@@ -8,11 +8,18 @@ class Bitfinex(Feed):
         super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2')
         self.pairs = pairs
         self.channels = channels
+        '''
+        maps channel id (int) to a dict of
+           symbol: channel's currency
+           channel: channel name
+           handler: the handler for this channel type
+        '''
         self.channel_map = {}
     
     def _ticker(self, msg):
         chan_id = msg[0]
         if msg[1] == 'hb':
+            # ignore heartbeats
             pass
         else:
             bid, bid_size, ask, ask_size, \
@@ -51,6 +58,11 @@ class Bitfinex(Feed):
                 pass
             else:
                 print("Unexpected trade message {}".format(msg))
+    
+    def _book(self, msg):
+        chan_id = msg[0]
+        pair = self.channel_map[chan_id]['symbol']
+        print(msg)
 
     def message_handler(self, msg):
         msg = json.loads(msg)
@@ -82,7 +94,20 @@ class Bitfinex(Feed):
     async def subscribe(self, websocket):
         for channel in self.channels:
             for pair in self.pairs:
-                await websocket.send(json.dumps({'event': 'subscribe',
-                                'channel': channel,
-                                'symbol': pair
-                                }))
+                message = {'event': 'subscribe',
+                            'channel': channel,
+                            'symbol': pair
+                          }
+                if 'book' in channel:
+                    parts = channel.split('-')
+                    if len(parts) != 1:
+                        message['channel'] = 'book'
+                        try:
+                            message['prec'] = parts[1]
+                            message['freq'] = parts[2]
+                            message['len'] = parts[3]
+                        except IndexError:
+                            # any non specified params will be defaulted
+                            pass
+
+                await websocket.send(json.dumps(message))

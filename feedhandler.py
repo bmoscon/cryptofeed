@@ -35,5 +35,5 @@ class FeedHandler(object):
 if __name__ == '__main__':
     f = FeedHandler()
     #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker']))
-    f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['trades', 'ticker']))
+    f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['book']))
     f.run()
