@@ -3,6 +3,7 @@ import asyncio
 import websockets
 from collections import deque
 
+import requests
 
 sub = {
     "type": "subscribe",
@@ -18,9 +19,15 @@ sub = {
 }
 
 handlers = {}
-seq_window = 10
+seq_window = 2
 seq = deque([], seq_window)
 
+
+
+def get_order_book():
+    endpoint = 'https://api.gdax.com/products/BTC-USD/book'
+    order_book = requests.get(endpoint, params={'level': 3})
+    print(order_book.json())
 
 def register_handler(msg_type, callback):
     handlers[msg_type] = callback
@@ -35,16 +42,13 @@ def full_handler(message):
 
 def check_sequence(msg):
     seq.append(msg['sequence'])
-    if len(seq) == 10:
+    if len(seq) == seq_window:
         expected = seq[0] + seq_window - 1
         if expected == seq[-1]:
-            print('none missing')
+            return
         else:
             print('missing')
             print(seq)
-        last = seq[-1]
-        seq.clear()
-        seq.append(last)
 
 async def main():
     async with websockets.connect('wss://ws-feed.gdax.com') as websocket:
@@ -62,6 +66,7 @@ async def consumer_handler(websocket):
         handlers['full'](msg)
 
 if __name__ == '__main__':
+    get_order_book()
     register_handler('ticker', ticker_handler)
     register_handler('full', full_handler)
     asyncio.get_event_loop().run_until_complete(main())
