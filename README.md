@@ -1,2 +1,4 @@
-# gdax-handler
-GDAX Feed Handler
+# Cryptocurrency Feed Handler
+Supports the following exchanges:
+* Btitfinex
+* GDAX
