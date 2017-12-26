@@ -4,17 +4,29 @@ from feed import Feed
 
 
 class GDAX(Feed):
-    def __init__(self, pairs=None, channels=None):
+    def __init__(self, pairs=None, channels=None, callbacks=None):
         super(GDAX, self).__init__('wss://ws-feed.gdax.com')
         self.channels = channels
         self.pairs = pairs
+        self.callbacks = callbacks
+        if self.callbacks is None:
+            self.callbacks = {'ticker': self._print}
     
-    def message_handler(self, msg):
+    async def _ticker(self, msg):
+        self.callbacks['ticker']({'feed': 'gdax',
+                                  'channel': 'ticker',
+                                  'pair': msg['product_id'],
+                                  'bid': msg['best_bid'],
+                                  'ask': msg['best_ask']})
+    
+    async def message_handler(self, msg):
         msg = json.loads(msg)
-        print(msg)
+        if 'type' in msg:
+            if msg['type'] == 'ticker':
+                await self._ticker(msg)
     
     async def subscribe(self, websocket):
-        websocket.send(json.dumps({"type": "subscribe",
-                                   "product_ids": self.pairs,
-                                   "channels": self.channels
-                                }))
+        await websocket.send(json.dumps({"type": "subscribe",
+                                         "product_ids": self.pairs,
+                                         "channels": self.channels
+                                        }))

@@ -29,11 +29,11 @@ class FeedHandler(object):
 
     async def _handler(self, websocket, handler):
         async for message in websocket:
-            handler(message)
+            await handler(message)
 
 
 if __name__ == '__main__':
     f = FeedHandler()
-    #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker']))
-    f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['book']))
+    f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker']))
+    #f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['ticker']))
     f.run()
