@@ -38,5 +38,5 @@ if __name__ == '__main__':
     #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker']))
     #f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['ticker']))
     #f.add_feed(Poloniex(channels=['USDT_BTC']))
-    f.add_feed(Poloniex(channels=['1002']))
+    f.add_feed(Poloniex(channels=['1003']))
     f.run()
