@@ -9,5 +9,10 @@ def get_ticker_map():
         for key in data:
             print("'{}': {},".format(key, data[key]['id']))
         print("}")
+
+        print("[", end='')
+        for key in data:
+            print("'{}', ".format(key), end='')
+        print("]", end='')
 if __name__ == '__main__':
     get_ticker_map()
