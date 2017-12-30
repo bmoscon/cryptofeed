@@ -22,9 +22,6 @@ class Bitfinex(Feed):
             self.callbacks = {'trades': self._print,
                               'ticker': self._print,
                               'book': self._print}
-        
-    async def _print(self, update):
-        print(update)
     
     async def _ticker(self, msg):
         chan_id = msg[0]

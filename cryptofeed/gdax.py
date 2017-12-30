@@ -22,6 +22,7 @@ class GDAX(Feed):
     
     async def _trades(self, msg):
         # GDAX calls this 'match'
+        pass
     
     async def message_handler(self, msg):
         msg = json.loads(msg)

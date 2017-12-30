@@ -5,6 +5,7 @@ import websockets
 
 from gdax import GDAX
 from bitfinex import Bitfinex
+from poloniex import Poloniex
 
 
 class FeedHandler(object):
@@ -34,6 +35,8 @@ class FeedHandler(object):
 
 if __name__ == '__main__':
     f = FeedHandler()
-    f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker']))
+    #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker']))
     #f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['ticker']))
+    #f.add_feed(Poloniex(channels=['USDT_BTC']))
+    f.add_feed(Poloniex(channels=['1002']))
     f.run()
