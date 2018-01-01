@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions 
+associated with this software.
+'''
 poloniex_id_pair_mapping = {
     7: 'BTC_BCN',
     8: 'BTC_BELA',

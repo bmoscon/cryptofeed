@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions 
+associated with this software.
+'''
 import asyncio
 import json
 
@@ -34,9 +40,17 @@ class FeedHandler(object):
 
 
 if __name__ == '__main__':
+    from callback import TickerCallback, TradeCallback, BookCallback
+    def ticker(feed, pair, bid, ask):
+        print('Feed: {} Pair: {} Bid: {} Ask: {}'.format(feed, pair, bid, ask))
+    def trade(feed, pair, side, amount, price):
+        print('Feed: {} Pair: {} side: {} Amount: {} Price: {}'.format(feed, pair, side, amount, price))
+    def book(b):
+        print('book bid size is {} ask size is {}'.format(len(b['BTC-USD']['bid']), len(b['BTC-USD']['ask'])))
     f = FeedHandler()
-    #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker']))
-    #f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['ticker']))
+    f.add_feed(GDAX(pairs=['BTC-USD'], channels=['full'], callbacks={'book': BookCallback(book)}))
+    #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['matches'], callbacks={'trades': TradeCallback(trade)}))
+    #f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['ticker'], callbacks={'ticker': TickerCallback(p)}))
     #f.add_feed(Poloniex(channels=['USDT_BTC']))
-    f.add_feed(Poloniex(channels=['1003']))
+    #f.add_feed(Poloniex(channels=['USDT_BTC']))
     f.run()

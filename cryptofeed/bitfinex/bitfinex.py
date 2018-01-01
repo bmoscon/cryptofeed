@@ -1,10 +1,17 @@
+'''
+Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions 
+associated with this software.
+'''
 import json
 
 from feed import Feed
+from callback import Callback
 
 
 class Bitfinex(Feed):
-    def __init__(self, pairs=None, channels=None, callbacks=None):
+    def __init__(self, pairs=None, channels=None, callbacks={}):
         super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2')
         self.pairs = pairs
         self.channels = channels
@@ -17,11 +24,9 @@ class Bitfinex(Feed):
         self.channel_map = {}
         self.book = {}
         self.order_map = {}
-        self.callbacks = callbacks
-        if self.callbacks is None:
-            self.callbacks = {'trades': self._print,
-                              'ticker': self._print,
-                              'book': self._print}
+        self.callbacks = {'trades': Callback(None), 'ticker': Callback(None), 'book': Callback(None)}
+        for cb in callbacks:
+            self.callbacks[cb] = callbacks[cb]
     
     async def _ticker(self, msg):
         chan_id = msg[0]
@@ -34,8 +39,7 @@ class Bitfinex(Feed):
             last_price, volume, high, low = msg[1]
             pair = self.channel_map[chan_id]['symbol']
             channel = self.channel_map[chan_id]['channel']
-            await self.callbacks['ticker']({'feed': 'bitfinex', 
-                                            'channel': 'ticker',
+            await self.callbacks['ticker'](**{'feed': 'bitfinex', 
                                             'pair': pair,
                                             'bid': bid,
                                             'ask': ask})

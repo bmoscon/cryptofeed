@@ -2,7 +2,7 @@ from urllib.request import urlopen
 import json
 
 
-def get_ticker_map():
+def poloniex_get_ticker_map():
     """
     mappings between pair strings and pair IDs are not documented
     so we can use their ticker endpoint which has the mappings embedded
@@ -20,5 +20,14 @@ def get_ticker_map():
         print("]", end='')
 
 
+def bitfinex_get_trading_pairs():
+    with urlopen('https://bittrex.com/api/v1.1/public/getmarkets') as url:
+        data = json.loads(url.read().decode())
+        print("[", end='')
+        for market in data['result']:
+            print("'{}', ".format(market['MarketName']), end='')
+        print("]", end='')
+
+
 if __name__ == '__main__':
-    get_ticker_map()
+    bitfinex_get_trading_pairs()
