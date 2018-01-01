@@ -2,3 +2,4 @@
 Supports the following exchanges:
 * Btitfinex
 * GDAX
+* Poloniex
