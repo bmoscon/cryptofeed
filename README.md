@@ -1,4 +1,7 @@
 # Cryptocurrency Feed Handler
+[![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
+
+
 Supports the following exchanges:
 * Bitfinex
 * GDAX
