@@ -1,5 +1,6 @@
 # Cryptocurrency Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.5+-green.svg)](LICENSE)
 
 
 Supports the following exchanges:
