@@ -1,13 +1,13 @@
 '''
 Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 
-Please see the LICENSE file for the terms and conditions 
+Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
 
-from feed import Feed
-from callback import Callback
+from cryptofeed.feed import Feed
+from cryptofeed.callback import Callback
 
 
 class Bitfinex(Feed):
@@ -39,32 +39,32 @@ class Bitfinex(Feed):
             last_price, volume, high, low = msg[1]
             pair = self.channel_map[chan_id]['symbol']
             channel = self.channel_map[chan_id]['channel']
-            await self.callbacks['ticker'](**{'feed': 'bitfinex', 
-                                            'pair': pair,
-                                            'bid': bid,
-                                            'ask': ask})
+            await self.callbacks['ticker'](feed='bitfinex', 
+                                           pair=pair,
+                                           bid=bid,
+                                           ask=ask)
     
     async def _trades(self, msg):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         async def _trade_update(trade):
-            trade_id, timestamp, amount, price = trade
+            # trade id, timestamp, amount, price
+            _, _, amount, price = trade
             if amount < 0:
                 side = 'SELL'
             else:
                 side = 'BUY'
             amount = abs(amount)
-            channel = self.channel_map[chan_id]['channel']
-            await self.callbacks['trades']({'feed': 'bitfinex', 'channel': 'trade', 'pair': pair, 'side': side, 'amount': amount, 'price': price})
+            await self.callbacks['trades'](feed='bitfinex', pair=pair, side=side, amount=amount, price=price)
         
         if isinstance(msg[1], list):
             # snapshot
             for trade_update in msg[1]:
-                _trade_update(trade_update)
+                await _trade_update(trade_update)
         else:
             # update
             if msg[1] == 'te':
-                _trade_update(msg[2])
+                await _trade_update(msg[2])
             elif msg[1] == 'tu':
                 # ignore trade updates
                 pass
@@ -112,7 +112,7 @@ class Bitfinex(Feed):
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book']({'feed': 'bitfinex', 'channel': 'book', 'book': self.book})
+        await self.callbacks['book'](self.book)
 
     async def _raw_book(self, msg):
         chan_id = msg[0]
@@ -162,7 +162,7 @@ class Bitfinex(Feed):
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book']({'feed': 'bitfinex', 'channel': 'book', 'book': self.book})
+        await self.callbacks['book'](self.book)
 
     async def message_handler(self, msg):
         msg = json.loads(msg)

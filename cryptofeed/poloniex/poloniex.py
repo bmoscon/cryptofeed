@@ -1,12 +1,13 @@
 '''
 Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 
-Please see the LICENSE file for the terms and conditions 
+Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
 
-from feed import Feed
+from cryptofeed.feed import Feed
+from cryptofeed.callback import Callback
 
 
 class Poloniex(Feed):
@@ -15,10 +16,13 @@ class Poloniex(Feed):
         self.channels = channels
         if pairs:
             raise ValueError("Poloniex does not support pairs on a channel")
-        self.callbacks = callbacks
-        if self.callbacks is None:
-            self.callbacks = {'ticker': self._print,
-                              'trades': self._print}
+        
+        self.callbacks = {'trades': Callback(None),
+                          'ticker': Callback(None),
+                          'book': Callback(None)}
+        
+        for cb in callbacks:
+            self.callbacks[cb] = callbacks[cb]
 
     async def _ticker(self, msg):
         print(msg)

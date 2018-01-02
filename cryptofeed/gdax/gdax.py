@@ -1,7 +1,7 @@
 '''
 Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 
-Please see the LICENSE file for the terms and conditions 
+Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
@@ -10,8 +10,8 @@ from decimal import Decimal
 
 import requests
 
-from feed import Feed
-from callback import Callback
+from cryptofeed.feed import Feed
+from cryptofeed.callback import Callback
 
 
 class GDAX(Feed):
@@ -60,7 +60,6 @@ class GDAX(Feed):
 
             await self.callbacks['book'](self.book)
 
-
     async def _book_snapshot(self):
         self.book = {}
         loop = asyncio.get_event_loop()
@@ -80,7 +79,7 @@ class GDAX(Feed):
                     else:
                         self.book[pair][side][price] = size
                     self.order_map[order_id] = {'price': price, 'size': size}
-    
+
     async def _open(self, msg):
         price = Decimal(msg['price'])
         side = 'ask' if msg['side'] == 'sell' else 'bid'
@@ -144,8 +143,8 @@ class GDAX(Feed):
         if 'type' in msg:
             if msg['type'] == 'ticker':
                 await self._ticker(msg)
-            elif msg['type'] == 'match':
-                    await self._trades(msg)
+            elif msg['type'] == 'match' or msg['type'] == 'last_match':
+                await self._trades(msg)
             elif msg['type'] == 'open':
                 await self._open(msg)
             elif msg['type'] == 'done':
@@ -156,11 +155,11 @@ class GDAX(Feed):
                 pass
             elif msg['type'] == 'activate':
                 pass
-            elif msg['type'] == 'subscription':
+            elif msg['type'] == 'subscriptions':
                 pass
             else:
                 print('Invalid message type {}'.format(msg))
-    
+
     async def subscribe(self, websocket):
         await websocket.send(json.dumps({"type": "subscribe",
                                          "product_ids": self.pairs,
