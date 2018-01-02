@@ -30,9 +30,9 @@ def main():
     #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['full'], callbacks={'book': BookCallback(book)}))
     #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['matches'], callbacks={'trades': TradeCallback(trade)}))
     #f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['trades'], callbacks={'trades': TradeCallback(trade)}))
-    f.add_feed(Poloniex(channels=[1002], callbacks={'ticker': TickerCallback(ticker)}))
+    #f.add_feed(Poloniex(channels=[1002], callbacks={'ticker': TickerCallback(ticker)}))
     f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
-    f.add_feed(Bitfinex(pairs=['tBTCUSD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
+    f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
     #f.add_feed(Poloniex(channels=['USDT_BTC']))
     f.run()
 
