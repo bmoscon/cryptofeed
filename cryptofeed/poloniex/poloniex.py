@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
+from decimal import Decimal
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
@@ -19,7 +20,8 @@ class Poloniex(Feed):
         
         self.callbacks = {'trades': Callback(None),
                           'ticker': Callback(None),
-                          'book': Callback(None)}
+                          'book': Callback(None),
+                          'volume': Callback(None)}
         
         for cb in callbacks:
             self.callbacks[cb] = callbacks[cb]
@@ -29,14 +31,18 @@ class Poloniex(Feed):
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
         pair = poloniex_id_pair_mapping[pair_id] 
-        
         await self.callbacks['ticker'](feed='poloniex', 
                                        pair=pair,
-                                       bid=bid,
-                                       ask=ask)
+                                       bid=Decimal(bid),
+                                       ask=Decimal(ask))
     
     async def _volume(self, msg):
-        print(msg)
+        # ['2018-01-02 00:45', 35361, {'BTC': '43811.201', 'ETH': '6747.243', 'XMR': '781.716', 'USDT': '196758644.806'}]
+        # timestamp, exchange volume, dict of top volumes
+        _, _, top_vols = msg
+        for pair in top_vols:
+            top_vols[pair] = Decimal(top_vols[pair])
+        self.callbacks['volume'](feed='poloniex', **top_vols)
     
     async def _book(self, msg):
         print(msg)
