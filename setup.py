@@ -18,6 +18,6 @@ setup(
         "Programming Language :: Python :: 3.6",
     ],
     setup_requires=["requests",
-                    "websocket",
+                    "websockets",
                    ],
 )
