@@ -5,15 +5,17 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
+from decimal import Decimal
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
 class Bitfinex(Feed):
     def __init__(self, pairs=None, channels=None, callbacks={}):
         super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2')
-        self.pairs = pairs
+        self.pairs = [pair_std_to_exchange(pair, 'BITFINEX') for pair in pairs]
         self.channels = channels
         '''
         maps channel id (int) to a dict of
@@ -38,15 +40,17 @@ class Bitfinex(Feed):
             daily_change, daily_change_perc, \
             last_price, volume, high, low = msg[1]
             pair = self.channel_map[chan_id]['symbol']
+            pair = pair_exchange_to_std(pair)
             channel = self.channel_map[chan_id]['channel']
             await self.callbacks['ticker'](feed='bitfinex', 
                                            pair=pair,
-                                           bid=bid,
-                                           ask=ask)
+                                           bid=Decimal(bid),
+                                           ask=Decimal(ask))
     
     async def _trades(self, msg):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
+        pair = pair_exchange_to_std(pair)
         async def _trade_update(trade):
             # trade id, timestamp, amount, price
             _, _, amount, price = trade
@@ -77,6 +81,7 @@ class Bitfinex(Feed):
     async def _book(self, msg):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
+        pair = pair_exchange_to_std(pair)
 
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
@@ -117,6 +122,8 @@ class Bitfinex(Feed):
     async def _raw_book(self, msg):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
+        pair = pair_exchange_to_std(pair)
+
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book

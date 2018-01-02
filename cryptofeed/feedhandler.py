@@ -8,6 +8,8 @@ import asyncio
 
 import websockets
 
+from .nbbo import NBBO
+
 
 class FeedHandler(object):
     def __init__(self):
@@ -15,8 +17,16 @@ class FeedHandler(object):
     
     def add_feed(self, feed):
         self.feeds.append(feed)
-    
+
+    def add_nbbo(self, feeds, pairs, callback):
+        for pair in pairs:
+            cb = NBBO(callback, pair)
+            for feed in feeds:
+                self.add_feed(feed(channels=['ticker'], pairs=pairs, callbacks={'ticker': cb}))
+
     def run(self):
+        if len(self.feeds) == 0:
+            raise ValueError("No feeds specified")
         asyncio.get_event_loop().run_until_complete(self._run())
 
     def _run(self):

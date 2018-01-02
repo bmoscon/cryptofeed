@@ -31,8 +31,8 @@ class GDAX(Feed):
     async def _ticker(self, msg):
         await self.callbacks['ticker'](feed='gdax',
                                        pair=msg['product_id'],
-                                       bid=msg['best_bid'],
-                                       ask=msg['best_ask'])
+                                       bid=Decimal(msg['best_bid']),
+                                       ask=Decimal(msg['best_ask']))
     
     async def _trades(self, msg):
         # GDAX calls this 'match'
