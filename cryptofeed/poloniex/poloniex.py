@@ -8,10 +8,10 @@ import json
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
-
+from .pairs import poloniex_id_pair_mapping
 
 class Poloniex(Feed):
-    def __init__(self, pairs=None, channels=None, callbacks=None):
+    def __init__(self, pairs=None, channels=None, callbacks={}):
         super(Poloniex, self).__init__('wss://api2.poloniex.com')
         self.channels = channels
         if pairs:
@@ -25,7 +25,15 @@ class Poloniex(Feed):
             self.callbacks[cb] = callbacks[cb]
 
     async def _ticker(self, msg):
-        print(msg)
+        # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
+        # quoteVolume, isFrozen, 24hrHigh, 24hrLow
+        pair_id, _, ask, bid, _, _, _, _, _, _ = msg
+        pair = poloniex_id_pair_mapping[pair_id] 
+        
+        await self.callbacks['ticker'](feed='poloniex', 
+                                       pair=pair,
+                                       bid=bid,
+                                       ask=ask)
     
     async def _volume(self, msg):
         print(msg)
