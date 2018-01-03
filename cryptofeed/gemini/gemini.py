@@ -20,14 +20,27 @@ class Gemini(Feed):
             raise ValueError("Gemini does not support different channels")
         self.pair = pairs[0]
         super(Gemini, self).__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'))
-        self.book = {}
+        self.book = {self.pair: {'bid': {}, 'ask': {}}}
         self.callbacks = {'trades': Callback(None),
                           'book': Callback(None)}
         for cb in callbacks:
             self.callbacks[cb] = callbacks[cb]
 
     async def _book(self, msg):
-        pass
+        side = msg['side']
+        price = Decimal(msg['price'])
+        remaining = Decimal(msg['remaining'])
+        #delta = Decimal(msg['delta'])
+
+        if msg['reason'] == 'initial':
+            self.book[self.pair][side][price] = remaining
+        else:
+            if remaining == 0:
+                del self.book[self.pair][side][price]
+            else:
+                self.book[self.pair][side][price] = remaining
+        await self.callbacks['book'](self.book)
+        
     
     async def _auction(self, msg):
         pass
