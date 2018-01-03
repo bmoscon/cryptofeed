@@ -5,9 +5,19 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
-std_trading_pairs = {'BTC-USD': {'GDAX': 'BTC-USD', 'BITFINEX': 'tBTCUSD', 'GEMINI': 'BTCUSD'}}
+std_trading_pairs = {'BTC-USD': {'GDAX': 'BTC-USD', 'BITFINEX': 'tBTCUSD', 'GEMINI': 'BTCUSD'},
+                     'ETH-USD': {'GEMINI': 'ETHUSD'},
+                     'ETH-BTC': {'GEMINI': 'ETHBTC'}
+                     }
 
-exchange_to_std = {'BTC-USD': 'BTC-USD', 'tBTCUSD': 'BTC-USD', 'BTCUSD': 'BTC-USD'}
+exchange_to_std = {'BTC-USD': 'BTC-USD',
+                   'tBTCUSD': 'BTC-USD',
+                   'BTCUSD': 'BTC-USD',
+                   'ETHUSD': 'ETH-USD',
+                   'ETH-USD': 'ETH-USD',
+                   'ETHBTC': 'ETH-BTC',
+                   'ETH-BTC': 'ETH-BTC'
+                   }
 
 def pair_std_to_exchange(pair, exchange):
     return std_trading_pairs[pair][exchange]
