@@ -7,3 +7,4 @@ associated with this software.
 from cryptofeed.poloniex import Poloniex
 from cryptofeed.bitfinex import Bitfinex
 from cryptofeed.gdax import GDAX
+from cryptofeed.gemini import Gemini

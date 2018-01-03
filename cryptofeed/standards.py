@@ -5,9 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
-std_trading_pairs = {'BTC-USD': {'GDAX': 'BTC-USD', 'BITFINEX': 'tBTCUSD'}}
+std_trading_pairs = {'BTC-USD': {'GDAX': 'BTC-USD', 'BITFINEX': 'tBTCUSD', 'GEMINI': 'BTCUSD'}}
 
-exchange_to_std = {'BTC-USD': 'BTC-USD', 'tBTCUSD': 'BTC-USD'}
+exchange_to_std = {'BTC-USD': 'BTC-USD', 'tBTCUSD': 'BTC-USD', 'BTCUSD': 'BTC-USD'}
 
 def pair_std_to_exchange(pair, exchange):
     return std_trading_pairs[pair][exchange]
