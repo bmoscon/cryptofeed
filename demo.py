@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
-from cryptofeed.feedhandler import FeedHandler
+from cryptofeed import FeedHandler
 from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini
 
 
