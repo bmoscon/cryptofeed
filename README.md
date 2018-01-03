@@ -4,7 +4,6 @@
 
 Handles multiple feeds and return normalized and standardized results across exchanges to client registered callbacks for events like trades, book updates, ticker updates, etc.
 
-exmaple:
 
 ```python
 from cryptofeed import FeedHandler
