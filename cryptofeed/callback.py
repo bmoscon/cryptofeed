@@ -14,7 +14,10 @@ class Callback(object):
         self.is_async = inspect.iscoroutinefunction(callback)
 
     async def __call__(self, *args, **kwargs):
-        raise NotImplementedError
+        if self.callback is None:
+            pass
+        else:
+            raise NotImplementedError
 
 
 class TradeCallback(Callback):

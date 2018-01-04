@@ -34,7 +34,7 @@ def main():
     #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
     #f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
     #f.add_feed(Poloniex(channels=['USDT_BTC']))
-    f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade), 'book': BookCallback(book)}))
+    f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
     f.run()
 
 if __name__ == '__main__':

@@ -20,7 +20,7 @@ def poloniex_get_ticker_map():
         print("]", end='')
 
 
-def bitfinex_get_trading_pairs():
+def bittrex_get_trading_pairs():
     with urlopen('https://bittrex.com/api/v1.1/public/getmarkets') as url:
         data = json.loads(url.read().decode())
         print("[", end='')
@@ -30,4 +30,4 @@ def bitfinex_get_trading_pairs():
 
 
 if __name__ == '__main__':
-    bitfinex_get_trading_pairs()
+    bittrex_get_trading_pairs()
