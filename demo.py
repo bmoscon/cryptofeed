@@ -6,8 +6,7 @@ associated with this software.
 '''
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
-from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini
-
+from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini, HitBTC
 
 '''
 examples of some handlers for different updates. These currently don't do much.
@@ -34,7 +33,8 @@ def main():
     #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
     #f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
     #f.add_feed(Poloniex(channels=['USDT_BTC']))
-    f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
+    #f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
+    f.add_feed(HitBTC(channels=['ticker'], pairs=['BTC-USD'], callbacks={'ticker': TickerCallback(ticker)}))
     f.run()
 
 if __name__ == '__main__':

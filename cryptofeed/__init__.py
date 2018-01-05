@@ -8,4 +8,5 @@ from cryptofeed.poloniex import Poloniex
 from cryptofeed.bitfinex import Bitfinex
 from cryptofeed.gdax import GDAX
 from cryptofeed.gemini import Gemini
+from cryptofeed.hitbtc import HitBTC
 from cryptofeed.feedhandler import FeedHandler

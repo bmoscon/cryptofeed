@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.feedhandler import FeedHandler
-from cryptofeed import GDAX, Bitfinex
+from cryptofeed import GDAX, Bitfinex, HitBTC
 
 
 def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
@@ -14,7 +14,7 @@ def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
 
 def main():
     f = FeedHandler()
-    f.add_nbbo([GDAX, Bitfinex], ['BTC-USD'], nbbo_ticker)
+    f.add_nbbo([GDAX, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
     f.run()
 
 if __name__ == '__main__':
