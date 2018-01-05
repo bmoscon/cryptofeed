@@ -30,5 +30,20 @@ Supports the following exchanges:
 * GDAX
 * Poloniex
 * Gemini
+* HitBTC
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
+
+```python
+from cryptofeed.feedhandler import FeedHandler
+from cryptofeed import GDAX, Bitfinex, HitBTC
+
+
+def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
+    print('Pair: {} Bid: {} Bid Feed: {} Ask: {} Ask Feed: {}'.format(pair, bid, bid_feed, ask, ask_feed))
+
+
+fh = FeedHandler()
+fh.add_nbbo([GDAX, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
+fh.run()
+```
