@@ -11,6 +11,7 @@ from cryptofeed.bitfinex.pairs import bitfinex_trading_pairs
 from cryptofeed.gemini.pairs import gemini_trading_pairs
 from cryptofeed.hitbtc.pairs import hitbtc_trading_pairs
 
+
 def test_gdax_pair_conversions():
     for pair in gdax_trading_pairs:
         assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, 'GDAX'))
