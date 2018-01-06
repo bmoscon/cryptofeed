@@ -1,6 +1,8 @@
 # Cryptocurrency Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.5+-green.svg)](LICENSE)
+[![Build Status](https://travis-ci.org/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.org/bmoscon/cryptofeed)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
 
 Handles multiple feeds and return normalized and standardized results across exchanges to client registered callbacks for events like trades, book updates, ticker updates, etc.
 
