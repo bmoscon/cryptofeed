@@ -30,7 +30,6 @@ class FeedHandler(object):
         asyncio.get_event_loop().run_until_complete(self._run())
 
     def _run(self):
-        loop = asyncio.get_event_loop()
         feeds = [asyncio.ensure_future(self._connect(feed)) for feed in self.feeds]
         _, _ = yield from asyncio.wait(feeds)
     

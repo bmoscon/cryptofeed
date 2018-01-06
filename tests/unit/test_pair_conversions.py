@@ -24,7 +24,6 @@ def test_poloniex_pair_conversions():
 
 
 def test_bitfinex_pair_conversions():
-    errors = 0
     for pair in bitfinex_trading_pairs:
         std = pair_exchange_to_std(pair)
         assert(pair == pair_std_to_exchange(std, 'BITFINEX'))
