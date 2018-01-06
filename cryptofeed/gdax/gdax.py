@@ -65,7 +65,12 @@ class GDAX(Feed):
         loop = asyncio.get_event_loop()
         url = 'https://api.gdax.com/products/{}/book?level=3'
         futures = [loop.run_in_executor(None, requests.get, url.format(pair)) for pair in self.pairs]
-        results = [await future for future in futures]
+
+        results = []
+        for future in futures:
+            ret = await future
+            results.append(ret)
+
         for res, pair in zip(results, self.pairs):
             orders = res.json()
             self.book[pair] = {'bid': {}, 'ask': {}}
