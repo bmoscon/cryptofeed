@@ -29,5 +29,13 @@ def bittrex_get_trading_pairs():
         print("]", end='')
 
 
+def gdax_get_trading_pairs():
+    with urlopen('https://api.gdax.com/products') as url:
+        data = json.loads(url.read().decode())
+        print('[', end='')
+        for pair in data:
+            print("'" + pair['id'] +"',",)
+        print("]")
+
 if __name__ == '__main__':
-    bittrex_get_trading_pairs()
+    gdax_get_trading_pairs()
