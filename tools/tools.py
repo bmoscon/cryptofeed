@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from urllib.request import urlopen
 import json
 
@@ -37,5 +43,14 @@ def gdax_get_trading_pairs():
             print("'" + pair['id'] +"',",)
         print("]")
 
+def hitbtc_get_trading_pairs():
+    with urlopen('https://api.hitbtc.com/api/2/public/symbol') as url:
+        data = json.loads(url.read().decode())
+        print('[', end='')
+        for pair in data:
+            print("'" + pair['id'] +"',",)
+        print("]")
+        
+
 if __name__ == '__main__':
-    gdax_get_trading_pairs()
+    hitbtc_get_trading_pairs()
