@@ -31,7 +31,7 @@ class Bitfinex(Feed):
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]
-    
+
     async def _ticker(self, msg):
         chan_id = msg[0]
         if msg[1] == 'hb':

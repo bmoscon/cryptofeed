@@ -1748,8 +1748,8 @@ _exchange_to_std = {
     'BTC-GBP': 'BTC-GBP',
     'BTC-EUR': 'BTC-EUR',
     # Poloniex
-    'BTC_BCN': 'BTC-BCN',
     'BTC_BELA': 'BTC-BELA',
+    'BTC_BCN': 'BTC-BCN',
     'BTC_BLK': 'BTC-BLK',
     'BTC_BTCD': 'BTC-BTCD',
     'BTC_BTM': 'BTC-BTM',

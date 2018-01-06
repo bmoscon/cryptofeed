@@ -100,7 +100,7 @@ class GDAX(Feed):
 
         self.order_map[order_id] = {'price': price, 'size': size}
         await self.callbacks['book'](self.book)
-    
+
     async def _done(self, msg):
         if 'price' not in msg:
             return
