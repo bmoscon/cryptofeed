@@ -13,7 +13,7 @@ from cryptofeed.standards import pair_std_to_exchange
 
 
 class Gemini(Feed):
-    def __init__(self, pairs=None, channels=None, callbacks={}):
+    def __init__(self, pairs=None, channels=None, callbacks=None):
         if len(pairs) != 1:
             raise ValueError("Gemini requires a websocket per trading pair")
         if channels is not None:
@@ -23,8 +23,9 @@ class Gemini(Feed):
         self.book = {self.pair: {'bid': {}, 'ask': {}}}
         self.callbacks = {'trades': Callback(None),
                           'book': Callback(None)}
-        for cb in callbacks:
-            self.callbacks[cb] = callbacks[cb]
+        if callbacks:
+            for cb in callbacks:
+                self.callbacks[cb] = callbacks[cb]
 
     async def _book(self, msg):
         side = msg['side']
@@ -40,11 +41,11 @@ class Gemini(Feed):
             else:
                 self.book[self.pair][side][price] = remaining
         await self.callbacks['book'](self.book)
-        
-    
+
+
     async def _auction(self, msg):
         pass
-    
+
     async def _trade(self, msg):
         price = Decimal(msg['price'])
         side = msg['makerSide']
@@ -61,7 +62,7 @@ class Gemini(Feed):
                 await self._auction(update)
             else:
                 print("Invalid update received {}".format(update))
-    
+
     async def message_handler(self, msg):
         msg = json.loads(msg)
         if msg['type'] == 'update':

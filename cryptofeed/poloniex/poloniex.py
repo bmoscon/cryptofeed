@@ -17,12 +17,12 @@ class Poloniex(Feed):
         self.channels = channels
         if pairs:
             raise ValueError("Poloniex does not support pairs on a channel")
-        
+
         self.callbacks = {'trades': Callback(None),
                           'ticker': Callback(None),
                           'book': Callback(None),
                           'volume': Callback(None)}
-        
+
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]
@@ -31,12 +31,12 @@ class Poloniex(Feed):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
-        pair = poloniex_id_pair_mapping[pair_id] 
+        pair = poloniex_id_pair_mapping[pair_id]
         await self.callbacks['ticker'](feed='poloniex', 
                                        pair=pair,
                                        bid=Decimal(bid),
                                        ask=Decimal(ask))
-    
+
     async def _volume(self, msg):
         # ['2018-01-02 00:45', 35361, {'BTC': '43811.201', 'ETH': '6747.243', 'XMR': '781.716', 'USDT': '196758644.806'}]
         # timestamp, exchange volume, dict of top volumes
@@ -44,7 +44,7 @@ class Poloniex(Feed):
         for pair in top_vols:
             top_vols[pair] = Decimal(top_vols[pair])
         self.callbacks['volume'](feed='poloniex', **top_vols)
-    
+
     async def _book(self, msg):
         print(msg)
 
@@ -53,30 +53,24 @@ class Poloniex(Feed):
         chan_id = msg[0]
 
         if chan_id == 1002:
-            '''
-            the ticker channel doesn't have sequence ids
-            so it should be None, except for the subscription
-            ack, in which case its 1
-            '''
+            # the ticker channel doesn't have sequence ids
+            # so it should be None, except for the subscription
+            # ack, in which case its 1
             seq_id = msg[1]
             if seq_id is None:
                 await self._ticker(msg[2])
         elif chan_id == 1003:
-            '''
-            volume update channel is just like ticker - the 
-            sequence id is None except for the initial ack
-            '''
+            # volume update channel is just like ticker - the
+            # sequence id is None except for the initial ack
             seq_id = msg[1]
             if seq_id is None:
                 await self._volume(msg[2])
         elif chan_id <= 200:
-            '''
-            order book updates - the channel id refers to 
-            the trading pair being updated
-            '''
+            # order book updates - the channel id refers to
+            # the trading pair being updated
             await self._book(msg)
         elif chan_id == 1010:
-            #heartbeat - ignore
+            # heartbeat - ignore
             pass
         else:
             print('Invalid message type {}'.format(msg))

@@ -14,7 +14,7 @@ from .nbbo import NBBO
 class FeedHandler(object):
     def __init__(self):
         self.feeds = []
-    
+
     def add_feed(self, feed):
         self.feeds.append(feed)
 

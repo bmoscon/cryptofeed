@@ -28,7 +28,7 @@ class GDAX(Feed):
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]
-    
+
     async def _ticker(self, msg):
         await self.callbacks['ticker'](feed='gdax',
                                        pair=msg['product_id'],

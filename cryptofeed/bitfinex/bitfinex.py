@@ -38,12 +38,12 @@ class Bitfinex(Feed):
             # ignore heartbeats
             pass
         else:
-            # bid, bid_ask, ask, ask_size, daily_change, daily_change_percent, 
+            # bid, bid_ask, ask, ask_size, daily_change, daily_change_percent,
             # last_price, volume, high, low
             bid, _, ask, _, _, _, _, _, _, _ = msg[1]
             pair = self.channel_map[chan_id]['symbol']
             pair = pair_exchange_to_std(pair)
-            await self.callbacks['ticker'](feed='bitfinex', 
+            await self.callbacks['ticker'](feed='bitfinex',
                                            pair=pair,
                                            bid=Decimal(bid),
                                            ask=Decimal(ask))
@@ -165,7 +165,7 @@ class Bitfinex(Feed):
                         self.book[pair][side][price]['count'] += 1
                         self.book[pair][side][price]['amount'] += amount
                     else:
-                        self.book[pair][side][price] = {'count': 1, 'amount': amount}                    
+                        self.book[pair][side][price] = {'count': 1, 'amount': amount}
         elif msg[1] == 'hb':
             pass
         else:
