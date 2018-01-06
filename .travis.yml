@@ -1,0 +1,14 @@
+dist: trusty
+sudo: false
+language: python
+python:
+  - "3.5"
+  - "3.6"
+
+install:
+  - pip install --upgrade pip
+  - pip install requests --upgrade
+  - pip install websockets --upgrade
+script:
+  - pip freeze
+  - python setup.py test
