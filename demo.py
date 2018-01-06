@@ -25,7 +25,7 @@ def book(b):
 
 def main():
     f = FeedHandler()
-    f.add_feed(GDAX(pairs=['BTC-USD'], channels=['full'], callbacks={'book': BookCallback(book)}))
+    #f.add_feed(GDAX(pairs=['BTC-USD'], channels=['full'], callbacks={'book': BookCallback(book)}))
     f.add_feed(GDAX(pairs=['BTC-USD'], channels=['matches'], callbacks={'trades': TradeCallback(trade)}))
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['trades'], callbacks={'trades': TradeCallback(trade)}))
     f.add_feed(Poloniex(channels=[1002], callbacks={'ticker': TickerCallback(ticker)}))

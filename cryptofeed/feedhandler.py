@@ -27,7 +27,11 @@ class FeedHandler(object):
     def run(self):
         if len(self.feeds) == 0:
             raise ValueError("No feeds specified")
-        asyncio.get_event_loop().run_until_complete(self._run())
+
+        try:
+            asyncio.get_event_loop().run_until_complete(self._run())
+        except KeyboardInterrupt:
+            pass
 
     def _run(self):
         feeds = [asyncio.ensure_future(self._connect(feed)) for feed in self.feeds]
