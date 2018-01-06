@@ -5,4 +5,3 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from .bitfinex import Bitfinex
-from .pairs import bitfinex_trading_pairs

@@ -208,7 +208,7 @@ poloniex_pair_id_mapping = {
     'BTC_STORJ': 200,
 }
 
-poloniex_possible_pairs = {
+poloniex_trading_pairs = {
     'BTC_BCN', 'BTC_BELA', 'BTC_BLK', 'BTC_BTCD', 'BTC_BTM', 'BTC_BTS',
     'BTC_BURST', 'BTC_CLAM', 'BTC_DASH', 'BTC_DGB', 'BTC_DOGE', 'BTC_EMC2',
     'BTC_FLDC', 'BTC_FLO', 'BTC_GAME', 'BTC_GRC', 'BTC_HUC', 'BTC_LTC',
