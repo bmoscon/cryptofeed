@@ -27,7 +27,7 @@ class Bitfinex(Feed):
         self.book = {}
         self.order_map = {}
         self.callbacks = {'trades': Callback(None), 'ticker': Callback(None), 'book': Callback(None)}
-        
+
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]
@@ -195,7 +195,7 @@ class Bitfinex(Feed):
             else:
                 print('Invalid message type {}'.format(msg))
                 return
-            self.channel_map[msg['chanId']] = {'symbol': msg['symbol'], 
+            self.channel_map[msg['chanId']] = {'symbol': msg['symbol'],
                                                'channel': msg['channel'],
                                                'handler': handler}
 

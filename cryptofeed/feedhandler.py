@@ -32,7 +32,7 @@ class FeedHandler(object):
     def _run(self):
         feeds = [asyncio.ensure_future(self._connect(feed)) for feed in self.feeds]
         _, _ = yield from asyncio.wait(feeds)
-    
+
     async def _connect(self, feed):
         async with websockets.connect(feed.address) as websocket:
             await feed.subscribe(websocket)

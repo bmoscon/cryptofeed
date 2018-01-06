@@ -34,7 +34,7 @@ class GDAX(Feed):
                                        pair=msg['product_id'],
                                        bid=Decimal(msg['best_bid']),
                                        ask=Decimal(msg['best_ask']))
-    
+
     async def _trades(self, msg):
         # GDAX calls this 'match'
         # This will also be called when 'book' channels are enabled

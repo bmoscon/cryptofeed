@@ -32,7 +32,7 @@ class Poloniex(Feed):
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
         pair = poloniex_id_pair_mapping[pair_id]
-        await self.callbacks['ticker'](feed='poloniex', 
+        await self.callbacks['ticker'](feed='poloniex',
                                        pair=pair,
                                        bid=Decimal(bid),
                                        ask=Decimal(ask))

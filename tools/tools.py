@@ -50,7 +50,7 @@ def hitbtc_get_trading_pairs():
         for pair in data:
             print("'" + pair['id'] +"',",)
         print("]")
-        
+
 
 if __name__ == '__main__':
     hitbtc_get_trading_pairs()
