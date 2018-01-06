@@ -12,7 +12,7 @@ from cryptofeed.callback import Callback
 from .pairs import poloniex_id_pair_mapping
 
 class Poloniex(Feed):
-    def __init__(self, pairs=None, channels=None, callbacks={}):
+    def __init__(self, pairs=None, channels=None, callbacks=None):
         super(Poloniex, self).__init__('wss://api2.poloniex.com')
         self.channels = channels
         if pairs:
@@ -23,8 +23,9 @@ class Poloniex(Feed):
                           'book': Callback(None),
                           'volume': Callback(None)}
         
-        for cb in callbacks:
-            self.callbacks[cb] = callbacks[cb]
+        if callbacks:
+            for cb in callbacks:
+                self.callbacks[cb] = callbacks[cb]
 
     async def _ticker(self, msg):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,

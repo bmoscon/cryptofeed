@@ -15,7 +15,7 @@ from cryptofeed.callback import Callback
 
 
 class GDAX(Feed):
-    def __init__(self, pairs=None, channels=None, callbacks={}):
+    def __init__(self, pairs=None, channels=None, callbacks=None):
         super(GDAX, self).__init__('wss://ws-feed.gdax.com')
         self.channels = channels
         self.pairs = pairs
@@ -25,8 +25,9 @@ class GDAX(Feed):
         self.callbacks = {'trades': Callback(None),
                           'ticker': Callback(None),
                           'book': Callback(None)}
-        for cb in callbacks:
-            self.callbacks[cb] = callbacks[cb]
+        if callbacks:
+            for cb in callbacks:
+                self.callbacks[cb] = callbacks[cb]
     
     async def _ticker(self, msg):
         await self.callbacks['ticker'](feed='gdax',

@@ -13,7 +13,7 @@ from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
 class Bitfinex(Feed):
-    def __init__(self, pairs=None, channels=None, callbacks={}):
+    def __init__(self, pairs=None, channels=None, callbacks=None):
         super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2')
         self.pairs = [pair_std_to_exchange(pair, 'BITFINEX') for pair in pairs]
         self.channels = channels
@@ -27,8 +27,10 @@ class Bitfinex(Feed):
         self.book = {}
         self.order_map = {}
         self.callbacks = {'trades': Callback(None), 'ticker': Callback(None), 'book': Callback(None)}
-        for cb in callbacks:
-            self.callbacks[cb] = callbacks[cb]
+        
+        if callbacks:
+            for cb in callbacks:
+                self.callbacks[cb] = callbacks[cb]
     
     async def _ticker(self, msg):
         chan_id = msg[0]
@@ -36,12 +38,11 @@ class Bitfinex(Feed):
             # ignore heartbeats
             pass
         else:
-            bid, bid_size, ask, ask_size, \
-            daily_change, daily_change_perc, \
-            last_price, volume, high, low = msg[1]
+            # bid, bid_ask, ask, ask_size, daily_change, daily_change_percent, 
+            # last_price, volume, high, low
+            bid, _, ask, _, _, _, _, _, _, _ = msg[1]
             pair = self.channel_map[chan_id]['symbol']
             pair = pair_exchange_to_std(pair)
-            channel = self.channel_map[chan_id]['channel']
             await self.callbacks['ticker'](feed='bitfinex', 
                                            pair=pair,
                                            bid=Decimal(bid),

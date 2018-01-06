@@ -13,7 +13,7 @@ from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, std
 
 
 class HitBTC(Feed):
-    def __init__(self, pairs=None, channels=None, callbacks={}):
+    def __init__(self, pairs=None, channels=None, callbacks=None):
         super(HitBTC, self).__init__('wss://api.hitbtc.com/api/2/ws')
         self.pairs = pairs
         self.channels = channels
@@ -21,8 +21,9 @@ class HitBTC(Feed):
         self.callbacks = {'trades': Callback(None),
                           'ticker': Callback(None),
                           'book': Callback(None)}
-        for cb in callbacks:
-            self.callbacks[cb] = callbacks[cb]
+        if callbacks:
+            for cb in callbacks:
+                self.callbacks[cb] = callbacks[cb]
 
     async def _ticker(self, msg):
         await self.callbacks['ticker'](feed='hitbtc',
