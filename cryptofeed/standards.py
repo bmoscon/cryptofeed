@@ -380,7 +380,7 @@ _std_trading_pairs = {
     },
     'DASH-USD': {
         'BITFINEX': 'tDASHUSD',
-         'HITBTC': 'DASHUSD'
+        'HITBTC': 'DASHUSD'
     },
     'RRT-USD': {
         'BITFINEX': 'tRRTUSD'
@@ -2028,7 +2028,6 @@ _exchange_to_std = {
     'GVTETH': 'GVT-ETH',
     'NDCETH': 'NDC-ETH',
     'DATAUSD': 'DATA-USD',
-    'ETHBTC': 'ETH-BTC',
     'CNDETH': 'CND-ETH',
     'XAURBTC': 'XAUR-BTC',
     'SMSUSD': 'SMS-USD',
@@ -2050,7 +2049,6 @@ _exchange_to_std = {
     'PPCBTC': 'PPC-BTC',
     'UGTBTC': 'UGT-BTC',
     'BETETH': 'BET-ETH',
-    'BTCUSD': 'BTC-USD',
     'UTTUSD': 'UTT-USD',
     'MCOUSD': 'MCO-USD',
     'BTGETH': 'BTG-ETH',
@@ -2142,7 +2140,6 @@ _exchange_to_std = {
     'MSPETH': 'MSP-ETH',
     'ZSCUSD': 'ZSC-USD',
     'SISABTC': 'SISA-BTC',
-    'ETHUSD': 'ETH-USD',
     'MTHBTC': 'MTH-BTC',
     'ZSCBTC': 'ZSC-BTC',
     'DRTETH': 'DRT-ETH',

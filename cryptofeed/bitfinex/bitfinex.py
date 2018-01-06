@@ -47,7 +47,7 @@ class Bitfinex(Feed):
                                            pair=pair,
                                            bid=Decimal(bid),
                                            ask=Decimal(ask))
-    
+
     async def _trades(self, msg):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
@@ -61,7 +61,7 @@ class Bitfinex(Feed):
                 side = 'BUY'
             amount = abs(amount)
             await self.callbacks['trades'](feed='bitfinex', pair=pair, side=side, amount=amount, price=price)
-        
+
         if isinstance(msg[1], list):
             # snapshot
             for trade_update in msg[1]:
@@ -78,7 +78,7 @@ class Bitfinex(Feed):
                 pass
             else:
                 print("Unexpected trade message {}".format(msg))
-    
+
     async def _book(self, msg):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
@@ -179,7 +179,7 @@ class Bitfinex(Feed):
             if chan_id in self.channel_map:
                 await self.channel_map[chan_id]['handler'](msg)
             else:
-               print("Unexpected message on unregistered channel {}".format(msg))
+                print("Unexpected message on unregistered channel {}".format(msg))
 
         elif 'chanId' in msg and 'symbol' in msg:
             handler = None
@@ -203,8 +203,8 @@ class Bitfinex(Feed):
         for channel in self.channels:
             for pair in self.pairs:
                 message = {'event': 'subscribe',
-                            'channel': channel,
-                            'symbol': pair
+                           'channel': channel,
+                           'symbol': pair
                           }
                 if 'book' in channel:
                     parts = channel.split('-')
