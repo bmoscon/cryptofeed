@@ -40,7 +40,7 @@ class Gemini(Feed):
                 del self.book[self.pair][side][price]
             else:
                 self.book[self.pair][side][price] = remaining
-        await self.callbacks['book'](self.book)
+        await self.callbacks['book'](feed='gemini', book=self.book)
 
 
     async def _auction(self, msg):
@@ -50,7 +50,7 @@ class Gemini(Feed):
         price = Decimal(msg['price'])
         side = msg['makerSide']
         amount = Decimal(msg['amount'])
-        await self.callbacks['trades'](feed='gemini', pair=self.pair ,side=side, amount=amount, price=price)
+        await self.callbacks['trades'](feed='gemini', pair=self.pair, side=side, amount=amount, price=price)
 
     async def _update(self, msg):
         for update in msg['events']:

@@ -23,7 +23,8 @@ async def trade(feed, pair, side, amount, price):
 
 
 async def book(feed, book):
-    print('feed {} book bid size is {} ask size is {}'.format(feed, len(book['BTC-USD']['bid']), len(book['BTC-USD']['ask'])))
+    for pair in book:
+        print('feed {} book bid size is {} ask size is {}'.format(feed, len(book[pair]['bid']), len(book[pair]['ask'])))
 
 
 def main():
@@ -34,9 +35,9 @@ def main():
     # f.add_feed(Poloniex(channels=[1002], callbacks={'ticker': TickerCallback(ticker)}))
     # f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
     # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
-    # f.add_feed(Poloniex(channels=['USDT-BTC']))
+    f.add_feed(Poloniex(channels=['USDT-BTC'], callbacks={'book': BookCallback(book), 'trades': TradeCallback(trade)}))
     # f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
-    f.add_feed(HitBTC(channels=['trades'], pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
+    # f.add_feed(HitBTC(channels=['trades'], pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
     f.run()
 
 

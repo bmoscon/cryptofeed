@@ -59,7 +59,7 @@ class GDAX(Feed):
             if self.book[pair][side][price] == 0:
                 del self.book[pair][side][price]
 
-            await self.callbacks['book'](self.book)
+            await self.callbacks['book'](feed='gdax', book=self.book)
 
     async def _book_snapshot(self):
         self.book = {}
@@ -99,7 +99,7 @@ class GDAX(Feed):
             self.book[pair][side][price] = size
 
         self.order_map[order_id] = {'price': price, 'size': size}
-        await self.callbacks['book'](self.book)
+        await self.callbacks['book'](feed='gdax', book=self.book)
 
     async def _done(self, msg):
         if 'price' not in msg:
@@ -119,7 +119,7 @@ class GDAX(Feed):
             self.book[pair][side][price] -= size
 
         del self.order_map[order_id]
-        await self.callbacks['book'](self.book)
+        await self.callbacks['book'](feed='gdax', book=self.book)
 
     async def _change(self, msg):
         order_id = msg['order_id']
@@ -135,7 +135,7 @@ class GDAX(Feed):
         self.book[pair][side][price] -= size
         self.order_map[order_id] = new_size
 
-        await self.callbacks['book'](self.book)
+        await self.callbacks['book'](feed='gdax', book=self.book)
 
     async def message_handler(self, msg):
         msg = json.loads(msg)

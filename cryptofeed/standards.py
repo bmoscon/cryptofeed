@@ -2347,12 +2347,15 @@ _exchange_to_std = {
 
 
 def pair_std_to_exchange(pair, exchange):
-    return _std_trading_pairs[pair][exchange]
-
+    if pair in _std_trading_pairs:
+        return _std_trading_pairs[pair][exchange]
+    else:
+        return None
 
 def pair_exchange_to_std(pair):
-    return _exchange_to_std[pair]
-
+    if pair in _exchange_to_std:
+        return _exchange_to_std[pair]
+    return None
 
 _channel_to_exchange = {'ticker': {'HITBTC': 'subscribeTicker'},
                         'book': {'HITBTC': 'subscribeOrderbook'},

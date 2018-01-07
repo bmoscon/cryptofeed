@@ -118,7 +118,7 @@ class Bitfinex(Feed):
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book'](self.book)
+        await self.callbacks['book'](feed='bitfinex', book=self.book)
 
     async def _raw_book(self, msg):
         chan_id = msg[0]
@@ -170,7 +170,7 @@ class Bitfinex(Feed):
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book'](self.book)
+        await self.callbacks['book'](feed='bitfinex', book=self.book)
 
     async def message_handler(self, msg):
         msg = json.loads(msg)
