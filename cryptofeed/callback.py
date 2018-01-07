@@ -39,12 +39,12 @@ class TickerCallback(Callback):
 
 
 class BookCallback(Callback):
-    async def __call__(self, book):
+    async def __call__(self, *, feed: str, book: dict):
         if self.is_async:
-            await self.callback(book)
+            await self.callback(feed, book)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, book)
+            await loop.run_in_executor(None, self.callback, feed, book)
 
 
 class VolumeCallback(Callback):

@@ -2354,7 +2354,10 @@ def pair_exchange_to_std(pair):
     return _exchange_to_std[pair]
 
 
-_channel_to_exchange = {'ticker': {'HITBTC': 'subscribeTicker'}}
+_channel_to_exchange = {'ticker': {'HITBTC': 'subscribeTicker'},
+                        'book': {'HITBTC': 'subscribeOrderbook'},
+                        'trades': {'HITBTC': 'subscribeTrades'},
+                        }
 
 
 def std_channel_to_exchange(channel, exchange):
