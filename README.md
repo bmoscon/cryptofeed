@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.org/bmoscon/cryptofeed)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
 
-Handles multiple feeds and return normalized and standardized results across exchanges to client registered callbacks for events like trades, book updates, ticker updates, etc.
+Handles multiple feeds and returns normalized and standardized results across exchanges to client registered callbacks for events like trades, book updates, ticker updates, etc.
 
 
 ```python
@@ -53,3 +53,18 @@ fh = FeedHandler()
 fh.add_nbbo([GDAX, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
 fh.run()
 ```
+
+# Planned Work
+
+### Future Feeds
+* CEX
+* Bitstamp
+* Bitmex
+* BTCC
+* Many more...
+
+### REST API Support
+Some feeds do not support websocket. A framework for supporting non websocket feeds is planned.
+
+### DB Plugins
+Support for registering databases and writing directly to them via the handler (as opposed to client provided callbacks).
