@@ -57,6 +57,7 @@ fh.run()
 # Planned Work
 
 ### Future Feeds
+* EXX
 * CEX
 * Bitstamp
 * Bitmex
