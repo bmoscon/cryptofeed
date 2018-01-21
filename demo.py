@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
-from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini, HitBTC, EXX, Bitstamp
+from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp
 
 
 # Examples of some handlers for different updates. These currently don't do much.
