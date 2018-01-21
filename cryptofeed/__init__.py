@@ -9,6 +9,5 @@ from cryptofeed.bitfinex import Bitfinex
 from cryptofeed.gdax import GDAX
 from cryptofeed.gemini import Gemini
 from cryptofeed.hitbtc import HitBTC
-from cryptofeed.exx import EXX
 from cryptofeed.bitstamp import Bitstamp
 from cryptofeed.feedhandler import FeedHandler
