@@ -2348,7 +2348,13 @@ _exchange_to_std = {
 
 def pair_std_to_exchange(pair, exchange):
     if pair in _std_trading_pairs:
-        return _std_trading_pairs[pair][exchange]
+        try:
+            return _std_trading_pairs[pair][exchange]
+        except KeyError as e:
+            raise KeyError("{} is not configured/availble for {}".format(
+                pair,
+                exchange
+            ))
     else:
         return None
 
