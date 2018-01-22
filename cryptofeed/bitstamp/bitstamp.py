@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
+from cryptofeed.standards import pair_exchange_to_std, std_channel_to_exchange, pair_std_to_exchange
 
 
 class Bitstamp(Feed):
@@ -29,15 +30,57 @@ class Bitstamp(Feed):
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]
+    
+    async def _trades(self, msg):
+        data = msg['data']
+        chan = msg['channel']
+        pair = None
+        if chan == 'live_trades':
+            pair = 'BTC-USD'
+        else:
+            pair = pair_exchange_to_std(chan.split('_')[-1])
+
+        side = 'BUY' if data['type'] == 0 else 'SELL'
+        amount = Decimal(data['amount'])
+        price = Decimal(data['price'])
+        await self.callbacks['trades'](feed='bitstamp',
+                                       pair=pair,
+                                       side=side,
+                                       amount=amount,
+                                       price=price)
 
     async def message_handler(self, msg):
-        print(msg)
+        # for some reason the internal parts of the message
+        # are formatted in such a way that it wont parse from
+        # string to json without stripping some extra quotes and
+        # slashes
+        msg = msg.replace("\\", '')
+        msg = msg.replace("\"{", "{")
+        msg = msg.replace("}\"", "}")
+        msg = json.loads(msg)
+        if 'pusher' in msg['event']:
+            if msg['event'] == 'pusher:connection_established':
+                pass
+            elif msg['event'] == 'pusher_internal:subscription_succeeded':
+                pass
+            else:
+                print("Unexpected pusher message {}".format(msg))
+        elif msg['event'] == 'trade':
+            await self._trades(msg)
+        else:
+            print('Invalid message type {}'.format(msg))
+
+
 
     async def subscribe(self, websocket):
-        await websocket.send(
-            json.dumps({
-                "event": "pusher:subscribe",
-                "data": {
-                    "channel": "live_trades"
-                }
-            }))
+        for channel in self.channels:
+            channel = std_channel_to_exchange(channel, 'BITSTAMP')
+            for pair in self.pairs:
+                pair = pair_std_to_exchange(pair, 'BITSTAMP')
+                await websocket.send(
+                    json.dumps({
+                        "event": "pusher:subscribe",
+                        "data": {
+                            "channel": "{}_{}".format(channel, pair) if pair != 'btcusd' else channel
+                        }
+                    }))
