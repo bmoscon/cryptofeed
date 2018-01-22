@@ -10,7 +10,8 @@ _std_trading_pairs = {
         'GDAX': 'BTC-USD',
         'BITFINEX': 'tBTCUSD',
         'GEMINI': 'BTCUSD',
-        'HITBTC': 'BTCUSD'
+        'HITBTC': 'BTCUSD',
+        'BITSTAMP': 'btcusd'
     },
     'ETH-USD': {
         'GEMINI': 'ETHUSD',
@@ -2343,6 +2344,22 @@ _exchange_to_std = {
     'EBETETH': 'EBET-ETH',
     'VENUSD': 'VEN-USD',
     'EOSETH': 'EOS-ETH',
+    # Bitstamp
+    'btcusd': 'BTC-USD',
+    'btceur': 'BTC-EUR',
+    'eurusd': 'EUR-USD',
+    'xrpusd': 'XRP-USD',
+    'xrpeur': 'XRP-EUR',
+    'xrpbtc': 'XRP-BTC',
+    'ltcusd': 'LTC-USD',
+    'ltceur': 'LTC-EUR',
+    'ltcbtc': 'LTC-BTC',
+    'ethusd': 'ETH-USD',
+    'etheur': 'ETH-EUR',
+    'ethbtc': 'ETH-BTC',
+    'bchusd': 'BCH-USD',
+    'bcheur': 'BCH-EUR',
+    'bchbtc': 'BCH-BTC'
 }
 
 
@@ -2365,7 +2382,8 @@ def pair_exchange_to_std(pair):
 
 _channel_to_exchange = {'ticker': {'HITBTC': 'subscribeTicker'},
                         'book': {'HITBTC': 'subscribeOrderbook'},
-                        'trades': {'HITBTC': 'subscribeTrades'},
+                        'trades': {'HITBTC': 'subscribeTrades',
+                                   'BITSTAMP': 'live_trades'},
                         }
 
 
