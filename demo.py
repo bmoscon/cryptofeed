@@ -39,7 +39,7 @@ def main():
     # f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
     # f.add_feed(HitBTC(channels=['trades'], pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
     #f.add_feed(EXX())
-    f.add_feed(Bitstamp(channels=['trades'], pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
+    f.add_feed(Bitstamp(channels=['book'], pairs=['BTC-USD'], callbacks={'book': BookCallback(book)}))
     f.run()
 
 
