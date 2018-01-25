@@ -26,7 +26,6 @@ class GDAX(Feed):
         self.level2 = {}
         self.order_map = {}
         self.seq_no = {}
-        self.level2_book = {}
         self.callbacks = {'trades': Callback(None),
                           'ticker': Callback(None),
                           'book': Callback(None)}
@@ -56,21 +55,22 @@ class GDAX(Feed):
         # This will also be called when 'book' channels are enabled
 
         # TODO: Are we sure this is accurate? Wouldn't the level2 channel be better?
-        price = Decimal(msg['price'])
-        side = 'ask' if msg['side'] == 'sell' else 'bid'
-        size = Decimal(msg['size'])
-        pair = msg['product_id']
-        maker_order_id = msg['maker_order_id']
+        if self.book:
+            price = Decimal(msg['price'])
+            side = 'ask' if msg['side'] == 'sell' else 'bid'
+            size = Decimal(msg['size'])
+            pair = msg['product_id']
+            maker_order_id = msg['maker_order_id']
 
-        self.order_map[maker_order_id]['size'] -= size
-        if self.order_map[maker_order_id]['size'] <= 0:
-            del self.order_map[maker_order_id]
+            self.order_map[maker_order_id]['size'] -= size
+            if self.order_map[maker_order_id]['size'] <= 0:
+                del self.order_map[maker_order_id]
 
-        self.book[pair][side][price] -= size
-        if self.book[pair][side][price] == 0:
-            del self.book[pair][side][price]
+            self.book[pair][side][price] -= size
+            if self.book[pair][side][price] == 0:
+                del self.book[pair][side][price]
 
-        await self.callbacks['book'](feed='gdax', book=self.book)
+            await self.callbacks['book'](feed='gdax', book=self.book)
 
     async def _pair_level2_snapshot(self, msg):
         # using a dict here is a bit strange, we need to sort it to use it
