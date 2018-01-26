@@ -7,6 +7,8 @@ associated with this software.
 import json
 from decimal import Decimal
 
+from sortedcontainers import SortedDict as sd
+
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
@@ -60,7 +62,11 @@ class Bitfinex(Feed):
             else:
                 side = 'BUY'
             amount = abs(amount)
-            await self.callbacks['trades'](feed='bitfinex', pair=pair, side=side, amount=amount, price=price)
+            await self.callbacks['trades'](feed='bitfinex',
+                                           pair=pair,
+                                           side=side,
+                                           amount=Decimal(amount),
+                                           price=Decimal(price))
 
         if isinstance(msg[1], list):
             # snapshot
@@ -87,9 +93,9 @@ class Bitfinex(Feed):
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book
-                self.book[pair] = {'bid': {}, 'ask': {}}
+                self.book[pair] = {'bid': sd(), 'ask': sd()}
                 for update in msg[1]:
-                    price, count, amount = update
+                    price, count, amount = [Decimal(x) for x in update]
                     if amount > 0:
                         side = 'bid'
                     else:
@@ -98,7 +104,7 @@ class Bitfinex(Feed):
                     self.book[pair][side][price] = {'count': count, 'amount': amount}
             else:
                 # book update
-                price, count, amount = msg[1]
+                price, count, amount = [Decimal(x) for x in msg[1]]
 
                 if amount > 0:
                     side = 'bid'
@@ -108,8 +114,6 @@ class Bitfinex(Feed):
 
                 if count > 0:
                     # change at price level
-                    if price in self.book[pair][side]:
-                        print(self.book[pair][side][price])
                     self.book[pair][side][price] = {'count': count, 'amount': amount}
                 else:
                     # remove price level
@@ -128,14 +132,18 @@ class Bitfinex(Feed):
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book
-                self.book[pair] = {'bid': {}, 'ask': {}}
+                self.book[pair] = {'bid': sd(), 'ask': sd()}
                 for update in msg[1]:
                     order_id, price, amount = update
+                    price = Decimal(price)
+                    amount = Decimal(amount)
+
                     if amount > 0:
                         side = 'bid'
                     else:
                         side = 'ask'
                         amount = abs(amount)
+
                     if price not in self.book[pair][side]:
                         self.book[pair][side][price] = {'count': 1, 'amount': amount}
                         self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
@@ -145,7 +153,7 @@ class Bitfinex(Feed):
                         self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
             else:
                 # book update
-                order_id, price, amount = msg[1]
+                order_id, price, amount = [Decimal(x) for x in msg[1]]
 
                 if amount > 0:
                     side = 'bid'
@@ -180,7 +188,8 @@ class Bitfinex(Feed):
                 await self.channel_map[chan_id]['handler'](msg)
             else:
                 print("Unexpected message on unregistered channel {}".format(msg))
-
+        elif 'event' in msg and msg['event'] == 'error':
+            print("Error: {}".format(msg['msg']))
         elif 'chanId' in msg and 'symbol' in msg:
             handler = None
             if msg['channel'] == 'ticker':

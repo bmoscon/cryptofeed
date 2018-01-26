@@ -10,47 +10,56 @@ _std_trading_pairs = {
         'GDAX': 'BTC-USD',
         'BITFINEX': 'tBTCUSD',
         'GEMINI': 'BTCUSD',
-        'HITBTC': 'BTCUSD'
+        'HITBTC': 'BTCUSD',
+        'BITSTAMP': 'btcusd'
     },
     'ETH-USD': {
         'GEMINI': 'ETHUSD',
         'GDAX': 'ETH-USD',
         'BITFINEX': 'tETHUSD',
-        'HITBTC': 'ETHUSD'
+        'HITBTC': 'ETHUSD',
+        'BITSTAMP': 'ethusd'
     },
     'ETH-BTC': {
         'GEMINI': 'ETHBTC',
         'GDAX': 'ETH-BTC',
         'BITFINEX': 'tETHBTC',
-        'HITBTC': 'ETHBTC'
+        'HITBTC': 'ETHBTC',
+        'BITSTAMP': 'ethbtc'
     },
     'BCH-USD': {
         'GDAX': 'BCH-USD',
         'BITFINEX': 'tBCHUSD',
-        'HITBTC': 'BCHUSD'
+        'HITBTC': 'BCHUSD',
+        'BITSTAMP': 'bchusd'
     },
     'LTC-EUR': {
-        'GDAX': 'LTC-EUR'
+        'GDAX': 'LTC-EUR',
+        'BITSTAMP': 'ltceur'
     },
     'LTC-USD': {
         'GDAX': 'LTC-USD',
         'BITFINEX': 'tLTCUSD',
-        'HITBTC': 'LTCUSD'
+        'HITBTC': 'LTCUSD',
+        'BITSTAMP': 'ltcusd'
     },
     'LTC-BTC': {
         'GDAX': 'LTC-BTC',
         'BITFINEX': 'tLTCBTC',
-        'HITBTC': 'LTCBTC'
+        'HITBTC': 'LTCBTC',
+        'BITSTAMP': 'ltcbtc'
     },
     'ETH-EUR': {
-        'GDAX': 'ETH-EUR'
+        'GDAX': 'ETH-EUR',
+        'BITSTAMP': 'etheur'
     },
     'BTC-GBP': {
         'GDAX': 'BTC-GBP'
     },
     'BTC-EUR': {
         'GDAX': 'BTC-EUR',
-        'BITFINEX': 'tBTCEUR'
+        'BITFINEX': 'tBTCEUR',
+        'BITSTAMP': 'btceur'
     },
     'BTC-BCN': {
         'POLONIEX': 'BTC_BCN'
@@ -399,7 +408,8 @@ _std_trading_pairs = {
     },
     'BCH-BTC': {
         'BITFINEX': 'tBCHBTC',
-        'HITBTC': 'BCHBTC'
+        'HITBTC': 'BCHBTC',
+        'BITSTAMP': 'bchbtc'
     },
     'NEO-USD': {
         'BITFINEX': 'tNEOUSD',
@@ -429,13 +439,15 @@ _std_trading_pairs = {
     },
     'XRP-BTC': {
         'BITFINEX': 'tXRPBTC',
-        'HITBTC': 'XRPBTC'
+        'HITBTC': 'XRPBTC',
+        'BITSTAMP': 'xrpbtc'
     },
     'AVT-USD': {
         'BITFINEX': 'tAVTUSD'
     },
     'XRP-USD': {
-        'BITFINEX': 'tXRPUSD'
+        'BITFINEX': 'tXRPUSD',
+        'BITSTAMP': 'xrpusd'
     },
     'XMR-BTC': {
         'BITFINEX': 'tXMRBTC',
@@ -1731,6 +1743,15 @@ _std_trading_pairs = {
     'VEN-USD': {
         'HITBTC': 'VENUSD'
     },
+    'EUR-USD': {
+        'BITSTAMP': 'eurusd'
+    },
+    'XRP-EUR': {
+        'BITSTAMP': 'xrpeur'
+    },
+    'BCH-EUR': {
+        'BITSTAMP': 'bcheur'
+    }
 }
 
 _exchange_to_std = {
@@ -2343,6 +2364,22 @@ _exchange_to_std = {
     'EBETETH': 'EBET-ETH',
     'VENUSD': 'VEN-USD',
     'EOSETH': 'EOS-ETH',
+    # Bitstamp
+    'btcusd': 'BTC-USD',
+    'btceur': 'BTC-EUR',
+    'eurusd': 'EUR-USD',
+    'xrpusd': 'XRP-USD',
+    'xrpeur': 'XRP-EUR',
+    'xrpbtc': 'XRP-BTC',
+    'ltcusd': 'LTC-USD',
+    'ltceur': 'LTC-EUR',
+    'ltcbtc': 'LTC-BTC',
+    'ethusd': 'ETH-USD',
+    'etheur': 'ETH-EUR',
+    'ethbtc': 'ETH-BTC',
+    'bchusd': 'BCH-USD',
+    'bcheur': 'BCH-EUR',
+    'bchbtc': 'BCH-BTC'
 }
 
 
@@ -2352,21 +2389,30 @@ def pair_std_to_exchange(pair, exchange):
             return _std_trading_pairs[pair][exchange]
         except KeyError as e:
             raise KeyError("{} is not configured/availble for {}".format(
-                pair,
-                exchange
-            ))
+                pair, exchange))
     else:
         return None
+
 
 def pair_exchange_to_std(pair):
     if pair in _exchange_to_std:
         return _exchange_to_std[pair]
     return None
 
-_channel_to_exchange = {'ticker': {'HITBTC': 'subscribeTicker'},
-                        'book': {'HITBTC': 'subscribeOrderbook'},
-                        'trades': {'HITBTC': 'subscribeTrades'},
-                        }
+
+_channel_to_exchange = {
+    'ticker': {
+        'HITBTC': 'subscribeTicker'
+    },
+    'book': {
+        'HITBTC': 'subscribeOrderbook',
+        'BITSTAMP': 'diff_order_book'
+    },
+    'trades': {
+        'HITBTC': 'subscribeTrades',
+        'BITSTAMP': 'live_trades'
+    },
+}
 
 
 def std_channel_to_exchange(channel, exchange):

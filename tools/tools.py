@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from urllib.request import urlopen
+import requests
 import json
 
 
@@ -43,6 +44,7 @@ def gdax_get_trading_pairs():
             print("'" + pair['id'] +"',",)
         print("]")
 
+
 def hitbtc_get_trading_pairs():
     with urlopen('https://api.hitbtc.com/api/2/public/symbol') as url:
         data = json.loads(url.read().decode())
@@ -51,6 +53,21 @@ def hitbtc_get_trading_pairs():
             print("'" + pair['id'] +"',",)
         print("]")
 
+def cex_get_trading_pairs():
+    r = requests.get('https://cex.io/api/currency_limits')
+    print("[")
+    for data in r.json()['data']['pairs']:
+        print("'{}-{}',".format(data['symbol1'], data['symbol2']))
+    print("]")
+
+
+def exx_get_trading_pairs():
+    r = requests.get('https://api.exx.com/data/v1/tickers')
+    print("[")
+    for key in r.json():
+        print("'{}',".format(key))
+    print("]")
+
 
 if __name__ == '__main__':
-    hitbtc_get_trading_pairs()
+    exx_get_trading_pairs()
