@@ -17,41 +17,49 @@ _std_trading_pairs = {
         'GEMINI': 'ETHUSD',
         'GDAX': 'ETH-USD',
         'BITFINEX': 'tETHUSD',
-        'HITBTC': 'ETHUSD'
+        'HITBTC': 'ETHUSD',
+        'BITSTAMP': 'ethusd'
     },
     'ETH-BTC': {
         'GEMINI': 'ETHBTC',
         'GDAX': 'ETH-BTC',
         'BITFINEX': 'tETHBTC',
-        'HITBTC': 'ETHBTC'
+        'HITBTC': 'ETHBTC',
+        'BITSTAMP': 'ethbtc'
     },
     'BCH-USD': {
         'GDAX': 'BCH-USD',
         'BITFINEX': 'tBCHUSD',
-        'HITBTC': 'BCHUSD'
+        'HITBTC': 'BCHUSD',
+        'BITSTAMP': 'bchusd'
     },
     'LTC-EUR': {
-        'GDAX': 'LTC-EUR'
+        'GDAX': 'LTC-EUR',
+        'BITSTAMP': 'ltceur'
     },
     'LTC-USD': {
         'GDAX': 'LTC-USD',
         'BITFINEX': 'tLTCUSD',
-        'HITBTC': 'LTCUSD'
+        'HITBTC': 'LTCUSD',
+        'BITSTAMP': 'ltcusd'
     },
     'LTC-BTC': {
         'GDAX': 'LTC-BTC',
         'BITFINEX': 'tLTCBTC',
-        'HITBTC': 'LTCBTC'
+        'HITBTC': 'LTCBTC',
+        'BITSTAMP': 'ltcbtc'
     },
     'ETH-EUR': {
-        'GDAX': 'ETH-EUR'
+        'GDAX': 'ETH-EUR',
+        'BITSTAMP': 'etheur'
     },
     'BTC-GBP': {
         'GDAX': 'BTC-GBP'
     },
     'BTC-EUR': {
         'GDAX': 'BTC-EUR',
-        'BITFINEX': 'tBTCEUR'
+        'BITFINEX': 'tBTCEUR',
+        'BITSTAMP': 'btceur'
     },
     'BTC-BCN': {
         'POLONIEX': 'BTC_BCN'
@@ -400,7 +408,8 @@ _std_trading_pairs = {
     },
     'BCH-BTC': {
         'BITFINEX': 'tBCHBTC',
-        'HITBTC': 'BCHBTC'
+        'HITBTC': 'BCHBTC',
+        'BITSTAMP': 'bchbtc'
     },
     'NEO-USD': {
         'BITFINEX': 'tNEOUSD',
@@ -430,13 +439,15 @@ _std_trading_pairs = {
     },
     'XRP-BTC': {
         'BITFINEX': 'tXRPBTC',
-        'HITBTC': 'XRPBTC'
+        'HITBTC': 'XRPBTC',
+        'BITSTAMP': 'xrpbtc'
     },
     'AVT-USD': {
         'BITFINEX': 'tAVTUSD'
     },
     'XRP-USD': {
-        'BITFINEX': 'tXRPUSD'
+        'BITFINEX': 'tXRPUSD',
+        'BITSTAMP': 'xrpusd'
     },
     'XMR-BTC': {
         'BITFINEX': 'tXMRBTC',
@@ -1732,6 +1743,15 @@ _std_trading_pairs = {
     'VEN-USD': {
         'HITBTC': 'VENUSD'
     },
+    'EUR-USD': {
+        'BITSTAMP': 'eurusd'
+    },
+    'XRP-EUR': {
+        'BITSTAMP': 'xrpeur'
+    },
+    'BCH-EUR': {
+        'BITSTAMP': 'bcheur'
+    }
 }
 
 _exchange_to_std = {

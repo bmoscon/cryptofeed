@@ -10,6 +10,7 @@ from cryptofeed.poloniex.pairs import poloniex_trading_pairs
 from cryptofeed.bitfinex.pairs import bitfinex_trading_pairs
 from cryptofeed.gemini.pairs import gemini_trading_pairs
 from cryptofeed.hitbtc.pairs import hitbtc_trading_pairs
+from cryptofeed.bitstamp.pairs import bitstamp_trading_pairs
 
 
 def test_gdax_pair_conversions():
@@ -39,3 +40,9 @@ def test_gemini_pair_conversions():
     for pair in gemini_trading_pairs:
         std = pair_exchange_to_std(pair)
         assert(pair == pair_std_to_exchange(std, 'GEMINI'))
+
+
+def test_bitstamp_pair_conversions():
+    for pair in bitstamp_trading_pairs:
+        std = pair_exchange_to_std(pair)
+        assert(pair == pair_std_to_exchange(std, 'BITSTAMP'))
