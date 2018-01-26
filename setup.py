@@ -37,5 +37,6 @@ setup(
     tests_require=["pytest"],
     setup_requires=["requests",
                     "websockets",
+                    "sortedcontainers"
                    ],
 )
