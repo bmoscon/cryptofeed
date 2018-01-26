@@ -9,6 +9,7 @@ import asyncio
 from decimal import Decimal
 
 import requests
+from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
@@ -51,7 +52,7 @@ class Bitstamp(Feed):
 
         for res, pair in zip(results, self.pairs):
             orders = res.json()
-            self.book[pair] = {'bid': {}, 'ask': {}}
+            self.book[pair] = {'bid': sd(), 'ask': sd()}
             self.seq_no[pair] = orders['timestamp']
             for side in ('bid', 'ask'):
                 for price, size in orders[side+'s']:
