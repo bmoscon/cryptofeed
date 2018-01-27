@@ -17,9 +17,13 @@ from cryptofeed.callback import Callback
 class GDAX(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None):
         super(GDAX, self).__init__('wss://ws-feed.gdax.com')
-        self.channels = channels
+        self.user_channels = channels
+        # user ticker channel for trades and match for book
+        channels_map = {'trades': 'ticker', 'book': 'level2'}
+        self.channels = [channels_map.get(c, c) for c in channels]
         self.pairs = pairs
         self.book = {}
+        self.level2 = {}
         self.order_map = {}
         self.seq_no = {}
         self.callbacks = {'trades': Callback(None),
@@ -30,21 +34,28 @@ class GDAX(Feed):
                 self.callbacks[cb] = callbacks[cb]
 
     async def _ticker(self, msg):
-        await self.callbacks['ticker'](feed='gdax',
-                                       pair=msg['product_id'],
-                                       bid=Decimal(msg['best_bid']),
-                                       ask=Decimal(msg['best_ask']))
+        if 'ticker' in self.user_channels:
+            await self.callbacks['ticker'](feed='gdax',
+                                           pair=msg['product_id'],
+                                           bid=Decimal(msg['best_bid']),
+                                           ask=Decimal(msg['best_ask']))
 
-    async def _trades(self, msg):
+    async def _agg_trades(self, msg):
+        if 'trades' in self.user_channels and 'side' in msg:
+            await self.callbacks['trades'](
+                feed='gdax',
+                pair=msg['product_id'],
+                side=msg['side'], # I assume we always want the taker side?
+                amount=msg['last_size'],
+                price=msg['price']
+            )
+
+    async def _book_update(self, msg):
         # GDAX calls this 'match'
         # This will also be called when 'book' channels are enabled
-        if self.book == {}:
-            await self.callbacks['trades'](feed='gdax',
-                                           pair=msg['product_id'],
-                                           side=msg['side'],
-                                           amount=msg['size'],
-                                           price=msg['price'])
-        else:
+
+        # TODO: Are we sure this is accurate? Wouldn't the level2 channel be better?
+        if self.book:
             price = Decimal(msg['price'])
             side = 'ask' if msg['side'] == 'sell' else 'bid'
             size = Decimal(msg['size'])
@@ -60,6 +71,34 @@ class GDAX(Feed):
                 del self.book[pair][side][price]
 
             await self.callbacks['book'](feed='gdax', book=self.book)
+
+    async def _pair_level2_snapshot(self, msg):
+        # using a dict here is a bit strange, we need to sort it to use it
+        # not that the count is not relevant here as we don't get updates about it
+        self.level2[msg['product_id']] = {
+            'bid': {
+                float(price): {'count': None, 'amount': amount}
+                for price, amount in msg['bids']
+            },
+            'ask': {
+                float(price): {'count': None, 'amount': amount}
+                for price, amount in msg['asks']
+            }
+        }
+
+    async def _pair_level2_update(self, msg):
+        for side, price, amount in msg['changes']:
+            bidask =  self.level2[msg['product_id']]['bid' if side == 'buy' else 'ask']
+            price = float(price)
+
+            if amount == "0":
+                if price in bidask:
+                    del bidask[price]
+            else:
+                bidask.setdefault(price, {})['amount'] = float(amount)
+
+        # Note having the book by pair would be more efficient
+        await self.callbacks['book'](feed='gdax', book=self.level2)
 
     async def _book_snapshot(self):
         self.book = {}
@@ -148,9 +187,13 @@ class GDAX(Feed):
 
         if 'type' in msg:
             if msg['type'] == 'ticker':
-                await self._ticker(msg)
+                await asyncio.gather(self._ticker(msg), self._agg_trades(msg))
             elif msg['type'] == 'match' or msg['type'] == 'last_match':
-                await self._trades(msg)
+                await self._book_update(msg)
+            elif msg['type'] == 'snapshot':
+                await self._pair_level2_snapshot(msg)
+            elif msg['type'] == 'l2update':
+                await self._pair_level2_update(msg)
             elif msg['type'] == 'open':
                 await self._open(msg)
             elif msg['type'] == 'done':
