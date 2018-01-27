@@ -10,15 +10,16 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.callback import Callback
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.feeds import TICKER, TRADES, L3_BOOK
+from cryptofeed.exchanges import BITFINEX
+from cryptofeed.standards import pair_exchange_to_std
 
 
 class Bitfinex(Feed):
+    id = BITFINEX
+
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2')
-        self.pairs = [pair_std_to_exchange(pair, 'BITFINEX') for pair in pairs]
-        self.channels = channels
+        super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks)
         '''
         maps channel id (int) to a dict of
            symbol: channel's currency
@@ -26,13 +27,7 @@ class Bitfinex(Feed):
            handler: the handler for this channel type
         '''
         self.channel_map = {}
-        self.book = {}
         self.order_map = {}
-        self.callbacks = {'trades': Callback(None), 'ticker': Callback(None), 'book': Callback(None)}
-
-        if callbacks:
-            for cb in callbacks:
-                self.callbacks[cb] = callbacks[cb]
 
     async def _ticker(self, msg):
         chan_id = msg[0]
@@ -45,10 +40,10 @@ class Bitfinex(Feed):
             bid, _, ask, _, _, _, _, _, _, _ = msg[1]
             pair = self.channel_map[chan_id]['symbol']
             pair = pair_exchange_to_std(pair)
-            await self.callbacks['ticker'](feed='bitfinex',
-                                           pair=pair,
-                                           bid=Decimal(bid),
-                                           ask=Decimal(ask))
+            await self.callbacks[TICKER](feed=self.id,
+                                         pair=pair,
+                                         bid=Decimal(bid),
+                                         ask=Decimal(ask))
 
     async def _trades(self, msg):
         chan_id = msg[0]
@@ -62,11 +57,11 @@ class Bitfinex(Feed):
             else:
                 side = 'BUY'
             amount = abs(amount)
-            await self.callbacks['trades'](feed='bitfinex',
-                                           pair=pair,
-                                           side=side,
-                                           amount=Decimal(amount),
-                                           price=Decimal(price))
+            await self.callbacks[TRADES](feed=self.id,
+                                         pair=pair,
+                                         side=side,
+                                         amount=Decimal(amount),
+                                         price=Decimal(price))
 
         if isinstance(msg[1], list):
             # snapshot
@@ -122,7 +117,7 @@ class Bitfinex(Feed):
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book'](feed='bitfinex', book=self.book)
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
     async def _raw_book(self, msg):
         chan_id = msg[0]
@@ -178,7 +173,7 @@ class Bitfinex(Feed):
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book'](feed='bitfinex', book=self.book)
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
     async def message_handler(self, msg):
         msg = json.loads(msg)

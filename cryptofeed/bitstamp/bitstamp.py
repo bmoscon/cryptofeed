@@ -11,12 +11,15 @@ from decimal import Decimal
 import requests
 from sortedcontainers import SortedDict as sd
 
+from cryptofeed.exchanges import BITSTAMP
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_exchange_to_std, std_channel_to_exchange, pair_std_to_exchange
 
 
 class Bitstamp(Feed):
+    id = BITSTAMP
+
     def __init__(self, pairs=None, channels=None, callbacks=None):
         super(Bitstamp, self).__init__(
             'wss://ws.pusherapp.com/app/de504dc5763aeef9ff52?protocol=7&client=js&version=2.1.6&flash=false'
@@ -42,7 +45,7 @@ class Bitstamp(Feed):
         loop = asyncio.get_event_loop()
         btc_usd_url = 'https://www.bitstamp.net/api/order_book/'
         url = 'https://www.bitstamp.net/api/v2/order_book/{}/'
-        pairs =  [pair_std_to_exchange(pair, 'BITSTAMP') for pair in self.pairs]
+        pairs =  [pair_std_to_exchange(pair, self.id) for pair in self.pairs]
         futures = [loop.run_in_executor(None, requests.get, url.format(pair) if pair != 'BTC-USD' else btc_usd_url) for pair in pairs]
 
         results = []
@@ -91,7 +94,7 @@ class Bitstamp(Feed):
                         del self.book[pair][side][price]
                 else:
                     self.book[pair][side][price] = size
-        await self.callbacks['book'](feed='bitstamp', book=self.book)
+        await self.callbacks['book'](feed=self.id, book=self.book)
 
     async def _trades(self, msg):
         data = msg['data']
@@ -105,7 +108,7 @@ class Bitstamp(Feed):
         side = 'BUY' if data['type'] == 0 else 'SELL'
         amount = Decimal(data['amount'])
         price = Decimal(data['price'])
-        await self.callbacks['trades'](feed='bitstamp',
+        await self.callbacks['trades'](feed=self.id,
                                        pair=pair,
                                        side=side,
                                        amount=amount,
@@ -140,9 +143,9 @@ class Bitstamp(Feed):
         # then process the updates from the diff channel, ignoring any updates that
         # are pre-timestamp on the response from the REST endpoint
         for channel in self.channels:
-            channel = std_channel_to_exchange(channel, 'BITSTAMP')
+            channel = std_channel_to_exchange(channel, self.id)
             for pair in self.pairs:
-                pair = pair_std_to_exchange(pair, 'BITSTAMP')
+                pair = pair_std_to_exchange(pair, self.id)
                 await websocket.send(
                     json.dumps({
                         "event": "pusher:subscribe",
