@@ -7,6 +7,8 @@ associated with this software.
 import json
 from decimal import Decimal
 
+from sortedcontainers import SortedDict as sd
+
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
@@ -20,7 +22,7 @@ class Gemini(Feed):
             raise ValueError("Gemini does not support different channels")
         self.pair = pairs[0]
         super(Gemini, self).__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'))
-        self.book = {self.pair: {'bid': {}, 'ask': {}}}
+        self.book = {self.pair: {'bid': sd(), 'ask': sd()}}
         self.callbacks = {'trades': Callback(None),
                           'book': Callback(None)}
         if callbacks:

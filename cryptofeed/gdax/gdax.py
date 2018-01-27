@@ -9,6 +9,7 @@ import json
 from decimal import Decimal
 
 import requests
+from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
@@ -76,14 +77,14 @@ class GDAX(Feed):
         # using a dict here is a bit strange, we need to sort it to use it
         # not that the count is not relevant here as we don't get updates about it
         self.level2[msg['product_id']] = {
-            'bid': {
+            'bid': sd({
                 float(price): {'count': None, 'amount': amount}
                 for price, amount in msg['bids']
-            },
-            'ask': {
+            }),
+            'ask': sd({
                 float(price): {'count': None, 'amount': amount}
                 for price, amount in msg['asks']
-            }
+            })
         }
 
     async def _pair_level2_update(self, msg):
@@ -113,7 +114,7 @@ class GDAX(Feed):
 
         for res, pair in zip(results, self.pairs):
             orders = res.json()
-            self.book[pair] = {'bid': {}, 'ask': {}}
+            self.book[pair] = {'bid': sd(), 'ask': sd()}
             self.seq_no[pair] = orders['sequence']
             for side in ('bid', 'ask'):
                 for price, size, order_id in orders[side+'s']:
