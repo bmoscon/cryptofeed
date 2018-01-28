@@ -7,7 +7,8 @@ associated with this software.
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
 from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp
-from cryptofeed.feeds import L3_BOOK
+from cryptofeed.defines import L3_BOOK, BID, ASK
+
 
 # Examples of some handlers for different updates. These currently don't do much.
 # Handlers should conform to the patterns/signatures in callback.py
@@ -23,7 +24,7 @@ async def trade(feed, pair, side, amount, price):
 
 
 async def book(feed, pair, book):
-        print('feed {} pair {} book bid size is {} ask size is {}'.format(feed, pair, len(book['bid']), len(book['ask'])))
+        print('feed {} pair {} book bid size is {} ask size is {}'.format(feed, pair, len(book[BID]), len(book[ASK])))
 
 
 def main():

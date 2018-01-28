@@ -1,11 +1,8 @@
 
 from cryptofeed.exchanges import BITFINEX
+from cryptofeed.defines import L2_BOOK, L3_BOOK, TRADES, TICKER
 
-L2_BOOK = 'l2_book'
-L3_BOOK = 'l3_book'
-TRADES = 'trades'
-TICKER = 'ticker'
-UNSUPPORTED = 'unsupported'
+
 
 
 _exchange_to_feed_map = {

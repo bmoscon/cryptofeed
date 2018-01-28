@@ -7,33 +7,33 @@ associated with this software.
 import json
 from decimal import Decimal
 
+from sortedcontainers import SortedDict as sd
+
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
+from cryptofeed.exchanges import HITBTC
+from cryptofeed.defines import TICKER, L3_BOOK, TRADES, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, std_channel_to_exchange
 
 
 class HitBTC(Feed):
+    id = HITBTC
+
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(HitBTC, self).__init__('wss://api.hitbtc.com/api/2/ws')
-        self.pairs = pairs
-        self.channels = channels
-        self.book = {}
-        self.callbacks = {'trades': Callback(None),
-                          'ticker': Callback(None),
-                          'book': Callback(None)}
-        if callbacks:
-            for cb in callbacks:
-                self.callbacks[cb] = callbacks[cb]
+        super(HitBTC, self).__init__('wss://api.hitbtc.com/api/2/ws',
+                                     pairs=pairs,
+                                     channels=channels,
+                                     callbacks=callbacks)
 
     async def _ticker(self, msg):
-        await self.callbacks['ticker'](feed='hitbtc',
-                                       pair=pair_exchange_to_std(msg['symbol']),
-                                       bid=Decimal(msg['bid']),
-                                       ask=Decimal(msg['ask']))
+        await self.callbacks[TICKER](feed=self.id,
+                                     pair=pair_exchange_to_std(msg['symbol']),
+                                     bid=Decimal(msg['bid']),
+                                     ask=Decimal(msg['ask']))
     
     async def _book(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
-        for side in ('bid', 'ask'):
+        for side in (BID, ASK):
             for entry in msg[side]:
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
@@ -41,17 +41,17 @@ class HitBTC(Feed):
                     del self.book[pair][side][price]
                 else:
                     self.book[pair][side][price] = size
-        await self.callbacks['book'](feed='hitbtc', book=self.book)
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
     async def _snapshot(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
-        self.book[pair] = {'bid': {}, 'ask': {}}
-        for side in ('bid', 'ask'):
+        self.book[pair] = {ASK: sd(), BID: sd()}
+        for side in (BID, ASK):
             for entry in msg[side]:
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
                 self.book[pair][side][price] = size
-        await self.callbacks['book'](feed='hitbtc', book=self.book)
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
     async def _trades(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
@@ -59,11 +59,11 @@ class HitBTC(Feed):
             price = Decimal(update['price'])
             quantity = Decimal(update['quantity'])
             side = update['side']
-            await self.callbacks['trades'](feed='hitbtc',
-                                           pair=pair,
-                                           side=side,
-                                           amount=quantity,
-                                           price=price)
+            await self.callbacks[TRADES](feed=self.id,
+                                         pair=pair,
+                                         side=side,
+                                         amount=quantity,
+                                         price=price)
 
     async def message_handler(self, msg):
         msg = json.loads(msg)

@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.feeds import TICKER, TRADES, L3_BOOK
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK
 from cryptofeed.exchanges import BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
@@ -53,9 +53,9 @@ class Bitfinex(Feed):
             # trade id, timestamp, amount, price
             _, _, amount, price = trade
             if amount < 0:
-                side = 'SELL'
+                side = ASK
             else:
-                side = 'BUY'
+                side = BID
             amount = abs(amount)
             await self.callbacks[TRADES](feed=self.id,
                                          pair=pair,
@@ -88,28 +88,28 @@ class Bitfinex(Feed):
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book
-                self.book[pair] = {'bid': sd(), 'ask': sd()}
+                self.book[pair] = {BID: sd(), ASK: sd()}
                 for update in msg[1]:
-                    price, count, amount = [Decimal(x) for x in update]
+                    price, _, amount = [Decimal(x) for x in update]
                     if amount > 0:
-                        side = 'bid'
+                        side = BID
                     else:
-                        side = 'ask'
+                        side = ASK
                         amount = abs(amount)
-                    self.book[pair][side][price] = {'count': count, 'amount': amount}
+                    self.book[pair][side][price] = amount
             else:
                 # book update
                 price, count, amount = [Decimal(x) for x in msg[1]]
 
                 if amount > 0:
-                    side = 'bid'
+                    side = BID
                 else:
-                    side = 'ask'
+                    side = ASK
                     amount = abs(amount)
 
                 if count > 0:
                     # change at price level
-                    self.book[pair][side][price] = {'count': count, 'amount': amount}
+                    self.book[pair][side][price] = amount
                 else:
                     # remove price level
                     del self.book[pair][side][price]
@@ -127,48 +127,48 @@ class Bitfinex(Feed):
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book
-                self.book[pair] = {'bid': sd(), 'ask': sd()}
+                self.book[pair] = {BID: sd(), ASK: sd()}
                 for update in msg[1]:
                     order_id, price, amount = update
                     price = Decimal(price)
                     amount = Decimal(amount)
 
                     if amount > 0:
-                        side = 'bid'
+                        side = BID
                     else:
-                        side = 'ask'
+                        side = ASK
                         amount = abs(amount)
 
                     if price not in self.book[pair][side]:
-                        self.book[pair][side][price] = {'count': 1, 'amount': amount}
+                        self.book[pair][side][price] = amount
                         self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
                     else:
-                        self.book[pair][side][price]['count'] += 1
-                        self.book[pair][side][price]['amount'] += amount
+                        self.book[pair][side][price]
+                        self.book[pair][side][price] += amount
                         self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
             else:
                 # book update
                 order_id, price, amount = [Decimal(x) for x in msg[1]]
 
                 if amount > 0:
-                    side = 'bid'
+                    side = BID
                 else:
-                    side = 'ask'
+                    side = ASK
                     amount = abs(amount)
 
                 if price == 0:
                     price = self.order_map[order_id]['price']
-                    self.book[pair][side][price]['count'] -= 1
-                    if self.book[pair][side][price]['count'] == 0:
+                    self.book[pair][side][price] -= self.order_map[order_id]['amount']
+                    if self.book[pair][side][price] == 0:
                         del self.book[pair][side][price]
                     del self.order_map[order_id]
                 else:
                     self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
                     if price in self.book[pair][side]:
-                        self.book[pair][side][price]['count'] += 1
-                        self.book[pair][side][price]['amount'] += amount
+                        self.book[pair][side][price]
+                        self.book[pair][side][price] += amount
                     else:
-                        self.book[pair][side][price] = {'count': 1, 'amount': amount}
+                        self.book[pair][side][price] = amount
         elif msg[1] == 'hb':
             pass
         else:
