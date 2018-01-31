@@ -77,19 +77,20 @@ class GDAX(Feed):
         # not that the count is not relevant here as we don't get updates about it
         self.level2[msg['product_id']] = {
             'bid': {
-                float(price): {'count': None, 'amount': amount}
+                Decimal(price): {'count': None, 'amount': Decimal(amount)}
                 for price, amount in msg['bids']
             },
             'ask': {
-                float(price): {'count': None, 'amount': amount}
+                Decimal(price): {'count': None, 'amount': Decimal(amount)}
                 for price, amount in msg['asks']
             }
         }
 
     async def _pair_level2_update(self, msg):
         for side, price, amount in msg['changes']:
-            bidask =  self.level2[msg['product_id']]['bid' if side == 'buy' else 'ask']
-            price = float(price)
+            price = Decimal(price)
+            amount = Decimal(amount)
+            bidask = self.level2[msg['product_id']]['bid' if side == 'buy' else 'ask']
 
             if amount == "0":
                 if price in bidask:
