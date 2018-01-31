@@ -7,6 +7,8 @@ associated with this software.
 import json
 from decimal import Decimal
 
+from sortedcontainers import SortedDict as sd
+
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, std_channel_to_exchange
@@ -45,7 +47,7 @@ class HitBTC(Feed):
 
     async def _snapshot(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
-        self.book[pair] = {'bid': {}, 'ask': {}}
+        self.book[pair] = {'bid': sd(), 'ask': sd()}
         for side in ('bid', 'ask'):
             for entry in msg[side]:
                 price = Decimal(entry['price'])

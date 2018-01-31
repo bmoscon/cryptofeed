@@ -7,6 +7,8 @@ associated with this software.
 import json
 from decimal import Decimal
 
+from sortedcontainers import SortedDict as sd
+
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
@@ -54,7 +56,7 @@ class Poloniex(Feed):
         if msg_type == 'i':
             pair = msg[0][1]['currencyPair']
             pair = pair_exchange_to_std(pair)
-            self.book[pair] = {'bid': {}, 'ask': {}}
+            self.book[pair] = {'bid': sd(), 'ask': sd()}
             # 0 is asks, 1 is bids
             order_book = msg[0][1]['orderBook']
             for key in order_book[0]:
