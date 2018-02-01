@@ -20,7 +20,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="0.8.0",
+    version="0.9.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description=("Cryptocurrency feed handler and synthetic NBBO feed"),
@@ -35,8 +35,9 @@ setup(
         "Programming Language :: Python :: 3.6",
     ],
     tests_require=["pytest"],
-    setup_requires=["requests",
-                    "websockets",
-                    "sortedcontainers"
-                   ],
+    install_requires=[
+        "requests>=2.18.4",
+        "websockets>=4.0.0",
+        "sortedcontainers>=1.5.9"
+    ],
 )

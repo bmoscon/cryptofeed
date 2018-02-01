@@ -29,7 +29,7 @@ async def book(feed, pair, book):
 
 def main():
     f = FeedHandler()
-    # f.add_feed(GDAX(pairs=['BTC-USD'], channels=['full'], callbacks={'book': BookCallback(book)}))
+    f.add_feed(GDAX(pairs=['BTC-USD'], channels=['full'], callbacks={'book': BookCallback(book)}))
     # f.add_feed(GDAX(pairs=['BTC-USD'], channels=['matches'], callbacks={'trades': TradeCallback(trade)}))
     # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['trades'], callbacks={'trades': TradeCallback(trade)}))
     # f.add_feed(Poloniex(channels=[1002], callbacks={'ticker': TickerCallback(ticker)}))
@@ -39,8 +39,9 @@ def main():
     # f.add_feed(Poloniex(channels=['USDT-BTC'], callbacks={'book': BookCallback(book), 'trades': TradeCallback(trade)}))
     # f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
     # f.add_feed(HitBTC(channels=['trades'], pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
+    # f.add_feed(HitBTC(channels=['book'], pairs=['BTC-USD'], callbacks={'book': BookCallback(book)}))
     # f.add_feed(EXX())
-    #f.add_feed(Bitstamp(channels=['book'], pairs=['BTC-USD'], callbacks={'book': BookCallback(book)}))
+    # f.add_feed(Bitstamp(channels=['book'], pairs=['BTC-USD'], callbacks={'book': BookCallback(book)}))
     f.run()
 
 

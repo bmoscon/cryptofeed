@@ -25,11 +25,13 @@ class Gemini(Feed):
         if channels is not None:
             raise ValueError("Gemini does not support different channels")
         self.pair = pairs[0]
+
         super(Gemini, self).__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'),
                                      pairs=None,
                                      channels=None,
                                      callbacks=callbacks)
         self.book = {BID: sd(), ASK: sd()}
+
 
     async def _book(self, msg):
         side = BID if msg['side'] == 'bid' else ASK
