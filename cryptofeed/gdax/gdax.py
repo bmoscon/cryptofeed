@@ -77,20 +77,24 @@ class GDAX(Feed):
         # using a dict here is a bit strange, we need to sort it to use it
         # not that the count is not relevant here as we don't get updates about it
         self.level2[msg['product_id']] = {
+            # TODO: Reversed ordering might be preferable for bids, as
+            # we was to compare the highest bid to the lowest ask.
+            # However it might not be intuitive
             'bid': sd({
-                float(price): {'count': None, 'amount': amount}
+                Decimal(price): {'count': None, 'amount': Decimal(amount)}
                 for price, amount in msg['bids']
             }),
             'ask': sd({
-                float(price): {'count': None, 'amount': amount}
+                Decimal(price): {'count': None, 'amount': Decimal(amount)}
                 for price, amount in msg['asks']
             })
         }
 
     async def _pair_level2_update(self, msg):
         for side, price, amount in msg['changes']:
-            bidask =  self.level2[msg['product_id']]['bid' if side == 'buy' else 'ask']
-            price = float(price)
+            price = Decimal(price)
+            amount = Decimal(amount)
+            bidask = self.level2[msg['product_id']]['bid' if side == 'buy' else 'ask']
 
             if amount == "0":
                 if price in bidask:
