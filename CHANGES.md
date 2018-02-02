@@ -1,8 +1,8 @@
 ## Changelog
 
 ### 0.9.2
-  * Bugfix: Change from float to decimal.Decimal in GDAX
-  * Feature: use sorted dictionaries for order books
+  * Bugfix #10: Change from float to decimal.Decimal in GDAX
+  * Feature #5: use sorted dictionaries for order books
 
 ### 0.9.1 (2018-01-27)
   * Bugfix #4: produce ticker from trades channel on GDAX
