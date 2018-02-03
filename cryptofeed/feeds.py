@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.exchanges import BITFINEX, POLONIEX
-from cryptofeed.defines import L2_BOOK, L3_BOOK, TRADES, TICKER, UNSUPPORTED
+from cryptofeed.defines import L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, UNSUPPORTED
 
 
 
