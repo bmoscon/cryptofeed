@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, feed_to_exchange
+from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, feed_to_exchange
 class Feed(object):
     id = 'NotImplemented'
 
@@ -14,11 +14,13 @@ class Feed(object):
         self.address = address
         self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
         self.channels = [feed_to_exchange(self.id, chan) for chan in channels]
-        self.book = {}
+        self.l3_book = {}
+        self.l2_book = {}
         self.callbacks = {TRADES: Callback(None),
                           TICKER: Callback(None),
                           L2_BOOK: Callback(None),
-                          L3_BOOK: Callback(None)}
+                          L3_BOOK: Callback(None),
+                          VOLUME: Callback(None)}
 
         if callbacks:
             for cb in callbacks:
