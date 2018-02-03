@@ -62,7 +62,7 @@ class GDAX(Feed):
             if self.book[pair][side][price] == 0:
                 del self.book[pair][side][price]
 
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair book=self.book[pair])
+            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
     async def _pair_level2_snapshot(self, msg):
         self.l2_book[msg['product_id']] = {
