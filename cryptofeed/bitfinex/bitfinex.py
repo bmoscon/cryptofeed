@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK
 from cryptofeed.exchanges import BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
