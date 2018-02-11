@@ -13,7 +13,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
 from cryptofeed.exchanges import HITBTC
 from cryptofeed.defines import TICKER, L3_BOOK, TRADES, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, std_channel_to_exchange
+from cryptofeed.standards import pair_exchange_to_std
 
 
 class HitBTC(Feed):
@@ -38,20 +38,20 @@ class HitBTC(Feed):
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
                 if size == 0:
-                    del self.book[pair][side][price]
+                    del self.l3_book[pair][side][price]
                 else:
-                    self.book[pair][side][price] = size
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+                    self.l3_book[pair][side][price] = size
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
 
     async def _snapshot(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
-        self.book[pair] = {ASK: sd(), BID: sd()}
+        self.l3_book[pair] = {ASK: sd(), BID: sd()}
         for side in (BID, ASK):
             for entry in msg[side]:
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
-                self.book[pair][side][price] = size
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+                self.l3_book[pair][side][price] = size
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
 
     async def _trades(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
@@ -89,9 +89,7 @@ class HitBTC(Feed):
 
     async def subscribe(self, websocket):
         for channel in self.channels:
-            channel = std_channel_to_exchange(channel, 'HITBTC')
             for pair in self.pairs:
-                pair = pair_std_to_exchange(pair, 'HITBTC')
                 await websocket.send(
                     json.dumps({
                         "method": channel,

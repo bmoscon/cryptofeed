@@ -9,12 +9,13 @@ from cryptofeed import GDAX, Bitfinex, HitBTC
 
 
 def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
-    print('Pair: {} Bid: {} Bid Feed: {} Ask: {} Ask Feed: {}'.format(pair, bid, bid_feed, ask, ask_feed))
+    print('Pair: {} Bid: {:.2f} Bid Feed: {} Ask: {:.2f} Ask Feed: {}'.format(pair, bid, bid_feed, ask, ask_feed))
 
 
 def main():
     f = FeedHandler()
-    f.add_nbbo([GDAX, HitBTC, Bitfinex], ['BTC-USD'], nbbo_ticker)
+    f.add_nbbo([GDAX, HitBTC, Bitfinex], 'BTC-USD', nbbo_ticker)
+    f.add_nbbo([GDAX, HitBTC, Bitfinex], 'ETH-USD', nbbo_ticker)
     f.run()
 
 if __name__ == '__main__':

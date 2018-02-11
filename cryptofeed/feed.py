@@ -12,8 +12,10 @@ class Feed(object):
 
     def __init__(self, address, pairs=None, channels=None, callbacks=None):
         self.address = address
-        self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
-        self.channels = [feed_to_exchange(self.id, chan) for chan in channels]
+        if pairs:
+            self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
+        if channels:
+            self.channels = [feed_to_exchange(self.id, chan) for chan in channels]
         self.l3_book = {}
         self.l2_book = {}
         self.callbacks = {TRADES: Callback(None),

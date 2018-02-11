@@ -15,7 +15,7 @@ from cryptofeed.exchanges import BITSTAMP
 from cryptofeed.feed import Feed
 from cryptofeed.defines import BID, ASK, TRADES, L3_BOOK
 from cryptofeed.callback import Callback
-from cryptofeed.standards import pair_exchange_to_std, std_channel_to_exchange, pair_std_to_exchange
+from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange
 
 
 class Bitstamp(Feed):
@@ -134,7 +134,6 @@ class Bitstamp(Feed):
         # then process the updates from the diff channel, ignoring any updates that
         # are pre-timestamp on the response from the REST endpoint
         for channel in self.channels:
-            channel = std_channel_to_exchange(channel, self.id)
             for pair in self.pairs:
                 pair = pair_std_to_exchange(pair, self.id)
                 await websocket.send(

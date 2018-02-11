@@ -13,18 +13,19 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
-from cryptofeed.exchanges import GDAX
+from cryptofeed.exchanges import GDAX as GDAX_ID
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER
 
 
 class GDAX(Feed):
-    id = GDAX
+    id = GDAX_ID
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
         super(GDAX, self).__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=None, callbacks=callbacks)
         self.user_channels = channels
         # user ticker channel for trades and match for book
-        channels_map = {'trades': 'ticker', 'book': 'level2'}
+        channels_map = {'trades': 'ticker', 'book': 'level2', 'full': 'full'}
+
         self.channels = [channels_map.get(c, c) for c in channels]
         self.order_map = {}
         self.seq_no = {}
@@ -80,7 +81,7 @@ class GDAX(Feed):
         for side, price, amount in msg['changes']:
             price = Decimal(price)
             amount = Decimal(amount)
-            bidask = self.level2[msg['product_id']][BID if side == 'buy' else ASK]
+            bidask = self.l2_book[msg['product_id']][BID if side == 'buy' else ASK]
 
             if amount == "0":
                 if price in bidask:
@@ -88,7 +89,7 @@ class GDAX(Feed):
             else:
                 bidask[price] = amount
 
-        await self.callbacks[L2_BOOK](self.id, pair=msg['product_id'], book=self.l2_book[pair])
+        await self.callbacks[L2_BOOK](feed=self.id, pair=msg['product_id'], book=self.l2_book[msg['product_id']])
 
     async def _book_snapshot(self):
         self.book = {}

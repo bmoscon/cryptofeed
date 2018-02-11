@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from decimal import Decimal
 
 from cryptofeed.callback import Callback
 
@@ -27,7 +28,7 @@ class NBBO(Callback):
 
         return self.bids[max_bid], self.asks[min_ask], max_bid, min_ask
 
-    async def __call__(self, *, feed: str, pair: str, bid:  float, ask: float):
+    async def __call__(self, *, feed: str, pair: str, bid:  Decimal, ask: Decimal):
         bid, ask, bid_feed, ask_feed = await self._update(feed, pair, bid, ask)
         if bid is None:
             return
