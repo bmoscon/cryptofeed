@@ -11,22 +11,19 @@ from cryptofeed.callback import Callback
 
 
 class NBBO(Callback):
-    def __init__(self, callback, pair):
-        self.bids = {}
-        self.asks = {}
-        self.pair = pair
+    def __init__(self, callback, pairs):
+        self.bids = {pair: {} for pair in pairs}
+        self.asks = {pair: {} for pair in pairs}
         super(NBBO, self).__init__(callback)
 
     async def _update(self, feed, pair, bid, ask):
-        if pair != self.pair:
-            return None, None, None, None
-        self.bids[feed] = bid
-        self.asks[feed] = ask
+        self.bids[pair][feed] = bid
+        self.asks[pair][feed] = ask
 
-        min_ask = min(self.bids, key=self.bids.get)
-        max_bid = max(self.asks, key=self.asks.get)
+        min_ask = min(self.bids[pair], key=self.bids[pair].get)
+        max_bid = max(self.asks[pair], key=self.asks[pair].get)
 
-        return self.bids[max_bid], self.asks[min_ask], max_bid, min_ask
+        return self.bids[pair][max_bid], self.asks[pair][min_ask], max_bid, min_ask
 
     async def __call__(self, *, feed: str, pair: str, bid:  Decimal, ask: Decimal):
         bid, ask, bid_feed, ask_feed = await self._update(feed, pair, bid, ask)

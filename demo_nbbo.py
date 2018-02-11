@@ -14,8 +14,7 @@ def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
 
 def main():
     f = FeedHandler()
-    f.add_nbbo([GDAX, HitBTC, Bitfinex], 'BTC-USD', nbbo_ticker)
-    f.add_nbbo([GDAX, HitBTC, Bitfinex], 'ETH-USD', nbbo_ticker)
+    f.add_nbbo([GDAX, HitBTC, Bitfinex], ['BTC-USD', 'ETH-USD'], nbbo_ticker)
     f.run()
 
 if __name__ == '__main__':

@@ -20,10 +20,10 @@ class FeedHandler(object):
     def add_feed(self, feed):
         self.feeds.append(feed)
 
-    def add_nbbo(self, feeds, pair, callback):
-        cb = NBBO(callback, pair)
+    def add_nbbo(self, feeds, pairs, callback):
+        cb = NBBO(callback, pairs)
         for feed in feeds:
-            self.add_feed(feed(channels=[TICKER], pairs=[pair], callbacks={TICKER: cb}))
+            self.add_feed(feed(channels=[TICKER], pairs=pairs, callbacks={TICKER: cb}))
 
     def run(self):
         if len(self.feeds) == 0:
