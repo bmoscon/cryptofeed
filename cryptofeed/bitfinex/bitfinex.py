@@ -10,15 +10,16 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.callback import Callback
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK
+from cryptofeed.exchanges import BITFINEX
+from cryptofeed.standards import pair_exchange_to_std
 
 
 class Bitfinex(Feed):
+    id = BITFINEX
+
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2')
-        self.pairs = [pair_std_to_exchange(pair, 'BITFINEX') for pair in pairs]
-        self.channels = channels
+        super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks)
         '''
         maps channel id (int) to a dict of
            symbol: channel's currency
@@ -26,13 +27,7 @@ class Bitfinex(Feed):
            handler: the handler for this channel type
         '''
         self.channel_map = {}
-        self.book = {}
         self.order_map = {}
-        self.callbacks = {'trades': Callback(None), 'ticker': Callback(None), 'book': Callback(None)}
-
-        if callbacks:
-            for cb in callbacks:
-                self.callbacks[cb] = callbacks[cb]
 
     async def _ticker(self, msg):
         chan_id = msg[0]
@@ -40,15 +35,15 @@ class Bitfinex(Feed):
             # ignore heartbeats
             pass
         else:
-            # bid, bid_ask, ask, ask_size, daily_change, daily_change_percent,
+            # bid, bid_size, ask, ask_size, daily_change, daily_change_percent,
             # last_price, volume, high, low
             bid, _, ask, _, _, _, _, _, _, _ = msg[1]
             pair = self.channel_map[chan_id]['symbol']
             pair = pair_exchange_to_std(pair)
-            await self.callbacks['ticker'](feed='bitfinex',
-                                           pair=pair,
-                                           bid=Decimal(bid),
-                                           ask=Decimal(ask))
+            await self.callbacks[TICKER](feed=self.id,
+                                         pair=pair,
+                                         bid=Decimal(bid),
+                                         ask=Decimal(ask))
 
     async def _trades(self, msg):
         chan_id = msg[0]
@@ -58,15 +53,15 @@ class Bitfinex(Feed):
             # trade id, timestamp, amount, price
             _, _, amount, price = trade
             if amount < 0:
-                side = 'SELL'
+                side = ASK
             else:
-                side = 'BUY'
+                side = BID
             amount = abs(amount)
-            await self.callbacks['trades'](feed='bitfinex',
-                                           pair=pair,
-                                           side=side,
-                                           amount=Decimal(amount),
-                                           price=Decimal(price))
+            await self.callbacks[TRADES](feed=self.id,
+                                         pair=pair,
+                                         side=side,
+                                         amount=Decimal(amount),
+                                         price=Decimal(price))
 
         if isinstance(msg[1], list):
             # snapshot
@@ -93,36 +88,41 @@ class Bitfinex(Feed):
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book
-                self.book[pair] = {'bid': sd(), 'ask': sd()}
+                self.l2_book[pair] = {BID: sd(), ASK: sd()}
                 for update in msg[1]:
-                    price, count, amount = [Decimal(x) for x in update]
+                    price, _, amount = [Decimal(x) for x in update]
                     if amount > 0:
-                        side = 'bid'
+                        side = BID
                     else:
-                        side = 'ask'
+                        side = ASK
                         amount = abs(amount)
-                    self.book[pair][side][price] = {'count': count, 'amount': amount}
+                    self.l2_book[pair][side][price] = amount
             else:
                 # book update
                 price, count, amount = [Decimal(x) for x in msg[1]]
 
                 if amount > 0:
-                    side = 'bid'
+                    side = BID
                 else:
-                    side = 'ask'
+                    side = ASK
                     amount = abs(amount)
 
                 if count > 0:
                     # change at price level
-                    self.book[pair][side][price] = {'count': count, 'amount': amount}
+                    self.l2_book[pair][side][price] = amount
                 else:
                     # remove price level
-                    del self.book[pair][side][price]
+                    del self.l2_book[pair][side][price]
         elif msg[1] == 'hb':
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book'](feed='bitfinex', book=self.book)
+        
+        if L3_BOOK in self.channels:
+            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+        else:
+            await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+
 
     async def _raw_book(self, msg):
         chan_id = msg[0]
@@ -132,53 +132,57 @@ class Bitfinex(Feed):
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book
-                self.book[pair] = {'bid': sd(), 'ask': sd()}
+                self.l2_book[pair] = {BID: sd(), ASK: sd()}
                 for update in msg[1]:
                     order_id, price, amount = update
                     price = Decimal(price)
                     amount = Decimal(amount)
 
                     if amount > 0:
-                        side = 'bid'
+                        side = BID
                     else:
-                        side = 'ask'
+                        side = ASK
                         amount = abs(amount)
 
-                    if price not in self.book[pair][side]:
-                        self.book[pair][side][price] = {'count': 1, 'amount': amount}
+                    if price not in self.l2_book[pair][side]:
+                        self.l2_book[pair][side][price] = amount
                         self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
                     else:
-                        self.book[pair][side][price]['count'] += 1
-                        self.book[pair][side][price]['amount'] += amount
+                        self.l2_book[pair][side][price]
+                        self.l2_book[pair][side][price] += amount
                         self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
             else:
                 # book update
                 order_id, price, amount = [Decimal(x) for x in msg[1]]
 
                 if amount > 0:
-                    side = 'bid'
+                    side = BID
                 else:
-                    side = 'ask'
+                    side = ASK
                     amount = abs(amount)
 
                 if price == 0:
                     price = self.order_map[order_id]['price']
-                    self.book[pair][side][price]['count'] -= 1
-                    if self.book[pair][side][price]['count'] == 0:
-                        del self.book[pair][side][price]
+                    self.l2_book[pair][side][price] -= self.order_map[order_id]['amount']
+                    if self.l2_book[pair][side][price] == 0:
+                        del self.l2_book[pair][side][price]
                     del self.order_map[order_id]
                 else:
                     self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
-                    if price in self.book[pair][side]:
-                        self.book[pair][side][price]['count'] += 1
-                        self.book[pair][side][price]['amount'] += amount
+                    if price in self.l2_book[pair][side]:
+                        self.l2_book[pair][side][price]
+                        self.l2_book[pair][side][price] += amount
                     else:
-                        self.book[pair][side][price] = {'count': 1, 'amount': amount}
+                        self.l2_book[pair][side][price] = amount
         elif msg[1] == 'hb':
             pass
         else:
             print("Unexpected book msg {}".format(msg))
-        await self.callbacks['book'](feed='bitfinex', book=self.book)
+        
+        if L3_BOOK in self.channels:
+            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+        else:
+            await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])        
 
     async def message_handler(self, msg):
         msg = json.loads(msg)

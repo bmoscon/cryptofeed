@@ -8,6 +8,8 @@ import asyncio
 
 import websockets
 
+from cryptofeed.defines import TICKER
+from cryptofeed import Gemini
 from .nbbo import NBBO
 
 
@@ -19,10 +21,9 @@ class FeedHandler(object):
         self.feeds.append(feed)
 
     def add_nbbo(self, feeds, pairs, callback):
-        for pair in pairs:
-            cb = NBBO(callback, pair)
-            for feed in feeds:
-                self.add_feed(feed(channels=['ticker'], pairs=pairs, callbacks={'ticker': cb}))
+        cb = NBBO(callback, pairs)
+        for feed in feeds:
+            self.add_feed(feed(channels=[TICKER], pairs=pairs, callbacks={TICKER: cb}))
 
     def run(self):
         if len(self.feeds) == 0:

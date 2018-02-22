@@ -2387,7 +2387,7 @@ def pair_std_to_exchange(pair, exchange):
     if pair in _std_trading_pairs:
         try:
             return _std_trading_pairs[pair][exchange]
-        except KeyError as e:
+        except KeyError:
             raise KeyError("{} is not configured/availble for {}".format(
                 pair, exchange))
     else:
@@ -2398,25 +2398,3 @@ def pair_exchange_to_std(pair):
     if pair in _exchange_to_std:
         return _exchange_to_std[pair]
     return None
-
-
-_channel_to_exchange = {
-    'ticker': {
-        'HITBTC': 'subscribeTicker'
-    },
-    'book': {
-        'HITBTC': 'subscribeOrderbook',
-        'BITSTAMP': 'diff_order_book'
-    },
-    'trades': {
-        'HITBTC': 'subscribeTrades',
-        'BITSTAMP': 'live_trades'
-    },
-}
-
-
-def std_channel_to_exchange(channel, exchange):
-    if channel in _channel_to_exchange:
-        if exchange in _channel_to_exchange[channel]:
-            return _channel_to_exchange[channel][exchange]
-    return channel

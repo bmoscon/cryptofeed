@@ -11,26 +11,30 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
+from cryptofeed.exchanges import GEMINI
+from cryptofeed.defines import L3_BOOK, BID, ASK, TRADES
 from cryptofeed.standards import pair_std_to_exchange
 
 
 class Gemini(Feed):
+    id = GEMINI
+
     def __init__(self, pairs=None, channels=None, callbacks=None):
         if len(pairs) != 1:
             raise ValueError("Gemini requires a websocket per trading pair")
         if channels is not None:
             raise ValueError("Gemini does not support different channels")
         self.pair = pairs[0]
-        super(Gemini, self).__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'))
-        self.book = {self.pair: {'bid': sd(), 'ask': sd()}}
-        self.callbacks = {'trades': Callback(None),
-                          'book': Callback(None)}
-        if callbacks:
-            for cb in callbacks:
-                self.callbacks[cb] = callbacks[cb]
+
+        super(Gemini, self).__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'),
+                                     pairs=None,
+                                     channels=None,
+                                     callbacks=callbacks)
+        self.book = {BID: sd(), ASK: sd()}
+
 
     async def _book(self, msg):
-        side = msg['side']
+        side = BID if msg['side'] == 'bid' else ASK
         price = Decimal(msg['price'])
         remaining = Decimal(msg['remaining'])
         #delta = Decimal(msg['delta'])
@@ -42,17 +46,13 @@ class Gemini(Feed):
                 del self.book[self.pair][side][price]
             else:
                 self.book[self.pair][side][price] = remaining
-        await self.callbacks['book'](feed='gemini', book=self.book)
-
-
-    async def _auction(self, msg):
-        pass
+        await self.callbacks[L3_BOOK](feed=self.id, pair=self.pair, book=self.book)
 
     async def _trade(self, msg):
         price = Decimal(msg['price'])
-        side = msg['makerSide']
+        side = BID if msg['makerSide'] == 'bid' else ASK
         amount = Decimal(msg['amount'])
-        await self.callbacks['trades'](feed='gemini', pair=self.pair, side=side, amount=amount, price=price)
+        await self.callbacks[TRADES](feed=self.id, pair=self.pair, side=side, amount=amount, price=price)
 
     async def _update(self, msg):
         for update in msg['events']:
@@ -61,7 +61,7 @@ class Gemini(Feed):
             elif update['type'] == 'trade':
                 await self._trade(update)
             elif update['type'] == 'auction':
-                await self._auction(update)
+                pass
             else:
                 print("Invalid update received {}".format(update))
 

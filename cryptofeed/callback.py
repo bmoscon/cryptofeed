@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 import inspect
+from decimal import Decimal
 
 
 class Callback(object):
@@ -21,7 +22,7 @@ class Callback(object):
 
 
 class TradeCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: float, price: float):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal):
         if self.is_async:
             await self.callback(feed, pair, side, amount, price)
         else:
@@ -30,7 +31,7 @@ class TradeCallback(Callback):
 
 
 class TickerCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, bid:  float, ask: float):
+    async def __call__(self, *, feed: str, pair: str, bid:  Decimal, ask: Decimal):
         if self.is_async:
             await self.callback(feed, pair, bid, ask)
         else:
@@ -39,12 +40,12 @@ class TickerCallback(Callback):
 
 
 class BookCallback(Callback):
-    async def __call__(self, *, feed: str, book: dict):
+    async def __call__(self, *, feed: str, pair: str, book: dict):
         if self.is_async:
-            await self.callback(feed, book)
+            await self.callback(feed, pair, book)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, book)
+            await loop.run_in_executor(None, self.callback, feed, pair, book)
 
 
 class VolumeCallback(Callback):

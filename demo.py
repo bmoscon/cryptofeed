@@ -7,6 +7,7 @@ associated with this software.
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
 from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp
+from cryptofeed.defines import L3_BOOK, BID, ASK
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -22,9 +23,8 @@ async def trade(feed, pair, side, amount, price):
     print('Feed: {} Pair: {} side: {} Amount: {} Price: {}'.format(feed, pair, side, amount, price))
 
 
-async def book(feed, book):
-    for pair in book:
-        print('feed {} book bid size is {} ask size is {}'.format(feed, len(book[pair]['bid']), len(book[pair]['ask'])))
+async def book(feed, pair, book):
+        print('feed {} pair {} book bid size is {} ask size is {}'.format(feed, pair, len(book[BID]), len(book[ASK])))
 
 
 def main():
@@ -35,7 +35,7 @@ def main():
     # f.add_feed(Poloniex(channels=[1002], callbacks={'ticker': TickerCallback(ticker)}))
     # f.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
     # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['ticker'], callbacks={'ticker': TickerCallback(ticker)}))
-    # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['book-P0-F0-100'], callbacks={'book': BookCallback(book)}))
+    f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book)}))
     # f.add_feed(Poloniex(channels=['USDT-BTC'], callbacks={'book': BookCallback(book), 'trades': TradeCallback(trade)}))
     # f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
     # f.add_feed(HitBTC(channels=['trades'], pairs=['BTC-USD'], callbacks={'trades': TradeCallback(trade)}))
