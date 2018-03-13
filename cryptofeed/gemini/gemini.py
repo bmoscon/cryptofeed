@@ -46,12 +46,12 @@ class Gemini(Feed):
         #delta = Decimal(msg['delta'])
 
         if msg['reason'] == 'initial':
-            self.book[self.pair][side][price] = remaining
+            self.book[side][price] = remaining
         else:
             if remaining == 0:
-                del self.book[self.pair][side][price]
+                del self.book[side][price]
             else:
-                self.book[self.pair][side][price] = remaining
+                self.book[side][price] = remaining
         await self.callbacks[L3_BOOK](feed=self.id, pair=self.pair, book=self.book)
 
     async def _trade(self, msg):
