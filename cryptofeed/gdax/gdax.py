@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 import json
+import logging
 from decimal import Decimal
 
 import requests
@@ -17,16 +18,14 @@ from cryptofeed.exchanges import GDAX as GDAX_ID
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER
 
 
+LOG = logging.getLogger('feedhandler')
+
+
 class GDAX(Feed):
     id = GDAX_ID
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(GDAX, self).__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=None, callbacks=callbacks)
-        self.user_channels = channels
-        # user ticker channel for trades and match for book
-        channels_map = {'trades': 'ticker', 'book': 'level2', 'full': 'full'}
-
-        self.channels = [channels_map.get(c, c) for c in channels]
+        super(GDAX, self).__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks)
         self.order_map = {}
         self.seq_no = {}
 
@@ -35,11 +34,9 @@ class GDAX(Feed):
                                      pair=msg['product_id'],
                                      bid=Decimal(msg['best_bid']),
                                      ask=Decimal(msg['best_ask']))
-
-    async def _agg_trades(self, msg):
         if 'side' in msg:
             await self.callbacks[TRADES](
-                feed='gdax',
+                feed=self.id,
                 pair=msg['product_id'],
                 side=msg['side'],
                 amount=msg['last_size'],
@@ -168,7 +165,7 @@ class GDAX(Feed):
         await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
     async def message_handler(self, msg):
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
         if 'product_id' in msg and 'sequence' in msg:
             if msg['product_id'] in self.seq_no:
                 if msg['sequence'] < self.seq_no[msg['product_id']]:
@@ -178,7 +175,7 @@ class GDAX(Feed):
 
         if 'type' in msg:
             if msg['type'] == 'ticker':
-                await asyncio.gather(self._ticker(msg), self._agg_trades(msg))
+                await self._ticker(msg)
             elif msg['type'] == 'match' or msg['type'] == 'last_match':
                 await self._book_update(msg)
             elif msg['type'] == 'snapshot':
@@ -198,7 +195,7 @@ class GDAX(Feed):
             elif msg['type'] == 'subscriptions':
                 pass
             else:
-                print('Invalid message type {}'.format(msg))
+                LOG.warning('{} - Invalid message type {}'.format(self.id, msg))
 
     async def subscribe(self, websocket):
         await websocket.send(json.dumps({"type": "subscribe",

@@ -6,6 +6,7 @@ associated with this software.
 '''
 import json
 import asyncio
+import logging
 from decimal import Decimal
 
 import requests
@@ -14,8 +15,10 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.exchanges import BITSTAMP
 from cryptofeed.feed import Feed
 from cryptofeed.defines import BID, ASK, TRADES, L3_BOOK
-from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 class Bitstamp(Feed):
@@ -113,20 +116,20 @@ class Bitstamp(Feed):
         msg = msg.replace("\\", '')
         msg = msg.replace("\"{", "{")
         msg = msg.replace("}\"", "}")
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
         if 'pusher' in msg['event']:
             if msg['event'] == 'pusher:connection_established':
                 pass
             elif msg['event'] == 'pusher_internal:subscription_succeeded':
                 pass
             else:
-                print("Unexpected pusher message {}".format(msg))
+                LOG.warning("{} - Unexpected pusher message {}".format(self.id, msg))
         elif msg['event'] == 'trade':
             await self._trades(msg)
         elif msg['event'] == 'data':
             await self._order_book(msg)
         else:
-            print('Invalid message type {}'.format(msg))
+            LOG.warning("{} - Invalid message type {}".format(self.id, msg))
 
     async def subscribe(self, websocket):
         # if channel is order book we need to subscribe to the diff channel
