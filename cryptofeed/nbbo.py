@@ -25,7 +25,7 @@ class NBBO(Callback):
 
         return self.bids[pair][max_bid], self.asks[pair][min_ask], max_bid, min_ask
 
-    async def __call__(self, *, feed: str, pair: str, bid:  Decimal, ask: Decimal):
+    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal):
         bid, ask, bid_feed, ask_feed = await self._update(feed, pair, bid, ask)
         if bid is None:
             return

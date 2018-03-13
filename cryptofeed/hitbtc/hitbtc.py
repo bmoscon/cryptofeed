@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
+import logging
 from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
@@ -14,6 +15,9 @@ from cryptofeed.callback import Callback
 from cryptofeed.exchanges import HITBTC
 from cryptofeed.defines import TICKER, L3_BOOK, TRADES, BID, ASK
 from cryptofeed.standards import pair_exchange_to_std
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 class HitBTC(Feed):
@@ -66,7 +70,7 @@ class HitBTC(Feed):
                                          price=price)
 
     async def message_handler(self, msg):
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
         if 'method' in msg:
             if msg['method'] == 'ticker':
                 await self._ticker(msg['params'])
@@ -77,15 +81,15 @@ class HitBTC(Feed):
             elif msg['method'] == 'updateTrades' or msg['method'] == 'snapshotTrades':
                 await self._trades(msg['params'])
             else:
-                print("Invalid message received: {}".format(msg))
+                LOG.warning("{} - Invalid message received: {}".format(self.id, msg))
         elif 'channel' in msg:
             if msg['channel'] == 'ticker':
                 await self._ticker(msg['data'])
             else:
-                print("Invalid message received: {}".format(msg))
+                LOG.warning("{} - Invalid message received: {}".format(self.id, msg))
         else:
             if 'error' in msg or not msg['result']:
-                print("Received error from server {}".format(msg))
+                LOG.error("{} - Received error from server {}".format(self.id, msg))
 
     async def subscribe(self, websocket):
         for channel in self.channels:

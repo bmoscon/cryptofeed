@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
+import logging
 from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
@@ -17,11 +18,15 @@ from cryptofeed.exchanges import POLONIEX
 from .pairs import poloniex_id_pair_mapping
 
 
+LOG = logging.getLogger('feedhandler')
+
+
 class Poloniex(Feed):
     id = POLONIEX
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
         if pairs:
+            LOG.error("Poloniex does not support pairs on a channel")
             raise ValueError("Poloniex does not support pairs on a channel")
 
         super(Poloniex, self).__init__('wss://api2.poloniex.com',
@@ -90,13 +95,14 @@ class Poloniex(Feed):
                                                  amount=amount,
                                                  price=price)
                 else:
-                    print("Unexpected message received: {}".format(msg))
+                    LOG.warning("{} - Unexpected message received: {}".format(self.id, msg))
+
         await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
 
     async def message_handler(self, msg):
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
         if 'error' in msg:
-            print("Error from exchange: {}".format(msg))
+            LOG.error("{} - Error from exchange: {}".format(self.id, msg))
             return
 
         chan_id = msg[0]
@@ -121,7 +127,7 @@ class Poloniex(Feed):
             # heartbeat - ignore
             pass
         else:
-            print('Invalid message type {}'.format(msg))
+            LOG.warning('{} - Invalid message type {}'.format(self.id, msg))
 
     async def subscribe(self, websocket):
         for channel in self.channels:

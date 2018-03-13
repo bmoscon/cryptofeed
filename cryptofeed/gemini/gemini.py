@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
+import logging
 from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
@@ -16,13 +17,18 @@ from cryptofeed.defines import L3_BOOK, BID, ASK, TRADES
 from cryptofeed.standards import pair_std_to_exchange
 
 
+LOG = logging.getLogger('feedhandler')
+
+
 class Gemini(Feed):
     id = GEMINI
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
         if len(pairs) != 1:
+            LOG.error("Gemini requires a websocket per trading pair")
             raise ValueError("Gemini requires a websocket per trading pair")
         if channels is not None:
+            LOG.error("Gemini does not support different channels")
             raise ValueError("Gemini does not support different channels")
         self.pair = pairs[0]
 
@@ -63,16 +69,16 @@ class Gemini(Feed):
             elif update['type'] == 'auction':
                 pass
             else:
-                print("Invalid update received {}".format(update))
+                LOG.warning("Invalid update received {}".format(update))
 
     async def message_handler(self, msg):
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
         if msg['type'] == 'update':
             await self._update(msg)
         elif msg['type'] == 'heartbeat':
             pass
         else:
-            print('Invalid message type {}'.format(msg))
+            LOG.warning('Invalid message type {}'.format(msg))
 
     async def subscribe(self, *args):
         return
