@@ -1,8 +1,13 @@
 ## Changelog
 
-### 0.9.2
+### 0.9.2 (2018-03-13)
   * Bugfix #10: Change from float to decimal.Decimal in GDAX
   * Feature #5: use sorted dictionaries for order books
+  * Feature #17: logging support
+  * Bugfix: Gemini order books now work
+  * Bugfix: All json floats parsed to Decimal
+  * Bugfix: Fix Bitstamp pair parsing
+  * Feature: Major clean up of channel, exchange, and trading pair names
 
 ### 0.9.1 (2018-01-27)
   * Bugfix #4: produce ticker from trades channel on GDAX

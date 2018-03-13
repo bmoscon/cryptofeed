@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
+import logging
 from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
@@ -13,6 +14,9 @@ from cryptofeed.feed import Feed
 from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK
 from cryptofeed.exchanges import BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 class Bitfinex(Feed):
@@ -78,7 +82,7 @@ class Bitfinex(Feed):
                 # ignore heartbeats
                 pass
             else:
-                print("Unexpected trade message {}".format(msg))
+                LOG.warning("{} - Unexpected trade message {}".format(self.id, msg))
 
     async def _book(self, msg):
         chan_id = msg[0]
@@ -116,7 +120,7 @@ class Bitfinex(Feed):
         elif msg[1] == 'hb':
             pass
         else:
-            print("Unexpected book msg {}".format(msg))
+            LOG.warning("{} - Unexpected book msg {}".format(self.id, msg))
         
         if L3_BOOK in self.channels:
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
@@ -177,23 +181,23 @@ class Bitfinex(Feed):
         elif msg[1] == 'hb':
             pass
         else:
-            print("Unexpected book msg {}".format(msg))
+            LOG.warning("{} - Unexpected book msg {}".format(self.id, msg))
         
-        if L3_BOOK in self.channels:
+        if L3_BOOK in self.standardized_channels:
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
         else:
             await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])        
 
     async def message_handler(self, msg):
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
         if isinstance(msg, list):
             chan_id = msg[0]
             if chan_id in self.channel_map:
                 await self.channel_map[chan_id]['handler'](msg)
             else:
-                print("Unexpected message on unregistered channel {}".format(msg))
+                LOG.warning("{} - Unexpected message on unregistered channel {}".format(self.id, msg))
         elif 'event' in msg and msg['event'] == 'error':
-            print("Error: {}".format(msg['msg']))
+            LOG.error("{} - Error message from exchange: {}".format(self.id, msg['msg']))
         elif 'chanId' in msg and 'symbol' in msg:
             handler = None
             if msg['channel'] == 'ticker':
@@ -206,7 +210,7 @@ class Bitfinex(Feed):
                 else:
                     handler = self._book
             else:
-                print('Invalid message type {}'.format(msg))
+                LOG.warning('{} - Invalid message type {}'.format(self.id, msg))
                 return
             self.channel_map[msg['chanId']] = {'symbol': msg['symbol'],
                                                'channel': msg['channel'],
