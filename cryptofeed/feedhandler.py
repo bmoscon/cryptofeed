@@ -45,7 +45,7 @@ class FeedHandler(object):
         try:
             asyncio.get_event_loop().run_until_complete(self._run())
         except KeyboardInterrupt:
-            Log.info("Keyboard Interrupt received - shutting down")
+            LOG.info("Keyboard Interrupt received - shutting down")
             pass
         except Exception as e:
             LOG.error("Unhandled exception: %s", str(e))
