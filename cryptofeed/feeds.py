@@ -4,8 +4,15 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import logging
+
 from cryptofeed.exchanges import BITFINEX, POLONIEX, HITBTC, BITSTAMP, GDAX
 from cryptofeed.defines import L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, UNSUPPORTED
+from cryptofeed.standards import pair_std_to_exchange
+
+
+LOG = logging.getLogger('feedhandler')
+
 
 _feed_to_exchange_map = {
     L2_BOOK: {
@@ -18,7 +25,8 @@ _feed_to_exchange_map = {
         BITFINEX: 'book-R0-F0-100',
         HITBTC: 'subscribeOrderbook',
         BITSTAMP: 'diff_order_book',
-        GDAX: 'full'
+        GDAX: 'full',
+        POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel
     },
     TRADES: {
         POLONIEX: UNSUPPORTED,
@@ -41,4 +49,12 @@ _feed_to_exchange_map = {
 
 
 def feed_to_exchange(exchange, feed):
-    return _feed_to_exchange_map[feed][exchange]
+    if exchange == POLONIEX:
+        if feed not in _feed_to_exchange_map:
+            return pair_std_to_exchange(feed, POLONIEX)
+
+    ret = _feed_to_exchange_map[feed][exchange]
+    if ret == UNSUPPORTED:
+        LOG.error("{} is not supported on {}".format(feed, exchange))
+        raise ValueError("{} is not supported on {}".format(feed, exchange))
+    return ret

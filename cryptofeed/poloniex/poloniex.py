@@ -26,8 +26,8 @@ class Poloniex(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
         if pairs:
-            LOG.error("Poloniex does not support pairs on a channel")
-            raise ValueError("Poloniex does not support pairs on a channel")
+            LOG.error("Poloniex does not support pairs")
+            raise ValueError("Poloniex does not support pairs")
 
         super(Poloniex, self).__init__('wss://api2.poloniex.com',
                                      channels=channels,
@@ -37,7 +37,7 @@ class Poloniex(Feed):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
-        pair = poloniex_id_pair_mapping[pair_id]
+        pair = pair_exchange_to_std(poloniex_id_pair_mapping[pair_id])
         await self.callbacks[TICKER](feed=self.id,
                                      pair=pair,
                                      bid=Decimal(bid),
@@ -131,9 +131,6 @@ class Poloniex(Feed):
 
     async def subscribe(self, websocket):
         for channel in self.channels:
-            chan = pair_std_to_exchange(channel, POLONIEX)
-            if chan:
-                channel = chan
             await websocket.send(json.dumps({"command": "subscribe",
                                              "channel": channel
                                             }))

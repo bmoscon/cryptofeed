@@ -7,7 +7,9 @@ associated with this software.
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
 from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, feed_to_exchange
-class Feed(object):
+
+
+class Feed:
     id = 'NotImplemented'
 
     def __init__(self, address, pairs=None, channels=None, callbacks=None):

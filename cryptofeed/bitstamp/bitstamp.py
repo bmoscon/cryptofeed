@@ -39,8 +39,7 @@ class Bitstamp(Feed):
         loop = asyncio.get_event_loop()
         btc_usd_url = 'https://www.bitstamp.net/api/order_book/'
         url = 'https://www.bitstamp.net/api/v2/order_book/{}/'
-        pairs =  [pair_std_to_exchange(pair, self.id) for pair in self.pairs]
-        futures = [loop.run_in_executor(None, requests.get, url.format(pair) if pair != 'BTC-USD' else btc_usd_url) for pair in pairs]
+        futures = [loop.run_in_executor(None, requests.get, url.format(pair) if pair != 'BTC-USD' else btc_usd_url) for pair in self.pairs]
 
         results = []
         for future in futures:
@@ -49,6 +48,7 @@ class Bitstamp(Feed):
 
         for res, pair in zip(results, self.pairs):
             orders = res.json()
+            pair = pair_exchange_to_std(pair)
             self.book[pair] = {BID: sd(), ASK: sd()}
             self.seq_no[pair] = orders['timestamp']
 
@@ -138,7 +138,6 @@ class Bitstamp(Feed):
         # are pre-timestamp on the response from the REST endpoint
         for channel in self.channels:
             for pair in self.pairs:
-                pair = pair_std_to_exchange(pair, self.id)
                 await websocket.send(
                     json.dumps({
                         "event": "pusher:subscribe",
