@@ -6,6 +6,7 @@
   * Feature #17: logging support
   * Bugfix: Gemini order books now work
   * Bugfix: All json floats parsed to Decimal
+  * Bugfix: Fix Bitstamp pair parsing
 
 ### 0.9.1 (2018-01-27)
   * Bugfix #4: produce ticker from trades channel on GDAX
