@@ -42,7 +42,7 @@ class GDAX(Feed):
                 amount=msg['last_size'],
                 price=msg['price']
             )
-            
+
     async def _book_update(self, msg):
         # GDAX calls this 'match'
         if self.book:
