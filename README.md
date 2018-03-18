@@ -16,14 +16,14 @@ fh = FeedHandler()
 
 # ticker, trade, and book are user defined functions that
 # will be called when ticker, trade and book updates are received
-ticker_cb = {'ticker': TickerCallback(ticker)}
-trade_cb = {'trades': TradeCallback(trade)}
-gemini_cb = {'trades': TradeCallback(trade), 'book': BookCallback(book)}
+ticker_cb = {TICKER: TickerCallback(ticker)}
+trade_cb = {TRADES: TradeCallback(trade)}
+gemini_cb = {TRADES: TradeCallback(trade), L3_BOOK: BookCallback(book)}
 
 
-fh.add_feed(GDAX(pairs=['BTC-USD'], channels=['ticker'], callbacks=ticker_cb)
-fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=['ticker'], callbacks=ticker_cb)
-fh.add_feed(Poloniex(channels=['USDT_BTC'], callbacks=trade_cb))
+fh.add_feed(GDAX(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
+fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
+fh.add_feed(Poloniex(channels=['USDT-BTC'], callbacks=trade_cb))
 fh.add_feed(Gemini(pairs=['BTC-USD'], callbacks=gemini_cb)
 
 fh.run()
