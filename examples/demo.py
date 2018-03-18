@@ -38,6 +38,7 @@ def main():
 
     bitmex_symbols = Bitmex.get_active_symbols()
     f.add_feed(Bitmex(channels=[TRADES], pairs=bitmex_symbols, callbacks={TRADES: TradeCallback(trade)}))
+    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.run()
 
 
