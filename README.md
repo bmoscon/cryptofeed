@@ -36,6 +36,7 @@ Supports the following exchanges:
 * Gemini
 * HitBTC
 * Bitstamp
+* BitMEX
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
@@ -62,7 +63,6 @@ fh.run()
 ### Future Feeds
 * EXX
 * CEX
-* Bitmex
 * BTCC
 * Many more...
 
