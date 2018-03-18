@@ -4,1753 +4,1755 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.exchanges import GDAX, GEMINI, BITFINEX, BITSTAMP, HITBTC, BITMEX, POLONIEX
+
 
 _std_trading_pairs = {
     'BTC-USD': {
-        'GDAX': 'BTC-USD',
-        'BITFINEX': 'tBTCUSD',
-        'GEMINI': 'BTCUSD',
-        'HITBTC': 'BTCUSD',
-        'BITSTAMP': 'btcusd'
+        GDAX: 'BTC-USD',
+        BITFINEX: 'tBTCUSD',
+        GEMINI: 'BTCUSD',
+        HITBTC: 'BTCUSD',
+        BITSTAMP: 'btcusd'
     },
     'ETH-USD': {
-        'GEMINI': 'ETHUSD',
-        'GDAX': 'ETH-USD',
-        'BITFINEX': 'tETHUSD',
-        'HITBTC': 'ETHUSD',
-        'BITSTAMP': 'ethusd'
+        GEMINI: 'ETHUSD',
+        GDAX: 'ETH-USD',
+        BITFINEX: 'tETHUSD',
+        HITBTC: 'ETHUSD',
+        BITSTAMP: 'ethusd'
     },
     'ETH-BTC': {
-        'GEMINI': 'ETHBTC',
-        'GDAX': 'ETH-BTC',
-        'BITFINEX': 'tETHBTC',
-        'HITBTC': 'ETHBTC',
-        'BITSTAMP': 'ethbtc'
+        GEMINI: 'ETHBTC',
+        GDAX: 'ETH-BTC',
+        BITFINEX: 'tETHBTC',
+        HITBTC: 'ETHBTC',
+        BITSTAMP: 'ethbtc'
     },
     'BCH-USD': {
-        'GDAX': 'BCH-USD',
-        'BITFINEX': 'tBCHUSD',
-        'HITBTC': 'BCHUSD',
-        'BITSTAMP': 'bchusd'
+        GDAX: 'BCH-USD',
+        BITFINEX: 'tBCHUSD',
+        HITBTC: 'BCHUSD',
+        BITSTAMP: 'bchusd'
     },
     'LTC-EUR': {
-        'GDAX': 'LTC-EUR',
-        'BITSTAMP': 'ltceur'
+        GDAX: 'LTC-EUR',
+        BITSTAMP: 'ltceur'
     },
     'LTC-USD': {
-        'GDAX': 'LTC-USD',
-        'BITFINEX': 'tLTCUSD',
-        'HITBTC': 'LTCUSD',
-        'BITSTAMP': 'ltcusd'
+        GDAX: 'LTC-USD',
+        BITFINEX: 'tLTCUSD',
+        HITBTC: 'LTCUSD',
+        BITSTAMP: 'ltcusd'
     },
     'LTC-BTC': {
-        'GDAX': 'LTC-BTC',
-        'BITFINEX': 'tLTCBTC',
-        'HITBTC': 'LTCBTC',
-        'BITSTAMP': 'ltcbtc'
+        GDAX: 'LTC-BTC',
+        BITFINEX: 'tLTCBTC',
+        HITBTC: 'LTCBTC',
+        BITSTAMP: 'ltcbtc'
     },
     'ETH-EUR': {
-        'GDAX': 'ETH-EUR',
-        'BITSTAMP': 'etheur'
+        GDAX: 'ETH-EUR',
+        BITSTAMP: 'etheur'
     },
     'BTC-GBP': {
-        'GDAX': 'BTC-GBP'
+        GDAX: 'BTC-GBP'
     },
     'BTC-EUR': {
-        'GDAX': 'BTC-EUR',
-        'BITFINEX': 'tBTCEUR',
-        'BITSTAMP': 'btceur'
+        GDAX: 'BTC-EUR',
+        BITFINEX: 'tBTCEUR',
+        BITSTAMP: 'btceur'
     },
     'BTC-BCN': {
-        'POLONIEX': 'BTC_BCN'
+        POLONIEX: 'BTC_BCN'
     },
     'BTC-BELA': {
-        'POLONIEX': 'BTC_BELA'
+        POLONIEX: 'BTC_BELA'
     },
     'BTC-BLK': {
-        'POLONIEX': 'BTC_BLK'
+        POLONIEX: 'BTC_BLK'
     },
     'BTC-BTCD': {
-        'POLONIEX': 'BTC_BTCD'
+        POLONIEX: 'BTC_BTCD'
     },
     'BTC-BTM': {
-        'POLONIEX': 'BTC_BTM'
+        POLONIEX: 'BTC_BTM'
     },
     'BTC-BTS': {
-        'POLONIEX': 'BTC_BTS'
+        POLONIEX: 'BTC_BTS'
     },
     'BTC-BURST': {
-        'POLONIEX': 'BTC_BURST'
+        POLONIEX: 'BTC_BURST'
     },
     'BTC-CLAM': {
-        'POLONIEX': 'BTC_CLAM'
+        POLONIEX: 'BTC_CLAM'
     },
     'BTC-DASH': {
-        'POLONIEX': 'BTC_DASH'
+        POLONIEX: 'BTC_DASH'
     },
     'BTC-DGB': {
-        'POLONIEX': 'BTC_DGB'
+        POLONIEX: 'BTC_DGB'
     },
     'BTC-DOGE': {
-        'POLONIEX': 'BTC_DOGE'
+        POLONIEX: 'BTC_DOGE'
     },
     'BTC-EMC2': {
-        'POLONIEX': 'BTC_EMC2'
+        POLONIEX: 'BTC_EMC2'
     },
     'BTC-FLDC': {
-        'POLONIEX': 'BTC_FLDC'
+        POLONIEX: 'BTC_FLDC'
     },
     'BTC-FLO': {
-        'POLONIEX': 'BTC_FLO'
+        POLONIEX: 'BTC_FLO'
     },
     'BTC-GAME': {
-        'POLONIEX': 'BTC_GAME'
+        POLONIEX: 'BTC_GAME'
     },
     'BTC-GRC': {
-        'POLONIEX': 'BTC_GRC'
+        POLONIEX: 'BTC_GRC'
     },
     'BTC-HUC': {
-        'POLONIEX': 'BTC_HUC'
+        POLONIEX: 'BTC_HUC'
     },
     'BTC-LTC': {
-        'POLONIEX': 'BTC_LTC'
+        POLONIEX: 'BTC_LTC'
     },
     'BTC-MAID': {
-        'POLONIEX': 'BTC_MAID'
+        POLONIEX: 'BTC_MAID'
     },
     'BTC-OMNI': {
-        'POLONIEX': 'BTC_OMNI'
+        POLONIEX: 'BTC_OMNI'
     },
     'BTC-NAV': {
-        'POLONIEX': 'BTC_NAV'
+        POLONIEX: 'BTC_NAV'
     },
     'BTC-NEOS': {
-        'POLONIEX': 'BTC_NEOS'
+        POLONIEX: 'BTC_NEOS'
     },
     'BTC-NMC': {
-        'POLONIEX': 'BTC_NMC'
+        POLONIEX: 'BTC_NMC'
     },
     'BTC-NXT': {
-        'POLONIEX': 'BTC_NXT'
+        POLONIEX: 'BTC_NXT'
     },
     'BTC-PINK': {
-        'POLONIEX': 'BTC_PINK'
+        POLONIEX: 'BTC_PINK'
     },
     'BTC-POT': {
-        'POLONIEX': 'BTC_POT'
+        POLONIEX: 'BTC_POT'
     },
     'BTC-PPC': {
-        'POLONIEX': 'BTC_PPC'
+        POLONIEX: 'BTC_PPC'
     },
     'BTC-RIC': {
-        'POLONIEX': 'BTC_RIC'
+        POLONIEX: 'BTC_RIC'
     },
     'BTC-STR': {
-        'POLONIEX': 'BTC_STR'
+        POLONIEX: 'BTC_STR'
     },
     'BTC-SYS': {
-        'POLONIEX': 'BTC_SYS'
+        POLONIEX: 'BTC_SYS'
     },
     'BTC-VIA': {
-        'POLONIEX': 'BTC_VIA'
+        POLONIEX: 'BTC_VIA'
     },
     'BTC-XVC': {
-        'POLONIEX': 'BTC_XVC'
+        POLONIEX: 'BTC_XVC'
     },
     'BTC-VRC': {
-        'POLONIEX': 'BTC_VRC'
+        POLONIEX: 'BTC_VRC'
     },
     'BTC-VTC': {
-        'POLONIEX': 'BTC_VTC'
+        POLONIEX: 'BTC_VTC'
     },
     'BTC-XBC': {
-        'POLONIEX': 'BTC_XBC'
+        POLONIEX: 'BTC_XBC'
     },
     'BTC-XCP': {
-        'POLONIEX': 'BTC_XCP'
+        POLONIEX: 'BTC_XCP'
     },
     'BTC-XEM': {
-        'POLONIEX': 'BTC_XEM'
+        POLONIEX: 'BTC_XEM'
     },
     'BTC-XMR': {
-        'POLONIEX': 'BTC_XMR'
+        POLONIEX: 'BTC_XMR'
     },
     'BTC-XPM': {
-        'POLONIEX': 'BTC_XPM'
+        POLONIEX: 'BTC_XPM'
     },
     'BTC-XRP': {
-        'POLONIEX': 'BTC_XRP'
+        POLONIEX: 'BTC_XRP'
     },
     'USDT-BTC': {
-        'POLONIEX': 'USDT_BTC'
+        POLONIEX: 'USDT_BTC'
     },
     'USDT-DASH': {
-        'POLONIEX': 'USDT_DASH'
+        POLONIEX: 'USDT_DASH'
     },
     'USDT-LTC': {
-        'POLONIEX': 'USDT_LTC'
+        POLONIEX: 'USDT_LTC'
     },
     'USDT-NXT': {
-        'POLONIEX': 'USDT_NXT'
+        POLONIEX: 'USDT_NXT'
     },
     'USDT-STR': {
-        'POLONIEX': 'USDT_STR'
+        POLONIEX: 'USDT_STR'
     },
     'USDT-XMR': {
-        'POLONIEX': 'USDT_XMR'
+        POLONIEX: 'USDT_XMR'
     },
     'USDT-XRP': {
-        'POLONIEX': 'USDT_XRP'
+        POLONIEX: 'USDT_XRP'
     },
     'XMR-BCN': {
-        'POLONIEX': 'XMR_BCN'
+        POLONIEX: 'XMR_BCN'
     },
     'XMR-BLK': {
-        'POLONIEX': 'XMR_BLK'
+        POLONIEX: 'XMR_BLK'
     },
     'XMR-BTCD': {
-        'POLONIEX': 'XMR_BTCD'
+        POLONIEX: 'XMR_BTCD'
     },
     'XMR-DASH': {
-        'POLONIEX': 'XMR_DASH'
+        POLONIEX: 'XMR_DASH'
     },
     'XMR-LTC': {
-        'POLONIEX': 'XMR_LTC'
+        POLONIEX: 'XMR_LTC'
     },
     'XMR-MAID': {
-        'POLONIEX': 'XMR_MAID'
+        POLONIEX: 'XMR_MAID'
     },
     'XMR-NXT': {
-        'POLONIEX': 'XMR_NXT'
+        POLONIEX: 'XMR_NXT'
     },
     'BTC-ETH': {
-        'POLONIEX': 'BTC_ETH'
+        POLONIEX: 'BTC_ETH'
     },
     'USDT-ETH': {
-        'POLONIEX': 'USDT_ETH'
+        POLONIEX: 'USDT_ETH'
     },
     'BTC-SC': {
-        'POLONIEX': 'BTC_SC'
+        POLONIEX: 'BTC_SC'
     },
     'BTC-BCY': {
-        'POLONIEX': 'BTC_BCY'
+        POLONIEX: 'BTC_BCY'
     },
     'BTC-EXP': {
-        'POLONIEX': 'BTC_EXP'
+        POLONIEX: 'BTC_EXP'
     },
     'BTC-FCT': {
-        'POLONIEX': 'BTC_FCT'
+        POLONIEX: 'BTC_FCT'
     },
     'BTC-RADS': {
-        'POLONIEX': 'BTC_RADS'
+        POLONIEX: 'BTC_RADS'
     },
     'BTC-AMP': {
-        'POLONIEX': 'BTC_AMP'
+        POLONIEX: 'BTC_AMP'
     },
     'BTC-DCR': {
-        'POLONIEX': 'BTC_DCR'
+        POLONIEX: 'BTC_DCR'
     },
     'BTC-LSK': {
-        'POLONIEX': 'BTC_LSK'
+        POLONIEX: 'BTC_LSK'
     },
     'ETH-LSK': {
-        'POLONIEX': 'ETH_LSK'
+        POLONIEX: 'ETH_LSK'
     },
     'BTC-LBC': {
-        'POLONIEX': 'BTC_LBC'
+        POLONIEX: 'BTC_LBC'
     },
     'BTC-STEEM': {
-        'POLONIEX': 'BTC_STEEM'
+        POLONIEX: 'BTC_STEEM'
     },
     'ETH-STEEM': {
-        'POLONIEX': 'ETH_STEEM'
+        POLONIEX: 'ETH_STEEM'
     },
     'BTC-SBD': {
-        'POLONIEX': 'BTC_SBD'
+        POLONIEX: 'BTC_SBD'
     },
     'BTC-ETC': {
-        'POLONIEX': 'BTC_ETC'
+        POLONIEX: 'BTC_ETC'
     },
     'ETH-ETC': {
-        'POLONIEX': 'ETH_ETC'
+        POLONIEX: 'ETH_ETC'
     },
     'USDT-ETC': {
-        'POLONIEX': 'USDT_ETC'
+        POLONIEX: 'USDT_ETC'
     },
     'BTC-REP': {
-        'POLONIEX': 'BTC_REP'
+        POLONIEX: 'BTC_REP'
     },
     'USDT-REP': {
-        'POLONIEX': 'USDT_REP'
+        POLONIEX: 'USDT_REP'
     },
     'ETH-REP': {
-        'POLONIEX': 'ETH_REP'
+        POLONIEX: 'ETH_REP'
     },
     'BTC-ARDR': {
-        'POLONIEX': 'BTC_ARDR'
+        POLONIEX: 'BTC_ARDR'
     },
     'BTC-ZEC': {
-        'POLONIEX': 'BTC_ZEC'
+        POLONIEX: 'BTC_ZEC'
     },
     'ETH-ZEC': {
-        'POLONIEX': 'ETH_ZEC'
+        POLONIEX: 'ETH_ZEC'
     },
     'USDT-ZEC': {
-        'POLONIEX': 'USDT_ZEC'
+        POLONIEX: 'USDT_ZEC'
     },
     'XMR-ZEC': {
-        'POLONIEX': 'XMR_ZEC'
+        POLONIEX: 'XMR_ZEC'
     },
     'BTC-STRAT': {
-        'POLONIEX': 'BTC_STRAT'
+        POLONIEX: 'BTC_STRAT'
     },
     'BTC-NXC': {
-        'POLONIEX': 'BTC_NXC'
+        POLONIEX: 'BTC_NXC'
     },
     'BTC-PASC': {
-        'POLONIEX': 'BTC_PASC'
+        POLONIEX: 'BTC_PASC'
     },
     'BTC-GNT': {
-        'POLONIEX': 'BTC_GNT'
+        POLONIEX: 'BTC_GNT'
     },
     'ETH-GNT': {
-        'POLONIEX': 'ETH_GNT'
+        POLONIEX: 'ETH_GNT'
     },
     'BTC-GNO': {
-        'POLONIEX': 'BTC_GNO'
+        POLONIEX: 'BTC_GNO'
     },
     'ETH-GNO': {
-        'POLONIEX': 'ETH_GNO'
+        POLONIEX: 'ETH_GNO'
     },
     'BTC-BCH': {
-        'POLONIEX': 'BTC_BCH'
+        POLONIEX: 'BTC_BCH'
     },
     'ETH-BCH': {
-        'POLONIEX': 'ETH_BCH'
+        POLONIEX: 'ETH_BCH'
     },
     'USDT-BCH': {
-        'POLONIEX': 'USDT_BCH'
+        POLONIEX: 'USDT_BCH'
     },
     'BTC-ZRX': {
-        'POLONIEX': 'BTC_ZRX'
+        POLONIEX: 'BTC_ZRX'
     },
     'ETH-ZRX': {
-        'POLONIEX': 'ETH_ZRX'
+        POLONIEX: 'ETH_ZRX'
     },
     'BTC-CVC': {
-        'POLONIEX': 'BTC_CVC'
+        POLONIEX: 'BTC_CVC'
     },
     'ETH-CVC': {
-        'POLONIEX': 'ETH_CVC'
+        POLONIEX: 'ETH_CVC'
     },
     'BTC-OMG': {
-        'POLONIEX': 'BTC_OMG'
+        POLONIEX: 'BTC_OMG'
     },
     'ETH-OMG': {
-        'POLONIEX': 'ETH_OMG'
+        POLONIEX: 'ETH_OMG'
     },
     'BTC-GAS': {
-        'POLONIEX': 'BTC_GAS'
+        POLONIEX: 'BTC_GAS'
     },
     'ETH-GAS': {
-        'POLONIEX': 'ETH_GAS'
+        POLONIEX: 'ETH_GAS'
     },
     'BTC-STORJ': {
-        'POLONIEX': 'BTC_STORJ'
+        POLONIEX: 'BTC_STORJ'
     },
     'BCH-ETH': {
-        'BITFINEX': 'tBCHETH',
-        'HITBTC': 'BCHETH'
+        BITFINEX: 'tBCHETH',
+        HITBTC: 'BCHETH'
     },
     'DATA-BTC': {
-        'BITFINEX': 'tDATABTC',
-        'HITBTC': 'DATABTC'
+        BITFINEX: 'tDATABTC',
+        HITBTC: 'DATABTC'
     },
     'ETC-BTC': {
-        'BITFINEX': 'tETCBTC',
-        'HITBTC': 'ETCBTC'
+        BITFINEX: 'tETCBTC',
+        HITBTC: 'ETCBTC'
     },
     'GNT-BTC': {
-        'BITFINEX': 'tGNTBTC'
+        BITFINEX: 'tGNTBTC'
     },
     'QTUM-BTC': {
-        'BITFINEX': 'tQTUMBTC'
+        BITFINEX: 'tQTUMBTC'
     },
     'SAN-USD': {
-        'BITFINEX': 'tSANUSD'
+        BITFINEX: 'tSANUSD'
     },
     'OMG-ETH': {
-        'BITFINEX': 'tOMGETH',
-        'HITBTC': 'OMGETH'
+        BITFINEX: 'tOMGETH',
+        HITBTC: 'OMGETH'
     },
     'ETC-USD': {
-        'BITFINEX': 'tETCUSD',
-        'HITBTC': 'ETCUSD'
+        BITFINEX: 'tETCUSD',
+        HITBTC: 'ETCUSD'
     },
     'DASH-USD': {
-        'BITFINEX': 'tDASHUSD',
-        'HITBTC': 'DASHUSD'
+        BITFINEX: 'tDASHUSD',
+        HITBTC: 'DASHUSD'
     },
     'RRT-USD': {
-        'BITFINEX': 'tRRTUSD'
+        BITFINEX: 'tRRTUSD'
     },
     'SAN-BTC': {
-        'BITFINEX': 'tSANBTC'
+        BITFINEX: 'tSANBTC'
     },
     'GNT-USD': {
-        'BITFINEX': 'tGNTUSD'
+        BITFINEX: 'tGNTUSD'
     },
     'IOTA-EUR': {
-        'BITFINEX': 'tIOTAEUR'
+        BITFINEX: 'tIOTAEUR'
     },
     'YYW-BTC': {
-        'BITFINEX': 'tYYWBTC'
+        BITFINEX: 'tYYWBTC'
     },
     'BCH-BTC': {
-        'BITFINEX': 'tBCHBTC',
-        'HITBTC': 'BCHBTC',
-        'BITSTAMP': 'bchbtc'
+        BITFINEX: 'tBCHBTC',
+        HITBTC: 'BCHBTC',
+        BITSTAMP: 'bchbtc'
     },
     'NEO-USD': {
-        'BITFINEX': 'tNEOUSD',
-        'HITBTC': 'NEOUSD'
+        BITFINEX: 'tNEOUSD',
+        HITBTC: 'NEOUSD'
     },
     'EDO-BTC': {
-        'BITFINEX': 'tEDOBTC',
-        'HITBTC': 'EDOBTC'
+        BITFINEX: 'tEDOBTC',
+        HITBTC: 'EDOBTC'
     },
     'EDO-ETH': {
-        'BITFINEX': 'tEDOETH',
-        'HITBTC': 'EDOETH'
+        BITFINEX: 'tEDOETH',
+        HITBTC: 'EDOETH'
     },
     'QASH-USD': {
-        'BITFINEX': 'tQASHUSD'
+        BITFINEX: 'tQASHUSD'
     },
     'QTUM-USD': {
-        'BITFINEX': 'tQTUMUSD'
+        BITFINEX: 'tQTUMUSD'
     },
     'BTG-BTC': {
-        'BITFINEX': 'tBTGBTC',
-        'HITBTC': 'BTGBTC'
+        BITFINEX: 'tBTGBTC',
+        HITBTC: 'BTGBTC'
     },
     'ZEC-BTC': {
-        'BITFINEX': 'tZECBTC',
-        'HITBTC': 'ZECBTC'
+        BITFINEX: 'tZECBTC',
+        HITBTC: 'ZECBTC'
     },
     'XRP-BTC': {
-        'BITFINEX': 'tXRPBTC',
-        'HITBTC': 'XRPBTC',
-        'BITSTAMP': 'xrpbtc'
+        BITFINEX: 'tXRPBTC',
+        HITBTC: 'XRPBTC',
+        BITSTAMP: 'xrpbtc'
     },
     'AVT-USD': {
-        'BITFINEX': 'tAVTUSD'
+        BITFINEX: 'tAVTUSD'
     },
     'XRP-USD': {
-        'BITFINEX': 'tXRPUSD',
-        'BITSTAMP': 'xrpusd'
+        BITFINEX: 'tXRPUSD',
+        BITSTAMP: 'xrpusd'
     },
     'XMR-BTC': {
-        'BITFINEX': 'tXMRBTC',
-        'HITBTC': 'XMRBTC'
+        BITFINEX: 'tXMRBTC',
+        HITBTC: 'XMRBTC'
     },
     'OMG-BTC': {
-        'BITFINEX': 'tOMGBTC',
-        'HITBTC': 'OMGBTC'
+        BITFINEX: 'tOMGBTC',
+        HITBTC: 'OMGBTC'
     },
     'IOTA-USD': {
-        'BITFINEX': 'tIOTAUSD'
+        BITFINEX: 'tIOTAUSD'
     },
     'ETP-USD': {
-        'BITFINEX': 'tETPUSD',
-        'HITBTC': 'ETPUSD'
+        BITFINEX: 'tETPUSD',
+        HITBTC: 'ETPUSD'
     },
     'IOTA-BTC': {
-        'BITFINEX': 'tIOTABTC'
+        BITFINEX: 'tIOTABTC'
     },
     'EDO-USD': {
-        'BITFINEX': 'tEDOUSD',
-        'HITBTC': 'EDOUSD'
+        BITFINEX: 'tEDOUSD',
+        HITBTC: 'EDOUSD'
     },
     'NEO-ETH': {
-        'BITFINEX': 'tNEOETH',
-        'HITBTC': 'NEOETH'
+        BITFINEX: 'tNEOETH',
+        HITBTC: 'NEOETH'
     },
     'SNT-USD': {
-        'BITFINEX': 'tSNTUSD'
+        BITFINEX: 'tSNTUSD'
     },
     'BTG-USD': {
-        'BITFINEX': 'tBTGUSD',
-        'HITBTC': 'BTGUSD'
+        BITFINEX: 'tBTGUSD',
+        HITBTC: 'BTGUSD'
     },
     'DATA-USD': {
-        'BITFINEX': 'tDATAUSD',
-        'HITBTC': 'DATAUSD'
+        BITFINEX: 'tDATAUSD',
+        HITBTC: 'DATAUSD'
     },
     'ETP-BTC': {
-        'BITFINEX': 'tETPBTC',
-        'HITBTC': 'ETPBTC'
+        BITFINEX: 'tETPBTC',
+        HITBTC: 'ETPBTC'
     },
     'AVT-ETH': {
-        'BITFINEX': 'tAVTETH',
-        'HITBTC': 'AVTETH'
+        BITFINEX: 'tAVTETH',
+        HITBTC: 'AVTETH'
     },
     'SAN-ETH': {
-        'BITFINEX': 'tSANETH',
-        'HITBTC': 'SANETH'
+        BITFINEX: 'tSANETH',
+        HITBTC: 'SANETH'
     },
     'EOS-ETH': {
-        'BITFINEX': 'tEOSETH',
-        'HITBTC': 'EOSETH'
+        BITFINEX: 'tEOSETH',
+        HITBTC: 'EOSETH'
     },
     'DATA-ETH': {
-        'BITFINEX': 'tDATAETH',
-        'HITBTC': 'DATAETH'
+        BITFINEX: 'tDATAETH',
+        HITBTC: 'DATAETH'
     },
     'DASH-BTC': {
-        'BITFINEX': 'tDASHBTC',
-        'HITBTC': 'DASHBTC'
+        BITFINEX: 'tDASHBTC',
+        HITBTC: 'DASHBTC'
     },
     'XMR-USD': {
-        'BITFINEX': 'tXMRUSD',
-        'HITBTC': 'XMRUSD'
+        BITFINEX: 'tXMRUSD',
+        HITBTC: 'XMRUSD'
     },
     'IOTA-ETH': {
-        'BITFINEX': 'tIOTAETH'
+        BITFINEX: 'tIOTAETH'
     },
     'YYW-ETH': {
-        'BITFINEX': 'tYYWETH'
+        BITFINEX: 'tYYWETH'
     },
     'QTUM-ETH': {
-        'BITFINEX': 'tQTUMETH',
-        'HITBTC': 'QTUMETH'
+        BITFINEX: 'tQTUMETH',
+        HITBTC: 'QTUMETH'
     },
     'YYW-USD': {
-        'BITFINEX': 'tYYWUSD'
+        BITFINEX: 'tYYWUSD'
     },
     'OMG-USD': {
-        'BITFINEX': 'tOMGUSD'
+        BITFINEX: 'tOMGUSD'
     },
     'GNT-ETH': {
-        'BITFINEX': 'tGNTETH'
+        BITFINEX: 'tGNTETH'
     },
     'EOS-BTC': {
-        'BITFINEX': 'tEOSBTC',
-        'HITBTC': 'EOSBTC'
+        BITFINEX: 'tEOSBTC',
+        HITBTC: 'EOSBTC'
     },
     'ETP-ETH': {
-        'BITFINEX': 'tETPETH',
-        'HITBTC': 'ETPETH'
+        BITFINEX: 'tETPETH',
+        HITBTC: 'ETPETH'
     },
     'SNT-BTC': {
-        'BITFINEX': 'tSNTBTC',
-        'HITBTC': 'SNTBTC'
+        BITFINEX: 'tSNTBTC',
+        HITBTC: 'SNTBTC'
     },
     'SNT-ETH': {
-        'BITFINEX': 'tSNTETH',
-        'HITBTC': 'SNTETH'
+        BITFINEX: 'tSNTETH',
+        HITBTC: 'SNTETH'
     },
     'QASH-BTC': {
-        'BITFINEX': 'tQASHBTC'
+        BITFINEX: 'tQASHBTC'
     },
     'QASH-ETH': {
-        'BITFINEX': 'tQASHETH'
+        BITFINEX: 'tQASHETH'
     },
     'AVT-BTC': {
-        'BITFINEX': 'tAVTBTC'
+        BITFINEX: 'tAVTBTC'
     },
     'RRT-BTC': {
-        'BITFINEX': 'tRRTBTC'
+        BITFINEX: 'tRRTBTC'
     },
     'ZEC-USD': {
-        'BITFINEX': 'tZECUSD',
-        'HITBTC': 'ZECUSD'
+        BITFINEX: 'tZECUSD',
+        HITBTC: 'ZECUSD'
     },
     'NEO-BTC': {
-        'BITFINEX': 'tNEOBTC',
-        'HITBTC': 'NEOBTC'
+        BITFINEX: 'tNEOBTC',
+        HITBTC: 'NEOBTC'
     },
     'EOS-USD': {
-        'BITFINEX': 'tEOSUSD',
-        'HITBTC': 'EOSUSD'
+        BITFINEX: 'tEOSUSD',
+        HITBTC: 'EOSUSD'
     },
     'CTR-ETH': {
-        'HITBTC': 'CTRETH'
+        HITBTC: 'CTRETH'
     },
     'FYP-BTC': {
-        'HITBTC': 'FYPBTC'
+        HITBTC: 'FYPBTC'
     },
     'TRST-BTC': {
-        'HITBTC': 'TRSTBTC'
+        HITBTC: 'TRSTBTC'
     },
     'SWFTC-USD': {
-        'HITBTC': 'SWFTCUSD'
+        HITBTC: 'SWFTCUSD'
     },
     'HDG-ETH': {
-        'HITBTC': 'HDGETH'
+        HITBTC: 'HDGETH'
     },
     'DSH-BTC': {
-        'HITBTC': 'DSHBTC'
+        HITBTC: 'DSHBTC'
     },
     'VIB-USD': {
-        'HITBTC': 'VIBUSD'
+        HITBTC: 'VIBUSD'
     },
     'CPAY-ETH': {
-        'HITBTC': 'CPAYETH'
+        HITBTC: 'CPAYETH'
     },
     'AMM-ETH': {
-        'HITBTC': 'AMMETH'
+        HITBTC: 'AMMETH'
     },
     'XUC-ETH': {
-        'HITBTC': 'XUCETH'
+        HITBTC: 'XUCETH'
     },
     'ZRC-BTC': {
-        'HITBTC': 'ZRCBTC'
+        HITBTC: 'ZRCBTC'
     },
     'AMM-BTC': {
-        'HITBTC': 'AMMBTC'
+        HITBTC: 'AMMBTC'
     },
     'COSS-BTC': {
-        'HITBTC': 'COSSBTC'
+        HITBTC: 'COSSBTC'
     },
     'LA-ETH': {
-        'HITBTC': 'LAETH'
+        HITBTC: 'LAETH'
     },
     'XMR-ETH': {
-        'HITBTC': 'XMRETH'
+        HITBTC: 'XMRETH'
     },
     'UGT-USD': {
-        'HITBTC': 'UGTUSD'
+        HITBTC: 'UGTUSD'
     },
     'EBTCNEW-USD': {
-        'HITBTC': 'EBTCNEWUSD'
+        HITBTC: 'EBTCNEWUSD'
     },
     'VERI-ETH': {
-        'HITBTC': 'VERIETH'
+        HITBTC: 'VERIETH'
     },
     'AIR-USD': {
-        'HITBTC': 'AIRUSD'
+        HITBTC: 'AIRUSD'
     },
     'INDI-BTC': {
-        'HITBTC': 'INDIBTC'
+        HITBTC: 'INDIBTC'
     },
     'AMP-BTC': {
-        'HITBTC': 'AMPBTC'
+        HITBTC: 'AMPBTC'
     },
     'FUEL-USD': {
-        'HITBTC': 'FUELUSD'
+        HITBTC: 'FUELUSD'
     },
     'XEM-USD': {
-        'HITBTC': 'XEMUSD'
+        HITBTC: 'XEMUSD'
     },
     'WMGO-USD': {
-        'HITBTC': 'WMGOUSD'
+        HITBTC: 'WMGOUSD'
     },
     'CLD-BTC': {
-        'HITBTC': 'CLDBTC'
+        HITBTC: 'CLDBTC'
     },
     'ICX-ETH': {
-        'HITBTC': 'ICXETH'
+        HITBTC: 'ICXETH'
     },
     'PRS-BTC': {
-        'HITBTC': 'PRSBTC'
+        HITBTC: 'PRSBTC'
     },
     'RKC-ETH': {
-        'HITBTC': 'RKCETH'
+        HITBTC: 'RKCETH'
     },
     'MNE-BTC': {
-        'HITBTC': 'MNEBTC'
+        HITBTC: 'MNEBTC'
     },
     'EMCU-SDT': {
-        'HITBTC': 'EMCUSDT'
+        HITBTC: 'EMCUSDT'
     },
     'ART-BTC': {
-        'HITBTC': 'ARTBTC'
+        HITBTC: 'ARTBTC'
     },
     'RVT-BTC': {
-        'HITBTC': 'RVTBTC'
+        HITBTC: 'RVTBTC'
     },
     'HAC-BTC': {
-        'HITBTC': 'HACBTC'
+        HITBTC: 'HACBTC'
     },
     'DOV-ETH': {
-        'HITBTC': 'DOVETH'
+        HITBTC: 'DOVETH'
     },
     'CND-BTC': {
-        'HITBTC': 'CNDBTC'
+        HITBTC: 'CNDBTC'
     },
     'ICOS-BTC': {
-        'HITBTC': 'ICOSBTC'
+        HITBTC: 'ICOSBTC'
     },
     'PPT-BTC': {
-        'HITBTC': 'PPTBTC'
+        HITBTC: 'PPTBTC'
     },
     'SISA-ETH': {
-        'HITBTC': 'SISAETH'
+        HITBTC: 'SISAETH'
     },
     'EBTCNEW-ETH': {
-        'HITBTC': 'EBTCNEWETH'
+        HITBTC: 'EBTCNEWETH'
     },
     'SNC-USD': {
-        'HITBTC': 'SNCUSD'
+        HITBTC: 'SNCUSD'
     },
     'DENT-ETH': {
-        'HITBTC': 'DENTETH'
+        HITBTC: 'DENTETH'
     },
     'NEBL-ETH': {
-        'HITBTC': 'NEBLETH'
+        HITBTC: 'NEBLETH'
     },
     'BTM-ETH': {
-        'HITBTC': 'BTMETH'
+        HITBTC: 'BTMETH'
     },
     'XRP-ETH': {
-        'HITBTC': 'XRPETH'
+        HITBTC: 'XRPETH'
     },
     'ATB-BTC': {
-        'HITBTC': 'ATBBTC'
+        HITBTC: 'ATBBTC'
     },
     'XTZ-USD': {
-        'HITBTC': 'XTZUSD'
+        HITBTC: 'XTZUSD'
     },
     'BTX-USDT': {
-        'HITBTC': 'BTXUSDT'
+        HITBTC: 'BTXUSDT'
     },
     'ARN-ETH': {
-        'HITBTC': 'ARNETH'
+        HITBTC: 'ARNETH'
     },
     'DDF-ETH': {
-        'HITBTC': 'DDFETH'
+        HITBTC: 'DDFETH'
     },
     'SUB-USD': {
-        'HITBTC': 'SUBUSD'
+        HITBTC: 'SUBUSD'
     },
     'IGNIS-ETH': {
-        'HITBTC': 'IGNISETH'
+        HITBTC: 'IGNISETH'
     },
     'DICE-BTC': {
-        'HITBTC': 'DICEBTC'
+        HITBTC: 'DICEBTC'
     },
     'LUN-BTC': {
-        'HITBTC': 'LUNBTC'
+        HITBTC: 'LUNBTC'
     },
     'DIM-ETH': {
-        'HITBTC': 'DIMETH'
+        HITBTC: 'DIMETH'
     },
     'SWT-BTC': {
-        'HITBTC': 'SWTBTC'
+        HITBTC: 'SWTBTC'
     },
     'GNO-ETH': {
-        'HITBTC': 'GNOETH'
+        HITBTC: 'GNOETH'
     },
     'STRAT-USD': {
-        'HITBTC': 'STRATUSD'
+        HITBTC: 'STRATUSD'
     },
     'ADX-ETH': {
-        'HITBTC': 'ADXETH'
+        HITBTC: 'ADXETH'
     },
     'STX-BTC': {
-        'HITBTC': 'STXBTC'
+        HITBTC: 'STXBTC'
     },
     'SBD-BTC': {
-        'HITBTC': 'SBDBTC'
+        HITBTC: 'SBDBTC'
     },
     'BQX-ETH': {
-        'HITBTC': 'BQXETH'
+        HITBTC: 'BQXETH'
     },
     'PAY-ETH': {
-        'HITBTC': 'PAYETH'
+        HITBTC: 'PAYETH'
     },
     'PLU-ETH': {
-        'HITBTC': 'PLUETH'
+        HITBTC: 'PLUETH'
     },
     'XRP-USDT': {
-        'HITBTC': 'XRPUSDT'
+        HITBTC: 'XRPUSDT'
     },
     'VEN-ETH': {
-        'HITBTC': 'VENETH'
+        HITBTC: 'VENETH'
     },
     'EMC-BTC': {
-        'HITBTC': 'EMCBTC'
+        HITBTC: 'EMCBTC'
     },
     'PQT-USD': {
-        'HITBTC': 'PQTUSD'
+        HITBTC: 'PQTUSD'
     },
     'KICK-BTC': {
-        'HITBTC': 'KICKBTC'
+        HITBTC: 'KICKBTC'
     },
     'ETBS-BTC': {
-        'HITBTC': 'ETBSBTC'
+        HITBTC: 'ETBSBTC'
     },
     'ICX-USD': {
-        'HITBTC': 'ICXUSD'
+        HITBTC: 'ICXUSD'
     },
     'ENJ-ETH': {
-        'HITBTC': 'ENJETH'
+        HITBTC: 'ENJETH'
     },
     'ZRX-ETH': {
-        'HITBTC': 'ZRXETH'
+        HITBTC: 'ZRXETH'
     },
     'NXT-ETH': {
-        'HITBTC': 'NXTETH'
+        HITBTC: 'NXTETH'
     },
     'DRPU-ETH': {
-        'HITBTC': 'DRPUETH'
+        HITBTC: 'DRPUETH'
     },
     'MCAP-BTC': {
-        'HITBTC': 'MCAPBTC'
+        HITBTC: 'MCAPBTC'
     },
     'OAX-ETH': {
-        'HITBTC': 'OAXETH'
+        HITBTC: 'OAXETH'
     },
     'NTO-BTC': {
-        'HITBTC': 'NTOBTC'
+        HITBTC: 'NTOBTC'
     },
     'SPF-ETH': {
-        'HITBTC': 'SPFETH'
+        HITBTC: 'SPFETH'
     },
     'BQX-BTC': {
-        'HITBTC': 'BQXBTC'
+        HITBTC: 'BQXBTC'
     },
     'TKN-BTC': {
-        'HITBTC': 'TKNBTC'
+        HITBTC: 'TKNBTC'
     },
     'B2X-USD': {
-        'HITBTC': 'B2XUSD'
+        HITBTC: 'B2XUSD'
     },
     'DGB-ETH': {
-        'HITBTC': 'DGBETH'
+        HITBTC: 'DGBETH'
     },
     'HVN-ETH': {
-        'HITBTC': 'HVNETH'
+        HITBTC: 'HVNETH'
     },
     'B2X-ETH': {
-        'HITBTC': 'B2XETH'
+        HITBTC: 'B2XETH'
     },
     'B2X-BTC': {
-        'HITBTC': 'B2XBTC'
+        HITBTC: 'B2XBTC'
     },
     'EBTCOLD-ETH': {
-        'HITBTC': 'EBTCOLDETH'
+        HITBTC: 'EBTCOLDETH'
     },
     'CLD-USD': {
-        'HITBTC': 'CLDUSD'
+        HITBTC: 'CLDUSD'
     },
     'CTX-ETH': {
-        'HITBTC': 'CTXETH'
+        HITBTC: 'CTXETH'
     },
     'VERI-BTC': {
-        'HITBTC': 'VERIBTC'
+        HITBTC: 'VERIBTC'
     },
     'TRX-USD': {
-        'HITBTC': 'TRXUSD'
+        HITBTC: 'TRXUSD'
     },
     'HPC-BTC': {
-        'HITBTC': 'HPCBTC'
+        HITBTC: 'HPCBTC'
     },
     'LTC-ETH': {
-        'HITBTC': 'LTCETH'
+        HITBTC: 'LTCETH'
     },
     'BCC-BTC': {
-        'HITBTC': 'BCCBTC'
+        HITBTC: 'BCCBTC'
     },
     'TBT-BTC': {
-        'HITBTC': 'TBTBTC'
+        HITBTC: 'TBTBTC'
     },
     'SUB-BTC': {
-        'HITBTC': 'SUBBTC'
+        HITBTC: 'SUBBTC'
     },
     'ZAP-BTC': {
-        'HITBTC': 'ZAPBTC'
+        HITBTC: 'ZAPBTC'
     },
     'QAU-BTC': {
-        'HITBTC': 'QAUBTC'
+        HITBTC: 'QAUBTC'
     },
     'GVT-ETH': {
-        'HITBTC': 'GVTETH'
+        HITBTC: 'GVTETH'
     },
     'NDC-ETH': {
-        'HITBTC': 'NDCETH'
+        HITBTC: 'NDCETH'
     },
     'CND-ETH': {
-        'HITBTC': 'CNDETH'
+        HITBTC: 'CNDETH'
     },
     'XAUR-BTC': {
-        'HITBTC': 'XAURBTC'
+        HITBTC: 'XAURBTC'
     },
     'SMS-USD': {
-        'HITBTC': 'SMSUSD'
+        HITBTC: 'SMSUSD'
     },
     'ICN-BTC': {
-        'HITBTC': 'ICNBTC'
+        HITBTC: 'ICNBTC'
     },
     'FUN-ETH': {
-        'HITBTC': 'FUNETH'
+        HITBTC: 'FUNETH'
     },
     'DCT-BTC': {
-        'HITBTC': 'DCTBTC'
+        HITBTC: 'DCTBTC'
     },
     'TRX-ETH': {
-        'HITBTC': 'TRXETH'
+        HITBTC: 'TRXETH'
     },
     'PLU-BTC': {
-        'HITBTC': 'PLUBTC'
+        HITBTC: 'PLUBTC'
     },
     'PAY-BTC': {
-        'HITBTC': 'PAYBTC'
+        HITBTC: 'PAYBTC'
     },
     'AIR-ETH': {
-        'HITBTC': 'AIRETH'
+        HITBTC: 'AIRETH'
     },
     'LRC-ETH': {
-        'HITBTC': 'LRCETH'
+        HITBTC: 'LRCETH'
     },
     'VERI-USD': {
-        'HITBTC': 'VERIUSD'
+        HITBTC: 'VERIUSD'
     },
     'BMC-USD': {
-        'HITBTC': 'BMCUSD'
+        HITBTC: 'BMCUSD'
     },
     'SNC-BTC': {
-        'HITBTC': 'SNCBTC'
+        HITBTC: 'SNCBTC'
     },
     'FCN-BTC': {
-        'HITBTC': 'FCNBTC'
+        HITBTC: 'FCNBTC'
     },
     'EDG-BTC': {
-        'HITBTC': 'EDGBTC'
+        HITBTC: 'EDGBTC'
     },
     'SUB-ETH': {
-        'HITBTC': 'SUBETH'
+        HITBTC: 'SUBETH'
     },
     'PPC-BTC': {
-        'HITBTC': 'PPCBTC'
+        HITBTC: 'PPCBTC'
     },
     'UGT-BTC': {
-        'HITBTC': 'UGTBTC'
+        HITBTC: 'UGTBTC'
     },
     'BET-ETH': {
-        'HITBTC': 'BETETH'
+        HITBTC: 'BETETH'
     },
     'UTT-USD': {
-        'HITBTC': 'UTTUSD'
+        HITBTC: 'UTTUSD'
     },
     'MCO-USD': {
-        'HITBTC': 'MCOUSD'
+        HITBTC: 'MCOUSD'
     },
     'BTG-ETH': {
-        'HITBTC': 'BTGETH'
+        HITBTC: 'BTGETH'
     },
     'ATM-USD': {
-        'HITBTC': 'ATMUSD'
+        HITBTC: 'ATMUSD'
     },
     'HGT-ETH': {
-        'HITBTC': 'HGTETH'
+        HITBTC: 'HGTETH'
     },
     'CTR-BTC': {
-        'HITBTC': 'CTRBTC'
+        HITBTC: 'CTRBTC'
     },
     'LRC-BTC': {
-        'HITBTC': 'LRCBTC'
+        HITBTC: 'LRCBTC'
     },
     'STX-ETH': {
-        'HITBTC': 'STXETH'
+        HITBTC: 'STXETH'
     },
     'MCO-BTC': {
-        'HITBTC': 'MCOBTC'
+        HITBTC: 'MCOBTC'
     },
     'ZSC-ETH': {
-        'HITBTC': 'ZSCETH'
+        HITBTC: 'ZSCETH'
     },
     'KBR-BTC': {
-        'HITBTC': 'KBRBTC'
+        HITBTC: 'KBRBTC'
     },
     'TGT-BTC': {
-        'HITBTC': 'TGTBTC'
+        HITBTC: 'TGTBTC'
     },
     'DCN-USD': {
-        'HITBTC': 'DCNUSD'
+        HITBTC: 'DCNUSD'
     },
     'FYN-ETH': {
-        'HITBTC': 'FYNETH'
+        HITBTC: 'FYNETH'
     },
     'EBTCOLD-USD': {
-        'HITBTC': 'EBTCOLDUSD'
+        HITBTC: 'EBTCOLDUSD'
     },
     '8BT-USD': {
-        'HITBTC': '8BTUSD'
+        HITBTC: '8BTUSD'
     },
     'DLT-BTC': {
-        'HITBTC': 'DLTBTC'
+        HITBTC: 'DLTBTC'
     },
     'OAX-USD': {
-        'HITBTC': 'OAXUSD'
+        HITBTC: 'OAXUSD'
     },
     'EXN-BTC': {
-        'HITBTC': 'EXNBTC'
+        HITBTC: 'EXNBTC'
     },
     'ITS-BTC': {
-        'HITBTC': 'ITSBTC'
+        HITBTC: 'ITSBTC'
     },
     'ORME-BTC': {
-        'HITBTC': 'ORMEBTC'
+        HITBTC: 'ORMEBTC'
     },
     'CSNO-BTC': {
-        'HITBTC': 'CSNOBTC'
+        HITBTC: 'CSNOBTC'
     },
     'UTT-BTC': {
-        'HITBTC': 'UTTBTC'
+        HITBTC: 'UTTBTC'
     },
     'SC-BTC': {
-        'HITBTC': 'SCBTC'
+        HITBTC: 'SCBTC'
     },
     'WRC-ETH': {
-        'HITBTC': 'WRCETH'
+        HITBTC: 'WRCETH'
     },
     'ATM-BTC': {
-        'HITBTC': 'ATMBTC'
+        HITBTC: 'ATMBTC'
     },
     'CCT-ETH': {
-        'HITBTC': 'CCTETH'
+        HITBTC: 'CCTETH'
     },
     'SMART-BTC': {
-        'HITBTC': 'SMARTBTC'
+        HITBTC: 'SMARTBTC'
     },
     'NXT-USD': {
-        'HITBTC': 'NXTUSD'
+        HITBTC: 'NXTUSD'
     },
     'ELM-BTC': {
-        'HITBTC': 'ELMBTC'
+        HITBTC: 'ELMBTC'
     },
     'FUN-BTC': {
-        'HITBTC': 'FUNBTC'
+        HITBTC: 'FUNBTC'
     },
     'BMC-BTC': {
-        'HITBTC': 'BMCBTC'
+        HITBTC: 'BMCBTC'
     },
     'DIM-USD': {
-        'HITBTC': 'DIMUSD'
+        HITBTC: 'DIMUSD'
     },
     'SMS-BTC': {
-        'HITBTC': 'SMSBTC'
+        HITBTC: 'SMSBTC'
     },
     'MIPS-BTC': {
-        'HITBTC': 'MIPSBTC'
+        HITBTC: 'MIPSBTC'
     },
     'REP-BTC': {
-        'HITBTC': 'REPBTC'
+        HITBTC: 'REPBTC'
     },
     'DCN-ETH': {
-        'HITBTC': 'DCNETH'
+        HITBTC: 'DCNETH'
     },
     'DRPU-BTC': {
-        'HITBTC': 'DRPUBTC'
+        HITBTC: 'DRPUBTC'
     },
     'FUEL-ETH': {
-        'HITBTC': 'FUELETH'
+        HITBTC: 'FUELETH'
     },
     'DOGE-ETH': {
-        'HITBTC': 'DOGEETH'
+        HITBTC: 'DOGEETH'
     },
     'EMGO-BTC': {
-        'HITBTC': 'EMGOBTC'
+        HITBTC: 'EMGOBTC'
     },
     'ECH-BTC': {
-        'HITBTC': 'ECHBTC'
+        HITBTC: 'ECHBTC'
     },
     'PING-BTC': {
-        'HITBTC': 'PINGBTC'
+        HITBTC: 'PINGBTC'
     },
     'AE-BTC': {
-        'HITBTC': 'AEBTC'
+        HITBTC: 'AEBTC'
     },
     'DICE-ETH': {
-        'HITBTC': 'DICEETH'
+        HITBTC: 'DICEETH'
     },
     'IXT-ETH': {
-        'HITBTC': 'IXTETH'
+        HITBTC: 'IXTETH'
     },
     'ICOS-ETH': {
-        'HITBTC': 'ICOSETH'
+        HITBTC: 'ICOSETH'
     },
     'IXT-BTC': {
-        'HITBTC': 'IXTBTC'
+        HITBTC: 'IXTBTC'
     },
     'ATM-ETH': {
-        'HITBTC': 'ATMETH'
+        HITBTC: 'ATMETH'
     },
     'AEON-BTC': {
-        'HITBTC': 'AEONBTC'
+        HITBTC: 'AEONBTC'
     },
     'MANA-ETH': {
-        'HITBTC': 'MANAETH'
+        HITBTC: 'MANAETH'
     },
     'PPC-USD': {
-        'HITBTC': 'PPCUSD'
+        HITBTC: 'PPCUSD'
     },
     'STORM-BTC': {
-        'HITBTC': 'STORMBTC'
+        HITBTC: 'STORMBTC'
     },
     'ATL-BTC': {
-        'HITBTC': 'ATLBTC'
+        HITBTC: 'ATLBTC'
     },
     'CAT-BTC': {
-        'HITBTC': 'CATBTC'
+        HITBTC: 'CATBTC'
     },
     'NXT-BTC': {
-        'HITBTC': 'NXTBTC'
+        HITBTC: 'NXTBTC'
     },
     'CNX-BTC': {
-        'HITBTC': 'CNXBTC'
+        HITBTC: 'CNXBTC'
     },
     'EBTCNEW-BTC': {
-        'HITBTC': 'EBTCNEWBTC'
+        HITBTC: 'EBTCNEWBTC'
     },
     'STU-USD': {
-        'HITBTC': 'STUUSD'
+        HITBTC: 'STUUSD'
     },
     'ODN-BTC': {
-        'HITBTC': 'ODNBTC'
+        HITBTC: 'ODNBTC'
     },
     'CTX-BTC': {
-        'HITBTC': 'CTXBTC'
+        HITBTC: 'CTXBTC'
     },
     'ZRX-BTC': {
-        'HITBTC': 'ZRXBTC'
+        HITBTC: 'ZRXBTC'
     },
     'BTM-BTC': {
-        'HITBTC': 'BTMBTC'
+        HITBTC: 'BTMBTC'
     },
     'BTCA-BTC': {
-        'HITBTC': 'BTCABTC'
+        HITBTC: 'BTCABTC'
     },
     'GNO-BTC': {
-        'HITBTC': 'GNOBTC'
+        HITBTC: 'GNOBTC'
     },
     'XUC-BTC': {
-        'HITBTC': 'XUCBTC'
+        HITBTC: 'XUCBTC'
     },
     'TNT-ETH': {
-        'HITBTC': 'TNTETH'
+        HITBTC: 'TNTETH'
     },
     'BMT-ETH': {
-        'HITBTC': 'BMTETH'
+        HITBTC: 'BMTETH'
     },
     'BUS-BTC': {
-        'HITBTC': 'BUSBTC'
+        HITBTC: 'BUSBTC'
     },
     'IND-ETH': {
-        'HITBTC': 'INDETH'
+        HITBTC: 'INDETH'
     },
     'SMS-ETH': {
-        'HITBTC': 'SMSETH'
+        HITBTC: 'SMSETH'
     },
     'MAID-USD': {
-        'HITBTC': 'MAIDUSD'
+        HITBTC: 'MAIDUSD'
     },
     'TNT-USD': {
-        'HITBTC': 'TNTUSD'
+        HITBTC: 'TNTUSD'
     },
     'DOGE-BTC': {
-        'HITBTC': 'DOGEBTC'
+        HITBTC: 'DOGEBTC'
     },
     'FRD-BTC': {
-        'HITBTC': 'FRDBTC'
+        HITBTC: 'FRDBTC'
     },
     'STRAT-ETH': {
-        'HITBTC': 'STRATETH'
+        HITBTC: 'STRATETH'
     },
     'OPT-BTC': {
-        'HITBTC': 'OPTBTC'
+        HITBTC: 'OPTBTC'
     },
     'NXC-BTC': {
-        'HITBTC': 'NXCBTC'
+        HITBTC: 'NXCBTC'
     },
     'ARDR-BTC': {
-        'HITBTC': 'ARDRBTC'
+        HITBTC: 'ARDRBTC'
     },
     'MSP-ETH': {
-        'HITBTC': 'MSPETH'
+        HITBTC: 'MSPETH'
     },
     'ZSC-USD': {
-        'HITBTC': 'ZSCUSD'
+        HITBTC: 'ZSCUSD'
     },
     'SISA-BTC': {
-        'HITBTC': 'SISABTC'
+        HITBTC: 'SISABTC'
     },
     'MTH-BTC': {
-        'HITBTC': 'MTHBTC'
+        HITBTC: 'MTHBTC'
     },
     'ZSC-BTC': {
-        'HITBTC': 'ZSCBTC'
+        HITBTC: 'ZSCBTC'
     },
     'DRT-ETH': {
-        'HITBTC': 'DRTETH'
+        HITBTC: 'DRTETH'
     },
     'QAU-ETH': {
-        'HITBTC': 'QAUETH'
+        HITBTC: 'QAUETH'
     },
     'SKIN-BTC': {
-        'HITBTC': 'SKINBTC'
+        HITBTC: 'SKINBTC'
     },
     'BCC-ETH': {
-        'HITBTC': 'BCCETH'
+        HITBTC: 'BCCETH'
     },
     'VEN-BTC': {
-        'HITBTC': 'VENBTC'
+        HITBTC: 'VENBTC'
     },
     'GUP-BTC': {
-        'HITBTC': 'GUPBTC'
+        HITBTC: 'GUPBTC'
     },
     'CAT-USD': {
-        'HITBTC': 'CATUSD'
+        HITBTC: 'CATUSD'
     },
     'NGC-USD': {
-        'HITBTC': 'NGCUSD'
+        HITBTC: 'NGCUSD'
     },
     'BCN-USD': {
-        'HITBTC': 'BCNUSD'
+        HITBTC: 'BCNUSD'
     },
     'SWT-ETH': {
-        'HITBTC': 'SWTETH'
+        HITBTC: 'SWTETH'
     },
     'XUC-USD': {
-        'HITBTC': 'XUCUSD'
+        HITBTC: 'XUCUSD'
     },
     'TIME-ETH': {
-        'HITBTC': 'TIMEETH'
+        HITBTC: 'TIMEETH'
     },
     'DOV-BTC': {
-        'HITBTC': 'DOVBTC'
+        HITBTC: 'DOVBTC'
     },
     'ATB-USD': {
-        'HITBTC': 'ATBUSD'
+        HITBTC: 'ATBUSD'
     },
     'CDT-BTC': {
-        'HITBTC': 'CDTBTC'
+        HITBTC: 'CDTBTC'
     },
     'BTX-BTC': {
-        'HITBTC': 'BTXBTC'
+        HITBTC: 'BTXBTC'
     },
     'STU-BTC': {
-        'HITBTC': 'STUBTC'
+        HITBTC: 'STUBTC'
     },
     'LOC-ETH': {
-        'HITBTC': 'LOCETH'
+        HITBTC: 'LOCETH'
     },
     'BTCA-USD': {
-        'HITBTC': 'BTCAUSD'
+        HITBTC: 'BTCAUSD'
     },
     'XDN-USD': {
-        'HITBTC': 'XDNUSD'
+        HITBTC: 'XDNUSD'
     },
     'CLD-ETH': {
-        'HITBTC': 'CLDETH'
+        HITBTC: 'CLDETH'
     },
     'AMB-BTC': {
-        'HITBTC': 'AMBBTC'
+        HITBTC: 'AMBBTC'
     },
     'EVX-USD': {
-        'HITBTC': 'EVXUSD'
+        HITBTC: 'EVXUSD'
     },
     'VIB-ETH': {
-        'HITBTC': 'VIBETH'
+        HITBTC: 'VIBETH'
     },
     'CL-ETH': {
-        'HITBTC': 'CLETH'
+        HITBTC: 'CLETH'
     },
     'WRC-BTC': {
-        'HITBTC': 'WRCBTC'
+        HITBTC: 'WRCBTC'
     },
     'EBTCOLD-BTC': {
-        'HITBTC': 'EBTCOLDBTC'
+        HITBTC: 'EBTCOLDBTC'
     },
     'ELE-BTC': {
-        'HITBTC': 'ELEBTC'
+        HITBTC: 'ELEBTC'
     },
     'VIBE-BTC': {
-        'HITBTC': 'VIBEBTC'
+        HITBTC: 'VIBEBTC'
     },
     'CAT-ETH': {
-        'HITBTC': 'CATETH'
+        HITBTC: 'CATETH'
     },
     'GAME-BTC': {
-        'HITBTC': 'GAMEBTC'
+        HITBTC: 'GAMEBTC'
     },
     'ATS-ETH': {
-        'HITBTC': 'ATSETH'
+        HITBTC: 'ATSETH'
     },
     'BNT-BTC': {
-        'HITBTC': 'BNTBTC'
+        HITBTC: 'BNTBTC'
     },
     'SNGLS-BTC': {
-        'HITBTC': 'SNGLSBTC'
+        HITBTC: 'SNGLSBTC'
     },
     'CND-USD': {
-        'HITBTC': 'CNDUSD'
+        HITBTC: 'CNDUSD'
     },
     'ZRX-USD': {
-        'HITBTC': 'ZRXUSD'
+        HITBTC: 'ZRXUSD'
     },
     'SCL-BTC': {
-        'HITBTC': 'SCLBTC'
+        HITBTC: 'SCLBTC'
     },
     'ETC-ETH': {
-        'HITBTC': 'ETCETH'
+        HITBTC: 'ETCETH'
     },
     'MANA-BTC': {
-        'HITBTC': 'MANABTC'
+        HITBTC: 'MANABTC'
     },
     'SWFTC-BTC': {
-        'HITBTC': 'SWFTCBTC'
+        HITBTC: 'SWFTCBTC'
     },
     'TAAS-BTC': {
-        'HITBTC': 'TAASBTC'
+        HITBTC: 'TAASBTC'
     },
     'SMART-ETH': {
-        'HITBTC': 'SMARTETH'
+        HITBTC: 'SMARTETH'
     },
     'WTT-BTC': {
-        'HITBTC': 'WTTBTC'
+        HITBTC: 'WTTBTC'
     },
     'PRE-BTC': {
-        'HITBTC': 'PREBTC'
+        HITBTC: 'PREBTC'
     },
     'SBTC-BTC': {
-        'HITBTC': 'SBTCBTC'
+        HITBTC: 'SBTCBTC'
     },
     'LIFE-BTC': {
-        'HITBTC': 'LIFEBTC'
+        HITBTC: 'LIFEBTC'
     },
     'CTR-USD': {
-        'HITBTC': 'CTRUSD'
+        HITBTC: 'CTRUSD'
     },
     'FUEL-BTC': {
-        'HITBTC': 'FUELBTC'
+        HITBTC: 'FUELBTC'
     },
     'WMGO-BTC': {
-        'HITBTC': 'WMGOBTC'
+        HITBTC: 'WMGOBTC'
     },
     'NEBL-BTC': {
-        'HITBTC': 'NEBLBTC'
+        HITBTC: 'NEBLBTC'
     },
     'PLR-ETH': {
-        'HITBTC': 'PLRETH'
+        HITBTC: 'PLRETH'
     },
     'STU-ETH': {
-        'HITBTC': 'STUETH'
+        HITBTC: 'STUETH'
     },
     'TRX-BTC': {
-        'HITBTC': 'TRXBTC'
+        HITBTC: 'TRXBTC'
     },
     'SUR-BTC': {
-        'HITBTC': 'SURBTC'
+        HITBTC: 'SURBTC'
     },
     'KMD-USD': {
-        'HITBTC': 'KMDUSD'
+        HITBTC: 'KMDUSD'
     },
     'MAID-ETH': {
-        'HITBTC': 'MAIDETH'
+        HITBTC: 'MAIDETH'
     },
     'ATB-ETH': {
-        'HITBTC': 'ATBETH'
+        HITBTC: 'ATBETH'
     },
     'ERO-BTC': {
-        'HITBTC': 'EROBTC'
+        HITBTC: 'EROBTC'
     },
     'CL-USD': {
-        'HITBTC': 'CLUSD'
+        HITBTC: 'CLUSD'
     },
     'DBIX-BTC': {
-        'HITBTC': 'DBIXBTC'
+        HITBTC: 'DBIXBTC'
     },
     'TKR-ETH': {
-        'HITBTC': 'TKRETH'
+        HITBTC: 'TKRETH'
     },
     'PIX-ETH': {
-        'HITBTC': 'PIXETH'
+        HITBTC: 'PIXETH'
     },
     'BMC-ETH': {
-        'HITBTC': 'BMCETH'
+        HITBTC: 'BMCETH'
     },
     'PPT-ETH': {
-        'HITBTC': 'PPTETH'
+        HITBTC: 'PPTETH'
     },
     'MCO-ETH': {
-        'HITBTC': 'MCOETH'
+        HITBTC: 'MCOETH'
     },
     'LSK-BTC': {
-        'HITBTC': 'LSKBTC'
+        HITBTC: 'LSKBTC'
     },
     'XAUR-ETH': {
-        'HITBTC': 'XAURETH'
+        HITBTC: 'XAURETH'
     },
     'UGT-ETH': {
-        'HITBTC': 'UGTETH'
+        HITBTC: 'UGTETH'
     },
     'LOC-BTC': {
-        'HITBTC': 'LOCBTC'
+        HITBTC: 'LOCBTC'
     },
     'STEE-MBTC': {
-        'HITBTC': 'STEEMBTC'
+        HITBTC: 'STEEMBTC'
     },
     'ICX-BTC': {
-        'HITBTC': 'ICXBTC'
+        HITBTC: 'ICXBTC'
     },
     'PLBT-BTC': {
-        'HITBTC': 'PLBTBTC'
+        HITBTC: 'PLBTBTC'
     },
     'XVG-USD': {
-        'HITBTC': 'XVGUSD'
+        HITBTC: 'XVGUSD'
     },
     'BCC-USD': {
-        'HITBTC': 'BCCUSD'
+        HITBTC: 'BCCUSD'
     },
     'CVC-USD': {
-        'HITBTC': 'CVCUSD'
+        HITBTC: 'CVCUSD'
     },
     'ANT-BTC': {
-        'HITBTC': 'ANTBTC'
+        HITBTC: 'ANTBTC'
     },
     'XVG-BTC': {
-        'HITBTC': 'XVGBTC'
+        HITBTC: 'XVGBTC'
     },
     'STAR-ETH': {
-        'HITBTC': 'STARETH'
+        HITBTC: 'STARETH'
     },
     'XDNCO-BTC': {
-        'HITBTC': 'XDNCOBTC'
+        HITBTC: 'XDNCOBTC'
     },
     'OTX-BTC': {
-        'HITBTC': 'OTXBTC'
+        HITBTC: 'OTXBTC'
     },
     'BNT-ETH': {
-        'HITBTC': 'BNTETH'
+        HITBTC: 'BNTETH'
     },
     'PTOY-BTC': {
-        'HITBTC': 'PTOYBTC'
+        HITBTC: 'PTOYBTC'
     },
     '1ST-ETH': {
-        'HITBTC': '1STETH'
+        HITBTC: '1STETH'
     },
     'ICOS-USD': {
-        'HITBTC': 'ICOSUSD'
+        HITBTC: 'ICOSUSD'
     },
     'AMB-USD': {
-        'HITBTC': 'AMBUSD'
+        HITBTC: 'AMBUSD'
     },
     'PTOY-ETH': {
-        'HITBTC': 'PTOYETH'
+        HITBTC: 'PTOYETH'
     },
     'SNC-ETH': {
-        'HITBTC': 'SNCETH'
+        HITBTC: 'SNCETH'
     },
     'HVN-BTC': {
-        'HITBTC': 'HVNBTC'
+        HITBTC: 'HVNBTC'
     },
     'SNM-ETH': {
-        'HITBTC': 'SNMETH'
+        HITBTC: 'SNMETH'
     },
     'ATS-BTC': {
-        'HITBTC': 'ATSBTC'
+        HITBTC: 'ATSBTC'
     },
     'PRO-ETH': {
-        'HITBTC': 'PROETH'
+        HITBTC: 'PROETH'
     },
     'MRV-ETH': {
-        'HITBTC': 'MRVETH'
+        HITBTC: 'MRVETH'
     },
     'COSS-ETH': {
-        'HITBTC': 'COSSETH'
+        HITBTC: 'COSSETH'
     },
     '1ST-BTC': {
-        'HITBTC': '1STBTC'
+        HITBTC: '1STBTC'
     },
     'EMGO-USD': {
-        'HITBTC': 'EMGOUSD'
+        HITBTC: 'EMGOUSD'
     },
     'CFI-ETH': {
-        'HITBTC': 'CFIETH'
+        HITBTC: 'CFIETH'
     },
     'FUN-USD': {
-        'HITBTC': 'FUNUSD'
+        HITBTC: 'FUNUSD'
     },
     'BOS-BTC': {
-        'HITBTC': 'BOSBTC'
+        HITBTC: 'BOSBTC'
     },
     'DGB-BTC': {
-        'HITBTC': 'DGBBTC'
+        HITBTC: 'DGBBTC'
     },
     'PRG-USD': {
-        'HITBTC': 'PRGUSD'
+        HITBTC: 'PRGUSD'
     },
     'BMT-BTC': {
-        'HITBTC': 'BMTBTC'
+        HITBTC: 'BMTBTC'
     },
     'DGD-BTC': {
-        'HITBTC': 'DGDBTC'
+        HITBTC: 'DGDBTC'
     },
     'DNT-BTC': {
-        'HITBTC': 'DNTBTC'
+        HITBTC: 'DNTBTC'
     },
     'NET-ETH': {
-        'HITBTC': 'NETETH'
+        HITBTC: 'NETETH'
     },
     'QCN-BTC': {
-        'HITBTC': 'QCNBTC'
+        HITBTC: 'QCNBTC'
     },
     'HSR-BTC': {
-        'HITBTC': 'HSRBTC'
+        HITBTC: 'HSRBTC'
     },
     'KMD-BTC': {
-        'HITBTC': 'KMDBTC'
+        HITBTC: 'KMDBTC'
     },
     'XTZ-ETH': {
-        'HITBTC': 'XTZETH'
+        HITBTC: 'XTZETH'
     },
     'AMB-ETH': {
-        'HITBTC': 'AMBETH'
+        HITBTC: 'AMBETH'
     },
     'TAAS-ETH': {
-        'HITBTC': 'TAASETH'
+        HITBTC: 'TAASETH'
     },
     'PRGETH': {
-        'HITBTC': 'PRGETH'
+        HITBTC: 'PRGETH'
     },
     'BNTUSD': {
-        'HITBTC': 'BNTUSD'
+        HITBTC: 'BNTUSD'
     },
     'ZECETH': {
-        'HITBTC': 'ZECETH'
+        HITBTC: 'ZECETH'
     },
     'EVX-BTC': {
-        'HITBTC': 'EVXBTC'
+        HITBTC: 'EVXBTC'
     },
     'TNT-BTC': {
-        'HITBTC': 'TNTBTC'
+        HITBTC: 'TNTBTC'
     },
     'DIM-BTC': {
-        'HITBTC': 'DIMBTC'
+        HITBTC: 'DIMBTC'
     },
     'AMM-USD': {
-        'HITBTC': 'AMMUSD'
+        HITBTC: 'AMMUSD'
     },
     'ENJ-BTC': {
-        'HITBTC': 'ENJBTC'
+        HITBTC: 'ENJBTC'
     },
     'DOGE-USD': {
-        'HITBTC': 'DOGEUSD'
+        HITBTC: 'DOGEUSD'
     },
     'BAS-ETH': {
-        'HITBTC': 'BASETH'
+        HITBTC: 'BASETH'
     },
     'OAX-BTC': {
-        'HITBTC': 'OAXBTC'
+        HITBTC: 'OAXBTC'
     },
     'ARN-BTC': {
-        'HITBTC': 'ARNBTC'
+        HITBTC: 'ARNBTC'
     },
     'AIRBTC': {
-        'HITBTC': 'AIRBTC'
+        HITBTC: 'AIRBTC'
     },
     'XTZ-BTC': {
-        'HITBTC': 'XTZBTC'
+        HITBTC: 'XTZBTC'
     },
     'BTCA-ETH': {
-        'HITBTC': 'BTCAETH'
+        HITBTC: 'BTCAETH'
     },
     'CDX-ETH': {
-        'HITBTC': 'CDXETH'
+        HITBTC: 'CDXETH'
     },
     'LOC-USD': {
-        'HITBTC': 'LOCUSD'
+        HITBTC: 'LOCUSD'
     },
     'MYB-ETH': {
-        'HITBTC': 'MYBETH'
+        HITBTC: 'MYBETH'
     },
     'XEM-ETH': {
-        'HITBTC': 'XEMETH'
+        HITBTC: 'XEMETH'
     },
     'NGC-BTC': {
-        'HITBTC': 'NGCBTC'
+        HITBTC: 'NGCBTC'
     },
     'STRAT-BTC': {
-        'HITBTC': 'STRATBTC'
+        HITBTC: 'STRATBTC'
     },
     'MANA-USD': {
-        'HITBTC': 'MANAUSD'
+        HITBTC: 'MANAUSD'
     },
     'MAID-BTC': {
-        'HITBTC': 'MAIDBTC'
+        HITBTC: 'MAIDBTC'
     },
     'SBTC-ETH': {
-        'HITBTC': 'SBTCETH'
+        HITBTC: 'SBTCETH'
     },
     'WRC-USD': {
-        'HITBTC': 'WRCUSD'
+        HITBTC: 'WRCUSD'
     },
     'CDT-ETH': {
-        'HITBTC': 'CDTETH'
+        HITBTC: 'CDTETH'
     },
     'EMC-ETH': {
-        'HITBTC': 'EMCETH'
+        HITBTC: 'EMCETH'
     },
     'CL-BTC': {
-        'HITBTC': 'CLBTC'
+        HITBTC: 'CLBTC'
     },
     'POLL-BTC': {
-        'HITBTC': 'POLLBTC'
+        HITBTC: 'POLLBTC'
     },
     'XDN-BTC': {
-        'HITBTC': 'XDNBTC'
+        HITBTC: 'XDNBTC'
     },
     'XVG-ETH': {
-        'HITBTC': 'XVGETH'
+        HITBTC: 'XVGETH'
     },
     'NGC-ETH': {
-        'HITBTC': 'NGCETH'
+        HITBTC: 'NGCETH'
     },
     'XDN-ETH': {
-        'HITBTC': 'XDNETH'
+        HITBTC: 'XDNETH'
     },
     'PLR-BTC': {
-        'HITBTC': 'PLRBTC'
+        HITBTC: 'PLRBTC'
     },
     'DASH-ETH': {
-        'HITBTC': 'DASHETH'
+        HITBTC: 'DASHETH'
     },
     'YOYOW-BTC': {
-        'HITBTC': 'YOYOWBTC'
+        HITBTC: 'YOYOWBTC'
     },
     'BCN-BTC': {
-        'HITBTC': 'BCNBTC'
+        HITBTC: 'BCNBTC'
     },
     'CRS-USD': {
-        'HITBTC': 'CRSUSD'
+        HITBTC: 'CRSUSD'
     },
     'UET-ETH': {
-        'HITBTC': 'UETETH'
+        HITBTC: 'UETETH'
     },
     'DGB-USD': {
-        'HITBTC': 'DGBUSD'
+        HITBTC: 'DGBUSD'
     },
     'KMD-ETH': {
-        'HITBTC': 'KMDETH'
+        HITBTC: 'KMDETH'
     },
     'UTT-ETH': {
-        'HITBTC': 'UTTETH'
+        HITBTC: 'UTTETH'
     },
     'BTM-USD': {
-        'HITBTC': 'BTMUSD'
+        HITBTC: 'BTMUSD'
     },
     'WINGS-BTC': {
-        'HITBTC': 'WINGSBTC'
+        HITBTC: 'WINGSBTC'
     },
     'EVX-ETH': {
-        'HITBTC': 'EVXETH'
+        HITBTC: 'EVXETH'
     },
     'WTC-BTC': {
-        'HITBTC': 'WTCBTC'
+        HITBTC: 'WTCBTC'
     },
     'SBTC-USDT': {
-        'HITBTC': 'SBTCUSDT'
+        HITBTC: 'SBTCUSDT'
     },
     'XEM-BTC': {
-        'HITBTC': 'XEMBTC'
+        HITBTC: 'XEMBTC'
     },
     'LEND-ETH': {
-        'HITBTC': 'LENDETH'
+        HITBTC: 'LENDETH'
     },
     'PRG-BTC': {
-        'HITBTC': 'PRGBTC'
+        HITBTC: 'PRGBTC'
     },
     'POE-ETH': {
-        'HITBTC': 'POEETH'
+        HITBTC: 'POEETH'
     },
     'CFI-BTC': {
-        'HITBTC': 'CFIBTC'
+        HITBTC: 'CFIBTC'
     },
     'VIB-BTC': {
-        'HITBTC': 'VIBBTC'
+        HITBTC: 'VIBBTC'
     },
     'RLC-BTC': {
-        'HITBTC': 'RLCBTC'
+        HITBTC: 'RLCBTC'
     },
     'BKB-BTC': {
-        'HITBTC': 'BKBBTC'
+        HITBTC: 'BKBBTC'
     },
     'ICO-BTC': {
-        'HITBTC': 'ICOBTC'
+        HITBTC: 'ICOBTC'
     },
     'SUR-ETH': {
-        'HITBTC': 'SURETH'
+        HITBTC: 'SURETH'
     },
     'ENJ-USD': {
-        'HITBTC': 'ENJUSD'
+        HITBTC: 'ENJUSD'
     },
     'LAT-BTC': {
-        'HITBTC': 'LATBTC'
+        HITBTC: 'LATBTC'
     },
     'VOISE-BTC': {
-        'HITBTC': 'VOISEBTC'
+        HITBTC: 'VOISEBTC'
     },
     'POE-BTC': {
-        'HITBTC': 'POEBTC'
+        HITBTC: 'POEBTC'
     },
     'QVT-ETH': {
-        'HITBTC': 'QVTETH'
+        HITBTC: 'QVTETH'
     },
     'LEND-BTC': {
-        'HITBTC': 'LENDBTC'
+        HITBTC: 'LENDBTC'
     },
     'PIX-BTC': {
-        'HITBTC': 'PIXBTC'
+        HITBTC: 'PIXBTC'
     },
     'BCN-ETH': {
-        'HITBTC': 'BCNETH'
+        HITBTC: 'BCNETH'
     },
     'CDT-USD': {
-        'HITBTC': 'CDTUSD'
+        HITBTC: 'CDTUSD'
     },
     'WAVES-BTC': {
-        'HITBTC': 'WAVESBTC'
+        HITBTC: 'WAVESBTC'
     },
     'TIME-BTC': {
-        'HITBTC': 'TIMEBTC'
+        HITBTC: 'TIMEBTC'
     },
     'SWFTC-ETH': {
-        'HITBTC': 'SWFTCETH'
+        HITBTC: 'SWFTCETH'
     },
     'OTN-BTC': {
-        'HITBTC': 'OTNBTC'
+        HITBTC: 'OTNBTC'
     },
     'TIX-ETH': {
-        'HITBTC': 'TIXETH'
+        HITBTC: 'TIXETH'
     },
     'ECAT-ETH': {
-        'HITBTC': 'ECATETH'
+        HITBTC: 'ECATETH'
     },
     'MTH-ETH': {
-        'HITBTC': 'MTHETH'
+        HITBTC: 'MTHETH'
     },
     'STX-USD': {
-        'HITBTC': 'STXUSD'
+        HITBTC: 'STXUSD'
     },
     'SMART-USD': {
-        'HITBTC': 'SMARTUSD'
+        HITBTC: 'SMARTUSD'
     },
     'EBET-ETH': {
-        'HITBTC': 'EBETETH'
+        HITBTC: 'EBETETH'
     },
     'VEN-USD': {
-        'HITBTC': 'VENUSD'
+        HITBTC: 'VENUSD'
     },
     'EUR-USD': {
-        'BITSTAMP': 'eurusd'
+        BITSTAMP: 'eurusd'
     },
     'XRP-EUR': {
-        'BITSTAMP': 'xrpeur'
+        BITSTAMP: 'xrpeur'
     },
     'BCH-EUR': {
-        'BITSTAMP': 'bcheur'
+        BITSTAMP: 'bcheur'
     }
 }
 

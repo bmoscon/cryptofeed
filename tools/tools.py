@@ -68,6 +68,14 @@ def exx_get_trading_pairs():
         print("'{}',".format(key))
     print("]")
 
+def bitmex_instruments():
+    r = requests.get('https://www.bitmex.com/api/v1/instrument/active')
+    print("[")
+    data = r.json()
+    for d in data:
+        print("'{}',".format(d['symbol']))
+    print("]")
+
 
 if __name__ == '__main__':
-    exx_get_trading_pairs()
+    bitmex_instruments()

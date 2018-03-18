@@ -25,7 +25,7 @@ class GDAX(Feed):
     id = GDAX_ID
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(GDAX, self).__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks)
+        super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks)
         self.order_map = {}
         self.seq_no = {}
 
@@ -38,7 +38,7 @@ class GDAX(Feed):
             await self.callbacks[TRADES](
                 feed=self.id,
                 pair=msg['product_id'],
-                side=msg['side'],
+                side=ASK if msg['side'] == 'sell' else BID,
                 amount=msg['last_size'],
                 price=msg['price']
             )

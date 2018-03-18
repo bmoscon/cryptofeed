@@ -29,9 +29,9 @@ class Poloniex(Feed):
             LOG.error("Poloniex does not support pairs")
             raise ValueError("Poloniex does not support pairs")
 
-        super(Poloniex, self).__init__('wss://api2.poloniex.com',
-                                     channels=channels,
-                                     callbacks=callbacks)
+        super().__init__('wss://api2.poloniex.com',
+                         channels=channels,
+                         callbacks=callbacks)
 
     async def _ticker(self, msg):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,

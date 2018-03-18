@@ -11,3 +11,4 @@ from cryptofeed.gemini import Gemini
 from cryptofeed.hitbtc import HitBTC
 from cryptofeed.bitstamp import Bitstamp
 from cryptofeed.feedhandler import FeedHandler
+from cryptofeed.bitmex import Bitmex

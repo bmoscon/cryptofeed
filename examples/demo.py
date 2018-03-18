@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
-from cryptofeed import GDAX, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp
+from cryptofeed import Bitmex, GDAX, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp
 from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER
 
 
@@ -35,6 +35,9 @@ def main():
     f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={L3_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
     f.add_feed(HitBTC(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bitstamp(channels=[L3_BOOK, TRADES], pairs=['BTC-USD'], callbacks={L3_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
+
+    bitmex_symbols = Bitmex.get_active_symbols()
+    f.add_feed(Bitmex(channels=[TRADES], pairs=bitmex_symbols, callbacks={TRADES: TradeCallback(trade)}))
     f.run()
 
 

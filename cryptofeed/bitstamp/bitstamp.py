@@ -25,7 +25,7 @@ class Bitstamp(Feed):
     id = BITSTAMP
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(Bitstamp, self).__init__(
+        super().__init__(
             'wss://ws.pusherapp.com/app/de504dc5763aeef9ff52?protocol=7&client=js&version=2.1.6&flash=false',
             pairs=pairs,
             channels=channels,

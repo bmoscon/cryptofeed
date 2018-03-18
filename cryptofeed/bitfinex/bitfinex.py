@@ -23,7 +23,7 @@ class Bitfinex(Feed):
     id = BITFINEX
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(Bitfinex, self).__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks)
+        super().__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks)
         '''
         maps channel id (int) to a dict of
            symbol: channel's currency

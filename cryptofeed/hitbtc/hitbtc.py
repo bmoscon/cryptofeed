@@ -24,10 +24,10 @@ class HitBTC(Feed):
     id = HITBTC
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
-        super(HitBTC, self).__init__('wss://api.hitbtc.com/api/2/ws',
-                                     pairs=pairs,
-                                     channels=channels,
-                                     callbacks=callbacks)
+        super().__init__('wss://api.hitbtc.com/api/2/ws',
+                         pairs=pairs,
+                         channels=channels,
+                         callbacks=callbacks)
 
     async def _ticker(self, msg):
         await self.callbacks[TICKER](feed=self.id,
