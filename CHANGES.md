@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.10.0
+  * Feature: Bitmex
+
 ### 0.9.2 (2018-03-13)
   * Bugfix #10: Change from float to decimal.Decimal in GDAX
   * Feature #5: use sorted dictionaries for order books
