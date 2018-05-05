@@ -8,6 +8,7 @@ import asyncio
 import logging
 
 import websockets
+from websockets import ConnectionClosed
 
 from cryptofeed.defines import TICKER
 from cryptofeed import Gemini
@@ -24,8 +25,9 @@ LOG = logging.getLogger('feedhandler')
 
 
 class FeedHandler(object):
-    def __init__(self):
+    def __init__(self, retries=10):
         self.feeds = []
+        self.retries = retries
 
     def add_feed(self, feed):
         self.feeds.append(feed)
@@ -43,6 +45,7 @@ class FeedHandler(object):
         try:
             asyncio.get_event_loop().run_until_complete(self._run())
         except KeyboardInterrupt:
+            LOG.info("Keyboard Interrupt received - shutting down")
             pass
         except Exception as e:
             LOG.error("Unhandled exception: %s", str(e))
@@ -52,9 +55,19 @@ class FeedHandler(object):
         _, _ = yield from asyncio.wait(feeds)
 
     async def _connect(self, feed):
-        async with websockets.connect(feed.address) as websocket:
-            await feed.subscribe(websocket)
-            await self._handler(websocket, feed.message_handler)
+        retries = 0
+        delay = 1.0
+        while retries <= self.retries:
+            try:
+                async with websockets.connect(feed.address) as websocket:
+                    await feed.subscribe(websocket)
+                    await self._handler(websocket, feed.message_handler)
+            except ConnectionClosed as e:
+                print("Feed {} encountered connection issue {} - reconnecting...".format(feed.id, str(e)))
+                await asyncio.sleep(delay)
+                retries += 1
+                delay = delay * 2
+        print("Feed {} failed to reconnect after {} retries - exiting".format(feed.id, retries))
 
     async def _handler(self, websocket, handler):
         async for message in websocket:
