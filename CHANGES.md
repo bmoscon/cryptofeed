@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.10.1
+  * Feature: Reconnect when a connection is lost
+
 ### 0.10.0 (2018-03-18)
   * Feature: Bitmex
 
