@@ -167,11 +167,19 @@ class GDAX(Feed):
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
         if 'product_id' in msg and 'sequence' in msg:
-            if msg['product_id'] in self.seq_no:
-                if msg['sequence'] < self.seq_no[msg['product_id']]:
-                    return
-                else:
-                    del self.seq_no[msg['product_id']]
+            pair = msg['product_id']
+            if pair not in self.seq_no:
+                self.seq_no[pair] = msg['sequence']
+            elif msg['sequence'] <= self.seq_no[pair]:
+                return
+            elif 'full' in self.channels and msg['sequence'] != self.seq_no[pair] + 1:
+                LOG.warning("Missing sequence number detected")
+                LOG.warning("Requesting book snapshot")
+                await self._book_snapshot()
+                return
+        
+            self.seq_no[pair] = msg['sequence']
+            
 
         if 'type' in msg:
             if msg['type'] == 'ticker':
