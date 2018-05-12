@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.10.1
+### 0.10.1 (2018-5-11)
   * Feature: Reconnect when a connection is lost
   * Bugfix #22: Check for additional connection failures
   * Feature #4: Trade ID support
