@@ -63,11 +63,11 @@ class FeedHandler(object):
                     await feed.subscribe(websocket)
                     await self._handler(websocket, feed.message_handler)
             except ConnectionClosed as e:
-                print("Feed {} encountered connection issue {} - reconnecting...".format(feed.id, str(e)))
+                LOG.warning("Feed {} encountered connection issue {} - reconnecting...".format(feed.id, str(e)))
                 await asyncio.sleep(delay)
                 retries += 1
                 delay = delay * 2
-        print("Feed {} failed to reconnect after {} retries - exiting".format(feed.id, retries))
+        LOG.error("Feed {} failed to reconnect after {} retries - exiting".format(feed.id, retries))
 
     async def _handler(self, websocket, handler):
         async for message in websocket:
