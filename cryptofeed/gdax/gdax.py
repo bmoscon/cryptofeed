@@ -38,6 +38,7 @@ class GDAX(Feed):
             await self.callbacks[TRADES](
                 feed=self.id,
                 pair=msg['product_id'],
+                id=msg['trade_id'],
                 side=ASK if msg['side'] == 'sell' else BID,
                 amount=msg['last_size'],
                 price=msg['price']

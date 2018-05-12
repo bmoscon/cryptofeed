@@ -58,7 +58,7 @@ class Gemini(Feed):
         price = Decimal(msg['price'])
         side = BID if msg['makerSide'] == 'bid' else ASK
         amount = Decimal(msg['amount'])
-        await self.callbacks[TRADES](feed=self.id, pair=self.pair, side=side, amount=amount, price=price)
+        await self.callbacks[TRADES](feed=self.id, id=msg['eventId'], pair=self.pair, side=side, amount=amount, price=price)
 
     async def _update(self, msg):
         for update in msg['events']:
@@ -67,6 +67,8 @@ class Gemini(Feed):
             elif update['type'] == 'trade':
                 await self._trade(update)
             elif update['type'] == 'auction':
+                pass
+            elif update['type'] == 'block_trade':
                 pass
             else:
                 LOG.warning("Invalid update received {}".format(update))

@@ -19,8 +19,12 @@ async def ticker(feed, pair, bid, ask):
     print('Feed: {} Pair: {} Bid: {} Ask: {}'.format(feed, pair, bid, ask))
 
 
-async def trade(feed, pair, side, amount, price):
-    print('Feed: {} Pair: {} side: {} Amount: {} Price: {}'.format(feed, pair, side, amount, price))
+
+async def trade(feed, pair, id, side, amount, price):
+    if id:
+        print("Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(feed, pair, id, side, amount, price))
+    else:
+        print("Feed: {} Pair: {} Side: {} Amount: {} Price: {}".format(feed, pair, side, amount, price))
 
 
 async def book(feed, pair, book):
