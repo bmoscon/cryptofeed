@@ -3,6 +3,8 @@
 ### 0.10.1
   * Feature: Reconnect when a connection is lost
   * Bugfix #22: Check for additional connection failures
+  * Feature #4: Trade ID support
+  * Feature: Account for new gemini message type
 
 ### 0.10.0 (2018-03-18)
   * Feature: Bitmex
