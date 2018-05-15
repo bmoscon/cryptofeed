@@ -56,10 +56,13 @@ class FeedHandler(object):
 
     async def _connect(self, feed):
         retries = 0
-        delay = 1.0
+        delay = 1
         while retries <= self.retries:
             try:
                 async with websockets.connect(feed.address) as websocket:
+                    # connection was successful, reset retry count and delay
+                    retries = 0
+                    delay = 1
                     await feed.subscribe(websocket)
                     await self._handler(websocket, feed.message_handler)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError) as e:
