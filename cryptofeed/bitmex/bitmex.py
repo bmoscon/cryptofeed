@@ -32,6 +32,9 @@ class Bitmex(Feed):
             if pair not in active_pairs:
                 raise ValueError("{} is not active on BitMEX".format(pair))
         self.pairs = pairs
+        self._reset()
+
+    def _reset(self):
         self.partial_received = False
         self.order_id = {}
         for pair in self.pairs:
@@ -59,7 +62,8 @@ class Bitmex(Feed):
                                          pair=data['symbol'],
                                          side=BID if data['side'] == 'Buy' else ASK,
                                          amount=data['size'],
-                                         price=data['price'])
+                                         price=data['price'],
+                                         id=data['trdMatchID'])
     
     async def _book(self, msg):
         pair = None
@@ -118,6 +122,7 @@ class Bitmex(Feed):
                 LOG.warning("{} - Unhandled message {}".format(self.id, msg))
 
     async def subscribe(self, websocket):
+        self._reset()
         chans = []
         for channel in self.channels:
             for pair in self.pairs:
