@@ -57,6 +57,22 @@ class Bitmex(Feed):
         return symbols
 
     async def _trade(self, msg):
+        """
+        trade msg example
+
+        {
+            'timestamp': '2018-05-19T12:25:26.632Z',
+            'symbol': 'XBTUSD',
+            'side': 'Buy',
+            'size': 40,
+            'price': 8335,
+            'tickDirection': 'PlusTick',
+            'trdMatchID': '5f4ecd49-f87f-41c0-06e3-4a9405b9cdde',
+            'grossValue': 479920,
+            'homeNotional': Decimal('0.0047992'),
+            'foreignNotional': 40
+        }
+        """
         for data in msg['data']:
             await self.callbacks[TRADES](feed=self.id,
                                          pair=data['symbol'],
@@ -68,6 +84,8 @@ class Bitmex(Feed):
     async def _book(self, msg):
         pair = None
         if not self.partial_received:
+            # per bitmex documentation messages received before partial
+            # should be discarded
             if msg['action'] != 'partial':
                 return
             self.partial_received = True
