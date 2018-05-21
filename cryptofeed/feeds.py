@@ -35,7 +35,7 @@ _feed_to_exchange_map = {
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
-        GDAX: 'ticker',
+        GDAX: 'matches',
         BITMEX: 'trade'
     },
     TICKER: {

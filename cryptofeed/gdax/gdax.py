@@ -28,24 +28,62 @@ class GDAX(Feed):
         super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks)
         self.order_map = {}
         self.seq_no = {}
+        self.book = {}
 
     async def _ticker(self, msg):
+        '''
+        {
+            'type': 'ticker',
+            'sequence': 5928281084,
+            'product_id': 'BTC-USD',
+            'price': '8500.01000000',
+            'open_24h': '8217.24000000',
+            'volume_24h': '4529.1293778',
+            'low_24h': '8172.00000000',
+            'high_24h': '8600.00000000',
+            'volume_30d': '329178.93594133',
+            'best_bid': '8500',
+            'best_ask': '8500.01'
+        }
+
+        {
+            'type': 'ticker',
+            'sequence': 5928281348,
+            'product_id': 'BTC-USD',
+            'price': '8500.00000000',
+            'open_24h': '8217.24000000',
+            'volume_24h': '4529.13179472',
+            'low_24h': '8172.00000000',
+            'high_24h': '8600.00000000',
+            'volume_30d': '329178.93835825',
+            'best_bid': '8500',
+            'best_ask': '8500.01',
+            'side': 'sell',
+            'time': '2018-05-21T00:30:11.587000Z',
+            'trade_id': 43736677,
+            'last_size': '0.00241692'
+        }
+        '''
         await self.callbacks[TICKER](feed=self.id,
                                      pair=msg['product_id'],
                                      bid=Decimal(msg['best_bid']),
                                      ask=Decimal(msg['best_ask']))
-        if 'side' in msg:
-            await self.callbacks[TRADES](
-                feed=self.id,
-                pair=msg['product_id'],
-                id=msg['trade_id'],
-                side=ASK if msg['side'] == 'sell' else BID,
-                amount=msg['last_size'],
-                price=msg['price']
-            )
 
     async def _book_update(self, msg):
-        # GDAX calls this 'match'
+        '''
+        {
+            'type': 'match', or last_match
+            'trade_id': 43736593
+            'maker_order_id': '2663b65f-b74e-4513-909d-975e3910cf22',
+            'taker_order_id': 'd058d737-87f1-4763-bbb4-c2ccf2a40bde',
+            'side': 'buy',
+            'size': '0.01235647',
+            'price': '8506.26000000',
+            'product_id': 'BTC-USD',
+            'sequence': 5928276661,
+            'time': '2018-05-21T00:26:05.585000Z'
+        }
+        '''
         if self.book:
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
@@ -62,6 +100,16 @@ class GDAX(Feed):
                 del self.book[pair][side][price]
 
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+
+        await self.callbacks[TRADES](
+                feed=self.id,
+                pair=msg['product_id'],
+                id=msg['trade_id'],
+                side=BID if msg['side'] == 'buy' else ASK,
+                amount=msg['size'],
+                price=msg['price'],
+                timestamp=msg['time']
+            )
 
     async def _pair_level2_snapshot(self, msg):
         self.l2_book[msg['product_id']] = {
@@ -167,7 +215,7 @@ class GDAX(Feed):
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
-        if 'product_id' in msg and 'sequence' in msg:
+        if 'full' in self.channels and 'product_id' in msg and 'sequence' in msg:
             pair = msg['product_id']
             if pair not in self.seq_no:
                 self.seq_no[pair] = msg['sequence']
