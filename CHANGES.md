@@ -4,6 +4,7 @@
   * Bugfix: Clear data structures on reconnect in bitmex
   * Feature: Support reconnecting on more connection errors
   * Feature: Timestamp support on trade feeds
+  * Feature: Connection watcher will terminate and re-open idle connections
 
 ### 0.10.1 (2018-5-11)
   * Feature: Reconnect when a connection is lost
