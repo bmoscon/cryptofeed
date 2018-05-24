@@ -14,7 +14,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.callback import Callback
+from cryptofeed.utils import JSONDatetimeDecimalEncoder
 from cryptofeed.exchanges import GDAX as GDAX_ID
 from cryptofeed.defines import L2_BOOK, L3_BOOK, L3_BOOK_UPDATE, BID, ASK, TRADES, TICKER
 
@@ -137,10 +137,11 @@ class GDAX(Feed):
         }
 
     async def _pair_level2_update(self, msg):
+        pair = msg['product_id']
         for side, price, amount in msg['changes']:
             price = Decimal(price)
             amount = Decimal(amount)
-            bidask = self.l2_book[msg['product_id']][BID if side == 'buy' else ASK]
+            bidask = self.l2_book[pair][BID if side == 'buy' else ASK]
 
             if amount == "0":
                 if price in bidask:
@@ -148,15 +149,17 @@ class GDAX(Feed):
             else:
                 bidask[price] = amount
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=msg['product_id'], book=self.l2_book[msg['product_id']])
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
-    async def _book_snapshot(self, pair):
+    def _book_snapshot(self, pair):
+        print('book snapshot')
         timestamp = datetime.utcnow()
         self.book = {}
         loop = asyncio.get_event_loop()
         url = 'https://api.gdax.com/products/{}/book?level=3'
-        future = loop.run_in_executor(None, requests.get, url.format(pair))
-        result = await future
+        # future = loop.run_in_executor(None, requests.get, url.format(pair))
+        # result = await future
+        result = requests.get(url.format(pair))
 
         orders = result.json()
         self.book[pair] = {BID: sd(), ASK: sd()}
@@ -171,10 +174,17 @@ class GDAX(Feed):
                 else:
                     self.book[pair][side][price] = size
                 self.order_map[order_id] = {'price': price, 'size': size}
-        msg = {'timestamp': timestamp, 'product_id': pair, 'sequence': seq_no, **self.book[pair]}
+        msg = json.dumps(
+            {'type': 'l3snapshot',
+             'timestamp': str(timestamp),
+             'product_id': pair,
+             'sequence': seq_no,
+             **orders}
+        )
         return msg
 
     async def _l3_snapshot(self, msg):
+        print(f'l3snapshot keys {msg.keys()}')
         pair = msg['product_id']
         await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
@@ -283,6 +293,7 @@ class GDAX(Feed):
             self.seq_no[pair] = msg['sequence']
 
         if 'type' in msg:
+            print(f'Message type: {msg["type"]}')
             if msg['type'] == 'ticker':
                 await self._ticker(msg)
             elif msg['type'] == 'match' or msg['type'] == 'last_match':
@@ -309,19 +320,24 @@ class GDAX(Feed):
                 LOG.warning('{} - Invalid message type {}'.format(self.id, msg))
 
     async def subscribe(self, websocket):
+        print('subscribing')
         l3_book = False
         # remove l3_book from channels as we will be synthesizing that feed
-        if 'l3_book' in self.channels:
+        if L3_BOOK in self.channels:
             l3_book = True
-            self.channels.pop(self.channels.index('l3_book'))
+            self.channels.pop(self.channels.index(L3_BOOK))
 
         await websocket.send(json.dumps({"type": "subscribe",
                                          "product_ids": self.pairs,
                                          "channels": self.channels
                                         }))
         if l3_book:
+            print('synthesizing l3_book')
             for pair in self.pairs:
-                await self.synthesize_feed(self._book_snapshot, pair)
+                asyncio.ensure_future(self.synthesize_feed(self._book_snapshot, pair))
+        # we need to populate self.book here as well or add:
+        #   if pair in self.book:
+        # to each method so as to avoid KeyError
         elif 'full' in self.channels:
             for pair in self.pairs:
                 await self._book_snapshot(pair)

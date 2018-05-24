@@ -49,7 +49,8 @@ class BookCallback(Callback):
 
 
 class L3BookUpdateCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, msg_type: str, ts: float, seq: int, side: str, price: Decimal, size: Decimal):
+    async def __call__(self, *, feed: str, pair: str, msg_type: str, ts: float,
+                       seq: int, side: str, price: Decimal, size: Decimal):
         if self.is_async:
             await self.callback(feed, pair, msg_type, ts, seq, side, price, size)
         else:

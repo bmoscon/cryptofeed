@@ -1,0 +1,10 @@
+[
+  "tests/unit/test_pair_conversions.py::test_gdax_pair_conversions",
+  "tests/unit/test_pair_conversions.py::test_poloniex_pair_conversions",
+  "tests/unit/test_pair_conversions.py::test_bitfinex_pair_conversions",
+  "tests/unit/test_pair_conversions.py::test_hitbtc_pair_conversions",
+  "tests/unit/test_pair_conversions.py::test_gemini_pair_conversions",
+  "tests/unit/test_pair_conversions.py::test_bitstamp_pair_conversions",
+  "tests/unit/test_periodic_calls.py::test_call_periodically",
+  "tests/unit/test_periodic_calls.py::test_gdax_with_periodic_snapshots"
+]

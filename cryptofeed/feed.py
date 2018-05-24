@@ -4,7 +4,10 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from collections import defaultdict
+from time import time
+import json
 
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
@@ -46,8 +49,17 @@ class Feed:
                 self.callbacks[cb] = callbacks[cb]
 
     async def synthesize_feed(self, func, *args, **kwargs):
-        message = await call_periodically(self.intervals[func.__name__], func, *args, **kwargs)
-        return await self.message_handler(message)
+        interval = self.intervals[func.__name__]
+        start_time = time()
+        while True:
+            print('synthesizing')
+            message = func(*args, **kwargs)
+            print(f'Synthesized msg type: {json.loads(message)["type"]}')
+            asyncio.ensure_future(self.message_handler(message))
+            await asyncio.sleep(
+                interval - ((time() - start_time) % interval)
+            )
+        # asyncio.ensure_future(call_periodically(self.intervals[func.__name__], func, *args, callback=self.message_handler, **kwargs))
 
     async def message_handler(self, msg):
         raise NotImplementedError
