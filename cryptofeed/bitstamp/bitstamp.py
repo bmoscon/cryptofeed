@@ -65,6 +65,9 @@ class Bitstamp(Feed):
     async def _order_book(self, msg):
         if not self.snapshot_processed:
             await self._process_snapshot()
+        # bitstamp does not specify which time zone their websocket api runs off of however their
+        # fix api docs mention UTC +0000 so we will assume this holds for all APIs
+        timestamp = self.tz_aware_datetime_from_string(msg['timestamp'])
         data = msg['data']
         chan = msg['channel']
         pair = None
@@ -88,7 +91,7 @@ class Bitstamp(Feed):
                         del self.book[pair][side][price]
                 else:
                     self.book[pair][side][price] = size
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, timestamp=timestamp, sequence=None, book=self.book[pair])
 
     async def _trades(self, msg):
         data = msg['data']

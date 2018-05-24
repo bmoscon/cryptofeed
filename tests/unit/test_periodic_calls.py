@@ -1,63 +1,58 @@
 from time import time
 import asyncio
+import json
 
-from cryptofeed import GDAX, FeedHandler
-from cryptofeed.defines import L3_BOOK, L3_BOOK_UPDATE
-from cryptofeed.callback import BookCallback, L3BookUpdateCallback
-from cryptofeed.utils import call_periodically
+import requests
 
-
-loop = asyncio.new_event_loop()
-
-
-async def test(interval: int, sleep_interval: int, max_calls: int):
-    """
-
-    :param interval: schedule interval in seconds
-    :param sleep_interval: amount to simulate execution time in seconds
-    :param max_calls: number of times to schedule calls
-    :return: None
-    """
-    call_times = []
-    count = 0
-
-    async def dummy_func():
-        nonlocal count, call_times
-        count += 1
-        call_times.append(time())
-        # simulate work
-        await asyncio.sleep(sleep_interval)
-        if count == max_calls:
-            raise Exception
-
-    low_range = interval - .01
-    high_range = interval + .01
-
-    try:
-        await call_periodically(interval, dummy_func)
-    except:
-        pass
-
-    for idx in range(len(call_times)-1):
-        a, b = call_times[idx], call_times[idx+1]
-        assert low_range <= (b - a) <= high_range, \
-            f'Call times {a} and {b} not within acceptable range of interval {interval}'
+from cryptofeed.exchanges import GDAX
+from cryptofeed.defines import TICKER, TRADES
+from cryptofeed.feed import Feed
+from cryptofeed.feedhandler import FeedHandler
 
 
-def test_gdax_with_periodic_snapshots():
+def test_periodic_snapshots_with_gdax_channels():
 
-    async def l3book(feed, pair, msg_type, ts, seq, side, price, size):
-        print(
-            f'Feed: {feed} Pair: {pair}  Message Type: {msg_type} Timestamp: {ts} '
-            f'Sequence: {seq} Side: {side} Price: {price} Size: {size}'
-        )
+    class TestFeed(Feed):
+        id = GDAX
 
-    async def l3snapshot(feed, pair, book):
-        print(f'Feed: {feed} Pair: {pair} Bids: {book["bids"][:10:-1]} Asks: {book["asks"][:10]}')
+        def __init__(self, pairs=None, channels=None, num_calls=20, intervals=None):
+            intervals = intervals or {'test': .5}
+            super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, intervals=intervals)
+            self.call_times = []
+            self.num_calls = num_calls
+
+        async def test(self):
+            self.call_times.append(time())
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, requests.get, 'http://httpbin.org/get')
+            if len(self.call_times) == self.num_calls:
+                try:
+                    for idx in range(len(self.call_times) - 1):
+                        high_range = self.intervals['test'] + .01
+                        low_range = self.intervals['test'] - .01
+                        delay = self.call_times[idx+1] - self.call_times[idx]
+                        assert low_range <= delay <= high_range, \
+                            'Delay between calls {} is greater than the specified interval {}.'.format(
+                                delay,
+                                self.intervals['test']
+                            )
+                finally:
+                    loop.call_soon(loop.stop)
+
+        async def message_handler(self, msg):
+            return msg
+
+        async def subscribe(self, websocket):
+            await websocket.send(json.dumps({"type": "subscribe",
+                                             "product_ids": self.pairs,
+                                             "channels": self.channels
+                                             }))
+            asyncio.ensure_future(self.synthesize_feed(self.test))
 
     f = FeedHandler()
-    f.add_feed(GDAX(pairs=['BTC-USD'],
-                    channels=[L3_BOOK_UPDATE, L3_BOOK],
-                    callbacks={L3_BOOK_UPDATE: L3BookUpdateCallback(l3book),
-                               L3_BOOK: BookCallback(l3snapshot)}))
+
+    f.add_feed(TestFeed(pairs=['BTC-USD', 'ETH-BTC', 'LTC-BTC'],
+                        channels=[TICKER, TRADES],
+                        intervals={'test': .5},
+                        num_calls=10))
     f.run()

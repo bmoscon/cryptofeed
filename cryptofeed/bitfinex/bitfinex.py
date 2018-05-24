@@ -22,8 +22,8 @@ LOG = logging.getLogger('feedhandler')
 class Bitfinex(Feed):
     id = BITFINEX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None):
-        super().__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks)
+    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+        super().__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks, **kwargs)
         '''
         maps channel id (int) to a dict of
            symbol: channel's currency
@@ -123,10 +123,9 @@ class Bitfinex(Feed):
             LOG.warning("{} - Unexpected book msg {}".format(self.id, msg))
         
         if L3_BOOK in self.channels:
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, timestamp=None, sequence=None, book=self.l2_book[pair])
         else:
             await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
-
 
     async def _raw_book(self, msg):
         chan_id = msg[0]
@@ -184,7 +183,7 @@ class Bitfinex(Feed):
             LOG.warning("{} - Unexpected book msg {}".format(self.id, msg))
         
         if L3_BOOK in self.standardized_channels:
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, timestamp=None, sequence=None, book=self.l2_book[pair])
         else:
             await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])        
 
