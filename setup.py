@@ -37,7 +37,7 @@ setup(
     tests_require=["pytest"],
     install_requires=[
         "requests>=2.18.4",
-        "websockets>=4.0.0",
+        "websockets>=5.0",
         "sortedcontainers>=1.5.9"
     ],
 )
