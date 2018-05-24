@@ -2,6 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="8c679d57-03af-4a06-a19d-13c195b50725" name="Default" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/cryptofeed.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.pytest_cache/v/cache/lastfailed" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.pytest_cache/v/cache/nodeids" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cryptofeed/callback.py" beforeDir="false" afterPath="$PROJECT_DIR$/cryptofeed/callback.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cryptofeed/feed.py" beforeDir="false" afterPath="$PROJECT_DIR$/cryptofeed/feed.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cryptofeed/gdax/gdax.py" beforeDir="false" afterPath="$PROJECT_DIR$/cryptofeed/gdax/gdax.py" afterDir="false" />
@@ -20,7 +28,7 @@
       <file leaf-file-name="utils.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cryptofeed/utils.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state>
+            <state relative-caret-position="-190">
               <caret column="14" lean-forward="true" selection-start-column="14" selection-end-column="14" />
             </state>
           </provider>
@@ -29,7 +37,7 @@
       <file leaf-file-name="test_periodic_calls.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/tests/unit/test_periodic_calls.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="337">
+            <state relative-caret-position="810">
               <caret line="54" column="104" selection-start-line="54" selection-start-column="104" selection-end-line="54" selection-end-column="104" />
               <folding>
                 <element signature="e#0#21#0" expanded="true" />
@@ -41,8 +49,8 @@
       <file leaf-file-name="callback.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cryptofeed/callback.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="150">
-              <caret line="12" column="21" selection-start-line="12" selection-start-column="21" selection-end-line="12" selection-end-column="21" />
+            <state relative-caret-position="116">
+              <caret line="51" selection-start-line="51" selection-end-line="51" />
             </state>
           </provider>
         </entry>
@@ -76,7 +84,7 @@
       <file leaf-file-name="gdax.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cryptofeed/gdax/gdax.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="322">
+            <state relative-caret-position="-315">
               <caret line="296" column="34" selection-start-line="296" selection-start-column="34" selection-end-line="296" selection-end-column="34" />
               <folding>
                 <element signature="e#156#170#0" expanded="true" />
@@ -100,8 +108,8 @@
       <file leaf-file-name="feed.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/cryptofeed/feed.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="125">
-              <caret line="56" column="62" selection-start-line="56" selection-start-column="62" selection-end-line="56" selection-end-column="62" />
+            <state relative-caret-position="176">
+              <caret line="54" selection-start-line="54" selection-end-line="54" />
               <folding>
                 <element signature="e#156#170#0" expanded="true" />
               </folding>
@@ -132,7 +140,6 @@
       <find>requests</find>
       <find>_watch</find>
       <find>synth</find>
-      <find>l3sn</find>
       <find>synthe</find>
       <find>l3s</find>
       <find>book sna</find>
@@ -140,8 +147,10 @@
       <find>bids</find>
       <find>print</find>
       <find>synthesizing</find>
-      <find>book snaps</find>
       <find>snapsh</find>
+      <find>l3sn</find>
+      <find>l3sna</find>
+      <find>book snaps</find>
     </findStrings>
     <replaceStrings>
       <replace>_book_snapshot</replace>
@@ -320,20 +329,6 @@
     <entry file="file://$PROJECT_DIR$/tests/unit/test_pair_conversions.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/cryptofeed/callback.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="12" column="21" selection-start-line="12" selection-start-column="21" selection-end-line="12" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/cryptofeed/utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <caret column="14" lean-forward="true" selection-start-column="14" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/feedhandler.log">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-5233" />
@@ -349,9 +344,23 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/cryptofeed/callback.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="116">
+          <caret line="51" selection-start-line="51" selection-end-line="51" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/cryptofeed/utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-190">
+          <caret column="14" lean-forward="true" selection-start-column="14" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/tests/unit/test_periodic_calls.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="337">
+        <state relative-caret-position="810">
           <caret line="54" column="104" selection-start-line="54" selection-start-column="104" selection-end-line="54" selection-end-column="104" />
           <folding>
             <element signature="e#0#21#0" expanded="true" />
@@ -361,7 +370,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/cryptofeed/gdax/gdax.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="322">
+        <state relative-caret-position="-315">
           <caret line="296" column="34" selection-start-line="296" selection-start-column="34" selection-end-line="296" selection-end-column="34" />
           <folding>
             <element signature="e#156#170#0" expanded="true" />
@@ -371,8 +380,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/cryptofeed/feed.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="125">
-          <caret line="56" column="62" selection-start-line="56" selection-start-column="62" selection-end-line="56" selection-end-column="62" />
+        <state relative-caret-position="176">
+          <caret line="54" selection-start-line="54" selection-end-line="54" />
           <folding>
             <element signature="e#156#170#0" expanded="true" />
           </folding>

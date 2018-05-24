@@ -7,11 +7,9 @@ associated with this software.
 import asyncio
 from collections import defaultdict
 from time import time
-import json
 
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.utils import call_periodically
 from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, L3_BOOK_UPDATE, VOLUME, feed_to_exchange
 
 
@@ -52,9 +50,7 @@ class Feed:
         interval = self.intervals[func.__name__]
         start_time = time()
         while True:
-            print('synthesizing')
             message = func(*args, **kwargs)
-            print(f'Synthesized msg type: {json.loads(message)["type"]}')
             asyncio.ensure_future(self.message_handler(message))
             await asyncio.sleep(
                 interval - ((time() - start_time) % interval)

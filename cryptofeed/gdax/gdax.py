@@ -152,7 +152,6 @@ class GDAX(Feed):
         await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
     def _book_snapshot(self, pair):
-        print('book snapshot')
         timestamp = datetime.utcnow()
         self.book = {}
         loop = asyncio.get_event_loop()
@@ -184,7 +183,6 @@ class GDAX(Feed):
         return msg
 
     async def _l3_snapshot(self, msg):
-        print(f'l3snapshot keys {msg.keys()}')
         pair = msg['product_id']
         await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
@@ -293,7 +291,7 @@ class GDAX(Feed):
             self.seq_no[pair] = msg['sequence']
 
         if 'type' in msg:
-            print(f'Message type: {msg["type"]}')
+            # print(f'Message type: {msg["type"]}')
             if msg['type'] == 'ticker':
                 await self._ticker(msg)
             elif msg['type'] == 'match' or msg['type'] == 'last_match':
@@ -320,7 +318,6 @@ class GDAX(Feed):
                 LOG.warning('{} - Invalid message type {}'.format(self.id, msg))
 
     async def subscribe(self, websocket):
-        print('subscribing')
         l3_book = False
         # remove l3_book from channels as we will be synthesizing that feed
         if L3_BOOK in self.channels:
@@ -332,7 +329,6 @@ class GDAX(Feed):
                                          "channels": self.channels
                                         }))
         if l3_book:
-            print('synthesizing l3_book')
             for pair in self.pairs:
                 asyncio.ensure_future(self.synthesize_feed(self._book_snapshot, pair))
         # we need to populate self.book here as well or add:
