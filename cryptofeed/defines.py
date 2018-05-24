@@ -6,6 +6,7 @@ associated with this software.
 '''
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
+L3_BOOK_UPDATE = 'l3_update'
 TRADES = 'trades'
 TICKER = 'ticker'
 VOLUME = 'volume'

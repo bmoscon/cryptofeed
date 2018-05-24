@@ -4,15 +4,19 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
+
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, feed_to_exchange
+from cryptofeed.utils import call_periodically
+from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, L3_BOOK_UPDATE, VOLUME, feed_to_exchange
 
 
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, callbacks=None):
+    # default_interval == 1 hour
+    def __init__(self, address: str, pairs=None, channels=None, callbacks=None, intervals=None, default_interval=60*60):
         self.address = address
         self.standardized_pairs = pairs
         self.standardized_channels = channels
@@ -28,11 +32,22 @@ class Feed:
                           TICKER: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),
+                          L3_BOOK_UPDATE: Callback(None),
                           VOLUME: Callback(None)}
+
+        assert isinstance(intervals, dict) or intervals is None, \
+            f'`intervals` arg must be of type dict or None, got {intervals.__class__.__name__} instead'
+        self.intervals = defaultdict(lambda: default_interval)  # {func_name: schedule_interval_in_seconds}
+        if intervals is not None:
+            self.intervals.update(intervals)
 
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]
 
-    def message_handler(self, msg):
+    async def synthesize_feed(self, func, *args, **kwargs):
+        message = await call_periodically(self.intervals[func.__name__], func, *args, **kwargs)
+        return await self.message_handler(message)
+
+    async def message_handler(self, msg):
         raise NotImplementedError
