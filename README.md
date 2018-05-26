@@ -71,3 +71,8 @@ Some feeds do not support websocket. A framework for supporting non websocket fe
 
 ### DB Plugins
 Support for registering databases and writing directly to them via the handler (as opposed to client provided callbacks).
+
+### Additional Callback Methods
+* Unix Domain Sockets
+* Redis
+* ZMQ
