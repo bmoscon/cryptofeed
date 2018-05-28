@@ -48,6 +48,15 @@ class BookCallback(Callback):
             await loop.run_in_executor(None, self.callback, feed, pair, book)
 
 
+class L3BookCallback(Callback):
+    async def __call__(self, *, feed: str, pair: str, sequence: int, book: dict):
+        if self.is_async:
+            await self.callback(feed, pair, sequence, book)
+        else:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self.callback, feed, pair, sequence, book)
+
+
 class L3BookUpdateCallback(Callback):
     async def __call__(self, *, feed: str, pair: str, msg_type: str, ts: float,
                        seq: int, side: str, price: Decimal, size: Decimal):

@@ -14,7 +14,6 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.utils import JSONDatetimeDecimalEncoder
 from cryptofeed.exchanges import GDAX as GDAX_ID
 from cryptofeed.defines import L2_BOOK, L3_BOOK, L3_BOOK_UPDATE, BID, ASK, TRADES, TICKER
 
@@ -151,42 +150,43 @@ class GDAX(Feed):
 
         await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
-    def _book_snapshot(self, pair):
-        timestamp = datetime.utcnow()
-        self.book = {}
+    async def _book_snapshot(self, pair, update_book=True, ignore_sequence=False):
         loop = asyncio.get_event_loop()
         url = 'https://api.gdax.com/products/{}/book?level=3'
-        # future = loop.run_in_executor(None, requests.get, url.format(pair))
-        # result = await future
-        result = requests.get(url.format(pair))
+        result = await loop.run_in_executor(None, requests.get, url.format(pair))
 
         orders = result.json()
-        self.book[pair] = {BID: sd(), ASK: sd()}
         seq_no = orders['sequence']
-        self.seq_no[pair] = seq_no
-        for side in (BID, ASK):
-            for price, size, order_id in orders[side + 's']:
-                price = Decimal(price)
-                size = Decimal(size)
-                if price in self.book[pair][side]:
-                    self.book[pair][side][price] += size
-                else:
-                    self.book[pair][side][price] = size
-                self.order_map[order_id] = {'price': price, 'size': size}
-        msg = json.dumps(
-            {'type': 'l3snapshot',
-             'timestamp': str(timestamp),
-             'product_id': pair,
-             'sequence': seq_no,
-             **orders}
-        )
-        return msg
 
-    async def _l3_snapshot(self, msg):
-        pair = msg['product_id']
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+        if update_book:
+            self.book[pair] = {BID: sd(), ASK: sd()}
+            for side in (BID, ASK):
+                book_side = self.book[pair][side]
+                for price, size, order_id in orders[side + 's']:
+                    price = Decimal(price)
+                    size = Decimal(size)
+                    if price in book_side:
+                        book_side[price] += size
+                    else:
+                        book_side[price] = size
+                    self.order_map[order_id] = {'price': price, 'size': size}
 
-    async def _open(self, msg):
+        if not ignore_sequence:
+            self.seq_no[pair] = seq_no
+
+        return json.dumps({'type': 'l3snapshot',
+                           'product_id': pair,
+                           'sequence': seq_no,
+                           'ignore_sequence': ignore_sequence,
+                           **orders})
+
+    async def _l3_snapshot(self, msg: dict):
+        await self.callbacks[L3_BOOK](feed=self.id,
+                                      pair=msg['product_id'],
+                                      sequence=msg['sequence'],
+                                      book={'bids': msg['bids'], 'asks': msg['asks']})
+
+    async def _open(self, msg: dict):
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         size = Decimal(msg['remaining_size'])
@@ -212,7 +212,7 @@ class GDAX(Feed):
                 size=size
             )
 
-    async def _done(self, msg):
+    async def _done(self, msg: dict):
         if 'price' not in msg:
             return
         order_id = msg['order_id']
@@ -242,7 +242,7 @@ class GDAX(Feed):
                 size=size
             )
 
-    async def _change(self, msg):
+    async def _change(self, msg: dict):
         order_id = msg['order_id']
         if order_id not in self.order_map:
             return
@@ -269,14 +269,19 @@ class GDAX(Feed):
             )
 
     @staticmethod
-    def make_utc_timestamp_from_string(tstring):
+    def make_utc_timestamp_from_string(tstring: str)-> datetime:
+        """
+        GDAX UTC +0:00
+        :param tstring: timestamp string
+        :return: tz aware datetime object
+        """
         timestamp = datetime.strptime(tstring, '%Y-%m-%dT%H:%M:%S.%fZ')
         timestamp.replace(tzinfo=timezone.utc)
         return timestamp
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str):
         msg = json.loads(msg, parse_float=Decimal)
-        if 'full' in self.channels and 'product_id' in msg and 'sequence' in msg:
+        if not msg.get('ignore_sequence', False) and 'full' in self.channels and 'product_id' in msg and 'sequence' in msg:
             pair = msg['product_id']
             if pair not in self.seq_no:
                 self.seq_no[pair] = msg['sequence']
@@ -287,11 +292,10 @@ class GDAX(Feed):
                 LOG.warning("Requesting book snapshot")
                 await self._book_snapshot(pair)
                 return
-        
+
             self.seq_no[pair] = msg['sequence']
 
         if 'type' in msg:
-            # print(f'Message type: {msg["type"]}')
             if msg['type'] == 'ticker':
                 await self._ticker(msg)
             elif msg['type'] == 'match' or msg['type'] == 'last_match':
@@ -330,10 +334,9 @@ class GDAX(Feed):
                                         }))
         if l3_book:
             for pair in self.pairs:
-                asyncio.ensure_future(self.synthesize_feed(self._book_snapshot, pair))
-        # we need to populate self.book here as well or add:
-        #   if pair in self.book:
-        # to each method so as to avoid KeyError
-        elif 'full' in self.channels:
-            for pair in self.pairs:
-                await self._book_snapshot(pair)
+                asyncio.ensure_future(self.synthesize_feed(self._book_snapshot,
+                                                           pair,
+                                                           update_book=False,
+                                                           ignore_sequence=True))
+        if 'full' in self.channels:
+            await asyncio.gather(*[self._book_snapshot(pair) for pair in self.pairs])

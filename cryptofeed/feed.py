@@ -36,8 +36,6 @@ class Feed:
                           L3_BOOK_UPDATE: Callback(None),
                           VOLUME: Callback(None)}
 
-        assert isinstance(intervals, dict) or intervals is None, \
-            f'`intervals` arg must be of type dict or None, got {intervals.__class__.__name__} instead'
         self.intervals = defaultdict(lambda: default_interval)  # {func_name: schedule_interval_in_seconds}
         if intervals is not None:
             self.intervals.update(intervals)
@@ -50,12 +48,11 @@ class Feed:
         interval = self.intervals[func.__name__]
         start_time = time()
         while True:
-            message = func(*args, **kwargs)
+            message = await func(*args, **kwargs)
             asyncio.ensure_future(self.message_handler(message))
             await asyncio.sleep(
                 interval - ((time() - start_time) % interval)
             )
-        # asyncio.ensure_future(call_periodically(self.intervals[func.__name__], func, *args, callback=self.message_handler, **kwargs))
 
     async def message_handler(self, msg):
         raise NotImplementedError
