@@ -6,6 +6,12 @@ __pycache__/
 # C extensions
 *.so
 
+# pytest
+.pytest_cache/
+
+# ide
+.idea/
+
 # Distribution / packaging
 .Python
 env/

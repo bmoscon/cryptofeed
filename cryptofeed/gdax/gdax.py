@@ -8,7 +8,6 @@ import asyncio
 import json
 import logging
 from decimal import Decimal
-from datetime import datetime, timezone
 
 import requests
 from sortedcontainers import SortedDict as sd
@@ -91,8 +90,7 @@ class GDAX(Feed):
             pair = msg['product_id']
             maker_order_id = msg['maker_order_id']
             sequence = msg['sequence']
-            timestamp = datetime.strptime(msg['time'], '%Y-%m-%dT%H:%M:%S.%fZ')
-            timestamp.replace(tzinfo=timezone.utc)
+            timestamp = self.tz_aware_datetime_from_string(msg['time'])
 
             self.order_map[maker_order_id]['size'] -= size
             if self.order_map[maker_order_id]['size'] <= 0:
@@ -152,39 +150,44 @@ class GDAX(Feed):
 
     async def _book_snapshot(self, pair, update_book=True, ignore_sequence=False):
         loop = asyncio.get_event_loop()
-        url = 'https://api.gdax.com/products/{}/book?level=3'
-        result = await loop.run_in_executor(None, requests.get, url.format(pair))
-
+        url = 'https://api.gdax.com/products/{}/book?level=3'.format(pair)
+        result = await loop.run_in_executor(None, requests.get, url)
         orders = result.json()
         seq_no = orders['sequence']
 
-        if update_book:
-            self.book[pair] = {BID: sd(), ASK: sd()}
-            for side in (BID, ASK):
-                book_side = self.book[pair][side]
-                for price, size, order_id in orders[side + 's']:
-                    price = Decimal(price)
-                    size = Decimal(size)
-                    if price in book_side:
-                        book_side[price] += size
-                    else:
-                        book_side[price] = size
+        book = {BID: sd(), ASK: sd()}
+        for side in (BID, ASK):
+            book_side = book[side]
+            for price, size, order_id in orders[side + 's']:
+                price = Decimal(price)
+                size = Decimal(size)
+                if price in book_side:
+                    book_side[price] += size
+                else:
+                    book_side[price] = size
+                if update_book:
                     self.order_map[order_id] = {'price': price, 'size': size}
+
+        if update_book:
+            self.book[pair] = book
 
         if not ignore_sequence:
             self.seq_no[pair] = seq_no
 
         return json.dumps({'type': 'l3snapshot',
                            'product_id': pair,
+                           'timestamp': None,
                            'sequence': seq_no,
                            'ignore_sequence': ignore_sequence,
                            **orders})
 
     async def _l3_snapshot(self, msg: dict):
+        timestamp = self.tz_aware_datetime_from_string(msg['timestamp']) if msg['timestamp'] is not None else None
         await self.callbacks[L3_BOOK](feed=self.id,
                                       pair=msg['product_id'],
+                                      timestamp=timestamp,
                                       sequence=msg['sequence'],
-                                      book={'bids': msg['bids'], 'asks': msg['asks']})
+                                      book={BID: msg[BID + 's'], ASK: msg[ASK + 's']})
 
     async def _open(self, msg: dict):
         price = Decimal(msg['price'])
@@ -193,7 +196,7 @@ class GDAX(Feed):
         pair = msg['product_id']
         order_id = msg['order_id']
         sequence = msg['sequence']
-        timestamp = self.make_utc_timestamp_from_string(msg['time'])
+        timestamp = self.tz_aware_datetime_from_string(msg['time'])
 
         if price in self.book[pair][side]:
             self.book[pair][side][price] += size
@@ -223,7 +226,7 @@ class GDAX(Feed):
         pair = msg['product_id']
         size = self.order_map[order_id]['size']
         sequence = msg['sequence']
-        timestamp = self.make_utc_timestamp_from_string(msg['time'])
+        timestamp = self.tz_aware_datetime_from_string(msg['time'])
 
         if self.book[pair][side][price] - size == 0:
             del self.book[pair][side][price]
@@ -253,7 +256,7 @@ class GDAX(Feed):
         pair = msg['product_id']
         size = old_size - new_size
         sequence = msg['sequence']
-        timestamp = self.make_utc_timestamp_from_string(msg['time'])
+        timestamp = self.tz_aware_datetime_from_string(msg['time'])
         self.book[pair][side][price] -= size
         self.order_map[order_id] = new_size
 
@@ -268,20 +271,12 @@ class GDAX(Feed):
                 size=new_size
             )
 
-    @staticmethod
-    def make_utc_timestamp_from_string(tstring: str)-> datetime:
-        """
-        GDAX UTC +0:00
-        :param tstring: timestamp string
-        :return: tz aware datetime object
-        """
-        timestamp = datetime.strptime(tstring, '%Y-%m-%dT%H:%M:%S.%fZ')
-        timestamp.replace(tzinfo=timezone.utc)
-        return timestamp
-
     async def message_handler(self, msg: str):
         msg = json.loads(msg, parse_float=Decimal)
-        if not msg.get('ignore_sequence', False) and 'full' in self.channels and 'product_id' in msg and 'sequence' in msg:
+        if not msg.get('ignore_sequence', False) and \
+                'full' in self.channels and \
+                'product_id' in msg and \
+                'sequence' in msg:
             pair = msg['product_id']
             if pair not in self.seq_no:
                 self.seq_no[pair] = msg['sequence']

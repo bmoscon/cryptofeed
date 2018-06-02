@@ -49,12 +49,12 @@ class BookCallback(Callback):
 
 
 class L3BookCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, sequence: int, book: dict):
+    async def __call__(self, *, feed: str, pair: str, timestamp: float, sequence: int, book: dict):
         if self.is_async:
-            await self.callback(feed, pair, sequence, book)
+            await self.callback(feed, pair, timestamp, sequence, book)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, sequence, book)
+            await loop.run_in_executor(None, self.callback, feed, pair, timestamp, sequence, book)
 
 
 class L3BookUpdateCallback(Callback):
