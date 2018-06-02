@@ -8,9 +8,11 @@ __pycache__/
 
 # pytest
 .pytest_cache/
+/.pytest_cache
 
 # ide
 .idea/
+/.idea
 
 # Distribution / packaging
 .Python
