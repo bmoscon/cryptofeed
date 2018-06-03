@@ -12,7 +12,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
-from cryptofeed.defines import BID, ASK, TRADES, TICKER, L3_BOOK, VOLUME
+from cryptofeed.defines import BID, ASK, TRADES, TICKER, L3_BOOK, L3_BOOK_UPDATE, VOLUME
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 from cryptofeed.exchanges import POLONIEX
 from .pairs import poloniex_id_pair_mapping
@@ -51,7 +51,7 @@ class Poloniex(Feed):
             top_vols[pair] = Decimal(top_vols[pair])
         self.callbacks[VOLUME](feed=self.id, **top_vols)
 
-    async def _book(self, msg, chan_id):
+    async def _book(self, msg, chan_id, sequence):
         msg_type = msg[0][0]
         pair = None
         # initial update (i.e. snapshot)
@@ -74,9 +74,11 @@ class Poloniex(Feed):
             pair = poloniex_id_pair_mapping[chan_id]
             pair = pair_exchange_to_std(pair)
             for update in msg:
+                timestamp = None
                 msg_type = update[0]
                 # order book update
                 if msg_type == 'o':
+                    mtype = 'change'
                     side = ASK if update[1] == 0 else BID
                     price = Decimal(update[2])
                     amount = Decimal(update[3])
@@ -85,6 +87,8 @@ class Poloniex(Feed):
                     else:
                         self.l3_book[pair][side][price] = amount
                 elif msg_type == 't':
+                    mtype = 'trade'
+                    timestamp = self.tz_aware_datetime_from_string(update[5])
                     # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp
                     price = Decimal(update[3])
                     side = ASK if update[2] == 0 else BID
@@ -96,8 +100,13 @@ class Poloniex(Feed):
                                                  price=price)
                 else:
                     LOG.warning("{} - Unexpected message received: {}".format(self.id, msg))
+                    # continue so we don't hit the callback below if the msg_type isn't of the 2 tested for above
+                    continue
 
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
+                await self.callbacks[L3_BOOK_UPDATE](feed=self.id, pair=pair, msg_type=mtype, ts=timestamp,
+                                                     seq=sequence, side=side, price=price, size=amount)
+
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, timestamp=None, sequence=sequence, book=self.l3_book[pair])
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
@@ -106,6 +115,7 @@ class Poloniex(Feed):
             return
 
         chan_id = msg[0]
+        sequence = msg[1]
         if chan_id == 1002:
             # the ticker channel doesn't have sequence ids
             # so it should be None, except for the subscription
@@ -122,7 +132,7 @@ class Poloniex(Feed):
         elif chan_id <= 200:
             # order book updates - the channel id refers to
             # the trading pair being updated
-            await self._book(msg[2], chan_id)
+            await self._book(msg[2], chan_id, sequence)
         elif chan_id == 1010:
             # heartbeat - ignore
             pass
