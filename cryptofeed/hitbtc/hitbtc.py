@@ -124,6 +124,6 @@ class HitBTC(Feed):
                         },
                         "id": 123
                     }))
-        if L3_BOOK in self.channels:
+        if L3_BOOK in self.channels and '_book_snapshot' in self.intervals:
             for pair in self.pairs:
                 asyncio.ensure_future(self.synthesize_feed(self._book_snapshot, pair))
