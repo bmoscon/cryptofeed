@@ -67,9 +67,9 @@ class Bitstamp(Feed):
             await self._process_snapshot()
         # bitstamp does not specify which time zone their websocket api runs off of however their
         # fix api docs mention UTC +0000 so we will assume this holds for all APIs
-        timestamp = self.tz_aware_datetime_from_string(msg['timestamp'])
         data = msg['data']
         chan = msg['channel']
+        timestamp = self.tz_aware_datetime_from_string(data['timestamp'])
         pair = None
         if chan == 'diff_order_book':
             pair = 'BTC-USD'

@@ -26,6 +26,7 @@ class Gemini(Feed):
     id = GEMINI
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+        self.l3_snapshot_channel = False
         if len(pairs) != 1:
             LOG.error("Gemini requires a websocket per trading pair")
             raise ValueError("Gemini requires a websocket per trading pair")
@@ -38,7 +39,7 @@ class Gemini(Feed):
         self.pair = pairs[0]
         self.exchange_pair = pair_std_to_exchange(pairs[0], 'GEMINI')
 
-        super().__init__('wss://api.gemini.com/v1/marketdata/' + self.pair,
+        super().__init__('wss://api.gemini.com/v1/marketdata/' + self.exchange_pair,
                          pairs=None,
                          channels=None,
                          callbacks=callbacks,
@@ -100,7 +101,12 @@ class Gemini(Feed):
 
     async def _update(self, msg):
         sequence = msg['socket_sequence']
-        timestamp = (Decimal(msg['timestampms'])/Decimal(1000)) if msg.get('timestampms') else Decimal(msg['timestamp'])
+        # print(msg)
+        # timstamp data only provided after initial book snapshot is provided, snapshot is socket_sequence = 0
+        if sequence is not 0:
+            timestamp = (Decimal(msg['timestampms'])/Decimal(1000)) if msg.get('timestampms') else Decimal(msg['timestamp'])
+        else:
+            timestamp = None
         for update in msg['events']:
             update['timestamp'] = timestamp
             update['sequence'] = sequence
