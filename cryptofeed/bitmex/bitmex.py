@@ -7,6 +7,7 @@ associated with this software.
 import asyncio
 import json
 import logging
+from collections import defaultdict
 from decimal import Decimal
 
 import requests
@@ -15,7 +16,7 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
 from cryptofeed.standards import pair_exchange_to_std
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, ADD, UPD, DEL, BOOK_DELTA
 
 
 LOG = logging.getLogger('feedhandler')
@@ -83,13 +84,14 @@ class Bitmex(Feed):
     
     async def _book(self, msg):
         pair = None
+        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         if not self.partial_received:
             # per bitmex documentation messages received before partial
             # should be discarded
             if msg['action'] != 'partial':
                 return
             self.partial_received = True
-        
+
         if msg['action'] == 'partial' or msg['action'] == 'insert':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
@@ -98,6 +100,7 @@ class Bitmex(Feed):
                 size = Decimal(data['size'])
                 self.l2_book[pair][side][price] = size
                 self.order_id[pair][data['id']] = (price, size)
+                delta[side][ADD].append((price, size))
         elif msg['action'] == 'update':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
@@ -106,6 +109,7 @@ class Bitmex(Feed):
                 price, _ = self.order_id[pair][data['id']]
                 self.l2_book[pair][side][price] = update_size
                 self.order_id[pair][data['id']] = (price, update_size)
+                delta[side][UPD].append(price, update_size)
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
@@ -115,10 +119,12 @@ class Bitmex(Feed):
                 self.l2_book[pair][side][delete_price] -= delete_size
                 if self.l2_book[pair][side][delete_price] == 0:
                     del self.l2_book[pair][side][delete_price]
+                    delta[side][DEL].append(delete_price)
         else:
             LOG.warning("{} - Unexpected L2 Book message {}".format(self.id, msg))
             return
         
+        await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
         await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
 
