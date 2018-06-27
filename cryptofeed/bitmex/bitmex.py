@@ -85,12 +85,15 @@ class Bitmex(Feed):
     async def _book(self, msg):
         pair = None
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        # if we reset the book, force a full update
+        forced = False
         if not self.partial_received:
             # per bitmex documentation messages received before partial
             # should be discarded
             if msg['action'] != 'partial':
                 return
             self.partial_received = True
+            forced = True
 
         if msg['action'] == 'partial' or msg['action'] == 'insert':
             for data in msg['data']:
@@ -124,8 +127,12 @@ class Bitmex(Feed):
             LOG.warning("{} - Unexpected L2 Book message {}".format(self.id, msg))
             return
         
-        await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+        if self.do_deltas and self.updates < self.book_update_interval and not forced:
+            self.updates += 1
+            await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
+        else:
+            self.updates = 0
+            await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
 
     async def message_handler(self, msg):
