@@ -31,7 +31,7 @@ def check_books(master, delta):
             if price not in master[side]:
                 return False
     return True
-        
+
 
 async def book(feed, pair, book):
     global BOOK

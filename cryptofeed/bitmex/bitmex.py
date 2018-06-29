@@ -16,7 +16,7 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
 from cryptofeed.standards import pair_exchange_to_std
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, ADD, UPD, DEL, BOOK_DELTA
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, ADD, UPD, DEL, BOOK_DELTA
 
 
 LOG = logging.getLogger('feedhandler')
