@@ -37,7 +37,7 @@ class Feed:
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]
-                if isinstance(cb, BookUpdateCallback):
+                if isinstance(callbacks[cb], BookUpdateCallback):
                     self.do_deltas = True
 
     def message_handler(self, msg):

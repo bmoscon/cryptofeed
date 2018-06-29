@@ -112,7 +112,7 @@ class Bitmex(Feed):
                 price, _ = self.order_id[pair][data['id']]
                 self.l2_book[pair][side][price] = update_size
                 self.order_id[pair][data['id']] = (price, update_size)
-                delta[side][UPD].append(price, update_size)
+                delta[side][UPD].append((price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
@@ -123,17 +123,19 @@ class Bitmex(Feed):
                 if self.l2_book[pair][side][delete_price] == 0:
                     del self.l2_book[pair][side][delete_price]
                     delta[side][DEL].append(delete_price)
+                else:
+                    delta[side][UPD].append((price, self.l2_book[pair][side][delete_price]))
         else:
             LOG.warning("{} - Unexpected L2 Book message {}".format(self.id, msg))
             return
-        
+
         if self.do_deltas and self.updates < self.book_update_interval and not forced:
             self.updates += 1
             await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
-        else:
+        
+        if self.updates == self.book_update_interval or forced or not self.do_deltas:
             self.updates = 0
             await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
-
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
