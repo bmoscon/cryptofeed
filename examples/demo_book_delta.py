@@ -41,7 +41,7 @@ async def book(feed, pair, book):
     else:
         assert(check_books(book, BOOK))
         print("Books match!")
-    
+
 
 async def delta(feed, pair, update):
     global BOOK
