@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.11.0
+  * Feature: Support for delta updates for order books
+
 ### 0.10.2
   * Bugfix: Clear data structures on reconnect in bitmex
   * Feature: Support reconnecting on more connection errors

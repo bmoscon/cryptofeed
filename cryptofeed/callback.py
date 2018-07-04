@@ -40,12 +40,46 @@ class TickerCallback(Callback):
 
 
 class BookCallback(Callback):
+    """
+    For full L2/L3 book updates
+    """
     async def __call__(self, *, feed: str, pair: str, book: dict):
         if self.is_async:
             await self.callback(feed, pair, book)
         else:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self.callback, feed, pair, book)
+
+
+class BookUpdateCallback(Callback):
+    """
+    For Book Deltas
+    """
+    async def __call__(self, *, feed: str, pair: str, delta: dict):
+        """
+        Delta is in format of:
+        {
+            BID: {
+                ADD: [(price, size), (price, size), ...],
+                DEL: [price, price, price, ...]
+                UPD: [(price, size), (price, size), ...]
+            },
+            ASK: {
+                ADD: [(price, size), (price, size), ...],
+                DEL: [price, price, price, ...]
+                UPD: [(price, size), (price, size), ...]
+            }
+        }
+
+        ADD - these tuples should simply be inserted.
+        DEL - price levels should be deleted
+        UPD - prices should have the quantity set to size (these are not price deltas)
+        """
+        if self.is_async:
+            await self.callback(feed, pair, delta)
+        else:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self.callback, feed, pair, delta)
 
 
 class VolumeCallback(Callback):

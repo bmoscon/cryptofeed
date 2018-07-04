@@ -6,6 +6,7 @@ associated with this software.
 '''
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
+BOOK_DELTA = 'book_delta'
 TRADES = 'trades'
 TICKER = 'ticker'
 VOLUME = 'volume'
@@ -13,6 +14,10 @@ UNSUPPORTED = 'unsupported'
 
 BID = 'bid'
 ASK = 'ask'
+
+ADD = 'add'
+DEL = 'delete'
+UPD = 'update'
 
 """
 Orderbook Layout
@@ -38,4 +43,24 @@ Orderbook Layout
     },
     ...
 }
+"""
+
+"""
+    Delta is in format of:
+    {
+        BID: {
+            ADD: [(price, size), (price, size), ...],
+            DEL: [price, price, price, ...]
+            UPD: [(price, size), (price, size), ...]
+        },
+        ASK: {
+            ADD: [(price, size), (price, size), ...],
+            DEL: [price, price, price, ...]
+            UPD: [(price, size), (price, size), ...]
+        }
+    }
+
+    ADD - these tuples should simply be inserted.
+    DEL - price levels should be deleted
+    UPD - prices should have the quantity set to size (these are not price deltas)
 """
