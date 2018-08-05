@@ -40,6 +40,17 @@ def generate_signature(verb: str, url: str, key_id: str, key_secret: str, data='
     }
 
 
+def trade_normalization(trade: dict) -> dict:
+    return {
+        'timestamp': trade['timestamp'],
+        'pair': trade['symbol'],
+        'id': trade['trdMatchID'],
+        'feed': 'BITMEX',
+        'side': trade['side'],
+        'amount': trade['size'],
+        'price': trade['price']
+    }
+
 def get_trades(symbol: str, start_date: str, end_date: str, key_id=None, key_secret=None) -> list:
     """
     data format
@@ -85,6 +96,8 @@ def get_trades(symbol: str, start_date: str, end_date: str, key_id=None, key_sec
                 print(r.headers)
                 raise
             data = r.json()
+
+            data = list(map(trade_normalization, data))
 
             total_data.extend(data)
 
