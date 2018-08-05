@@ -41,6 +41,22 @@ def generate_signature(verb: str, url: str, key_id: str, key_secret: str, data='
 
 
 def get_trades(symbol: str, start_date: str, end_date: str, key_id=None, key_secret=None) -> list:
+    """
+    data format
+
+    {
+        'timestamp': '2018-01-01T23:59:59.907Z',
+        'symbol': 'XBTUSD',
+        'side': 'Buy',
+        'size': 1900,
+        'price': 13477,
+        'tickDirection': 'ZeroPlusTick',
+        'trdMatchID': '14fcc8d7-d056-768d-3c46-1fdf98728343',
+        'grossValue': 14098000,
+        'homeNotional': 0.14098,
+        'foreignNotional': 1900
+    }
+    """
     total_data = []
 
     dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq="6H").tolist()
