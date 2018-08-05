@@ -100,8 +100,8 @@ if __name__ == '__main__':
     try:
         with open(config, 'r') as fp:
             data = yaml.load(fp)
-            key_id = data['key_id']
-            key_secret = data['key_secret']
+            key_id = data['bitmex']['key_id']
+            key_secret = data['bitmex']['key_secret']
     except:
         pass
 
