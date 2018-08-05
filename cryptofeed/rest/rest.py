@@ -7,7 +7,7 @@ class Rest:
             'bitmex': Bitmex(config)
         }
     
-    def __getattribute__(self, attr):
+    def __getattr__(self, attr):
         return self.lookup[attr]
     
     
