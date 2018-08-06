@@ -3,7 +3,6 @@ import time
 import hashlib
 import hmac
 from urllib.parse import urlparse
-import argparse
 import yaml
 
 import requests
