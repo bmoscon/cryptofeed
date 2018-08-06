@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.11.1
+  * Bitfinex and Bitmex historical trade data via REST
+
 ### 0.11.0 (2018-08-05)
   * Feature: Support for delta updates for order books
   * REST api work started
