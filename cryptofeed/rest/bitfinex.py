@@ -1,6 +1,7 @@
 import time
 from time import sleep
 import yaml
+from datetime import datetime as dt
 
 import pandas as pd
 import requests
@@ -23,6 +24,32 @@ class Bitfinex:
         except:
             pass
 
+    def _trade_normalization(self, symbol: str, trade: list) -> dict:
+        trade_id, timestamp, amount, price = trade
+        timestamp = dt.fromtimestamp(int(timestamp / 1000)).strftime('%Y-%m-%d %H:%M:%S')
+
+        return {
+            'timestamp': timestamp,
+            'pair': symbol,
+            'id': trade_id,
+            'feed': 'BITFINEX',
+            'side': 'Sell' if amount < 0 else 'Buy',
+            'amount': abs(amount),
+            'price': price
+        }
+
+    def _dedupe(self, data):
+        ids = set()
+        ret = []
+
+        for d in data:
+            if d['id'] in ids:
+                continue
+            ids.add(d['id'])
+            ret.append(d)
+
+        return ret
+
     def _get_trades_hist(self, symbol, start_date, end_date):
         total_data = []
 
@@ -43,13 +70,15 @@ class Bitfinex:
                 r.raise_for_status()
 
             data = r.json()
+            start = data[-1][1]
+
+            data = list(map(lambda x: self._trade_normalization(symbol, x), data))
             total_data.extend(data)
 
             if len(data) < REQUEST_LIMIT:
                 break
 
-            start = data[-1][1]
-
+        total_data = list(self._dedupe(total_data))
         return total_data
 
     def trades(self, symbol: str, start=None, end=None):
