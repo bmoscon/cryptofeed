@@ -1,28 +1,18 @@
 import time
 from time import sleep
-import yaml
 from datetime import datetime as dt
 
 import pandas as pd
 import requests
 
+from cryptofeed.rest.api import API
+
 
 REQUEST_LIMIT = 1000
 
 
-class Bitfinex:
-    def __init__(self, config):
-        self.key_id, self.key_secret = None, None
-        if not config:
-            config = "config.yaml"
-        
-        try:
-            with open(config, 'r') as fp:
-                data = yaml.load(fp)
-                self.key_id = data['bitfinex']['key_id']
-                self.key_secret = data['bitfinex']['key_secret']
-        except:
-            pass
+class Bitfinex(API):
+    ID = 'bitfinex'
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         trade_id, timestamp, amount, price = trade

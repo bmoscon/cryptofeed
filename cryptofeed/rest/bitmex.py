@@ -3,29 +3,20 @@ import time
 import hashlib
 import hmac
 from urllib.parse import urlparse
-import yaml
 
 import requests
 import pandas as pd
+
+from cryptofeed.rest.api import API
 
 
 API_MAX = 500
 API_REFRESH = 300
 
-class Bitmex:
-    def __init__(self, config):
-        self.key_id, self.key_secret = None, None
-        if not config:
-            config = "config.yaml"
-        
-        try:
-            with open(config, 'r') as fp:
-                data = yaml.load(fp)
-                self.key_id = data['bitmex']['key_id']
-                self.key_secret = data['bitmex']['key_secret']
-        except:
-            pass
-    
+
+class Bitmex(API):
+    ID = 'bitmex'
+
     def _generate_signature(self, verb: str, url: str, data='') -> dict:
         """
         verb: GET/POST/PUT
