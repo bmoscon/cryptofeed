@@ -39,6 +39,7 @@ setup(
         "requests>=2.18.4",
         "websockets>=5.0",
         "sortedcontainers>=1.5.9",
-        "pandas"
+        "pandas",
+        "yaml"
     ],
 )
