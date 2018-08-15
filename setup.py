@@ -40,6 +40,6 @@ setup(
         "websockets>=5.0",
         "sortedcontainers>=1.5.9",
         "pandas",
-        "yaml"
+        "pyyaml"
     ],
 )
