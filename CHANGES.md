@@ -1,7 +1,9 @@
 ## Changelog
 
-### 0.11.1
+### 0.11.1 (2018-08-18)
   * Bitfinex and Bitmex historical trade data via REST
+  * Bugfix: interval incorrect for rest time ranges
+  * Bugfix: lowercase attrs in Rest interface
 
 ### 0.11.0 (2018-08-05)
   * Feature: Support for delta updates for order books
