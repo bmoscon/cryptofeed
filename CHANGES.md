@@ -1,5 +1,7 @@
 ## Changelog
 
+### 0.12.0
+
 ### 0.11.1 (2018-08-18)
   * Bitfinex and Bitmex historical trade data via REST
   * Bugfix: interval incorrect for rest time ranges
