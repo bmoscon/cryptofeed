@@ -82,6 +82,9 @@ class Bitmex(API):
                 r = requests.get('https://www.bitmex.com{}'.format(endpoint), headers=header)
                 try:
                     limit = int(r.headers['X-RateLimit-Remaining'])
+                    if r.status_code == 429:
+                        sleep(API_REFRESH)
+                        continue
                     if r.status_code != 200:
                         r.raise_for_status()
                 except:
