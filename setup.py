@@ -20,7 +20,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="0.11.1",
+    version="0.12.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description=("Cryptocurrency feed handler and synthetic NBBO feed"),
