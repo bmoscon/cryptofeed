@@ -11,6 +11,6 @@ class Rest:
         }
     
     def __getattr__(self, attr):
-        return self.lookup[attr]
+        return self.lookup[attr.lower()]
     
     

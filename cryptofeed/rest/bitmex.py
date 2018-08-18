@@ -62,6 +62,8 @@ class Bitmex(API):
         total_data = []
 
         dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq="6H").tolist()
+        if dates[-1].right < pd.Timestamp(end_date):
+            dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
 
         for interval in dates:
             start = 0
@@ -112,7 +114,7 @@ class Bitmex(API):
             'amount': trade['size'],
             'price': trade['price']
         }
-    
+
     def trades(self, symbol, start=None, end=None):
         if start and end:
             return self._get_trades(symbol, start, end)
