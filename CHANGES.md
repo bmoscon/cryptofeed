@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 0.12.0
+  * Bugfix: Handle 429s in Bitmex (REST)
 
 ### 0.11.1 (2018-08-18)
   * Bitfinex and Bitmex historical trade data via REST
