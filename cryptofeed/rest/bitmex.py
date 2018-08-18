@@ -113,6 +113,6 @@ class Bitmex(API):
             'price': trade['price']
         }
     
-    def trade(self, symbol, start=None, end=None):
+    def trades(self, symbol, start=None, end=None):
         if start and end:
             return self._get_trades(symbol, start, end)
