@@ -80,7 +80,8 @@ class Bitmex(Feed):
                                          side=BID if data['side'] == 'Buy' else ASK,
                                          amount=data['size'],
                                          price=data['price'],
-                                         id=data['trdMatchID'])
+                                         id=data['trdMatchID'],
+                                         timestamp=data['timestamp'])
     
     async def _book(self, msg):
         pair = None

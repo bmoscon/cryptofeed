@@ -18,8 +18,6 @@ def main():
     f.add_feed(GDAX(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
     f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
 
-
-
     f.run()
 
 
