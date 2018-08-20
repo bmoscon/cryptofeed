@@ -55,7 +55,7 @@ class Bitfinex(Feed):
         pair = pair_exchange_to_std(pair)
         async def _trade_update(trade):
             # trade id, timestamp, amount, price
-            _, _, amount, price = trade
+            id, timestamp, amount, price = trade
             if amount < 0:
                 side = ASK
             else:
@@ -65,7 +65,9 @@ class Bitfinex(Feed):
                                          pair=pair,
                                          side=side,
                                          amount=Decimal(amount),
-                                         price=Decimal(price))
+                                         price=Decimal(price),
+                                         id=id,
+                                         timestamp=timestamp)
 
         if isinstance(msg[1], list):
             # snapshot

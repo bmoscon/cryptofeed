@@ -4,6 +4,9 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from datetime import datetime as dt
+import calendar
+
 from cryptofeed.exchanges import GDAX, GEMINI, BITFINEX, BITSTAMP, HITBTC, BITMEX, POLONIEX
 
 
@@ -2400,3 +2403,12 @@ def pair_exchange_to_std(pair):
     if pair in _exchange_to_std:
         return _exchange_to_std[pair]
     return None
+
+
+def timestamp_normalize(exchange, ts):
+    if exchange == BITMEX or exchange == GDAX:
+        ts = dt.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
+        return calendar.timegm(ts.utctimetuple())
+    elif exchange == 'BITFINEX':
+        return ts / 1000.0
+    return ts

@@ -42,4 +42,7 @@ setup(
         "pandas",
         "pyyaml"
     ],
+    extras_require={
+        'redis': ['aioredis'],
+    },
 )

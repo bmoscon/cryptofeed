@@ -9,7 +9,7 @@ import inspect
 from decimal import Decimal
 
 
-class Callback(object):
+class Callback:
     def __init__(self, callback):
         self.callback = callback
         self.is_async = inspect.iscoroutinefunction(callback)

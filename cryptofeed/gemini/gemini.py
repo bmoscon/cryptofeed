@@ -39,7 +39,7 @@ class Gemini(Feed):
         self.book = {BID: sd(), ASK: sd()}
 
 
-    async def _book(self, msg):
+    async def _book(self, msg, timestamp):
         side = BID if msg['side'] == 'bid' else ASK
         price = Decimal(msg['price'])
         remaining = Decimal(msg['remaining'])
@@ -54,18 +54,22 @@ class Gemini(Feed):
                 self.book[side][price] = remaining
         await self.callbacks[L3_BOOK](feed=self.id, pair=self.pair, book=self.book)
 
-    async def _trade(self, msg):
+    async def _trade(self, msg, timestamp):
         price = Decimal(msg['price'])
         side = BID if msg['makerSide'] == 'bid' else ASK
         amount = Decimal(msg['amount'])
-        await self.callbacks[TRADES](feed=self.id, id=msg['eventId'], pair=self.pair, side=side, amount=amount, price=price)
+        await self.callbacks[TRADES](feed=self.id, id=msg['tid'], pair=self.pair, side=side, amount=amount, price=price, timestamp=timestamp)
 
     async def _update(self, msg):
+        timestamp = None
+        if 'timestampms' in msg:
+            timestamp = msg['timestampms'] / 1000.0
+
         for update in msg['events']:
             if update['type'] == 'change':
-                await self._book(update)
+                await self._book(update, timestamp)
             elif update['type'] == 'trade':
-                await self._trade(update)
+                await self._trade(update, timestamp)
             elif update['type'] == 'auction':
                 pass
             elif update['type'] == 'block_trade':
