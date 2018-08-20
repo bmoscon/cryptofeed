@@ -3,6 +3,7 @@
 ### 0.12.0
   * Bugfix: Handle 429s in Bitmex (REST)
   * Feature: Redis backend for trades to write updates directly to redis
+  * Bugfix: issue #27 - Bitmex trades missing timestamps
 
 ### 0.11.1 (2018-08-18)
   * Bitfinex and Bitmex historical trade data via REST
