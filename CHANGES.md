@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.12.0
+### 0.12.0 (2018-08-20)
   * Bugfix: Handle 429s in Bitmex (REST)
   * Feature: Redis backend for trades to write updates directly to redis
   * Bugfix: issue #27 - Bitmex trades missing timestamps
