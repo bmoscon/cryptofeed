@@ -16,7 +16,7 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
 from cryptofeed.standards import pair_exchange_to_std
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, ADD, UPD, DEL, BOOK_DELTA
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, ADD, UPD, DEL, BOOK_DELTA, FUNDING
 
 
 LOG = logging.getLogger('feedhandler')
@@ -49,7 +49,7 @@ class Bitmex(Feed):
     @staticmethod
     def get_active_symbols_info():
         return requests.get(Bitmex.api + 'instrument/active').json()
-    
+
     @staticmethod
     def get_active_symbols():
         symbols = []
@@ -82,7 +82,7 @@ class Bitmex(Feed):
                                          price=data['price'],
                                          id=data['trdMatchID'],
                                          timestamp=data['timestamp'])
-    
+
     async def _book(self, msg):
         pair = None
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
@@ -133,10 +133,49 @@ class Bitmex(Feed):
         if self.do_deltas and self.updates < self.book_update_interval and not forced:
             self.updates += 1
             await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
-        
+
         if self.updates == self.book_update_interval or forced or not self.do_deltas:
             self.updates = 0
             await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+
+    async def _funding(self, msg):
+        """
+        {'table': 'funding',
+         'action': 'partial',
+         'keys': ['timestamp', 'symbol'],
+         'types': {
+             'timestamp': 'timestamp',
+             'symbol': 'symbol',
+             'fundingInterval': 'timespan',
+             'fundingRate': 'float',
+             'fundingRateDaily': 'float'
+            },
+         'foreignKeys': {
+             'symbol': 'instrument'
+            },
+         'attributes': {
+             'timestamp': 'sorted',
+             'symbol': 'grouped'
+            },
+         'filter': {'symbol': 'XBTUSD'},
+         'data': [{
+             'timestamp': '2018-08-21T20:00:00.000Z',
+             'symbol': 'XBTUSD',
+             'fundingInterval': '2000-01-01T08:00:00.000Z',
+             'fundingRate': Decimal('-0.000561'),
+             'fundingRateDaily': Decimal('-0.001683')
+            }]
+        }
+        """
+        for data in msg['data']:
+            await self.callbacks[FUNDING](feed=self.id,
+                                          pair=data['symbol'],
+                                          timestamp=data['timestamp'],
+                                          interval=data['fundingInterval'],
+                                          rate=data['fundingRate'],
+                                          rate_daily=data['fundingRateDaily']
+                                         )
+
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
@@ -152,6 +191,8 @@ class Bitmex(Feed):
                 await self._trade(msg)
             elif msg['table'] == 'orderBookL2':
                 await self._book(msg)
+            elif msg['table'] == 'funding':
+                await self._funding(msg)
             else:
                 LOG.warning("{} - Unhandled message {}".format(self.id, msg))
 
@@ -161,6 +202,6 @@ class Bitmex(Feed):
         for channel in self.channels:
             for pair in self.pairs:
                 chans.append("{}:{}".format(channel, pair))
-    
-        await websocket.send(json.dumps({"op": "subscribe", 
+
+        await websocket.send(json.dumps({"op": "subscribe",
                                          "args": chans}))

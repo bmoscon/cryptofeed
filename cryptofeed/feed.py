@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, feed_to_exchange
+from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, feed_to_exchange
 from cryptofeed.callback import BookUpdateCallback
 
 
@@ -32,7 +32,9 @@ class Feed:
                           TICKER: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),
-                          VOLUME: Callback(None)}
+                          VOLUME: Callback(None),
+                          FUNDING: Callback(None)}
+
 
         if callbacks:
             for cb in callbacks:

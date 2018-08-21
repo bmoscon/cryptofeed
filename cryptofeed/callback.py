@@ -89,3 +89,12 @@ class VolumeCallback(Callback):
         else:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self.callback, **kwargs)
+
+
+class FundingCallback(Callback):
+    async def __call__(self, **kwargs):
+        if self.is_async:
+            await self.callback(**kwargs)
+        else:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self.callback, **kwargs)

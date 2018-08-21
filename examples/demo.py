@@ -4,10 +4,10 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
+from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
 from cryptofeed import Bitmex, GDAX, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp
-from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER
+from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -20,11 +20,16 @@ async def ticker(feed, pair, bid, ask):
 
 
 async def trade(feed, pair, id, timestamp, side, amount, price):
-        print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, id, side, amount, price))
+    print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, id, side, amount, price))
 
 
 async def book(feed, pair, book):
-        print('Feed: {} Pair: {} Book Bid Size is {} Ask Size is {}'.format(feed, pair, len(book[BID]), len(book[ASK])))
+    print('Feed: {} Pair: {} Book Bid Size is {} Ask Size is {}'.format(feed, pair, len(book[BID]), len(book[ASK])))
+
+
+async def funding(**kwargs):
+    print("Funding Update for {}".format(kwargs['feed']))
+    print(kwargs)
 
 
 def main():
@@ -39,7 +44,7 @@ def main():
 
     bitmex_symbols = Bitmex.get_active_symbols()
     f.add_feed(Bitmex(channels=[TRADES], pairs=bitmex_symbols, callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[FUNDING, TRADES], callbacks={FUNDING: FundingCallback(funding), TRADES: TradeCallback(trade)}))
     f.run()
 
 

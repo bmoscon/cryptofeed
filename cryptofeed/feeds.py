@@ -7,7 +7,7 @@ associated with this software.
 import logging
 
 from cryptofeed.exchanges import BITFINEX, POLONIEX, HITBTC, BITSTAMP, GDAX, BITMEX
-from cryptofeed.defines import L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, UNSUPPORTED
+from cryptofeed.defines import L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED
 from cryptofeed.standards import pair_std_to_exchange
 
 
@@ -48,6 +48,9 @@ _feed_to_exchange_map = {
     },
     VOLUME: {
         POLONIEX: 1003
+    },
+    FUNDING: {
+        BITMEX: 'funding'
     }
 }
 

@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.13.0
+  * Feature: Funding data from Bitmex on ws
+
 ### 0.12.0 (2018-08-20)
   * Bugfix: Handle 429s in Bitmex (REST)
   * Feature: Redis backend for trades to write updates directly to redis
