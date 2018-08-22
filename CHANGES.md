@@ -2,6 +2,7 @@
 
 ### 0.13.0
   * Feature: Funding data from Bitmex on ws
+  * Feature: Funding historical data via rest
 
 ### 0.12.0 (2018-08-20)
   * Bugfix: Handle 429s in Bitmex (REST)
