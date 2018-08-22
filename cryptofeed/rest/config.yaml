@@ -1,0 +1,6 @@
+bitmex:
+    key_id: None
+    key_secret: None
+bitfinex:
+    key_id: None
+    key_secret: None

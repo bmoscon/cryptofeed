@@ -50,7 +50,8 @@ _feed_to_exchange_map = {
         POLONIEX: 1003
     },
     FUNDING: {
-        BITMEX: 'funding'
+        BITMEX: 'funding',
+        BITFINEX: 'trades'
     }
 }
 
