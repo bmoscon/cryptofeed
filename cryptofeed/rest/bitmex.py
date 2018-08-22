@@ -8,6 +8,7 @@ import requests
 import pandas as pd
 
 from cryptofeed.rest.api import API
+from cryptofeed.feeds import BITMEX
 
 
 API_MAX = 500
@@ -15,7 +16,8 @@ API_REFRESH = 300
 
 
 class Bitmex(API):
-    ID = 'bitmex'
+    ID = BITMEX
+    api = 'https://www.bitmex.com'
 
     def _generate_signature(self, verb: str, url: str, data='') -> dict:
         """
@@ -42,7 +44,62 @@ class Bitmex(API):
             "api-signature": signature
         }
 
-    def _get_trades(self, symbol: str, start_date: str, end_date: str) -> list:
+    def _get(self, ep, symbol, start_date, end_date, freq='6H'):
+        dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq=freq).tolist()
+        if dates[-1].right < pd.Timestamp(end_date):
+            dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
+
+        for interval in dates:
+            start = 0
+
+            end = interval.right
+            end -= pd.Timedelta(nanoseconds=1)
+
+            start_date = str(interval.left).replace(" ", "T") + "Z"
+            end_date = str(end).replace(" ", "T") + "Z"
+
+            while True:
+                endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(ep, symbol, API_MAX, start, start_date, end_date)
+                header = {}
+                if self.key_id and self.key_secret:
+                    header = self._generate_signature("GET", endpoint)
+                header['Accept'] = 'application/json'
+                r = requests.get('{}{}'.format(self.api, endpoint), headers=header)
+                try:
+                    limit = int(r.headers['X-RateLimit-Remaining'])
+                    if r.status_code == 429:
+                        sleep(API_REFRESH)
+                        continue
+                    if r.status_code != 200:
+                        r.raise_for_status()
+                except:
+                    print(r.text)
+                    print(r.headers)
+                    raise
+                data = r.json()
+
+                yield data
+
+                if len(data) != API_MAX:
+                    break
+
+                if limit < 1:
+                    sleep(API_REFRESH)
+
+                start += len(data)
+
+    def _trade_normalization(self, trade: dict) -> dict:
+        return {
+            'timestamp': trade['timestamp'],
+            'pair': trade['symbol'],
+            'id': trade['trdMatchID'],
+            'feed': self.ID,
+            'side': trade['side'],
+            'amount': trade['size'],
+            'price': trade['price']
+        }
+
+    def trades(self, symbol, start=None, end=None):
         """
         data format
 
@@ -59,65 +116,29 @@ class Bitmex(API):
             'foreignNotional': 1900
         }
         """
-        total_data = []
+        if start and end:
+            for data in self._get('trade', symbol, start, end):
+                yield list(map(self._trade_normalization, data))
 
-        dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq="6H").tolist()
-        if dates[-1].right < pd.Timestamp(end_date):
-            dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
-
-        for interval in dates:
-            start = 0
-
-            end = interval.right
-            end -= pd.Timedelta(nanoseconds=1)
-
-            start_date = str(interval.left).replace(" ", "T") + "Z"
-            end_date = str(end).replace(" ", "T") + "Z"
-
-            while True:
-                endpoint = '/api/v1/trade?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(symbol, API_MAX, start, start_date, end_date)
-                header = None
-                if self.key_id and self.key_secret:
-                    header = self._generate_signature("GET", endpoint)
-                r = requests.get('https://www.bitmex.com{}'.format(endpoint), headers=header)
-                try:
-                    limit = int(r.headers['X-RateLimit-Remaining'])
-                    if r.status_code == 429:
-                        sleep(API_REFRESH)
-                        continue
-                    if r.status_code != 200:
-                        r.raise_for_status()
-                except:
-                    print(r.json())
-                    print(r.headers)
-                    raise
-                data = r.json()
-
-                data = list(map(self._trade_normalization, data))
-
-                total_data.extend(data)
-
-                if len(data) != API_MAX:
-                    break
-
-                if limit < 1:
-                    sleep(API_REFRESH)
-
-                start += len(data)
-
-        return total_data
-
-    def _trade_normalization(self, trade: dict) -> dict:
+    def _funding_normalization(self, funding: dict) -> dict:
         return {
-            'timestamp': trade['timestamp'],
-            'pair': trade['symbol'],
-            'id': trade['trdMatchID'],
-            'feed': 'BITMEX',
-            'side': trade['side'],
-            'amount': trade['size'],
-            'price': trade['price']
+            'timestamp': funding['timestamp'],
+            'pair': funding['symbol'],
+            'feed': self.ID,
+            'interval': funding['fundingInterval'],
+            'rate': funding['fundingRate'],
+            'rate_daily': funding['fundingRateDaily']
         }
 
-    def trades(self, symbol, start=None, end=None):
-        if start and end:
-            return self._get_trades(symbol, start, end)
+    def funding(self, symbol, start=None, end=None):
+        """
+        {
+            'timestamp': '2017-01-05T12:00:00.000Z',
+            'symbol': 'XBTUSD',
+            'fundingInterval': '2000-01-01T08:00:00.000Z',
+            'fundingRate': 0.00375,
+            'fundingRateDaily': 0.01125
+        }
+        """
+        for data in self._get('funding', symbol, start, end, freq='2W'):
+            yield list(map(self._funding_normalization, data))

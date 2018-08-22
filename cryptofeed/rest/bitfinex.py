@@ -6,13 +6,14 @@ import pandas as pd
 import requests
 
 from cryptofeed.rest.api import API
+from cryptofeed.feeds import BITFINEX
 
 
 REQUEST_LIMIT = 1000
 
 
 class Bitfinex(API):
-    ID = 'bitfinex'
+    ID = BITFINEX
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         trade_id, timestamp, amount, price = trade
