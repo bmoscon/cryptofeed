@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.13.0
+### 0.13.0 (2018-08-22)
   * Feature: Funding data from Bitmex on ws
   * Feature: Funding historical data via rest
   * Bugfix: Python 3.7 compatibility
