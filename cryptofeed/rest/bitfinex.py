@@ -7,6 +7,7 @@ import requests
 
 from cryptofeed.rest.api import API
 from cryptofeed.feeds import BITFINEX
+from cryptofeed.standards import pair_std_to_exchange
 
 
 REQUEST_LIMIT = 1000
@@ -29,20 +30,27 @@ class Bitfinex(API):
             'price': price
         }
 
-    def _dedupe(self, data):
-        ids = set()
+    def _dedupe(self, data, last):
+        """
+        Bitfinex does not support pagination, and using timestamps
+        to paginate can lead to duplicate data being pulled
+        """
+        if len(last) == 0:
+            return data
+
+        ids = set([id for id, _, _, _ in last])
         ret = []
 
         for d in data:
-            if d['id'] in ids:
+            if d[0] in ids:
                 continue
-            ids.add(d['id'])
+            ids.add(d[0])
             ret.append(d)
 
         return ret
 
     def _get_trades_hist(self, symbol, start_date, end_date):
-        total_data = []
+        last = []
 
         start = pd.Timestamp(start_date)
         end = pd.Timestamp(end_date) - pd.Timedelta(nanoseconds=1)
@@ -63,15 +71,18 @@ class Bitfinex(API):
             data = r.json()
             start = data[-1][1]
 
-            data = list(map(lambda x: self._trade_normalization(symbol, x), data))
-            total_data.extend(data)
+            orig_data = list(data)
+            data = self._dedupe(data, last)
+            last = list(orig_data)
 
-            if len(data) < REQUEST_LIMIT:
+            data = list(map(lambda x: self._trade_normalization(symbol, x), data))
+            yield data
+
+            if len(orig_data) < REQUEST_LIMIT:
                 break
 
-        total_data = list(self._dedupe(total_data))
-        return total_data
-
     def trades(self, symbol: str, start=None, end=None):
+        symbol = pair_std_to_exchange(symbol, self.ID)
         if start and end:
-            return self._get_trades_hist(symbol, start, end)
+            for data in self._get_trades_hist(symbol, start, end):
+                yield data

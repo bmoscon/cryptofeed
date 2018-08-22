@@ -58,6 +58,7 @@ class FeedHandler(object):
         except Exception as e:
             LOG.error("Unhandled exception: %s", str(e))
 
+    @asyncio.coroutine
     def _run(self):
         feeds = [asyncio.ensure_future(self._connect(feed)) for feed in self.feeds]
         _, _ = yield from asyncio.wait(feeds)
