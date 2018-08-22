@@ -1,6 +1,9 @@
 import time
 from time import sleep
 from datetime import datetime as dt
+import json
+import hashlib
+import hmac
 
 import pandas as pd
 import requests
@@ -15,6 +18,36 @@ REQUEST_LIMIT = 1000
 
 class Bitfinex(API):
     ID = BITFINEX
+    api = "https://api.bitfinex.com/"
+
+    def _nonce(self):
+        return str(int(round(time.time() * 1000)))
+    
+    def _generate_signature(self, url: str, body = json.dumps({})):
+        nonce = self._nonce()
+        signature = "/api/" + url + nonce + body
+        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        signature = h.hexdigest()
+
+        return {
+            "bfx-nonce": nonce,
+            "bfx-apikey": self.key_id,
+            "bfx-signature": signature,
+            "content-type": "application/json"
+        }
+    
+    def funding(self, symbol):
+        endpoint = "v2/auth/r/funding/offers/{}".format(symbol)
+        header = self._generate_signature(endpoint)
+        r = requests.post(self.api + endpoint, header=header, data=json.dumps({}))
+        
+        if r.status_code == 200:
+            return r.json()
+        else:
+            print(r.status_code)
+            print(r.hedaers)
+            print(r.json())
+            r.raise_for_status()
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         trade_id, timestamp, amount, price = trade
