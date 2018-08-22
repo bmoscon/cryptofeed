@@ -24,6 +24,8 @@ class Bitfinex(API):
         return str(int(round(time.time() * 1000)))
     
     def _generate_signature(self, url: str, body = json.dumps({})):
+        print(self.key_id)
+        print(self.key_secret)
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
         h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
@@ -35,33 +37,29 @@ class Bitfinex(API):
             "bfx-signature": signature,
             "content-type": "application/json"
         }
-    
-    def funding(self, symbol):
-        endpoint = "v2/auth/r/funding/offers/{}".format(symbol)
-        header = self._generate_signature(endpoint)
-        r = requests.post(self.api + endpoint, header=header, data=json.dumps({}))
-        
-        if r.status_code == 200:
-            return r.json()
-        else:
-            print(r.status_code)
-            print(r.hedaers)
-            print(r.json())
-            r.raise_for_status()
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
-        trade_id, timestamp, amount, price = trade
-        timestamp = dt.fromtimestamp(int(timestamp / 1000)).strftime('%Y-%m-%d %H:%M:%S')
+        if symbol[0] == 'f':
+            # period is in days, from 2 to 30
+            trade_id, timestamp, amount, price, period = trade
+        else:
+            trade_id, timestamp, amount, price = trade
+            period = None
+        timestamp = dt.fromtimestamp(timestamp / 1000.0).strftime('%Y-%m-%d %H:%M:%S.%fZ')
 
-        return {
+        ret = {
             'timestamp': timestamp,
             'pair': symbol,
             'id': trade_id,
             'feed': 'BITFINEX',
             'side': 'Sell' if amount < 0 else 'Buy',
             'amount': abs(amount),
-            'price': price
+            'price': price,
         }
+
+        if period:
+            ret['period'] = period
+        return ret
 
     def _dedupe(self, data, last):
         """
@@ -71,7 +69,7 @@ class Bitfinex(API):
         if len(last) == 0:
             return data
 
-        ids = set([id for id, _, _, _ in last])
+        ids = set([data[0] for data in last])
         ret = []
 
         for d in data:
@@ -115,7 +113,9 @@ class Bitfinex(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None):
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        # funding symbols start with f, eg: fUSD, fBTC, etc
+        if symbol[0] != 'f':
+            symbol = pair_std_to_exchange(symbol, self.ID)
         if start and end:
             for data in self._get_trades_hist(symbol, start, end):
                 yield data

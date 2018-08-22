@@ -45,6 +45,7 @@ def main():
     bitmex_symbols = Bitmex.get_active_symbols()
     f.add_feed(Bitmex(channels=[TRADES], pairs=bitmex_symbols, callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[FUNDING, TRADES], callbacks={FUNDING: FundingCallback(funding), TRADES: TradeCallback(trade)}))
+    f.add_feed(Bitfinex(pairs=['fBTC'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
     f.run()
 
 
