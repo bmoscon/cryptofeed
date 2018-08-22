@@ -5,6 +5,7 @@
   * Feature: Funding historical data via rest
   * Bugfix: Python 3.7 compatibility
   * Feature: Rest trade APIs are now generators
+  * Feature: funding data on bitfinex - ws and rest
 
 ### 0.12.0 (2018-08-20)
   * Bugfix: Handle 429s in Bitmex (REST)
