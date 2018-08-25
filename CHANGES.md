@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.13.1
+  * Feature: access rest endpoints via getitem / []
+
 ### 0.13.0 (2018-08-22)
   * Feature: Funding data from Bitmex on ws
   * Feature: Funding historical data via rest
