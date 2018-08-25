@@ -1,5 +1,15 @@
+import logging
+
 from cryptofeed.rest.bitmex import Bitmex
 from cryptofeed.rest.bitfinex import Bitfinex
+
+
+FORMAT = '%(asctime)-15s : %(levelname)s : %(message)s'
+logging.basicConfig(level=logging.WARNING,
+                    format=FORMAT,
+                    handlers=[logging.FileHandler('rest.log'),
+                              logging.StreamHandler()])
+LOG = logging.getLogger('rest')
 
 
 class Rest:

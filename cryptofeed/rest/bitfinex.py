@@ -4,6 +4,7 @@ from datetime import datetime as dt
 import json
 import hashlib
 import hmac
+import logging
 
 import pandas as pd
 import requests
@@ -14,6 +15,7 @@ from cryptofeed.standards import pair_std_to_exchange
 
 
 REQUEST_LIMIT = 1000
+LOG = logging.getLogger('rest')
 
 
 class Bitfinex(API):
@@ -24,8 +26,6 @@ class Bitfinex(API):
         return str(int(round(time.time() * 1000)))
     
     def _generate_signature(self, url: str, body = json.dumps({})):
-        print(self.key_id)
-        print(self.key_secret)
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
         h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
@@ -92,17 +92,20 @@ class Bitfinex(API):
         while True:
             try:
                 r = requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
-            except TimeoutError:
+            except TimeoutError as e:
+                LOG.warning("Timeout on exchange %s: %s", self.ID, e)
                 continue
-            except requests.exceptions.ConnectionError:
-                    continue
+            except requests.exceptions.ConnectionError as e:
+                LOG.warning("Connection error on exchange %s: %s", self.ID, e)
+                continue
 
             if r.status_code == 429:
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code != 200:
-                print(r.headers)
-                print(r.json())
+                LOG.error("Status code %d on %s", r.status_code, self.ID)
+                LOG.error("Headers: %s", r.headers)
+                LOG.error("Resp: %s", r.json())
                 r.raise_for_status()
 
             data = r.json()

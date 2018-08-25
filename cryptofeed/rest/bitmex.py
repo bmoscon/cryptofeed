@@ -3,6 +3,7 @@ import time
 import hashlib
 import hmac
 from urllib.parse import urlparse
+import logging
 
 import requests
 import pandas as pd
@@ -13,6 +14,8 @@ from cryptofeed.feeds import BITMEX
 
 API_MAX = 500
 API_REFRESH = 300
+
+LOG = logging.getLogger('rest')
 
 
 class Bitmex(API):
@@ -66,9 +69,11 @@ class Bitmex(API):
                 header['Accept'] = 'application/json'
                 try:
                     r = requests.get('{}{}'.format(self.api, endpoint), headers=header)
-                except TimeoutError:
+                except TimeoutError as e:
+                    LOG.warning("Timeout on exchange %s: %s", self.ID, e)
                     continue
-                except requests.exceptions.ConnectionError:
+                except requests.exceptions.ConnectionError as e:
+                    LOG.warning("Connection error on exchange %s: %s", self.ID, e)
                     continue
 
                 try:
@@ -79,8 +84,9 @@ class Bitmex(API):
                     if r.status_code != 200:
                         r.raise_for_status()
                 except:
-                    print(r.text)
-                    print(r.headers)
+                    LOG.error("Status code %d on %s", r.status_code, self.ID)
+                    LOG.error("Headers: %s", r.headers)
+                    LOG.error("Resp: %s", r.json())
                     raise
                 data = r.json()
 
