@@ -68,6 +68,8 @@ class Bitmex(API):
                     r = requests.get('{}{}'.format(self.api, endpoint), headers=header)
                 except TimeoutError:
                     continue
+                except requests.exceptions.ConnectionError:
+                    continue
 
                 try:
                     limit = int(r.headers['X-RateLimit-Remaining'])

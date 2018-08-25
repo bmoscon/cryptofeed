@@ -94,6 +94,8 @@ class Bitfinex(API):
                 r = requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
             except TimeoutError:
                 continue
+            except requests.exceptions.ConnectionError:
+                    continue
 
             if r.status_code == 429:
                 sleep(int(r.headers['Retry-After']))
