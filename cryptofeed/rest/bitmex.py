@@ -64,7 +64,11 @@ class Bitmex(API):
                 if self.key_id and self.key_secret:
                     header = self._generate_signature("GET", endpoint)
                 header['Accept'] = 'application/json'
-                r = requests.get('{}{}'.format(self.api, endpoint), headers=header)
+                try:
+                    r = requests.get('{}{}'.format(self.api, endpoint), headers=header)
+                except TimeoutError:
+                    continue
+
                 try:
                     limit = int(r.headers['X-RateLimit-Remaining'])
                     if r.status_code == 429:
