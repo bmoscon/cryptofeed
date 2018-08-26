@@ -45,7 +45,7 @@ class Bitfinex(API):
         else:
             trade_id, timestamp, amount, price = trade
             period = None
-        timestamp = dt.fromtimestamp(timestamp / 1000.0).strftime('%Y-%m-%d %H:%M:%S.%fZ')
+        timestamp = dt.fromtimestamp(timestamp / 1000.0).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         ret = {
             'timestamp': timestamp,
