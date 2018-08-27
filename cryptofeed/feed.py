@@ -22,7 +22,7 @@ class Feed:
         self.updates = 0
         self.do_deltas = False
 
-        if FUNDING in channels and self.id == BITFINEX:
+        if channels is not None and FUNDING in channels and self.id == BITFINEX:
             if any(map(lambda x: x[0] != 'f', pairs)):
                 raise ValueError("Funding channel on bitfinex can be used with funding pairs only")
 
