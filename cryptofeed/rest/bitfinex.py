@@ -15,7 +15,7 @@ from cryptofeed.standards import pair_std_to_exchange
 
 
 REQUEST_LIMIT = 1000
-LOG = LOG = get_logger('rest', 'rest.log')
+LOG = get_logger('rest', 'rest.log')
 
 
 class Bitfinex(API):

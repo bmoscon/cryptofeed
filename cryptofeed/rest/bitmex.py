@@ -3,19 +3,19 @@ import time
 import hashlib
 import hmac
 from urllib.parse import urlparse
-import logging
 
 import requests
 import pandas as pd
 
 from cryptofeed.rest.api import API
 from cryptofeed.feeds import BITMEX
+from cryptofeed.log import get_logger
 
 
 API_MAX = 500
 API_REFRESH = 300
 
-LOG = logging.getLogger('rest')
+LOG = get_logger('rest', 'rest.log')
 
 
 class Bitmex(API):
