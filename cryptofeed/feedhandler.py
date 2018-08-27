@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-import logging
 from datetime import datetime as dt
 from datetime import timedelta
 from socket import error as socket_error
@@ -14,17 +13,13 @@ import websockets
 from websockets import ConnectionClosed
 
 from cryptofeed.defines import TICKER
+from cryptofeed.log import get_logger
 from cryptofeed import Gemini
 from .nbbo import NBBO
 
 
-FORMAT = '%(asctime)-15s : %(levelname)s : %(message)s'
-logging.basicConfig(level=logging.WARNING,
-                    format=FORMAT,
-                    handlers=[logging.FileHandler('feedhandler.log'),
-                              logging.StreamHandler()])
 
-LOG = logging.getLogger('feedhandler')
+LOG = get_logger('feedhandler', 'feedhandler.log')
 
 
 class FeedHandler(object):

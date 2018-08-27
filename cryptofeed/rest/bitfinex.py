@@ -4,18 +4,18 @@ from datetime import datetime as dt
 import json
 import hashlib
 import hmac
-import logging
 
 import pandas as pd
 import requests
 
 from cryptofeed.rest.api import API
 from cryptofeed.feeds import BITFINEX
+from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange
 
 
 REQUEST_LIMIT = 1000
-LOG = logging.getLogger('rest')
+LOG = LOG = get_logger('rest', 'rest.log')
 
 
 class Bitfinex(API):
