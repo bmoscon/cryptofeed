@@ -89,8 +89,8 @@ class Bitmex(API):
                     continue
 
                 try:
-                    if r.status_code == 503:
-                        LOG.warning("%s: 500 - %s", self.ID, r.text)
+                    if r.status_code == 502:
+                        LOG.warning("%s: 502 - %s", self.ID, r.text)
                         sleep(retry_wait)
                         continue
                     elif r.status_code == 429:
