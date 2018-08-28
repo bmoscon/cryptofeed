@@ -89,17 +89,17 @@ class Bitmex(API):
                     continue
 
                 try:
-                    limit = int(r.headers['X-RateLimit-Remaining'])
-                    if r.status_code == 429:
-                        sleep(API_REFRESH)
-                        continue
                     if r.status_code == 503:
                         LOG.warning("%s: 500 - %s", self.ID, r.text)
                         sleep(retry_wait)
                         continue
-                    if r.status_code != 200:
+                    elif r.status_code == 429:
+                        sleep(API_REFRESH)
+                        continue
+                    elif r.status_code != 200:
                         r.raise_for_status()
 
+                    limit = int(r.headers['X-RateLimit-Remaining'])
                     data = r.json()
                 except:
                     LOG.error("%s: Status code %d", self.ID, r.status_code)
