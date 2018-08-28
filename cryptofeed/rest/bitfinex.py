@@ -80,7 +80,7 @@ class Bitfinex(API):
 
         return ret
 
-    def _get_trades_hist(self, symbol, start_date, end_date):
+    def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
         last = []
 
         start = pd.Timestamp(start_date)
@@ -94,9 +94,21 @@ class Bitfinex(API):
                 r = requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
             except TimeoutError as e:
                 LOG.warning("%s: Timeout - %s", self.ID, e)
+                if retry is not None:
+                    if retry == 0:
+                        raise
+                    else:
+                        retry -= 1
+                sleep(retry_wait)
                 continue
             except requests.exceptions.ConnectionError as e:
                 LOG.warning("%s: Connection error - %s", self.ID, e)
+                if retry is not None:
+                    if retry == 0:
+                        raise
+                    else:
+                        retry -= 1
+                sleep(retry_wait)
                 continue
 
             if r.status_code == 429:
@@ -104,7 +116,7 @@ class Bitfinex(API):
                 continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 - %s", self.ID, r.text)
-                sleep(10)
+                sleep(retry_wait)
                 continue
             elif r.status_code != 200:
                 LOG.error("%s: Status code %d", self.ID, r.status_code)
@@ -128,10 +140,10 @@ class Bitfinex(API):
             if len(orig_data) < REQUEST_LIMIT:
                 break
 
-    def trades(self, symbol: str, start=None, end=None):
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         # funding symbols start with f, eg: fUSD, fBTC, etc
         if symbol[0] != 'f':
             symbol = pair_std_to_exchange(symbol, self.ID)
         if start and end:
-            for data in self._get_trades_hist(symbol, start, end):
+            for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
                 yield data

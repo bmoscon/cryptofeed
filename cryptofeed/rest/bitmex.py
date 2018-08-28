@@ -47,7 +47,7 @@ class Bitmex(API):
             "api-signature": signature
         }
 
-    def _get(self, ep, symbol, start_date, end_date, freq='6H'):
+    def _get(self, ep, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
         dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq=freq).tolist()
         if dates[-1].right < pd.Timestamp(end_date):
             dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
@@ -71,15 +71,31 @@ class Bitmex(API):
                     r = requests.get('{}{}'.format(self.api, endpoint), headers=header)
                 except TimeoutError as e:
                     LOG.warning("%s: Timeout - %s", self.ID, e)
+                    if retry is not None:
+                        if retry == 0:
+                            raise
+                        else:
+                            retry -= 1
+                    sleep(retry_wait)
                     continue
                 except requests.exceptions.ConnectionError as e:
                     LOG.warning("%s: Connection error - %s", self.ID, e)
+                    if retry is not None:
+                        if retry == 0:
+                            raise
+                        else:
+                            retry -= 1
+                    sleep(retry_wait)
                     continue
 
                 try:
                     limit = int(r.headers['X-RateLimit-Remaining'])
                     if r.status_code == 429:
                         sleep(API_REFRESH)
+                        continue
+                    if r.status_code == 503:
+                        LOG.warning("%s: 500 - %s", self.ID, r.text)
+                        sleep(retry_wait)
                         continue
                     if r.status_code != 200:
                         r.raise_for_status()
@@ -112,7 +128,7 @@ class Bitmex(API):
             'price': trade['price']
         }
 
-    def trades(self, symbol, start=None, end=None):
+    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         """
         data format
 
@@ -130,7 +146,7 @@ class Bitmex(API):
         }
         """
         if start and end:
-            for data in self._get('trade', symbol, start, end):
+            for data in self._get('trade', symbol, start, end, retry, retry_wait):
                 yield list(map(self._trade_normalization, data))
 
     def _funding_normalization(self, funding: dict) -> dict:
@@ -143,7 +159,7 @@ class Bitmex(API):
             'rate_daily': funding['fundingRateDaily']
         }
 
-    def funding(self, symbol, start=None, end=None):
+    def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         """
         {
             'timestamp': '2017-01-05T12:00:00.000Z',
@@ -153,5 +169,5 @@ class Bitmex(API):
             'fundingRateDaily': 0.01125
         }
         """
-        for data in self._get('funding', symbol, start, end, freq='2W'):
+        for data in self._get('funding', symbol, start, end, retry, retry_wait, freq='2W'):
             yield list(map(self._funding_normalization, data))
