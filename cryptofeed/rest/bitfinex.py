@@ -89,7 +89,6 @@ class Bitfinex(API):
         start = int(time.mktime(start.timetuple()) * 1000)
         end = int(time.mktime(end.timetuple()) * 1000)
 
-        missing_data_retry_count = 0
         while True:
             try:
                 r = requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
@@ -103,6 +102,10 @@ class Bitfinex(API):
             if r.status_code == 429:
                 sleep(int(r.headers['Retry-After']))
                 continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 - %s", self.ID, r.text)
+                sleep(10)
+                continue
             elif r.status_code != 200:
                 LOG.error("%s: Status code %d", self.ID, r.status_code)
                 LOG.error("%s: Headers: %s", self.ID, r.headers)
@@ -111,12 +114,7 @@ class Bitfinex(API):
 
             data = r.json()
             if data == []:
-                if missing_data_retry_count < 5:
-                    missing_data_retry_count += 1
-                    sleep(10)
-                    continue
-                else:
-                    LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
+                LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
                 start = data[-1][1]
 
