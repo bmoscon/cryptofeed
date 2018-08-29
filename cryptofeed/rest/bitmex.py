@@ -28,7 +28,7 @@ class Bitmex(API):
         url: api endpoint
         data: body (if present)
         """
-        expires = int(round(time.time()) + 5)
+        expires = int(round(time.time()) + 30)
 
         parsedURL = urlparse(url)
         path = parsedURL.path
