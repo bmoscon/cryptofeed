@@ -147,3 +147,7 @@ class Bitfinex(API):
         if start and end:
             for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
                 yield data
+    
+    def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+        for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
+            yield data
