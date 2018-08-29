@@ -3,6 +3,8 @@
 ### 0.13.1
   * Feature: access rest endpoints via getitem / []
   * Bugfix: #31 - funding channel broke gemini
+  * Feature: Book deltas for GDAX
+  * Bugfix: Fix intervals on Bitmex (rest)
 
 ### 0.13.0 (2018-08-22)
   * Feature: Funding data from Bitmex on ws
