@@ -51,7 +51,7 @@ class Bitmex(API):
         dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq=freq).tolist()
         if len(dates) == 0:
             dates.extend([pd.Timestamp(start_date), pd.Timestamp(end_date)])
-        if dates[-1].right < pd.Timestamp(end_date):
+        elif dates[-1].right < pd.Timestamp(end_date):
             dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
 
         for interval in dates:
