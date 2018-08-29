@@ -8,8 +8,8 @@ from copy import deepcopy
 
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
-from cryptofeed import Bitmex
-from cryptofeed.defines import L2_BOOK, BID, ASK, UPD, ADD, DEL, BOOK_DELTA
+from cryptofeed import Bitmex, GDAX
+from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, UPD, ADD, DEL, BOOK_DELTA
 
 
 BOOK = None
@@ -56,7 +56,9 @@ async def delta(feed, pair, update):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    # due to the way the test verification works, you can only run one or the other for this test
+    #f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    f.add_feed(GDAX(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
     f.run()
 
 

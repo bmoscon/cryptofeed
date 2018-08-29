@@ -134,7 +134,7 @@ class Bitmex(Feed):
             self.updates += 1
             await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
 
-        if self.updates == self.book_update_interval or forced or not self.do_deltas:
+        if self.updates >= self.book_update_interval or forced or not self.do_deltas:
             self.updates = 0
             await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
