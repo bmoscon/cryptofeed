@@ -5,6 +5,7 @@ import json
 import aioredis
 
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.defines import BID, ASK
 
 
 class RedisCallback:
@@ -67,3 +68,24 @@ class FundingRedis(RedisCallback):
         data = json.dumps(kwargs)
 
         await self.redis.execute('ZADD', "{}-{}-{}".format(self.key, feed, pair), ts, data)
+
+
+class BookRedis(RedisCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.key is None:
+            self.key = 'book'
+
+    async def __call__(self, *, feed, pair, book):
+        if self.redis is None:
+            self.redis = await aioredis.create_redis('redis://{}:{}'.format(self.host, self.port))
+
+        timestamp = time.time()
+
+        data = {BID: {}, ASK: {}}
+        for side in book:
+            for level in book[side]:
+                data[side][str(level)] = float(book[side][level])
+
+        data = json.dumps(data)
+        await self.redis.execute('ZADD', "{}-{}-{}".format(self.key, feed, pair), timestamp, data)
