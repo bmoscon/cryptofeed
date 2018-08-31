@@ -11,7 +11,7 @@ import requests
 from cryptofeed.rest.api import API
 from cryptofeed.feeds import BITFINEX
 from cryptofeed.log import get_logger
-from cryptofeed.standards import pair_std_to_exchange
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
 REQUEST_LIMIT = 1000
@@ -49,7 +49,7 @@ class Bitfinex(API):
 
         ret = {
             'timestamp': timestamp,
-            'pair': symbol,
+            'pair': pair_exchange_to_std(symbol),
             'id': trade_id,
             'feed': 'BITFINEX',
             'side': 'Sell' if amount < 0 else 'Buy',
