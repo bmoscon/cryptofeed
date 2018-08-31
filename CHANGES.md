@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.13.1
+### 0.13.1 (2018-08-31)
   * Feature: access rest endpoints via getitem / []
   * Bugfix: #31 - funding channel broke gemini
   * Feature: Book deltas for GDAX
