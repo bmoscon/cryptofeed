@@ -141,13 +141,11 @@ class Bitfinex(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        # funding symbols start with f, eg: fUSD, fBTC, etc
-        if symbol[0] != 'f':
-            symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = pair_std_to_exchange(symbol, self.ID)
         if start and end:
             for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
                 yield data
-    
+
     def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
             yield data

@@ -2396,8 +2396,8 @@ def pair_std_to_exchange(pair, exchange):
             raise KeyError("{} is not configured/availble for {}".format(
                 pair, exchange))
     else:
-        if pair[0] == 'f' and exchange == BITFINEX:
-            return pair
+        if exchange == BITFINEX and '-' not in pair:
+            return "f{}".format(pair)
         return None
 
 
@@ -2405,7 +2405,7 @@ def pair_exchange_to_std(pair):
     if pair in _exchange_to_std:
         return _exchange_to_std[pair]
     if pair[0] == 'f':
-        return pair
+        return pair[1:]
     return None
 
 

@@ -23,8 +23,8 @@ class Feed:
         self.do_deltas = False
 
         if channels is not None and FUNDING in channels and self.id == BITFINEX:
-            if any(map(lambda x: x[0] != 'f', pairs)):
-                raise ValueError("Funding channel on bitfinex can be used with funding pairs only")
+            if len(channels) > 1:
+                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex")
 
         if pairs:
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]

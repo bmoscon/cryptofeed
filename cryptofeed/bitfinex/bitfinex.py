@@ -52,9 +52,11 @@ class Bitfinex(Feed):
     async def _trades(self, msg):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
+        funding = pair[0] == 'f'
         pair = pair_exchange_to_std(pair)
+
         async def _trade_update(trade):
-            if pair[0] == 'f':
+            if funding:
                 id, timestamp, amount, price, period = trade
             else:
                 id, timestamp, amount, price = trade
