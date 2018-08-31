@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.13.2 (2018-08-31)
+  * Bugfix: fix symbol in bitfinex rest
+
 ### 0.13.1 (2018-08-31)
   * Feature: access rest endpoints via getitem / []
   * Bugfix: #31 - funding channel broke gemini
