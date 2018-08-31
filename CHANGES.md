@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.13.3 (2018-08-31)
+  * Feature: normalize bitfinex funding symbols
+
 ### 0.13.2 (2018-08-31)
   * Bugfix: fix symbol in bitfinex rest
 
