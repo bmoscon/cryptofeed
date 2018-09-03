@@ -2,6 +2,7 @@
 
 ### 0.14.0 
   * Feature: support for writing order books directly to redis
+  * Feature: ability to specify book depth for redis updates
 
 ### 0.13.3 (2018-08-31)
   * Feature: normalize bitfinex funding symbols

@@ -9,7 +9,7 @@ from cryptofeed.defines import BID, ASK
 
 
 class RedisCallback:
-    def __init__(self, host='127.0.0.1', port=6379, key=None):
+    def __init__(self, host='127.0.0.1', port=6379, key=None, **kwargs):
         """
         setting key lets you override the prefix on the
         key used in redis. The defaults are related to the data
@@ -75,6 +75,7 @@ class BookRedis(RedisCallback):
         super().__init__(*args, **kwargs)
         if self.key is None:
             self.key = 'book'
+        self.depth = kwargs.get('depth', None)
 
     async def __call__(self, *, feed, pair, book):
         if self.redis is None:
@@ -83,9 +84,19 @@ class BookRedis(RedisCallback):
         timestamp = time.time()
 
         data = {BID: {}, ASK: {}}
-        for side in book:
-            for level in book[side]:
-                data[side][str(level)] = float(book[side][level])
+        count = 0
+        for level in book[ASK]:
+            data[ASK][str(level)] = float(book[ASK][level])
+            count += 1
+            if self.depth and count >= self.depth:
+                break
+
+        count = 0
+        for level in reversed(book[BID]):
+            data[BID][str(level)] = float(book[BID][level])
+            count += 1
+            if self.depth and count >= self.depth:
+                break
 
         data = json.dumps(data)
         await self.redis.execute('ZADD', "{}-{}-{}".format(self.key, feed, pair), timestamp, data)
