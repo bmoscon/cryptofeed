@@ -4,6 +4,7 @@ from datetime import datetime as dt
 import json
 import hashlib
 import hmac
+import calendar
 
 import pandas as pd
 import requests
@@ -86,8 +87,8 @@ class Bitfinex(API):
         start = pd.Timestamp(start_date)
         end = pd.Timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
-        start = int(time.mktime(start.timetuple()) * 1000)
-        end = int(time.mktime(end.timetuple()) * 1000)
+        start = int(calendar.timegm(start.utctimetuple()) * 1000)
+        end = int(calendar.timegm(end.utctimetuple()) * 1000)
 
         while True:
             try:
