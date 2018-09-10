@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.14.1
+  * Added some docstrings
+  * Feature: Add exchanges by name to feedhandler. Easier to instantiate a feedhandler from config
+
 ### 0.14.0 (2018-09-04)
   * Feature: support for writing order books directly to redis
   * Feature: ability to specify book depth for redis updates
