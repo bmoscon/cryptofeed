@@ -14,28 +14,75 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import TICKER
 from cryptofeed.log import get_logger
-from cryptofeed import Gemini
-from .nbbo import NBBO
+from cryptofeed.exchanges import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX
+from cryptofeed.exchanges import GDAX as Gdax
+from cryptofeed import Gemini, GDAX, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex
+from cryptofeed.nbbo import NBBO
 
 
 
 LOG = get_logger('feedhandler', 'feedhandler.log')
+_EXCHANGES = {
+    Gdax: GDAX,
+    GEMINI: Gemini,
+    HITBTC: HitBTC,
+    POLONIEX: Poloniex,
+    BITFINEX: Bitfinex,
+    BITMEX: Bitmex,
+    BITSTAMP: Bitstamp,
+}
 
 
-class FeedHandler(object):
+
+class FeedHandler:
     def __init__(self, retries=10, timeout_interval=5):
+        """
+        retries: int
+            number of times the connection will be retried (in the event of a disconnect or other failure)
+        timeout_interval: int
+            number of seconds between checks to see if a feed has timed out
+        """
         self.feeds = []
         self.retries = retries
         self.timeout = {}
         self.last_msg = {}
         self.timeout_interval = timeout_interval
 
-    def add_feed(self, feed, timeout=30):
-        self.feeds.append(feed)
+    def add_feed(self, feed, timeout=120, **kwargs):
+        """
+        feed: str or class
+            the feed (exchange) to add to the handler
+        timeout: int
+            number of seconds without a message before the feed is considered
+            to be timed out. The connection will be closed, and if retries
+            have not been exhausted, the connection will be restablished
+        kwargs: dict
+            if a string is used for the feed, kwargs will be passed to the
+            newly instantiated object
+        """
+        if isinstance(feed, str):
+            if feed in _EXCHANGES:
+                self.feeds.append(_EXCHANGES[feed](**kwargs))
+                feed = _EXCHANGES[feed]
+            else:
+                raise ValueError("Invalid feed specified")
+        else:
+            self.feeds.append(feed)
         self.last_msg[feed.id] = None
         self.timeout[feed.id] = timeout
 
     def add_nbbo(self, feeds, pairs, callback, timeout=120):
+        """
+        feeds: list of feed classes
+            list of feeds (exchanges) that comprises the NBBO
+        pairs: list str
+            the trading pairs
+        callback: function pointer
+            the callback to be invoked when a new tick is calculated for the NBBO
+        timeout: int
+            seconds without a message before a connection will be considered dead and reestablished.
+            See `add_feed`
+        """
         cb = NBBO(callback, pairs)
         for feed in feeds:
             self.add_feed(feed(channels=[TICKER], pairs=pairs, callbacks={TICKER: cb}), timeout=timeout)

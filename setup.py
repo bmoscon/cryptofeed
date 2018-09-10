@@ -33,11 +33,12 @@ setup(
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
     tests_require=["pytest"],
     install_requires=[
         "requests>=2.18.4",
-        "websockets>=5.0",
+        "websockets>=6.0",
         "sortedcontainers>=1.5.9",
         "pandas",
         "pyyaml"
