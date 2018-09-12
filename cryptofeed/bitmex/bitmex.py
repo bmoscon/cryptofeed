@@ -118,14 +118,16 @@ class Bitmex(Feed):
             for data in msg['data']:
                 pair = data['symbol']
                 side = BID if data['side'] == 'Buy' else ASK
-                delete_price, delete_size = self.order_id[pair][data['id']]
-                del self.order_id[pair][data['id']]
-                self.l2_book[pair][side][delete_price] -= delete_size
-                if self.l2_book[pair][side][delete_price] == 0:
-                    del self.l2_book[pair][side][delete_price]
-                    delta[side][DEL].append(delete_price)
-                else:
-                    delta[side][UPD].append((price, self.l2_book[pair][side][delete_price]))
+                if data['id'] in self.order_id[pair]:
+                    delete_price, delete_size = self.order_id[pair][data['id']]
+                    del self.order_id[pair][data['id']]
+                    
+                    self.l2_book[pair][side][delete_price] -= delete_size
+                    if self.l2_book[pair][side][delete_price] == 0:
+                        del self.l2_book[pair][side][delete_price]
+                        delta[side][DEL].append(delete_price)
+                    else:
+                        delta[side][UPD].append((price, self.l2_book[pair][side][delete_price]))
         else:
             LOG.warning("{} - Unexpected L2 Book message {}".format(self.id, msg))
             return
