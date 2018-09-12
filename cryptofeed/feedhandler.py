@@ -93,23 +93,21 @@ class FeedHandler:
             raise ValueError("No feeds specified")
 
         try:
-            asyncio.get_event_loop().run_until_complete(self._run())
+            for feed in self.feeds:
+                loop = asyncio.get_event_loop()
+                loop.create_task(self._connect(feed))
+            loop.run_forever()
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
             pass
         except Exception as e:
-            LOG.error("Unhandled exception: %s", str(e))
-
-    @asyncio.coroutine
-    def _run(self):
-        feeds = [asyncio.ensure_future(self._connect(feed)) for feed in self.feeds]
-        _, _ = yield from asyncio.wait(feeds)
+            LOG.error("Unhandled exception", exc_info=True)
 
     async def _watch(self, feed_id, websocket):
         while websocket.open:
             if self.last_msg[feed_id]:
                 if dt.utcnow() - timedelta(seconds=self.timeout[feed_id]) > self.last_msg[feed_id]:
-                    LOG.warning("Feed {} received no messages within timeout, restarting connection".format(feed_id))
+                    LOG.warning("%s: received no messages within timeout, restarting connection", feed_id)
                     await websocket.close()
                     break
             await asyncio.sleep(self.timeout_interval)
@@ -128,11 +126,17 @@ class FeedHandler:
                     await feed.subscribe(websocket)
                     await self._handler(websocket, feed.message_handler, feed.id)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                LOG.warning("Feed {} encountered connection issue {} - reconnecting...".format(feed.id, str(e)))
+                LOG.warning("%s: encountered connection issue %s - reconnecting...", feed.id, str(e))
                 await asyncio.sleep(delay)
                 retries += 1
-                delay = delay * 2
-        LOG.error("Feed {} failed to reconnect after {} retries - exiting".format(feed.id, retries))
+                delay *= 2
+            except Exception as e:
+                LOG.error("%s: encountered an exception, reconnecting", feed.id, e, exc_info=True)
+                await asyncio.sleep(delay)
+                retries += 1
+                delay *= 2
+            finally:
+                LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
 
     async def _handler(self, websocket, handler, feed_id):
         async for message in websocket:

@@ -266,8 +266,8 @@ class GDAX(Feed):
             elif msg['sequence'] <= self.seq_no[pair]:
                 return
             elif 'full' in self.channels and msg['sequence'] != self.seq_no[pair] + 1:
-                LOG.warning("Missing sequence number detected")
-                LOG.warning("Requesting book snapshot")
+                LOG.warning("%s: Missing sequence number detected", self.id)
+                LOG.warning("%s: Requesting book snapshot", self.id)
                 await self._book_snapshot()
                 return
 
@@ -296,7 +296,7 @@ class GDAX(Feed):
             elif msg['type'] == 'subscriptions':
                 pass
             else:
-                LOG.warning('{} - Invalid message type {}'.format(self.id, msg))
+                LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
         await websocket.send(json.dumps({"type": "subscribe",
