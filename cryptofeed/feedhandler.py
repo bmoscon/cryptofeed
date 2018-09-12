@@ -135,8 +135,8 @@ class FeedHandler:
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
-            finally:
-                LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+
+        LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
 
     async def _handler(self, websocket, handler, feed_id):
         async for message in websocket:
