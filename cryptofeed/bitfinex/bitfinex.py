@@ -46,8 +46,8 @@ class Bitfinex(Feed):
             pair = pair_exchange_to_std(pair)
             await self.callbacks[TICKER](feed=self.id,
                                          pair=pair,
-                                         bid=Decimal(bid),
-                                         ask=Decimal(ask))
+                                         bid=bid,
+                                         ask=ask)
 
     async def _trades(self, msg):
         chan_id = msg[0]
@@ -70,8 +70,8 @@ class Bitfinex(Feed):
                 await self.callbacks[FUNDING](feed=self.id,
                                               pair=pair,
                                               side=side,
-                                              amount=Decimal(amount),
-                                              price=Decimal(price),
+                                              amount=amount,
+                                              price=price,
                                               id=id,
                                               timestamp=timestamp,
                                               period=period)
@@ -79,8 +79,8 @@ class Bitfinex(Feed):
                 await self.callbacks[TRADES](feed=self.id,
                                             pair=pair,
                                             side=side,
-                                            amount=Decimal(amount),
-                                            price=Decimal(price),
+                                            amount=amount,
+                                            price=price,
                                             id=id,
                                             timestamp=timestamp)
 
@@ -111,7 +111,7 @@ class Bitfinex(Feed):
                 # snapshot so clear book
                 self.l2_book[pair] = {BID: sd(), ASK: sd()}
                 for update in msg[1]:
-                    price, _, amount = [Decimal(x) for x in update]
+                    price, _, amount = update
                     if amount > 0:
                         side = BID
                     else:
@@ -120,7 +120,7 @@ class Bitfinex(Feed):
                     self.l2_book[pair][side][price] = amount
             else:
                 # book update
-                price, count, amount = [Decimal(x) for x in msg[1]]
+                price, count, amount = msg[1]
 
                 if amount > 0:
                     side = BID
@@ -156,8 +156,8 @@ class Bitfinex(Feed):
                 self.l2_book[pair] = {BID: sd(), ASK: sd()}
                 for update in msg[1]:
                     order_id, price, amount = update
-                    price = Decimal(price)
-                    amount = Decimal(amount)
+                    price = price
+                    amount = amount
 
                     if amount > 0:
                         side = BID
@@ -174,7 +174,7 @@ class Bitfinex(Feed):
                         self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
             else:
                 # book update
-                order_id, price, amount = [Decimal(x) for x in msg[1]]
+                order_id, price, amount = msg[1]
 
                 if amount > 0:
                     side = BID
@@ -212,9 +212,9 @@ class Bitfinex(Feed):
             if chan_id in self.channel_map:
                 await self.channel_map[chan_id]['handler'](msg)
             else:
-                LOG.warning("{} - Unexpected message on unregistered channel {}".format(self.id, msg))
+                LOG.warning("%s: Unexpected message on unregistered channel %s", self.id, msg)
         elif 'event' in msg and msg['event'] == 'error':
-            LOG.error("{} - Error message from exchange: {}".format(self.id, msg['msg']))
+            LOG.error("%s: Error message from exchange: %s", self.id, msg['msg'])
         elif 'chanId' in msg and 'symbol' in msg:
             handler = None
             if msg['channel'] == 'ticker':
@@ -227,7 +227,7 @@ class Bitfinex(Feed):
                 else:
                     handler = self._book
             else:
-                LOG.warning('{} - Invalid message type {}'.format(self.id, msg))
+                LOG.warning('%s: Invalid message type %s', self.id, msg)
                 return
             self.channel_map[msg['chanId']] = {'symbol': msg['symbol'],
                                                'channel': msg['channel'],

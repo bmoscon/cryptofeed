@@ -245,7 +245,7 @@ class GDAX(Feed):
 
         size = old_size - new_size
         self.book[pair][side][price] -= size
-        self.order_map[order_id] = new_size
+        self.order_map[order_id]['size'] = new_size
 
         delta[side][UPD].append((price, new_size))
 
