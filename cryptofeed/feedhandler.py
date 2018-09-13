@@ -141,4 +141,10 @@ class FeedHandler:
     async def _handler(self, websocket, handler, feed_id):
         async for message in websocket:
             self.last_msg[feed_id] = dt.utcnow()
-            await handler(message)
+            try:
+                await handler(message)
+            except Exception:
+                LOG.error("%s: error handling message %s", feed_id, message)
+                # exception will be logged with traceback when connection handler
+                # retries the connection
+                raise
