@@ -7,6 +7,7 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
+from collections import defaultdict
 
 from sortedcontainers import SortedDict as sd
 
@@ -31,7 +32,7 @@ class Bitfinex(Feed):
            handler: the handler for this channel type
         '''
         self.channel_map = {}
-        self.order_map = {}
+        self.order_map = defaultdict(dict)
 
     async def _ticker(self, msg):
         chan_id = msg[0]
@@ -154,10 +155,10 @@ class Bitfinex(Feed):
             if isinstance(msg[1][0], list):
                 # snapshot so clear book
                 self.l2_book[pair] = {BID: sd(), ASK: sd()}
+                self.order_map[pair] = {}
+
                 for update in msg[1]:
                     order_id, price, amount = update
-                    price = price
-                    amount = amount
 
                     if amount > 0:
                         side = BID
@@ -165,13 +166,13 @@ class Bitfinex(Feed):
                         side = ASK
                         amount = abs(amount)
 
+                    self.order_map[pair][order_id] = {'price': price, 'amount': amount}
+
                     if price not in self.l2_book[pair][side]:
                         self.l2_book[pair][side][price] = amount
-                        self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
                     else:
-                        self.l2_book[pair][side][price]
+
                         self.l2_book[pair][side][price] += amount
-                        self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
             else:
                 # book update
                 order_id, price, amount = msg[1]
@@ -183,22 +184,21 @@ class Bitfinex(Feed):
                     amount = abs(amount)
 
                 if price == 0:
-                    price = self.order_map[order_id]['price']
-                    self.l2_book[pair][side][price] -= self.order_map[order_id]['amount']
+                    price = self.order_map[pair][order_id]['price']
+                    self.l2_book[pair][side][price] -= self.order_map[pair][order_id]['amount']
                     if self.l2_book[pair][side][price] == 0:
                         del self.l2_book[pair][side][price]
-                    del self.order_map[order_id]
+                    del self.order_map[pair][order_id]
                 else:
-                    self.order_map[order_id] = {'price': price, 'amount': amount, 'side': side}
+                    self.order_map[pair][order_id] = {'price': price, 'amount': amount}
                     if price in self.l2_book[pair][side]:
-                        self.l2_book[pair][side][price]
                         self.l2_book[pair][side][price] += amount
                     else:
                         self.l2_book[pair][side][price] = amount
         elif msg[1] == 'hb':
             pass
         else:
-            LOG.warning("{} - Unexpected book msg {}".format(self.id, msg))
+            LOG.warning("%s: Unexpected book msg %", self.id, msg)
 
         if L3_BOOK in self.standardized_channels:
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
