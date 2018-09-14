@@ -83,7 +83,7 @@ class BookRedis(RedisCallback):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
 
-        data = {BID: {}, ASK: {}}
+        data = {'timestamp': timestamp, BID: {}, ASK: {}}
         count = 0
         for level in book[ASK]:
             data[ASK][str(level)] = float(book[ASK][level])
