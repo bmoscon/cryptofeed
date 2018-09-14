@@ -1,10 +1,11 @@
 ## Changelog
 
-### 0.14.1
+### 0.14.1 (2018-09-14)
   * Added some docstrings
   * Feature: Add exchanges by name to feedhandler. Easier to instantiate a feedhandler from config
   * Logging improvements
   * Bugfix: non-gathered futures were suppressing exceptions when multiple feeds are configured. Changed to tasks 
+  * Redis backend uses a connection pool
 
 ### 0.14.0 (2018-09-04)
   * Feature: support for writing order books directly to redis
