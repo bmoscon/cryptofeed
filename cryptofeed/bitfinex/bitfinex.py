@@ -196,9 +196,10 @@ class Bitfinex(Feed):
                     else:
                         self.l2_book[pair][side][price] = amount
         elif msg[1] == 'hb':
-            pass
+            return
         else:
             LOG.warning("%s: Unexpected book msg %", self.id, msg)
+            return
 
         if L3_BOOK in self.standardized_channels:
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])

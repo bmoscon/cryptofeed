@@ -29,7 +29,7 @@ class TradeRedis(RedisCallback):
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, id=None, timestamp=None):
         if self.redis is None:
-            self.redis = await aioredis.create_redis('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_pool('redis://{}:{}'.format(self.host, self.port))
         ts = None
         if timestamp is None:
             timestamp = time.time()
