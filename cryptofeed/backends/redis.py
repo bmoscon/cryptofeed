@@ -50,7 +50,7 @@ class FundingRedis(RedisCallback):
 
     async def __call__(self, *, feed, pair, **kwargs):
         if self.redis is None:
-            self.redis = await aioredis.create_redis('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_pool('redis://{}:{}'.format(self.host, self.port))
 
         ts = None
         timestamp = kwargs.get('timestamp', None)
@@ -79,7 +79,7 @@ class BookRedis(RedisCallback):
 
     async def __call__(self, *, feed, pair, book):
         if self.redis is None:
-            self.redis = await aioredis.create_redis('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_pool('redis://{}:{}'.format(self.host, self.port))
 
         timestamp = time.time()
 
