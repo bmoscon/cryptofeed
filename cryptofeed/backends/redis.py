@@ -86,14 +86,14 @@ class BookRedis(RedisCallback):
         data = {'timestamp': timestamp, BID: {}, ASK: {}}
         count = 0
         for level in book[ASK]:
-            data[ASK][str(level)] = float(book[ASK][level])
+            data[ASK][float(level)] = float(book[ASK][level])
             count += 1
             if self.depth and count >= self.depth:
                 break
 
         count = 0
         for level in reversed(book[BID]):
-            data[BID][str(level)] = float(book[BID][level])
+            data[BID][float(level)] = float(book[BID][level])
             count += 1
             if self.depth and count >= self.depth:
                 break
