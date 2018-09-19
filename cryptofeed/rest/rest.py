@@ -2,6 +2,7 @@ import logging
 
 from cryptofeed.rest.bitmex import Bitmex
 from cryptofeed.rest.bitfinex import Bitfinex
+from cryptofeed.rest.gdax import Gdax
 
 
 FORMAT = '%(asctime)-15s : %(levelname)s : %(message)s'
@@ -17,7 +18,8 @@ class Rest:
         self.config = config
         self.lookup = {
             'bitmex': Bitmex(config),
-            'bitfinex': Bitfinex(config)
+            'bitfinex': Bitfinex(config),
+            'gdax': Gdax(config)
         }
     
     def __getattr__(self, attr):

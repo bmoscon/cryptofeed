@@ -4,3 +4,7 @@ bitmex:
 bitfinex:
     key_id: null
     key_secret: null
+gdax:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
