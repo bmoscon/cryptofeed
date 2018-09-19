@@ -35,17 +35,15 @@ class Gdax(API):
         }
 
     
-    def _get_fills(self, symbol=None, retry=None, retry_wait=0, start_date=None, end_date=None):
-        endpoint = '/fills'
-        if symbol is not None:
-            symbol = pair_std_to_exchange(symbol, self.ID)
-            endpoint = '{}?product_id={}'.format(endpoint, symbol)
-
+    def _make_request(self, method: str, endpoint: str, header: dict, body=None):
         while True:
-            print(endpoint)
-            header = self._generate_signature(endpoint, "GET")
             try:
-                resp = requests.get('{}{}'.format(self.api, endpoint), headers=header)
+                if method == "GET":
+                    resp = requests.get('{}{}'.format(self.api, endpoint), headers=header)
+                elif method == "POST":
+                    resp = requests.post('{}{}'.format(self.api, endpoint), json=body, headers=header)
+                elif method == "DELETE":
+                    resp = requests.delete('{}{}'.format(self.api, endpoint), headers=header)
             except TimeoutError as e:
                 LOG.warning("%s: Timeout - %s", self.ID, e)
                 if retry is not None:
@@ -88,26 +86,34 @@ class Gdax(API):
                 LOG.error("%s: Resp: %s", self.ID, resp.text)
                 resp.raise_for_status()
 
-            data = resp.json()
+            return resp.json()
 
-            if data == []:
-                LOG.warning("%s: No data", self.ID)
-            elif start_date is not None and end_date is not None:
-                # filter out data not in specified range
-                data_in_range = []
-                start_time = pd.Timestamp(start_date).to_pydatetime()
-                end_time = pd.Timestamp(end_date).to_pydatetime()
-                for entry in data:
-                    entry_time = datetime.strptime(entry['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
 
-                    if entry_time >= start_time and entry_time <= end_time:
-                        data_in_range.append(entry)
-                data = data_in_range
-                
-            data = list(map(lambda x: self._trade_normalization(symbol, x), data))
-            yield data
+    def _get_fills(self, symbol=None, retry=None, retry_wait=0, start_date=None, end_date=None):
+        endpoint = '/fills'
+        if symbol is not None:
+            symbol = pair_std_to_exchange(symbol, self.ID)
+            endpoint = '{}?product_id={}'.format(endpoint, symbol)
+
+        header = self._generate_signature(endpoint, "GET")
+        data = self._make_request("GET", endpoint, header)
+
+        if data == []:
+            LOG.warning("%s: No data", self.ID)
+        elif start_date is not None and end_date is not None:
+            # filter out data not in specified range
+            data_in_range = []
+            start_time = pd.Timestamp(start_date).to_pydatetime()
+            end_time = pd.Timestamp(end_date).to_pydatetime()
+            for entry in data:
+                entry_time = datetime.strptime(entry['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
+
+                if entry_time >= start_time and entry_time <= end_time:
+                    data_in_range.append(entry)
+            data = data_in_range
             
-            break
+        data = list(map(lambda x: self._trade_normalization(symbol, x), data))
+        return data
 
 
     def _get_orders(self, body):
@@ -129,115 +135,22 @@ class Gdax(API):
             else:
                 endpoint = '{}&product_id={}'.format(endpoint, product_id)
         
-        while True:
-            header = self._generate_signature(endpoint, "GET")
-            
-            try:
-                resp = requests.get('{}{}'.format(self.api, endpoint), headers=header)
-            except TimeoutError as e:
-                LOG.warning("%s: Timeout - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-            except requests.exceptions.ConnectionError as e:
-                LOG.warning("%s: Connection error - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
+        header = self._generate_signature(endpoint, "GET")
+        data = self._make_request("GET", endpoint, header)
+        data = list(map(lambda x: self._trade_normalization(x), data))
         
-            # 400 Bad Request – Invalid request format
-            # 401 Unauthorized – Invalid API Key
-            # 403 Forbidden – You do not have access to the requested resource
-            # 404 Not Found
-            # 500 Internal Server Error – We had a problem with our server
-            if resp.status_code == 400:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
-            elif resp.status_code in [401, 403, 404]:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                resp.raise_for_status()
-            elif resp.status_code == 500:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                resp.raise_for_status()
-            elif resp.status_code != 200:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
+        return data
 
-            data = resp.json()
-            data = map(lambda x: self._trade_normalization(x), data)
-            
-            yield list(data)
-
-            break
 
     def _get_order(self, order_id):
         """
         https://docs.gdax.com/?python#get-an-order
         """
         endpoint = "/orders/{}".format(order_id)
-        while True:
-            header = self._generate_signature(endpoint, "GET")
-            
-            try:
-                resp = requests.get('{}{}'.format(self.api, endpoint), headers=header)
-            except TimeoutError as e:
-                LOG.warning("%s: Timeout - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-            except requests.exceptions.ConnectionError as e:
-                LOG.warning("%s: Connection error - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-        
-            # 400 Bad Request – Invalid request format
-            # 401 Unauthorized – Invalid API Key
-            # 403 Forbidden – You do not have access to the requested resource
-            # 404 Not Found
-            # 500 Internal Server Error – We had a problem with our server
-            if resp.status_code == 400:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
-            elif resp.status_code in [401, 403, 404]:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                resp.raise_for_status()
-            elif resp.status_code == 500:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                resp.raise_for_status()
-            elif resp.status_code != 200:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
+        header = self._generate_signature(endpoint, "GET")
+        data = self._make_request("GET", endpoint, header)
 
-            data = resp.json()
-
-            return data
+        return data
 
 
     def _post_order(self, body, retry=None, retry_wait=0):
@@ -245,110 +158,19 @@ class Gdax(API):
         https://docs.gdax.com/?python#place-a-new-order
         """
         endpoint = "/orders"
-        while True:
-            header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
-        
-            try:
-                resp = requests.post('{}{}'.format(self.api, endpoint), json=body, headers=header)
-            except TimeoutError as e:
-                LOG.warning("%s: Timeout - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-            except requests.exceptions.ConnectionError as e:
-                LOG.warning("%s: Connection error - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
+        header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
+        data = self._make_request("POST", endpoint, header, body)
 
-            # 400 Bad Request – Invalid request format
-            # 401 Unauthorized – Invalid API Key
-            # 403 Forbidden – You do not have access to the requested resource
-            # 404 Not Found
-            # 500 Internal Server Error – We had a problem with our server
-            if resp.status_code == 400:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
-            elif resp.status_code in [401, 403, 404]:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                resp.raise_for_status()
-            elif resp.status_code == 500:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                resp.raise_for_status()
-            elif resp.status_code != 200:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
-            
-            data = resp.json()
-
-            return data
+        return data
 
 
     def _delete_order(self, order_id=None):
         endpoint = "/orders"
         if order_id is not None:
             endpoint = '{}/{}'.format(endpoint, order_id)
-        
-        while True:
-            header = self._generate_signature(endpoint, "DELETE", body=json.dumps(body))
-            try:
-                resp = requests.delete('{}{}'.format(self.api, endpoint), header=headers)
-            except TimeoutError as e:
-                LOG.warning("%s: Timeout - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-            except requests.exceptions.ConnectionError as e:
-                LOG.warning("%s: Connection error - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
 
-            # 400 Bad Request – Invalid request format
-            # 401 Unauthorized – Invalid API Key
-            # 403 Forbidden – You do not have access to the requested resource
-            # 404 Not Found
-            # 500 Internal Server Error – We had a problem with our server
-            if resp.status_code == 400:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
-            elif resp.status_code in [401, 403, 404]:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                resp.raise_for_status()
-            elif resp.status_code == 500:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                resp.raise_for_status()
-            elif resp.status_code != 200:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
-        
-            break
+        header = self._generate_signature(endpoint, "DELETE", body=json.dumps(body))
+        self._make_request("DELETE", endpoint, headers)
 
 
     def fills(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
@@ -368,10 +190,7 @@ class Gdax(API):
             "side": "buy"
         }
         """
-        
-        fills = self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
-        for data in fills:
-            yield data
+        return self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
     
 
     def execute_trades(self, trades_to_make):
@@ -407,8 +226,8 @@ class Gdax(API):
             'product_id': 'BTC-USD' (optional)
         }
         """
-        for order in self._get_orders(body):
-            yield order
+        return self._get_orders(body)
+
 
     def  get_order(self, order_id: str):
         return self._trade_normalization(self._get_order(order_id))
