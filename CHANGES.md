@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.15.0
+  * Feature: GDAX/Coinbase rest support - trades, order status, etc
+
 ### 0.14.1 (2018-09-14)
   * Added some docstrings
   * Feature: Add exchanges by name to feedhandler. Easier to instantiate a feedhandler from config
