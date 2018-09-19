@@ -1,4 +1,4 @@
-import time, json, hashlib, hmac, calendar, requests
+import time, json, hashlib, hmac, calendar, requests, base64
 from time import sleep
 from datetime import datetime as dt
 
@@ -9,6 +9,7 @@ from cryptofeed.feeds import GDAX
 from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
+REQUEST_LIMIT = 10
 LOG = get_logger('rest', 'rest.log')
 
 # API Docs https://docs.gdax.com/
@@ -18,30 +19,30 @@ class Gdax(API):
     api = "https://api-public.sandbox.gdax.com"
 
     
-    def _generate_signature(self, endpoint: str, method: str, body = json.dumps({})):
+    def _generate_signature(self, endpoint: str, method: str, body = ''):
         timestamp = str(time.time())
-        url = '{}{}'.format(self.api, endpoint)
-        message = timestamp + method + url + (body or '')
+        message = ''.join([timestamp, method, endpoint, (body or '')])
         hmac_key = base64.b64decode(self.key_secret)
-        signature = hmac.new(hmac_key, message, hashlib.sha256)
-        signature_b64 = signature.digest().encode('base64').rstrip('\n')
+        signature = hmac.new(hmac_key, message.encode('ascii'), hashlib.sha256)
+        signature_b64 = base64.b64encode(signature.digest()).decode('utf-8')
         
         return {
             'CB-ACCESS-KEY': self.key_id, # The api key as a string.
             'CB-ACCESS-SIGN': signature_b64, # The base64-encoded signature (see Signing a Message).
             'CB-ACCESS-TIMESTAMP': timestamp, # A timestamp for your request.
             'CB-ACCESS-PASSPHRASE': self.key_passphrase, # The passphrase you specified when creating the API key
-            'Content-Type': 'application/json'
+            'Content-Type': 'Application/JSON',
         }
-    
+
     
     def _get_fills(self, symbol=None, retry=None, retry_wait=0, start_date=None, end_date=None):
         endpoint = '/fills'
         if symbol is not None:
             symbol = pair_std_to_exchange(symbol, self.ID)
-            endpoint = '{}?product-id={}'.format(endpoint, symbol)
+            endpoint = '{}?product_id={}'.format(endpoint, symbol)
 
         while True:
+            print(endpoint)
             header = self._generate_signature(endpoint, "GET")
             try:
                 resp = requests.get('{}{}'.format(self.api, endpoint), headers=header)
@@ -239,7 +240,7 @@ class Gdax(API):
             return data
 
 
-    def _post_order(self, symbol, body, retry=None, retry_wait=0):
+    def _post_order(self, body, retry=None, retry_wait=0):
         """
         https://docs.gdax.com/?python#place-a-new-order
         """
@@ -248,7 +249,7 @@ class Gdax(API):
             header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
         
             try:
-                resp = requests.post('{}{}'.format(self.api, endpoint), json=body, header=headers)
+                resp = requests.post('{}{}'.format(self.api, endpoint), json=body, headers=header)
             except TimeoutError as e:
                 LOG.warning("%s: Timeout - %s", self.ID, e)
                 if retry is not None:
@@ -293,9 +294,7 @@ class Gdax(API):
             
             data = resp.json()
 
-            yield data
-
-            break
+            return data
 
 
     def _delete_order(self, order_id=None):
@@ -352,7 +351,7 @@ class Gdax(API):
             break
 
 
-    def trades(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
+    def fills(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
         """
         data format
 
@@ -370,20 +369,30 @@ class Gdax(API):
         }
         """
         
-        for data in self._get_fills('trade', symbol, start, end, retry, retry_wait):
+        fills = self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
+        for data in fills:
             yield data
     
 
-    def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
-        for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
-            yield data
-    
+    def execute_trades(self, trades_to_make):
+        """
+        https://docs.gdax.com/?python#place-a-new-order
+        data format
+        {
+            "size": "0.01",
+            "price": "0.100",
+            "side": "buy",
+            "product_id": "BTC-USD"
+        }
+        """
 
-    def execute_trades(self, symbol, trades_to_make):
+        responses = []
         for trade in trades_to_make:
-            yield self._trade_normalization(
-                self._post_order(self, symbol, trade, retry=None, retry_wait=0)
-            )
+            responses.append(self._trade_normalization(
+                self._post_order(trade, retry=None, retry_wait=0)
+            ))
+        
+        return responses
     
 
     def cancel_orders(self, order_id=None):
@@ -391,11 +400,18 @@ class Gdax(API):
     
 
     def get_orders(self, body):
+        """
+        body should be
+        {
+            'status':['open', 'pending', 'active'],
+            'product_id': 'BTC-USD' (optional)
+        }
+        """
         for order in self._get_orders(body):
             yield order
 
     def  get_order(self, order_id: str):
-        yield self._trade_normalization(self._get_order(order_id))
+        return self._trade_normalization(self._get_order(order_id))
 
     def _trade_normalization(self, trade: dict) -> dict:
         trade_data = {
