@@ -19,7 +19,7 @@ class Rest:
         self.lookup = {
             'bitmex': Bitmex(config),
             'bitfinex': Bitfinex(config),
-            'gdax': Gdax(config)
+            'gdax': Gdax(config, True)
         }
     
     def __getattr__(self, attr):

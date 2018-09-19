@@ -15,13 +15,14 @@ LOG = get_logger('rest', 'rest.log')
 # API Docs https://docs.gdax.com/
 class Gdax(API):
     ID = GDAX
-    # api = "https://api.gdax.com"
-    api = "https://api-public.sandbox.gdax.com"
+    
+    api = "https://api.gdax.com"
+    sandbox_api = "https://api-public.sandbox.gdax.com"
 
     
     def _generate_signature(self, endpoint: str, method: str, body = ''):
         timestamp = str(time.time())
-        message = ''.join([timestamp, method, endpoint, (body or '')])
+        message = ''.join([timestamp, method, endpoint, body])
         hmac_key = base64.b64decode(self.key_secret)
         signature = hmac.new(hmac_key, message.encode('ascii'), hashlib.sha256)
         signature_b64 = base64.b64encode(signature.digest()).decode('utf-8')
@@ -36,14 +37,18 @@ class Gdax(API):
 
     
     def _make_request(self, method: str, endpoint: str, header: dict, body=None):
+        api = self.api
+        if self.sandbox:
+            api = self.sandbox_api
+
         while True:
             try:
                 if method == "GET":
-                    resp = requests.get('{}{}'.format(self.api, endpoint), headers=header)
+                    resp = requests.get('{}{}'.format(api, endpoint), headers=header)
                 elif method == "POST":
-                    resp = requests.post('{}{}'.format(self.api, endpoint), json=body, headers=header)
+                    resp = requests.post('{}{}'.format(api, endpoint), json=body, headers=header)
                 elif method == "DELETE":
-                    resp = requests.delete('{}{}'.format(self.api, endpoint), headers=header)
+                    resp = requests.delete('{}{}'.format(api, endpoint), headers=header)
             except TimeoutError as e:
                 LOG.warning("%s: Timeout - %s", self.ID, e)
                 if retry is not None:

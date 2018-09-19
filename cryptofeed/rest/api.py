@@ -6,9 +6,10 @@ import yaml
 class API:
     ID = 'NotImplemented'
 
-    def __init__(self, config):
+    def __init__(self, config, sandbox=False):
         path = os.path.dirname(os.path.abspath(__file__))
         self.key_id, self.key_secret, self.key_passphrase = None, None, None
+        self.sandbox = sandbox
         if not config:
             config = "config.yaml"
 
