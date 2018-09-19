@@ -14,12 +14,12 @@ LOG = logging.getLogger('rest')
 
 
 class Rest:
-    def __init__(self, config=None):
+    def __init__(self, config=None, sandbox=False):
         self.config = config
         self.lookup = {
             'bitmex': Bitmex(config),
             'bitfinex': Bitfinex(config),
-            'gdax': Gdax(config, True)
+            'gdax': Gdax(config, sandbox=sandbox)
         }
     
     def __getattr__(self, attr):
