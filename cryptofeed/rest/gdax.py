@@ -35,7 +35,10 @@ class Gdax(API):
             'Content-Type': 'Application/JSON',
         }
 
-    def _pagination(self, endpoint: str, body={}):
+    def _pagination(self, endpoint: str, body=None):
+        if body is None:
+            return endpoint
+
         if 'before' in body:
             if '?' in endpoint:
                 endpoint = '{}&before={}'.format(endpoint, 'before')
@@ -192,7 +195,7 @@ class Gdax(API):
             endpoint = '{}/{}'.format(endpoint, order_id)
 
         header = self._generate_signature(endpoint, "DELETE")
-        self._make_request("DELETE", endpoint, headers)
+        self._make_request("DELETE", endpoint, header)
     
     def _get(self, endpoint):
         header = self._generate_signature(endpoint, "GET")
@@ -303,7 +306,7 @@ class Gdax(API):
         """
         return self._post("/deposits/coinbase-account", body)
 
-    def withdrawl_funds(self, body):
+    def withdrawal_funds(self, body):
         """
         data format
         {
@@ -314,7 +317,7 @@ class Gdax(API):
         """
         return self._post("/withdrawals/payment-method", body)
     
-    def withdrawl_coinbase(self, body):
+    def withdrawal_coinbase(self, body):
         """
         data format
         {
@@ -325,7 +328,7 @@ class Gdax(API):
         """
         return self._post("/withdrawals/coinbase-account", body)
     
-    def withdrawl_crypto(self, body):
+    def withdrawal_crypto(self, body):
         """
         data format
         {
