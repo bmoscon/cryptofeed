@@ -35,6 +35,21 @@ class Gdax(API):
             'Content-Type': 'Application/JSON',
         }
 
+    def _pagination(self, endpoint: str, body={}):
+        if 'before' in body:
+            if '?' in endpoint:
+                endpoint = '{}&before={}'.format(endpoint, 'before')
+            else:
+                endpoint = '{}?before={}'.format(endpoint, 'before')
+        if 'after' in body:
+            if '?' in endpoint:
+                endpoint = '{}&after={}'.format(endpoint, 'after')
+            else:
+                endpoint = '{}?after={}'.format(endpoint, 'after')
+        if 'limit' in body:
+            endpoint = '{}?limit={}'.format(endpoint, 'limit')
+        
+        return endpoint
     
     def _make_request(self, method: str, endpoint: str, header: dict, body=None):
         api = self.api
@@ -136,9 +151,11 @@ class Gdax(API):
         if 'product_id' in body:
             product_id = pair_std_to_exchange(body['product_id'], self.ID)
             if 'status' in endpoint:
-                endpoint = '{}?product_id={}'.format(endpoint, product_id)
-            else:
                 endpoint = '{}&product_id={}'.format(endpoint, product_id)
+            else:
+                endpoint = '{}?product_id={}'.format(endpoint, product_id)
+
+        endpoint = self._pagination(endpoint, body)
         
         header = self._generate_signature(endpoint, "GET")
         data = self._make_request("GET", endpoint, header)
@@ -174,8 +191,16 @@ class Gdax(API):
         if order_id is not None:
             endpoint = '{}/{}'.format(endpoint, order_id)
 
-        header = self._generate_signature(endpoint, "DELETE", body=json.dumps(body))
+        header = self._generate_signature(endpoint, "DELETE")
         self._make_request("DELETE", endpoint, headers)
+    
+    def _get(self, endpoint):
+        header = self._generate_signature(endpoint, "GET")
+        return self._make_request("GET", endpoint, header)
+
+    def _post(self, endpoint, body):
+        header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
+        return self._make_request("POST", endpoint, header, body)
 
 
     def fills(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
@@ -234,8 +259,89 @@ class Gdax(API):
         return self._get_orders(body)
 
 
-    def  get_order(self, order_id: str):
+    def get_order(self, order_id: str):
         return self._trade_normalization(self._get_order(order_id))
+
+    def get_accounts(self):
+        return self._get("/accounts")
+
+    def get_account(self, account_id: str):
+        endpoint = "/accounts/{}".format(account_id)
+        return self._get(endpoint)
+    
+    def get_account_history(self, account_id: str, pagination={}):
+        endpoint = "/accounts/{}/ledger".format(account_id)
+        endpoint = self._pagination(endpoint, pagination)
+        
+        return self._get(endpoint)
+    
+    def get_holds(self, account_id: str, pagination={}):
+        endpoint = "/accounts/{}/holds".format(account_id)
+        endpoint = self._pagination(endpoint, pagination)
+        
+        return self._get(endpoint)
+    
+    def deposit_funds(self, body):
+        """
+        data format
+        {
+            "amount": 10.00,
+            "currency": "USD",
+            "payment_method_id": "bc677162-d934-5f1a-968c-a496b1c1270b"
+        }
+        """
+        return self._post("/deposits/payment-method", body)
+
+    def deposit_coinbase(self, body):
+        """
+        data format
+        {
+            "amount": 10.00,
+            "currency": "BTC",
+            "coinbase_account_id": "c13cd0fc-72ca-55e9-843b-b84ef628c198",
+        }
+        """
+        return self._post("/deposits/coinbase-account", body)
+
+    def withdrawl_funds(self, body):
+        """
+        data format
+        {
+            "amount": 10.00,
+            "currency": "USD",
+            "payment_method_id": "bc677162-d934-5f1a-968c-a496b1c1270b"
+        }
+        """
+        return self._post("/withdrawals/payment-method", body)
+    
+    def withdrawl_coinbase(self, body):
+        """
+        data format
+        {
+            "amount": 10.00,
+            "currency": "BTC",
+            "coinbase_account_id": "c13cd0fc-72ca-55e9-843b-b84ef628c198",
+        }
+        """
+        return self._post("/withdrawals/coinbase-account", body)
+    
+    def withdrawl_crypto(self, body):
+        """
+        data format
+        {
+            "amount": 10.00,
+            "currency": "BTC",
+            "crypto_address": "0x5ad5769cd04681FeD900BCE3DDc877B50E83d469"
+        }
+        """
+        return self._post("/withdrawals/crypto", body)
+
+    def list_payment_methods(self):
+        return self._get("/payment-methods")
+    
+    def list_coinbase_accounts(self):
+        return self._get("/coinbase-accounts")
+
 
     def _trade_normalization(self, trade: dict) -> dict:
         trade_data = {
