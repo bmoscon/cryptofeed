@@ -12,13 +12,13 @@ class ArcticCallback:
     def __init__(self, library, host='127.0.0.1', key=None, **kwargs):
         """
         library: str
-            arctic library. Will be created if does not exist. 
+            arctic library. Will be created if does not exist.
         key: str
             setting key lets you override the symbol name.
             The defaults are related to the data
             being stored, i.e. trade, funding, etc
         kwargs:
-            if library needs to be created you can specify the 
+            if library needs to be created you can specify the
             lib_type in the kwargs. Default is VersionStore, but you can
             set to chunkstore with lib_type=arctic.CHUNK_STORE
         """
@@ -73,7 +73,7 @@ class FundingArctic(ArcticCallback):
                 kwargs[key] = [float(kwargs[key])]
             else:
                 kwargs[key] = [kwargs[key]]
-        
+
         kwargs['date'] = dt.utcfromtimestamp(ts)
 
         df = pd.DataFrame(kwargs)
