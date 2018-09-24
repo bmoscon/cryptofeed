@@ -284,8 +284,11 @@ class Gdax(API):
         
         return self._get(endpoint)
     
+    
     def deposit_funds(self, body):
         """
+        Deposit funds from a payment method to the account the api key is associated with.
+        
         data format
         {
             "amount": 10.00,
@@ -295,8 +298,11 @@ class Gdax(API):
         """
         return self._post("/deposits/payment-method", body)
 
+
     def deposit_coinbase(self, body):
         """
+        Deposit funds from a different coinbase account into the account the api key is associated with.
+        
         data format
         {
             "amount": 10.00,
@@ -306,8 +312,10 @@ class Gdax(API):
         """
         return self._post("/deposits/coinbase-account", body)
 
+    
     def withdrawal_funds(self, body):
         """
+        Withdrawal funds from the account the api key is associated with to the specified account
         data format
         {
             "amount": 10.00,
@@ -317,8 +325,10 @@ class Gdax(API):
         """
         return self._post("/withdrawals/payment-method", body)
     
+    
     def withdrawal_coinbase(self, body):
         """
+        Withdrawal funds from the account the api key is associated with to the specified coinbase account
         data format
         {
             "amount": 10.00,
@@ -328,8 +338,10 @@ class Gdax(API):
         """
         return self._post("/withdrawals/coinbase-account", body)
     
+    
     def withdrawal_crypto(self, body):
         """
+        Withdrawal funds from the account the api key is associated with to the specified crypto address
         data format
         {
             "amount": 10.00,
