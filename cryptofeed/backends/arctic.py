@@ -1,13 +1,11 @@
 from decimal import Decimal
 import time
-import json
 from datetime import datetime as dt
 
 import arctic
 import pandas as pd
 
 from cryptofeed.standards import timestamp_normalize
-from cryptofeed.defines import BID, ASK
 
 
 class ArcticCallback:
