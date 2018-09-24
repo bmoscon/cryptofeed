@@ -21,7 +21,8 @@ class ArcticCallback:
             being stored, i.e. trade, funding, etc
         kwargs:
             if library needs to be created you can specify the 
-            lib_type in the kwargs. Default is VersionStore
+            lib_type in the kwargs. Default is VersionStore, but you can
+            set to chunkstore with lib_type=arctic.CHUNK_STORE
         """
         con = arctic.Arctic(host)
         if library not in con.list_libraries():
