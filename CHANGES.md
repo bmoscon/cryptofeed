@@ -2,6 +2,7 @@
 
 ### 0.15.0
   * Feature: GDAX/Coinbase rest support - trades, order status, etc
+  * Feature: Arctic backend, supports writing to arctic directly on trade/funding updates
 
 ### 0.14.1 (2018-09-14)
   * Added some docstrings
