@@ -27,6 +27,9 @@ class GDAX(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
         super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks)
+        self.__reset()
+
+    def __reset(self):
         self.order_map = {}
         self.seq_no = {}
         self.book = {}
@@ -149,7 +152,7 @@ class GDAX(Feed):
         await self.callbacks[L2_BOOK](feed=self.id, pair=msg['product_id'], book=self.l2_book[msg['product_id']])
 
     async def _book_snapshot(self):
-        self.book = {}
+        self.__reset()
         loop = asyncio.get_event_loop()
         url = 'https://api.gdax.com/products/{}/book?level=3'
         futures = [loop.run_in_executor(None, requests.get, url.format(pair)) for pair in self.pairs]
@@ -307,6 +310,7 @@ class GDAX(Feed):
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
+        self.__reset()
         await websocket.send(json.dumps({"type": "subscribe",
                                          "product_ids": self.pairs,
                                          "channels": self.channels

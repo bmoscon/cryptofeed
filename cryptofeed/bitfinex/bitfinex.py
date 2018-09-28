@@ -49,7 +49,7 @@ class Bitfinex(Feed):
            handler: the handler for this channel type
         '''
         self.__reset()
-    
+
     def __reset(self):
         self.channel_map = {}
         self.order_map = defaultdict(dict)
@@ -227,7 +227,6 @@ class Bitfinex(Feed):
                 seq_no = msg[-1]
                 if self.seq_no + 1 != seq_no:
                     LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
-                    self.__reset()
                     raise MissingSequenceNumber
                 self.seq_no = seq_no
 
@@ -256,6 +255,7 @@ class Bitfinex(Feed):
                                                'handler': handler}
 
     async def subscribe(self, websocket):
+        self.__reset()
         await websocket.send(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL
