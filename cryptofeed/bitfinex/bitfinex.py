@@ -222,6 +222,9 @@ class Bitfinex(Feed):
                 seq_no = msg[-1]
                 if self.seq_no + 1 != seq_no:
                     LOG.warning("%s: missing sequence number - reconnecting", self.id)
+                    self.seq_no = 0
+                    self.channel_map = {}
+                    self.order_map = defaultdict(dict)
                     raise Exception("Missing sequence number")
                 self.seq_no = seq_no
 
