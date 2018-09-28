@@ -11,6 +11,7 @@ from collections import defaultdict
 
 from sortedcontainers import SortedDict as sd
 
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING
 from cryptofeed.exchanges import BITFINEX
@@ -47,9 +48,13 @@ class Bitfinex(Feed):
            channel: channel name
            handler: the handler for this channel type
         '''
+        self.__reset()
+    
+    def __reset(self):
         self.channel_map = {}
         self.order_map = defaultdict(dict)
         self.seq_no = 0
+
 
     async def _ticker(self, msg):
         chan_id = msg[0]
@@ -221,11 +226,9 @@ class Bitfinex(Feed):
             if chan_id in self.channel_map:
                 seq_no = msg[-1]
                 if self.seq_no + 1 != seq_no:
-                    LOG.warning("%s: missing sequence number - reconnecting", self.id)
-                    self.seq_no = 0
-                    self.channel_map = {}
-                    self.order_map = defaultdict(dict)
-                    raise Exception("Missing sequence number")
+                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
+                    self.__reset()
+                    raise MissingSequenceNumber
                 self.seq_no = seq_no
 
                 await self.channel_map[chan_id]['handler'](msg)

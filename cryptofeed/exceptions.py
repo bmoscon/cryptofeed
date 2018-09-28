@@ -1,0 +1,2 @@
+class MissingSequenceNumber(Exception):
+    pass
