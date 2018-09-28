@@ -13,6 +13,7 @@ from decimal import Decimal
 import requests
 from sortedcontainers import SortedDict as sd
 
+from cryptofeed.exceptions import MissingMessage
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
 from cryptofeed.standards import pair_exchange_to_std
@@ -40,7 +41,7 @@ class Bitmex(Feed):
         self.order_id = {}
         for pair in self.pairs:
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
-            self.order_id[pair] = {}
+            self.order_id[pair] = defaultdict(dict)
 
     @staticmethod
     def get_symbol_info():
@@ -103,7 +104,7 @@ class Bitmex(Feed):
                 pair = data['symbol']
                 size = data['size']
                 self.l2_book[pair][side][price] = size
-                self.order_id[pair][data['id']] = (price, size)
+                self.order_id[pair][side][data['id']] = (price, size)
                 delta[side][ADD].append((price, size))
         elif msg['action'] == 'update':
             for data in msg['data']:
@@ -111,26 +112,26 @@ class Bitmex(Feed):
                 pair = data['symbol']
                 update_size = data['size']
 
-                if data['id'] not in self.order_id[pair]:
-                    raise Exception("Missing message encountered, reconnecting")
+                if data['id'] not in self.order_id[pair][side]:
+                    raise MissingMessage
 
-                price, _ = self.order_id[pair][data['id']]
+                price, _ = self.order_id[pair][side][data['id']]
                 self.l2_book[pair][side][price] = update_size
-                self.order_id[pair][data['id']] = (price, update_size)
+                self.order_id[pair][side][data['id']] = (price, update_size)
                 delta[side][UPD].append((price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
                 side = BID if data['side'] == 'Buy' else ASK
 
-                if data['id'] not in self.order_id[pair]:
-                    raise Exception("Missing message encountered, reconnecting")
+                if data['id'] not in self.order_id[pair][side]:
+                    raise MissingMessage
 
-                delete_price, delete_size = self.order_id[pair][data['id']]
-                del self.order_id[pair][data['id']]
+                delete_price, delete_size = self.order_id[pair][side][data['id']]
+                del self.order_id[pair][side][data['id']]
 
                 self.l2_book[pair][side][delete_price] -= delete_size
-                if self.l2_book[pair][side][delete_price] == 0:
+                if self.l2_book[pair][side][delete_price] <= 0:
                     del self.l2_book[pair][side][delete_price]
                     delta[side][DEL].append(delete_price)
                 else:
