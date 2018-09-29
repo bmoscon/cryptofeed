@@ -122,7 +122,7 @@ class Bitfinex(Feed):
                 # ignore heartbeats
                 pass
             else:
-                LOG.warning("{} - Unexpected trade message {}".format(self.id, msg))
+                LOG.warning("%s: Unexpected trade message %s", self.id, msg)
 
     async def _book(self, msg):
         chan_id = msg[0]
@@ -160,7 +160,7 @@ class Bitfinex(Feed):
         elif msg[1] == 'hb':
             pass
         else:
-            LOG.warning("{} - Unexpected book msg {}".format(self.id, msg))
+            LOG.warning("%s: Unexpected book msg %s", self.id, msg)
 
         await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
