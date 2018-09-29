@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.15.0
+### 0.15.0 (2018-09-29)
   * Feature: GDAX/Coinbase rest support - trades, order status, etc
   * Feature: Arctic backend, supports writing to arctic directly on trade/funding updates
   * Bugfix: #36 Update poloniex to use new trading pairs and handle sequence numbers
