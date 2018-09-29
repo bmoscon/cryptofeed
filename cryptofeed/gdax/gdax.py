@@ -27,6 +27,9 @@ class GDAX(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None):
         super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks)
+        self.__reset()
+
+    def __reset(self):
         self.order_map = {}
         self.seq_no = {}
         self.book = {}
@@ -98,7 +101,7 @@ class GDAX(Feed):
                 del self.order_map[maker_order_id]
 
             self.book[pair][side][price] -= size
-            if self.book[pair][side][price] == 0:
+            if self.book[pair][side][price] <= 0:
                 del self.book[pair][side][price]
                 delta[side][DEL].append(price)
             else:
@@ -149,7 +152,7 @@ class GDAX(Feed):
         await self.callbacks[L2_BOOK](feed=self.id, pair=msg['product_id'], book=self.l2_book[msg['product_id']])
 
     async def _book_snapshot(self):
-        self.book = {}
+        self.__reset()
         loop = asyncio.get_event_loop()
         url = 'https://api.gdax.com/products/{}/book?level=3'
         futures = [loop.run_in_executor(None, requests.get, url.format(pair)) for pair in self.pairs]
@@ -201,20 +204,29 @@ class GDAX(Feed):
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
 
     async def _done(self, msg):
+        """
+        per GDAX API Docs:
+
+        A done message will be sent for received orders which are fully filled or canceled due
+        to self-trade prevention. There will be no open message for such orders. Done messages
+        for orders which are not on the book should be ignored when maintaining a real-time order book.
+        """
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
 
         if 'price' not in msg:
             return
+
         order_id = msg['order_id']
         if order_id not in self.order_map:
             return
+
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         pair = msg['product_id']
 
         size = self.order_map[order_id]['size']
 
-        if self.book[pair][side][price] - size == 0:
+        if self.book[pair][side][price] - size <= 0:
             del self.book[pair][side][price]
             delta[side][DEL].append(price)
         else:
@@ -234,9 +246,10 @@ class GDAX(Feed):
     async def _change(self, msg):
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
 
-        order_id = msg['order_id']
-        if order_id not in self.order_map:
+        if 'price' not in msg or not msg['price']:
             return
+
+        order_id = msg['order_id']
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         new_size = Decimal(msg['new_size'])
@@ -261,9 +274,7 @@ class GDAX(Feed):
         msg = json.loads(msg, parse_float=Decimal)
         if 'full' in self.channels and 'product_id' in msg and 'sequence' in msg:
             pair = msg['product_id']
-            if pair not in self.seq_no:
-                self.seq_no[pair] = msg['sequence']
-            elif msg['sequence'] <= self.seq_no[pair]:
+            if msg['sequence'] <= self.seq_no[pair]:
                 return
             elif 'full' in self.channels and msg['sequence'] != self.seq_no[pair] + 1:
                 LOG.warning("%s: Missing sequence number detected", self.id)
@@ -299,6 +310,7 @@ class GDAX(Feed):
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
+        self.__reset()
         await websocket.send(json.dumps({"type": "subscribe",
                                          "product_ids": self.pairs,
                                          "channels": self.channels

@@ -13,6 +13,7 @@ from decimal import Decimal
 import requests
 from sortedcontainers import SortedDict as sd
 
+from cryptofeed.exceptions import MissingMessage
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
 from cryptofeed.standards import pair_exchange_to_std
@@ -40,7 +41,7 @@ class Bitmex(Feed):
         self.order_id = {}
         for pair in self.pairs:
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
-            self.order_id[pair] = {}
+            self.order_id[pair] = defaultdict(dict)
 
     @staticmethod
     def get_symbol_info():
@@ -103,33 +104,41 @@ class Bitmex(Feed):
                 pair = data['symbol']
                 size = data['size']
                 self.l2_book[pair][side][price] = size
-                self.order_id[pair][data['id']] = (price, size)
+                self.order_id[pair][side][data['id']] = (price, size)
                 delta[side][ADD].append((price, size))
         elif msg['action'] == 'update':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 pair = data['symbol']
                 update_size = data['size']
-                price, _ = self.order_id[pair][data['id']]
+
+                if data['id'] not in self.order_id[pair][side]:
+                    raise MissingMessage
+
+                price, _ = self.order_id[pair][side][data['id']]
                 self.l2_book[pair][side][price] = update_size
-                self.order_id[pair][data['id']] = (price, update_size)
+                self.order_id[pair][side][data['id']] = (price, update_size)
                 delta[side][UPD].append((price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
                 side = BID if data['side'] == 'Buy' else ASK
-                if data['id'] in self.order_id[pair]:
-                    delete_price, delete_size = self.order_id[pair][data['id']]
-                    del self.order_id[pair][data['id']]
-                    
-                    self.l2_book[pair][side][delete_price] -= delete_size
-                    if self.l2_book[pair][side][delete_price] == 0:
-                        del self.l2_book[pair][side][delete_price]
-                        delta[side][DEL].append(delete_price)
-                    else:
-                        delta[side][UPD].append((price, self.l2_book[pair][side][delete_price]))
+
+                if data['id'] not in self.order_id[pair][side]:
+                    raise MissingMessage
+
+                delete_price, delete_size = self.order_id[pair][side][data['id']]
+                del self.order_id[pair][side][data['id']]
+
+                self.l2_book[pair][side][delete_price] -= delete_size
+                if self.l2_book[pair][side][delete_price] <= 0:
+                    del self.l2_book[pair][side][delete_price]
+                    delta[side][DEL].append(delete_price)
+                else:
+                    delta[side][UPD].append((price, self.l2_book[pair][side][delete_price]))
+
         else:
-            LOG.warning("{} - Unexpected L2 Book message {}".format(self.id, msg))
+            LOG.warning("%s: Unexpected L2 Book message %s", self.id, msg)
             return
 
         if self.do_deltas and self.updates < self.book_update_interval and not forced:
@@ -185,9 +194,9 @@ class Bitmex(Feed):
             LOG.info("%s - info message: %s", self.id, msg)
         elif 'subscribe' in msg:
             if not msg['success']:
-                LOG.error("{} - subscribe failed: {}".format(self.id, msg))
+                LOG.error("%s: subscribe failed: %s", self.id, msg)
         elif 'error' in msg:
-            LOG.error("{} - Error message from exchange: {}".format(self.id, msg))
+            LOG.error("%s: Error message from exchange: %s", self.id, msg)
         else:
             if msg['table'] == 'trade':
                 await self._trade(msg)
@@ -196,7 +205,7 @@ class Bitmex(Feed):
             elif msg['table'] == 'funding':
                 await self._funding(msg)
             else:
-                LOG.warning("{} - Unhandled message {}".format(self.id, msg))
+                LOG.warning("%s: Unhandled message %s", self.id, msg)
 
     async def subscribe(self, websocket):
         self._reset()

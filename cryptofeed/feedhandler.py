@@ -100,7 +100,7 @@ class FeedHandler:
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
             pass
-        except Exception as e:
+        except Exception:
             LOG.error("Unhandled exception", exc_info=True)
 
     async def _watch(self, feed_id, websocket):
