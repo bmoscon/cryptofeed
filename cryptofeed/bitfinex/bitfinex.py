@@ -51,6 +51,8 @@ class Bitfinex(Feed):
         self.__reset()
 
     def __reset(self):
+        self.l2_book = {}
+        self.l3_book = {}
         self.channel_map = {}
         self.order_map = defaultdict(dict)
         self.seq_no = 0
@@ -125,6 +127,9 @@ class Bitfinex(Feed):
                 LOG.warning("%s: Unexpected trade message %s", self.id, msg)
 
     async def _book(self, msg):
+        """
+        For L2 book updates
+        """
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
@@ -166,6 +171,21 @@ class Bitfinex(Feed):
 
 
     async def _raw_book(self, msg):
+        """
+        For L3 book updates
+        """
+        def add_to_book(pair, side, price, order_id, amount):
+            if price in self.l3_book[pair][side]:
+                self.l3_book[pair][side][price][order_id] = amount
+            else:
+                self.l3_book[pair][side][price] = {order_id: amount}
+
+        def remove_from_book(pair, side, order_id):
+            price = self.order_map[pair][side][order_id]['price']
+            del self.l3_book[pair][side][price][order_id]
+            if len(self.l3_book[pair][side][price]) == 0:
+                del self.l3_book[pair][side][price]
+
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
@@ -174,6 +194,7 @@ class Bitfinex(Feed):
             if isinstance(msg[1][0], list):
                 # snapshot so clear orders
                 self.order_map[pair] = {BID: {}, ASK: {}}
+                self.l3_book[pair] = {BID: sd(), ASK: sd()}
 
                 for update in msg[1]:
                     order_id, price, amount = update
@@ -185,6 +206,7 @@ class Bitfinex(Feed):
                         amount = abs(amount)
 
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
+                    add_to_book(pair, side, price, order_id, amount)
             else:
                 # book update
                 order_id, price, amount = msg[1]
@@ -196,9 +218,16 @@ class Bitfinex(Feed):
                     amount = abs(amount)
 
                 if price == 0:
+                    remove_from_book(pair, side, order_id)
                     del self.order_map[pair][side][order_id]
+
                 else:
+                    if order_id in self.order_map[pair][side]:
+                        # Update existing order before adding new one
+                        remove_from_book(pair, side, order_id)
+                    add_to_book(pair, side, price, order_id, amount)
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
+
 
         elif msg[1] == 'hb':
             return
@@ -206,17 +235,7 @@ class Bitfinex(Feed):
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
             return
 
-        self.l2_book[pair] = {BID: sd(), ASK: sd()}
-        for side in (BID, ASK):
-            for order_id in self.order_map[pair][side]:
-                price = self.order_map[pair][side][order_id]['price']
-                amount = self.order_map[pair][side][order_id]['amount']
-                if price in self.l2_book[pair][side]:
-                    self.l2_book[pair][side][price] += amount
-                else:
-                    self.l2_book[pair][side][price] = amount
-
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

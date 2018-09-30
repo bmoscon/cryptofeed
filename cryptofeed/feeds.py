@@ -16,7 +16,7 @@ LOG = logging.getLogger('feedhandler')
 
 _feed_to_exchange_map = {
     L2_BOOK: {
-        BITFINEX: 'book-P0-F0-25',
+        BITFINEX: 'book-P0-F0-100',
         POLONIEX: UNSUPPORTED,
         HITBTC: UNSUPPORTED,
         GDAX: 'level2',

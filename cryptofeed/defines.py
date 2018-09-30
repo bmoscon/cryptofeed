@@ -21,7 +21,7 @@ DEL = 'delete'
 UPD = 'update'
 
 """
-Orderbook Layout
+L2 Orderbook Layout
     * BID and ASK are SortedDictionaries
     * Currency Pairs are defined in standards.py
     * PRICE and SIZE are of type decimal.Decimal
@@ -44,10 +44,48 @@ Orderbook Layout
     },
     ...
 }
-"""
 
-"""
-    Delta is in format of:
+
+L3 Orderbook Layout
+    * Similar to L2, except orders are not aggregated by price,
+      each price level contains the individual orders for that price level
+{
+    currency pair: {
+        BID: {
+            PRICE: {
+                order-id: amount,
+                order-id: amount,
+                order-id: amount
+            },
+            PRICE: {
+                order-id: amount,
+                order-id: amount,
+                order-id: amount
+            }
+            ...
+        },
+        ASK: {
+            PRICE: {
+                order-id: amount,
+                order-id: amount,
+                order-id: amount
+            },
+            PRICE: {
+                order-id: amount,
+                order-id: amount,
+                order-id: amount
+            }
+            ...
+        }
+    },
+    currency pair: {
+        ...
+    },
+    ...
+}
+
+
+Delta is in format of:
     {
         BID: {
             ADD: [(price, size), (price, size), ...],
