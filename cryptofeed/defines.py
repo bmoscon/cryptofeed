@@ -86,6 +86,13 @@ L3 Orderbook Layout
 
 
 Delta is in format of:
+
+for L2 books, it is as below
+for L3 books:
+    * ADD will include order-id in each tuple
+    * DEL will be an array of order-id, price tuples
+    * UPD will include order-id in each tuple
+
     {
         BID: {
             ADD: [(price, size), (price, size), ...],

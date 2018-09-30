@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING, ADD, DEL, UPD
 from cryptofeed.exchanges import BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
@@ -133,6 +133,8 @@ class Bitfinex(Feed):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
+        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        forced = False
 
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
@@ -146,6 +148,7 @@ class Bitfinex(Feed):
                         side = ASK
                         amount = abs(amount)
                     self.l2_book[pair][side][price] = amount
+                forced = True
             else:
                 # book update
                 price, count, amount = msg[1]
@@ -158,16 +161,21 @@ class Bitfinex(Feed):
 
                 if count > 0:
                     # change at price level
+                    if price in self.l2_book[pair][side]:
+                        delta[side] = {UPD: [(price, amount)]}
+                    else:
+                        delta[side] = {ADD: [(price, amount)]}
                     self.l2_book[pair][side][price] = amount
                 else:
                     # remove price level
                     del self.l2_book[pair][side][price]
+                    delta[side] = {DEL: [price]}
         elif msg[1] == 'hb':
             pass
         else:
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+        await self.book_callback(pair, L2_BOOK, forced, delta)
 
 
     async def _raw_book(self, msg):
@@ -186,6 +194,8 @@ class Bitfinex(Feed):
             if len(self.l3_book[pair][side][price]) == 0:
                 del self.l3_book[pair][side][price]
 
+        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        forced = False
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
@@ -207,6 +217,7 @@ class Bitfinex(Feed):
 
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
                     add_to_book(pair, side, price, order_id, amount)
+                forced = True
             else:
                 # book update
                 order_id, price, amount = msg[1]
@@ -218,13 +229,19 @@ class Bitfinex(Feed):
                     amount = abs(amount)
 
                 if price == 0:
+                    price = self.order_map[pair][side][order_id]['price']
                     remove_from_book(pair, side, order_id)
                     del self.order_map[pair][side][order_id]
-
+                    delta[side][DEL] = [(order_id, price)]
                 else:
                     if order_id in self.order_map[pair][side]:
-                        # Update existing order before adding new one
+                        del_price = self.order_map[pair][side][order_id]['price']
+                        delta[side][DEL] = [(order_id, del_price)]
+                        # remove existing order before adding new one
+                        delta[side][UPD] = [(order_id, price, amount)]
                         remove_from_book(pair, side, order_id)
+                    else:
+                        delta[side][ADD] = [(order_id, price, amount)]
                     add_to_book(pair, side, price, order_id, amount)
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
 
@@ -235,7 +252,7 @@ class Bitfinex(Feed):
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
             return
 
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
+        await self.book_callback(pair, L3_BOOK, forced, delta)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
