@@ -16,7 +16,7 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.feed import Feed
 from cryptofeed.callback import Callback
 from cryptofeed.exchanges import GDAX as GDAX_ID
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER, ADD, DEL, UPD, BOOK_DELTA
+from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER, DEL, UPD, BOOK_DELTA
 
 
 LOG = logging.getLogger('feedhandler')
@@ -32,7 +32,8 @@ class GDAX(Feed):
     def __reset(self):
         self.order_map = {}
         self.seq_no = {}
-        self.book = {}
+        self.l3_book = {}
+        self.l2_book = {}
 
     async def _ticker(self, msg):
         '''
@@ -88,7 +89,7 @@ class GDAX(Feed):
             'time': '2018-05-21T00:26:05.585000Z'
         }
         '''
-        if self.book:
+        if self.l3_book:
             delta = {BID: defaultdict(list), ASK: defaultdict(list)}
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
@@ -96,24 +97,20 @@ class GDAX(Feed):
             pair = msg['product_id']
             maker_order_id = msg['maker_order_id']
 
-            self.order_map[maker_order_id]['size'] -= size
-            if self.order_map[maker_order_id]['size'] <= 0:
+            _, new_size = self.order_map[maker_order_id]
+            new_size -= size
+            if new_size <= 0:
                 del self.order_map[maker_order_id]
-
-            self.book[pair][side][price] -= size
-            if self.book[pair][side][price] <= 0:
-                del self.book[pair][side][price]
-                delta[side][DEL].append(price)
+                delta[side][DEL].append((maker_order_id, price))
+                del self.l3_book[pair][side][price][maker_order_id]
+                if len(self.l3_book[pair][side][price]) == 0:
+                    del self.l3_book[pair][side][price]
             else:
-                delta[side][UPD].append((price, self.book[pair][side][price]))
+                self.order_map[maker_order_id] = (price, new_size)
+                self.l3_book[pair][side][price][maker_order_id] = new_size
+                delta[side][UPD].append((maker_order_id, price, new_size))
 
-            if self.do_deltas and self.updates < self.book_update_interval:
-                self.updates += 1
-                await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
-
-            if self.updates >= self.book_update_interval or not self.do_deltas:
-                self.updates = 0
-                await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+            await self.book_callback(pair, L3_BOOK, False, delta)
 
         await self.callbacks[TRADES](
                 feed=self.id,
@@ -137,19 +134,24 @@ class GDAX(Feed):
             })
         }
 
+        await self.book_callback(msg['product_id'], L2_BOOK, True, None)
+
     async def _pair_level2_update(self, msg):
+        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         for side, price, amount in msg['changes']:
+            side = BID if side == 'buy' else ASK
             price = Decimal(price)
             amount = Decimal(amount)
-            bidask = self.l2_book[msg['product_id']][BID if side == 'buy' else ASK]
+            bidask = self.l2_book[msg['product_id']][side]
 
             if amount == "0":
-                if price in bidask:
-                    del bidask[price]
+                del bidask[price]
+                delta[side][DEL].append(price)
             else:
                 bidask[price] = amount
+                delta[side][UPD].append((price, amount))
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=msg['product_id'], book=self.l2_book[msg['product_id']])
+        await self.book_callback(msg['product_id'], L2_BOOK, False, delta)
 
     async def _book_snapshot(self):
         self.__reset()
@@ -164,19 +166,19 @@ class GDAX(Feed):
 
         for res, pair in zip(results, self.pairs):
             orders = res.json()
-            self.book[pair] = {BID: sd(), ASK: sd()}
+            self.l3_book[pair] = {BID: sd(), ASK: sd()}
             self.seq_no[pair] = orders['sequence']
             for side in (BID, ASK):
                 for price, size, order_id in orders[side+'s']:
                     price = Decimal(price)
                     size = Decimal(size)
-                    if price in self.book[pair][side]:
-                        self.book[pair][side][price] += size
+                    if price in self.l3_book[pair][side]:
+                        self.l3_book[pair][side][price][order_id] = size
                     else:
-                        self.book[pair][side][price] = size
-                    self.order_map[order_id] = {'price': price, 'size': size}
+                        self.l3_book[pair][side][price] = {order_id: size}
+                    self.order_map[order_id] = (price, size)
 
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
 
     async def _open(self, msg):
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
@@ -186,22 +188,15 @@ class GDAX(Feed):
         pair = msg['product_id']
         order_id = msg['order_id']
 
-        if price in self.book[pair][side]:
-            self.book[pair][side][price] += size
+        if price in self.l3_book[pair][side]:
+            self.l3_book[pair][side][price][order_id] = size
         else:
-            self.book[pair][side][price] = size
+            self.l3_book[pair][side][price] = {order_id: size}
+        self.order_map[order_id] = (price, size)
 
-        self.order_map[order_id] = {'price': price, 'size': size}
+        delta[side][UPD].append((order_id, price, size))
 
-        delta[side][ADD].append((price, size))
-
-        if self.do_deltas and self.updates < self.book_update_interval:
-            self.updates += 1
-            await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
-
-        if self.updates >= self.book_update_interval or not self.do_deltas:
-            self.updates = 0
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+        await self.book_callback(pair, L3_BOOK, False, delta)
 
     async def _done(self, msg):
         """
@@ -224,24 +219,13 @@ class GDAX(Feed):
         side = ASK if msg['side'] == 'sell' else BID
         pair = msg['product_id']
 
-        size = self.order_map[order_id]['size']
-
-        if self.book[pair][side][price] - size <= 0:
-            del self.book[pair][side][price]
-            delta[side][DEL].append(price)
-        else:
-            self.book[pair][side][price] -= size
-            delta[side][UPD].append((price, self.book[pair][side][price]))
-
+        del self.l3_book[pair][side][price][order_id]
+        if len(self.l3_book[pair][side][price]) == 0:
+            del self.l3_book[pair][side][price]
+        delta[side][DEL].append((order_id, price))
         del self.order_map[order_id]
 
-        if self.do_deltas and self.updates < self.book_update_interval:
-            self.updates += 1
-            await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
-
-        if self.updates >= self.book_update_interval or not self.do_deltas:
-            self.updates = 0
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+        await self.book_callback(pair, L3_BOOK, False, delta)
 
     async def _change(self, msg):
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
@@ -253,22 +237,14 @@ class GDAX(Feed):
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         new_size = Decimal(msg['new_size'])
-        old_size = Decimal(msg['old_size'])
         pair = msg['product_id']
 
-        size = old_size - new_size
-        self.book[pair][side][price] -= size
-        self.order_map[order_id]['size'] = new_size
+        self.l3_book[pair][side][price][order_id] = new_size
+        self.order_map[order_id] = (price, new_size)
 
-        delta[side][UPD].append((price, new_size))
+        delta[side][UPD].append((order_id, price, new_size))
 
-        if self.do_deltas and self.updates < self.book_update_interval:
-            self.updates += 1
-            await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
-
-        if self.updates >= self.book_update_interval or not self.do_deltas:
-            self.updates = 0
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.book[pair])
+        await self.book_callback(pair, L3_BOOK, False, delta)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

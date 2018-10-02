@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING, ADD, DEL, UPD
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING, DEL, UPD
 from cryptofeed.exchanges import BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
@@ -161,10 +161,7 @@ class Bitfinex(Feed):
 
                 if count > 0:
                     # change at price level
-                    if price in self.l2_book[pair][side]:
-                        delta[side] = {UPD: [(price, amount)]}
-                    else:
-                        delta[side] = {ADD: [(price, amount)]}
+                    delta[side] = {UPD: [(price, amount)]}
                     self.l2_book[pair][side][price] = amount
                 else:
                     # remove price level
@@ -241,7 +238,7 @@ class Bitfinex(Feed):
                         delta[side][UPD] = [(order_id, price, amount)]
                         remove_from_book(pair, side, order_id)
                     else:
-                        delta[side][ADD] = [(order_id, price, amount)]
+                        delta[side][UPD] = [(order_id, price, amount)]
                     add_to_book(pair, side, price, order_id, amount)
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
 

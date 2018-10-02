@@ -16,7 +16,6 @@ UNSUPPORTED = 'unsupported'
 BID = 'bid'
 ASK = 'ask'
 
-ADD = 'add'
 DEL = 'delete'
 UPD = 'update'
 
@@ -89,24 +88,20 @@ Delta is in format of:
 
 for L2 books, it is as below
 for L3 books:
-    * ADD will include order-id in each tuple
     * DEL will be an array of order-id, price tuples
     * UPD will include order-id in each tuple
 
     {
         BID: {
-            ADD: [(price, size), (price, size), ...],
             DEL: [price, price, price, ...]
             UPD: [(price, size), (price, size), ...]
         },
         ASK: {
-            ADD: [(price, size), (price, size), ...],
             DEL: [price, price, price, ...]
             UPD: [(price, size), (price, size), ...]
         }
     }
 
-    ADD - these tuples should simply be inserted.
-    DEL - price levels should be deleted
-    UPD - prices should have the quantity set to size (these are not price deltas)
+    DEL - price levels should be deleted (for L3 the order id should be deleted, if the price level is now empty, delete the price level)
+    UPD - prices should have the quantity set to size (these are not price deltas). For L3, add the order id at the price level
 """

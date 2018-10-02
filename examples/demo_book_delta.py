@@ -9,7 +9,7 @@ from copy import deepcopy
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
 from cryptofeed import Bitmex, GDAX, Bitfinex
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, UPD, ADD, DEL, BOOK_DELTA
+from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, UPD, DEL, BOOK_DELTA
 
 
 BOOK = None
@@ -47,9 +47,6 @@ async def delta(feed, pair, update):
     # handle updates for L2 books
     global BOOK
     for side in (BID, ASK):
-        if ADD in update[side]:
-            for price, size in update[side][ADD]:
-                BOOK[side][price] = size
         if UPD in update[side]:
             for price, size in update[side][UPD]:
                 BOOK[side][price] = size
@@ -61,12 +58,6 @@ async def delta(feed, pair, update):
 async def l3_delta(feed, pair, update):
     global BOOK
     for side in (BID, ASK):
-        if ADD in update[side]:
-            for order, price, size in update[side][ADD]:
-                if price in BOOK[side]:
-                    BOOK[side][price][order] = size
-                else:
-                    BOOK[side][price] = {order: size}
         """
         you must DEL before UPD because a modified order will
         be sent as a DEL on the old order followed by an UPD
@@ -88,9 +79,12 @@ async def l3_delta(feed, pair, update):
 def main():
     f = FeedHandler()
     # due to the way the test verification works, you can only run one for the test
-    # f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
-    f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(l3_delta)}))
-    # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    # f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(l3_delta)}))
+    # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(l3_delta)}))
+    #f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    # f.add_feed(GDAX(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(l3_delta)}))
+    f.add_feed(GDAX(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+
 
     f.run()
 
