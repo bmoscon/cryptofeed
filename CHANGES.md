@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.16.0
+  * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
+
 ### 0.15.0 (2018-09-29)
   * Feature: GDAX/Coinbase rest support - trades, order status, etc
   * Feature: Arctic backend, supports writing to arctic directly on trade/funding updates
