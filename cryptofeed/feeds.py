@@ -16,18 +16,18 @@ LOG = logging.getLogger('feedhandler')
 
 _feed_to_exchange_map = {
     L2_BOOK: {
-        BITFINEX: 'book-P0-F0-25',
+        BITFINEX: 'book-P0-F0-100',
         POLONIEX: UNSUPPORTED,
         HITBTC: UNSUPPORTED,
         GDAX: 'level2',
-        BITMEX: 'orderBookL2'
+        BITMEX: 'orderBook10'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
         HITBTC: 'subscribeOrderbook',
         BITSTAMP: 'diff_order_book',
         GDAX: 'full',
-        BITMEX: UNSUPPORTED,
+        BITMEX: 'orderBookL2',
         POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel
     },
     TRADES: {

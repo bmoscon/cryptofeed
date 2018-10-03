@@ -13,11 +13,10 @@ from decimal import Decimal
 import requests
 from sortedcontainers import SortedDict as sd
 
-from cryptofeed.exceptions import MissingMessage
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
 from cryptofeed.standards import pair_exchange_to_std
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, ADD, UPD, DEL, BOOK_DELTA, FUNDING
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL, FUNDING, L3_BOOK
 
 
 LOG = logging.getLogger('feedhandler')
@@ -40,6 +39,7 @@ class Bitmex(Feed):
         self.partial_received = False
         self.order_id = {}
         for pair in self.pairs:
+            self.l3_book[pair] = {BID: sd(), ASK: sd()}
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             self.order_id[pair] = defaultdict(dict)
 
@@ -85,6 +85,9 @@ class Bitmex(Feed):
                                          timestamp=data['timestamp'])
 
     async def _book(self, msg):
+        """
+        the Full bitmex book
+        """
         pair = None
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         # if we reset the book, force a full update
@@ -103,51 +106,65 @@ class Bitmex(Feed):
                 price = data['price']
                 pair = data['symbol']
                 size = data['size']
-                self.l2_book[pair][side][price] = size
-                self.order_id[pair][side][data['id']] = (price, size)
-                delta[side][ADD].append((price, size))
+                order_id = data['id']
+
+                if price in self.l3_book[pair][side]:
+                    self.l3_book[pair][side][price][order_id] = size
+                else:
+                    self.l3_book[pair][side][price] = {order_id: size}
+                self.order_id[pair][side][order_id] = (price, size)
+                delta[side][UPD].append((order_id, price, size))
         elif msg['action'] == 'update':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 pair = data['symbol']
                 update_size = data['size']
+                order_id = data['id']
 
-                if data['id'] not in self.order_id[pair][side]:
-                    raise MissingMessage
+                price, _ = self.order_id[pair][side][order_id]
 
-                price, _ = self.order_id[pair][side][data['id']]
-                self.l2_book[pair][side][price] = update_size
-                self.order_id[pair][side][data['id']] = (price, update_size)
-                delta[side][UPD].append((price, update_size))
+                self.l3_book[pair][side][price][order_id] = update_size
+                self.order_id[pair][side][order_id] = (price, update_size)
+                delta[side][UPD].append((order_id, price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
                 side = BID if data['side'] == 'Buy' else ASK
+                order_id = data['id']
 
-                if data['id'] not in self.order_id[pair][side]:
-                    raise MissingMessage
+                delete_price, _ = self.order_id[pair][side][order_id]
+                del self.order_id[pair][side][order_id]
+                del self.l3_book[pair][side][delete_price][order_id]
 
-                delete_price, delete_size = self.order_id[pair][side][data['id']]
-                del self.order_id[pair][side][data['id']]
+                if len(self.l3_book[pair][side][delete_price]) == 0:
+                    del self.l3_book[pair][side][delete_price]
 
-                self.l2_book[pair][side][delete_price] -= delete_size
-                if self.l2_book[pair][side][delete_price] <= 0:
-                    del self.l2_book[pair][side][delete_price]
-                    delta[side][DEL].append(delete_price)
-                else:
-                    delta[side][UPD].append((price, self.l2_book[pair][side][delete_price]))
+                delta[side][DEL].append((order_id, delete_price))
 
         else:
-            LOG.warning("%s: Unexpected L2 Book message %s", self.id, msg)
+            LOG.warning("%s: Unexpected L3 Book message %s", self.id, msg)
             return
 
-        if self.do_deltas and self.updates < self.book_update_interval and not forced:
-            self.updates += 1
-            await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
+        await self.book_callback(pair, L3_BOOK, forced, delta)
 
-        if self.updates >= self.book_update_interval or forced or not self.do_deltas:
-            self.updates = 0
-            await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+    async def _l2_book(self, msg):
+        """
+        top 10 orders from each side
+        """
+        pair = None
+
+        for update in msg['data']:
+            pair = update['symbol']
+            self.l2_book[pair][BID] = sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in update['bids']
+            })
+            self.l2_book[pair][ASK] = sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in update['asks']
+            })
+
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
 
     async def _funding(self, msg):
         """
@@ -204,6 +221,8 @@ class Bitmex(Feed):
                 await self._book(msg)
             elif msg['table'] == 'funding':
                 await self._funding(msg)
+            elif msg['table'] == 'orderBook10':
+                await self._l2_book(msg)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
 

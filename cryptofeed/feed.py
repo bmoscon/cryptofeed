@@ -6,7 +6,8 @@ associated with this software.
 '''
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.feeds import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, feed_to_exchange
+from cryptofeed.feeds import feed_to_exchange
+from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA
 from cryptofeed.callback import BookUpdateCallback
 from cryptofeed.exchanges import BITFINEX
 
@@ -30,7 +31,7 @@ class Feed:
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
         if channels:
             self.channels = [feed_to_exchange(self.id, chan) for chan in channels]
-        
+
         self.l3_book = {}
         self.l2_book = {}
         self.callbacks = {TRADES: Callback(None),
@@ -46,6 +47,18 @@ class Feed:
                 self.callbacks[cb] = callbacks[cb]
                 if isinstance(callbacks[cb], BookUpdateCallback):
                     self.do_deltas = True
+
+    async def book_callback(self, pair, book_type, forced, delta):
+        if self.do_deltas and self.updates < self.book_update_interval and not forced:
+            self.updates += 1
+            await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta)
+
+        if self.updates >= self.book_update_interval or forced or not self.do_deltas:
+            self.updates = 0
+            if book_type == L2_BOOK:
+                await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+            else:
+                await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
 
     def message_handler(self, msg):
         raise NotImplementedError

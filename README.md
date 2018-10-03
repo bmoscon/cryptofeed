@@ -57,6 +57,19 @@ fh.add_nbbo([GDAX, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
 fh.run()
 ```
 
+## Supported Channels
+
+Cryptofeed supports the following channels:
+
+* L2_BOOK - Price aggregated levels. Some exchanges provide the entire depth, some provide a subset.
+* L3_BOOK - Order aggregated levels. Like the L2 book, some exchanges may only provide partial depth.
+* TRADES
+* TICKER
+* VOLUME
+* FUNDING
+* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects.
+
+
 # Planned Work
 
 ### Future Feeds
