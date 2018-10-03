@@ -146,7 +146,6 @@ class Poloniex(Feed):
 
     async def subscribe(self, websocket):
         for channel in self.channels:
-            print(channel)
             await websocket.send(json.dumps({"command": "subscribe",
                                              "channel": channel
                                             }))
