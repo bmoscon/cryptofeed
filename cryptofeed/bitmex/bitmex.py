@@ -13,7 +13,6 @@ from decimal import Decimal
 import requests
 from sortedcontainers import SortedDict as sd
 
-from cryptofeed.exceptions import MissingMessage
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
 from cryptofeed.standards import pair_exchange_to_std
@@ -133,7 +132,7 @@ class Bitmex(Feed):
                 side = BID if data['side'] == 'Buy' else ASK
                 order_id = data['id']
 
-                delete_price, delete_size = self.order_id[pair][side][order_id]
+                delete_price, _ = self.order_id[pair][side][order_id]
                 del self.order_id[pair][side][order_id]
                 del self.l3_book[pair][side][delete_price][order_id]
 
