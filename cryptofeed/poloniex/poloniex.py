@@ -12,9 +12,8 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.callback import Callback
 from cryptofeed.defines import BID, ASK, TRADES, TICKER, L3_BOOK, VOLUME
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.exchanges import POLONIEX
 from .pairs import poloniex_id_pair_mapping
 

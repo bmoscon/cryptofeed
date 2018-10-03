@@ -12,7 +12,7 @@ from arctic import Arctic
 from cryptofeed.callback import TickerCallback
 from cryptofeed import FeedHandler
 from cryptofeed import GDAX
-from cryptofeed.defines import BID, ASK, TICKER
+from cryptofeed.defines import TICKER
 
 
 a = Arctic('127.0.0.1')

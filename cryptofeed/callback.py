@@ -22,12 +22,12 @@ class Callback:
 
 
 class TradeCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, id=None, timestamp=None):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if self.is_async:
-            await self.callback(feed, pair, id, timestamp, side, amount, price)
+            await self.callback(feed, pair, order_id, timestamp, side, amount, price)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, id, timestamp, side, amount, price)
+            await loop.run_in_executor(None, self.callback, feed, pair, order_id, timestamp, side, amount, price)
 
 
 class TickerCallback(Callback):

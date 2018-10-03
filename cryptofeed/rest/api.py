@@ -15,12 +15,12 @@ class API:
 
         try:
             with open(os.path.join(path, config), 'r') as fp:
-                data = yaml.load(fp)
+                data = yaml.safe_load(fp)
                 self.key_id = data[self.ID.lower()]['key_id']
                 self.key_secret = data[self.ID.lower()]['key_secret']
                 if 'key_passphrase' in data[self.ID.lower()]:
                     self.key_passphrase = data[self.ID.lower()]['key_passphrase']
-        except:
+        except KeyError:
             pass
 
     def trades(self, *args, **kwargs):

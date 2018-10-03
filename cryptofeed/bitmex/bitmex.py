@@ -15,7 +15,6 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
-from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL, FUNDING, L3_BOOK
 
 
