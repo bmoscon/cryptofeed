@@ -114,7 +114,7 @@ class GDAX(Feed):
         await self.callbacks[TRADES](
                 feed=self.id,
                 pair=msg['product_id'],
-                id=msg['trade_id'],
+                order_id=msg['trade_id'],
                 side=BID if msg['side'] == 'buy' else ASK,
                 amount=msg['size'],
                 price=msg['price'],

@@ -36,7 +36,7 @@ class TradeArctic(ArcticCallback):
         if self.key is None:
             self.key = 'trades'
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, id=None, timestamp=None):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if timestamp is None:
             timestamp = time.time()
             ts = timestamp
