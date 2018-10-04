@@ -70,6 +70,16 @@ Cryptofeed supports the following channels:
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects.
 
 
+## Backends
+
+Cryptofeeds supports `backend` callbacks that will write directly to storage or other interfaces
+
+Supported Backends:
+* Redis
+* Arctic
+
+
+
 # Planned Work
 
 ### Future Feeds
@@ -86,5 +96,6 @@ Support for registering databases and writing directly to them via the handler (
 
 ### Additional Callback Methods
 * Unix Domain Sockets
-* Redis
 * ZMQ
+* Postgres
+* InfluxDB

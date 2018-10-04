@@ -2,6 +2,7 @@
 
 ### 0.16.0
   * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
+  * Book deltas supported on all feeds
 
 ### 0.15.0 (2018-09-29)
   * Feature: GDAX/Coinbase rest support - trades, order status, etc
