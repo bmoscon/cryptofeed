@@ -4,7 +4,6 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 import json
 import logging
 from collections import defaultdict
@@ -25,8 +24,8 @@ class Bitmex(Feed):
     id = BITMEX
     api = 'https://www.bitmex.com/api/v1/'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None):
-        super().__init__('wss://www.bitmex.com/realtime', pairs=None, channels=channels, callbacks=callbacks)
+    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+        super().__init__('wss://www.bitmex.com/realtime', pairs=None, channels=channels, callbacks=callbacks, **kwargs)
         active_pairs = self.get_active_symbols()
         for pair in pairs:
             if pair not in active_pairs:

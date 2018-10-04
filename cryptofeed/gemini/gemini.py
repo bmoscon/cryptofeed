@@ -11,10 +11,10 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.callback import Callback
 from cryptofeed.exchanges import GEMINI
-from cryptofeed.defines import L3_BOOK, BID, ASK, TRADES
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL
 from cryptofeed.standards import pair_std_to_exchange
+from cryptofeed.exceptions import MissingSequenceNumber
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class Gemini(Feed):
     id = GEMINI
 
-    def __init__(self, pairs=None, channels=None, callbacks=None):
+    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         if len(pairs) != 1:
             LOG.error("Gemini requires a websocket per trading pair")
             raise ValueError("Gemini requires a websocket per trading pair")
@@ -35,24 +35,28 @@ class Gemini(Feed):
         super().__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'),
                          pairs=None,
                          channels=None,
-                         callbacks=callbacks)
-        self.book = {BID: sd(), ASK: sd()}
+                         callbacks=callbacks,
+                         **kwargs)
+        self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
+        self.seq_no = None
 
-
-    async def _book(self, msg, timestamp):
+    async def _book(self, msg):
+        delta = {BID: {}, ASK: {}}
         side = BID if msg['side'] == 'bid' else ASK
         price = Decimal(msg['price'])
         remaining = Decimal(msg['remaining'])
         #delta = Decimal(msg['delta'])
 
         if msg['reason'] == 'initial':
-            self.book[side][price] = remaining
+            self.l2_book[self.pair][side][price] = remaining
         else:
             if remaining == 0:
-                del self.book[side][price]
+                del self.l2_book[self.pair][side][price]
+                delta[side][DEL] = [price]
             else:
-                self.book[side][price] = remaining
-        await self.callbacks[L3_BOOK](feed=self.id, pair=self.pair, book=self.book)
+                self.l2_book[self.pair][side][price] = remaining
+                delta[side][UPD] = [(price, remaining)]
+            await self.book_callback(self.pair, L2_BOOK, False, delta)
 
     async def _trade(self, msg, timestamp):
         price = Decimal(msg['price'])
@@ -70,10 +74,12 @@ class Gemini(Feed):
         timestamp = None
         if 'timestampms' in msg:
             timestamp = msg['timestampms'] / 1000.0
-
+        forced = False
         for update in msg['events']:
             if update['type'] == 'change':
-                await self._book(update, timestamp)
+                await self._book(update)
+                if update['reason'] == 'initial':
+                    forced = True
             elif update['type'] == 'trade':
                 await self._trade(update, timestamp)
             elif update['type'] == 'auction':
@@ -81,16 +87,26 @@ class Gemini(Feed):
             elif update['type'] == 'block_trade':
                 pass
             else:
-                LOG.warning("Invalid update received {}".format(update))
+                LOG.warning("%s: Invalid update received %s", self.id, update)
+        if forced:
+            await self.book_callback(self.pair, L2_BOOK, True, None)
+
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
+        seq_no = msg['socket_sequence']
+
+        if self.seq_no and self.seq_no + 1 != seq_no:
+            LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
+            raise MissingSequenceNumber
+        else:
+            self.seq_no = seq_no
         if msg['type'] == 'update':
             await self._update(msg)
         elif msg['type'] == 'heartbeat':
             pass
         else:
-            LOG.warning('Invalid message type {}'.format(msg))
+            LOG.warning('%s: Invalid message type %s', self.id, msg)
 
     async def subscribe(self, *args):
         return

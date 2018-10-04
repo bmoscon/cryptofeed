@@ -18,14 +18,15 @@ _feed_to_exchange_map = {
     L2_BOOK: {
         BITFINEX: 'book-P0-F0-100',
         POLONIEX: UNSUPPORTED,
-        HITBTC: UNSUPPORTED,
+        HITBTC: 'subscribeOrderbook',
         GDAX: 'level2',
-        BITMEX: 'orderBook10'
+        BITMEX: 'orderBook10',
+        BITSTAMP: 'order_book'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
-        HITBTC: 'subscribeOrderbook',
-        BITSTAMP: 'diff_order_book',
+        BITSTAMP: UNSUPPORTED,
+        HITBTC: UNSUPPORTED,
         GDAX: 'full',
         BITMEX: 'orderBookL2',
         POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel

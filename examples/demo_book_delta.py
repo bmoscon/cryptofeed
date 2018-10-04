@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
-from cryptofeed import Bitmex, GDAX, Bitfinex
+from cryptofeed import Bitmex, GDAX, Bitfinex, Gemini, HitBTC, Poloniex
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, UPD, DEL, BOOK_DELTA
 
 
@@ -81,10 +81,12 @@ def main():
     # due to the way the test verification works, you can only run one for the test
     # f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(l3_delta)}))
     # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(l3_delta)}))
-    #f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    # f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
     # f.add_feed(GDAX(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(l3_delta)}))
-    f.add_feed(GDAX(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
-
+    # f.add_feed(GDAX(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    # f.add_feed(Gemini(book_interval=100, pairs=['BTC-USD'], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    # f.add_feed(HitBTC(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    f.add_feed(Poloniex(book_interval=100, channels=['USDT-BTC'], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
 
     f.run()
 

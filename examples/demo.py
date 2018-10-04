@@ -40,9 +40,10 @@ def main():
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book)}))
     f.add_feed(Poloniex(channels=['USDT-BTC', 'USDC-BTC'], callbacks={L3_BOOK: BookCallback(book), TICKER: TickerCallback(ticker)}))
     f.add_feed(Poloniex(channels=['USDT-BTC', 'USDC-BTC'], callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={L3_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
+    f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
     f.add_feed(HitBTC(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Bitstamp(channels=[L3_BOOK, TRADES], pairs=['BTC-USD'], callbacks={L3_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
+    f.add_feed(HitBTC(channels=[L2_BOOK], pairs=['BTC-USD'], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Bitstamp(channels=[L2_BOOK, TRADES], pairs=['BTC-USD'], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
 
     bitmex_symbols = Bitmex.get_active_symbols()
     f.add_feed(Bitmex(channels=[TRADES], pairs=bitmex_symbols, callbacks={TRADES: TradeCallback(trade)}))

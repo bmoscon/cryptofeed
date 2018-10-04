@@ -7,12 +7,13 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
+from collections import defaultdict
 
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import HITBTC
-from cryptofeed.defines import TICKER, L3_BOOK, TRADES, BID, ASK
+from cryptofeed.defines import TICKER, L2_BOOK, TRADES, BID, ASK, UPD, DEL
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -22,11 +23,12 @@ LOG = logging.getLogger('feedhandler')
 class HitBTC(Feed):
     id = HITBTC
 
-    def __init__(self, pairs=None, channels=None, callbacks=None):
+    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.hitbtc.com/api/2/ws',
                          pairs=pairs,
                          channels=channels,
-                         callbacks=callbacks)
+                         callbacks=callbacks,
+                         **kwargs)
 
     async def _ticker(self, msg):
         await self.callbacks[TICKER](feed=self.id,
@@ -35,26 +37,29 @@ class HitBTC(Feed):
                                      ask=Decimal(msg['ask']))
 
     async def _book(self, msg):
+        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         pair = pair_exchange_to_std(msg['symbol'])
         for side in (BID, ASK):
             for entry in msg[side]:
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
                 if size == 0:
-                    del self.l3_book[pair][side][price]
+                    del self.l2_book[pair][side][price]
+                    delta[side][DEL].append(price)
                 else:
-                    self.l3_book[pair][side][price] = size
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
+                    self.l2_book[pair][side][price] = size
+                    delta[side][UPD].append((price, size))
+        await self.book_callback(pair, L2_BOOK, False, delta)
 
     async def _snapshot(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
-        self.l3_book[pair] = {ASK: sd(), BID: sd()}
+        self.l2_book[pair] = {ASK: sd(), BID: sd()}
         for side in (BID, ASK):
             for entry in msg[side]:
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
-                self.l3_book[pair][side][price] = size
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
+                self.l2_book[pair][side][price] = size
+        await self.book_callback(pair, L2_BOOK, True, None)
 
     async def _trades(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
@@ -62,11 +67,15 @@ class HitBTC(Feed):
             price = Decimal(update['price'])
             quantity = Decimal(update['quantity'])
             side = update['side']
+            order_id = update['id']
+            timestamp = update['timestamp']
             await self.callbacks[TRADES](feed=self.id,
                                          pair=pair,
                                          side=side,
                                          amount=quantity,
-                                         price=price)
+                                         price=price,
+                                         order_id=order_id,
+                                         timestamp=timestamp)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
@@ -80,15 +89,15 @@ class HitBTC(Feed):
             elif msg['method'] == 'updateTrades' or msg['method'] == 'snapshotTrades':
                 await self._trades(msg['params'])
             else:
-                LOG.warning("{} - Invalid message received: {}".format(self.id, msg))
+                LOG.warning("%s: Invalid message received: %s", self.id, msg)
         elif 'channel' in msg:
             if msg['channel'] == 'ticker':
                 await self._ticker(msg['data'])
             else:
-                LOG.warning("{} - Invalid message received: {}".format(self.id, msg))
+                LOG.warning("%s: Invalid message received: %s", self.id, msg)
         else:
             if 'error' in msg or not msg['result']:
-                LOG.error("{} - Received error from server {}".format(self.id, msg))
+                LOG.error("%s: Received error from server: %s", self.id, msg)
 
     async def subscribe(self, websocket):
         for channel in self.channels:

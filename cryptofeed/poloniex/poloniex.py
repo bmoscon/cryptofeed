@@ -7,12 +7,13 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
+from collections import defaultdict
 
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BID, ASK, TRADES, TICKER, L3_BOOK, VOLUME
+from cryptofeed.defines import BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, UPD, DEL
 from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.exchanges import POLONIEX
 from .pairs import poloniex_id_pair_mapping
@@ -24,18 +25,19 @@ LOG = logging.getLogger('feedhandler')
 class Poloniex(Feed):
     id = POLONIEX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None):
+    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         if pairs:
             LOG.error("Poloniex does not support pairs")
             raise ValueError("Poloniex does not support pairs")
 
         super().__init__('wss://api2.poloniex.com',
                          channels=channels,
-                         callbacks=callbacks)
+                         callbacks=callbacks,
+                         **kwargs)
         self.__reset()
 
     def __reset(self):
-        self.l3_book = {}
+        self.l2_book = {}
         self.seq_no = {}
 
     async def _ticker(self, msg):
@@ -57,24 +59,27 @@ class Poloniex(Feed):
         self.callbacks[VOLUME](feed=self.id, **top_vols)
 
     async def _book(self, msg, chan_id):
+        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         msg_type = msg[0][0]
         pair = None
+        forced = False
         # initial update (i.e. snapshot)
         if msg_type == 'i':
+            forced = True
             pair = msg[0][1]['currencyPair']
             pair = pair_exchange_to_std(pair)
-            self.l3_book[pair] = {BID: sd(), ASK: sd()}
+            self.l2_book[pair] = {BID: sd(), ASK: sd()}
             # 0 is asks, 1 is bids
             order_book = msg[0][1]['orderBook']
             for key in order_book[0]:
                 amount = order_book[0][key]
                 price = key
-                self.l3_book[pair][ASK][price] = amount
+                self.l2_book[pair][ASK][price] = amount
 
             for key in order_book[1]:
                 amount = order_book[1][key]
                 price = key
-                self.l3_book[pair][BID][price] = amount
+                self.l2_book[pair][BID][price] = amount
         else:
             pair = poloniex_id_pair_mapping[chan_id]
             pair = pair_exchange_to_std(pair)
@@ -86,24 +91,26 @@ class Poloniex(Feed):
                     price = update[2]
                     amount = update[3]
                     if amount == 0:
-                        del self.l3_book[pair][side][price]
+                        delta[side][DEL].append(price)
+                        del self.l2_book[pair][side][price]
                     else:
-                        self.l3_book[pair][side][price] = amount
+                        delta[side][UPD].append((price, amount))
+                        self.l2_book[pair][side][price] = amount
                 elif msg_type == 't':
                     # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp
-                    price = update[3]
+                    _, order_id, _, price, amount, timestamp = update
                     side = ASK if update[2] == 0 else BID
-                    amount = update[4]
                     await self.callbacks[TRADES](feed=self.id,
                                                  pair=pair,
                                                  side=side,
                                                  amount=amount,
                                                  price=price,
-                                                 timestamp=update[5])
+                                                 timestamp=timestamp,
+                                                 order_id=order_id)
                 else:
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-        await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair])
+        await self.book_callback(pair, L2_BOOK, forced, delta)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

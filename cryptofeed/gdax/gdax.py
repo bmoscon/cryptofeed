@@ -24,8 +24,8 @@ LOG = logging.getLogger('feedhandler')
 class GDAX(Feed):
     id = GDAX_ID
 
-    def __init__(self, pairs=None, channels=None, callbacks=None):
-        super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks)
+    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+        super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
 
     def __reset(self):
