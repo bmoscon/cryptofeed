@@ -27,7 +27,7 @@ class TradeCallback(Callback):
             await self.callback(feed, pair, order_id, timestamp, side, amount, price)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, side, amount, price, order_id, timestamp)
+            await loop.run_in_executor(None, self.callback, feed, pair, order_id, timestamp, side, amount, price)
 
 
 class TickerCallback(Callback):
