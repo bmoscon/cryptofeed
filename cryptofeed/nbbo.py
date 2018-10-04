@@ -20,8 +20,8 @@ class NBBO(Callback):
         self.bids[pair][feed] = bid
         self.asks[pair][feed] = ask
 
-        min_ask = min(self.bids[pair], key=self.bids[pair].get)
-        max_bid = max(self.asks[pair], key=self.asks[pair].get)
+        min_ask = min(self.asks[pair], key=self.asks[pair].get)
+        max_bid = max(self.bids[pair], key=self.bids[pair].get)
 
         return self.bids[pair][max_bid], self.asks[pair][min_ask], max_bid, min_ask
 
