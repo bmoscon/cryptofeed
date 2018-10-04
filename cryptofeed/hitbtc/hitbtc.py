@@ -11,7 +11,6 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.callback import Callback
 from cryptofeed.exchanges import HITBTC
 from cryptofeed.defines import TICKER, L3_BOOK, TRADES, BID, ASK
 from cryptofeed.standards import pair_exchange_to_std
@@ -34,7 +33,7 @@ class HitBTC(Feed):
                                      pair=pair_exchange_to_std(msg['symbol']),
                                      bid=Decimal(msg['bid']),
                                      ask=Decimal(msg['ask']))
-    
+
     async def _book(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])
         for side in (BID, ASK):

@@ -82,9 +82,9 @@ class Bitfinex(Feed):
 
         async def _trade_update(trade):
             if funding:
-                id, timestamp, amount, price, period = trade
+                order_id, timestamp, amount, price, period = trade
             else:
-                id, timestamp, amount, price = trade
+                order_id, timestamp, amount, price = trade
                 period = None
             if amount < 0:
                 side = ASK
@@ -97,7 +97,7 @@ class Bitfinex(Feed):
                                               side=side,
                                               amount=amount,
                                               price=price,
-                                              id=id,
+                                              order_id=order_id,
                                               timestamp=timestamp,
                                               period=period)
             else:
@@ -106,7 +106,7 @@ class Bitfinex(Feed):
                                             side=side,
                                             amount=amount,
                                             price=price,
-                                            id=id,
+                                            order_id=order_id,
                                             timestamp=timestamp)
 
         if isinstance(msg[1], list):

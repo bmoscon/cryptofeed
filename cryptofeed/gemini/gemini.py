@@ -58,7 +58,13 @@ class Gemini(Feed):
         price = Decimal(msg['price'])
         side = BID if msg['makerSide'] == 'bid' else ASK
         amount = Decimal(msg['amount'])
-        await self.callbacks[TRADES](feed=self.id, id=msg['tid'], pair=self.pair, side=side, amount=amount, price=price, timestamp=timestamp)
+        await self.callbacks[TRADES](feed=self.id,
+                                     order_id=msg['tid'],
+                                     pair=self.pair,
+                                     side=side,
+                                     amount=amount,
+                                     price=price,
+                                     timestamp=timestamp)
 
     async def _update(self, msg):
         timestamp = None

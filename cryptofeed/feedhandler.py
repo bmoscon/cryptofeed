@@ -99,7 +99,6 @@ class FeedHandler:
             loop.run_forever()
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
-            pass
         except Exception:
             LOG.error("Unhandled exception", exc_info=True)
 

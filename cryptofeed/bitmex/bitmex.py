@@ -15,7 +15,6 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges import BITMEX
-from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL, FUNDING, L3_BOOK
 
 
@@ -81,7 +80,7 @@ class Bitmex(Feed):
                                          side=BID if data['side'] == 'Buy' else ASK,
                                          amount=data['size'],
                                          price=data['price'],
-                                         id=data['trdMatchID'],
+                                         order_id=data['trdMatchID'],
                                          timestamp=data['timestamp'])
 
     async def _book(self, msg):

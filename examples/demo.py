@@ -19,8 +19,8 @@ async def ticker(feed, pair, bid, ask):
     print('Feed: {} Pair: {} Bid: {} Ask: {}'.format(feed, pair, bid, ask))
 
 
-async def trade(feed, pair, id, timestamp, side, amount, price):
-    print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, id, side, amount, price))
+async def trade(feed, pair, order_id, timestamp, side, amount, price):
+    print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, order_id, side, amount, price))
 
 
 async def book(feed, pair, book):
@@ -39,6 +39,7 @@ def main():
     f.add_feed(GDAX(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book)}))
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book)}))
     f.add_feed(Poloniex(channels=['USDT-BTC', 'USDC-BTC'], callbacks={L3_BOOK: BookCallback(book), TICKER: TickerCallback(ticker)}))
+    f.add_feed(Poloniex(channels=['USDT-BTC', 'USDC-BTC'], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Gemini(pairs=['BTC-USD'], callbacks={L3_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
     f.add_feed(HitBTC(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bitstamp(channels=[L3_BOOK, TRADES], pairs=['BTC-USD'], callbacks={L3_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))

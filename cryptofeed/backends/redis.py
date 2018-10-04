@@ -27,7 +27,7 @@ class TradeRedis(RedisCallback):
         if self.key is None:
             self.key = 'trades'
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, id=None, timestamp=None):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
         ts = None

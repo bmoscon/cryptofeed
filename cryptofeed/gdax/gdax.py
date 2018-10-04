@@ -14,7 +14,6 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.callback import Callback
 from cryptofeed.exchanges import GDAX as GDAX_ID
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER, DEL, UPD
 
@@ -115,7 +114,7 @@ class GDAX(Feed):
         await self.callbacks[TRADES](
                 feed=self.id,
                 pair=msg['product_id'],
-                id=msg['trade_id'],
+                order_id=msg['trade_id'],
                 side=BID if msg['side'] == 'buy' else ASK,
                 amount=msg['size'],
                 price=msg['price'],
