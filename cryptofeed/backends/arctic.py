@@ -43,7 +43,7 @@ class TradeArctic(ArcticCallback):
         else:
             ts = timestamp_normalize(feed, timestamp)
 
-        df = pd.DataFrame({'feed': [feed], 'pair': [pair], 'id': [id], 'date': [dt.utcfromtimestamp(ts)], 'side': [side], 'amount': [float(amount)], 'price': [float(price)]})
+        df = pd.DataFrame({'feed': [feed], 'pair': [pair], 'id': [order_id], 'date': [dt.utcfromtimestamp(ts)], 'side': [side], 'amount': [float(amount)], 'price': [float(price)]})
         df['date'] = pd.to_datetime(df.date)
         df.set_index(['date'], inplace=True)
         self.lib.append(self.key, df, upsert=True)

@@ -37,7 +37,7 @@ class TradeRedis(RedisCallback):
         else:
             ts = timestamp_normalize(feed, timestamp)
 
-        data = json.dumps({'feed': feed, 'pair': pair, 'id': id, 'timestamp': timestamp, 'side': side, 'amount': float(amount), 'price': float(price)})
+        data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp, 'side': side, 'amount': float(amount), 'price': float(price)})
 
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
