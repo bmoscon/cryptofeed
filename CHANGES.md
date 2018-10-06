@@ -1,7 +1,8 @@
 ## Changelog
 
 ### 0.17.0
-  * Feature: Timestamps for orderbooks and book deltas 
+  * Feature: Timestamps for orderbooks and book deltas
+  * Feature #40: NBBO now uses best bid/ask from L2 books
 
 ### 0.16.0 (2018-10-4)
   * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
