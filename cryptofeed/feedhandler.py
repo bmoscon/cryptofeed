@@ -12,7 +12,7 @@ from socket import error as socket_error
 import websockets
 from websockets import ConnectionClosed
 
-from cryptofeed.defines import TICKER
+from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
 from cryptofeed.exchanges import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX
 from cryptofeed.exchanges import GDAX as Gdax
@@ -85,7 +85,11 @@ class FeedHandler:
         """
         cb = NBBO(callback, pairs)
         for feed in feeds:
-            self.add_feed(feed(channels=[TICKER], pairs=pairs, callbacks={TICKER: cb}), timeout=timeout)
+            if feed.id == 'GEMINI':
+                for pair in pairs:
+                    self.add_feed(feed(pairs=[pair], callbacks={L2_BOOK: cb}), timeout=timeout)
+            else:
+                self.add_feed(feed(channels=[L2_BOOK], pairs=pairs, callbacks={L2_BOOK: cb}), timeout=timeout)
 
     def run(self):
         if self.feeds == []:
