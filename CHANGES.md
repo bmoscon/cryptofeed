@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.17.0
+  * Feature: Timestamps for orderbooks and book deltas 
+
 ### 0.16.0 (2018-10-4)
   * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
   * Book deltas supported on all feeds
