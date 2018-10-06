@@ -8,6 +8,7 @@ import json
 import logging
 from decimal import Decimal
 from collections import defaultdict
+import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -59,6 +60,7 @@ class Poloniex(Feed):
         self.callbacks[VOLUME](feed=self.id, **top_vols)
 
     async def _book(self, msg, chan_id):
+        timestamp = time.time()
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         msg_type = msg[0][0]
         pair = None
@@ -110,7 +112,7 @@ class Poloniex(Feed):
                 else:
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-        await self.book_callback(pair, L2_BOOK, forced, delta)
+        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

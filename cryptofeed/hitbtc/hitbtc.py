@@ -8,6 +8,7 @@ import json
 import logging
 from decimal import Decimal
 from collections import defaultdict
+import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -37,6 +38,7 @@ class HitBTC(Feed):
                                      ask=Decimal(msg['ask']))
 
     async def _book(self, msg):
+        timestamp = time.time()
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         pair = pair_exchange_to_std(msg['symbol'])
         for side in (BID, ASK):
@@ -49,9 +51,10 @@ class HitBTC(Feed):
                 else:
                     self.l2_book[pair][side][price] = size
                     delta[side][UPD].append((price, size))
-        await self.book_callback(pair, L2_BOOK, False, delta)
+        await self.book_callback(pair, L2_BOOK, False, delta, timestamp)
 
     async def _snapshot(self, msg):
+        timestamp = time.time()
         pair = pair_exchange_to_std(msg['symbol'])
         self.l2_book[pair] = {ASK: sd(), BID: sd()}
         for side in (BID, ASK):
@@ -59,7 +62,7 @@ class HitBTC(Feed):
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
                 self.l2_book[pair][side][price] = size
-        await self.book_callback(pair, L2_BOOK, True, None)
+        await self.book_callback(pair, L2_BOOK, True, None, timestamp)
 
     async def _trades(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])

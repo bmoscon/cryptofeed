@@ -43,19 +43,19 @@ class BookCallback(Callback):
     """
     For full L2/L3 book updates
     """
-    async def __call__(self, *, feed: str, pair: str, book: dict):
+    async def __call__(self, *, feed: str, pair: str, book: dict, timestamp):
         if self.is_async:
-            await self.callback(feed, pair, book)
+            await self.callback(feed, pair, book, timestamp)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, book)
+            await loop.run_in_executor(None, self.callback, feed, pair, book, timestamp)
 
 
 class BookUpdateCallback(Callback):
     """
     For Book Deltas
     """
-    async def __call__(self, *, feed: str, pair: str, delta: dict):
+    async def __call__(self, *, feed: str, pair: str, delta: dict, timestamp):
         """
         Delta is in format of:
         {
@@ -76,10 +76,10 @@ class BookUpdateCallback(Callback):
         UPD - prices should have the quantity set to size (these are not price deltas)
         """
         if self.is_async:
-            await self.callback(feed, pair, delta)
+            await self.callback(feed, pair, delta, timestamp)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, delta)
+            await loop.run_in_executor(None, self.callback, feed, pair, delta, timestamp)
 
 
 class VolumeCallback(Callback):

@@ -8,6 +8,7 @@ import json
 import logging
 from decimal import Decimal
 from collections import defaultdict
+import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -130,6 +131,7 @@ class Bitfinex(Feed):
         """
         For L2 book updates
         """
+        timestamp = time.time()
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
@@ -172,13 +174,14 @@ class Bitfinex(Feed):
         else:
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
 
-        await self.book_callback(pair, L2_BOOK, forced, delta)
+        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
 
 
     async def _raw_book(self, msg):
         """
         For L3 book updates
         """
+        timestamp = time.time()
         def add_to_book(pair, side, price, order_id, amount):
             if price in self.l3_book[pair][side]:
                 self.l3_book[pair][side][price][order_id] = amount
@@ -249,7 +252,7 @@ class Bitfinex(Feed):
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
             return
 
-        await self.book_callback(pair, L3_BOOK, forced, delta)
+        await self.book_callback(pair, L3_BOOK, forced, delta, timestamp)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

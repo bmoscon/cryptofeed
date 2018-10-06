@@ -33,7 +33,7 @@ def check_books(master, delta):
     return True
 
 
-async def book(feed, pair, book):
+async def book(feed, pair, book, timestamp):
     global BOOK
     if not BOOK:
         BOOK = deepcopy(book)
@@ -43,7 +43,7 @@ async def book(feed, pair, book):
         print("Books match!")
 
 
-async def delta(feed, pair, update):
+async def delta(feed, pair, update, timestamp):
     # handle updates for L2 books
     global BOOK
     for side in (BID, ASK):
@@ -55,7 +55,7 @@ async def delta(feed, pair, update):
                 del BOOK[side][price]
 
 
-async def l3_delta(feed, pair, update):
+async def l3_delta(feed, pair, update, timestamp):
     global BOOK
     for side in (BID, ASK):
         """

@@ -8,6 +8,7 @@ import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
+from datetime import datetime as dt
 
 import requests
 from sortedcontainers import SortedDict as sd
@@ -86,6 +87,8 @@ class Bitmex(Feed):
         """
         the Full bitmex book
         """
+        timestamp = dt.utcnow()
+        timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         pair = None
         delta = {BID: defaultdict(list), ASK: defaultdict(list)}
         # if we reset the book, force a full update
@@ -143,12 +146,13 @@ class Bitmex(Feed):
             LOG.warning("%s: Unexpected L3 Book message %s", self.id, msg)
             return
 
-        await self.book_callback(pair, L3_BOOK, forced, delta)
+        await self.book_callback(pair, L3_BOOK, forced, delta, timestamp)
 
     async def _l2_book(self, msg):
         """
         top 10 orders from each side
         """
+        timestamp = msg['data'][0]['timestamp']
         pair = None
 
         for update in msg['data']:
@@ -162,7 +166,7 @@ class Bitmex(Feed):
                 for price, amount in update['asks']
             })
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair])
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair], timestamp=timestamp)
 
     async def _funding(self, msg):
         """

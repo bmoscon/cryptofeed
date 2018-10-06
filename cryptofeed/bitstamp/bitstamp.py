@@ -36,6 +36,7 @@ class Bitstamp(Feed):
     async def _order_book(self, msg):
         data = msg['data']
         chan = msg['channel']
+        timestamp = data['timestamp']
         pair = None
         if chan == 'order_book':
             pair = 'BTC-USD'
@@ -45,7 +46,7 @@ class Bitstamp(Feed):
         book = {}
         for side in (BID, ASK):
             book[side] = sd({price: size for price, size in data[side+'s']})
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=book)
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=book, timestamp=timestamp)
 
     async def _trades(self, msg):
         data = msg['data']

@@ -77,8 +77,8 @@ class BookRedis(RedisCallback):
             self.key = 'book'
         self.depth = kwargs.get('depth', None)
 
-    async def __call__(self, *, feed, pair, book):
-        timestamp = time.time()
+    async def __call__(self, *, feed, pair, book, timestamp):
+        ts = time.time()
 
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
@@ -99,4 +99,4 @@ class BookRedis(RedisCallback):
                 break
 
         data = json.dumps(data)
-        await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+        await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)

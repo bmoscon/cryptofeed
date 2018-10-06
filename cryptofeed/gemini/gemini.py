@@ -40,7 +40,7 @@ class Gemini(Feed):
         self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
         self.seq_no = None
 
-    async def _book(self, msg):
+    async def _book(self, msg, timestamp):
         delta = {BID: {}, ASK: {}}
         side = BID if msg['side'] == 'bid' else ASK
         price = Decimal(msg['price'])
@@ -56,7 +56,7 @@ class Gemini(Feed):
             else:
                 self.l2_book[self.pair][side][price] = remaining
                 delta[side][UPD] = [(price, remaining)]
-            await self.book_callback(self.pair, L2_BOOK, False, delta)
+            await self.book_callback(self.pair, L2_BOOK, False, delta, timestamp)
 
     async def _trade(self, msg, timestamp):
         price = Decimal(msg['price'])
@@ -77,7 +77,7 @@ class Gemini(Feed):
         forced = False
         for update in msg['events']:
             if update['type'] == 'change':
-                await self._book(update)
+                await self._book(update, timestamp)
                 if update['reason'] == 'initial':
                     forced = True
             elif update['type'] == 'trade':
@@ -89,7 +89,7 @@ class Gemini(Feed):
             else:
                 LOG.warning("%s: Invalid update received %s", self.id, update)
         if forced:
-            await self.book_callback(self.pair, L2_BOOK, True, None)
+            await self.book_callback(self.pair, L2_BOOK, True, None, timestamp)
 
 
     async def message_handler(self, msg):
