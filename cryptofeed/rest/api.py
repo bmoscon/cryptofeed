@@ -20,7 +20,7 @@ class API:
                 self.key_secret = data[self.ID.lower()]['key_secret']
                 if 'key_passphrase' in data[self.ID.lower()]:
                     self.key_passphrase = data[self.ID.lower()]['key_passphrase']
-        except KeyError:
+        except (KeyError, FileNotFoundError, TypeError):
             pass
 
     def trades(self, *args, **kwargs):
