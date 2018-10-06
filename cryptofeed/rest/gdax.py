@@ -91,19 +91,7 @@ class Gdax(API):
             # 403 Forbidden – You do not have access to the requested resource
             # 404 Not Found
             # 500 Internal Server Error – We had a problem with our server
-            if resp.status_code == 400:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
-            elif resp.status_code in [401, 403, 404]:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                resp.raise_for_status()
-            elif resp.status_code == 500:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                resp.raise_for_status()
-            elif resp.status_code != 200:
+            if resp.status_code != 200:
                 LOG.error("%s: Status code %d", self.ID, resp.status_code)
                 LOG.error("%s: Headers: %s", self.ID, resp.headers)
                 LOG.error("%s: Resp: %s", self.ID, resp.text)
