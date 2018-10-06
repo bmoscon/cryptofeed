@@ -214,7 +214,7 @@ class Gdax(API):
         return self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
 
 
-    def execute_trades(self, trades_to_make):
+    def execute_trades(self, trades_to_make: list):
         """
         https://docs.gdax.com/?python#place-a-new-order
         data format
@@ -224,6 +224,32 @@ class Gdax(API):
             "side": "buy",
             "product_id": "BTC-USD"
         }
+
+        Param descriptions
+        client_oid	[optional] Order ID selected by you to identify your order
+        type	[optional] limit or market (default is limit)
+        side	buy or sell
+        product_id	A valid product id
+        stp	[optional] Self-trade prevention flag
+        stop	[optional] Either loss or entry. Requires stop_price to be defined.
+        stop_price	[optional] Only if stop is defined. Sets trigger price for stop order.
+
+        LIMIT ORDER PARAMETERS
+        Param	Description
+        price	Price per bitcoin
+        size	Amount of BTC to buy or sell
+        time_in_force	[optional] GTC, GTT, IOC, or FOK (default is GTC)
+        cancel_after	[optional]* min, hour, day
+        post_only	[optional]** Post only flag
+        * Requires time_in_force to be GTT
+
+        ** Invalid when time_in_force is IOC or FOK
+
+        MARKET ORDER PARAMETERS
+        Param	Description
+        size	[optional]* Desired amount in BTC
+        funds	[optional]* Desired amount of quote currency to use
+        * One of size or funds is required.
         """
 
         responses = []
@@ -353,17 +379,20 @@ class Gdax(API):
             'feed': self.ID,
             'side': trade['side'],
             'amount': trade['size'],
-            'price': trade['price']
+            "settled": trade["settled"]
+
         }
         if 'order_id' in trade:
             trade_data['id'] = trade['order_id']
+            trade_data['price'] = trade['price']
+            trade_data['fee'] = trade['fee']
         else:
+            trade_data['type'] = trade['type']
             trade_data['id'] = trade['id']
             trade_data['type'] = trade['type']
-            trade_data["fill_fees"] = trade_data["fill_fees"]
-            trade_data["filled_size"] = trade_data["filled_size"]
-            trade_data["executed_value"] = trade_data["executed_value"]
-            trade_data["status"] = trade_data["status"]
-            trade_data["settled"] = trade_data["settled"]
+            trade_data["fill_fees"] = trade["fill_fees"]
+            trade_data["filled_size"] = trade["filled_size"]
+            trade_data["executed_value"] = trade["executed_value"]
+            trade_data["status"] = trade["status"]
 
         return trade_data
