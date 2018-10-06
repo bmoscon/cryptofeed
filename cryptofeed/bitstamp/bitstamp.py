@@ -5,11 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
-import asyncio
 import logging
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exchanges import BITSTAMP

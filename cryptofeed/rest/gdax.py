@@ -1,4 +1,4 @@
-import time, json, hashlib, hmac, calendar, requests, base64
+import time, json, hashlib, hmac, requests, base64
 from time import sleep
 from datetime import datetime as dt
 
@@ -7,7 +7,7 @@ import pandas as pd
 from cryptofeed.rest.api import API
 from cryptofeed.feeds import GDAX
 from cryptofeed.log import get_logger
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.standards import pair_std_to_exchange
 
 REQUEST_LIMIT = 10
 LOG = get_logger('rest', 'rest.log')
@@ -15,18 +15,18 @@ LOG = get_logger('rest', 'rest.log')
 # API Docs https://docs.gdax.com/
 class Gdax(API):
     ID = GDAX
-    
+
     api = "https://api.gdax.com"
     sandbox_api = "https://api-public.sandbox.gdax.com"
 
-    
+
     def _generate_signature(self, endpoint: str, method: str, body = ''):
         timestamp = str(time.time())
         message = ''.join([timestamp, method, endpoint, body])
         hmac_key = base64.b64decode(self.key_secret)
         signature = hmac.new(hmac_key, message.encode('ascii'), hashlib.sha256)
         signature_b64 = base64.b64encode(signature.digest()).decode('utf-8')
-        
+
         return {
             'CB-ACCESS-KEY': self.key_id, # The api key as a string.
             'CB-ACCESS-SIGN': signature_b64, # The base64-encoded signature (see Signing a Message).
@@ -51,10 +51,10 @@ class Gdax(API):
                 endpoint = '{}?after={}'.format(endpoint, 'after')
         if 'limit' in body:
             endpoint = '{}?limit={}'.format(endpoint, 'limit')
-        
+
         return endpoint
-    
-    def _make_request(self, method: str, endpoint: str, header: dict, body=None):
+
+    def _make_request(self, method: str, endpoint: str, header: dict, body=None, retry=None, retry_wait=0):
         api = self.api
         if self.sandbox:
             api = self.sandbox_api
@@ -85,7 +85,7 @@ class Gdax(API):
                         retry -= 1
                 sleep(retry_wait)
                 continue
-        
+
             # 400 Bad Request – Invalid request format
             # 401 Unauthorized – Invalid API Key
             # 403 Forbidden – You do not have access to the requested resource
@@ -107,7 +107,7 @@ class Gdax(API):
             endpoint = '{}?product_id={}'.format(endpoint, symbol)
 
         header = self._generate_signature(endpoint, "GET")
-        data = self._make_request("GET", endpoint, header)
+        data = self._make_request("GET", endpoint, header, retry=retry)
 
         if data == []:
             LOG.warning("%s: No data", self.ID)
@@ -117,13 +117,13 @@ class Gdax(API):
             start_time = pd.Timestamp(start_date).to_pydatetime()
             end_time = pd.Timestamp(end_date).to_pydatetime()
             for entry in data:
-                entry_time = datetime.strptime(entry['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
+                entry_time = dt.strptime(entry['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
 
                 if entry_time >= start_time and entry_time <= end_time:
                     data_in_range.append(entry)
             data = data_in_range
-            
-        data = list(map(lambda x: self._trade_normalization(symbol, x), data))
+
+        data = list(map(self._trade_normalization, data))
         return data
 
 
@@ -147,11 +147,11 @@ class Gdax(API):
                 endpoint = '{}?product_id={}'.format(endpoint, product_id)
 
         endpoint = self._pagination(endpoint, body)
-        
+
         header = self._generate_signature(endpoint, "GET")
         data = self._make_request("GET", endpoint, header)
-        data = list(map(lambda x: self._trade_normalization(x), data))
-        
+        data = list(map(self._trade_normalization, data))
+
         return data
 
 
@@ -172,7 +172,7 @@ class Gdax(API):
         """
         endpoint = "/orders"
         header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
-        data = self._make_request("POST", endpoint, header, body)
+        data = self._make_request("POST", endpoint, header, body, retry=retry, retry_wait=retry_wait)
 
         return data
 
@@ -184,7 +184,7 @@ class Gdax(API):
 
         header = self._generate_signature(endpoint, "DELETE")
         self._make_request("DELETE", endpoint, header)
-    
+
     def _get(self, endpoint):
         header = self._generate_signature(endpoint, "GET")
         return self._make_request("GET", endpoint, header)
@@ -212,7 +212,7 @@ class Gdax(API):
         }
         """
         return self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
-    
+
 
     def execute_trades(self, trades_to_make):
         """
@@ -231,13 +231,13 @@ class Gdax(API):
             responses.append(self._trade_normalization(
                 self._post_order(trade, retry=None, retry_wait=0)
             ))
-        
+
         return responses
-    
+
 
     def cancel_orders(self, order_id=None):
         self._delete_order(order_id)
-    
+
 
     def get_orders(self, body):
         """
@@ -259,24 +259,24 @@ class Gdax(API):
     def get_account(self, account_id: str):
         endpoint = "/accounts/{}".format(account_id)
         return self._get(endpoint)
-    
-    def get_account_history(self, account_id: str, pagination={}):
+
+    def get_account_history(self, account_id: str, pagination=None):
         endpoint = "/accounts/{}/ledger".format(account_id)
         endpoint = self._pagination(endpoint, pagination)
-        
+
         return self._get(endpoint)
-    
-    def get_holds(self, account_id: str, pagination={}):
+
+    def get_holds(self, account_id: str, pagination=None):
         endpoint = "/accounts/{}/holds".format(account_id)
         endpoint = self._pagination(endpoint, pagination)
-        
+
         return self._get(endpoint)
-    
-    
+
+
     def deposit_funds(self, body):
         """
         Deposit funds from a payment method to the account the api key is associated with.
-        
+
         data format
         {
             "amount": 10.00,
@@ -290,7 +290,7 @@ class Gdax(API):
     def deposit_coinbase(self, body):
         """
         Deposit funds from a different coinbase account into the account the api key is associated with.
-        
+
         data format
         {
             "amount": 10.00,
@@ -300,7 +300,7 @@ class Gdax(API):
         """
         return self._post("/deposits/coinbase-account", body)
 
-    
+
     def withdrawal_funds(self, body):
         """
         Withdrawal funds from the account the api key is associated with to the specified account
@@ -312,8 +312,8 @@ class Gdax(API):
         }
         """
         return self._post("/withdrawals/payment-method", body)
-    
-    
+
+
     def withdrawal_coinbase(self, body):
         """
         Withdrawal funds from the account the api key is associated with to the specified coinbase account
@@ -325,8 +325,8 @@ class Gdax(API):
         }
         """
         return self._post("/withdrawals/coinbase-account", body)
-    
-    
+
+
     def withdrawal_crypto(self, body):
         """
         Withdrawal funds from the account the api key is associated with to the specified crypto address
@@ -341,7 +341,7 @@ class Gdax(API):
 
     def list_payment_methods(self):
         return self._get("/payment-methods")
-    
+
     def list_coinbase_accounts(self):
         return self._get("/coinbase-accounts")
 
@@ -367,4 +367,3 @@ class Gdax(API):
             trade_data["settled"] = trade_data["settled"]
 
         return trade_data
-    
