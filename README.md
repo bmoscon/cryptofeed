@@ -84,7 +84,7 @@ Supported Backends:
 
 ## Rest API
 
-Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [/cryptofeed/rest](rest) package.
+Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [rest](/cryptofeed/rest) package.
 
 
 # Planned Work
