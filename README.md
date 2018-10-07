@@ -7,6 +7,8 @@
 
 Handles multiple feeds and returns normalized and standardized results across exchanges to client registered callbacks for events like trades, book updates, ticker updates, etc.
 
+Please see the [examples](/examples) for more code samples.
+
 
 ```python
 from cryptofeed import FeedHandler
@@ -77,6 +79,7 @@ Cryptofeeds supports `backend` callbacks that will write directly to storage or 
 Supported Backends:
 * Redis
 * Arctic
+* ZeroMQ
 
 
 
@@ -96,6 +99,6 @@ Support for registering databases and writing directly to them via the handler (
 
 ### Additional Callback Methods
 * Unix Domain Sockets
-* ZMQ
 * Postgres
 * InfluxDB
+* UDP
