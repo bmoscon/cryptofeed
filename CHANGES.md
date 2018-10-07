@@ -3,6 +3,7 @@
 ### 0.17.0
   * Feature: Timestamps for orderbooks and book deltas
   * Feature #40: NBBO now uses best bid/ask from L2 books
+  * Feature #28: GDAX now renamed Coinbase and uses coinbase endpoints
 
 ### 0.16.0 (2018-10-4)
   * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
