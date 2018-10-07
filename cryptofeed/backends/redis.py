@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from decimal import Decimal
 import time
 import json
@@ -6,6 +12,7 @@ import aioredis
 
 from cryptofeed.standards import timestamp_normalize
 from cryptofeed.defines import BID, ASK
+from cryptofeed.backends._util import book_convert
 
 
 class RedisCallback:
@@ -84,19 +91,6 @@ class BookRedis(RedisCallback):
             self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
 
         data = {'timestamp': timestamp, BID: {}, ASK: {}}
-        count = 0
-        for level in book[ASK]:
-            data[ASK][float(level)] = float(book[ASK][level])
-            count += 1
-            if self.depth and count >= self.depth:
-                break
-
-        count = 0
-        for level in reversed(book[BID]):
-            data[BID][float(level)] = float(book[BID][level])
-            count += 1
-            if self.depth and count >= self.depth:
-                break
-
+        book_convert(book, data, self.depth)
         data = json.dumps(data)
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
