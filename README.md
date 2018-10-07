@@ -82,6 +82,10 @@ Supported Backends:
 * ZeroMQ
 
 
+## Rest API
+
+Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [/cryptofeed/rest](rest) package.
+
 
 # Planned Work
 
