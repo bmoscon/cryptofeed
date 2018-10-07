@@ -95,13 +95,10 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 * BTCC
 * Many more...
 
-### REST API Support
-Some feeds do not support websocket. A framework for supporting non websocket feeds is planned.
+### REST
+Continue to build out rest endpoints
 
-### DB Plugins
-Support for registering databases and writing directly to them via the handler (as opposed to client provided callbacks).
-
-### Additional Callback Methods
+### Additional Callback Methods / Backends
 * Unix Domain Sockets
 * Postgres
 * InfluxDB
