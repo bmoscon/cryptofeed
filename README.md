@@ -61,8 +61,8 @@ fh.run()
 
 Cryptofeed supports the following channels:
 
-* L2_BOOK - Price aggregated levels. Some exchanges provide the entire depth, some provide a subset.
-* L3_BOOK - Order aggregated levels. Like the L2 book, some exchanges may only provide partial depth.
+* L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
+* L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES
 * TICKER
 * VOLUME
