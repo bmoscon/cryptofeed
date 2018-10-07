@@ -1,34 +1,21 @@
 '''
-Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2018  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import time
-
-import pandas as pd
-from arctic import Arctic
-
-from cryptofeed.callback import TickerCallback
+from cryptofeed.backends.arctic import TradeArctic, FundingArctic
 from cryptofeed import FeedHandler
-from cryptofeed import GDAX
-from cryptofeed.defines import TICKER
+from cryptofeed import Bitmex, Bitfinex
 
-
-a = Arctic('127.0.0.1')
-a.initialize_library('gdax.ticker')
-lib = a['gdax.ticker']
-
-
-async def ticker(feed, pair, bid, ask):
-    ts = time.time()
-    df = pd.DataFrame({'time': [ts], 'bid': [float(bid)], 'ask': [float(ask)]})
-    lib.append('BTC-USD', df)
+from cryptofeed.defines import TRADES, FUNDING
 
 
 def main():
     f = FeedHandler()
-    f.add_feed(GDAX(pairs=['BTC-USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)}))
+    f.add_feed(Bitmex(channels=[TRADES, FUNDING], pairs=['XBTUSD'], callbacks={TRADES: TradeArctic('cryptofeed-test'), FUNDING: FundingArctic('cryptofeed-test')}))
+    f.add_feed(Bitfinex(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeArctic('cryptofeed-test')}))
+
     f.run()
 
 

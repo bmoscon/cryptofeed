@@ -5,7 +5,7 @@ from datetime import datetime as dt
 import pandas as pd
 
 from cryptofeed.rest.api import API
-from cryptofeed.feeds import GDAX
+from cryptofeed.feeds import COINBASE
 from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange
 
@@ -13,11 +13,11 @@ REQUEST_LIMIT = 10
 LOG = get_logger('rest', 'rest.log')
 
 # API Docs https://docs.gdax.com/
-class Gdax(API):
-    ID = GDAX
+class Coinbase(API):
+    ID = COINBASE
 
-    api = "https://api.gdax.com"
-    sandbox_api = "https://api-public.sandbox.gdax.com"
+    api = "https://api.pro.coinbase.com"
+    sandbox_api = "https://api-public.sandbox.pro.coinbase.com"
 
 
     def _generate_signature(self, endpoint: str, method: str, body = ''):

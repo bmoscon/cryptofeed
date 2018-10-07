@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.poloniex import Poloniex
 from cryptofeed.bitfinex import Bitfinex
-from cryptofeed.gdax import GDAX
+from cryptofeed.coinbase import Coinbase
 from cryptofeed.gemini import Gemini
 from cryptofeed.hitbtc import HitBTC
 from cryptofeed.bitstamp import Bitstamp

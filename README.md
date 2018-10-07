@@ -20,7 +20,7 @@ trade_cb = {TRADES: TradeCallback(trade)}
 gemini_cb = {TRADES: TradeCallback(trade), L3_BOOK: BookCallback(book)}
 
 
-fh.add_feed(GDAX(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
+fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
 fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
 fh.add_feed(Poloniex(channels=['USDT-BTC'], callbacks=trade_cb))
 fh.add_feed(Gemini(pairs=['BTC-USD'], callbacks=gemini_cb)
@@ -30,7 +30,7 @@ fh.run()
 
 Supports the following exchanges:
 * Bitfinex
-* GDAX
+* Coinbase
 * Poloniex
 * Gemini
 * HitBTC
@@ -41,7 +41,7 @@ Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates th
 
 ```python
 from cryptofeed.feedhandler import FeedHandler
-from cryptofeed import GDAX, Bitfinex, HitBTC
+from cryptofeed import Coinbase, Bitfinex, HitBTC
 
 
 def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
@@ -53,7 +53,7 @@ def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
 
 
 fh = FeedHandler()
-fh.add_nbbo([GDAX, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
+fh.add_nbbo([Coinbase, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
 fh.run()
 ```
 

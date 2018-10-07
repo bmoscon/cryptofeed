@@ -6,7 +6,7 @@ associated with this software.
 '''
 import logging
 
-from cryptofeed.exchanges import BITFINEX, POLONIEX, HITBTC, BITSTAMP, GDAX, BITMEX
+from cryptofeed.exchanges import BITFINEX, POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX
 from cryptofeed.defines import L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED
 from cryptofeed.standards import pair_std_to_exchange
 
@@ -19,7 +19,7 @@ _feed_to_exchange_map = {
         BITFINEX: 'book-P0-F0-100',
         POLONIEX: UNSUPPORTED,
         HITBTC: 'subscribeOrderbook',
-        GDAX: 'level2',
+        COINBASE: 'level2',
         BITMEX: 'orderBook10',
         BITSTAMP: 'order_book'
     },
@@ -27,7 +27,7 @@ _feed_to_exchange_map = {
         BITFINEX: 'book-R0-F0-100',
         BITSTAMP: UNSUPPORTED,
         HITBTC: UNSUPPORTED,
-        GDAX: 'full',
+        COINBASE: 'full',
         BITMEX: 'orderBookL2',
         POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel
     },
@@ -36,7 +36,7 @@ _feed_to_exchange_map = {
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
-        GDAX: 'matches',
+        COINBASE: 'matches',
         BITMEX: 'trade'
     },
     TICKER: {
@@ -44,7 +44,7 @@ _feed_to_exchange_map = {
         HITBTC: 'subscribeTicker',
         BITFINEX: 'ticker',
         BITSTAMP: UNSUPPORTED,
-        GDAX: 'ticker',
+        COINBASE: 'ticker',
         BITMEX: UNSUPPORTED
     },
     VOLUME: {

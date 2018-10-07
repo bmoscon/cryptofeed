@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
-gdax_trading_pairs = {
+coinbase_trading_pairs = {
     'BCH-USD',
     'LTC-EUR',
     'LTC-USD',

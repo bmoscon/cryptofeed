@@ -36,8 +36,8 @@ def bittrex_get_trading_pairs():
         print("]", end='')
 
 
-def gdax_get_trading_pairs():
-    with urlopen('https://api.gdax.com/products') as url:
+def coinbase_get_trading_pairs():
+    with urlopen('https://api.pro.coinbase.com/products') as url:
         data = json.loads(url.read().decode())
         print('[', end='')
         for pair in data:

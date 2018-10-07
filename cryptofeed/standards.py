@@ -7,13 +7,13 @@ associated with this software.
 from datetime import datetime as dt
 import calendar
 
-from cryptofeed.exchanges import GDAX, GEMINI, BITFINEX, BITSTAMP, HITBTC, BITMEX, POLONIEX
+from cryptofeed.exchanges import COINBASE, GEMINI, BITFINEX, BITSTAMP, HITBTC, BITMEX, POLONIEX
 from cryptofeed.poloniex.pairs import poloniex_trading_pairs
 
 
 _std_trading_pairs = {
     'BTC-USD': {
-        GDAX: 'BTC-USD',
+        COINBASE: 'BTC-USD',
         BITFINEX: 'tBTCUSD',
         GEMINI: 'BTCUSD',
         HITBTC: 'BTCUSD',
@@ -21,49 +21,49 @@ _std_trading_pairs = {
     },
     'ETH-USD': {
         GEMINI: 'ETHUSD',
-        GDAX: 'ETH-USD',
+        COINBASE: 'ETH-USD',
         BITFINEX: 'tETHUSD',
         HITBTC: 'ETHUSD',
         BITSTAMP: 'ethusd'
     },
     'ETH-BTC': {
         GEMINI: 'ETHBTC',
-        GDAX: 'ETH-BTC',
+        COINBASE: 'ETH-BTC',
         BITFINEX: 'tETHBTC',
         HITBTC: 'ETHBTC',
         BITSTAMP: 'ethbtc'
     },
     'BCH-USD': {
-        GDAX: 'BCH-USD',
+        COINBASE: 'BCH-USD',
         BITFINEX: 'tBCHUSD',
         HITBTC: 'BCHUSD',
         BITSTAMP: 'bchusd'
     },
     'LTC-EUR': {
-        GDAX: 'LTC-EUR',
+        COINBASE: 'LTC-EUR',
         BITSTAMP: 'ltceur'
     },
     'LTC-USD': {
-        GDAX: 'LTC-USD',
+        COINBASE: 'LTC-USD',
         BITFINEX: 'tLTCUSD',
         HITBTC: 'LTCUSD',
         BITSTAMP: 'ltcusd'
     },
     'LTC-BTC': {
-        GDAX: 'LTC-BTC',
+        COINBASE: 'LTC-BTC',
         BITFINEX: 'tLTCBTC',
         HITBTC: 'LTCBTC',
         BITSTAMP: 'ltcbtc'
     },
     'ETH-EUR': {
-        GDAX: 'ETH-EUR',
+        COINBASE: 'ETH-EUR',
         BITSTAMP: 'etheur'
     },
     'BTC-GBP': {
-        GDAX: 'BTC-GBP'
+        COINBASE: 'BTC-GBP'
     },
     'BTC-EUR': {
-        GDAX: 'BTC-EUR',
+        COINBASE: 'BTC-EUR',
         BITFINEX: 'tBTCEUR',
         BITSTAMP: 'btceur'
     },
@@ -2022,7 +2022,7 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange == BITMEX or exchange == GDAX:
+    if exchange == BITMEX or exchange == COINBASE:
         ts = dt.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
         return calendar.timegm(ts.utctimetuple())
     elif exchange == 'BITFINEX':

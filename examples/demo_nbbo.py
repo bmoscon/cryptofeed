@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.feedhandler import FeedHandler
-from cryptofeed import GDAX, Bitfinex, HitBTC, Bitstamp, Gemini
+from cryptofeed import Coinbase, Bitfinex, HitBTC, Bitstamp, Gemini
 
 
 def nbbo_update(pair, bid, ask, bid_feed, ask_feed):
@@ -14,7 +14,7 @@ def nbbo_update(pair, bid, ask, bid_feed, ask_feed):
 
 def main():
     f = FeedHandler()
-    f.add_nbbo([GDAX, HitBTC, Bitfinex, Bitstamp, Gemini], ['BTC-USD'], nbbo_update)
+    f.add_nbbo([Coinbase, HitBTC, Bitfinex, Bitstamp, Gemini], ['BTC-USD'], nbbo_update)
     f.run()
 
 if __name__ == '__main__':

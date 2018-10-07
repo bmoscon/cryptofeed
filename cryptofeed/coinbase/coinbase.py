@@ -15,18 +15,18 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.exchanges import GDAX as GDAX_ID
+from cryptofeed.exchanges import COINBASE
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER, DEL, UPD
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class GDAX(Feed):
-    id = GDAX_ID
+class Coinbase(Feed):
+    id = COINBASE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://ws-feed.gdax.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__('wss://ws-feed.pro.coinbase.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -161,7 +161,7 @@ class GDAX(Feed):
     async def _book_snapshot(self):
         self.__reset()
         loop = asyncio.get_event_loop()
-        url = 'https://api.gdax.com/products/{}/book?level=3'
+        url = 'https://api.pro.coinbase.com/products/{}/book?level=3'
         futures = [loop.run_in_executor(None, requests.get, url.format(pair)) for pair in self.pairs]
 
         results = []
@@ -208,7 +208,7 @@ class GDAX(Feed):
 
     async def _done(self, msg):
         """
-        per GDAX API Docs:
+        per Coinbase API Docs:
 
         A done message will be sent for received orders which are fully filled or canceled due
         to self-trade prevention. There will be no open message for such orders. Done messages
