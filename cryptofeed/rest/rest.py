@@ -21,8 +21,6 @@ class Rest:
             'bitfinex': Bitfinex(config),
             'coinbase': Coinbase(config, sandbox=sandbox)
         }
-    
+
     def __getattr__(self, attr):
         return self.lookup[attr.lower()]
-    
-    

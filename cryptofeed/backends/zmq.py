@@ -5,18 +5,16 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from decimal import Decimal
-import time
 
 import zmq
 import zmq.asyncio
 
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert
 
 
 class ZMQCallback:
-    def __init__(self, host='127.0.0.1', port=5555, **kwargs):        
+    def __init__(self, host='127.0.0.1', port=5555, **kwargs):
         url = "tcp://{}:{}".format(host, port)
         ctx = zmq.asyncio.Context.instance()
         self.con = ctx.socket(zmq.PUSH)
