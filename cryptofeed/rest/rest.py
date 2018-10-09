@@ -3,6 +3,8 @@ import logging
 from cryptofeed.rest.bitmex import Bitmex
 from cryptofeed.rest.bitfinex import Bitfinex
 from cryptofeed.rest.coinbase import Coinbase
+from cryptofeed.rest.poloniex import Poloniex
+from cryptofeed.rest.gemini import Gemini
 
 
 FORMAT = '%(asctime)-15s : %(levelname)s : %(message)s'
@@ -19,7 +21,9 @@ class Rest:
         self.lookup = {
             'bitmex': Bitmex(config),
             'bitfinex': Bitfinex(config),
-            'coinbase': Coinbase(config, sandbox=sandbox)
+            'coinbase': Coinbase(config, sandbox=sandbox),
+            'poloniex': Poloniex(config),
+            'gemini': Gemini(config)
         }
 
     def __getattr__(self, attr):

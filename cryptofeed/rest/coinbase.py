@@ -380,7 +380,6 @@ class Coinbase(API):
             'side': trade['side'],
             'amount': trade['size'],
             "settled": trade["settled"]
-
         }
         if 'order_id' in trade:
             trade_data['id'] = trade['order_id']
