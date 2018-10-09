@@ -77,9 +77,35 @@ class TestPoloniex(unittest.TestCase):
 
     def test_deposit_withdrawals(self):
         poloniex = Rest('config.yaml').Poloniex
+        deposit_withdrawals = poloniex.deposit_withdrawals({"start": 1410158341, "end": 1410499372})
+
+        assert 'deposits' in deposit_withdrawals
+        assert 'withdrawals' in deposit_withdrawals
+
+    def test_open_orders(self):
+        poloniex = Rest('config.yaml').Poloniex
+        open_orders = poloniex.open_orders()
+
+        assert 'BTC_AMP' in open_orders
+
+    def test_trade_history(self):
+        poloniex = Rest('config.yaml').Poloniex
+        trade_history = poloniex.trade_history()
+
+        assert len(trade_history) >= 0
+
+    def test_available_account_balances(self):
+        poloniex = Rest('config.yaml').Poloniex
+        available_account_balances = poloniex.available_account_balances()
+
+        assert len(available_account_balances) >= 0
+
+    def test_tradable_balances(self):
+        poloniex = Rest('config.yaml').Poloniex
+        tradable_balances = poloniex.tradable_balances()
+
+        assert 'BTC_BTS' in tradable_balances
+        assert float(tradable_balances['BTC_BTS']['BTC']) == 0.0
 
 if __name__ == '__main__':
     unittest.main()
-
-poloniex = Rest('config.yaml').Poloniex
-poloniex.balances()

@@ -196,11 +196,11 @@ class Poloniex(API):
         """
         return self._post("withdraw", payload)
 
-    def available_account_balances(self, payload):
+    def available_account_balances(self, payload={}):
         """
         "account" (optional)
         """
-        return self._post("returnAvailableAccountBalances")
+        return self._post("returnAvailableAccountBalances", payload)
 
     def tradable_balances(self):
         return self._post("returnTradableBalances")
