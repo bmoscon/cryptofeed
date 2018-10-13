@@ -1,4 +1,4 @@
-# Cryptocurrency Feed Handler
+# Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.6+-green.svg)
 [![Build Status](https://travis-ci.org/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.org/bmoscon/cryptofeed)
