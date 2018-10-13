@@ -29,6 +29,8 @@ class UDPProtocol:
 
     def error_received(self, exc):
         LOG.error('UDP backend received exception: %s', exc)
+        self.transport.close()
+        self.transport = None
 
     def connection_lost(self, exc):
         LOG.error('UDP backend connection lost: %s', exc)
@@ -42,7 +44,7 @@ class UDPCallback:
         self.protocol = None
         self.host = host
         self.port = port
-    
+
     async def connect(self):
         if not self.transport:
             loop = asyncio.get_event_loop()
