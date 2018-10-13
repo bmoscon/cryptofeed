@@ -5,7 +5,7 @@
   * Feature #40: NBBO now uses best bid/ask from L2 books
   * Feature #28: GDAX now renamed Coinbase and uses coinbase endpoints
   * Feature: ZeroMQ backend. Write updates directly to zmq connection
-  * Feature: UDP Socket backend≥ Write updates directy to UDP socket
+  * Feature: UDP Socket backend. Write updates directy to UDP socket
 
 ### 0.16.0 (2018-10-4)
   * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
