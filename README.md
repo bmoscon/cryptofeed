@@ -80,6 +80,7 @@ Supported Backends:
 * Redis
 * Arctic
 * ZeroMQ
+* UDP Sockets
 
 
 ## Rest API
@@ -102,4 +103,3 @@ Continue to build out rest endpoints
 * Unix Domain Sockets
 * Postgres
 * InfluxDB
-* UDP
