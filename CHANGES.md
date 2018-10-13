@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.17.0
+### 0.17.0 (2018-10-13)
   * Feature: Timestamps for orderbooks and book deltas
   * Feature #40: NBBO now uses best bid/ask from L2 books
   * Feature #28: GDAX now renamed Coinbase and uses coinbase endpoints
