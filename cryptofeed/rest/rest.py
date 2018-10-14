@@ -23,7 +23,7 @@ class Rest:
             'bitfinex': Bitfinex(config),
             'coinbase': Coinbase(config, sandbox=sandbox),
             'poloniex': Poloniex(config),
-            'gemini': Gemini(config)
+            'gemini': Gemini(config, sandbox=sandbox)
         }
 
     def __getattr__(self, attr):

@@ -8,3 +8,9 @@ coinbase:
     key_id: null
     key_secret: null
     key_passphrase: null
+poloniex:
+    key_id: null
+    key_secret: null
+gemini:
+    key_id: null
+    key_secret: null

@@ -1,5 +1,5 @@
 from time import time
-import hashlib, hmac, requests, urllib
+import hashlib, hmac, requests, urllib, json, base64
 
 from cryptofeed.rest.api import API
 from cryptofeed.feeds import GEMINI
@@ -13,8 +13,8 @@ LOG = get_logger('rest', 'rest.log')
 class Gemini(API):
     ID = GEMINI
 
-    api = "https://api.gemini.com/v1/"
-    sandbox_api = "https://api.sandbox.gemini.com/v1/"
+    api = "https://api.gemini.com"
+    sandbox_api = "https://api.sandbox.gemini.com"
 
     def _get(self, command: str, options = {}):
         api = self.api
@@ -44,27 +44,28 @@ class Gemini(API):
 
 
     def _post(self, command: str, payload = {}):
+        payload['request'] = command
+        payload['nonce'] = int(time() * 1000)
+
         api = self.api
         if self.sandbox:
             api = self.sandbox_api
 
-        payload['command'] = command
-        payload['nonce'] = int(time() * 1000)
+        api = "{}{}".format(api, command)
 
-        encoded_payload = json.dumps(payload)
-        b64 = base64.b64encode(encoded_payload)
-        signature = hmac.new(bytes(self.key_secret, 'utf8'), b64, hashlib.sha384).hexdigest()
+        b64_payload = base64.b64encode(json.dumps(payload).encode('utf-8'))
+        signature = hmac.new(self.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
 
         headers = {
             'Content-Type': "text/plain",
             'Content-Length': "0",
             'X-GEMINI-APIKEY': self.key_id,
-            'X-GEMINI-PAYLOAD': b64,
+            'X-GEMINI-PAYLOAD': b64_payload,
             'X-GEMINI-SIGNATURE': signature,
             'Cache-Control': "no-cache"
         }
 
-        resp = requests.post(api, data=None, headers=headers, timeout=timeout, verify=False)
+        resp = requests.post(api, headers=headers)
         if resp.status_code >= 300:
             LOG.error("%s: Status code %d", self.ID, resp.status_code)
             LOG.error("%s: Headers: %s", self.ID, resp.headers)
@@ -117,3 +118,101 @@ class Gemini(API):
             include_indicative	    boolean	    Optional. Whether to include publication of indicative prices and quantities. True by default, true to explicitly enable, and false to disable
         """
         return self._get("auction/{}/history".format(symbol), parameters)
+
+
+    # Order Placement API
+
+    def new_order(self, parameters):
+        """
+        Parameters:
+            client_order_id	string	Recommended. A client-specified order id
+            symbol	string	The symbol for the new order
+            amount	string	Quoted decimal amount to purchase
+            min_amount	string	Optional. Minimum decimal amount to purchase, for block trades only
+            price	string	Quoted decimal amount to spend per unit
+            side	string	"buy" or "sell"
+            type	string	The order type. Only "exchange limit" supported through this API
+            options	array	Optional. An optional array containing at most one supported order execution option. See Order execution options for details
+        """
+        return self._post("/v1/order/new", parameters)
+
+
+    def cancel_order(self, parameters):
+        """
+        Parameters:
+            order_id	integer	The order ID given by /order/new
+        """
+        return self._post("/v1/order/cancel", parameters)
+
+
+    def cancel_all_session_orders(self):
+        return self._post("/v1/order/cancel/session")
+
+
+    def cancel_all_active_orders(self):
+        return self._post("/v1/order/cancel/all")
+
+
+    # Order Status API
+
+    def order_status(self, parameters):
+        """
+        Parameters:
+            order_id	integer	the order ID to be queried
+        """
+        return self._post("/v1/order/status", parameters)
+
+    def get_active_orders(self):
+        return self._post("/v1/orders")
+
+
+    def get_past_trades(self, parameters):
+        """
+        Parameters:
+            symbol	string	The symbol to retrieve trades for
+            limit_trades	integer	Optional. The maximum number of trades to return. Default is 50, max is 500.
+            timestamp	timestamp	Optional. Only return trades on or after this timestamp. See Data Types: Timestamps for more information. If not present, will show the most recent orders.
+        """
+        return self._post("/v1/mytrades", parameters)
+
+
+    # Fee and Volume Volume API
+    def get_notional_volume(self):
+        return self._post("/v1/notionalvolume")
+
+    def get_trade_volume(self):
+        return self._post("/v1/tradevolume")
+
+
+    # Fund Managment API
+    def get_available_balances(self):
+        return self._post("/v1/balances")
+
+    def transfers(self, parameters={}):
+        """
+        Parameters:
+            timestamp	timestamp	Optional. Only return transfers on or after this timestamp. See Data Types: Timestamps for more information. If not present, will show the most recent transfers.
+            limit_transfers	integer	Optional. The maximum number of transfers to return. The default is 10 and the maximum is 50.
+        """
+        return self._post("/v1/transfers", parameters)
+
+    def new_deposit_address(self, currency: str, parameters={}):
+        """
+        Parameters:
+            label	string	Optional. label for the deposit address
+        """
+        uri = "/v1/deposit/{}/newAddress".format(currency)
+        return self._post(uri, parameters)
+
+    def withdraw_crypto_to_address(self, currency: str, parameters):
+        """
+        Parameters:
+            address	string	Standard string format of a whitelisted cryptocurrency address.
+            amount	string	Quoted decimal amount to withdraw
+        """
+        uri = "/v1/withdraw/{}".format(currency)
+        parameters["request"] = uri
+        return self._post(uri, parameters)
+
+    def heartbeat(self):
+        return self._post("/v1/heartbeat")
