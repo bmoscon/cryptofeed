@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.0.0
+  * Bugfix #43: Coinbase L2 book used "0" rather than 0 for comparisons against decimal.Decimal
+
 ### 0.17.0 (2018-10-13)
   * Feature: Timestamps for orderbooks and book deltas
   * Feature #40: NBBO now uses best bid/ask from L2 books
