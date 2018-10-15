@@ -7,7 +7,7 @@ class TestGemini(unittest.TestCase):
         gemini = Rest('config.yaml', sandbox=True).Gemini
         symbols = gemini.symbols()
 
-        assert len(symbols) == 6
+        assert len(symbols) >= 10
 
     def test_ticker(self):
         gemini = Rest('config.yaml', sandbox=True).Gemini
@@ -51,7 +51,7 @@ class TestGemini(unittest.TestCase):
         gemini = Rest('config.yaml', sandbox=True).Gemini
         current_auction = gemini.current_auction('btcusd')
 
-        assert 'last_auction_price' in current_auction
+        assert 'next_auction_ms' in current_auction
 
     def test_auction_history(self):
         gemini = Rest('config.yaml', sandbox=True).Gemini

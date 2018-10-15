@@ -79,10 +79,10 @@ class Gemini(API):
     # Public Routes
 
     def symbols(self):
-        return self._get("symbols")
+        return self._get("/v1/symbols")
 
     def ticker(self, symbol: str):
-        return self._get("pubticker/{}".format(symbol))
+        return self._get("/v1/pubticker/{}".format(symbol))
 
     def current_order_book(self, symbol: str, parameters = {}):
         """
@@ -92,7 +92,7 @@ class Gemini(API):
             limit_bids	integer	Optional. Limit the number of bids (offers to buy) returned. Default is 50. May be 0 to return the full order book on this side.
             limit_asks	integer	Optional. Limit the number of asks (offers to sell) returned. Default is 50. May be 0 to return the full order book on this side.
         """
-        return self._get("book/{}".format(symbol), parameters)
+        return self._get("/v1/book/{}".format(symbol), parameters)
 
     def trade_history(self, symbol: str, parameters = {}):
         """
@@ -103,10 +103,10 @@ class Gemini(API):
             limit_trades	integer	    Optional. The maximum number of trades to return. The default is 50.
             include_breaks	boolean	    Optional. Whether to display broken trades. False by default. Can be '1' or 'true' to activate
         """
-        return self._get("trades/{}".format(symbol), parameters)
+        return self._get("/v1/trades/{}".format(symbol), parameters)
 
     def current_auction(self, symbol: str):
-        return self._get("auction/{}".format(symbol))
+        return self._get("/v1/auction/{}".format(symbol))
 
     def auction_history(self, symbol: str, parameters = {}):
         """
@@ -117,7 +117,7 @@ class Gemini(API):
             limit_auction_results	integer	    Optional. The maximum number of auction events to return. The default is 50.
             include_indicative	    boolean	    Optional. Whether to include publication of indicative prices and quantities. True by default, true to explicitly enable, and false to disable
         """
-        return self._get("auction/{}/history".format(symbol), parameters)
+        return self._get("/v1/auction/{}/history".format(symbol), parameters)
 
 
     # Order Placement API

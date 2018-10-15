@@ -86,7 +86,7 @@ class TestPoloniex(unittest.TestCase):
         poloniex = Rest('config.yaml').Poloniex
         open_orders = poloniex.open_orders()
 
-        assert 'BTC_AMP' in open_orders
+        assert 'BTC_BCN' in open_orders
 
     def test_trade_history(self):
         poloniex = Rest('config.yaml').Poloniex
