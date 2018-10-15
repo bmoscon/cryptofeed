@@ -17,6 +17,7 @@ from cryptofeed.log import get_logger
 from cryptofeed.exchanges import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE
 from cryptofeed import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase
 from cryptofeed.nbbo import NBBO
+from cryptofeed.feed import RestFeed
 
 
 
@@ -96,9 +97,13 @@ class FeedHandler:
             raise ValueError("No feeds specified")
 
         try:
+            loop = asyncio.get_event_loop()
+
             for feed in self.feeds:
-                loop = asyncio.get_event_loop()
-                loop.create_task(self._connect(feed))
+                if isinstance(feed, RestFeed):
+                    loop.create_task(self._rest_connect(feed))
+                else:
+                    loop.create_task(self._connect(feed))
             loop.run_forever()
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
@@ -114,7 +119,29 @@ class FeedHandler:
                     break
             await asyncio.sleep(self.timeout_interval)
 
+    async def _rest_connect(self, feed):
+        """
+        Connect to REST feed
+        """
+        retries = 0
+        delay = 1
+        while retries <= self.retries:
+            await feed.subscribe()
+            try:
+                while True:
+                    await feed.message_handler()
+            except Exception as e:
+                LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
+                await asyncio.sleep(delay)
+                retries += 1
+                delay *= 2
+
+        LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+
     async def _connect(self, feed):
+        """
+        Connect to websocket feeds
+        """
         retries = 0
         delay = 1
         while retries <= self.retries:

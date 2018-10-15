@@ -11,4 +11,5 @@ from cryptofeed.gemini import Gemini
 from cryptofeed.hitbtc import HitBTC
 from cryptofeed.bitstamp import Bitstamp
 from cryptofeed.bitmex import Bitmex
+from cryptofeed.kraken.kraken import Kraken
 from cryptofeed.feedhandler import FeedHandler

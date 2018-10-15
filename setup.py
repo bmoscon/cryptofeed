@@ -41,7 +41,10 @@ setup(
         "websockets>=6.0",
         "sortedcontainers>=1.5.9",
         "pandas",
-        "pyyaml"
+        "pyyaml",
+        "aiohttp",
+        "aiodns",
+        "cchardet"
     ],
     extras_require={
         'redis': ['aioredis'],

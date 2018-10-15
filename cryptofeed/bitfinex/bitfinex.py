@@ -43,17 +43,17 @@ class Bitfinex(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks, **kwargs)
-        '''
-        maps channel id (int) to a dict of
-           symbol: channel's currency
-           channel: channel name
-           handler: the handler for this channel type
-        '''
         self.__reset()
 
     def __reset(self):
         self.l2_book = {}
         self.l3_book = {}
+        '''
+        channel map maps channel id (int) to a dict of
+           symbol: channel's currency
+           channel: channel name
+           handler: the handler for this channel type
+        '''
         self.channel_map = {}
         self.order_map = defaultdict(dict)
         self.seq_no = 0

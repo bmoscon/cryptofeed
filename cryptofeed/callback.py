@@ -16,9 +16,12 @@ class Callback:
 
     async def __call__(self, *args, **kwargs):
         if self.callback is None:
-            pass
+            return
+        elif self.is_async:
+            await self.callback(**kwargs)
         else:
-            raise NotImplementedError
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, self.callback, **kwargs)
 
 
 class TradeCallback(Callback):
@@ -83,18 +86,8 @@ class BookUpdateCallback(Callback):
 
 
 class VolumeCallback(Callback):
-    async def __call__(self, **kwargs):
-        if self.is_async:
-            await self.callback(**kwargs)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, **kwargs)
+    pass
 
 
 class FundingCallback(Callback):
-    async def __call__(self, **kwargs):
-        if self.is_async:
-            await self.callback(**kwargs)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, **kwargs)
+    pass
