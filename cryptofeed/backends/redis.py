@@ -90,7 +90,7 @@ class BookRedis(RedisCallback):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
 
-        data = {'timestamp': timestamp, BID: {}, ASK: {}}
+        data = {'timestamp': timestamp_normalize(feed, timestamp), BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
         data = json.dumps(data)
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
