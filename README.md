@@ -1,4 +1,4 @@
-# Cryptocurrency Feed Handler
+# Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.6+-green.svg)
 [![Build Status](https://travis-ci.org/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.org/bmoscon/cryptofeed)
@@ -38,6 +38,7 @@ Supports the following exchanges:
 * HitBTC
 * Bitstamp
 * BitMEX
+* Kraken
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
@@ -80,6 +81,7 @@ Supported Backends:
 * Redis
 * Arctic
 * ZeroMQ
+* UDP Sockets
 
 
 ## Rest API
@@ -102,4 +104,3 @@ Continue to build out rest endpoints
 * Unix Domain Sockets
 * Postgres
 * InfluxDB
-* UDP

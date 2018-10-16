@@ -149,7 +149,7 @@ class Coinbase(Feed):
             amount = Decimal(amount)
             bidask = self.l2_book[msg['product_id']][side]
 
-            if amount == "0":
+            if amount == 0:
                 del bidask[price]
                 delta[side][DEL].append(price)
             else:

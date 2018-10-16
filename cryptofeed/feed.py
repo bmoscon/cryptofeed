@@ -62,3 +62,7 @@ class Feed:
 
     def message_handler(self, msg):
         raise NotImplementedError
+
+
+class RestFeed(Feed):
+    pass

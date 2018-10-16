@@ -1,10 +1,16 @@
 ## Changelog
 
-### 0.17.0
+### 1.0.0
+  * Bugfix #43: Coinbase L2 book used "0" rather than 0 for comparisons against decimal.Decimal
+  * Feature: REST feed market data supported via normal subscription methods
+  * Feature: Kraken support
+
+### 0.17.0 (2018-10-13)
   * Feature: Timestamps for orderbooks and book deltas
   * Feature #40: NBBO now uses best bid/ask from L2 books
   * Feature #28: GDAX now renamed Coinbase and uses coinbase endpoints
   * Feature: ZeroMQ backend. Write updates directly to zmq connection
+  * Feature: UDP Socket backend. Write updates directy to UDP socket
 
 ### 0.16.0 (2018-10-4)
   * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
