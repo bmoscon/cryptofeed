@@ -131,7 +131,7 @@ class Bitfinex(Feed):
         """
         For L2 book updates
         """
-        timestamp = time.time()
+        timestamp = time.time() * 1000
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
@@ -181,7 +181,7 @@ class Bitfinex(Feed):
         """
         For L3 book updates
         """
-        timestamp = time.time()
+        timestamp = time.time() * 1000
         def add_to_book(pair, side, price, order_id, amount):
             if price in self.l3_book[pair][side]:
                 self.l3_book[pair][side][price][order_id] = amount
