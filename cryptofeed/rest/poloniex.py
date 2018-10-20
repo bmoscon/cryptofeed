@@ -167,12 +167,8 @@ class Poloniex(API):
         """
         return self._post("sell", payload)
 
-    def cancel_order(self, payload):
-        """
-        Data FORMAT
-        {"orderNumber": int}
-        """
-        return self._post("cancelOrder", payload)
+    def cancel_order(self, order_id):
+        return self._post("cancelOrder", {"orderNumber": order_id})
 
     def move_order(self, payload):
         """

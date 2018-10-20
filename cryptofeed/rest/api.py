@@ -22,7 +22,7 @@ class API:
                     self.key_passphrase = data[self.ID.lower()]['key_passphrase']
         except (KeyError, FileNotFoundError, TypeError):
             pass
-    
+
     def handle_error(self, resp, log):
         if resp.status_code >= 300:
             log.error("%s: Status code %d", self.ID, resp.status_code)
@@ -34,6 +34,12 @@ class API:
         raise NotImplementedError
 
     def funding(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def place_order(self):
+        raise NotImplementedError
+
+    def cancel_order(self, order_id):
         raise NotImplementedError
 
     def __getitem__(self, key):

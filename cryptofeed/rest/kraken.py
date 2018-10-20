@@ -3,6 +3,7 @@ import hashlib, hmac, requests, urllib, base64
 
 from cryptofeed.rest.api import API
 from cryptofeed.exchanges import KRAKEN
+from cryptofeed.standards import pair_std_to_exchange
 from cryptofeed.log import get_logger
 
 
@@ -23,7 +24,6 @@ class Kraken(API):
         self.handle_error(resp, LOG)
 
         return resp.json()
-
 
     def _post_private(self, command: str, payload=None):
         # API-Key = API key
@@ -53,7 +53,6 @@ class Kraken(API):
         self.handle_error(resp, LOG)
 
         return resp.json()
-
 
     # public API
     def get_server_time(self):
@@ -92,7 +91,6 @@ class Kraken(API):
         """
         return self._post_public("/public/OHLC", payload)
 
-
     def get_order_book(self, payload=None):
         """
         Parameters:
@@ -101,14 +99,14 @@ class Kraken(API):
         """
         return self._post_public("/public/Depth", payload)
 
-
-    def get_recent_trades(self, payload=None):
+    def trades(self, symbol):
+        symbol = pair_std_to_exchange(symbol, self.ID)
         """
         Parameters:
             pair = asset pair to get trade data for
             since = return trade data since given id (optional.  exclusive)
         """
-        return self._post_public("/public/Trades", payload)
+        return self._post_public("/public/Trades", {'pair': symbol})
 
     def get_recent_spread_data(self, payload=None):
         """
@@ -119,7 +117,6 @@ class Kraken(API):
         return self._post_public("/public/Spread", payload)
 
     # Private API
-
     def get_account_balance(self, payload=None):
         """
         Parameters:
@@ -181,7 +178,6 @@ class Kraken(API):
         """
         return self._post_private('/private/QueryTrades', payload)
 
-
     def get_open_positions(self, payload: dict):
         """
         Parameters:
@@ -189,7 +185,6 @@ class Kraken(API):
             docalcs = whether or not to include profit/loss calculations (optional.  default = false)
         """
         return self._post_private('/private/OpenPositions', payload)
-
 
     def get_ledgers_info(self, payload=None):
         """
@@ -215,7 +210,6 @@ class Kraken(API):
             id = comma delimited list of ledger ids to query info about (20 maximum)
         """
         return self._post_private('/private/QueryLedgers', payload)
-
 
     def get_trade_volume(self, payload=None):
         """
@@ -266,10 +260,5 @@ class Kraken(API):
         """
         return self._post_private('/private/AddOrder', payload)
 
-
-    def cancel_open_order(self, payload: dict):
-        """
-        Parameters:
-            txid = transaction id
-        """
-        return self._post_private('/private/CancelOrder', payload)
+    def cancel_order(self, order_id):
+        return self._post_private('/private/CancelOrder', {'txid': order_id})

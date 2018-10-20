@@ -21,7 +21,6 @@ class Coinbase(API):
     api = "https://api.pro.coinbase.com"
     sandbox_api = "https://api-public.sandbox.pro.coinbase.com"
 
-
     def _generate_signature(self, endpoint: str, method: str, body = ''):
         timestamp = str(time.time())
         message = ''.join([timestamp, method, endpoint, body])
@@ -97,7 +96,6 @@ class Coinbase(API):
 
             return resp.json()
 
-
     def _get_fills(self, symbol=None, retry=None, retry_wait=0, start_date=None, end_date=None):
         endpoint = '/fills'
         if symbol is not None:
@@ -123,7 +121,6 @@ class Coinbase(API):
 
         data = list(map(self._trade_normalization, data))
         return data
-
 
     def _get_orders(self, body):
         """
@@ -152,7 +149,6 @@ class Coinbase(API):
 
         return data
 
-
     def _get_order(self, order_id):
         """
         https://docs.gdax.com/?python#get-an-order
@@ -162,7 +158,6 @@ class Coinbase(API):
         data = self._make_request("GET", endpoint, header)
 
         return data
-
 
     def _post_order(self, body, retry=None, retry_wait=0):
         """
@@ -174,11 +169,9 @@ class Coinbase(API):
 
         return data
 
-
-    def _delete_order(self, order_id=None):
+    def _delete_order(self, order_id):
         endpoint = "/orders"
-        if order_id is not None:
-            endpoint = '{}/{}'.format(endpoint, order_id)
+        endpoint = '{}/{}'.format(endpoint, order_id)
 
         header = self._generate_signature(endpoint, "DELETE")
         self._make_request("DELETE", endpoint, header)
@@ -190,7 +183,6 @@ class Coinbase(API):
     def _post(self, endpoint, body):
         header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
         return self._make_request("POST", endpoint, header, body)
-
 
     def fills(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
         """
@@ -258,10 +250,8 @@ class Coinbase(API):
 
         return responses
 
-
-    def cancel_orders(self, order_id=None):
+    def cancel_order(self, order_id):
         self._delete_order(order_id)
-
 
     def get_orders(self, body):
         """
@@ -272,7 +262,6 @@ class Coinbase(API):
         }
         """
         return self._get_orders(body)
-
 
     def get_order(self, order_id: str):
         return self._trade_normalization(self._get_order(order_id))
@@ -296,7 +285,6 @@ class Coinbase(API):
 
         return self._get(endpoint)
 
-
     def deposit_funds(self, body):
         """
         Deposit funds from a payment method to the account the api key is associated with.
@@ -309,7 +297,6 @@ class Coinbase(API):
         }
         """
         return self._post("/deposits/payment-method", body)
-
 
     def deposit_coinbase(self, body):
         """
@@ -324,7 +311,6 @@ class Coinbase(API):
         """
         return self._post("/deposits/coinbase-account", body)
 
-
     def withdrawal_funds(self, body):
         """
         Withdrawal funds from the account the api key is associated with to the specified account
@@ -337,7 +323,6 @@ class Coinbase(API):
         """
         return self._post("/withdrawals/payment-method", body)
 
-
     def withdrawal_coinbase(self, body):
         """
         Withdrawal funds from the account the api key is associated with to the specified coinbase account
@@ -349,7 +334,6 @@ class Coinbase(API):
         }
         """
         return self._post("/withdrawals/coinbase-account", body)
-
 
     def withdrawal_crypto(self, body):
         """
@@ -368,7 +352,6 @@ class Coinbase(API):
 
     def list_coinbase_accounts(self):
         return self._get("/coinbase-accounts")
-
 
     def _trade_normalization(self, trade: dict) -> dict:
         trade_data = {

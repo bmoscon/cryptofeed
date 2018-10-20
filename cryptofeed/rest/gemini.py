@@ -117,12 +117,8 @@ class Gemini(API):
         return self._post("/v1/order/new", parameters)
 
 
-    def cancel_order(self, parameters):
-        """
-        Parameters:
-            order_id	integer	The order ID given by /order/new
-        """
-        return self._post("/v1/order/cancel", parameters)
+    def cancel_order(self, order_id):
+        return self._post("/v1/order/cancel", {'order_id': order_id})
 
 
     def cancel_all_session_orders(self):

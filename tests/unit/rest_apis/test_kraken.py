@@ -41,7 +41,8 @@ def test_get_order_book():
 
 
 def test_get_recent_trades():
-    trades = kraken.get_recent_trades({"pair": "adacad"})
+    trades = kraken.trades('ADA-CAD')
+    print(trades)
     assert len(trades['result']['ADACAD']) > 0
 
 
