@@ -1,9 +1,10 @@
 ## Changelog
 
-### 1.0.0
+### 0.17.1
   * Bugfix #43: Coinbase L2 book used "0" rather than 0 for comparisons against decimal.Decimal
   * Feature: REST feed market data supported via normal subscription methods
   * Feature: Kraken support
+  * Bugfix: Bitfinex book timestamps match expected bitfinex timestamps (in ms)
 
 ### 0.17.0 (2018-10-13)
   * Feature: Timestamps for orderbooks and book deltas
