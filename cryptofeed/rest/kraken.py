@@ -1,5 +1,5 @@
 from time import time
-import hashlib, hmac, requests, urllib, json, base64
+import hashlib, hmac, requests, urllib, base64
 
 from cryptofeed.rest.api import API
 from cryptofeed.exchanges import KRAKEN
