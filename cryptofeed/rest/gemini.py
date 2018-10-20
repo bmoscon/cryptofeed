@@ -1,5 +1,5 @@
 from time import time
-import hashlib, hmac, requests, urllib, json, base64
+import hashlib, hmac, requests, json, base64
 
 from cryptofeed.rest.api import API
 from cryptofeed.feeds import GEMINI
@@ -16,23 +16,14 @@ class Gemini(API):
     api = "https://api.gemini.com"
     sandbox_api = "https://api.sandbox.gemini.com"
 
-    def _get(self, command: str, options = {}):
+    def _get(self, command: str, options=None):
         api = self.api
         if self.sandbox:
             api = self.sandbox_api
 
         base_url = "{}{}".format(api, command)
 
-        # loop over dictionary of options and add them as query parameters to the url
-        # example: currencyPair=BTC_NXT&depth=10
-        for key, val in options.items():
-            if "?" not in base_url:
-                base_url = "{}?{}={}".format(base_url, key, val)
-                continue
-
-            base_url = "{}&{}={}".format(base_url, key, val)
-
-        resp = requests.get(base_url)
+        resp = requests.get(base_url, options)
 
         if resp.status_code != 200:
             LOG.error("%s: Status code %d", self.ID, resp.status_code)
@@ -43,7 +34,9 @@ class Gemini(API):
         return resp.json()
 
 
-    def _post(self, command: str, payload = {}):
+    def _post(self, command: str, payload=None):
+        if not payload:
+            payload = {}
         payload['request'] = command
         payload['nonce'] = int(time() * 1000)
 
@@ -84,7 +77,7 @@ class Gemini(API):
     def ticker(self, symbol: str):
         return self._get("/v1/pubticker/{}".format(symbol))
 
-    def current_order_book(self, symbol: str, parameters = {}):
+    def current_order_book(self, symbol: str, parameters=None):
         """
         Signature:
             symbol: str, parameters: dict of params for get query
@@ -94,7 +87,7 @@ class Gemini(API):
         """
         return self._get("/v1/book/{}".format(symbol), parameters)
 
-    def trade_history(self, symbol: str, parameters = {}):
+    def trade_history(self, symbol: str, parameters=None):
         """
         Signature:
             symbol: str, parameters: dict of params for get query
@@ -108,7 +101,7 @@ class Gemini(API):
     def current_auction(self, symbol: str):
         return self._get("/v1/auction/{}".format(symbol))
 
-    def auction_history(self, symbol: str, parameters = {}):
+    def auction_history(self, symbol: str, parameters=None):
         """
         Signature:
             symbol: str, parameters: dict of params for get query
@@ -188,7 +181,7 @@ class Gemini(API):
     def get_available_balances(self):
         return self._post("/v1/balances")
 
-    def transfers(self, parameters={}):
+    def transfers(self, parameters=None):
         """
         Parameters:
             timestamp	timestamp	Optional. Only return transfers on or after this timestamp. See Data Types: Timestamps for more information. If not present, will show the most recent transfers.
@@ -196,7 +189,7 @@ class Gemini(API):
         """
         return self._post("/v1/transfers", parameters)
 
-    def new_deposit_address(self, currency: str, parameters={}):
+    def new_deposit_address(self, currency: str, parameters=None):
         """
         Parameters:
             label	string	Optional. label for the deposit address
