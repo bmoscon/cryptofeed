@@ -5,6 +5,7 @@ from cryptofeed.rest.bitfinex import Bitfinex
 from cryptofeed.rest.coinbase import Coinbase
 from cryptofeed.rest.poloniex import Poloniex
 from cryptofeed.rest.gemini import Gemini
+from cryptofeed.rest.kraken import Kraken
 
 
 FORMAT = '%(asctime)-15s : %(levelname)s : %(message)s'
@@ -23,7 +24,8 @@ class Rest:
             'bitfinex': Bitfinex(config),
             'coinbase': Coinbase(config, sandbox=sandbox),
             'poloniex': Poloniex(config),
-            'gemini': Gemini(config, sandbox=sandbox)
+            'gemini': Gemini(config, sandbox=sandbox),
+            'kraken': Kraken(config)
         }
 
     def __getattr__(self, attr):

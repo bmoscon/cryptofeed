@@ -14,3 +14,6 @@ poloniex:
 gemini:
     key_id: null
     key_secret: null
+kraken:
+    key_id: null
+    key_secret: null
