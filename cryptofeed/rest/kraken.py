@@ -12,7 +12,7 @@ class Kraken(API):
 
     api = "https://api.kraken.com/0"
 
-    def _post_public(self, command: str, payload = None):
+    def _post_public(self, command: str, payload=None):
         if payload is None:
             payload = {}
         url = "{}{}".format(self.api, command)
@@ -28,7 +28,7 @@ class Kraken(API):
         return resp.json()
 
 
-    def _post_private(self, command: str, payload = None):
+    def _post_private(self, command: str, payload=None):
         # API-Key = API key
         # API-Sign = Message signature using HMAC-SHA512 of (URI path + SHA256(nonce + POST data)) and base64 decoded secret API key
         if payload is None:
@@ -67,7 +67,7 @@ class Kraken(API):
     def get_server_time(self):
         return self._post_public("/public/Time")
 
-    def get_asset_info(self, payload = None):
+    def get_asset_info(self, payload=None):
         """
         Parameters (optional):
             asset: comma delimited list of asset types (currencies)
@@ -75,7 +75,7 @@ class Kraken(API):
         """
         return self._post_public("/public/Assets", payload)
 
-    def get_tradeable_pairs(self, payload = None):
+    def get_tradeable_pairs(self, payload=None):
         """
         Parameters:
             info: info = all info (default), leverage = leverage info, fees = fees schedule, margin = margin info
@@ -90,7 +90,7 @@ class Kraken(API):
         """
         return self._post_public("/public/Ticker", payload)
 
-    def get_ohlc_data(self, payload = None):
+    def get_ohlc_data(self, payload=None):
         """
         Parameters:
             pair = asset pair to get OHLC data for (required)
@@ -101,7 +101,7 @@ class Kraken(API):
         return self._post_public("/public/OHLC", payload)
 
 
-    def get_order_book(self, payload = None):
+    def get_order_book(self, payload=None):
         """
         Parameters:
             pair = asset pair to get market depth for
@@ -110,7 +110,7 @@ class Kraken(API):
         return self._post_public("/public/Depth", payload)
 
 
-    def get_recent_trades(self, payload = None):
+    def get_recent_trades(self, payload=None):
         """
         Parameters:
             pair = asset pair to get trade data for
@@ -118,7 +118,7 @@ class Kraken(API):
         """
         return self._post_public("/public/Trades", payload)
 
-    def get_recent_spread_data(self, payload = None):
+    def get_recent_spread_data(self, payload=None):
         """
         Parameters:
             pair = asset pair to get spread data for
@@ -136,7 +136,7 @@ class Kraken(API):
         """
         return self._post_private('/private/Balance', payload)
 
-    def get_open_orders(self, payload = None):
+    def get_open_orders(self, payload=None):
         """
         Parameters:
             trades = whether or not to include trades in output (optional.  default = false)
@@ -144,7 +144,7 @@ class Kraken(API):
         """
         return self._post_private('/private/OpenOrders', payload)
 
-    def get_closed_orders(self, payload = None):
+    def get_closed_orders(self, payload=None):
         """
         Parameters:
             trades = whether or not to include trades in output (optional.  default = false)
@@ -156,7 +156,7 @@ class Kraken(API):
         """
         return self._post_private('/private/ClosedOrders', payload)
 
-    def query_orders_info(self, payload = None):
+    def query_orders_info(self, payload=None):
         """
         Parameters:
             txid = comma delimited list of transaction ids to query info about (20 maximum)
@@ -165,7 +165,7 @@ class Kraken(API):
         """
         return self._post_private('/private/QueryOrders', payload)
 
-    def get_trades_history(self, payload = None):
+    def get_trades_history(self, payload=None):
         """
         Parameters:
             type = type of trade (optional)
@@ -199,7 +199,7 @@ class Kraken(API):
         return self._post_private('/private/OpenPositions', payload)
 
 
-    def get_ledgers_info(self, payload = None):
+    def get_ledgers_info(self, payload=None):
         """
         Parameters:
             aclass = asset class (optional):
@@ -225,7 +225,7 @@ class Kraken(API):
         return self._post_private('/private/QueryLedgers', payload)
 
 
-    def get_trade_volume(self, payload = None):
+    def get_trade_volume(self, payload=None):
         """
         Parameters:
             pair = comma delimited list of asset pairs to get fee info on (optional)
