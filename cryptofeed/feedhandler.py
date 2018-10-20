@@ -130,7 +130,7 @@ class FeedHandler:
             try:
                 while True:
                     await feed.message_handler()
-            except Exception as e:
+            except Exception:
                 LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
@@ -159,7 +159,7 @@ class FeedHandler:
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
-            except Exception as e:
+            except Exception:
                 LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1

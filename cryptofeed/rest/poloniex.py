@@ -15,15 +15,10 @@ class Poloniex(API):
     # for public_api add "public" to the url, for trading add "tradingApi" (example: https://poloniex.com/public)
     rest_api = "https://poloniex.com/"
 
-    def _get(self, command: str, options = {}):
+    def _get(self, command: str, options=None):
         base_url = "{}public?command={}".format(self.rest_api, command)
 
-        # loop over dictionary of options and add them as query parameters to the url
-        # example: currencyPair=BTC_NXT&depth=10
-        for key, val in options.items():
-            base_url = "{}&{}={}".format(base_url, key, val)
-
-        resp = requests.get(base_url)
+        resp = requests.get(base_url, params=options)
 
         if resp.status_code != 200:
             LOG.error("%s: Status code %d", self.ID, resp.status_code)
@@ -34,7 +29,9 @@ class Poloniex(API):
         return resp.json()
 
 
-    def _post(self, command: str, payload = {}):
+    def _post(self, command: str, payload=None):
+        if not payload:
+            payload = {}
         # need to sign the payload, referenced https://stackoverflow.com/questions/43559332/python-3-hash-hmac-sha512
         payload['command'] = command
         payload['nonce'] = int(time() * 1000)
@@ -64,19 +61,19 @@ class Poloniex(API):
     def past_day_volume(self):
         return self._get("return24hVolume")
 
-    def order_books(self, options = {}):
+    def order_books(self, options=None):
         """
         options: currencyPair=BTC_NXT depth=10
         """
         return self._get("returnOrderBook", options)
 
-    def all_trade_history(self, options = {}):
+    def all_trade_history(self, options=None):
         """
         options: currencyPair=BTC_NXT start=1410158341 end=1410499372
         """
         return self._get("returnTradeHistory", options)
 
-    def chart_data(self, options = {}):
+    def chart_data(self, options=None):
         """
         options: currencyPair=BTC_XMR start=1405699200 end=9999999999 period=14400
         """
@@ -90,7 +87,7 @@ class Poloniex(API):
     def balances(self):
         return self._post("returnBalances")
 
-    def complete_balances(self, payload={}):
+    def complete_balances(self, payload=None):
         """
         set {"account": "all"} to return margin and lending accounts
         """
@@ -99,7 +96,7 @@ class Poloniex(API):
     def deposit_addresses(self):
         return self._post("returnDepositAddresses")
 
-    def generate_new_address(self, payload={}):
+    def generate_new_address(self, payload=None):
         """
         Generates a new deposit address for the currency specified by the "currency"
         """
@@ -119,7 +116,7 @@ class Poloniex(API):
         """
         return self._post("returnOpenOrders", payload)
 
-    def trade_history(self, payload={"currencyPair": "all"}):
+    def trade_history(self, payload=None):
         """
         Data FORMAT
         {
@@ -129,6 +126,8 @@ class Poloniex(API):
         "limit": int (optional, up to 10,000. only 500 if not specified)
         } ("all" will return open orders for all markets)
         """
+        if not payload:
+            payload = {"currencyPair": "all"}
         return self._post("returnTradeHistory", payload)
 
     def order_trades(self, payload):
@@ -196,7 +195,7 @@ class Poloniex(API):
         """
         return self._post("withdraw", payload)
 
-    def available_account_balances(self, payload={}):
+    def available_account_balances(self, payload=None):
         """
         "account" (optional)
         """

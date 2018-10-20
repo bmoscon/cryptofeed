@@ -12,7 +12,7 @@ def get_kraken_pairs():
             modifier = -5
         normalized = alt[:modifier] + '-' + alt[modifier:]
         normalized = normalized.replace('XBT', 'BTC')
-        normalized = normalized.replace('XDG', 'DOG')                                                                                                                           
+        normalized = normalized.replace('XDG', 'DOG')
         ret[pair] = normalized
     return ret
 
