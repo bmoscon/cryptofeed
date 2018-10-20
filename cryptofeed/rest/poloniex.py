@@ -109,11 +109,13 @@ class Poloniex(API):
         """
         return self._post("returnDepositsWithdrawals", payload)
 
-    def open_orders(self, payload={"currencyPair": "all"}):
+    def open_orders(self, payload=None):
         """
         Data FORMAT
         {"currencyPair": <pair>} ("all" will return open orders for all markets)
         """
+        if not payload:
+            payload = {"currencyPair": "all"}
         return self._post("returnOpenOrders", payload)
 
     def trade_history(self, payload=None):
