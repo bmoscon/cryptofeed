@@ -2,7 +2,7 @@ from time import time
 import hashlib, hmac, requests, urllib
 
 from cryptofeed.rest.api import API
-from cryptofeed.feeds import POLONIEX
+from cryptofeed.exchanges import POLONIEX
 from cryptofeed.log import get_logger
 
 LOG = get_logger('rest', 'rest.log')
