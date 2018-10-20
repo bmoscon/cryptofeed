@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.17.1
+### 0.17.1 (2018-10-19)
   * Bugfix #43: Coinbase L2 book used "0" rather than 0 for comparisons against decimal.Decimal
   * Feature: REST feed market data supported via normal subscription methods
   * Feature: Kraken support
