@@ -20,12 +20,7 @@ class Kraken(API):
         url = "{}{}".format(self.api, command)
 
         resp = requests.post(url, data=payload)
-
-        if resp.status_code != 200:
-            LOG.error("%s: Status code %d", self.ID, resp.status_code)
-            LOG.error("%s: Headers: %s", self.ID, resp.headers)
-            LOG.error("%s: Resp: %s", self.ID, resp.text)
-            resp.raise_for_status()
+        self.handle_error(resp, LOG)
 
         return resp.json()
 
@@ -55,12 +50,7 @@ class Kraken(API):
         }
 
         resp = requests.post("{}{}".format(self.api, command), data=payload, headers=headers)
-
-        if resp.status_code != 200:
-            LOG.error("%s: Status code %d", self.ID, resp.status_code)
-            LOG.error("%s: Headers: %s", self.ID, resp.headers)
-            LOG.error("%s: Resp: %s", self.ID, resp.text)
-            resp.raise_for_status()
+        self.handle_error(resp, LOG)
 
         return resp.json()
 

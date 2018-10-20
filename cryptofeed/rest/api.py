@@ -22,6 +22,13 @@ class API:
                     self.key_passphrase = data[self.ID.lower()]['key_passphrase']
         except (KeyError, FileNotFoundError, TypeError):
             pass
+    
+    def handle_error(self, resp, log):
+        if resp.status_code >= 300:
+            log.error("%s: Status code %d", self.ID, resp.status_code)
+            log.error("%s: Headers: %s", self.ID, resp.headers)
+            log.error("%s: Resp: %s", self.ID, resp.text)
+            resp.raise_for_status()
 
     def trades(self, *args, **kwargs):
         raise NotImplementedError

@@ -120,10 +120,7 @@ class Bitfinex(API):
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                LOG.error("%s: Status code %d", self.ID, r.status_code)
-                LOG.error("%s: Headers: %s", self.ID, r.headers)
-                LOG.error("%s: Resp: %s", self.ID, r.text)
-                r.raise_for_status()
+                self.handle_error(r, LOG)
 
             data = r.json()
             if data == []:

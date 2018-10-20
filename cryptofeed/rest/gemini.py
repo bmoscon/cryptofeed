@@ -23,12 +23,7 @@ class Gemini(API):
 
         base_url = "{}{}".format(api, command)
         resp = requests.get(base_url, params=options)
-
-        if resp.status_code != 200:
-            LOG.error("%s: Status code %d", self.ID, resp.status_code)
-            LOG.error("%s: Headers: %s", self.ID, resp.headers)
-            LOG.error("%s: Resp: %s", self.ID, resp.text)
-            resp.raise_for_status()
+        self.handle_error(resp, LOG)
 
         return resp.json()
 
@@ -58,18 +53,11 @@ class Gemini(API):
         }
 
         resp = requests.post(api, headers=headers)
-        if resp.status_code >= 300:
-            LOG.error("%s: Status code %d", self.ID, resp.status_code)
-            LOG.error("%s: Headers: %s", self.ID, resp.headers)
-            LOG.error("%s: Resp: %s", self.ID, resp.text)
-            resp.raise_for_status()
+        self.handle_error(resp, LOG)
 
-        # return response.content
         return resp.json()
 
-
     # Public Routes
-
     def symbols(self):
         return self._get("/v1/symbols")
 

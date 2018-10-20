@@ -9,8 +9,10 @@ from cryptofeed.feeds import COINBASE
 from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange
 
+
 REQUEST_LIMIT = 10
 LOG = get_logger('rest', 'rest.log')
+
 
 # API Docs https://docs.gdax.com/
 class Coinbase(API):
@@ -91,11 +93,7 @@ class Coinbase(API):
             # 403 Forbidden – You do not have access to the requested resource
             # 404 Not Found
             # 500 Internal Server Error – We had a problem with our server
-            if resp.status_code != 200:
-                LOG.error("%s: Status code %d", self.ID, resp.status_code)
-                LOG.error("%s: Headers: %s", self.ID, resp.headers)
-                LOG.error("%s: Resp: %s", self.ID, resp.text)
-                resp.raise_for_status()
+            self.handle_error(resp, LOG)
 
             return resp.json()
 

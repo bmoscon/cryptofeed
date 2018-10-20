@@ -104,10 +104,7 @@ class Bitmex(API):
                     limit = int(r.headers['X-RateLimit-Remaining'])
                     data = r.json()
                 except:
-                    LOG.error("%s: Status code %d", self.ID, r.status_code)
-                    LOG.error("%s: Headers: %s", self.ID, r.headers)
-                    LOG.error("%s: Resp: %s", self.ID, r.text)
-                    raise
+                    self.handle_error(r, LOG)
 
                 yield data
 

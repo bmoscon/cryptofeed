@@ -19,12 +19,7 @@ class Poloniex(API):
         base_url = "{}public?command={}".format(self.rest_api, command)
 
         resp = requests.get(base_url, params=options)
-
-        if resp.status_code != 200:
-            LOG.error("%s: Status code %d", self.ID, resp.status_code)
-            LOG.error("%s: Headers: %s", self.ID, resp.headers)
-            LOG.error("%s: Resp: %s", self.ID, resp.text)
-            resp.raise_for_status()
+        self.handle_error(resp, LOG)
 
         return resp.json()
 
@@ -45,11 +40,7 @@ class Poloniex(API):
             'Content-Type': 'application/x-www-form-urlencoded'
         }
         resp = requests.post("{}tradingApi?command={}".format(self.rest_api, command), headers=headers, data=paybytes)
-        if resp.status_code >= 300:
-            LOG.error("%s: Status code %d", self.ID, resp.status_code)
-            LOG.error("%s: Headers: %s", self.ID, resp.headers)
-            LOG.error("%s: Resp: %s", self.ID, resp.text)
-            resp.raise_for_status()
+        self.handle_error(resp, LOG)
 
         return resp.json()
 
