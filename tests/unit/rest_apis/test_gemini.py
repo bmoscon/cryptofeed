@@ -90,7 +90,7 @@ def test_new_order_and_cancel():
         "type": "exchange limit"
     })
     assert 'order_id' in order_resp
-    cancel_resp = gemini.cancel_order({'order_id': order_resp['order_id']})
+    cancel_resp = sandbox.cancel_order({'order_id': order_resp['order_id']})
     assert 'order_id' in cancel_resp
 
 
@@ -116,8 +116,8 @@ def test_order_status():
         "side": "buy",
         "type": "exchange limit"
     })
-    status = gemini.order_status({'order_id': order_resp['order_id']})
-    gemini.cancel_all_active_orders()
+    status = sandbox.order_status({'order_id': order_resp['order_id']})
+    sandbox.cancel_all_active_orders()
 
     assert status['symbol'] == 'btcusd'
     assert status['side'] == 'buy'
@@ -132,7 +132,7 @@ def test_get_active_orders():
 
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 def test_get_past_trades():
-    trades = sanxbox.get_past_trades({'symbol': 'btcusd'})
+    trades = sandbox.get_past_trades({'symbol': 'btcusd'})
     assert len(trades) == 0
 
 
