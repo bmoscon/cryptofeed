@@ -5,7 +5,9 @@ from cryptofeed.rest.api import API
 from cryptofeed.exchanges import KRAKEN
 from cryptofeed.log import get_logger
 
+
 LOG = get_logger('rest', 'rest.log')
+
 
 class Kraken(API):
     ID = KRAKEN
@@ -17,7 +19,7 @@ class Kraken(API):
             payload = {}
         url = "{}{}".format(self.api, command)
 
-        resp = requests.post(url, data = payload)
+        resp = requests.post(url, data=payload)
 
         if resp.status_code != 200:
             LOG.error("%s: Status code %d", self.ID, resp.status_code)
@@ -52,7 +54,7 @@ class Kraken(API):
             'API-Sign': sigdigest.decode()
         }
 
-        resp = requests.post("{}{}".format(self.api, command), data = payload, headers = headers)
+        resp = requests.post("{}{}".format(self.api, command), data=payload, headers=headers)
 
         if resp.status_code != 200:
             LOG.error("%s: Status code %d", self.ID, resp.status_code)
