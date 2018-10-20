@@ -22,8 +22,7 @@ class Gemini(API):
             api = self.sandbox_api
 
         base_url = "{}{}".format(api, command)
-
-        resp = requests.get(base_url, options)
+        resp = requests.get(base_url, params=options)
 
         if resp.status_code != 200:
             LOG.error("%s: Status code %d", self.ID, resp.status_code)
