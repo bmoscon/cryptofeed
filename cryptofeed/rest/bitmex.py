@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import requests
 import pandas as pd
 
-from cryptofeed.rest.api import API
+from cryptofeed.rest.api import API, request_retry
 from cryptofeed.feeds import BITMEX
 from cryptofeed.log import get_logger
 
@@ -54,6 +54,15 @@ class Bitmex(API):
         elif dates[-1].right < pd.Timestamp(end_date):
             dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
 
+        @request_retry(ID=self.ID, retry=retry, retry_wait=retry_wait)
+        def helper(start, start_date, end_date):
+            endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(ep, symbol, API_MAX, start, start_date, end_date)
+            header = {}
+            if self.key_id and self.key_secret:
+                header = self._generate_signature("GET", endpoint)
+            header['Accept'] = 'application/json'
+            return requests.get('{}{}'.format(self.api, endpoint), headers=header)
+
         for interval in dates:
             start = 0
 
@@ -64,47 +73,20 @@ class Bitmex(API):
             end_date = str(end).replace(" ", "T") + "Z"
 
             while True:
-                endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(ep, symbol, API_MAX, start, start_date, end_date)
-                header = {}
-                if self.key_id and self.key_secret:
-                    header = self._generate_signature("GET", endpoint)
-                header['Accept'] = 'application/json'
-                try:
-                    r = requests.get('{}{}'.format(self.api, endpoint), headers=header)
-                except TimeoutError as e:
-                    LOG.warning("%s: Timeout - %s", self.ID, e)
-                    if retry is not None:
-                        if retry == 0:
-                            raise
-                        else:
-                            retry -= 1
+                r = helper(start, start_date, end_date)
+
+                if r.status_code == 502:
+                    LOG.warning("%s: 502 - %s", self.ID, r.text)
                     sleep(retry_wait)
                     continue
-                except requests.exceptions.ConnectionError as e:
-                    LOG.warning("%s: Connection error - %s", self.ID, e)
-                    if retry is not None:
-                        if retry == 0:
-                            raise
-                        else:
-                            retry -= 1
-                    sleep(retry_wait)
+                elif r.status_code == 429:
+                    sleep(API_REFRESH)
                     continue
-
-                try:
-                    if r.status_code == 502:
-                        LOG.warning("%s: 502 - %s", self.ID, r.text)
-                        sleep(retry_wait)
-                        continue
-                    elif r.status_code == 429:
-                        sleep(API_REFRESH)
-                        continue
-                    elif r.status_code != 200:
-                        r.raise_for_status()
-
-                    limit = int(r.headers['X-RateLimit-Remaining'])
-                    data = r.json()
-                except:
+                elif r.status_code != 200:
                     self.handle_error(r, LOG)
+
+                limit = int(r.headers['X-RateLimit-Remaining'])
+                data = r.json()
 
                 yield data
 

@@ -9,7 +9,7 @@ import calendar
 import pandas as pd
 import requests
 
-from cryptofeed.rest.api import API
+from cryptofeed.rest.api import API, request_retry
 from cryptofeed.feeds import BITFINEX
 from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
@@ -90,27 +90,12 @@ class Bitfinex(API):
         start = int(calendar.timegm(start.utctimetuple()) * 1000)
         end = int(calendar.timegm(end.utctimetuple()) * 1000)
 
+        @request_retry(ID=self.ID, retry=retry, retry_wait=retry_wait)
+        def helper(start, end):
+            return requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
+
         while True:
-            try:
-                r = requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
-            except TimeoutError as e:
-                LOG.warning("%s: Timeout - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-            except requests.exceptions.ConnectionError as e:
-                LOG.warning("%s: Connection error - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
+            r = helper(start, end)
 
             if r.status_code == 429:
                 sleep(int(r.headers['Retry-After']))

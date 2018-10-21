@@ -1,6 +1,46 @@
 import os
+from functools import wraps
+from time import sleep
 
+import requests
 import yaml
+
+from cryptofeed.log import get_logger
+
+
+LOG = get_logger('rest', 'rest.log')
+
+
+def request_retry(ID, retry=None, retry_wait=10):
+    """
+    exception handler decorator that handles retries for requests
+    """
+    def _req_retry(f):
+        @wraps(f)
+        def f_retry(*args, **kwargs):
+            while True:
+                try:
+                    return f(*args, **kwargs)
+                except TimeoutError as e:
+                    LOG.warning("%s: Timeout - %s", ID, e)
+                    if retry is not None:
+                        if retry == 0:
+                            raise
+                        else:
+                            retry -= 1
+                    sleep(retry_wait)
+                    continue
+                except requests.exceptions.ConnectionError as e:
+                    LOG.warning("%s: Connection error - %s", ID, e)
+                    if retry is not None:
+                        if retry == 0:
+                            raise
+                        else:
+                            retry -= 1
+                    sleep(retry_wait)
+                    continue
+        return f_retry
+    return _req_retry
 
 
 class API:
@@ -24,7 +64,7 @@ class API:
             pass
 
     def handle_error(self, resp, log):
-        if resp.status_code >= 300:
+        if resp.status_code != 200:
             log.error("%s: Status code %d", self.ID, resp.status_code)
             log.error("%s: Headers: %s", self.ID, resp.headers)
             log.error("%s: Resp: %s", self.ID, resp.text)
