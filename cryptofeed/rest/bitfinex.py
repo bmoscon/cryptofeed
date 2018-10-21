@@ -90,7 +90,7 @@ class Bitfinex(API):
         start = int(calendar.timegm(start.utctimetuple()) * 1000)
         end = int(calendar.timegm(end.utctimetuple()) * 1000)
 
-        @request_retry(ID=self.ID, retry=retry, retry_wait=retry_wait)
+        @request_retry(self.ID, retry, retry_wait)
         def helper(start, end):
             return requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
 

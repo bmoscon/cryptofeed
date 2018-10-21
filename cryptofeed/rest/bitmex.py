@@ -54,7 +54,7 @@ class Bitmex(API):
         elif dates[-1].right < pd.Timestamp(end_date):
             dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
 
-        @request_retry(ID=self.ID, retry=retry, retry_wait=retry_wait)
+        @request_retry(self.ID, retry, retry_wait)
         def helper(start, start_date, end_date):
             endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(ep, symbol, API_MAX, start, start_date, end_date)
             header = {}

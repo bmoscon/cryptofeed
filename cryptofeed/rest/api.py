@@ -11,36 +11,34 @@ from cryptofeed.log import get_logger
 LOG = get_logger('rest', 'rest.log')
 
 
-def request_retry(ID, retry=None, retry_wait=10):
-    """
-    exception handler decorator that handles retries for requests
-    """
-    def _req_retry(f):
+def request_retry(exchange, retry, retry_wait):
+    def wrap(f):
         @wraps(f)
-        def f_retry(*args, **kwargs):
+        def wrapped_f(*args, **kwargs):
+            retry_count = retry
             while True:
                 try:
                     return f(*args, **kwargs)
                 except TimeoutError as e:
-                    LOG.warning("%s: Timeout - %s", ID, e)
-                    if retry is not None:
-                        if retry == 0:
+                    LOG.warning("%s: Timeout - %s", exchange, e)
+                    if retry_count is not None:
+                        if retry_count == 0:
                             raise
                         else:
-                            retry -= 1
+                            retry_count -= 1
                     sleep(retry_wait)
                     continue
                 except requests.exceptions.ConnectionError as e:
-                    LOG.warning("%s: Connection error - %s", ID, e)
-                    if retry is not None:
-                        if retry == 0:
+                    LOG.warning("%s: Connection error - %s", exchange, e)
+                    if retry_count is not None:
+                        if retry_count == 0:
                             raise
                         else:
-                            retry -= 1
+                            retry_count -= 1
                     sleep(retry_wait)
                     continue
-        return f_retry
-    return _req_retry
+        return wrapped_f
+    return wrap
 
 
 class API:
