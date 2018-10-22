@@ -144,6 +144,9 @@ class Bitfinex(Feed):
                 self.l2_book[pair] = {BID: sd(), ASK: sd()}
                 for update in msg[1]:
                     price, _, amount = update
+                    price = Decimal(price)
+                    amount = Decimal(amount)
+
                     if amount > 0:
                         side = BID
                     else:
@@ -154,6 +157,8 @@ class Bitfinex(Feed):
             else:
                 # book update
                 price, count, amount = msg[1]
+                price = Decimal(price)
+                amount = Decimal(amount)
 
                 if amount > 0:
                     side = BID
@@ -208,6 +213,8 @@ class Bitfinex(Feed):
 
                 for update in msg[1]:
                     order_id, price, amount = update
+                    price = Decimal(price)
+                    amount = Decimal(amount)
 
                     if amount > 0:
                         side = BID
@@ -221,6 +228,8 @@ class Bitfinex(Feed):
             else:
                 # book update
                 order_id, price, amount = msg[1]
+                price = Decimal(price)
+                amount = Decimal(amount)
 
                 if amount > 0:
                     side = BID

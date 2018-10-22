@@ -104,9 +104,9 @@ class Bitmex(Feed):
         if msg['action'] == 'partial' or msg['action'] == 'insert':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
-                price = data['price']
+                price = Decimal(data['price'])
                 pair = data['symbol']
-                size = data['size']
+                size = Decimal(data['size'])
                 order_id = data['id']
 
                 if price in self.l3_book[pair][side]:
@@ -119,7 +119,7 @@ class Bitmex(Feed):
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 pair = data['symbol']
-                update_size = data['size']
+                update_size = Decimal(data['size'])
                 order_id = data['id']
 
                 price, _ = self.order_id[pair][side][order_id]

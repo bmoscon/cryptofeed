@@ -74,13 +74,13 @@ class Poloniex(Feed):
             # 0 is asks, 1 is bids
             order_book = msg[0][1]['orderBook']
             for key in order_book[0]:
-                amount = order_book[0][key]
-                price = key
+                amount = Decimal(order_book[0][key])
+                price = Decimal(key)
                 self.l2_book[pair][ASK][price] = amount
 
             for key in order_book[1]:
-                amount = order_book[1][key]
-                price = key
+                amount = Decimal(order_book[1][key])
+                price = Decimal(key)
                 self.l2_book[pair][BID][price] = amount
         else:
             pair = poloniex_id_pair_mapping[chan_id]
@@ -90,8 +90,8 @@ class Poloniex(Feed):
                 # order book update
                 if msg_type == 'o':
                     side = ASK if update[1] == 0 else BID
-                    price = update[2]
-                    amount = update[3]
+                    price = Decimal(update[2])
+                    amount = Decimal(update[3])
                     if amount == 0:
                         delta[side][DEL].append(price)
                         del self.l2_book[pair][side][price]
@@ -101,6 +101,8 @@ class Poloniex(Feed):
                 elif msg_type == 't':
                     # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp
                     _, order_id, _, price, amount, timestamp = update
+                    price = Decimal(price)
+                    amount = Decimal(amount)
                     side = ASK if update[2] == 0 else BID
                     await self.callbacks[TRADES](feed=self.id,
                                                  pair=pair,
