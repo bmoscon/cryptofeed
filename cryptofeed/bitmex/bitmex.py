@@ -78,8 +78,8 @@ class Bitmex(Feed):
             await self.callbacks[TRADES](feed=self.id,
                                          pair=data['symbol'],
                                          side=BID if data['side'] == 'Buy' else ASK,
-                                         amount=data['size'],
-                                         price=data['price'],
+                                         amount=Decimal(data['size']),
+                                         price=Decimal(data['price']),
                                          order_id=data['trdMatchID'],
                                          timestamp=data['timestamp'])
 

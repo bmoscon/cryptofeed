@@ -118,8 +118,8 @@ class Coinbase(Feed):
                 pair=msg['product_id'],
                 order_id=msg['trade_id'],
                 side=BID if msg['side'] == 'buy' else ASK,
-                amount=msg['size'],
-                price=msg['price'],
+                amount=Decimal(msg['size']),
+                price=Decimal(msg['price']),
                 timestamp=msg['time']
             )
 

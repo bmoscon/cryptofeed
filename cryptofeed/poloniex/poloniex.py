@@ -48,15 +48,15 @@ class Poloniex(Feed):
         pair = pair_exchange_to_std(poloniex_id_pair_mapping[pair_id])
         await self.callbacks[TICKER](feed=self.id,
                                      pair=pair,
-                                     bid=bid,
-                                     ask=ask)
+                                     bid=Decimal(bid),
+                                     ask=Decimal(ask))
 
     async def _volume(self, msg):
         # ['2018-01-02 00:45', 35361, {'BTC': '43811.201', 'ETH': '6747.243', 'XMR': '781.716', 'USDT': '196758644.806'}]
         # timestamp, exchange volume, dict of top volumes
         _, _, top_vols = msg
         for pair in top_vols:
-            top_vols[pair] = top_vols[pair]
+            top_vols[pair] = Decimal(top_vols[pair])
         self.callbacks[VOLUME](feed=self.id, **top_vols)
 
     async def _book(self, msg, chan_id):
