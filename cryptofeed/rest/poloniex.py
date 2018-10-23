@@ -1,9 +1,15 @@
 from time import time
 import hashlib, hmac, requests, urllib
+from decimal import Decimal
+import calendar
 
-from cryptofeed.rest.api import API
+import pandas as pd
+
+from cryptofeed.rest.api import API, request_retry
 from cryptofeed.exchanges import POLONIEX
 from cryptofeed.log import get_logger
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+
 
 LOG = get_logger('rest', 'rest.log')
 
@@ -58,11 +64,48 @@ class Poloniex(API):
         """
         return self._get("returnOrderBook", options)
 
-    def all_trade_history(self, options=None):
-        """
-        options: currencyPair=BTC_NXT start=1410158341 end=1410499372
-        """
-        return self._get("returnTradeHistory", options)
+    def _trade_normalize(self, trade, symbol):
+        return {
+            'timestamp': trade['date'],
+            'pair': pair_exchange_to_std(symbol),
+            'id': trade['tradeID'],
+            'feed': self.ID,
+            'side': trade['type'],
+            'amount': Decimal(trade['amount']),
+            'price': Decimal(trade['rate'])
+        }
+
+    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+        symbol = pair_std_to_exchange(symbol, self.ID)
+
+        @request_retry(self.ID, retry, retry_wait)
+        def helper(s=None, e=None):
+            data = self._get("returnTradeHistory", {'currencyPair': symbol, 'start': s, 'end': e})
+            data.reverse()
+            return data
+
+        if not start or not end:
+            yield map(lambda x: self._trade_normalize(x, symbol), helper())
+
+        else:
+            start = pd.Timestamp(start)
+            end = pd.Timestamp(end) - pd.Timedelta(nanoseconds=1)
+
+            start = int(calendar.timegm(start.utctimetuple()))
+            end = int(calendar.timegm(end.utctimetuple()))
+
+            s = start
+            e = start + 21600
+            while True:
+                if e > end:
+                    e = end
+
+                yield map(lambda x: self._trade_normalize(x, symbol), helper(s=s, e=e))
+
+                s = e
+                e += 21600
+                if s >= end:
+                    break
 
     def chart_data(self, options=None):
         """

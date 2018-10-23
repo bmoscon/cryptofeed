@@ -1993,8 +1993,9 @@ _exchange_to_std = {
 }
 
 for pair in poloniex_trading_pairs:
-    std = pair.replace("_", "-")
-    _exchange_to_std[pair] = pair.replace("_", "-")
+    pairs = pair.split('_')
+    std = "{}-{}".format(pairs[1], pairs[0])
+    _exchange_to_std[pair] = std
     if std in _std_trading_pairs:
         _std_trading_pairs[std][POLONIEX] = pair
     else:
