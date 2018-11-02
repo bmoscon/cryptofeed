@@ -7,12 +7,7 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-from collections import defaultdict
-import time
 
-from sortedcontainers import SortedDict as sd
-
-from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.feeds import feed_to_exchange
 from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, UND
