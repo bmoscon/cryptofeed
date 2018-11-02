@@ -9,40 +9,41 @@ from cryptofeed.coinbase.pairs import coinbase_trading_pairs
 from cryptofeed.poloniex.pairs import poloniex_trading_pairs
 from cryptofeed.bitfinex.pairs import bitfinex_trading_pairs
 from cryptofeed.gemini.pairs import gemini_trading_pairs
-from cryptofeed.hitbtc.pairs import hitbtc_trading_pairs
+from cryptofeed.hitbtc.pairs import hitbtc_pair_mapping
 from cryptofeed.bitstamp.pairs import bitstamp_trading_pairs
+from cryptofeed.exchanges import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP
 
 
 def test_coinbase_pair_conversions():
     for pair in coinbase_trading_pairs:
-        assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, 'COINBASE'))
+        assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, COINBASE))
 
 
 def test_poloniex_pair_conversions():
     for pair in poloniex_trading_pairs:
         std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, 'POLONIEX'))
+        assert(pair == pair_std_to_exchange(std, POLONIEX))
 
 
 def test_bitfinex_pair_conversions():
     for pair in bitfinex_trading_pairs:
         std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, 'BITFINEX'))
+        assert(pair == pair_std_to_exchange(std, BITFINEX))
 
 
 def test_hitbtc_pair_conversions():
-    for pair in hitbtc_trading_pairs:
+    for _, pair in hitbtc_pair_mapping.items():
         std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, 'HITBTC'))
+        assert(pair == pair_std_to_exchange(std, HITBTC))
 
 
 def test_gemini_pair_conversions():
     for pair in gemini_trading_pairs:
         std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, 'GEMINI'))
+        assert(pair == pair_std_to_exchange(std, GEMINI))
 
 
 def test_bitstamp_pair_conversions():
     for pair in bitstamp_trading_pairs:
         std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, 'BITSTAMP'))
+        assert(pair == pair_std_to_exchange(std, BITSTAMP))

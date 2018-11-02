@@ -41,7 +41,6 @@ class Feed:
                           VOLUME: Callback(None),
                           FUNDING: Callback(None)}
 
-
         if callbacks:
             for cb in callbacks:
                 self.callbacks[cb] = callbacks[cb]

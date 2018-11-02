@@ -8,7 +8,7 @@ from cryptofeed.poloniex import Poloniex
 from cryptofeed.bitfinex import Bitfinex
 from cryptofeed.coinbase import Coinbase
 from cryptofeed.gemini import Gemini
-from cryptofeed.hitbtc import HitBTC
+from cryptofeed.hitbtc.hitbtc import HitBTC
 from cryptofeed.bitstamp import Bitstamp
 from cryptofeed.bitmex import Bitmex
 from cryptofeed.kraken.kraken import Kraken
