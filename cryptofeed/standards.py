@@ -7,8 +7,9 @@ associated with this software.
 from datetime import datetime as dt
 import calendar
 
-from cryptofeed.exchanges import COINBASE, GEMINI, BITFINEX, BITSTAMP, HITBTC, BITMEX, POLONIEX, KRAKEN
+from cryptofeed.exchanges import COINBASE, GEMINI, BITFINEX, BITSTAMP, HITBTC, BITMEX, POLONIEX, KRAKEN, BINANCE
 from cryptofeed.poloniex.pairs import poloniex_trading_pairs
+from cryptofeed.binance.pairs import binance_pair_mapping
 from cryptofeed.kraken.pairs import get_kraken_pairs
 
 
@@ -2000,6 +2001,14 @@ for pair in poloniex_trading_pairs:
         _std_trading_pairs[std][POLONIEX] = pair
     else:
         _std_trading_pairs[std] = {POLONIEX: pair}
+
+for std, exch in binance_pair_mapping.items():
+    _exchange_to_std[exch] = std
+    if std in _std_trading_pairs:
+        _std_trading_pairs[std][BINANCE] = exch
+    else:
+        _std_trading_pairs[std] = {BINANCE: exch}
+
 
 kraken_pairs = get_kraken_pairs()
 

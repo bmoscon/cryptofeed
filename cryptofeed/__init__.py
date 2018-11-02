@@ -12,4 +12,5 @@ from cryptofeed.hitbtc import HitBTC
 from cryptofeed.bitstamp import Bitstamp
 from cryptofeed.bitmex import Bitmex
 from cryptofeed.kraken.kraken import Kraken
+from cryptofeed.binance.binance import Binance
 from cryptofeed.feedhandler import FeedHandler

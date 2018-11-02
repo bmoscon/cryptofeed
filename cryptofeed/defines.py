@@ -15,6 +15,7 @@ UNSUPPORTED = 'unsupported'
 
 BID = 'bid'
 ASK = 'ask'
+UND = 'undefined'
 
 DEL = 'delete'
 UPD = 'update'
