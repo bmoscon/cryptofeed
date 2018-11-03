@@ -39,7 +39,7 @@ Supports the following exchanges:
 * Bitstamp
 * BitMEX
 * Kraken
-* Binance (Trades only currently)
+* Binance
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
