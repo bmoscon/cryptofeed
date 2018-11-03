@@ -2,6 +2,7 @@
 
 ### 0.17.2
   * Bugfix #45: Bitstamp prices and sizes in L2 book are string, not decimal.Decimal
+  * Feature: Binance support
 
 ### 0.17.1 (2018-10-19)
   * Bugfix #43: Coinbase L2 book used "0" rather than 0 for comparisons against decimal.Decimal
