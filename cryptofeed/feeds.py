@@ -22,7 +22,8 @@ _feed_to_exchange_map = {
         COINBASE: 'level2',
         BITMEX: 'orderBook10',
         BITSTAMP: 'order_book',
-        KRAKEN: L2_BOOK
+        KRAKEN: L2_BOOK,
+        BINANCE: 'depth20'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -31,7 +32,8 @@ _feed_to_exchange_map = {
         COINBASE: 'full',
         BITMEX: 'orderBookL2',
         POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel,
-        KRAKEN: UNSUPPORTED
+        KRAKEN: UNSUPPORTED,
+        BINANCE: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: UNSUPPORTED,
@@ -50,7 +52,8 @@ _feed_to_exchange_map = {
         BITSTAMP: UNSUPPORTED,
         COINBASE: 'ticker',
         BITMEX: UNSUPPORTED,
-        KRAKEN: TICKER
+        KRAKEN: TICKER,
+        BINANCE: 'ticker'
     },
     VOLUME: {
         POLONIEX: 1003
