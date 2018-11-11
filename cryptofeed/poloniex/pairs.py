@@ -16,4 +16,4 @@ def gen_pairs():
 
 poloniex_id_pair_mapping = gen_pairs()
 poloniex_pair_id_mapping = {value: key for key, value in poloniex_id_pair_mapping.items()}
-poloniex_trading_pairs = { value for _, value in poloniex_id_pair_mapping.items()}
+poloniex_pair_mapping = {value.replace("_", "-") : value for _, value in poloniex_id_pair_mapping.items()}

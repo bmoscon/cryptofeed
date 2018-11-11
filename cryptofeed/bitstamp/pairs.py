@@ -4,8 +4,17 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-bitstamp_trading_pairs = {
-    'btcusd', 'btceur', 'eurusd', 'xrpusd', 'xrpeur', 'xrpbtc', 'ltcusd',
-    'ltceur', 'ltcbtc', 'ethusd', 'etheur', 'ethbtc', 'bchusd', 'bcheur',
-    'bchbtc'
-}
+import requests
+
+
+def gen_pairs():
+    ret = {}
+    r = requests.get('https://www.bitstamp.net/api/v2/trading-pairs-info/').json()
+    for data in r:
+        normalized = data['name'].replace("/", "-")
+        pair = data['url_symbol']
+        ret[normalized] = pair
+    return ret
+
+
+bitstamp_pair_mapping = gen_pairs()
