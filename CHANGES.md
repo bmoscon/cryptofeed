@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.17.3
+  * Feature #41: Rework trading pairs to generate them dynamically (as opposed to hard coded)
+
 ### 0.17.2 (2018-11-03)
   * Bugfix #45: Bitstamp prices and sizes in L2 book are string, not decimal.Decimal
   * Feature: Binance support
