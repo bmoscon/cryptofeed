@@ -16,7 +16,6 @@ from cryptofeed.exchanges import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, B
 
 def test_coinbase_pair_conversions():
     for _, pair in coinbase_pair_mapping.items():
-        print(pair)
         assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, COINBASE))
 
 
