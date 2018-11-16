@@ -77,6 +77,7 @@ class BookUDP(UDPCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.depth = kwargs.get('depth', None)
+        self.previous = {BID: {}, ASK: {}}
 
     async def __call__(self, *, feed, pair, book, timestamp):
         await self.connect()
@@ -84,4 +85,12 @@ class BookUDP(UDPCallback):
         data = {'timestamp': timestamp, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
         upd = {'type': 'book', 'feed': feed, 'pair': pair, 'data': data}
+
+        if self.depth:
+            if upd['data'][BID] == self.previous[BID] and upd['data'][ASK] == self.previous[ASK]:
+                print("BOOK SAME")
+                return
+            self.previous[ASK] = upd['data'][ASK]
+            self.previous[BID] = upd['data'][BID]
+
         self.transport.sendto(json.dumps(upd).encode())

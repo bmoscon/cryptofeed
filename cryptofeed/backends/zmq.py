@@ -42,9 +42,17 @@ class BookZMQ(ZMQCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.depth = kwargs.get('depth', None)
+        self.previous = {BID: {}, ASK: {}}
 
     async def __call__(self, *, feed, pair, book, timestamp):
         data = {'timestamp': timestamp, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
         upd = {'type': 'book', 'feed': feed, 'pair': pair, 'data': data}
+
+        if self.depth:
+            if upd['data'][BID] == self.previous[BID] and upd['data'][ASK] == self.previous[ASK]:
+                return
+            self.previous[ASK] = upd['data'][ASK]
+            self.previous[BID] = upd['data'][BID]
+
         await self.con.send_json(upd)

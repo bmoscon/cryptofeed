@@ -83,6 +83,8 @@ class BookRedis(RedisCallback):
         if self.key is None:
             self.key = 'book'
         self.depth = kwargs.get('depth', None)
+        self.previous = {BID: {}, ASK: {}}
+
 
     async def __call__(self, *, feed, pair, book, timestamp):
         ts = time.time()
@@ -92,5 +94,12 @@ class BookRedis(RedisCallback):
 
         data = {'timestamp': timestamp_normalize(feed, timestamp), BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
+
+        if self.depth:
+            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
+                return
+            self.previous[ASK] = data[ASK]
+            self.previous[BID] = data[BID]
+
         data = json.dumps(data)
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
