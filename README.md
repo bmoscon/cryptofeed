@@ -80,7 +80,7 @@ Cryptofeeds supports `backend` callbacks that will write directly to storage or 
 
 Supported Backends:
 * Redis
-* Arctic
+* [Arctic](https://github.com/manahl/arctic)
 * ZeroMQ
 * UDP Sockets
 
