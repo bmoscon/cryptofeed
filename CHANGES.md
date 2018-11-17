@@ -4,6 +4,7 @@
   * Feature #41: Rework trading pairs to generate them dynamically (as opposed to hard coded)
   * Feature: When book depth configured Redis, ZMQ and UDP backends only report book changes when changed occurred in 
              depth window
+  * Feature: TCP socket backend
 
 ### 0.17.2 (2018-11-03)
   * Bugfix #45: Bitstamp prices and sizes in L2 book are string, not decimal.Decimal
