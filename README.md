@@ -106,3 +106,4 @@ Continue to build out rest endpoints
 ### Additional Callback Methods / Backends
 * Postgres
 * InfluxDB
+* RabbitMQ
