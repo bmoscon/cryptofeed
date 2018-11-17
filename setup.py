@@ -27,11 +27,12 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="0.17.3",
+    version="0.17.4",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description=("Cryptocurrency feed handler and synthetic NBBO feed"),
     long_description=ld,
+    long_description_content_type='text/x-rst',
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
     url="https://github.com/bmoscon/cryptofeed",

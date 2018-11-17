@@ -94,16 +94,16 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 
 # Planned Work
 
-### Future Feeds
+## Future Feeds
 * EXX
 * CEX
 * BTCC
 * Many more...
 
-### REST
+## REST
 Continue to build out rest endpoints
 
-### Additional Callback Methods / Backends
+## Additional Callback Methods / Backends
 * Postgres
 * InfluxDB
 * RabbitMQ
