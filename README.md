@@ -83,6 +83,7 @@ Supported Backends:
 * [Arctic](https://github.com/manahl/arctic)
 * ZeroMQ
 * UDP Sockets
+* TCP Sockets
 
 
 ## Rest API
