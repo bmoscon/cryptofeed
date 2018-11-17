@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.17.3
+### 0.17.3 (2018-11-17)
   * Feature #41: Rework trading pairs to generate them dynamically (as opposed to hard coded)
   * Feature: When book depth configured Redis, ZMQ and UDP backends only report book changes when changed occurred in 
              depth window
