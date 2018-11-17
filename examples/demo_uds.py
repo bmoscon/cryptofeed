@@ -8,6 +8,7 @@ import asyncio
 from multiprocessing import Process
 import json
 from decimal import Decimal
+import os
 
 from cryptofeed.backends.socket import TradeSocket
 from cryptofeed import FeedHandler
@@ -24,24 +25,26 @@ async def reader(reader, writer):
         message = f"[{message}]"
         message = json.loads(message, parse_float=Decimal)
 
-        addr = writer.get_extra_info('peername')
 
-        print(f"Received {message!r} from {addr!r}")
+        print(f"Received {message!r}")
 
 
 async def main():
-    server = await asyncio.start_server(
-        reader, '127.0.0.1', 8080)
+    server = await asyncio.start_unix_server(
+        reader, path='temp.uds')
 
     await server.serve_forever()
 
-def writer(addr, port):
+def writer(path):
     f = FeedHandler()
-    f.add_feed(Coinbase(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket(addr, port=port)}))
+    f.add_feed(Coinbase(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket(path)}))
     f.run()
 
 
 if __name__ == '__main__':
-    p = Process(target=writer, args=('tcp://127.0.0.1', 8080))
-    p.start()
-    asyncio.run(main())
+    try:
+        p = Process(target=writer, args=('uds://temp.uds',))
+        p.start()
+        asyncio.run(main())
+    finally:
+        os.unlink('temp.uds')
