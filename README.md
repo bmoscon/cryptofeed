@@ -7,7 +7,7 @@
 
 Handles multiple feeds and returns normalized and standardized results across exchanges to client registered callbacks for events like trades, book updates, ticker updates, etc.
 
-Please see the [examples](https://github.com/bmoscon/examples) for more code samples.
+Please see the [examples](https://github.com/bmoscon/cryptofeed/examples) for more code samples.
 
 
 ```python
