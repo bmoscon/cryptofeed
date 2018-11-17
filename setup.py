@@ -10,6 +10,13 @@ from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
 
+ld = None
+try:
+    import pypandoc
+    ld = pypandoc.convert('README.md', 'rst', format='markdown_github')
+except:
+    pass
+
 
 class Test(TestCommand):
     def run_tests(self):
@@ -24,6 +31,7 @@ setup(
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description=("Cryptocurrency feed handler and synthetic NBBO feed"),
+    long_description=ld,
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
     url="https://github.com/bmoscon/cryptofeed",
