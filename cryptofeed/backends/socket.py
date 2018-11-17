@@ -38,30 +38,60 @@ class UDPProtocol:
         self.transport = None
 
 
-class UDPCallback:
-    def __init__(self, host='127.0.0.1', port=5555, **kwargs):
-        self.transport = None
+class SocketCallback:
+    def __init__(self, addr: str, port=None, **kwargs):
+        """
+        Common parent class for all socket callbacks
+
+        Parameters
+        ----------
+        addr: str
+          Address for connection. Should be in the format:
+          <protocol>://<address>
+          Example:
+          tcp://127.0.0.1
+          uds:///tmp/crypto.uds
+          udp://127.0.0.1
+        port: int
+          port for connection. Should not be specified for UDS connections
+        """
+        self.conn_type = addr[:6]
+        if self.conn_type not in {'tcp://', 'uds://', 'udp://'}:
+            raise ValueError("Invalid protocol specified for SocketCallback")
+        self.conn = None
         self.protocol = None
-        self.host = host
+        self.addr = addr[6:]
         self.port = port
 
     async def connect(self):
-        if not self.transport:
-            loop = asyncio.get_event_loop()
-            self.transport, self.protocol = await loop.create_datagram_endpoint(
-                lambda: UDPProtocol(loop), remote_addr=(self.host, self.port))
+        if not self.conn:
+            if self.conn_type == 'udp://':
+                loop = asyncio.get_event_loop()
+                self.conn, self.protocol = await loop.create_datagram_endpoint(
+                    lambda: UDPProtocol(loop), remote_addr=(self.addr, self.port))
+            elif self.conn_type == 'tcp://':
+                _, self.conn = await asyncio.open_connection(host=self.addr, port=self.port)
+            elif self.conn_type == 'uds://':
+                _, self.conn = await asyncio.open_unix_connection(path=self.addr)
+
+    def write(self, data):
+        data = json.dumps(data).encode()
+        if self.conn_type == 'udp://':
+            self.conn.sendto(data)
+        else:
+            self.conn.write(data)
 
 
-class TradeUDP(UDPCallback):
+class TradeSocket(SocketCallback):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         await self.connect()
 
         trade = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp, 'side': side, 'amount': float(amount), 'price': float(price)}
         data = {'type': 'trade', 'data': trade}
-        self.transport.sendto(json.dumps(data).encode())
+        self.write(data)
 
 
-class FundingUDP(UDPCallback):
+class FundingSocket(SocketCallback):
     async def __call__(self, **kwargs):
         await self.connect()
 
@@ -70,10 +100,10 @@ class FundingUDP(UDPCallback):
                 kwargs[key] = float(kwargs[key])
 
         data = {'type': 'funding', 'data': kwargs}
-        self.transport.sendto(json.dumps(data).encode())
+        self.write(data)
 
 
-class BookUDP(UDPCallback):
+class BookSocket(SocketCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.depth = kwargs.get('depth', None)
@@ -88,9 +118,8 @@ class BookUDP(UDPCallback):
 
         if self.depth:
             if upd['data'][BID] == self.previous[BID] and upd['data'][ASK] == self.previous[ASK]:
-                print("BOOK SAME")
                 return
             self.previous[ASK] = upd['data'][ASK]
             self.previous[BID] = upd['data'][BID]
 
-        self.transport.sendto(json.dumps(upd).encode())
+        self.write(upd)
