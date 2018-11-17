@@ -84,6 +84,7 @@ Supported Backends:
 * ZeroMQ
 * UDP Sockets
 * TCP Sockets
+* Unix Domain Sockets
 
 
 ## Rest API
@@ -103,6 +104,5 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 Continue to build out rest endpoints
 
 ### Additional Callback Methods / Backends
-* Unix Domain Sockets
 * Postgres
 * InfluxDB
