@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.17.4 (2018-13-17)
+### 0.17.4 (2018-11-17)
   * Readme change for long description rendering issue
 
 ### 0.17.3 (2018-11-17)
