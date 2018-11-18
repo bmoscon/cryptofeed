@@ -51,13 +51,16 @@ class InfluxCallback:
           Database to write to
         """
         self.addr = f"{addr}/write?db={db}"
+        self.session = None
 
     async def write(self, data):
-        async with aiohttp.ClientSession() as session:
-            async with session.post(self.addr, data=data) as resp:
-                if resp.status != 204:
-                    error = await resp.text()
-                    LOG.error("Write to influxDB failed: %d - %s", resp.status, error)
+        if not self.session or self.session.closed:
+            self.session = aiohttp.ClientSession()
+
+        async with self.session.post(self.addr, data=data) as resp:
+            if resp.status != 204:
+                error = await resp.text()
+                LOG.error("Write to influxDB failed: %d - %s", resp.status, error)
 
 
 class TradeInflux(InfluxCallback):
