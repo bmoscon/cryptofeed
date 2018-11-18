@@ -85,6 +85,7 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
+* [InfluxDB](https://github.com/influxdata/influxdb)
 
 
 ## Rest API
@@ -105,5 +106,4 @@ Continue to build out rest endpoints
 
 ## Additional Callback Methods / Backends
 * Postgres
-* InfluxDB
 * RabbitMQ
