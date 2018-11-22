@@ -8,9 +8,10 @@ from multiprocessing import Process
 import socket
 
 from cryptofeed.backends.socket import TradeSocket, BookSocket
+from cryptofeed.backends.aggregate import Throttle
 from cryptofeed import FeedHandler
 from cryptofeed import Coinbase
-from cryptofeed.defines import L3_BOOK, TRADES
+from cryptofeed.defines import L2_BOOK, TRADES
 
 
 def receiver(port):
@@ -29,7 +30,7 @@ def main():
         p.start()
 
         f = FeedHandler()
-        f.add_feed(Coinbase(channels=[L3_BOOK, TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket('udp://127.0.0.1', port=5555), L3_BOOK: BookSocket('udp://127.0.0.1', port=5555, depth=1)}))
+        f.add_feed(Coinbase(channels=[L2_BOOK, TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket('udp://127.0.0.1', port=5555), L2_BOOK: Throttle(BookSocket('udp://127.0.0.1', port=5555, depth=10), timer=1)}))
 
         f.run()
     finally:
