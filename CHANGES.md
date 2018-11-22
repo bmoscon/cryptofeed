@@ -2,6 +2,7 @@
 
 ### 0.18.0
   * Feature: InfluxDB support via backend
+  * Feature: Aggregation backend wrappers
 
 ### 0.17.4 (2018-11-17)
   * Readme change for long description rendering issue
