@@ -86,7 +86,7 @@ def main():
     # f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
     # f.add_feed(Gemini(book_interval=100, pairs=['BTC-USD'], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
     # f.add_feed(HitBTC(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
-    f.add_feed(Poloniex(book_interval=100, channels=['USDT-BTC'], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
+    f.add_feed(Poloniex(book_interval=100, channels=['BTC-USDT'], callbacks={L2_BOOK: BookCallback(book), BOOK_DELTA: BookUpdateCallback(delta)}))
 
     f.run()
 

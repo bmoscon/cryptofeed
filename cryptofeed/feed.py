@@ -8,7 +8,6 @@ from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange
 from cryptofeed.feeds import feed_to_exchange
 from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA
-from cryptofeed.callback import BookUpdateCallback
 from cryptofeed.exchanges import BITFINEX
 
 
@@ -42,9 +41,9 @@ class Feed:
                           FUNDING: Callback(None)}
 
         if callbacks:
-            for cb in callbacks:
-                self.callbacks[cb] = callbacks[cb]
-                if isinstance(callbacks[cb], BookUpdateCallback):
+            for cb_type, cb_func in callbacks.items():
+                self.callbacks[cb_type] = cb_func
+                if cb_type == BOOK_DELTA:
                     self.do_deltas = True
 
     async def book_callback(self, pair, book_type, forced, delta, timestamp):
