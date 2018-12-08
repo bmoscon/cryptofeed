@@ -6,12 +6,13 @@ import calendar
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.exchanges import POLONIEX
+from cryptofeed.defines import POLONIEX
 from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
 LOG = get_logger('rest', 'rest.log')
+
 
 # API docs https://poloniex.com/support/api/
 # 6 calls per second API limit

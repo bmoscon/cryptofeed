@@ -6,14 +6,10 @@ from cryptofeed.rest.coinbase import Coinbase
 from cryptofeed.rest.poloniex import Poloniex
 from cryptofeed.rest.gemini import Gemini
 from cryptofeed.rest.kraken import Kraken
+from cryptofeed.log import get_logger
 
 
-FORMAT = '%(asctime)-15s : %(levelname)s : %(message)s'
-logging.basicConfig(level=logging.WARNING,
-                    format=FORMAT,
-                    handlers=[logging.FileHandler('rest.log'),
-                              logging.StreamHandler()])
-LOG = logging.getLogger('rest')
+LOG = get_logger('rest', 'rest.log')
 
 
 class Rest:

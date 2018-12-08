@@ -2,7 +2,7 @@ from time import time
 import hashlib, hmac, requests, urllib, base64
 
 from cryptofeed.rest.api import API
-from cryptofeed.exchanges import KRAKEN
+from cryptofeed.defines import KRAKEN
 from cryptofeed.standards import pair_std_to_exchange
 from cryptofeed.log import get_logger
 

@@ -8,7 +8,7 @@ import requests
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.feeds import BITMEX
+from cryptofeed.defines import BITMEX
 from cryptofeed.log import get_logger
 
 

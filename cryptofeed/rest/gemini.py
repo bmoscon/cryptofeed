@@ -2,7 +2,7 @@ from time import time
 import hashlib, hmac, requests, json, base64
 
 from cryptofeed.rest.api import API
-from cryptofeed.exchanges import GEMINI
+from cryptofeed.defines import GEMINI
 from cryptofeed.log import get_logger
 
 LOG = get_logger('rest', 'rest.log')

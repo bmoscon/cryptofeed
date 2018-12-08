@@ -10,7 +10,7 @@ import pandas as pd
 import requests
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.feeds import BITFINEX
+from cryptofeed.defines import BITFINEX
 from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 

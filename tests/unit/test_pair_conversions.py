@@ -11,7 +11,7 @@ from cryptofeed.bitfinex.pairs import bitfinex_pair_mapping
 from cryptofeed.gemini.pairs import gemini_pair_mapping
 from cryptofeed.hitbtc.pairs import hitbtc_pair_mapping
 from cryptofeed.bitstamp.pairs import bitstamp_pair_mapping
-from cryptofeed.exchanges import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP
+from cryptofeed.defines import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP
 
 
 def test_coinbase_pair_conversions():

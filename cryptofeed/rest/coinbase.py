@@ -5,7 +5,7 @@ from datetime import datetime as dt
 import pandas as pd
 
 from cryptofeed.rest.api import API
-from cryptofeed.feeds import COINBASE
+from cryptofeed.defines import COINBASE
 from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange
 
