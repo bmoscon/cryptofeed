@@ -3,6 +3,11 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
+
+
+Contains all code to normalize and standardize the differences
+between exchanges. These include trading pairs, timestamps, and
+data channel names
 '''
 from datetime import datetime as dt
 import calendar
