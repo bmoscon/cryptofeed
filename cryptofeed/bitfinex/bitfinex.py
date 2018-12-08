@@ -14,8 +14,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING, DEL, UPD
-from cryptofeed.exchanges import BITFINEX
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING, DEL, UPD, BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
 

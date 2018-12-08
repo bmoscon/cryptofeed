@@ -14,14 +14,15 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.exchanges import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE
-from cryptofeed import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase
+from cryptofeed.defines import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE
+from cryptofeed.exchanges import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
 
 
-
 LOG = get_logger('feedhandler', 'feedhandler.log')
+
+
 _EXCHANGES = {
     COINBASE: Coinbase,
     GEMINI: Gemini,
@@ -31,7 +32,6 @@ _EXCHANGES = {
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
 }
-
 
 
 class FeedHandler:

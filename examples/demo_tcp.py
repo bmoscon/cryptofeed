@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from cryptofeed.backends.socket import TradeSocket
 from cryptofeed import FeedHandler
-from cryptofeed import Coinbase
+from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import TRADES
 
 async def reader(reader, writer):

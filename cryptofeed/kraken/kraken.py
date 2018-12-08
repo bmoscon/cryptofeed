@@ -5,8 +5,7 @@ import time
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import RestFeed
-from cryptofeed.defines import TRADES, BID, ASK, TICKER, L2_BOOK
-from cryptofeed.exchanges import KRAKEN
+from cryptofeed.defines import TRADES, BID, ASK, TICKER, L2_BOOK, KRAKEN
 from cryptofeed.standards import pair_exchange_to_std
 
 import aiohttp

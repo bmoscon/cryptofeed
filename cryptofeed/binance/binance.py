@@ -12,10 +12,8 @@ import time
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.feeds import feed_to_exchange
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, UND
-from cryptofeed.exchanges import BINANCE
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, UND, BINANCE
+from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, feed_to_exchange
 
 
 LOG = logging.getLogger('feedhandler')

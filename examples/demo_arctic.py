@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.backends.arctic import TradeArctic, FundingArctic
 from cryptofeed import FeedHandler
-from cryptofeed import Bitmex, Bitfinex
+from cryptofeed.exchanges import Bitmex, Bitfinex
 
 from cryptofeed.defines import TRADES, FUNDING
 

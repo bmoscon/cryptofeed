@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.backends.redis import TradeRedis, FundingRedis, BookRedis
 from cryptofeed import FeedHandler
-from cryptofeed import Bitmex, Bitfinex, Coinbase, Gemini
+from cryptofeed.exchanges import Bitmex, Bitfinex, Coinbase, Gemini
 
 from cryptofeed.defines import TRADES, FUNDING, L2_BOOK
 

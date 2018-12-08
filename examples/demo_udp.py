@@ -10,7 +10,7 @@ import socket
 from cryptofeed.backends.socket import TradeSocket, BookSocket
 from cryptofeed.backends.aggregate import Throttle
 from cryptofeed import FeedHandler
-from cryptofeed import Coinbase
+from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import L2_BOOK, TRADES
 
 

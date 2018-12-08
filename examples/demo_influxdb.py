@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.backends.influxdb import TradeInflux, FundingInflux, BookInflux
 from cryptofeed import FeedHandler
-from cryptofeed import Bitmex, Coinbase
+from cryptofeed.exchanges import Bitmex, Coinbase
 
 from cryptofeed.defines import TRADES, FUNDING, L2_BOOK, L3_BOOK
 

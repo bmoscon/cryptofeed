@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
-from cryptofeed import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex
+from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, UPD, DEL, BOOK_DELTA
 
 

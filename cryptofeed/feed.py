@@ -5,10 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.callback import Callback
-from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.feeds import feed_to_exchange
-from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA
-from cryptofeed.exchanges import BITFINEX
+from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange
+from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, BITFINEX
 
 
 class Feed:

@@ -8,7 +8,7 @@ from multiprocessing import Process
 
 from cryptofeed.backends.zmq import BookZMQ, TradeZMQ
 from cryptofeed import FeedHandler
-from cryptofeed import Coinbase
+from cryptofeed.exchanges import Coinbase
 
 from cryptofeed.defines import L3_BOOK, TRADES
 

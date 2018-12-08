@@ -4,6 +4,16 @@ Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+BITSTAMP = 'BITSTAMP'
+BITFINEX = 'BITFINEX'
+COINBASE = 'COINBASE'
+GEMINI = 'GEMINI'
+HITBTC = 'HITBTC'
+POLONIEX = 'POLONIEX'
+BITMEX = 'BITMEX'
+KRAKEN = 'KRAKEN'
+BINANCE = 'BINANCE'
+
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
 BOOK_DELTA = 'book_delta'

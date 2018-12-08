@@ -15,8 +15,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.exchanges import COINBASE
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER, DEL, UPD
+from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER, DEL, UPD, COINBASE
 
 
 LOG = logging.getLogger('feedhandler')

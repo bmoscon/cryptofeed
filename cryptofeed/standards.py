@@ -6,8 +6,10 @@ associated with this software.
 '''
 from datetime import datetime as dt
 import calendar
+import logging
 
-from cryptofeed.exchanges import COINBASE, GEMINI, BITFINEX, BITSTAMP, HITBTC, BITMEX, POLONIEX, KRAKEN, BINANCE
+from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX,
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, GEMINI)
 from cryptofeed.poloniex.pairs import poloniex_pair_mapping
 from cryptofeed.binance.pairs import binance_pair_mapping
 from cryptofeed.hitbtc.pairs import hitbtc_pair_mapping
@@ -16,6 +18,9 @@ from cryptofeed.bitfinex.pairs import bitfinex_pair_mapping
 from cryptofeed.bitstamp.pairs import bitstamp_pair_mapping
 from cryptofeed.coinbase.pairs import coinbase_pair_mapping
 from cryptofeed.gemini.pairs import gemini_pair_mapping
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 _std_trading_pairs = {}
@@ -69,3 +74,66 @@ def timestamp_normalize(exchange, ts):
     elif exchange == 'BITFINEX':
         return ts / 1000.0
     return ts
+
+
+_feed_to_exchange_map = {
+    L2_BOOK: {
+        BITFINEX: 'book-P0-F0-100',
+        POLONIEX: UNSUPPORTED,
+        HITBTC: 'subscribeOrderbook',
+        COINBASE: 'level2',
+        BITMEX: 'orderBook10',
+        BITSTAMP: 'order_book',
+        KRAKEN: L2_BOOK,
+        BINANCE: 'depth20'
+    },
+    L3_BOOK: {
+        BITFINEX: 'book-R0-F0-100',
+        BITSTAMP: UNSUPPORTED,
+        HITBTC: UNSUPPORTED,
+        COINBASE: 'full',
+        BITMEX: 'orderBookL2',
+        POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel,
+        KRAKEN: UNSUPPORTED,
+        BINANCE: UNSUPPORTED
+    },
+    TRADES: {
+        POLONIEX: UNSUPPORTED,
+        HITBTC: 'subscribeTrades',
+        BITSTAMP: 'live_trades',
+        BITFINEX: 'trades',
+        COINBASE: 'matches',
+        BITMEX: 'trade',
+        KRAKEN: TRADES,
+        BINANCE: 'trade'
+    },
+    TICKER: {
+        POLONIEX: 1002,
+        HITBTC: 'subscribeTicker',
+        BITFINEX: 'ticker',
+        BITSTAMP: UNSUPPORTED,
+        COINBASE: 'ticker',
+        BITMEX: UNSUPPORTED,
+        KRAKEN: TICKER,
+        BINANCE: 'ticker'
+    },
+    VOLUME: {
+        POLONIEX: 1003
+    },
+    FUNDING: {
+        BITMEX: 'funding',
+        BITFINEX: 'trades'
+    }
+}
+
+
+def feed_to_exchange(exchange, feed):
+    if exchange == POLONIEX:
+        if feed not in _feed_to_exchange_map:
+            return pair_std_to_exchange(feed, POLONIEX)
+
+    ret = _feed_to_exchange_map[feed][exchange]
+    if ret == UNSUPPORTED:
+        LOG.error("{} is not supported on {}".format(feed, exchange))
+        raise ValueError("{} is not supported on {}".format(feed, exchange))
+    return ret

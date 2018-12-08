@@ -10,9 +10,8 @@ from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
 
-from cryptofeed.exchanges import BITSTAMP
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK
+from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, BITSTAMP
 from cryptofeed.standards import pair_exchange_to_std
 
 
