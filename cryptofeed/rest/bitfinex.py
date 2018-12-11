@@ -111,7 +111,11 @@ class Bitfinex(API):
             if data == []:
                 LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
-                start = data[-1][1]
+                if data[-1][1] == start:
+                    LOG.warning("%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.ID, start)
+                    start += 1
+                else:
+                    start = data[-1][1]
 
             orig_data = list(data)
             data = self._dedupe(data, last)
