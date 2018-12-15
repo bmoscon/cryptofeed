@@ -1,13 +1,13 @@
 from time import time
 import hashlib, hmac, requests, urllib, base64
+import logging
 
 from cryptofeed.rest.api import API
 from cryptofeed.defines import KRAKEN
 from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.log import get_logger
 
 
-LOG = get_logger('rest', 'rest.log')
+LOG = logging.getLogger('rest')
 
 
 class Kraken(API):

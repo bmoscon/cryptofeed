@@ -1,14 +1,13 @@
 import os
 from functools import wraps
 from time import sleep
+import logging
 
 import requests
 import yaml
 
-from cryptofeed.log import get_logger
 
-
-LOG = get_logger('rest', 'rest.log')
+LOG = logging.getLogger('rest')
 
 
 def request_retry(exchange, retry, retry_wait):

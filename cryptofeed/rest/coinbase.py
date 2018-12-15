@@ -1,17 +1,17 @@
 import time, json, hashlib, hmac, requests, base64
 from time import sleep
 from datetime import datetime as dt
+import logging
 
 import pandas as pd
 
 from cryptofeed.rest.api import API
 from cryptofeed.defines import COINBASE
-from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange
 
 
 REQUEST_LIMIT = 10
-LOG = get_logger('rest', 'rest.log')
+LOG = logging.getLogger('rest')
 
 
 # API Docs https://docs.gdax.com/

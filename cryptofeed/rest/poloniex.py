@@ -2,16 +2,16 @@ from time import time
 import hashlib, hmac, requests, urllib
 from decimal import Decimal
 import calendar
+import logging
 
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import POLONIEX
-from cryptofeed.log import get_logger
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
-LOG = get_logger('rest', 'rest.log')
+LOG = logging.getLogger('rest')
 
 
 # API docs https://poloniex.com/support/api/

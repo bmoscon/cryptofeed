@@ -1,11 +1,13 @@
 from time import time
 import hashlib, hmac, requests, json, base64
+import logging
 
 from cryptofeed.rest.api import API
 from cryptofeed.defines import GEMINI
-from cryptofeed.log import get_logger
 
-LOG = get_logger('rest', 'rest.log')
+
+LOG = logging.getLogger('rest')
+
 
 # https://docs.gemini.com/rest-api/#introduction
 # For public API entry points, we limit requests to 120 requests per minute, and recommend that you do not exceed 1 request per second.
