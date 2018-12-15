@@ -4,6 +4,8 @@
   * Feature: InfluxDB support via backend
   * Feature: Aggregation backend wrappers
   * Bugfix: BookDelta callback no longer needs to be an instance of BookUpdateCallback
+  * Bugfix: REST module was creating duplicate log handlers
+  * Bugfix: Bitfinex REST now properly handles cases when there are more than 1000 updates for a single tick
 
 ### 0.17.4 (2018-11-17)
   * Readme change for long description rendering issue
