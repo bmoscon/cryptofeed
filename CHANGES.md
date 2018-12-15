@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.18.0
+### 0.18.0 (2018-12-15)
   * Feature: InfluxDB support via backend
   * Feature: Aggregation backend wrappers
   * Bugfix: BookDelta callback no longer needs to be an instance of BookUpdateCallback
