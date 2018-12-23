@@ -25,7 +25,7 @@ class Gemini(API):
 
         base_url = "{}{}".format(api, command)
         resp = requests.get(base_url, params=options)
-        self.handle_error(resp, LOG)
+        self._handle_error(resp, LOG)
 
         return resp.json()
 
@@ -55,7 +55,7 @@ class Gemini(API):
         }
 
         resp = requests.post(api, headers=headers)
-        self.handle_error(resp, LOG)
+        self._handle_error(resp, LOG)
 
         return resp.json()
 

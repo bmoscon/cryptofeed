@@ -26,7 +26,7 @@ class Poloniex(API):
         base_url = "{}public?command={}".format(self.rest_api, command)
 
         resp = requests.get(base_url, params=options)
-        self.handle_error(resp, LOG)
+        self._handle_error(resp, LOG)
 
         return resp.json()
 
@@ -47,7 +47,7 @@ class Poloniex(API):
             'Content-Type': 'application/x-www-form-urlencoded'
         }
         resp = requests.post("{}tradingApi?command={}".format(self.rest_api, command), headers=headers, data=paybytes)
-        self.handle_error(resp, LOG)
+        self._handle_error(resp, LOG)
 
         return resp.json()
 

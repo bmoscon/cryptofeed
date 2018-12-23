@@ -21,7 +21,7 @@ class Kraken(API):
         url = "{}{}".format(self.api, command)
 
         resp = requests.post(url, data=payload)
-        self.handle_error(resp, LOG)
+        self._handle_error(resp, LOG)
 
         return resp.json()
 
@@ -50,7 +50,7 @@ class Kraken(API):
         }
 
         resp = requests.post("{}{}".format(self.api, command), data=payload, headers=headers)
-        self.handle_error(resp, LOG)
+        self._handle_error(resp, LOG)
 
         return resp.json()
 

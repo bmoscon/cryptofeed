@@ -5,7 +5,7 @@ import logging
 
 import pandas as pd
 
-from cryptofeed.rest.api import API
+from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import COINBASE
 from cryptofeed.standards import pair_std_to_exchange
 
@@ -55,46 +55,27 @@ class Coinbase(API):
 
         return endpoint
 
-    def _make_request(self, method: str, endpoint: str, header: dict, body=None, retry=None, retry_wait=0):
+
+    def _make_request(self, method: str, endpoint: str, body=None, retry=None, retry_wait=0):
         api = self.api
         if self.sandbox:
             api = self.sandbox_api
 
-        while True:
-            try:
-                if method == "GET":
-                    resp = requests.get('{}{}'.format(api, endpoint), headers=header)
-                elif method == "POST":
-                    resp = requests.post('{}{}'.format(api, endpoint), json=body, headers=header)
-                elif method == "DELETE":
-                    resp = requests.delete('{}{}'.format(api, endpoint), headers=header)
-            except TimeoutError as e:
-                LOG.warning("%s: Timeout - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-            except requests.exceptions.ConnectionError as e:
-                LOG.warning("%s: Connection error - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
+        @request_retry(self.ID, retry, retry_wait)
+        def helper(verb, api, endpoint, body):
+            header = self._generate_signature(endpoint, verb, body=json.dumps(body) if body else None)
 
-            # 400 Bad Request – Invalid request format
-            # 401 Unauthorized – Invalid API Key
-            # 403 Forbidden – You do not have access to the requested resource
-            # 404 Not Found
-            # 500 Internal Server Error – We had a problem with our server
-            self.handle_error(resp, LOG)
+            if method == "GET":
+                return requests.get('{}{}'.format(api, endpoint), headers=header)
+            elif method == "POST":
+                return requests.post('{}{}'.format(api, endpoint), json=body, headers=header)
+            elif method == "DELETE":
+                return requests.delete('{}{}'.format(api, endpoint), headers=header)
 
-            return resp.json()
+
+        resp = helper(method, api, endpoint, body)
+        self._handle_error(resp, LOG)
+        return resp.json()
 
     def _get_fills(self, symbol=None, retry=None, retry_wait=0, start_date=None, end_date=None):
         endpoint = '/fills'
@@ -102,8 +83,7 @@ class Coinbase(API):
             symbol = pair_std_to_exchange(symbol, self.ID)
             endpoint = '{}?product_id={}'.format(endpoint, symbol)
 
-        header = self._generate_signature(endpoint, "GET")
-        data = self._make_request("GET", endpoint, header, retry=retry)
+        data = self._make_request("GET", endpoint, retry=retry)
 
         if data == []:
             LOG.warning("%s: No data", self.ID)
@@ -143,8 +123,7 @@ class Coinbase(API):
 
         endpoint = self._pagination(endpoint, body)
 
-        header = self._generate_signature(endpoint, "GET")
-        data = self._make_request("GET", endpoint, header)
+        data = self._make_request("GET", endpoint)
         data = list(map(self._trade_normalization, data))
 
         return data
@@ -154,8 +133,7 @@ class Coinbase(API):
         https://docs.gdax.com/?python#get-an-order
         """
         endpoint = "/orders/{}".format(order_id)
-        header = self._generate_signature(endpoint, "GET")
-        data = self._make_request("GET", endpoint, header)
+        data = self._make_request("GET", endpoint)
 
         return data
 
@@ -164,8 +142,7 @@ class Coinbase(API):
         https://docs.gdax.com/?python#place-a-new-order
         """
         endpoint = "/orders"
-        header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
-        data = self._make_request("POST", endpoint, header, body, retry=retry, retry_wait=retry_wait)
+        data = self._make_request("POST", endpoint, body, retry=retry, retry_wait=retry_wait)
 
         return data
 
@@ -173,16 +150,13 @@ class Coinbase(API):
         endpoint = "/orders"
         endpoint = '{}/{}'.format(endpoint, order_id)
 
-        header = self._generate_signature(endpoint, "DELETE")
-        self._make_request("DELETE", endpoint, header)
+        self._make_request("DELETE", endpoint)
 
     def _get(self, endpoint):
-        header = self._generate_signature(endpoint, "GET")
-        return self._make_request("GET", endpoint, header)
+        return self._make_request("GET", endpoint)
 
     def _post(self, endpoint, body):
-        header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
-        return self._make_request("POST", endpoint, header, body)
+        return self._make_request("POST", endpoint, body=body)
 
     def fills(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
         """
@@ -203,8 +177,7 @@ class Coinbase(API):
         """
         return self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
 
-
-    def execute_trades(self, trades_to_make: list):
+    def place_order(self, trades_to_make: list):
         """
         https://docs.gdax.com/?python#place-a-new-order
         data format
@@ -253,18 +226,26 @@ class Coinbase(API):
     def cancel_order(self, order_id):
         self._delete_order(order_id)
 
-    def get_orders(self, body):
+    def orders(self, order_id=None, symbol=None, status=None):
         """
-        body should be
-        {
-            'status':['open', 'pending', 'active'],
-            'product_id': 'BTC-USD' (optional)
-        }
-        """
-        return self._get_orders(body)
+        Get order status(es)
 
-    def get_order(self, order_id: str):
-        return self._trade_normalization(self._get_order(order_id))
+        If order_id is supplied, a single order will be retrieved, otherwise orders can be
+        specified by status, or symbol. 
+        status can be None (all orders) or can be list of any of open, pending, active
+        """
+        if order_id:
+            ret = self._get_order(order_id)
+        else:
+            body = {}
+            if symbol:
+                body['product_id'] = symbol
+            if status:
+                body['status'] = status
+            else:
+                body['status'] = 'all'
+            ret = self._get_orders(body)
+        return self._trade_normalization(ret)       
 
     def get_accounts(self):
         return self._get("/accounts")

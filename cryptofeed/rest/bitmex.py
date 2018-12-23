@@ -83,7 +83,7 @@ class Bitmex(API):
                     sleep(API_REFRESH)
                     continue
                 elif r.status_code != 200:
-                    self.handle_error(r, LOG)
+                    self._handle_error(r, LOG)
 
                 limit = int(r.headers['X-RateLimit-Remaining'])
                 data = r.json()

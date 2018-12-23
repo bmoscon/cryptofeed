@@ -11,6 +11,9 @@ LOG = logging.getLogger('rest')
 
 
 def request_retry(exchange, retry, retry_wait):
+    """
+    decorator to retry request
+    """
     def wrap(f):
         @wraps(f)
         def wrapped_f(*args, **kwargs):
@@ -60,23 +63,31 @@ class API:
         except (KeyError, FileNotFoundError, TypeError):
             pass
 
-    def handle_error(self, resp, log):
+    def _handle_error(self, resp, log):
         if resp.status_code != 200:
             log.error("%s: Status code %d", self.ID, resp.status_code)
             log.error("%s: Headers: %s", self.ID, resp.headers)
             log.error("%s: Resp: %s", self.ID, resp.text)
             resp.raise_for_status()
 
+    # public / non account specific 
     def trades(self, *args, **kwargs):
         raise NotImplementedError
 
     def funding(self, *args, **kwargs):
         raise NotImplementedError
 
-    def place_order(self):
+    def book(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    # account specific
+    def place_order(self, *args, **kwargs):
         raise NotImplementedError
 
-    def cancel_order(self, order_id):
+    def cancel_order(self, order_id, *args, **kwargs):
+        raise NotImplementedError
+    
+    def orders(self, *args, **kwargs):
         raise NotImplementedError
 
     def __getitem__(self, key):
