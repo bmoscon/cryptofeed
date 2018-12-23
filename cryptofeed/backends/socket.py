@@ -11,6 +11,7 @@ import json
 
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert
+from cryptofeed.defines import TRADES, FUNDING
 
 
 LOG = logging.getLogger('feedhandler')
@@ -87,7 +88,7 @@ class TradeSocket(SocketCallback):
         await self.connect()
 
         trade = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp, 'side': side, 'amount': float(amount), 'price': float(price)}
-        data = {'type': 'trade', 'data': trade}
+        data = {'type': TRADES, 'data': trade}
         self.write(data)
 
 
@@ -99,7 +100,7 @@ class FundingSocket(SocketCallback):
             if isinstance(kwargs[key], Decimal):
                 kwargs[key] = float(kwargs[key])
 
-        data = {'type': 'funding', 'data': kwargs}
+        data = {'type': FUNDING, 'data': kwargs}
         self.write(data)
 
 

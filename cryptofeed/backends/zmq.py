@@ -14,10 +14,10 @@ from cryptofeed.backends._util import book_convert
 
 
 class ZMQCallback:
-    def __init__(self, host='127.0.0.1', port=5555, **kwargs):
+    def __init__(self, host='127.0.0.1', port=5555, zmq_type=zmq.PUSH, **kwargs):
         url = "tcp://{}:{}".format(host, port)
         ctx = zmq.asyncio.Context.instance()
-        self.con = ctx.socket(zmq.PUSH)
+        self.con = ctx.socket(zmq_type)
         self.con.bind(url)
 
 

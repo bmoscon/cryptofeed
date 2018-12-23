@@ -12,6 +12,7 @@ import arctic
 import pandas as pd
 
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.defines import TRADES, FUNDING
 
 
 class ArcticCallback:
@@ -40,7 +41,7 @@ class TradeArctic(ArcticCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.key is None:
-            self.key = 'trades'
+            self.key = TRADES
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if timestamp is None:
@@ -59,7 +60,7 @@ class FundingArctic(ArcticCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.key is None:
-            self.key = 'funding'
+            self.key = FUNDING
 
     async def __call__(self, *, feed, pair, **kwargs):
         ts = None
