@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2018  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -8,6 +8,12 @@ from urllib.request import urlopen
 import requests
 import json
 
+
+
+"""
+Just random functions I used while developing the library.
+They may come in handy again . . . 
+"""
 
 def poloniex_get_ticker_map():
     """
