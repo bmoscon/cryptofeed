@@ -18,7 +18,7 @@ def gen_pairs():
 
     try:
         r = requests.get('https://api.gemini.com/v1/symbols').json()
-    except Exception:
+    except:
         LOG.warning("Gemini: encountered an exception generating trading pairs, using defaults", exc_info=True)
         r = defaults
 

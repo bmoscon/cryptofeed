@@ -23,20 +23,18 @@ class Binance(Feed):
     id = BINANCE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        if len(pairs) != 1:
-            LOG.error("Binance requires a websocket per trading pair")
-            raise ValueError("Binance requires a websocket per trading pair")
-        if len(channels) != 1:
-            LOG.error("Binance requires a websocket per channel pair")
-            raise ValueError("Binance requires a websocket per channel pair")
-
-        p = pair_std_to_exchange(pairs[0], BINANCE)
-        self.pairs = pairs[0]
-        c = feed_to_exchange(BINANCE, channels[0])
-        endpoint = "wss://stream.binance.com:9443/ws/{}@{}".format(p.lower(), c)
-
-        super().__init__(endpoint, None, None, callbacks, **kwargs)
+        super().__init__(None, pairs, channels, callbacks, **kwargs)
+        self.address = self.__address()
         self.__reset()
+
+    def __address(self):
+        address = "wss://stream.binance.com:9443/stream?streams="
+        for chan in self.channels:
+            for pair in self.pairs:
+                pair = pair.lower()
+                stream = f"{pair}@{chan}/"
+                address += stream
+        return address[:-1]
 
     def __reset(self):
         self.l2_book = {}
@@ -133,6 +131,8 @@ class Binance(Feed):
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
 
+        msg = msg['data']
+
         if 'e' not in msg:
             await self._book(msg)
         elif msg['e'] == 'trade':
@@ -143,4 +143,4 @@ class Binance(Feed):
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
     async def subscribe(self, websocket):
-        return
+        pass

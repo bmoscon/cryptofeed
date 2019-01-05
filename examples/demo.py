@@ -34,9 +34,7 @@ async def funding(**kwargs):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Binance(pairs=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Binance(pairs=['BTC-USDT'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)}))
-    f.add_feed(Binance(pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Binance(pairs=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
 
     f.add_feed(COINBASE, pairs=['BTC-USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)})
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
