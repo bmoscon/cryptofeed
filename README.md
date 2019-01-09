@@ -45,7 +45,7 @@ Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates th
 
 ```python
 from cryptofeed.feedhandler import FeedHandler
-from cryptofeed import Coinbase, Bitfinex, HitBTC
+from cryptofeed.exchanges import Coinbase, Bitfinex, HitBTC
 
 
 def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
