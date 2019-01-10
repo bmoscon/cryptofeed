@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.19.0
+### 0.19.0 (2019-01-10)
   * Feature #50: Support multiple streams per websocket connection on Binance
   * Bugfix #51: Fix pairs on streams in Binance
 
