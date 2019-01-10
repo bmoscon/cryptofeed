@@ -132,6 +132,7 @@ class Binance(Feed):
         msg = json.loads(msg, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
+        # streamName is of format <symbol>@<channel>
         pair, event = msg['stream'].split('@')
         msg = msg['data']
 
@@ -148,4 +149,7 @@ class Binance(Feed):
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
     async def subscribe(self, websocket):
+        # Binance does not have a separate subscribe message, the
+        # subsription information is included in the
+        # connection endpoint
         pass
