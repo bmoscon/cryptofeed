@@ -101,7 +101,7 @@ class Binance(Feed):
                                      bid=bid,
                                      ask=ask)
 
-    async def _book(self, msg):
+    async def _book(self, msg, pair):
         """
         {
         "lastUpdateId": 160,  // Last update ID
@@ -126,15 +126,20 @@ class Binance(Feed):
                 ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
             }
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=self.pairs, book=self.l2_book, timestamp=time.time() * 1000)
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=time.time() * 1000)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
 
+        # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
+        pair, event = msg['stream'].split('@')
         msg = msg['data']
 
-        if 'e' not in msg:
-            await self._book(msg)
+        # All symbols for streams are lowercase
+        pair = pair_exchange_to_std(pair.upper())
+
+        if event == 'depth20':
+            await self._book(msg, pair)
         elif msg['e'] == 'trade':
             await self._trade(msg)
         elif msg['e'] == '24hrTicker':
