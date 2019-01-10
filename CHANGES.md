@@ -2,6 +2,7 @@
 
 ### 0.19.0
   * Feature #50: Support multiple streams per websocket connection on Binance
+  * Bugfix #51: Fix pairs on streams in Binance
 
 ### 0.18.0 (2018-12-15)
   * Feature: InfluxDB support via backend
