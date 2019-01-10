@@ -144,6 +144,8 @@ class Binance(Feed):
             await self._trade(msg)
         elif msg['e'] == '24hrTicker':
             await self._ticker(msg)
+        else:
+            LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
     async def subscribe(self, websocket):
         pass
