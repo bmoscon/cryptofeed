@@ -26,7 +26,7 @@ class UDPProtocol:
         self.transport = transport
 
     def datagram_received(self, data, addr):
-       pass
+        pass
 
     def error_received(self, exc):
         LOG.error('UDP backend received exception: %s', exc)

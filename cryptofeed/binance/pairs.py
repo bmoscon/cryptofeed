@@ -16,4 +16,5 @@ def gen_pairs():
         ret[normalized] = symbol['symbol']
     return ret
 
+
 binance_pair_mapping = gen_pairs()

@@ -1,5 +1,9 @@
 from time import time
-import hashlib, hmac, requests, json, base64
+import hashlib
+import hmac
+import requests
+import json
+import base64
 import logging
 
 from cryptofeed.rest.api import API
@@ -28,7 +32,6 @@ class Gemini(API):
         self.handle_error(resp, LOG)
 
         return resp.json()
-
 
     def _post(self, command: str, payload=None):
         if not payload:
@@ -101,7 +104,6 @@ class Gemini(API):
         """
         return self._get("/v1/auction/{}/history".format(symbol), parameters)
 
-
     # Order Placement API
 
     def new_order(self, parameters):
@@ -118,18 +120,14 @@ class Gemini(API):
         """
         return self._post("/v1/order/new", parameters)
 
-
     def cancel_order(self, order_id):
         return self._post("/v1/order/cancel", {'order_id': order_id})
-
 
     def cancel_all_session_orders(self):
         return self._post("/v1/order/cancel/session")
 
-
     def cancel_all_active_orders(self):
         return self._post("/v1/order/cancel/all")
-
 
     # Order Status API
 
@@ -143,7 +141,6 @@ class Gemini(API):
     def get_active_orders(self):
         return self._post("/v1/orders")
 
-
     def get_past_trades(self, parameters):
         """
         Parameters:
@@ -153,16 +150,16 @@ class Gemini(API):
         """
         return self._post("/v1/mytrades", parameters)
 
-
     # Fee and Volume Volume API
+
     def get_notional_volume(self):
         return self._post("/v1/notionalvolume")
 
     def get_trade_volume(self):
         return self._post("/v1/tradevolume")
 
-
     # Fund Managment API
+
     def get_available_balances(self):
         return self._post("/v1/balances")
 

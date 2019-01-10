@@ -122,9 +122,9 @@ class Binance(Feed):
         }
         """
         self.l2_book = {
-                BID: sd({Decimal(bid[0]): Decimal(bid[1]) for bid in msg['bids']}),
-                ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
-            }
+            BID: sd({Decimal(bid[0]): Decimal(bid[1]) for bid in msg['bids']}),
+            ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
+        }
 
         await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=time.time() * 1000)
 

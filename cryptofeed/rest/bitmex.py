@@ -56,7 +56,8 @@ class Bitmex(API):
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, start_date, end_date):
-            endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(ep, symbol, API_MAX, start, start_date, end_date)
+            endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(
+                ep, symbol, API_MAX, start, start_date, end_date)
             header = {}
             if self.key_id and self.key_secret:
                 header = self._generate_signature("GET", endpoint)

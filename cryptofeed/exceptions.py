@@ -5,8 +5,10 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
+
 class MissingSequenceNumber(Exception):
     pass
+
 
 class MissingMessage(Exception):
     pass

@@ -18,7 +18,6 @@ class Throttle(AggregateCallback):
         self.timer = timer
         self.last_update = 0
 
-
     async def __call__(self, **kwargs):
         now = time.time()
         if now - self.last_update > self.timer:

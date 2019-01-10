@@ -1,5 +1,9 @@
 from time import time
-import hashlib, hmac, requests, urllib, base64
+import hashlib
+import hmac
+import requests
+import urllib
+import base64
 import logging
 
 from cryptofeed.rest.api import API
@@ -86,7 +90,7 @@ class Kraken(API):
         Parameters:
             pair = asset pair to get OHLC data for (required)
             interval = time frame interval in minutes (optional):
-            	1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
+                1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
             since = return committed OHLC data since given id (optional.  exclusive)
         """
         return self._post_public("/public/OHLC", payload)

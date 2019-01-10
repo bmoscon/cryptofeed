@@ -1,4 +1,9 @@
-import time, json, hashlib, hmac, requests, base64
+import time
+import json
+import hashlib
+import hmac
+import requests
+import base64
 from time import sleep
 from datetime import datetime as dt
 import logging
@@ -21,7 +26,7 @@ class Coinbase(API):
     api = "https://api.pro.coinbase.com"
     sandbox_api = "https://api-public.sandbox.pro.coinbase.com"
 
-    def _generate_signature(self, endpoint: str, method: str, body = ''):
+    def _generate_signature(self, endpoint: str, method: str, body=''):
         timestamp = str(time.time())
         message = ''.join([timestamp, method, endpoint, body])
         hmac_key = base64.b64decode(self.key_secret)
@@ -29,10 +34,10 @@ class Coinbase(API):
         signature_b64 = base64.b64encode(signature.digest()).decode('utf-8')
 
         return {
-            'CB-ACCESS-KEY': self.key_id, # The api key as a string.
-            'CB-ACCESS-SIGN': signature_b64, # The base64-encoded signature (see Signing a Message).
-            'CB-ACCESS-TIMESTAMP': timestamp, # A timestamp for your request.
-            'CB-ACCESS-PASSPHRASE': self.key_passphrase, # The passphrase you specified when creating the API key
+            'CB-ACCESS-KEY': self.key_id,  # The api key as a string.
+            'CB-ACCESS-SIGN': signature_b64,  # The base64-encoded signature (see Signing a Message).
+            'CB-ACCESS-TIMESTAMP': timestamp,  # A timestamp for your request.
+            'CB-ACCESS-PASSPHRASE': self.key_passphrase,  # The passphrase you specified when creating the API key
             'Content-Type': 'Application/JSON',
         }
 
@@ -202,7 +207,6 @@ class Coinbase(API):
         }
         """
         return self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
-
 
     def execute_trades(self, trades_to_make: list):
         """

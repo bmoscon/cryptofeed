@@ -98,7 +98,7 @@ _feed_to_exchange_map = {
         HITBTC: UNSUPPORTED,
         COINBASE: 'full',
         BITMEX: 'orderBookL2',
-        POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel,
+        POLONIEX: UNSUPPORTED,  # supported by specifying a trading pair as the channel,
         KRAKEN: UNSUPPORTED,
         BINANCE: UNSUPPORTED
     },

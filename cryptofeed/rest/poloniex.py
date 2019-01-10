@@ -1,5 +1,8 @@
 from time import time
-import hashlib, hmac, requests, urllib
+import hashlib
+import hmac
+import requests
+import urllib
 from decimal import Decimal
 import calendar
 import logging
@@ -29,7 +32,6 @@ class Poloniex(API):
         self.handle_error(resp, LOG)
 
         return resp.json()
-
 
     def _post(self, command: str, payload=None):
         if not payload:

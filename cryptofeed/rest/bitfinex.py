@@ -26,7 +26,7 @@ class Bitfinex(API):
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
 
-    def _generate_signature(self, url: str, body = json.dumps({})):
+    def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
         h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)

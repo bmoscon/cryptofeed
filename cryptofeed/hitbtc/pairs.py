@@ -16,4 +16,5 @@ def gen_pairs():
         ret[normalized] = symbol['id']
     return ret
 
+
 hitbtc_pair_mapping = gen_pairs()

@@ -113,14 +113,14 @@ class Coinbase(Feed):
             await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
 
         await self.callbacks[TRADES](
-                feed=self.id,
-                pair=msg['product_id'],
-                order_id=msg['trade_id'],
-                side=BID if msg['side'] == 'buy' else ASK,
-                amount=Decimal(msg['size']),
-                price=Decimal(msg['price']),
-                timestamp=msg['time']
-            )
+            feed=self.id,
+            pair=msg['product_id'],
+            order_id=msg['trade_id'],
+            side=BID if msg['side'] == 'buy' else ASK,
+            amount=Decimal(msg['size']),
+            price=Decimal(msg['price']),
+            timestamp=msg['time']
+        )
 
     async def _pair_level2_snapshot(self, msg):
         timestamp = dt.utcnow()
@@ -193,7 +193,6 @@ class Coinbase(Feed):
         pair = msg['product_id']
         order_id = msg['order_id']
         timestamp = msg['time']
-
 
         if price in self.l3_book[pair][side]:
             self.l3_book[pair][side][price][order_id] = size
@@ -268,7 +267,6 @@ class Coinbase(Feed):
 
             self.seq_no[pair] = msg['sequence']
 
-
         if 'type' in msg:
             if msg['type'] == 'ticker':
                 await self._ticker(msg)
@@ -298,6 +296,6 @@ class Coinbase(Feed):
         await websocket.send(json.dumps({"type": "subscribe",
                                          "product_ids": self.pairs,
                                          "channels": self.channels
-                                        }))
+                                         }))
         if 'full' in self.channels:
             await self._book_snapshot()

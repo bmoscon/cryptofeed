@@ -140,7 +140,7 @@ class Poloniex(Feed):
             # the trading pair being updated
             seq_no = msg[1]
 
-            if chan_id not in self.seq_no :
+            if chan_id not in self.seq_no:
                 self.seq_no[chan_id] = seq_no
             elif self.seq_no[chan_id] + 1 != seq_no:
                 LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
@@ -158,4 +158,4 @@ class Poloniex(Feed):
         for channel in self.channels:
             await websocket.send(json.dumps({"command": "subscribe",
                                              "channel": channel
-                                            }))
+                                             }))

@@ -10,7 +10,7 @@ import requests
 def gen_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
 
-    return {data['id'] : data['id'] for data in r}
+    return {data['id']: data['id'] for data in r}
 
 
 coinbase_pair_mapping = gen_pairs()

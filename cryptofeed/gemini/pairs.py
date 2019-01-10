@@ -14,7 +14,8 @@ LOG = logging.getLogger('feedhandler')
 
 def gen_pairs():
     ret = {}
-    defaults = ['btcusd', 'ethusd', 'ethbtc','zecusd','zecbtc','zeceth','zecbch','zecltc','bchusd','bchbtc','bcheth','ltcusd','ltcbtc','ltceth','ltcbch']
+    defaults = ['btcusd', 'ethusd', 'ethbtc', 'zecusd', 'zecbtc', 'zeceth', 'zecbch',
+                'zecltc', 'bchusd', 'bchbtc', 'bcheth', 'ltcusd', 'ltcbtc', 'ltceth', 'ltcbch']
 
     try:
         r = requests.get('https://api.gemini.com/v1/symbols').json()

@@ -203,8 +203,7 @@ class Bitmex(Feed):
                                           interval=data['fundingInterval'],
                                           rate=data['fundingRate'],
                                           rate_daily=data['fundingRateDaily']
-                                         )
-
+                                          )
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

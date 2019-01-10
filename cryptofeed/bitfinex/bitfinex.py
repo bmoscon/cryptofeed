@@ -57,7 +57,6 @@ class Bitfinex(Feed):
         self.order_map = defaultdict(dict)
         self.seq_no = 0
 
-
     async def _ticker(self, msg):
         chan_id = msg[0]
         if msg[1] == 'hb':
@@ -102,12 +101,12 @@ class Bitfinex(Feed):
                                               period=period)
             else:
                 await self.callbacks[TRADES](feed=self.id,
-                                            pair=pair,
-                                            side=side,
-                                            amount=amount,
-                                            price=price,
-                                            order_id=order_id,
-                                            timestamp=timestamp)
+                                             pair=pair,
+                                             side=side,
+                                             amount=amount,
+                                             price=price,
+                                             order_id=order_id,
+                                             timestamp=timestamp)
 
         if isinstance(msg[1], list):
             # snapshot
@@ -180,12 +179,12 @@ class Bitfinex(Feed):
 
         await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
 
-
     async def _raw_book(self, msg):
         """
         For L3 book updates
         """
         timestamp = time.time() * 1000
+
         def add_to_book(pair, side, price, order_id, amount):
             if price in self.l3_book[pair][side]:
                 self.l3_book[pair][side][price][order_id] = amount
@@ -253,7 +252,6 @@ class Bitfinex(Feed):
                     add_to_book(pair, side, price, order_id, amount)
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
 
-
         elif msg[1] == 'hb':
             return
         else:
@@ -310,7 +308,7 @@ class Bitfinex(Feed):
                 message = {'event': 'subscribe',
                            'channel': channel,
                            'symbol': pair
-                          }
+                           }
                 if 'book' in channel:
                     parts = channel.split('-')
                     if len(parts) != 1:

@@ -36,12 +36,12 @@ class Kraken(RestFeed):
                         # <price>, <volume>, <time>, <buy/sell>, <market/limit>, <miscellaneous>
                         price, amount, timestamp, side, _, _ = trade
                         await self.callbacks[TRADES](feed=self.id,
-                                                    pair=pair_exchange_to_std(pair),
-                                                    side=BID if side == 'b' else ASK,
-                                                    amount=Decimal(amount),
-                                                    price=Decimal(price),
-                                                    order_id=None,
-                                                    timestamp=timestamp)
+                                                     pair=pair_exchange_to_std(pair),
+                                                     side=BID if side == 'b' else ASK,
+                                                     amount=Decimal(amount),
+                                                     price=Decimal(price),
+                                                     order_id=None,
+                                                     timestamp=timestamp)
 
     async def _ticker(self, session, pair):
         async with session.get("{}Ticker?pair={}&count=100".format(self.address, pair)) as response:

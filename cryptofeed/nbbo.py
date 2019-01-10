@@ -10,6 +10,7 @@ from decimal import Decimal
 from cryptofeed.callback import Callback
 from cryptofeed.defines import BID, ASK
 
+
 class NBBO(Callback):
     def __init__(self, callback, pairs):
         self.bids = {pair: {} for pair in pairs}
