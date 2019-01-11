@@ -143,7 +143,7 @@ class Poloniex(Feed):
             if chan_id not in self.seq_no:
                 self.seq_no[chan_id] = seq_no
             elif self.seq_no[chan_id] + 1 != seq_no:
-                LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
+                LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[chan_id]+1)
                 self.__reset()
                 raise MissingSequenceNumber
             self.seq_no[chan_id] = seq_no
