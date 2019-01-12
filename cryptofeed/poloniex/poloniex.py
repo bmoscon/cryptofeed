@@ -144,7 +144,6 @@ class Poloniex(Feed):
                 self.seq_no[chan_id] = seq_no
             elif self.seq_no[chan_id] + 1 != seq_no:
                 LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[chan_id]+1)
-                self.__reset()
                 raise MissingSequenceNumber
             self.seq_no[chan_id] = seq_no
             await self._book(msg[2], chan_id)
@@ -155,6 +154,7 @@ class Poloniex(Feed):
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
     async def subscribe(self, websocket):
+        self.__reset()
         for channel in self.channels:
             await websocket.send(json.dumps({"command": "subscribe",
                                              "channel": channel
