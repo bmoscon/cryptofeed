@@ -95,7 +95,7 @@ class Gemini(Feed):
         seq_no = msg['socket_sequence']
 
         if self.seq_no and self.seq_no + 1 != seq_no:
-            LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
+            LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no + 1)
             raise MissingSequenceNumber
         else:
             self.seq_no = seq_no

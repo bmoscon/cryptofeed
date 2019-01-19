@@ -173,7 +173,7 @@ class Coinbase(Feed):
             self.l3_book[pair] = {BID: sd(), ASK: sd()}
             self.seq_no[pair] = orders['sequence']
             for side in (BID, ASK):
-                for price, size, order_id in orders[side+'s']:
+                for price, size, order_id in orders[side + 's']:
                     price = Decimal(price)
                     size = Decimal(size)
                     if price in self.l3_book[pair][side]:

@@ -35,7 +35,7 @@ class Throttle(AggregateCallback):
 class OHLCV(AggregateCallback):
     """
     Aggregate trades and calculate OHLCV for time window
-    window is in seconds, defaults to 300 seconds (5 minutes) 
+    window is in seconds, defaults to 300 seconds (5 minutes)
     """
 
     def __init__(self, *args, window=300, **kwargs):

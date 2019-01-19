@@ -42,7 +42,7 @@ class Bitstamp(Feed):
 
         book = {}
         for side in (BID, ASK):
-            book[side] = sd({Decimal(price): Decimal(size) for price, size in data[side+'s']})
+            book[side] = sd({Decimal(price): Decimal(size) for price, size in data[side + 's']})
         await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=book, timestamp=timestamp)
 
     async def _trades(self, msg):

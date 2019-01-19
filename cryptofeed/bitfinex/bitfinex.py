@@ -268,7 +268,7 @@ class Bitfinex(Feed):
             if chan_id in self.channel_map:
                 seq_no = msg[-1]
                 if self.seq_no + 1 != seq_no:
-                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
+                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no + 1)
                     raise MissingSequenceNumber
                 self.seq_no = seq_no
 
