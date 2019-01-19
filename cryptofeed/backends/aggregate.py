@@ -8,8 +8,6 @@ import time
 from collections import defaultdict
 from decimal import Decimal
 
-from cryptofeed.defines import BID, ASK, TRADES
-
 
 class AggregateCallback:
     def __init__(self, handler, *args, **kwargs):
@@ -21,6 +19,7 @@ class Throttle(AggregateCallback):
     Wraps a callback and throttles updates based on `timer`. Will allow
     1 update per `timer` interval; all others are dropped
     """
+
     def __init__(self, *args, timer=60, **kwargs):
         super().__init__(*args, **kwargs)
         self.timer = timer
@@ -38,12 +37,13 @@ class OHLCV(AggregateCallback):
     Aggregate trades and calculate OHLCV for time window
     window is in seconds, defaults to 300 seconds (5 minutes) 
     """
+
     def __init__(self, *args, window=300, **kwargs):
         super().__init__(*args, **kwargs)
         self.window = window
         self.last_update = time.time()
         self.data = {}
-    
+
     def _agg(self, pair, amount, price):
         if pair not in self.data:
             self.data[pair] = {'open': price, 'high': price, 'low': price, 'close': price, 'volume': Decimal(0)}
@@ -81,7 +81,7 @@ class CustomAggregate(AggregateCallback):
         self.init = init
         self.data = {}
         self.init(self.data)
-    
+
     async def __call__(self, **kwargs):
         now = time.time()
         if now - self.last_update > self.timer:
