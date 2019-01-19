@@ -1,6 +1,9 @@
 ## Changelog
 
 ### 0.19.1 (2019-01-11)
+  * Feature #55: OHLCV aggregation method in backends plus support for user defined aggregators
+
+### 0.19.1 (2019-01-11)
   * Bugfix: Poloniex logging had bug that prevented reconnect on missing sequence number
 
 ### 0.19.0 (2019-01-10)
