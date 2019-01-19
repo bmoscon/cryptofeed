@@ -14,7 +14,7 @@ import calendar
 import logging
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, GEMINI)
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, GEMINI, EXX)
 from cryptofeed.poloniex.pairs import poloniex_pair_mapping
 from cryptofeed.binance.pairs import binance_pair_mapping
 from cryptofeed.hitbtc.pairs import hitbtc_pair_mapping
@@ -23,6 +23,7 @@ from cryptofeed.bitfinex.pairs import bitfinex_pair_mapping
 from cryptofeed.bitstamp.pairs import bitstamp_pair_mapping
 from cryptofeed.coinbase.pairs import coinbase_pair_mapping
 from cryptofeed.gemini.pairs import gemini_pair_mapping
+from cryptofeed.exx.pairs import exx_pair_mapping
 
 
 LOG = logging.getLogger('feedhandler')
@@ -39,7 +40,8 @@ mappings = {
     BINANCE: binance_pair_mapping,
     HITBTC: hitbtc_pair_mapping,
     KRAKEN: kraken_pair_mapping,
-    POLONIEX: poloniex_pair_mapping
+    POLONIEX: poloniex_pair_mapping,
+    EXX: exx_pair_mapping
 }
 
 for exchange, mapping in mappings.items():

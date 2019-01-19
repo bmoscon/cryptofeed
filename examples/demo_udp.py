@@ -45,7 +45,7 @@ def main():
                             'udp://127.0.0.1',
                             port=5555,
                             depth=10),
-                        timer=1)}))
+                        window=1)}))
 
         f.run()
     finally:

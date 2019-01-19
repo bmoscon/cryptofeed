@@ -36,7 +36,7 @@ def init(data):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TRADES], callbacks={TRADES: CustomAggregate(Callback(callback), timer=30, init=init, aggregator=custom_agg)}))
+    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TRADES], callbacks={TRADES: CustomAggregate(Callback(callback), window=30, init=init, aggregator=custom_agg)}))
 
     f.run()
 

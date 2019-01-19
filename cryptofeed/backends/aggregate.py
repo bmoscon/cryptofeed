@@ -16,18 +16,18 @@ class AggregateCallback:
 
 class Throttle(AggregateCallback):
     """
-    Wraps a callback and throttles updates based on `timer`. Will allow
-    1 update per `timer` interval; all others are dropped
+    Wraps a callback and throttles updates based on `window`. Will allow
+    1 update per `window` interval; all others are dropped
     """
 
-    def __init__(self, *args, timer=60, **kwargs):
+    def __init__(self, *args, window=60, **kwargs):
         super().__init__(*args, **kwargs)
-        self.timer = timer
+        self.window = window
         self.last_update = 0
 
     async def __call__(self, **kwargs):
         now = time.time()
-        if now - self.last_update > self.timer:
+        if now - self.last_update > self.window:
             self.last_update = now
             await self.handler(**kwargs)
 
@@ -66,7 +66,7 @@ class OHLCV(AggregateCallback):
 
 
 class CustomAggregate(AggregateCallback):
-    def __init__(self, *args, timer=30, aggregator=None, init=None, **kwargs):
+    def __init__(self, *args, window=30, aggregator=None, init=None, **kwargs):
         """
         aggregator is a function pointer to the aggregator function. The aggregator will be called with
         a dictionary of internal state (the aggregator will define it), and the data from the cryptofeed callback (trade, book, etc).
@@ -75,7 +75,7 @@ class CustomAggregate(AggregateCallback):
         do other appropriate work (if any).
         """
         super().__init__(*args, **kwargs)
-        self.timer = timer
+        self.window = window
         self.last_update = time.time()
         self.agg = aggregator
         self.init = init
@@ -84,7 +84,7 @@ class CustomAggregate(AggregateCallback):
 
     async def __call__(self, **kwargs):
         now = time.time()
-        if now - self.last_update > self.timer:
+        if now - self.last_update > self.window:
             self.last_update = now
             await self.handler(data=self.data)
             self.init(self.data)
