@@ -44,7 +44,6 @@ class Gemini(Feed):
         side = BID if msg['side'] == 'bid' else ASK
         price = Decimal(msg['price'])
         remaining = Decimal(msg['remaining'])
-        #delta = Decimal(msg['delta'])
 
         if msg['reason'] == 'initial':
             self.l2_book[self.pair][side][price] = remaining
