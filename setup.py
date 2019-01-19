@@ -14,7 +14,7 @@ ld = None
 try:
     import pypandoc
     ld = pypandoc.convert('README.md', 'rst', format='markdown_github')
-except:
+except BaseException:
     pass
 
 
