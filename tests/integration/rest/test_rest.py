@@ -24,7 +24,7 @@ def test_rest_bitfinex():
                 'pair': 'BTC-USD',
                 'id': 25291508,
                 'feed': 'BITFINEX',
-                'side': 'Buy',
+                'side': 'Sell',
                 'amount': 1.65,
                 'price': 966.61}
     r = Rest()
