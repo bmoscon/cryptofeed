@@ -15,6 +15,7 @@ from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import TRADES
 
+
 async def reader(reader, writer):
     while True:
         data = await reader.read(1024)
@@ -25,7 +26,6 @@ async def reader(reader, writer):
         message = f"[{message}]"
         message = json.loads(message, parse_float=Decimal)
 
-
         print(f"Received {message!r}")
 
 
@@ -34,6 +34,7 @@ async def main():
         reader, path='temp.uds')
 
     await server.serve_forever()
+
 
 def writer(path):
     f = FeedHandler()

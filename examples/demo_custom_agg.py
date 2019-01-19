@@ -28,7 +28,7 @@ def custom_agg(data, feed=None, pair=None, side=None, amount=None, price=None, o
 
 def init(data):
     """
-    called at start of each new interval. We just need to clear the 
+    called at start of each new interval. We just need to clear the
     internal state
     """
     data = {}
