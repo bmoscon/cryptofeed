@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.19.1 (2019-01-11)
+### 0.19.2
   * Feature #55: OHLCV aggregation method in backends plus support for user defined aggregators
 
 ### 0.19.1 (2019-01-11)
