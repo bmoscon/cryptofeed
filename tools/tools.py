@@ -9,11 +9,11 @@ import requests
 import json
 
 
-
 """
 Just random functions I used while developing the library.
-They may come in handy again . . . 
+They may come in handy again . . .
 """
+
 
 def poloniex_get_ticker_map():
     """
@@ -47,7 +47,7 @@ def coinbase_get_trading_pairs():
         data = json.loads(url.read().decode())
         print('[', end='')
         for pair in data:
-            print("'" + pair['id'] +"',",)
+            print("'" + pair['id'] + "',",)
         print("]")
 
 
@@ -56,8 +56,9 @@ def hitbtc_get_trading_pairs():
         data = json.loads(url.read().decode())
         print('[', end='')
         for pair in data:
-            print("'" + pair['id'] +"',",)
+            print("'" + pair['id'] + "',",)
         print("]")
+
 
 def cex_get_trading_pairs():
     r = requests.get('https://cex.io/api/currency_limits')
@@ -73,6 +74,7 @@ def exx_get_trading_pairs():
     for key in r.json():
         print("'{}',".format(key))
     print("]")
+
 
 def bitmex_instruments():
     r = requests.get('https://www.bitmex.com/api/v1/instrument/active')
