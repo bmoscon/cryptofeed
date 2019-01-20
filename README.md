@@ -40,6 +40,7 @@ Supports the following exchanges:
 * BitMEX
 * Kraken
 * Binance
+* EXX
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
@@ -96,7 +97,6 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 # Planned Work
 
 ## Future Feeds
-* EXX
 * CEX
 * BTCC
 * Many more...
