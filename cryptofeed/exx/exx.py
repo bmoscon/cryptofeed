@@ -4,14 +4,10 @@ Copyright (C) 2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 import json
 import logging
 from decimal import Decimal
-from collections import defaultdict
-from datetime import datetime as dt
 
-import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
@@ -37,40 +33,40 @@ class EXX(Feed):
         """
         Snapshot:
 
-        [  
-            [  
+        [
+            [
                 'AE',
                 '1',
                 'BTC_USDT',
                 '1547941504',
-                {  
-                    'asks':[  
-                        [  
+                {
+                    'asks':[
+                        [
                         '25000.00000000',
                         '0.02000000'
                         ],
-                        [  
+                        [
                         '19745.83000000',
                         '0.00200000'
                         ],
-                        [  
+                        [
                         '19698.96000000',
                         '0.00100000'
                         ],
                         ...
                     ]
                 },
-                {  
-                    'bids':[  
-                        [  
+                {
+                    'bids':[
+                        [
                         '3662.83040000',
                         '0.00100000'
                         ],
-                        [  
+                        [
                         '3662.77540000',
                         '0.01000000'
                         ],
-                        [  
+                        [
                         '3662.59900000',
                         '0.10300000'
                         ],
@@ -112,13 +108,13 @@ class EXX(Feed):
             if amount == 0:
                 try:
                     del self.l2_book[pair][side][price]
-                except:
-                   pass
+                except BaseException:
+                    pass
             else:
                 self.l2_book[pair][side][price] = amount
-        
+
         await self.book_callback(pair, L2_BOOK, True, None, timestamp)
-    
+
     async def _trade(self, msg):
         """
         Trade message
@@ -130,12 +126,12 @@ class EXX(Feed):
         side = msg[4]
         price = Decimal(msg[5])
         amount = Decimal(msg[6])
-        id = msg[7]
+        trade_id = msg[7]
 
         await self.callbacks[TRADES](
             feed=self.id,
             pair=pair,
-            order_id=id,
+            order_id=trade_id,
             side=side,
             amount=amount,
             price=price,
@@ -159,7 +155,7 @@ class EXX(Feed):
         self.__reset()
         for channel in self.channels:
             for pair in self.pairs:
-                await websocket.send(json.dumps({"dataType":f"1_{channel}_{pair}",
-                                                "dataSize":50,
-                                                "action":"ADD"
-                                                }))
+                await websocket.send(json.dumps({"dataType": f"1_{channel}_{pair}",
+                                                 "dataSize": 50,
+                                                 "action": "ADD"
+                                                 }))
