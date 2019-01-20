@@ -13,3 +13,4 @@ from cryptofeed.poloniex.poloniex import Poloniex
 from cryptofeed.bitmex.bitmex import Bitmex
 from cryptofeed.kraken.kraken import Kraken
 from cryptofeed.binance.binance import Binance
+from cryptofeed.exx.exx import EXX
