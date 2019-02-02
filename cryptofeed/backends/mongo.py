@@ -8,7 +8,6 @@ from decimal import Decimal
 
 import motor.motor_asyncio
 
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert
 

@@ -58,6 +58,7 @@ setup(
     extras_require={
         'redis': ['aioredis'],
         'arctic': ['arctic'],
-        'zmq': ['pyzmq']
+        'zmq': ['pyzmq'],
+        'mongo': ['motor']
     },
 )
