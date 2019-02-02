@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.20.0
+  * Feature #57: Write updates directly to MongoDB via new backend support
+
 ### 0.19.2 (2019-01-21)
   * Feature #55: OHLCV aggregation method in backends plus support for user defined aggregators
   * Feature: EXX exchange support
