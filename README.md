@@ -87,6 +87,7 @@ Supported Backends:
 * TCP Sockets
 * Unix Domain Sockets
 * [InfluxDB](https://github.com/influxdata/influxdb)
+* MongoDB
 
 
 ## Rest API
