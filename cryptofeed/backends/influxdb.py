@@ -7,8 +7,6 @@ associated with this software.
 from decimal import Decimal
 import logging
 import aiohttp
-import json
-from urllib.parse import urlencode
 
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert

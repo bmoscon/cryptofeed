@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 from decimal import Decimal
@@ -87,7 +86,7 @@ class Kraken(Feed):
                     if size == 0:
                         try:
                             del self.l2_book[pair][side][price]
-                        except Exception:
+                        except KeyError:
                             pass
                     else:
                         self.l2_book[pair][side][price] = size

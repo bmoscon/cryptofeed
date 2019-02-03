@@ -27,7 +27,7 @@ class Feed:
 
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")
-        
+
         if config is not None:
             for channel in config:
                 chan = feed_to_exchange(self.id, channel)

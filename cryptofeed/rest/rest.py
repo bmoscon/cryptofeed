@@ -1,5 +1,3 @@
-import logging
-
 from cryptofeed.rest.bitmex import Bitmex
 from cryptofeed.rest.bitfinex import Bitfinex
 from cryptofeed.rest.coinbase import Coinbase

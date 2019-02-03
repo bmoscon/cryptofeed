@@ -7,7 +7,7 @@ associated with this software.
 from cryptofeed.callback import TradeCallback, BookCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES
+from cryptofeed.defines import L3_BOOK, BID, ASK, TRADES
 
 
 
