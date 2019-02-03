@@ -12,17 +12,24 @@ from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, callbacks=None, book_interval=1000):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, book_interval=1000):
+        if channels is not None and FUNDING in channels and self.id == BITFINEX:
+            if len(channels) > 1:
+                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex or you must use config")
+
+        if config is not None and (pairs is not None or channels is not None):
+            raise ValueError("Use config, or channels and pairs, not both")
+        
+        if config is not None:
+            channels = config.keys()
+            pairs = config.values()
+
         self.address = address
         self.standardized_pairs = pairs
         self.standardized_channels = channels
         self.book_update_interval = book_interval
         self.updates = 0
         self.do_deltas = False
-
-        if channels is not None and FUNDING in channels and self.id == BITFINEX:
-            if len(channels) > 1:
-                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex")
 
         if pairs:
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]

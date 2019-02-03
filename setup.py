@@ -13,7 +13,7 @@ from setuptools.command.test import test as TestCommand
 ld = None
 try:
     import pypandoc
-    ld = pypandoc.convert('README.md', 'rst', format='markdown_github')
+    ld = pypandoc.convert_file('README.md', 'rst', format='markdown_github')
 except BaseException:
     pass
 
