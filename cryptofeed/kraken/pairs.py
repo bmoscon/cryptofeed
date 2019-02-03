@@ -17,9 +17,10 @@ def gen_pairs():
         if ".d" in alt:
             modifier = -5
         normalized = alt[:modifier] + '-' + alt[modifier:]
+        exch = normalized.replace("-", "/")
         normalized = normalized.replace('XBT', 'BTC')
         normalized = normalized.replace('XDG', 'DOG')
-        ret[normalized] = pair
+        ret[normalized] = exch
     return ret
 
 

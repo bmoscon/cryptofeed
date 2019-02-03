@@ -91,7 +91,7 @@ _feed_to_exchange_map = {
         COINBASE: 'level2',
         BITMEX: 'orderBook10',
         BITSTAMP: 'order_book',
-        KRAKEN: L2_BOOK,
+        KRAKEN: 'book',
         BINANCE: 'depth20',
         EXX: 'ENTRUST_ADD'
     },
@@ -113,7 +113,7 @@ _feed_to_exchange_map = {
         BITFINEX: 'trades',
         COINBASE: 'matches',
         BITMEX: 'trade',
-        KRAKEN: TRADES,
+        KRAKEN: 'trade',
         BINANCE: 'trade',
         EXX: 'TRADE'
     },
