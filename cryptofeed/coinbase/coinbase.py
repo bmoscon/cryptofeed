@@ -88,12 +88,13 @@ class Coinbase(Feed):
             'time': '2018-05-21T00:26:05.585000Z'
         }
         '''
-        if self.l3_book:
+        pair = msg['product_id']
+
+        if 'full' in self.channels or ('full' in self.config and pair in self.config['full']):
             delta = {BID: defaultdict(list), ASK: defaultdict(list)}
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
             size = Decimal(msg['size'])
-            pair = msg['product_id']
             maker_order_id = msg['maker_order_id']
             timestamp = msg['time']
 
@@ -157,18 +158,18 @@ class Coinbase(Feed):
 
         await self.book_callback(msg['product_id'], L2_BOOK, False, delta, timestamp)
 
-    async def _book_snapshot(self):
+    async def _book_snapshot(self, pairs):
         self.__reset()
         loop = asyncio.get_event_loop()
         url = 'https://api.pro.coinbase.com/products/{}/book?level=3'
-        futures = [loop.run_in_executor(None, requests.get, url.format(pair)) for pair in self.pairs]
+        futures = [loop.run_in_executor(None, requests.get, url.format(pair)) for pair in pairs]
 
         results = []
         for future in futures:
             ret = await future
             results.append(ret)
 
-        for res, pair in zip(results, self.pairs):
+        for res, pair in zip(results, pairs):
             orders = res.json()
             self.l3_book[pair] = {BID: sd(), ASK: sd()}
             self.seq_no[pair] = orders['sequence']
@@ -255,14 +256,15 @@ class Coinbase(Feed):
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
-        if 'full' in self.channels and 'product_id' in msg and 'sequence' in msg:
+
+        if 'product_id' in msg and 'sequence' in msg and ('full' in self.channels or ('full' in self.config and msg['product_id'] in self.config['full'])):
             pair = msg['product_id']
             if msg['sequence'] <= self.seq_no[pair]:
                 return
-            elif 'full' in self.channels and msg['sequence'] != self.seq_no[pair] + 1:
-                LOG.warning("%s: Missing sequence number detected", self.id)
+            elif ('full' in self.channels or 'full' in self.config) and msg['sequence'] != self.seq_no[pair] + 1:
+                LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
                 LOG.warning("%s: Requesting book snapshot", self.id)
-                await self._book_snapshot()
+                await self._book_snapshot(self.pairs or self.book_pairs)
                 return
 
             self.seq_no[pair] = msg['sequence']
@@ -293,9 +295,22 @@ class Coinbase(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        await websocket.send(json.dumps({"type": "subscribe",
-                                         "product_ids": self.pairs,
-                                         "channels": self.channels
+        snapshot = False
+        self.book_pairs = []
+
+        if self.config:
+            for chan in self.config:
+                await websocket.send(json.dumps({"type": "subscribe",
+                                         "product_ids": self.config[chan],
+                                         "channels": [chan]
                                          }))
-        if 'full' in self.channels:
-            await self._book_snapshot()
+                if 'full' in chan:
+                    snapshot = True
+                    self.book_pairs.extend(self.config[chan])
+        else:
+            await websocket.send(json.dumps({"type": "subscribe",
+                                            "product_ids": self.pairs,
+                                            "channels": self.channels
+                                            }))
+        if 'full' in self.channels or snapshot:
+            await self._book_snapshot(self.pairs or self.book_pairs)
