@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import TICKER, TRADES, BID, ASK, L2_BOOK, UND, BINANCE
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange
+from cryptofeed.standards import pair_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
