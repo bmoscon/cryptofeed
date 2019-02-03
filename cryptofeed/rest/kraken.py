@@ -104,12 +104,12 @@ class Kraken(API):
         return self._post_public("/public/Depth", payload)
 
     def trades(self, symbol):
-        symbol = pair_std_to_exchange(symbol, self.ID)
         """
         Parameters:
             pair = asset pair to get trade data for
             since = return trade data since given id (optional.  exclusive)
         """
+        symbol = pair_std_to_exchange(symbol, self.ID).replace("/", "")
         return self._post_public("/public/Trades", {'pair': symbol})
 
     def get_recent_spread_data(self, payload=None):
