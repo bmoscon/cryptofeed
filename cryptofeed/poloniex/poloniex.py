@@ -16,7 +16,7 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.defines import BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, UPD, DEL, POLONIEX
 from cryptofeed.standards import pair_exchange_to_std
-from .pairs import poloniex_id_pair_mapping
+from cryptofeed.pairs import poloniex_id_pair_mapping
 
 
 LOG = logging.getLogger('feedhandler')
@@ -29,6 +29,8 @@ class Poloniex(Feed):
         if pairs:
             LOG.error("Poloniex does not support pairs")
             raise ValueError("Poloniex does not support pairs")
+
+        self.pair_mapping = poloniex_id_pair_mapping()
 
         super().__init__('wss://api2.poloniex.com',
                          channels=channels,
@@ -44,7 +46,7 @@ class Poloniex(Feed):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
-        pair = pair_exchange_to_std(poloniex_id_pair_mapping[pair_id])
+        pair = pair_exchange_to_std(self.pair_mapping[pair_id])
         await self.callbacks[TICKER](feed=self.id,
                                      pair=pair,
                                      bid=Decimal(bid),
@@ -82,7 +84,7 @@ class Poloniex(Feed):
                 price = Decimal(key)
                 self.l2_book[pair][BID][price] = amount
         else:
-            pair = poloniex_id_pair_mapping[chan_id]
+            pair = self.pair_mapping[chan_id]
             pair = pair_exchange_to_std(pair)
             for update in msg:
                 msg_type = update[0]

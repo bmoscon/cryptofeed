@@ -12,7 +12,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL, GEMINI
-from cryptofeed.standards import pair_std_to_exchange
+from cryptofeed.standards import pair_std_to_exchange, load_exchange_pair_mapping
 from cryptofeed.exceptions import MissingSequenceNumber
 
 
@@ -31,11 +31,13 @@ class Gemini(Feed):
             raise ValueError("Gemini does not support different channels")
         self.pair = pairs[0]
 
-        super().__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'),
+        super().__init__('wss://api.gemini.com/v1/marketdata/',
                          pairs=None,
                          channels=None,
                          callbacks=callbacks,
                          **kwargs)
+
+        self.address += pair_std_to_exchange(self.pair, self.id)
         self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
         self.seq_no = None
 

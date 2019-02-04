@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.callback import Callback
-from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange
+from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
 from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, BITFINEX
 
 
@@ -20,6 +20,8 @@ class Feed:
         self.do_deltas = False
         self.pairs = []
         self.channels = []
+
+        load_exchange_pair_mapping(self.id)
 
         if channels is not None and FUNDING in channels and self.id == BITFINEX:
             if len(channels) > 1:

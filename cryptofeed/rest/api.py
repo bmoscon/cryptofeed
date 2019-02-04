@@ -6,6 +6,8 @@ import logging
 import requests
 import yaml
 
+from cryptofeed.standards import load_exchange_pair_mapping
+
 
 LOG = logging.getLogger('rest')
 
@@ -44,6 +46,7 @@ class API:
     ID = 'NotImplemented'
 
     def __init__(self, config, sandbox=False):
+        load_exchange_pair_mapping(self.ID)
         path = os.path.dirname(os.path.abspath(__file__))
         self.key_id, self.key_secret, self.key_passphrase = None, None, None
         self.sandbox = sandbox
