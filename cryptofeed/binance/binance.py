@@ -23,7 +23,7 @@ class Binance(Feed):
     id = BINANCE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__(None, pairs, channels, callbacks, **kwargs)
+        super().__init__(None, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.address = self.__address()
         self.__reset()
 

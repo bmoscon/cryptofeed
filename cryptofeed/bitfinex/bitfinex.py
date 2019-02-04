@@ -41,7 +41,7 @@ class Bitfinex(Feed):
     id = BITFINEX
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks, **kwargs)
+        super().__init__('wss://api.bitfinex.com/ws/2', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
 
     def __reset(self):
