@@ -45,12 +45,15 @@ mappings = {
 }
 
 for exchange, mapping in mappings.items():
-    for std, exch in mapping.items():
-        _exchange_to_std[exch] = std
-        if std in _std_trading_pairs:
-            _std_trading_pairs[std][exchange] = exch
-        else:
-            _std_trading_pairs[std] = {exchange: exch}
+    if mapping:
+        for std, exch in mapping.items():
+            _exchange_to_std[exch] = std
+            if std in _std_trading_pairs:
+                _std_trading_pairs[std][exchange] = exch
+            else:
+                _std_trading_pairs[std] = {exchange: exch}
+    else:
+        LOG.warning("No mapping for {}".format(exchange))
 
 
 def pair_std_to_exchange(pair, exchange):

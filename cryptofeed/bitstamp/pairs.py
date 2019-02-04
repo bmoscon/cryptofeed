@@ -5,7 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import requests
+import logging
 
+LOG = logging.getLogger('bitstamp.pairs')
 
 def gen_pairs():
     ret = {}
@@ -16,5 +18,8 @@ def gen_pairs():
         ret[normalized] = pair
     return ret
 
-
-bitstamp_pair_mapping = gen_pairs()
+try:
+    bitstamp_pair_mapping = gen_pairs()
+except:
+    LOG.exception("Unable to get pairs from Bitstamp")
+    bitstamp_pair_mapping = None
