@@ -5,7 +5,7 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
 
-Handles multiple feeds and returns normalized and standardized results across exchanges to client registered callbacks for events like trades, book updates, ticker updates, etc.
+Handles multiple cryptocurrency exchange data feeds and returns normalized and standardized results to client registered callbacks for events like trades, book updates, ticker updates, etc.
 
 Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples.
 
@@ -103,7 +103,7 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 * Many more...
 
 ## REST
-Continue to build out rest endpoints
+Continue to build out rest endpoints and standardize exchange interfaces and data
 
 ## Additional Callback Methods / Backends
 * Postgres
