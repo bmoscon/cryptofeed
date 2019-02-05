@@ -1,13 +1,16 @@
-from time import time
+import time
 import hashlib
 import hmac
 import requests
 import urllib
 import base64
 import logging
+import calendar
 
-from cryptofeed.rest.api import API
-from cryptofeed.defines import KRAKEN
+import pandas as pd
+
+from cryptofeed.rest.api import API, request_retry
+from cryptofeed.defines import KRAKEN, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange
 
 
@@ -34,7 +37,7 @@ class Kraken(API):
         # API-Sign = Message signature using HMAC-SHA512 of (URI path + SHA256(nonce + POST data)) and base64 decoded secret API key
         if payload is None:
             payload = {}
-        payload['nonce'] = int(time() * 1000)
+        payload['nonce'] = int(time.time() * 1000)
 
         urlpath = '{}{}'.format('/0', command)
 
@@ -103,14 +106,51 @@ class Kraken(API):
         """
         return self._post_public("/public/Depth", payload)
 
-    def trades(self, symbol):
-        """
-        Parameters:
-            pair = asset pair to get trade data for
-            since = return trade data since given id (optional.  exclusive)
-        """
+    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         symbol = pair_std_to_exchange(symbol, self.ID).replace("/", "")
-        return self._post_public("/public/Trades", {'pair': symbol})
+
+        if start and end:
+            for data in self._historical_trades(symbol, start, end, retry, retry_wait):
+                yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
+        else:
+            yield self._post_public("/public/Trades", {'pair': symbol})
+
+
+    def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
+        @request_retry(self.ID, retry, retry_wait)
+        def helper(start_date):
+            endpoint = f"{self.api}/public/Trades?pair={symbol}&since={start_date}"
+            return requests.get(endpoint)
+
+
+        start_date = calendar.timegm(pd.Timestamp(start_date).timetuple()) * 1000000000
+        end_date = calendar.timegm(pd.Timestamp(end_date).timetuple()) * 1000000000
+
+        while start_date < end_date:
+            r = helper(start_date)
+
+            if r.status_code != 200:
+                self.handle_error(r, LOG)
+
+            data = r.json()
+
+            yield data
+
+            start_date = int(data['result']['last'])
+
+    def _trade_normalization(self, trade: list, symbol: str) -> dict:
+        """
+        ['976.00000', '1.34379010', 1483270225.7744, 's', 'l', '']
+        """
+        return {
+            'timestamp': trade[2],
+            'pair': symbol,
+            'id': None,
+            'feed': self.ID,
+            'side': ASK if trade[3] == 's' else BID,
+            'amount': trade[1],
+            'price': trade[0]
+        }
 
     def get_recent_spread_data(self, payload=None):
         """

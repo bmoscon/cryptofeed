@@ -41,8 +41,8 @@ def test_get_order_book():
 
 
 def test_get_recent_trades():
-    trades = kraken.trades('ADA-CAD')
-    assert len(trades['result']['ADACAD']) > 0
+    trades = list(kraken.trades('ADA-CAD'))
+    assert len(trades) > 0
 
 
 def test_recent_spread_data():
