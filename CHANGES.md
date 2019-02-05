@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.20.0
+### 0.20.0 (2019-02-04)
   * Feature #57: Write updates directly to MongoDB via new backend support
   * Feature #56: Experimental support for fine grained configuration per exchange
   * Feature #58: Support Kraken websocket API
