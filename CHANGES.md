@@ -5,6 +5,7 @@
   * Feature #56: Experimental support for fine grained configuration per exchange
   * Feature #58: Support Kraken websocket API
   * Feature: Only generate trading pair conversions for configured exchanges
+  * Feature: Historical trade data on REST api for Kraken
 
 ### 0.19.2 (2019-01-21)
   * Feature #55: OHLCV aggregation method in backends plus support for user defined aggregators
