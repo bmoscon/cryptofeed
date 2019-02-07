@@ -14,8 +14,8 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE
-from cryptofeed.exchanges import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase
+from cryptofeed.defines import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN
+from cryptofeed.exchanges import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase, Kraken
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
 
@@ -31,6 +31,7 @@ _EXCHANGES = {
     BITFINEX: Bitfinex,
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
+    KRAKEN: Kraken
 }
 
 

@@ -55,7 +55,7 @@ class Kraken(Feed):
                                         amount=Decimal(amount),
                                         price=Decimal(price),
                                         order_id=None,
-                                        timestamp=timestamp)
+                                        timestamp=float(timestamp))
 
     async def _ticker(self, msg, pair):
         """
