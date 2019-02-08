@@ -133,6 +133,12 @@ class Kraken(API):
                 self.handle_error(r, LOG)
 
             data = r.json()
+            if 'error' in data and data['error']:
+                if data['error'] == ['EAPI:Rate limit exceeded']:
+                    time.sleep(20)
+                    continue
+                else:
+                    raise Exception("Error: {}".format(data['error']))
 
             yield data
 
