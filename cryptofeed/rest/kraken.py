@@ -129,7 +129,11 @@ class Kraken(API):
         while start_date < end_date:
             r = helper(start_date)
 
-            if r.status_code != 200:
+            if r.status_code == 504:
+                # cloudflare gateway timeout - try again
+                time.sleep(60)
+                continue
+            elif r.status_code != 200:
                 self.handle_error(r, LOG)
 
             data = r.json()
