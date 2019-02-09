@@ -10,6 +10,8 @@ The first step is to define a new class, with the Feed class as the parent. By c
 class definition will go in the `huobi` module within `cryptofeed`. 
 
 ```python
+import logging
+
 from cryptofeed.feed import Feed
 from cryptofeed.defines import HUOBI
 
@@ -26,11 +28,13 @@ class Huobi(Feed):
 
     def __reset(self):
         pass
+    
+    async def subscribe(self, websocket):
+        self.__reset()
+
 ```
 
-We've basically just extended Feed, populated the websocket address in the parent's constructor call, and defined the `__reset` 
-method, which we may or may not need (more on this later). You might notice that `HUOBI` is being imported from `defines`, so 
-we'll need to add that as well:
+We've basically just extended Feed, populated the websocket address in the parent's constructor call, and defined the `__reset` and `subscribe` methods; we may or may not need `__reset` (more on this later). `subscribe` is called every time a connection is made to the exchange - typically just when the feedhandler starts, and again if the connection is interrupted and has to be reestablished. You might notice that `HUOBI` is being imported from `defines`, so we'll need to add that as well:
 
 ```python
 HUOBI = 'HUOBI'
