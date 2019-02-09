@@ -129,8 +129,8 @@ class Kraken(API):
         while start_date < end_date:
             r = helper(start_date)
 
-            if r.status_code == 504:
-                # cloudflare gateway timeout - try again
+            if r.status_code == 504 or r.status_code == 520:
+                # cloudflare gateway timeout or other error
                 time.sleep(60)
                 continue
             elif r.status_code != 200:
