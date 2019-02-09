@@ -13,7 +13,7 @@ import time
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, L2_BOOK, TRADES, BID, ASK, UPD, DEL, HITBTC
+from cryptofeed.defines import TICKER, L2_BOOK, TRADES, BUY, SELL, BID, ASK, UPD, DEL, HITBTC
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -68,7 +68,7 @@ class HitBTC(Feed):
         for update in msg['data']:
             price = Decimal(update['price'])
             quantity = Decimal(update['quantity'])
-            side = update['side']
+            side = BUY if update['side'] == 'buy' else SELL
             order_id = update['id']
             timestamp = update['timestamp']
             await self.callbacks[TRADES](feed=self.id,

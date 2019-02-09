@@ -29,6 +29,9 @@ VOLUME = 'volume'
 FUNDING = 'funding'
 UNSUPPORTED = 'unsupported'
 
+BUY = 'buy'
+SELL = 'sell'
+
 BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'

@@ -6,7 +6,7 @@ import time
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BID, ASK, TICKER, L2_BOOK, KRAKEN
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, KRAKEN
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -51,7 +51,7 @@ class Kraken(Feed):
             price, amount, timestamp, side, _, _ = trade
             await self.callbacks[TRADES](feed=self.id,
                                         pair=pair,
-                                        side=BID if side == 'b' else ASK,
+                                        side=BUY if side == 'b' else SELL,
                                         amount=Decimal(amount),
                                         price=Decimal(price),
                                         order_id=None,

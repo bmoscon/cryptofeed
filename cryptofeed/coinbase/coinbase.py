@@ -15,7 +15,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, TRADES, TICKER, DEL, UPD, COINBASE
+from cryptofeed.defines import L2_BOOK, L3_BOOK, BUY, SELL, BID, ASK, TRADES, TICKER, DEL, UPD, COINBASE
 
 
 LOG = logging.getLogger('feedhandler')
@@ -117,7 +117,7 @@ class Coinbase(Feed):
             feed=self.id,
             pair=msg['product_id'],
             order_id=msg['trade_id'],
-            side=BID if msg['side'] == 'buy' else ASK,
+            side=BUY if msg['side'] == 'buy' else SELL,
             amount=Decimal(msg['size']),
             price=Decimal(msg['price']),
             timestamp=msg['time']
