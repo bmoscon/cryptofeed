@@ -42,5 +42,6 @@ HUOBI = 'HUOBI'
 
 Again by convention the exchange names in `defines.py` are all uppercase.
 
-
+### Subscribing
+Per the exchange docs, the 
 
