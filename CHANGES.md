@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.20.1 (2019-02-10)
+### 0.20.1
   * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
 
 ### 0.20.0 (2019-02-04)
