@@ -2,6 +2,7 @@
 
 ### 0.20.1
   * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
+  * Feature: Initial support for the Huobi exchange
 
 ### 0.20.0 (2019-02-04)
   * Feature #57: Write updates directly to MongoDB via new backend support
