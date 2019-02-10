@@ -14,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING, DEL, UPD, BITFINEX
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BUY, SELL, BID, ASK, L2_BOOK, FUNDING, DEL, UPD, BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -85,10 +85,7 @@ class Bitfinex(Feed):
             else:
                 order_id, timestamp, amount, price = trade
                 period = None
-            if amount < 0:
-                side = ASK
-            else:
-                side = BID
+            side = SELL if amount < 0 else BUY
             amount = abs(amount)
             if period:
                 await self.callbacks[FUNDING](feed=self.id,

@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.defines import EXX as EXX_id
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES
 
 
 LOG = logging.getLogger('feedhandler')
@@ -123,7 +123,7 @@ class EXX(Feed):
         """
         timestamp = msg[2]
         pair = pair_exchange_to_std(msg[3])
-        side = msg[4]
+        side = BUY if msg[4] == 'bid' else SELL
         price = Decimal(msg[5])
         amount = Decimal(msg[6])
         trade_id = msg[7]

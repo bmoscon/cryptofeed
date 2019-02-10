@@ -11,7 +11,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, BITSTAMP
+from cryptofeed.defines import BUY, SELL, BID, ASK, TRADES, L2_BOOK, BITSTAMP
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -54,7 +54,7 @@ class Bitstamp(Feed):
         else:
             pair = pair_exchange_to_std(chan.split('_')[-1])
 
-        side = BID if data['type'] == 0 else ASK
+        side = BUY if data['type'] == 0 else SELL
         amount = Decimal(data['amount'])
         price = Decimal(data['price'])
         timestamp = data['timestamp']

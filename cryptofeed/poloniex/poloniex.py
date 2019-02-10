@@ -14,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, UPD, DEL, POLONIEX
+from cryptofeed.defines import BUY, SELL, BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, UPD, DEL, POLONIEX
 from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.pairs import poloniex_id_pair_mapping
 
@@ -104,7 +104,7 @@ class Poloniex(Feed):
                     _, order_id, _, price, amount, timestamp = update
                     price = Decimal(price)
                     amount = Decimal(amount)
-                    side = ASK if update[2] == 0 else BID
+                    side = BUY if update[2] == 1 else SELL
                     await self.callbacks[TRADES](feed=self.id,
                                                  pair=pair,
                                                  side=side,

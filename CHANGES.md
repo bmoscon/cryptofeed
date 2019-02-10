@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.20.1 (2019-02-10)
+  * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
+
 ### 0.20.0 (2019-02-04)
   * Feature #57: Write updates directly to MongoDB via new backend support
   * Feature #56: Experimental support for fine grained configuration per exchange

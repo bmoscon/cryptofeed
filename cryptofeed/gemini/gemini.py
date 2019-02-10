@@ -11,7 +11,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL, GEMINI
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, UPD, DEL, GEMINI
 from cryptofeed.standards import pair_std_to_exchange
 from cryptofeed.exceptions import MissingSequenceNumber
 
@@ -60,7 +60,7 @@ class Gemini(Feed):
 
     async def _trade(self, msg, timestamp):
         price = Decimal(msg['price'])
-        side = BID if msg['makerSide'] == 'bid' else ASK
+        side = BUY if msg['makerSide'] == 'bid' else SELL
         amount = Decimal(msg['amount'])
         await self.callbacks[TRADES](feed=self.id,
                                      order_id=msg['tid'],
