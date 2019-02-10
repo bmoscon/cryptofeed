@@ -86,3 +86,7 @@ This does mean we'll need to add support for the various channel mappings in `st
            HUOBI: huobi_pairs
         }
     ```
+* `exchanges.py`
+    - ```python
+    from cryptofeed.huobi.huobi import Huobi
+```
