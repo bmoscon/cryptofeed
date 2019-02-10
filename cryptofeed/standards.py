@@ -14,7 +14,7 @@ import calendar
 import logging
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX)
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI)
 from cryptofeed.pairs import gen_pairs
 
 
@@ -99,7 +99,8 @@ _feed_to_exchange_map = {
         BITMEX: 'trade',
         KRAKEN: 'trade',
         BINANCE: 'trade',
-        EXX: 'TRADE'
+        EXX: 'TRADE',
+        HUOBI: 'trade.detail'
     },
     TICKER: {
         POLONIEX: 1002,

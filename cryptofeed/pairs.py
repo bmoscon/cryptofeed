@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI
 
 
 def gen_pairs(exchange):
@@ -114,6 +114,11 @@ def exx_pairs():
     return {pair: exchange for pair, exchange in zip(pairs, exchange)}
 
 
+def huobi_pairs():
+    r = requests.get('https://api.huobi.com/v1/common/symbols').json()
+    return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -123,5 +128,6 @@ _exchange_function_map = {
     BITSTAMP: bitstamp_pairs,
     KRAKEN: kraken_pairs,
     BINANCE: binance_pairs,
-    EXX: exx_pairs
+    EXX: exx_pairs,
+    HUOBI: huobi_pairs
 }
