@@ -54,7 +54,7 @@ async def subscribe(self, websocket):
             for pair in self.pairs:
                 await websocket.send(json.dumps(
                     {
-                        "sub": "market.${}.{}".format(pair, chan),
+                        "sub": "market.{}.{}".format(pair, chan),
                         "id": client_id
                     }
                 ))
@@ -90,3 +90,47 @@ This does mean we'll need to add support for the various channel mappings in `st
     - ```python
       from cryptofeed.huobi.huobi import Huobi
       ```
+
+### Message Handler
+Now that we can subscribe to trades, we can add the message handler (which is called by the feedhandler when messages are received on ther websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot intepret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and pair are sent in the update so we'll need to parse those out to properly handle the message. 
+
+
+``python
+async def _trade(self, msg):
+        """
+        {
+            'ch': 'market.btcusd.trade.detail',
+            'ts': 1549773923965, 
+            'tick': {
+                'id': 100065340982, 
+                'ts': 1549757127140,
+                'data': [{'id': '10006534098224147003732', 'amount': Decimal('0.0777'), 'price': Decimal('3669.69'), 'direction': 'buy', 'ts': 1549757127140}]}}
+        """
+        for trade in msg['tick']['data']:
+            await self.callbacks[TRADES](
+                feed=self.id,
+                pair=pair_exchange_to_std(msg['ch'].split('.')[1]),
+                order_id=trade['id'],
+                side=BUY if trade['direction'] == 'buy' else SELL,
+                amount=Decimal(trade['amount']),
+                price=Decimal(trade['price']),
+                timestamp=trade['ts']
+            )
+
+    async def message_handler(self, msg):
+        # unzip message
+        msg = zlib.decompress(msg, 16+zlib.MAX_WBITS)
+        msg = json.loads(msg, parse_float=Decimal)
+        
+        # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
+        if 'ping' in msg:
+            await self.websocket.send(json.dumps({'pong': msg['ping']}))
+            print("Ping sent")
+        elif 'status' in msg and msg['status'] == 'ok':
+            return
+        elif 'ch' in msg:
+            if 'trade' in msg['ch']:
+                await self._trade(msg)
+        else:
+            LOG.warning("%s: Invalid message type %s", self.id, msg)
+```
