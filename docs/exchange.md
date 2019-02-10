@@ -60,5 +60,29 @@ async def subscribe(self, websocket):
                 ))
 ```
 
-This does mean we'll need to add support for the various channel mappings in `standards.py`
+This does mean we'll need to add support for the various channel mappings in `standards.py`, add support for the pair mappings in `pairs.py` and add the exchange import to `exchanges.py`. 
 
+
+* `standards.py`
+    - ```python
+        _feed_to_exchange_map = {
+            ...
+            TRADES: {
+                ...
+                HUOBI: 'trade.detail'
+            },
+        ```
+
+* `pairs.py`
+    - Per the documentation we can get a list of symbols from their REST api via `GET /v1/common/symbols`
+    - ```python
+      def huobi_pairs():
+            r = requests.get('https://api.huobi.com/v1/common/symbols').json()
+            return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
+
+
+        _exchange_function_map = {
+           ...
+           HUOBI: huobi_pairs
+        }
+    ```
