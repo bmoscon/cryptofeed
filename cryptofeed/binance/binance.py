@@ -12,7 +12,7 @@ import time
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, UND, BINANCE
+from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE
 from cryptofeed.standards import pair_exchange_to_std
 
 
