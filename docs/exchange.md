@@ -133,3 +133,5 @@ async def _trade(self, msg):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 ```
+
+The actual trade handler, `_trade`, simply parses out the relevant data and invokes the callback to deliver the update to the client. 
