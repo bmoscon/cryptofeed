@@ -26,14 +26,14 @@ class Huobi(Feed):
 
     def __reset(self):
         pass
-    
+
     async def _trade(self, msg):
         """
         {
             'ch': 'market.btcusd.trade.detail',
-            'ts': 1549773923965, 
+            'ts': 1549773923965,
             'tick': {
-                'id': 100065340982, 
+                'id': 100065340982,
                 'ts': 1549757127140,
                 'data': [{'id': '10006534098224147003732', 'amount': Decimal('0.0777'), 'price': Decimal('3669.69'), 'direction': 'buy', 'ts': 1549757127140}]}}
         """
@@ -52,7 +52,7 @@ class Huobi(Feed):
         # unzip message
         msg = zlib.decompress(msg, 16+zlib.MAX_WBITS)
         msg = json.loads(msg, parse_float=Decimal)
-        
+
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
             await self.websocket.send(json.dumps({'pong': msg['ping']}))
@@ -63,7 +63,7 @@ class Huobi(Feed):
                 await self._trade(msg)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
-    
+
     async def subscribe(self, websocket):
         self.websocket = websocket
         self.__reset()
