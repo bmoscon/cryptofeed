@@ -137,3 +137,45 @@ async def _trade(self, msg):
 ```
 
 The actual trade handler, `_trade`, simply parses out the relevant data and invokes the callback to deliver the update to the client. 
+
+### Order Book Support
+
+Finally we'll add support for order books. There are other data feeds we could support (like `TICKER`) but for the purposes of this walk through, trades are order book are sufficient to illustrate the process for adding a new exchange. 
+
+Like we did with for the trades channel, we'll need to add a handler for the book data in the message handler, and add support for the subscription message in `standards.py`.
+
+
+* `standards.py`
+  - ```python
+  _feed_to_exchange_map = {
+    L2_BOOK: {
+        ...
+        HUOBI: 'depth.step0'
+        ```
+* `huobi.py`
+  - `message_handler`
+  - ```python
+  elif 'ch' in msg:
+      ....
+      elif 'depth' in msg['ch']:
+          await self._book(msg)
+    ```
+  - `_book`
+  - ```python
+  async def _book(self, msg):
+        pair = pair_exchange_to_std(msg['ch'].split('.')[1])
+        data = msg['tick']
+        self.l2_book[pair] = {
+            BID: sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in data['bids']
+            }),
+            ASK: sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in data['asks']
+            })
+        }
+
+        await self.book_callback(pair, L2_BOOK, False, False, msg['ts'])
+    ```
+   
