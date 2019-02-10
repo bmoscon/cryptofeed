@@ -43,5 +43,22 @@ HUOBI = 'HUOBI'
 Again by convention the exchange names in `defines.py` are all uppercase.
 
 ### Subscribing
-Per the exchange docs, the 
+Cryptofeed accepts standarized names for data channels/feeds. The `Feed` parent class will convert these to the exchange specific versions for use when subscribing. Per the exchange docs, each subscription to the various data channels must be made with a new subscription message, so for this exchange we can subscribe like so:
+
+
+```python
+async def subscribe(self, websocket):
+        self.__reset()
+        client_id = 0
+        for chan in self.channels:
+            for pair in self.pairs:
+                await websocket.send(json.dumps(
+                    {
+                        "sub": "market.${}.{}".format(pair, chan),
+                        "id": client_id
+                    }
+                ))
+```
+
+This does mean we'll need to add support for the various channel mappings in `standards.py`
 
