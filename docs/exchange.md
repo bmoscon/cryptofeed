@@ -48,6 +48,7 @@ Cryptofeed accepts standarized names for data channels/feeds. The `Feed` parent 
 
 ```python
 async def subscribe(self, websocket):
+        self.websocket = websocket
         self.__reset()
         client_id = 0
         for chan in self.channels:
@@ -60,8 +61,8 @@ async def subscribe(self, websocket):
                     }
                 ))
 ```
-
-This does mean we'll need to add support for the various channel mappings in `standards.py`, add support for the pair mappings in `pairs.py` and add the exchange import to `exchanges.py`. 
+We also save the websocket connection to a private data member of the class so we can use it in the message handler to respond to pings (more on this later, this is specific to this exchange).
+This also mean we'll need to add support for the various channel mappings in `standards.py`, add support for the pair mappings in `pairs.py` and add the exchange import to `exchanges.py`. 
 
 
 * `standards.py`
