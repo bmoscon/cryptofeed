@@ -16,19 +16,19 @@ from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDI
 # while the callbacks are being handled (unless they in turn await other functions or I/O)
 # so they should be as lightweight as possible
 async def ticker(feed, pair, bid, ask):
-    print('Feed: {} Pair: {} Bid: {} Ask: {}'.format(feed, pair, bid, ask))
+    print(f'Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
 
 
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
-    print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, order_id, side, amount, price))
+    print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
 
 async def book(feed, pair, book, timestamp):
-    print('Timestamp: {} Feed: {} Pair: {} Book Bid Size is {} Ask Size is {}'.format(timestamp, feed, pair, len(book[BID]), len(book[ASK])))
+    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
 
 async def funding(**kwargs):
-    print("Funding Update for {}".format(kwargs['feed']))
+    print(f"Funding Update for {kwargs['feed']}")
     print(kwargs)
 
 
