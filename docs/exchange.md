@@ -179,3 +179,4 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
           await self.book_callback(pair, L2_BOOK, False, False, msg['ts'])
     ```
    
+According to the docs, for the book updates, the entire book is sent each time, so we just need to process the message in its entirety and call the `book_callback` method, defined in the parent `Feed` class. Its designed to handle the myriad of ways an update might take place, many of which Huobi does not support. Some exchanges supply only incremental updates (also called deltas), meaning a client can subscribe to a book delta, instead of getting the entire book each time. Huobi does not support this, so there is no delta processing to handle, but by convention the same method is used to process the book update. 
