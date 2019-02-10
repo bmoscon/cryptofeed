@@ -41,6 +41,7 @@ Supports the following exchanges:
 * Kraken
 * Binance
 * EXX
+* Huobi
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
