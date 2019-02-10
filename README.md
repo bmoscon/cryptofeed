@@ -73,7 +73,7 @@ Cryptofeed supports the following channels:
 * TICKER
 * VOLUME
 * FUNDING
-* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects.
+* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects. Not all exchanges support, as some exchanges send complete books on every update.
 
 
 ## Backends
