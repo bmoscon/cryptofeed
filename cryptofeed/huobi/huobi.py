@@ -9,8 +9,10 @@ import json
 from decimal import Decimal
 import zlib
 
+from sortedcontainers import SortedDict as sd
+
 from cryptofeed.feed import Feed
-from cryptofeed.defines import HUOBI, BUY, SELL, TRADES
+from cryptofeed.defines import HUOBI, BUY, SELL, TRADES, BID, ASK, L2_BOOK
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -25,7 +27,23 @@ class Huobi(Feed):
         self.__reset()
 
     def __reset(self):
-        pass
+        self.l2_book = {}
+
+    async def _book(self, msg):
+        pair = pair_exchange_to_std(msg['ch'].split('.')[1])
+        data = msg['tick']
+        self.l2_book[pair] = {
+            BID: sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in data['bids']
+            }),
+            ASK: sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in data['asks']
+            })
+        }
+
+        await self.book_callback(pair, L2_BOOK, False, False, msg['ts'])
 
     async def _trade(self, msg):
         """
@@ -61,6 +79,10 @@ class Huobi(Feed):
         elif 'ch' in msg:
             if 'trade' in msg['ch']:
                 await self._trade(msg)
+            elif 'depth' in msg['ch']:
+                await self._book(msg)
+            else:
+                LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
@@ -68,8 +90,8 @@ class Huobi(Feed):
         self.websocket = websocket
         self.__reset()
         client_id = 0
-        for chan in self.channels:
-            for pair in self.pairs:
+        for chan in self.channels if self.channels else self.config:
+            for pair in self.pairs if self.pairs else self.config[chan]:
                 client_id += 1
                 await websocket.send(json.dumps(
                     {
@@ -77,3 +99,4 @@ class Huobi(Feed):
                         "id": client_id
                     }
                 ))
+
