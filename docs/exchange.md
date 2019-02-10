@@ -81,12 +81,12 @@ This does mean we'll need to add support for the various channel mappings in `st
             return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
-        _exchange_function_map = {
+      _exchange_function_map = {
            ...
            HUOBI: huobi_pairs
         }
-    ```
+      ```
 * `exchanges.py`
     - ```python
-    from cryptofeed.huobi.huobi import Huobi
-```
+      from cryptofeed.huobi.huobi import Huobi
+      ```
