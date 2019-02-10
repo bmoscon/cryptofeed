@@ -177,7 +177,7 @@ class FeedHandler:
                 await handler(message)
             except Exception:
                 if feed_id == HUOBI:
-                    message = msg = zlib.decompress(message, 16+zlib.MAX_WBITS)
+                    message = zlib.decompress(message, 16+zlib.MAX_WBITS)
                 LOG.error("%s: error handling message %s", feed_id, message)
                 # exception will be logged with traceback when connection handler
                 # retries the connection
