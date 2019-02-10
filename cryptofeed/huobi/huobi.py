@@ -70,6 +70,7 @@ class Huobi(Feed):
         client_id = 0
         for chan in self.channels:
             for pair in self.pairs:
+                client_id += 1
                 await websocket.send(json.dumps(
                     {
                         "sub": "market.{}.{}".format(pair, chan),
