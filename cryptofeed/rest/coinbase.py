@@ -11,7 +11,7 @@ import logging
 import pandas as pd
 
 from cryptofeed.rest.api import API
-from cryptofeed.defines import COINBASE
+from cryptofeed.defines import COINBASE, BUY, SELL
 from cryptofeed.standards import pair_std_to_exchange
 
 
@@ -362,7 +362,7 @@ class Coinbase(API):
             'timestamp': trade['created_at'],
             'pair': trade['product_id'],
             'feed': self.ID,
-            'side': trade['side'],
+            'side': BUY if trade['side'] == 'sell' else SELL,
             'amount': trade['size'],
             "settled": trade["settled"]
         }

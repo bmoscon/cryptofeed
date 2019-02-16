@@ -9,7 +9,7 @@ import requests
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import BITMEX
+from cryptofeed.defines import BITMEX, SELL, BUY
 
 
 API_MAX = 500
@@ -105,7 +105,7 @@ class Bitmex(API):
             'pair': trade['symbol'],
             'id': trade['trdMatchID'],
             'feed': self.ID,
-            'side': trade['side'],
+            'side': BUY if trade['side'] == 'Buy' else SELL,
             'amount': trade['size'],
             'price': trade['price']
         }
