@@ -10,7 +10,7 @@ import calendar
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import KRAKEN, BID, ASK
+from cryptofeed.defines import KRAKEN, SELL, BUY
 from cryptofeed.standards import pair_std_to_exchange
 
 
@@ -157,7 +157,7 @@ class Kraken(API):
             'pair': symbol,
             'id': None,
             'feed': self.ID,
-            'side': ASK if trade[3] == 's' else BID,
+            'side': SELL if trade[3] == 's' else BUY,
             'amount': trade[1],
             'price': trade[0]
         }
