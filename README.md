@@ -69,7 +69,7 @@ Cryptofeed supports the following channels:
 
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
-* TRADES
+* TRADES - Note this reports the taker's side, even for exchanges that report the maker side
 * TICKER
 * VOLUME
 * FUNDING
