@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.20.1
+### 0.20.1 (2019-02-16)
   * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
   * Feature: Support for the Huobi exchange
   * Bugfix: Change how exchange pairs are mapped for REST module - only map exchanges that are used
