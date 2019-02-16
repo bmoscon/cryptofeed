@@ -46,7 +46,7 @@ class API:
     ID = 'NotImplemented'
 
     def __init__(self, config, sandbox=False):
-        load_exchange_pair_mapping(self.ID)
+        self.mapped = False
         path = os.path.dirname(os.path.abspath(__file__))
         self.key_id, self.key_secret, self.key_passphrase = None, None, None
         self.sandbox = sandbox
@@ -83,6 +83,9 @@ class API:
         raise NotImplementedError
 
     def __getitem__(self, key):
+        if not self.mapped:
+            load_exchange_pair_mapping(self.ID)
+            self.mapped = True
         if key == 'trades':
             return self.trades
         elif key == 'funding':
