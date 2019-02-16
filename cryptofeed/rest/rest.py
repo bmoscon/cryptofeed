@@ -5,6 +5,7 @@ from cryptofeed.rest.poloniex import Poloniex
 from cryptofeed.rest.gemini import Gemini
 from cryptofeed.rest.kraken import Kraken
 from cryptofeed.log import get_logger
+from cryptofeed.standards import load_exchange_pair_mapping
 
 
 LOG = get_logger('rest', 'rest.log')
@@ -23,4 +24,8 @@ class Rest:
         }
 
     def __getattr__(self, attr):
-        return self.lookup[attr.lower()]
+        exch = self.lookup[attr.lower()]
+        if not exch.mapped:
+            load_exchange_pair_mapping(exch.ID)
+            exch.mapped = True
+        return exch
