@@ -4,6 +4,7 @@
   * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
   * Feature: Support for the Huobi exchange
   * Bugfix: Change how exchange pairs are mapped for REST module - only map exchanges that are used
+  * Bugfix #67: Ensure all trades report the taker's side
 
 ### 0.20.0 (2019-02-04)
   * Feature #57: Write updates directly to MongoDB via new backend support
