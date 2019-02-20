@@ -18,7 +18,7 @@ async def ohlcv(data=None):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TRADES], callbacks={TRADES: OHLCV(Callback(ohlcv), window=30)}))
+    f.add_feed(Coinbase(pairs=['BTC-USD', 'ETH-USD', 'BCH-USD'], channels=[TRADES], callbacks={TRADES: OHLCV(Callback(ohlcv), window=300)}))
 
     f.run()
 

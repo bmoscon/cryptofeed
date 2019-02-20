@@ -45,7 +45,7 @@ class OHLCV(AggregateCallback):
 
     def _agg(self, pair, amount, price):
         if pair not in self.data:
-            self.data[pair] = {'open': price, 'high': price, 'low': price, 'close': price, 'volume': Decimal(0)}
+            self.data[pair] = {'open': price, 'high': price, 'low': price, 'close': price, 'volume': Decimal(0), 'vwap': Decimal(0)}
 
         self.data[pair]['close'] = price
         self.data[pair]['volume'] += amount
@@ -53,11 +53,14 @@ class OHLCV(AggregateCallback):
             self.data[pair]['high'] = price
         if price < self.data[pair]['low']:
             self.data[pair]['low'] = price
+        self.data[pair]['vwap'] += price * amount
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
+            for p in self.data:
+                self.data[p]['vwap'] /= self.data[p]['volume']
             await self.handler(data=self.data)
             self.data = {}
 
