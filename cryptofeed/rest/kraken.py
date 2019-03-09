@@ -107,8 +107,6 @@ class Kraken(API):
         return self._post_public("/public/Depth", payload)
 
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
-        symbol = pair_std_to_exchange(symbol, self.ID).replace("/", "")
-
         if start and end:
             for data in self._historical_trades(symbol, start, end, retry, retry_wait):
                 yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
@@ -117,6 +115,8 @@ class Kraken(API):
 
 
     def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
+        symbol = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+
         @request_retry(self.ID, retry, retry_wait)
         def helper(start_date):
             endpoint = f"{self.api}/public/Trades?pair={symbol}&since={start_date}"
