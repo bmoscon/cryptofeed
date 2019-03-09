@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.20.2
+  * Bugfix: Kraken REST api using wrong symbol for trades
+
 ### 0.20.1 (2019-02-16)
   * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
   * Feature: Support for the Huobi exchange
