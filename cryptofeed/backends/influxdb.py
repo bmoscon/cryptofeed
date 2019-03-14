@@ -7,15 +7,12 @@ associated with this software.
 from decimal import Decimal
 import logging
 import aiohttp
-import json
-from urllib.parse import urlencode
 
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert
 
 
 LOG = logging.getLogger('feedhandler')
-
 
 
 class InfluxCallback:
@@ -69,7 +66,7 @@ class TradeInflux(InfluxCallback):
         price = float(price)
         trade = f'{feed},pair={pair},feed=trades,side={side}'
         if order_id:
-            trade+= f',id={order_id}'
+            trade += f',id={order_id}'
         trade += f' amount={amount},price={price}'
 
         if timestamp:

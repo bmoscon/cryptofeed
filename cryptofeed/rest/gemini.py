@@ -1,5 +1,9 @@
 from time import time
-import hashlib, hmac, requests, json, base64
+import hashlib
+import hmac
+import requests
+import json
+import base64
 import logging
 
 from cryptofeed.rest.api import API
@@ -28,7 +32,6 @@ class Gemini(API):
         self._handle_error(resp, LOG)
 
         return resp.json()
-
 
     def _post(self, command: str, payload=None):
         if not payload:
@@ -71,8 +74,10 @@ class Gemini(API):
         Signature:
             symbol: str, parameters: dict of params for get query
         Parameters:
-            limit_bids	integer	Optional. Limit the number of bids (offers to buy) returned. Default is 50. May be 0 to return the full order book on this side.
-            limit_asks	integer	Optional. Limit the number of asks (offers to sell) returned. Default is 50. May be 0 to return the full order book on this side.
+            limit_bids	integer	Optional. Limit the number of bids (offers to buy) returned. Default is 50. May be 0 to
+                                          return the full order book on this side.
+            limit_asks	integer	Optional. Limit the number of asks (offers to sell) returned. Default is 50. May be 0 to
+                                          return the full order book on this side.
         """
         return self._get("/v1/book/{}".format(symbol), parameters)
 
@@ -81,7 +86,9 @@ class Gemini(API):
         Signature:
             symbol: str, parameters: dict of params for get query
         Parameters:
-            since	        timestamp	Optional. Only return trades after this timestamp. See Data Types: Timestamps for more information. If not present, will show the most recent trades. For backwards compatibility, you may also use the alias 'since'.
+            since	        timestamp	Optional. Only return trades after this timestamp. See Data Types: Timestamps for more information.
+                                        If not present, will show the most recent trades. For backwards compatibility, you may also use
+                                        the alias 'since'.
             limit_trades	integer	    Optional. The maximum number of trades to return. The default is 50.
             include_breaks	boolean	    Optional. Whether to display broken trades. False by default. Can be '1' or 'true' to activate
         """
@@ -95,12 +102,13 @@ class Gemini(API):
         Signature:
             symbol: str, parameters: dict of params for get query
         Parameters:
-            since	                timestamp	Optional. Only returns auction events after the specified timestamp. If not present or empty, will show the most recent auction events. You can also use the alias 'timestamp'.
+            since	                timestamp	Optional. Only returns auction events after the specified timestamp. If not present or empty,
+                                                will show the most recent auction events. You can also use the alias 'timestamp'.
             limit_auction_results	integer	    Optional. The maximum number of auction events to return. The default is 50.
-            include_indicative	    boolean	    Optional. Whether to include publication of indicative prices and quantities. True by default, true to explicitly enable, and false to disable
+            include_indicative	    boolean	    Optional. Whether to include publication of indicative prices and quantities. True by default,
+                                                true to explicitly enable, and false to disable
         """
         return self._get("/v1/auction/{}/history".format(symbol), parameters)
-
 
     # Order Placement API
 
@@ -114,22 +122,19 @@ class Gemini(API):
             price	string	Quoted decimal amount to spend per unit
             side	string	"buy" or "sell"
             type	string	The order type. Only "exchange limit" supported through this API
-            options	array	Optional. An optional array containing at most one supported order execution option. See Order execution options for details
+            options	array	Optional. An optional array containing at most one supported order execution option. See Order execution
+                            options for details
         """
         return self._post("/v1/order/new", parameters)
-
 
     def cancel_order(self, order_id):
         return self._post("/v1/order/cancel", {'order_id': order_id})
 
-
     def cancel_all_session_orders(self):
         return self._post("/v1/order/cancel/session")
 
-
     def cancel_all_active_orders(self):
         return self._post("/v1/order/cancel/all")
-
 
     # Order Status API
 
@@ -143,33 +148,34 @@ class Gemini(API):
     def get_active_orders(self):
         return self._post("/v1/orders")
 
-
     def get_past_trades(self, parameters):
         """
         Parameters:
             symbol	string	The symbol to retrieve trades for
             limit_trades	integer	Optional. The maximum number of trades to return. Default is 50, max is 500.
-            timestamp	timestamp	Optional. Only return trades on or after this timestamp. See Data Types: Timestamps for more information. If not present, will show the most recent orders.
+            timestamp	  timestamp	Optional. Only return trades on or after this timestamp. See Data Types: Timestamps for more information.
+                                    If not present, will show the most recent orders.
         """
         return self._post("/v1/mytrades", parameters)
 
-
     # Fee and Volume Volume API
+
     def get_notional_volume(self):
         return self._post("/v1/notionalvolume")
 
     def get_trade_volume(self):
         return self._post("/v1/tradevolume")
 
-
     # Fund Managment API
+
     def get_available_balances(self):
         return self._post("/v1/balances")
 
     def transfers(self, parameters=None):
         """
         Parameters:
-            timestamp	timestamp	Optional. Only return transfers on or after this timestamp. See Data Types: Timestamps for more information. If not present, will show the most recent transfers.
+            timestamp	timestamp	Optional. Only return transfers on or after this timestamp. See Data Types: Timestamps for more
+                                    information. If not present, will show the most recent transfers.
             limit_transfers	integer	Optional. The maximum number of transfers to return. The default is 10 and the maximum is 50.
         """
         return self._post("/v1/transfers", parameters)

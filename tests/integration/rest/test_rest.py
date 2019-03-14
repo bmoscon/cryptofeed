@@ -1,4 +1,5 @@
 from cryptofeed.rest import Rest
+from cryptofeed.defines import BUY, SELL
 
 
 def test_rest_bitmex():
@@ -6,7 +7,7 @@ def test_rest_bitmex():
                 'pair': 'XBTUSD',
                 'id': '58db4844-82b2-40e9-de90-c4d1672af7cc',
                 'feed': 'BITMEX',
-                'side': 'Sell',
+                'side': SELL,
                 'amount': 265,
                 'price': 6620}
 
@@ -24,7 +25,7 @@ def test_rest_bitfinex():
                 'pair': 'BTC-USD',
                 'id': 25291508,
                 'feed': 'BITFINEX',
-                'side': 'Buy',
+                'side': SELL,
                 'amount': 1.65,
                 'price': 966.61}
     r = Rest()

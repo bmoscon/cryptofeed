@@ -18,6 +18,8 @@ POLONIEX = 'POLONIEX'
 BITMEX = 'BITMEX'
 KRAKEN = 'KRAKEN'
 BINANCE = 'BINANCE'
+EXX = 'EXX'
+HUOBI = 'HUOBI'
 
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
@@ -27,6 +29,9 @@ TICKER = 'ticker'
 VOLUME = 'volume'
 FUNDING = 'funding'
 UNSUPPORTED = 'unsupported'
+
+BUY = 'buy'
+SELL = 'sell'
 
 BID = 'bid'
 ASK = 'ask'

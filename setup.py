@@ -13,8 +13,8 @@ from setuptools.command.test import test as TestCommand
 ld = None
 try:
     import pypandoc
-    ld = pypandoc.convert('README.md', 'rst', format='markdown_github')
-except:
+    ld = pypandoc.convert_file('README.md', 'rst', format='markdown_github')
+except BaseException:
     pass
 
 
@@ -27,7 +27,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="0.18.0",
+    version="0.20.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description=("Cryptocurrency feed handler and synthetic NBBO feed"),
@@ -58,6 +58,7 @@ setup(
     extras_require={
         'redis': ['aioredis'],
         'arctic': ['arctic'],
-        'zmq': ['pyzmq']
+        'zmq': ['pyzmq'],
+        'mongo': ['motor']
     },
 )

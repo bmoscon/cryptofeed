@@ -1,5 +1,32 @@
 ## Changelog
 
+### 0.20.2
+  * Bugfix: Kraken REST api using wrong symbol for trades
+
+### 0.20.1 (2019-02-16)
+  * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
+  * Feature: Support for the Huobi exchange
+  * Bugfix: Change how exchange pairs are mapped for REST module - only map exchanges that are used
+  * Bugfix #67: Ensure all trades report the taker's side
+
+### 0.20.0 (2019-02-04)
+  * Feature #57: Write updates directly to MongoDB via new backend support
+  * Feature #56: Experimental support for fine grained configuration per exchange
+  * Feature #58: Support Kraken websocket API
+  * Feature: Only generate trading pair conversions for configured exchanges
+  * Feature: Historical trade data on REST api for Kraken
+
+### 0.19.2 (2019-01-21)
+  * Feature #55: OHLCV aggregation method in backends plus support for user defined aggregators
+  * Feature: EXX exchange support
+
+### 0.19.1 (2019-01-11)
+  * Bugfix: Poloniex logging had bug that prevented reconnect on missing sequence number
+
+### 0.19.0 (2019-01-10)
+  * Feature #50: Support multiple streams per websocket connection on Binance
+  * Bugfix #51: Fix pairs on streams in Binance
+
 ### 0.18.0 (2018-12-15)
   * Feature: InfluxDB support via backend
   * Feature: Aggregation backend wrappers

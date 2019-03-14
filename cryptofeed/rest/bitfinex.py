@@ -11,22 +11,22 @@ import pandas as pd
 import requests
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import BITFINEX
+from cryptofeed.defines import BITFINEX, SELL, BUY
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
-REQUEST_LIMIT = 1000
+REQUEST_LIMIT = 5000
 LOG = logging.getLogger('rest')
 
 
 class Bitfinex(API):
     ID = BITFINEX
-    api = "https://api.bitfinex.com/"
+    api = "https://api-pub.bitfinex.com/v2/"
 
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
 
-    def _generate_signature(self, url: str, body = json.dumps({})):
+    def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
         h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
@@ -53,7 +53,7 @@ class Bitfinex(API):
             'pair': pair_exchange_to_std(symbol),
             'id': trade_id,
             'feed': 'BITFINEX',
-            'side': 'Sell' if amount < 0 else 'Buy',
+            'side': SELL if amount < 0 else BUY,
             'amount': abs(amount),
             'price': price,
         }
@@ -92,7 +92,7 @@ class Bitfinex(API):
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, end):
-            return requests.get("https://api.bitfinex.com/v2/trades/{}/hist?limit={}&start={}&end={}&sort=1".format(symbol, REQUEST_LIMIT, start, end))
+            return requests.get(f"{self.api}trades/{symbol}/hist?limit={REQUEST_LIMIT}&start={start}&end={end}&sort=1")
 
         while True:
             r = helper(start, end)

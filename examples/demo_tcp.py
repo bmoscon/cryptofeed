@@ -14,6 +14,7 @@ from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import TRADES
 
+
 async def reader(reader, writer):
     while True:
         data = await reader.read(1024)
@@ -34,6 +35,7 @@ async def main():
         reader, '127.0.0.1', 8080)
 
     await server.serve_forever()
+
 
 def writer(addr, port):
     f = FeedHandler()

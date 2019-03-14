@@ -12,8 +12,8 @@ import time
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, UND, BINANCE
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, feed_to_exchange
+from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE
+from cryptofeed.standards import pair_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,7 +23,7 @@ class Binance(Feed):
     id = BINANCE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__(None, pairs, channels, callbacks, **kwargs)
+        super().__init__(None, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.address = self.__address()
         self.__reset()
 
@@ -60,7 +60,7 @@ class Binance(Feed):
         await self.callbacks[TRADES](feed=self.id,
                                      order_id=msg['t'],
                                      pair=pair_exchange_to_std(msg['s']),
-                                     side=UND,
+                                     side=SELL if msg['m'] else BUY,
                                      amount=amount,
                                      price=price,
                                      timestamp=msg['E'])
@@ -101,7 +101,7 @@ class Binance(Feed):
                                      bid=bid,
                                      ask=ask)
 
-    async def _book(self, msg):
+    async def _book(self, msg, pair):
         """
         {
         "lastUpdateId": 160,  // Last update ID
@@ -122,19 +122,25 @@ class Binance(Feed):
         }
         """
         self.l2_book = {
-                BID: sd({Decimal(bid[0]): Decimal(bid[1]) for bid in msg['bids']}),
-                ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
-            }
+            BID: sd({Decimal(bid[0]): Decimal(bid[1]) for bid in msg['bids']}),
+            ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
+        }
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=self.pairs, book=self.l2_book, timestamp=time.time() * 1000)
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=time.time() * 1000)
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
 
+        # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
+        # streamName is of format <symbol>@<channel>
+        pair, event = msg['stream'].split('@')
         msg = msg['data']
 
-        if 'e' not in msg:
-            await self._book(msg)
+        # All symbols for streams are lowercase
+        pair = pair_exchange_to_std(pair.upper())
+
+        if event == 'depth20':
+            await self._book(msg, pair)
         elif msg['e'] == 'trade':
             await self._trade(msg)
         elif msg['e'] == '24hrTicker':
@@ -143,4 +149,7 @@ class Binance(Feed):
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
     async def subscribe(self, websocket):
+        # Binance does not have a separate subscribe message, the
+        # subsription information is included in the
+        # connection endpoint
         pass

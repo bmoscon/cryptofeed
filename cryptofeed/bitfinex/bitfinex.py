@@ -14,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BID, ASK, L2_BOOK, FUNDING, DEL, UPD, BITFINEX
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BUY, SELL, BID, ASK, L2_BOOK, FUNDING, DEL, UPD, BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -41,7 +41,7 @@ class Bitfinex(Feed):
     id = BITFINEX
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.bitfinex.com/ws/2', pairs, channels, callbacks, **kwargs)
+        super().__init__('wss://api.bitfinex.com/ws/2', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -56,7 +56,6 @@ class Bitfinex(Feed):
         self.channel_map = {}
         self.order_map = defaultdict(dict)
         self.seq_no = 0
-
 
     async def _ticker(self, msg):
         chan_id = msg[0]
@@ -86,10 +85,7 @@ class Bitfinex(Feed):
             else:
                 order_id, timestamp, amount, price = trade
                 period = None
-            if amount < 0:
-                side = ASK
-            else:
-                side = BID
+            side = SELL if amount < 0 else BUY
             amount = abs(amount)
             if period:
                 await self.callbacks[FUNDING](feed=self.id,
@@ -102,12 +98,12 @@ class Bitfinex(Feed):
                                               period=period)
             else:
                 await self.callbacks[TRADES](feed=self.id,
-                                            pair=pair,
-                                            side=side,
-                                            amount=amount,
-                                            price=price,
-                                            order_id=order_id,
-                                            timestamp=timestamp)
+                                             pair=pair,
+                                             side=side,
+                                             amount=amount,
+                                             price=price,
+                                             order_id=order_id,
+                                             timestamp=timestamp)
 
         if isinstance(msg[1], list):
             # snapshot
@@ -180,12 +176,12 @@ class Bitfinex(Feed):
 
         await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
 
-
     async def _raw_book(self, msg):
         """
         For L3 book updates
         """
         timestamp = time.time() * 1000
+
         def add_to_book(pair, side, price, order_id, amount):
             if price in self.l3_book[pair][side]:
                 self.l3_book[pair][side][price][order_id] = amount
@@ -253,7 +249,6 @@ class Bitfinex(Feed):
                     add_to_book(pair, side, price, order_id, amount)
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
 
-
         elif msg[1] == 'hb':
             return
         else:
@@ -270,7 +265,7 @@ class Bitfinex(Feed):
             if chan_id in self.channel_map:
                 seq_no = msg[-1]
                 if self.seq_no + 1 != seq_no:
-                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
+                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no + 1)
                     raise MissingSequenceNumber
                 self.seq_no = seq_no
 
@@ -310,7 +305,7 @@ class Bitfinex(Feed):
                 message = {'event': 'subscribe',
                            'channel': channel,
                            'symbol': pair
-                          }
+                           }
                 if 'book' in channel:
                     parts = channel.split('-')
                     if len(parts) != 1:

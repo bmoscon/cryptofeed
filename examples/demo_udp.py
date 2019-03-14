@@ -30,7 +30,22 @@ def main():
         p.start()
 
         f = FeedHandler()
-        f.add_feed(Coinbase(channels=[L2_BOOK, TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket('udp://127.0.0.1', port=5555), L2_BOOK: Throttle(BookSocket('udp://127.0.0.1', port=5555, depth=10), timer=1)}))
+        f.add_feed(
+            Coinbase(
+                channels=[
+                    L2_BOOK,
+                    TRADES],
+                pairs=['BTC-USD'],
+                callbacks={
+                    TRADES: TradeSocket(
+                        'udp://127.0.0.1',
+                        port=5555),
+                    L2_BOOK: Throttle(
+                        BookSocket(
+                            'udp://127.0.0.1',
+                            port=5555,
+                            depth=10),
+                        window=1)}))
 
         f.run()
     finally:

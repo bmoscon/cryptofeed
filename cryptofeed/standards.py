@@ -14,15 +14,8 @@ import calendar
 import logging
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, GEMINI)
-from cryptofeed.poloniex.pairs import poloniex_pair_mapping
-from cryptofeed.binance.pairs import binance_pair_mapping
-from cryptofeed.hitbtc.pairs import hitbtc_pair_mapping
-from cryptofeed.kraken.pairs import kraken_pair_mapping
-from cryptofeed.bitfinex.pairs import bitfinex_pair_mapping
-from cryptofeed.bitstamp.pairs import bitstamp_pair_mapping
-from cryptofeed.coinbase.pairs import coinbase_pair_mapping
-from cryptofeed.gemini.pairs import gemini_pair_mapping
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI)
+from cryptofeed.pairs import gen_pairs
 
 
 LOG = logging.getLogger('feedhandler')
@@ -31,18 +24,11 @@ LOG = logging.getLogger('feedhandler')
 _std_trading_pairs = {}
 _exchange_to_std = {}
 
-mappings = {
-    GEMINI: gemini_pair_mapping,
-    COINBASE: coinbase_pair_mapping,
-    BITSTAMP: bitstamp_pair_mapping,
-    BITFINEX: bitfinex_pair_mapping,
-    BINANCE: binance_pair_mapping,
-    HITBTC: hitbtc_pair_mapping,
-    KRAKEN: kraken_pair_mapping,
-    POLONIEX: poloniex_pair_mapping
-}
 
-for exchange, mapping in mappings.items():
+def load_exchange_pair_mapping(exchange):
+    if exchange == BITMEX:
+        return
+    mapping = gen_pairs(exchange)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
         if std in _std_trading_pairs:
@@ -76,7 +62,7 @@ def timestamp_normalize(exchange, ts):
     if exchange == BITMEX or exchange == COINBASE:
         ts = dt.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
         return calendar.timegm(ts.utctimetuple())
-    elif exchange == 'BITFINEX':
+    elif exchange in  {HUOBI, BITFINEX}:
         return ts / 1000.0
     return ts
 
@@ -89,8 +75,10 @@ _feed_to_exchange_map = {
         COINBASE: 'level2',
         BITMEX: 'orderBook10',
         BITSTAMP: 'order_book',
-        KRAKEN: L2_BOOK,
-        BINANCE: 'depth20'
+        KRAKEN: 'book',
+        BINANCE: 'depth20',
+        EXX: 'ENTRUST_ADD',
+        HUOBI: 'depth.step0'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -98,9 +86,11 @@ _feed_to_exchange_map = {
         HITBTC: UNSUPPORTED,
         COINBASE: 'full',
         BITMEX: 'orderBookL2',
-        POLONIEX: UNSUPPORTED, # supported by specifying a trading pair as the channel,
+        POLONIEX: UNSUPPORTED,  # supported by specifying a trading pair as the channel,
         KRAKEN: UNSUPPORTED,
-        BINANCE: UNSUPPORTED
+        BINANCE: UNSUPPORTED,
+        EXX: UNSUPPORTED,
+        HUOBI: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: UNSUPPORTED,
@@ -109,8 +99,10 @@ _feed_to_exchange_map = {
         BITFINEX: 'trades',
         COINBASE: 'matches',
         BITMEX: 'trade',
-        KRAKEN: TRADES,
-        BINANCE: 'trade'
+        KRAKEN: 'trade',
+        BINANCE: 'trade',
+        EXX: 'TRADE',
+        HUOBI: 'trade.detail'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -120,7 +112,8 @@ _feed_to_exchange_map = {
         COINBASE: 'ticker',
         BITMEX: UNSUPPORTED,
         KRAKEN: TICKER,
-        BINANCE: 'ticker'
+        BINANCE: 'ticker',
+        HUOBI: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003

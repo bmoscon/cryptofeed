@@ -9,7 +9,7 @@ import requests
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import BITMEX
+from cryptofeed.defines import BITMEX, SELL, BUY
 
 
 API_MAX = 500
@@ -56,7 +56,8 @@ class Bitmex(API):
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, start_date, end_date):
-            endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(ep, symbol, API_MAX, start, start_date, end_date)
+            endpoint = '/api/v1/{}?symbol={}&count={}&reverse=false&start={}&startTime={}&endTime={}'.format(
+                ep, symbol, API_MAX, start, start_date, end_date)
             header = {}
             if self.key_id and self.key_secret:
                 header = self._generate_signature("GET", endpoint)
@@ -104,7 +105,7 @@ class Bitmex(API):
             'pair': trade['symbol'],
             'id': trade['trdMatchID'],
             'feed': self.ID,
-            'side': trade['side'],
+            'side': BUY if trade['side'] == 'Buy' else SELL,
             'amount': trade['size'],
             'price': trade['price']
         }

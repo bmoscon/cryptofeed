@@ -11,7 +11,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL, GEMINI
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, UPD, DEL, GEMINI
 from cryptofeed.standards import pair_std_to_exchange
 from cryptofeed.exceptions import MissingSequenceNumber
 
@@ -31,11 +31,13 @@ class Gemini(Feed):
             raise ValueError("Gemini does not support different channels")
         self.pair = pairs[0]
 
-        super().__init__('wss://api.gemini.com/v1/marketdata/' + pair_std_to_exchange(self.pair, 'GEMINI'),
+        super().__init__('wss://api.gemini.com/v1/marketdata/',
                          pairs=None,
                          channels=None,
                          callbacks=callbacks,
                          **kwargs)
+
+        self.address += pair_std_to_exchange(self.pair, self.id)
         self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
         self.seq_no = None
 
@@ -44,7 +46,6 @@ class Gemini(Feed):
         side = BID if msg['side'] == 'bid' else ASK
         price = Decimal(msg['price'])
         remaining = Decimal(msg['remaining'])
-        #delta = Decimal(msg['delta'])
 
         if msg['reason'] == 'initial':
             self.l2_book[self.pair][side][price] = remaining
@@ -59,7 +60,7 @@ class Gemini(Feed):
 
     async def _trade(self, msg, timestamp):
         price = Decimal(msg['price'])
-        side = BID if msg['makerSide'] == 'bid' else ASK
+        side = SELL if msg['makerSide'] == 'bid' else BUY
         amount = Decimal(msg['amount'])
         await self.callbacks[TRADES](feed=self.id,
                                      order_id=msg['tid'],
@@ -90,13 +91,12 @@ class Gemini(Feed):
         if forced:
             await self.book_callback(self.pair, L2_BOOK, True, None, timestamp)
 
-
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
         seq_no = msg['socket_sequence']
 
         if self.seq_no and self.seq_no + 1 != seq_no:
-            LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
+            LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no + 1)
             raise MissingSequenceNumber
         else:
             self.seq_no = seq_no

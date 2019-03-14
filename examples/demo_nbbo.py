@@ -17,6 +17,6 @@ def main():
     f.add_nbbo([Coinbase, HitBTC, Bitfinex, Bitstamp, Gemini], ['BTC-USD'], nbbo_update)
     f.run()
 
+
 if __name__ == '__main__':
     main()
-

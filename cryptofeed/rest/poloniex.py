@@ -1,5 +1,8 @@
 from time import time
-import hashlib, hmac, requests, urllib
+import hashlib
+import hmac
+import requests
+import urllib
 from decimal import Decimal
 import calendar
 import logging
@@ -7,7 +10,7 @@ import logging
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import POLONIEX
+from cryptofeed.defines import POLONIEX, BUY, SELL
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
@@ -29,7 +32,6 @@ class Poloniex(API):
         self._handle_error(resp, LOG)
 
         return resp.json()
-
 
     def _post(self, command: str, payload=None):
         if not payload:
@@ -71,7 +73,7 @@ class Poloniex(API):
             'pair': pair_exchange_to_std(symbol),
             'id': trade['tradeID'],
             'feed': self.ID,
-            'side': trade['type'],
+            'side': BUY if trade['type'] == 'buy' else SELL,
             'amount': Decimal(trade['amount']),
             'price': Decimal(trade['rate'])
         }

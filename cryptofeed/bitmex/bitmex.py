@@ -14,7 +14,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, UPD, DEL, FUNDING, L3_BOOK, BITMEX
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, UPD, DEL, FUNDING, L3_BOOK, BITMEX
 
 
 LOG = logging.getLogger('feedhandler')
@@ -76,7 +76,7 @@ class Bitmex(Feed):
         for data in msg['data']:
             await self.callbacks[TRADES](feed=self.id,
                                          pair=data['symbol'],
-                                         side=BID if data['side'] == 'Buy' else ASK,
+                                         side=BUY if data['side'] == 'Buy' else SELL,
                                          amount=Decimal(data['size']),
                                          price=Decimal(data['price']),
                                          order_id=data['trdMatchID'],
@@ -203,8 +203,7 @@ class Bitmex(Feed):
                                           interval=data['fundingInterval'],
                                           rate=data['fundingRate'],
                                           rate_daily=data['fundingRateDaily']
-                                         )
-
+                                          )
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

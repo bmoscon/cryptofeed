@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance
+from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi
 from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE
 
 
@@ -16,26 +16,28 @@ from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDI
 # while the callbacks are being handled (unless they in turn await other functions or I/O)
 # so they should be as lightweight as possible
 async def ticker(feed, pair, bid, ask):
-    print('Feed: {} Pair: {} Bid: {} Ask: {}'.format(feed, pair, bid, ask))
+    print(f'Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
 
 
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
-    print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, order_id, side, amount, price))
+    print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
 
 async def book(feed, pair, book, timestamp):
-    print('Timestamp: {} Feed: {} Pair: {} Book Bid Size is {} Ask Size is {}'.format(timestamp, feed, pair, len(book[BID]), len(book[ASK])))
+    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
 
 async def funding(**kwargs):
-    print("Funding Update for {}".format(kwargs['feed']))
+    print(f"Funding Update for {kwargs['feed']}")
     print(kwargs)
 
 
 def main():
     f = FeedHandler()
-    f.add_feed(Binance(pairs=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
 
+    # Note: EXX is extremely unreliable - sometimes a connection can take many many retries
+    # f.add_feed(EXX(pairs=['BTC-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
+    f.add_feed(Binance(pairs=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
     f.add_feed(COINBASE, pairs=['BTC-USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)})
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
@@ -52,8 +54,10 @@ def main():
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[FUNDING, TRADES], callbacks={FUNDING: FundingCallback(funding), TRADES: TradeCallback(trade)}))
     f.add_feed(Bitfinex(pairs=['BTC'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book)}))
-    f.add_feed(Kraken(pairs=['BTC-USD'], channels=[TRADES, TICKER, L2_BOOK], callbacks={TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker), L2_BOOK: BookCallback(book)}))
+    f.add_feed(Kraken(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
 
+    config={TRADES: ['BTC-USD', 'ETH-USD', 'BTC-USDT', 'ETH-USDT'], L2_BOOK: ['BTC-USD', 'BTC-USDT']}
+    f.add_feed(Huobi(config=config, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
     f.run()
 
 

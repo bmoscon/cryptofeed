@@ -14,9 +14,9 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, UPD, DEL, POLONIEX
+from cryptofeed.defines import BUY, SELL, BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, UPD, DEL, POLONIEX
 from cryptofeed.standards import pair_exchange_to_std
-from .pairs import poloniex_id_pair_mapping
+from cryptofeed.pairs import poloniex_id_pair_mapping
 
 
 LOG = logging.getLogger('feedhandler')
@@ -29,6 +29,8 @@ class Poloniex(Feed):
         if pairs:
             LOG.error("Poloniex does not support pairs")
             raise ValueError("Poloniex does not support pairs")
+
+        self.pair_mapping = poloniex_id_pair_mapping()
 
         super().__init__('wss://api2.poloniex.com',
                          channels=channels,
@@ -44,7 +46,7 @@ class Poloniex(Feed):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
-        pair = pair_exchange_to_std(poloniex_id_pair_mapping[pair_id])
+        pair = pair_exchange_to_std(self.pair_mapping[pair_id])
         await self.callbacks[TICKER](feed=self.id,
                                      pair=pair,
                                      bid=Decimal(bid),
@@ -82,7 +84,7 @@ class Poloniex(Feed):
                 price = Decimal(key)
                 self.l2_book[pair][BID][price] = amount
         else:
-            pair = poloniex_id_pair_mapping[chan_id]
+            pair = self.pair_mapping[chan_id]
             pair = pair_exchange_to_std(pair)
             for update in msg:
                 msg_type = update[0]
@@ -102,7 +104,7 @@ class Poloniex(Feed):
                     _, order_id, _, price, amount, timestamp = update
                     price = Decimal(price)
                     amount = Decimal(amount)
-                    side = ASK if update[2] == 0 else BID
+                    side = BUY if update[2] == 1 else SELL
                     await self.callbacks[TRADES](feed=self.id,
                                                  pair=pair,
                                                  side=side,
@@ -140,11 +142,10 @@ class Poloniex(Feed):
             # the trading pair being updated
             seq_no = msg[1]
 
-            if chan_id not in self.seq_no :
+            if chan_id not in self.seq_no:
                 self.seq_no[chan_id] = seq_no
             elif self.seq_no[chan_id] + 1 != seq_no:
-                LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no+1)
-                self.__reset()
+                LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[chan_id] + 1)
                 raise MissingSequenceNumber
             self.seq_no[chan_id] = seq_no
             await self._book(msg[2], chan_id)
@@ -155,7 +156,8 @@ class Poloniex(Feed):
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
     async def subscribe(self, websocket):
+        self.__reset()
         for channel in self.channels:
             await websocket.send(json.dumps({"command": "subscribe",
                                              "channel": channel
-                                            }))
+                                             }))

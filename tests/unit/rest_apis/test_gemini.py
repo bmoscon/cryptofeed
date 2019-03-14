@@ -73,6 +73,7 @@ def test_auction_history_with_parameters():
 
     assert len(auction_history) > 0
 
+
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 def test_heartbeat():
     result = sandbox.heartbeat()
