@@ -76,6 +76,9 @@ class API:
     def funding(self, *args, **kwargs):
         raise NotImplementedError
 
+    def book(self, *args, **kwargs):
+        raise NotImplementedError
+
     def place_order(self):
         raise NotImplementedError
 
@@ -90,3 +93,5 @@ class API:
             return self.trades
         elif key == 'funding':
             return self.funding
+        elif key == 'book':
+            return self.book

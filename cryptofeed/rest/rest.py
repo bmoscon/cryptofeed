@@ -23,6 +23,13 @@ class Rest:
             'kraken': Kraken(config)
         }
 
+    def __getitem__(self, key):
+        exch = self.lookup[key.lower()]
+        if not exch.mapped:
+            load_exchange_pair_mapping(exch.ID)
+            exch.mapped = True
+        return exch
+
     def __getattr__(self, attr):
         exch = self.lookup[attr.lower()]
         if not exch.mapped:
