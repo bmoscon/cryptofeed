@@ -101,3 +101,5 @@ class API:
             return self.trades
         elif key == 'funding':
             return self.funding
+        elif key == 'book':
+            return self.book
