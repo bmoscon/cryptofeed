@@ -25,8 +25,7 @@ class Kraken(API):
     def _post_public(self, command: str, payload=None):
         if payload is None:
             payload = {}
-        url = "{}{}".format(self.api, command)
-
+        url = f"{self.api}{command}"
         resp = requests.post(url, data=payload)
         self._handle_error(resp, LOG)
 
@@ -39,7 +38,7 @@ class Kraken(API):
             payload = {}
         payload['nonce'] = int(time.time() * 1000)
 
-        urlpath = '{}{}'.format('/0', command)
+        urlpath = f'/0{command}'
 
         postdata = urllib.parse.urlencode(payload)
 
@@ -56,7 +55,7 @@ class Kraken(API):
             'API-Sign': sigdigest.decode()
         }
 
-        resp = requests.post("{}{}".format(self.api, command), data=payload, headers=headers)
+        resp = requests.post(f"{self.api}{command}", data=payload, headers=headers)
         self._handle_error(resp, LOG)
 
         return resp.json()
@@ -142,7 +141,7 @@ class Kraken(API):
                     time.sleep(20)
                     continue
                 else:
-                    raise Exception("Error: {}".format(data['error']))
+                    raise Exception(f"Error processing URL {r.url}: {data['error']}")
 
             yield data
 

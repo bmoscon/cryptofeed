@@ -53,7 +53,7 @@ class Bitfinex(API):
             'timestamp': timestamp,
             'pair': pair_exchange_to_std(symbol),
             'id': trade_id,
-            'feed': 'BITFINEX',
+            'feed': self.ID,
             'side': SELL if amount < 0 else BUY,
             'amount': abs(amount),
             'price': price,
@@ -108,7 +108,7 @@ class Bitfinex(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 - %s", self.ID, r.text)
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
@@ -170,13 +170,13 @@ class Bitfinex(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 - %s", self.ID, r.text)
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 if retry == 0:
                     break
                 continue
             elif r.status_code != 200:
-                self.handle_error(r, LOG)
+                self._handle_error(r, LOG)
 
             data = r.json()
             break

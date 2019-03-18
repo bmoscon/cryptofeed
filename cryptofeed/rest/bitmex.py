@@ -82,7 +82,7 @@ class Bitmex(API):
                 r = helper(start, start_date, end_date)
 
                 if r.status_code == 502:
-                    LOG.warning("%s: 502 - %s", self.ID, r.text)
+                    LOG.warning("%s: 502 for URL %s - %s", self.ID, r.url, r.text)
                     sleep(retry_wait)
                     continue
                 elif r.status_code == 429:
