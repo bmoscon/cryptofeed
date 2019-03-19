@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.20.2
+### 0.20.2 (2019-03-19)
   * Bugfix: Kraken REST api using wrong symbol for trades
   * Feature: Complete work on standardizing Bitfinex rest API
   * Bugfix: Allow index symbols on Bitmex
