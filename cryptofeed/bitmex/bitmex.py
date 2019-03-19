@@ -28,8 +28,9 @@ class Bitmex(Feed):
         super().__init__('wss://www.bitmex.com/realtime', pairs=None, channels=channels, callbacks=callbacks, **kwargs)
         active_pairs = self.get_active_symbols()
         for pair in pairs:
-            if pair not in active_pairs:
-                raise ValueError("{} is not active on BitMEX".format(pair))
+            if not pair.startswith('.'):
+                if pair not in active_pairs:
+                    raise ValueError("{} is not active on BitMEX".format(pair))
         self.pairs = pairs
         self._reset()
 
