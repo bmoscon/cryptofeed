@@ -3,6 +3,7 @@
 ### 0.20.2
   * Bugfix: Kraken REST api using wrong symbol for trades
   * Feature: Complete work on standardizing Bitfinex rest API
+  * Bugfix: Allow index symbols on Bitmex
 
 ### 0.20.1 (2019-02-16)
   * Feature: Trades sides are now labeled as Buy / Sell instead of Bid / Ask.
