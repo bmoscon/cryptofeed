@@ -14,7 +14,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, UPD, DEL, FUNDING, L3_BOOK, BITMEX
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, L3_BOOK, BITMEX
 
 
 LOG = logging.getLogger('feedhandler')
@@ -90,7 +90,7 @@ class Bitmex(Feed):
         timestamp = dt.utcnow()
         timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         pair = None
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
         forced = False
         if not self.partial_received:
@@ -114,7 +114,7 @@ class Bitmex(Feed):
                 else:
                     self.l3_book[pair][side][price] = {order_id: size}
                 self.order_id[pair][side][order_id] = (price, size)
-                delta[side][UPD].append((order_id, price, size))
+                delta[side].append((order_id, price, size))
         elif msg['action'] == 'update':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
@@ -126,7 +126,7 @@ class Bitmex(Feed):
 
                 self.l3_book[pair][side][price][order_id] = update_size
                 self.order_id[pair][side][order_id] = (price, update_size)
-                delta[side][UPD].append((order_id, price, update_size))
+                delta[side].append((order_id, price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
@@ -140,7 +140,7 @@ class Bitmex(Feed):
                 if len(self.l3_book[pair][side][delete_price]) == 0:
                     del self.l3_book[pair][side][delete_price]
 
-                delta[side][DEL].append((order_id, delete_price))
+                delta[side].append((order_id, delete_price, 0))
 
         else:
             LOG.warning("%s: Unexpected L3 Book message %s", self.id, msg)

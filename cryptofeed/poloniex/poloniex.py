@@ -7,14 +7,13 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-from collections import defaultdict
 import time
 
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BUY, SELL, BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, UPD, DEL, POLONIEX
+from cryptofeed.defines import BUY, SELL, BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, POLONIEX
 from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.pairs import poloniex_id_pair_mapping
 
@@ -62,7 +61,7 @@ class Poloniex(Feed):
 
     async def _book(self, msg, chan_id):
         timestamp = time.time()
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         msg_type = msg[0][0]
         pair = None
         forced = False
@@ -94,10 +93,10 @@ class Poloniex(Feed):
                     price = Decimal(update[2])
                     amount = Decimal(update[3])
                     if amount == 0:
-                        delta[side][DEL].append(price)
+                        delta[side].append((price, 0))
                         del self.l2_book[pair][side][price]
                     else:
-                        delta[side][UPD].append((price, amount))
+                        delta[side].append((price, amount))
                         self.l2_book[pair][side][price] = amount
                 elif msg_type == 't':
                     # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp
