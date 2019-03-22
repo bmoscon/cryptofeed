@@ -113,7 +113,7 @@ for L3 books:
         ASK: [ (price, size), (price, size), (price, size), ...]
     }
 
-    For L2 books a size of 0 means the price level should be deleted. 
-    For L3 books, a size of 0 means the order should be deleted. If there are 
+    For L2 books a size of 0 means the price level should be deleted.
+    For L3 books, a size of 0 means the order should be deleted. If there are
     no orders at the price, the price level can be deleted.
 """
