@@ -14,7 +14,7 @@ import calendar
 import logging
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI)
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, OKCOIN)
 from cryptofeed.pairs import gen_pairs
 
 
@@ -78,7 +78,8 @@ _feed_to_exchange_map = {
         KRAKEN: 'book',
         BINANCE: 'depth20',
         EXX: 'ENTRUST_ADD',
-        HUOBI: 'depth.step0'
+        HUOBI: 'depth.step0',
+        OKCOIN: 'spot/depth'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -90,7 +91,8 @@ _feed_to_exchange_map = {
         KRAKEN: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
         EXX: UNSUPPORTED,
-        HUOBI: UNSUPPORTED
+        HUOBI: UNSUPPORTED,
+        OKCOIN: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: UNSUPPORTED,
@@ -102,7 +104,8 @@ _feed_to_exchange_map = {
         KRAKEN: 'trade',
         BINANCE: 'trade',
         EXX: 'TRADE',
-        HUOBI: 'trade.detail'
+        HUOBI: 'trade.detail',
+        OKCOIN: 'spot/trade'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -113,7 +116,8 @@ _feed_to_exchange_map = {
         BITMEX: UNSUPPORTED,
         KRAKEN: TICKER,
         BINANCE: 'ticker',
-        HUOBI: UNSUPPORTED
+        HUOBI: UNSUPPORTED,
+        OKCOIN: 'spot/ticker'
     },
     VOLUME: {
         POLONIEX: 1003
