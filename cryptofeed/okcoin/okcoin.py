@@ -7,7 +7,6 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-import time
 import zlib
 
 from sortedcontainers import SortedDict as sd
@@ -25,6 +24,7 @@ class OKCoin(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://real.okcoin.com:10442/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        self.book_depth = 200
 
     def __reset(self):
         self.l2_book = {}
@@ -70,6 +70,38 @@ class OKCoin(Feed):
                 timestamp=trade['timestamp']
             )
 
+    async def _book(self, msg):
+        if msg['action'] == 'partial':
+            # snapshot
+            for update in msg['data']:
+                pair = pair_exchange_to_std(update['instrument_id'])
+                self.l2_book[pair] = {
+                    BID: sd({
+                        Decimal(price) : Decimal(amount) for price, amount, _ in update['bids']
+                    }),
+                    ASK: sd({
+                        Decimal(price) : Decimal(amount) for price, amount, _ in update['asks']
+                    })
+                }
+                await self.book_callback(pair, L2_BOOK, True, None, update['timestamp'])
+        else:
+            # update
+            for update in msg['data']:
+                delta = {BID: [], ASK: []}
+                pair = pair_exchange_to_std(update['instrument_id'])
+                for side in ('bids', 'asks'):
+                    s = BID if side == 'bids' else ASK
+                    for price, amount, _ in update[side]:
+                        price = Decimal(price)
+                        amount = Decimal(amount)
+                        if amount == 0:
+                            delta[s].append((price, 0))
+                            del self.l2_book[pair][s][price]
+                        else:
+                            delta[s].append((price, amount))
+                            self.l2_book[pair][s][price] = amount
+                await self.book_callback(pair, L2_BOOK, False, delta, update['timestamp'])
+
     async def message_handler(self, msg):
         # DEFLATE compression, no header
         msg = zlib.decompress(msg, -15)
@@ -87,6 +119,8 @@ class OKCoin(Feed):
                 await self._ticker(msg)
             elif msg['table'] == 'spot/trade':
                 await self._trade(msg)
+            elif msg['table'] == 'spot/depth':
+                await self._book(msg)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
         else:

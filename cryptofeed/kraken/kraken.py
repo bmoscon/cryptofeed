@@ -90,9 +90,6 @@ class Kraken(Feed):
             }), ASK: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg['as']
             })}
-            assert len(self.l2_book[pair][BID]) == len(msg['bs'])
-            assert len(self.l2_book[pair][ASK]) == len(msg['as'])
-
             await self.book_callback(pair, L2_BOOK, True, delta, time.time())
         else:
             for s, updates in msg.items():
@@ -115,11 +112,6 @@ class Kraken(Feed):
                         del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
                         del self.l2_book[pair][side][del_price]
                         delta[side].append((del_price, 0))
-                        if side == ASK:
-                            assert all(del_price > x for x in self.l2_book[pair][side].keys()[:])
-                        if side == BID:
-                            assert all(del_price < x for x in self.l2_book[pair][side].keys()[:])
-
 
             await self.book_callback(pair, L2_BOOK, False, delta, time.time())
 
