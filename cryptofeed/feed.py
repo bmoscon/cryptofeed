@@ -20,7 +20,7 @@ class Feed:
         self.do_deltas = False
         self.pairs = []
         self.channels = []
-
+        print("Loading " + self.id)
         load_exchange_pair_mapping(self.id)
 
         if channels is not None and FUNDING in channels and self.id == BITFINEX:

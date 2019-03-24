@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, OKCOIN
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, OKCOIN, OKEX
 
 
 def gen_pairs(exchange):
@@ -123,6 +123,11 @@ def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
     return {e['product_id'] : e['product_id'] for e in r}
 
+def okex_pairs():
+    r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
+    return {e['instrument_id'] : e['instrument_id'] for e in r}
+
+
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -135,5 +140,6 @@ _exchange_function_map = {
     BINANCE: binance_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
-    OKCOIN: okcoin_pairs
+    OKCOIN: okcoin_pairs,
+    OKEX: okex_pairs
 }
