@@ -5,6 +5,7 @@
   * Feature: Kraken L2 Book Deltas
   * Feature: Book deltas streamlined and retain ordering
   * Feature: OKCoin exchange support
+  * Feature: OKEx exchange support
 
 ### 0.20.2 (2019-03-19)
   * Bugfix: Kraken REST api using wrong symbol for trades
