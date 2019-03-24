@@ -4,20 +4,8 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import json
-import logging
-from decimal import Decimal
-import zlib
-
-from sortedcontainers import SortedDict as sd
-
-from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKEX
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.defines import OKEX
 from cryptofeed.okcoin.okcoin import OKCoin
-
-
-LOG = logging.getLogger('feedhandler')
 
 
 class OKEx(OKCoin):
