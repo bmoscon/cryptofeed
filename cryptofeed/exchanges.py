@@ -17,3 +17,4 @@ from cryptofeed.exx.exx import EXX
 from cryptofeed.huobi.huobi import Huobi
 from cryptofeed.okcoin.okcoin import OKCoin
 from cryptofeed.okex.okex import OKEx
+from cryptofeed.coinbene.coinbene import Coinbene

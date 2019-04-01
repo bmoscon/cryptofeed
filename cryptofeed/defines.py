@@ -22,6 +22,8 @@ EXX = 'EXX'
 HUOBI = 'HUOBI'
 OKCOIN = 'OKCOIN'
 OKEX = 'OKEX'
+COINBENE = 'COINBENE'
+
 
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
