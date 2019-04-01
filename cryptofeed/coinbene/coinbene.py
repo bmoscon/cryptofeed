@@ -6,7 +6,6 @@ associated with this software.
 '''
 import asyncio
 from decimal import Decimal
-import time
 
 from sortedcontainers import SortedDict as sd
 
