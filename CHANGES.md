@@ -1,12 +1,13 @@
 ## Changelog
 
-### 0.21.0
+### 0.21.0 (2019-04-07)
   * Bugfix: Coinbase L3 Book would get in cycle of reconnecting due to missing sequence numbers
   * Feature: Kraken L2 Book Deltas
   * Feature: Book deltas streamlined and retain ordering
   * Feature: OKCoin exchange support
   * Feature: OKEx exchange support
   * Feature: Coinbene exchange support
+  * Feature: Support Huobi Global and Huobi USA
 
 ### 0.20.2 (2019-03-19)
   * Bugfix: Kraken REST api using wrong symbol for trades
