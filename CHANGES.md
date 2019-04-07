@@ -1,8 +1,7 @@
 ## Changelog
 
 ### 0.21.1
-  * Feature: Config support for Coinbene
-  * Feature: Config support for Binance
+  * Feature: Config support for Coinbene, Binance, EXX
 
 ### 0.21.0 (2019-04-07)
   * Bugfix: Coinbase L3 Book would get in cycle of reconnecting due to missing sequence numbers
