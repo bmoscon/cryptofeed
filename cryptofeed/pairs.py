@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, OKCOIN, OKEX, COINBENE
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE
 
 
 def gen_pairs(exchange):
@@ -115,6 +115,11 @@ def exx_pairs():
 
 
 def huobi_pairs():
+    r = requests.get('https://api.huobi.pro/v1/common/symbols').json()
+    return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
+
+
+def huobi_us_pairs():
     r = requests.get('https://api.huobi.com/v1/common/symbols').json()
     return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
@@ -123,9 +128,15 @@ def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
     return {e['product_id'] : e['product_id'] for e in r}
 
+
 def okex_pairs():
     r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
-    return {e['instrument_id'] : e['instrument_id'] for e in r}
+    data = {e['instrument_id'] : e['instrument_id'] for e in r}
+    # swaps
+    r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
+    for update in r:
+        data[update['instrument_id']] = update['instrument_id']
+    return data
 
 
 def coinbene_pairs():
@@ -144,6 +155,7 @@ _exchange_function_map = {
     BINANCE: binance_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
+    HUOBI_US: huobi_us_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
     COINBENE: coinbene_pairs

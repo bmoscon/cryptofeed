@@ -15,6 +15,7 @@ from cryptofeed.kraken.kraken import Kraken
 from cryptofeed.binance.binance import Binance
 from cryptofeed.exx.exx import EXX
 from cryptofeed.huobi.huobi import Huobi
+from cryptofeed.huobi.huobi_us import HuobiUS
 from cryptofeed.okcoin.okcoin import OKCoin
 from cryptofeed.okex.okex import OKEx
 from cryptofeed.coinbene.coinbene import Coinbene
