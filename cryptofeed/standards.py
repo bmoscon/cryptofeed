@@ -39,6 +39,8 @@ def load_exchange_pair_mapping(exchange):
 
 
 def pair_std_to_exchange(pair, exchange):
+    if exchange == BITMEX:
+        return pair
     if pair in _std_trading_pairs:
         try:
             return _std_trading_pairs[pair][exchange]

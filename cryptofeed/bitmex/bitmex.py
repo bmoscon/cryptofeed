@@ -25,13 +25,17 @@ class Bitmex(Feed):
     api = 'https://www.bitmex.com/api/v1/'
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://www.bitmex.com/realtime', pairs=None, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__('wss://www.bitmex.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+
         active_pairs = self.get_active_symbols()
+        if self.config:
+            pairs = list(self.config.values())
+            pairs = [pair for inner in pairs for pair in inner]
+
         for pair in pairs:
             if not pair.startswith('.'):
                 if pair not in active_pairs:
                     raise ValueError("{} is not active on BitMEX".format(pair))
-        self.pairs = pairs
         self._reset()
 
     def _reset(self):
@@ -230,8 +234,8 @@ class Bitmex(Feed):
     async def subscribe(self, websocket):
         self._reset()
         chans = []
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 chans.append("{}:{}".format(channel, pair))
 
         await websocket.send(json.dumps({"op": "subscribe",
