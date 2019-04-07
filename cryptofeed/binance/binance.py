@@ -29,8 +29,8 @@ class Binance(Feed):
 
     def __address(self):
         address = "wss://stream.binance.com:9443/stream?streams="
-        for chan in self.channels:
-            for pair in self.pairs:
+        for chan in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
                 address += stream
