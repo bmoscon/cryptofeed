@@ -101,8 +101,8 @@ class HitBTC(Feed):
                 LOG.error("%s: Received error from server: %s", self.id, msg)
 
     async def subscribe(self, websocket):
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 await websocket.send(
                     json.dumps({
                         "method": channel,
