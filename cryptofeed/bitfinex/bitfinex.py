@@ -300,8 +300,8 @@ class Bitfinex(Feed):
             'flags': SEQ_ALL
         }))
 
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 message = {'event': 'subscribe',
                            'channel': channel,
                            'symbol': pair
