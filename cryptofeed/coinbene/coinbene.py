@@ -19,8 +19,8 @@ import aiohttp
 class Coinbene(RestFeed):
     id = COINBENE
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('http://api.coinbene.com/v1/market/', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
+        super().__init__('http://api.coinbene.com/v1/market/', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
 
     def __reset(self):
         self.last_trade_update = {}
@@ -119,14 +119,22 @@ class Coinbene(RestFeed):
         return
 
     async def message_handler(self):
+        async def handle(session, pair, chan):
+            if chan == TRADES:
+                await self._trades(session, pair)
+            elif chan == TICKER:
+                await self._ticker(session, pair)
+            elif chan == L2_BOOK:
+                await self._book(session, pair)
+            # We can do 15 requests a second
+            await asyncio.sleep(0.07)
+
         async with aiohttp.ClientSession() as session:
-            for chan in self.channels:
-                for pair in self.pairs:
-                    if chan == TRADES:
-                        await self._trades(session, pair)
-                    elif chan == TICKER:
-                        await self._ticker(session, pair)
-                    elif chan == L2_BOOK:
-                        await self._book(session, pair)
-                    # We can do 15 requests a second
-                    await asyncio.sleep(0.07)
+            if self.config:
+                for chan in self.config:
+                    for pair in self.config[chan]:
+                        await handle(session, pair, chan)
+            else:
+                for chan in self.channels:
+                    for pair in self.pairs:
+                        await handle(session, pair, chan)
