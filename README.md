@@ -7,7 +7,7 @@
 
 Handles multiple cryptocurrency exchange data feeds and returns normalized and standardized results to client registered callbacks for events like trades, book updates, ticker updates, etc. Utilizes websockets when possible, but can also poll data via REST endpoints if a websocket is not provided.
 
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples.
+Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples or the [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) for some oddities and gotchas.
 
 
 ```python
