@@ -31,7 +31,18 @@ The exchange objects are supplied with the following arguments:
 * `config`
 * `callbacks`
 
-`channels` are the data channels for which you are interested in receiving updates. Examples are TRADES, TICKER, and L2_BOOK. Not all exchanges support all channels. `pairs` are the trading pairs. Every pair in `pairs` will subscribed to every channel in `channels`. If you wish to create a most custom subscription, use the `config` option.
+`channels` are the data channels for which you are interested in receiving updates. Examples are TRADES, TICKER, and L2_BOOK. Not all exchanges support all channels. `pairs` are the trading pairs. Every pair in `pairs` will subscribed to every channel in `channels`. If you wish to create a more granular subscription, use the `config` option.
+
+The supported data channels are:
+
+* L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
+* L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
+* TRADES - Note this reports the taker's side, even for exchanges that report the maker side
+* TICKER - Traditional ticker updates
+* VOLUME - Volume information (Poloniex only currently)
+* FUNDING - Exchange specific funding data / updates
+* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects. Not all exchanges support, as some exchanges send complete books on every update.
+
 
 Trading pairs follow the following scheme BASE-QUOTE. As an example, Bitcoin denominated by US Dollars would be BTC-USD. Many exchanges do not internally use this format, but cryptofeed handles trading pair normalization and all pairs should be subscribed to in this format and will be reported in this format. 
 
