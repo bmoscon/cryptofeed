@@ -31,10 +31,9 @@ class Binance(Feed):
         address = "wss://stream.binance.com:9443/stream?streams="
         for chan in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[chan]:
-                if pair:
-                    pair = pair.lower()
-                    stream = f"{pair}@{chan}/"
-                    address += stream
+                pair = pair.lower()
+                stream = f"{pair}@{chan}/"
+                address += stream
         return address[:-1]
 
     def __reset(self):
