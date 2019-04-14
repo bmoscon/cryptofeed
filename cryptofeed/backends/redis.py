@@ -58,7 +58,7 @@ class TradeStream(TradeRedis):
         data = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                 'side': side, 'amount': float(amount), 'price': float(price)}
 
-        await self.redis.xadd(f"{self.key}-{feed}", data, message_id=f'0-{order_id}')
+        await self.redis.xadd(f"{self.key}-{feed}-{pair}", data, message_id=f'0-{order_id}')
 
 
 class FundingRedis(RedisCallback):
@@ -98,7 +98,7 @@ class FundingStream(FundingRedis):
             if isinstance(kwargs[key], Decimal):
                 kwargs[key] = float(kwargs[key])
 
-        await self.redis.xadd(f"{self.key}-{feed}", kwargs)
+        await self.redis.xadd(f"{self.key}-{feed}-{pair}", kwargs)
 
 
 class BookRedis(RedisCallback):
@@ -142,4 +142,4 @@ class BookStream(BookRedis):
             self.previous[ASK] = data[ASK]
             self.previous[BID] = data[BID]
 
-        await self.redis.xadd(f"{self.key}-{feed}", data)
+        await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)
