@@ -50,6 +50,17 @@ class TradeRedis(RedisCallback):
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
+class TradeStream(TradeRedis):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
+        if self.redis is None:
+            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+
+        data = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
+                'side': side, 'amount': float(amount), 'price': float(price)}
+
+        await self.redis.xadd(f"{self.key}-{feed}", data, message_id=f'0-{order_id}')
+
+
 class FundingRedis(RedisCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -78,6 +89,18 @@ class FundingRedis(RedisCallback):
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
+class FundingStream(FundingRedis):
+    async def __call__(self, *, feed, pair, **kwargs):
+        if self.redis is None:
+            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = float(kwargs[key])
+
+        await self.redis.xadd(f"{self.key}-{feed}", kwargs)
+
+
 class BookRedis(RedisCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -103,3 +126,20 @@ class BookRedis(RedisCallback):
 
         data = json.dumps(data)
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+
+
+class BookStream(BookRedis):
+    async def __call__(self, *, feed, pair, book, timestamp):
+        if self.redis is None:
+            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+
+        data = {'timestamp': timestamp_normalize(feed, timestamp), BID: {}, ASK: {}}
+        book_convert(book, data, self.depth)
+
+        if self.depth:
+            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
+                return
+            self.previous[ASK] = data[ASK]
+            self.previous[BID] = data[BID]
+
+        await self.redis.xadd(f"{self.key}-{feed}", data)
