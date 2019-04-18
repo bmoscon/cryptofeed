@@ -5,9 +5,13 @@ import requests
 import json
 import base64
 import logging
+from decimal import Decimal
+
+from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API
-from cryptofeed.defines import GEMINI
+from cryptofeed.defines import GEMINI, BID, ASK
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
 LOG = logging.getLogger('rest')
@@ -23,12 +27,8 @@ class Gemini(API):
     sandbox_api = "https://api.sandbox.gemini.com"
 
     def _get(self, command: str, options=None):
-        api = self.api
-        if self.sandbox:
-            api = self.sandbox_api
-
-        base_url = "{}{}".format(api, command)
-        resp = requests.get(base_url, params=options)
+        api = self.api if not self.sandbox else self.sandbox_api
+        resp = requests.get(f"{api}{command}", params=options)
         self._handle_error(resp, LOG)
 
         return resp.json()
@@ -39,11 +39,8 @@ class Gemini(API):
         payload['request'] = command
         payload['nonce'] = int(time() * 1000)
 
-        api = self.api
-        if self.sandbox:
-            api = self.sandbox_api
-
-        api = "{}{}".format(api, command)
+        api = self.api if not self.sandbox else self.sandbox_api
+        api = f"{api}{command}"
 
         b64_payload = base64.b64encode(json.dumps(payload).encode('utf-8'))
         signature = hmac.new(self.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
@@ -63,23 +60,28 @@ class Gemini(API):
         return resp.json()
 
     # Public Routes
-    def symbols(self):
-        return self._get("/v1/symbols")
-
     def ticker(self, symbol: str):
-        return self._get("/v1/pubticker/{}".format(symbol))
+        sym = pair_std_to_exchange(symbol, self.ID)
+        data = self._get(f"/v1/pubticker/{sym}")
+        return {'pair': symbol,
+                'feed': self.ID,
+                'bid': Decimal(data['bid']),
+                'ask': Decimal(data['ask'])
+               }
 
-    def current_order_book(self, symbol: str, parameters=None):
-        """
-        Signature:
-            symbol: str, parameters: dict of params for get query
-        Parameters:
-            limit_bids	integer	Optional. Limit the number of bids (offers to buy) returned. Default is 50. May be 0 to
-                                          return the full order book on this side.
-            limit_asks	integer	Optional. Limit the number of asks (offers to sell) returned. Default is 50. May be 0 to
-                                          return the full order book on this side.
-        """
-        return self._get("/v1/book/{}".format(symbol), parameters)
+    def l2_book(self, symbol: str):
+        sym = pair_std_to_exchange(symbol, self.ID)
+        data = self._get(f"/v1/book/{sym}")
+        return {
+            BID: sd({
+                Decimal(u['price']): Decimal(u['amount'])
+                for u in data['bids']
+            }),
+            ASK: sd({
+                Decimal(u['price']): Decimal(u['amount'])
+                for u in data['asks']
+            })
+        }
 
     def trade_history(self, symbol: str, parameters=None):
         """

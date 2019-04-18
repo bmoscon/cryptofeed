@@ -73,23 +73,29 @@ class API:
             log.error("%s: Resp: %s", self.ID, resp.text)
             resp.raise_for_status()
 
-    # public / non account specific 
+    # public / non account specific
+    def ticker(self, symbol: str, retry=0, retry_wait=0):
+        raise NotImplementedError
+
     def trades(self, *args, **kwargs):
         raise NotImplementedError
 
     def funding(self, *args, **kwargs):
         raise NotImplementedError
 
-    def book(self, *args, **kwargs):
+    def l2_book(self, symbol: str, retry=0, retry_wait=0):
         raise NotImplementedError
-    
+
+    def l3_book(self, symbol: str, retry=0, retry_wait=0):
+        raise NotImplementedError
+
     # account specific
     def place_order(self, *args, **kwargs):
         raise NotImplementedError
 
     def cancel_order(self, order_id, *args, **kwargs):
         raise NotImplementedError
-    
+
     def orders(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -101,5 +107,7 @@ class API:
             return self.trades
         elif key == 'funding':
             return self.funding
-        elif key == 'book':
-            return self.book
+        elif key == 'l2_book':
+            return self.l2_book
+        elif key == 'l3_book':
+            return self.l3_book
