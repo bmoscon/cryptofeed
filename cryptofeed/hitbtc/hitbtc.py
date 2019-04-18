@@ -7,13 +7,12 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-from collections import defaultdict
 import time
 
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, L2_BOOK, TRADES, BUY, SELL, BID, ASK, UPD, DEL, HITBTC
+from cryptofeed.defines import TICKER, L2_BOOK, TRADES, BUY, SELL, BID, ASK, HITBTC
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -38,7 +37,7 @@ class HitBTC(Feed):
 
     async def _book(self, msg):
         timestamp = time.time()
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         pair = pair_exchange_to_std(msg['symbol'])
         for side in (BID, ASK):
             for entry in msg[side]:
@@ -46,10 +45,10 @@ class HitBTC(Feed):
                 size = Decimal(entry['size'])
                 if size == 0:
                     del self.l2_book[pair][side][price]
-                    delta[side][DEL].append(price)
+                    delta[side].append((price, 0))
                 else:
                     self.l2_book[pair][side][price] = size
-                    delta[side][UPD].append((price, size))
+                    delta[side].append((price, size))
         await self.book_callback(pair, L2_BOOK, False, delta, timestamp)
 
     async def _snapshot(self, msg):
@@ -102,8 +101,8 @@ class HitBTC(Feed):
                 LOG.error("%s: Received error from server: %s", self.id, msg)
 
     async def subscribe(self, websocket):
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 await websocket.send(
                     json.dumps({
                         "method": channel,

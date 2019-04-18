@@ -14,8 +14,10 @@ import calendar
 import logging
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI)
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
+                                OKEX, COINBENE, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP)
 from cryptofeed.pairs import gen_pairs
+from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed
 
 
 LOG = logging.getLogger('feedhandler')
@@ -38,21 +40,25 @@ def load_exchange_pair_mapping(exchange):
 
 
 def pair_std_to_exchange(pair, exchange):
+    # bitmex does its own validation of trading pairs dynamically
+    if exchange == BITMEX:
+        return pair
     if pair in _std_trading_pairs:
         try:
             return _std_trading_pairs[pair][exchange]
         except KeyError:
-            raise KeyError("{} is not configured/availble for {}".format(
-                pair, exchange))
+            raise UnsupportedTradingPair(f'{pair} is not supported on {exchange}')
     else:
+        # Bitfinex supports funding pairs that are single currencies, prefixed with f
         if exchange == BITFINEX and '-' not in pair:
-            return "f{}".format(pair)
-        return None
+            return f"f{pair}"
+        raise UnsupportedTradingPair(f'{pair} is not supported on {exchange}')
 
 
 def pair_exchange_to_std(pair):
     if pair in _exchange_to_std:
         return _exchange_to_std[pair]
+    # Bitfinex funding currency
     if pair[0] == 'f':
         return pair[1:]
     return None
@@ -78,7 +84,11 @@ _feed_to_exchange_map = {
         KRAKEN: 'book',
         BINANCE: 'depth20',
         EXX: 'ENTRUST_ADD',
-        HUOBI: 'depth.step0'
+        HUOBI: 'depth.step0',
+        HUOBI_US: 'depth.step0',
+        OKCOIN: 'spot/depth',
+        OKEX: 'spot/depth',
+        COINBENE: L2_BOOK
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -90,7 +100,10 @@ _feed_to_exchange_map = {
         KRAKEN: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
         EXX: UNSUPPORTED,
-        HUOBI: UNSUPPORTED
+        HUOBI: UNSUPPORTED,
+        HUOBI_US: UNSUPPORTED,
+        OKCOIN: UNSUPPORTED,
+        OKEX: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: UNSUPPORTED,
@@ -102,7 +115,11 @@ _feed_to_exchange_map = {
         KRAKEN: 'trade',
         BINANCE: 'trade',
         EXX: 'TRADE',
-        HUOBI: 'trade.detail'
+        HUOBI: 'trade.detail',
+        HUOBI_US: 'trade.detail',
+        OKCOIN: 'spot/trade',
+        OKEX: 'spot/trade',
+        COINBENE: TRADES
     },
     TICKER: {
         POLONIEX: 1002,
@@ -113,7 +130,11 @@ _feed_to_exchange_map = {
         BITMEX: UNSUPPORTED,
         KRAKEN: TICKER,
         BINANCE: 'ticker',
-        HUOBI: UNSUPPORTED
+        HUOBI: UNSUPPORTED,
+        HUOBI_US: UNSUPPORTED,
+        OKCOIN: 'spot/ticker',
+        OKEX: 'spot/ticker',
+        COINBENE: TICKER
     },
     VOLUME: {
         POLONIEX: 1003
@@ -121,6 +142,15 @@ _feed_to_exchange_map = {
     FUNDING: {
         BITMEX: 'funding',
         BITFINEX: 'trades'
+    },
+    TRADES_SWAP: {
+        OKEX: 'swap/trade'
+    },
+    TICKER_SWAP: {
+        OKEX: 'swap/ticker'
+    },
+    L2_BOOK_SWAP: {
+        OKEX: 'swap/depth'
     }
 }
 
@@ -133,5 +163,5 @@ def feed_to_exchange(exchange, feed):
     ret = _feed_to_exchange_map[feed][exchange]
     if ret == UNSUPPORTED:
         LOG.error("{} is not supported on {}".format(feed, exchange))
-        raise ValueError("{} is not supported on {}".format(feed, exchange))
+        raise UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
     return ret

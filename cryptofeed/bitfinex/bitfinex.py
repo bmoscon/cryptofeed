@@ -14,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BUY, SELL, BID, ASK, L2_BOOK, FUNDING, DEL, UPD, BITFINEX
+from cryptofeed.defines import TICKER, TRADES, L3_BOOK, BUY, SELL, BID, ASK, L2_BOOK, FUNDING, BITFINEX
 from cryptofeed.standards import pair_exchange_to_std
 
 
@@ -130,7 +130,7 @@ class Bitfinex(Feed):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         forced = False
 
         if isinstance(msg[1], list):
@@ -163,12 +163,12 @@ class Bitfinex(Feed):
 
                 if count > 0:
                     # change at price level
-                    delta[side] = {UPD: [(price, amount)]}
+                    delta[side].append((price, amount))
                     self.l2_book[pair][side][price] = amount
                 else:
                     # remove price level
                     del self.l2_book[pair][side][price]
-                    delta[side] = {DEL: [price]}
+                    delta[side].append((price, 0))
         elif msg[1] == 'hb':
             pass
         else:
@@ -194,7 +194,7 @@ class Bitfinex(Feed):
             if len(self.l3_book[pair][side][price]) == 0:
                 del self.l3_book[pair][side][price]
 
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         forced = False
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
@@ -236,16 +236,16 @@ class Bitfinex(Feed):
                     price = self.order_map[pair][side][order_id]['price']
                     remove_from_book(pair, side, order_id)
                     del self.order_map[pair][side][order_id]
-                    delta[side][DEL] = [(order_id, price)]
+                    delta[side].append((order_id, price, 0))
                 else:
                     if order_id in self.order_map[pair][side]:
                         del_price = self.order_map[pair][side][order_id]['price']
-                        delta[side][DEL] = [(order_id, del_price)]
+                        delta[side].append((order_id, del_price, 0))
                         # remove existing order before adding new one
-                        delta[side][UPD] = [(order_id, price, amount)]
+                        delta[side].append((order_id, price, amount))
                         remove_from_book(pair, side, order_id)
                     else:
-                        delta[side][UPD] = [(order_id, price, amount)]
+                        delta[side].append((order_id, price, amount))
                     add_to_book(pair, side, price, order_id, amount)
                     self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
 
@@ -300,8 +300,8 @@ class Bitfinex(Feed):
             'flags': SEQ_ALL
         }))
 
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 message = {'event': 'subscribe',
                            'channel': channel,
                            'symbol': pair

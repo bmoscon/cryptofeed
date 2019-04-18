@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import json
 import logging
 from decimal import Decimal
@@ -16,8 +22,9 @@ LOG = logging.getLogger('feedhandler')
 class Kraken(Feed):
     id = KRAKEN
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+    def __init__(self, pairs=None, channels=None, callbacks=None, depth=10, **kwargs):
         super().__init__('wss://ws.kraken.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        self.book_depth = depth
 
     def __reset(self):
         self.l2_book = {}
@@ -27,17 +34,23 @@ class Kraken(Feed):
         self.__reset()
         if self.config:
             for chan in self.config:
+                sub = {"name": chan}
+                if 'book' in chan:
+                    sub['depth'] = self.book_depth
                 await websocket.send(json.dumps({
                                         "event": "subscribe",
                                         "pair": self.config[chan],
-                                        "subscription": {"name": chan}
+                                        "subscription": sub
                                     }))
         else:
             for chan in self.channels:
+                sub = {"name": chan}
+                if 'book' in chan:
+                    sub['depth'] = self.book_depth
                 await websocket.send(json.dumps({
                                         "event": "subscribe",
                                         "pair": self.pairs,
-                                        "subscription": {"name": chan}
+                                        "subscription": sub
                                     }))
 
     async def _trade(self, msg, pair):
@@ -68,6 +81,7 @@ class Kraken(Feed):
                                      ask=Decimal(msg[1]['a'][0]))
 
     async def _book(self, msg, pair):
+        delta = {BID: [], ASK: []}
         msg = msg[1]
         if 'as' in msg:
             # Snapshot
@@ -76,6 +90,7 @@ class Kraken(Feed):
             }), ASK: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg['as']
             })}
+            await self.book_callback(pair, L2_BOOK, True, delta, time.time())
         else:
             for s, updates in msg.items():
                 side = BID if s == 'b' else ASK
@@ -84,14 +99,21 @@ class Kraken(Feed):
                     price = Decimal(price)
                     size = Decimal(size)
                     if size == 0:
-                        try:
+                        # Per Kraken's technical support
+                        # they deliver erroneous deletion messages
+                        # periodically which should be ignored
+                        if price in self.l2_book[pair][side]:
                             del self.l2_book[pair][side][price]
-                        except KeyError:
-                            pass
+                            delta[side].append((price, 0))
                     else:
+                        delta[side].append((price, size))
                         self.l2_book[pair][side][price] = size
+                    if len(self.l2_book[pair][side]) > self.book_depth:
+                        del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
+                        del self.l2_book[pair][side][del_price]
+                        delta[side].append((del_price, 0))
 
-        await self.book_callback(pair, L2_BOOK, False, False, time.time())
+            await self.book_callback(pair, L2_BOOK, False, delta, time.time())
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)

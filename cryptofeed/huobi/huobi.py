@@ -22,8 +22,8 @@ LOG = logging.getLogger('feedhandler')
 class Huobi(Feed):
     id = HUOBI
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.huobi.pro/hbus/ws', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
+        super().__init__('wss://api.huobi.pro/ws', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
         self.__reset()
 
     def __reset(self):

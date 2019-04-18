@@ -14,7 +14,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, UPD, DEL, FUNDING, L3_BOOK, BITMEX
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, L3_BOOK, BITMEX
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,12 +25,17 @@ class Bitmex(Feed):
     api = 'https://www.bitmex.com/api/v1/'
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://www.bitmex.com/realtime', pairs=None, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__('wss://www.bitmex.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+
         active_pairs = self.get_active_symbols()
+        if self.config:
+            pairs = list(self.config.values())
+            pairs = [pair for inner in pairs for pair in inner]
+
         for pair in pairs:
-            if pair not in active_pairs:
-                raise ValueError("{} is not active on BitMEX".format(pair))
-        self.pairs = pairs
+            if not pair.startswith('.'):
+                if pair not in active_pairs:
+                    raise ValueError("{} is not active on BitMEX".format(pair))
         self._reset()
 
     def _reset(self):
@@ -89,7 +94,7 @@ class Bitmex(Feed):
         timestamp = dt.utcnow()
         timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         pair = None
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
         forced = False
         if not self.partial_received:
@@ -113,7 +118,7 @@ class Bitmex(Feed):
                 else:
                     self.l3_book[pair][side][price] = {order_id: size}
                 self.order_id[pair][side][order_id] = (price, size)
-                delta[side][UPD].append((order_id, price, size))
+                delta[side].append((order_id, price, size))
         elif msg['action'] == 'update':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
@@ -125,7 +130,7 @@ class Bitmex(Feed):
 
                 self.l3_book[pair][side][price][order_id] = update_size
                 self.order_id[pair][side][order_id] = (price, update_size)
-                delta[side][UPD].append((order_id, price, update_size))
+                delta[side].append((order_id, price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
@@ -139,7 +144,7 @@ class Bitmex(Feed):
                 if len(self.l3_book[pair][side][delete_price]) == 0:
                     del self.l3_book[pair][side][delete_price]
 
-                delta[side][DEL].append((order_id, delete_price))
+                delta[side].append((order_id, delete_price, 0))
 
         else:
             LOG.warning("%s: Unexpected L3 Book message %s", self.id, msg)
@@ -229,8 +234,8 @@ class Bitmex(Feed):
     async def subscribe(self, websocket):
         self._reset()
         chans = []
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 chans.append("{}:{}".format(channel, pair))
 
         await websocket.send(json.dumps({"op": "subscribe",

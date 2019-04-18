@@ -8,14 +8,13 @@ import asyncio
 import json
 import logging
 from decimal import Decimal
-from collections import defaultdict
 from datetime import datetime as dt
 
 import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BUY, SELL, BID, ASK, TRADES, TICKER, DEL, UPD, COINBASE
+from cryptofeed.defines import L2_BOOK, L3_BOOK, BUY, SELL, BID, ASK, TRADES, TICKER, COINBASE
 
 
 LOG = logging.getLogger('feedhandler')
@@ -91,7 +90,7 @@ class Coinbase(Feed):
         pair = msg['product_id']
 
         if 'full' in self.channels or ('full' in self.config and pair in self.config['full']):
-            delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+            delta = {BID: [], ASK: []}
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
             size = Decimal(msg['size'])
@@ -102,14 +101,14 @@ class Coinbase(Feed):
             new_size -= size
             if new_size <= 0:
                 del self.order_map[maker_order_id]
-                delta[side][DEL].append((maker_order_id, price))
+                delta[side].append((maker_order_id, price, 0))
                 del self.l3_book[pair][side][price][maker_order_id]
                 if len(self.l3_book[pair][side][price]) == 0:
                     del self.l3_book[pair][side][price]
             else:
                 self.order_map[maker_order_id] = (price, new_size)
                 self.l3_book[pair][side][price][maker_order_id] = new_size
-                delta[side][UPD].append((maker_order_id, price, new_size))
+                delta[side].append((maker_order_id, price, new_size))
 
             await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
 
@@ -142,7 +141,7 @@ class Coinbase(Feed):
     async def _pair_level2_update(self, msg):
         timestamp = dt.utcnow()
         timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
             side = BID if side == 'buy' else ASK
             price = Decimal(price)
@@ -151,22 +150,27 @@ class Coinbase(Feed):
 
             if amount == 0:
                 del bidask[price]
-                delta[side][DEL].append(price)
+                delta[side].append((price, 0))
             else:
                 bidask[price] = amount
-                delta[side][UPD].append((price, amount))
+                delta[side].append((price, amount))
 
         await self.book_callback(msg['product_id'], L2_BOOK, False, delta, timestamp)
 
     async def _book_snapshot(self, pairs):
         self.__reset()
-        loop = asyncio.get_event_loop()
+        # Coinbase needs some time to send messages to us
+        # before we request the snapshot. If we don't sleep
+        # the snapshot seq no could be much earlier than
+        # the subsequent messages, causing a seq no mismatch.
+        await asyncio.sleep(2)
+
         url = 'https://api.pro.coinbase.com/products/{}/book?level=3'
-        futures = [loop.run_in_executor(None, requests.get, url.format(pair)) for pair in pairs]
+        urls = [url.format(pair) for pair in pairs]
 
         results = []
-        for future in futures:
-            ret = await future
+        for url in urls:
+            ret = requests.get(url)
             results.append(ret)
 
         for res, pair in zip(results, pairs):
@@ -187,7 +191,7 @@ class Coinbase(Feed):
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
 
     async def _open(self, msg):
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         size = Decimal(msg['remaining_size'])
@@ -201,7 +205,7 @@ class Coinbase(Feed):
             self.l3_book[pair][side][price] = {order_id: size}
         self.order_map[order_id] = (price, size)
 
-        delta[side][UPD].append((order_id, price, size))
+        delta[side].append((order_id, price, size))
 
         await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
 
@@ -213,7 +217,7 @@ class Coinbase(Feed):
         to self-trade prevention. There will be no open message for such orders. Done messages
         for orders which are not on the book should be ignored when maintaining a real-time order book.
         """
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
 
         if 'price' not in msg:
             return
@@ -230,13 +234,13 @@ class Coinbase(Feed):
         del self.l3_book[pair][side][price][order_id]
         if len(self.l3_book[pair][side][price]) == 0:
             del self.l3_book[pair][side][price]
-        delta[side][DEL].append((order_id, price))
+        delta[side].append((order_id, price, 0))
         del self.order_map[order_id]
 
         await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
 
     async def _change(self, msg):
-        delta = {BID: defaultdict(list), ASK: defaultdict(list)}
+        delta = {BID: [], ASK: []}
 
         if 'price' not in msg or not msg['price']:
             return
@@ -250,7 +254,7 @@ class Coinbase(Feed):
         self.l3_book[pair][side][price][order_id] = new_size
         self.order_map[order_id] = (price, new_size)
 
-        delta[side][UPD].append((order_id, price, new_size))
+        delta[side].append((order_id, price, new_size))
 
         await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
 

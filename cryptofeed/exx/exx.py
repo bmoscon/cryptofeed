@@ -153,8 +153,8 @@ class EXX(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 await websocket.send(json.dumps({"dataType": f"1_{channel}_{pair}",
                                                  "dataSize": 50,
                                                  "action": "ADD"

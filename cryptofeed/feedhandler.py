@@ -15,8 +15,8 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI
-from cryptofeed.exchanges import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase, Kraken
+from cryptofeed.defines import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE
+from cryptofeed.exchanges import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase, Kraken, OKCoin, OKEx, Coinbene, HuobiUS
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
 
@@ -33,7 +33,11 @@ _EXCHANGES = {
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
     KRAKEN: Kraken,
-    HUOBI: HUOBI
+    HUOBI: HUOBI,
+    HUOBI_US: HuobiUS,
+    OKCOIN: OKCoin,
+    OKEX: OKEx,
+    COINBENE: Coinbene
 }
 
 
@@ -176,8 +180,10 @@ class FeedHandler:
             try:
                 await handler(message)
             except Exception:
-                if feed_id == HUOBI:
+                if feed_id == HUOBI or feed_id == HUOBI_US:
                     message = zlib.decompress(message, 16+zlib.MAX_WBITS)
+                elif feed_id == OKCOIN or feed_id == OKEX:
+                    message = zlib.decompress(message, -15)
                 LOG.error("%s: error handling message %s", feed_id, message)
                 # exception will be logged with traceback when connection handler
                 # retries the connection

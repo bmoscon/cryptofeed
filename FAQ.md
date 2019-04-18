@@ -1,0 +1,13 @@
+# FAQ and Oddities
+
+* Why does Poloniex not support trading pairs / Why does the demo have trading pairs in the channels on Poloniex?
+  - Poloniex supports a ticker channel that gives you information for ALL trading pairs, or you can subscribe to a trading pair to get updates for that trading pair (book and trades). It doesn't allow you to specify channels and pairs like most the other exchange APIs.
+
+* Why does Gemini not support channels / Why can I only supply one trading pair? 
+  - Gemini only lets you register for a single trading pair per websocket. You receive all updates for the trading pair. Updates you are not interested in you can ignore by omitting a callback. For this reason every pair will require a new feed via the `add_feed` method. 
+
+* Why does BitMEX not have normalized symbols / I noticed BitMEX uses XBTUSD whereas other exchanges use BTC-USD - why the difference?
+  - BitMEX offers futures contracts, swaps and other derivative products that are bought and sold in bitcoin, which differs from other exchanges where cryptocurrencies like bitcoin are bought in other currencies like dollars (or other cryptocurrencies). For this reason, most their symbols have no analogues on other exchanges. 
+
+* Why don't all exchanges support book deltas?
+  - Only some exchanges provide delta updates. If you want a delta for the exchanges that only provide snapshots, you can calculate the delta on each update.

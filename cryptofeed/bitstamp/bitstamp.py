@@ -96,8 +96,8 @@ class Bitstamp(Feed):
         # to get updates, hit the REST endpoint to get the current complete state,
         # then process the updates from the diff channel, ignoring any updates that
         # are pre-timestamp on the response from the REST endpoint
-        for channel in self.channels:
-            for pair in self.pairs:
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
                 await websocket.send(
                     json.dumps({
                         "event": "pusher:subscribe",
