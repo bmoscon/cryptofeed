@@ -5,20 +5,14 @@ import requests
 import json
 import base64
 import logging
-<<<<<<< Updated upstream
 from decimal import Decimal
 
 from sortedcontainers.sorteddict import SortedDict as sd
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import GEMINI, BID, ASK
+from cryptofeed.defines import GEMINI, BID, ASK, GEMINI_TYPES, TypeNotSupported
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
-=======
-
-from cryptofeed.rest.api import API
-from cryptofeed.defines import GEMINI, GEMINI_TYPES, TypeNotSupported
->>>>>>> Stashed changes
 
 
 LOG = logging.getLogger('rest')
@@ -33,19 +27,8 @@ class Gemini(API):
     api = "https://api.gemini.com"
     sandbox_api = "https://api.sandbox.gemini.com"
 
-<<<<<<< Updated upstream
     def _get(self, command: str, retry, retry_wait, params=None):
         api = self.api if not self.sandbox else self.sandbox_api
-=======
-    def _get(self, command: str, options=None):
-        api = self.api
-        if self.sandbox:
-            api = self.sandbox_api
-
-        base_url = "{}{}".format(api, command)
-        resp = requests.get(base_url, params=options)
-        self._handle_error(resp, LOG)
->>>>>>> Stashed changes
 
         @request_retry(self.ID, retry, retry_wait)
         def helper():
