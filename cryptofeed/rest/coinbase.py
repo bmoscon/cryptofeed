@@ -42,9 +42,7 @@ class Coinbase(API):
         }
 
     def _request(self, method: str, endpoint: str, auth=False, body=None, retry=None, retry_wait=0):
-        api = self.api
-        if self.sandbox:
-            api = self.sandbox_api
+        api = self.sandbox_api if self.sandbox else self.api
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(verb, api, endpoint, body, auth):
@@ -107,7 +105,9 @@ class Coinbase(API):
         }
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        if start and end:
+        if start:
+            if not end:
+                end = pd.Timestamp.utcnow()
             start_id = self._date_to_trade(symbol, pd.Timestamp(start))
             end_id = self._date_to_trade(symbol, pd.Timestamp(end))
             while True:
@@ -139,4 +139,4 @@ class Coinbase(API):
                 if start_id >= end_id:
                     break
         else:
-            yield self._request('GET', f"/product/{symbol}/trades")
+            yield [self._trade_normalize(symbol, d) for d in self._request('GET', f"/product/{symbol}/trades")]

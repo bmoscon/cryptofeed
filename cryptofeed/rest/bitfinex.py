@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import calendar
 import logging
+from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
 import pandas as pd
@@ -23,6 +24,15 @@ LOG = logging.getLogger('rest')
 class Bitfinex(API):
     ID = BITFINEX
     api = "https://api-pub.bitfinex.com/v2/"
+
+
+    def _get(self, endpoint, retry, retry_wait):
+        @request_retry(self.ID, retry, retry_wait)
+        def helper():
+            r = requests.get(f"{self.api}{endpoint}")
+            self._handle_error(r, LOG)
+            return r.json()
+        return helper()
 
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
@@ -87,7 +97,9 @@ class Bitfinex(API):
         start = None
         end = None
 
-        if start_date and end_date:
+        if start_date:
+            if not end_date:
+                end_date = pd.Timestamp.utcnow()
             start = pd.Timestamp(start_date)
             end = pd.Timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
@@ -138,6 +150,15 @@ class Bitfinex(API):
         symbol = pair_std_to_exchange(symbol, self.ID)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
+
+    def ticker(self, symbol: str, retry=None, retry_wait=0):
+        sym = pair_std_to_exchange(symbol, self.ID)
+        data = self._get(f"ticker/{sym}", retry, retry_wait)
+        return {'pair': symbol,
+                'feed': self.ID,
+                'bid': Decimal(data[0]),
+                'ask': Decimal(data[2])
+               }
 
     def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = f"f{symbol}"

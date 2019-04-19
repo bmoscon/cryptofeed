@@ -50,7 +50,9 @@ class Bitmex(API):
 
     def _get(self, ep, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
         dates = [None]
-        if start_date and end_date:
+        if start_date:
+            if not end_date:
+                end_date = pd.Timestamp.utcnow()
             dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq=freq).tolist()
             if len(dates) == 0:
                 dates.append(pd.Interval(left=pd.Timestamp(start_date), right=pd.Timestamp(end_date)))
@@ -158,7 +160,7 @@ class Bitmex(API):
         for data in self._get('funding', symbol, start, end, retry, retry_wait, freq='2W'):
             yield list(map(self._funding_normalization, data))
 
-    def book(self, symbol, retry=None, retry_wait=10):
+    def l2_book(self, symbol: str, retry=None, retry_wait=10):
         ret = {symbol: {BID: sd(), ASK: sd()}}
         data = next(self._get('orderBook/L2', symbol, None, None, retry, retry_wait))
         for update in data:
