@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from time import time
 import hashlib
 import hmac
@@ -8,9 +14,10 @@ import calendar
 import logging
 
 import pandas as pd
+from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import POLONIEX, BUY, SELL
+from cryptofeed.defines import POLONIEX, BUY, SELL, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
 
@@ -25,13 +32,16 @@ class Poloniex(API):
     # for public_api add "public" to the url, for trading add "tradingApi" (example: https://poloniex.com/public)
     rest_api = "https://poloniex.com/"
 
-    def _get(self, command: str, options=None):
-        base_url = "{}public?command={}".format(self.rest_api, command)
 
-        resp = requests.get(base_url, params=options)
-        self.handle_error(resp, LOG)
+    def _get(self, command: str, options=None, retry=None, retry_wait=0):
+        base_url = f"{self.rest_api}public?command={command}"
 
-        return resp.json()
+        @request_retry(self.ID, retry, retry_wait)
+        def helper():
+            resp = requests.get(base_url, params=options)
+            self._handle_error(resp, LOG)
+            return resp.json()
+        return helper()
 
     def _post(self, command: str, payload=None):
         if not payload:
@@ -48,24 +58,34 @@ class Poloniex(API):
             "Sign": sign,
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        resp = requests.post("{}tradingApi?command={}".format(self.rest_api, command), headers=headers, data=paybytes)
-        self.handle_error(resp, LOG)
+        resp = requests.post(f"{self.rest_api}tradingApi?command={command}", headers=headers, data=paybytes)
+        self._handle_error(resp, LOG)
 
         return resp.json()
 
     # Public API Routes
+    def ticker(self, symbol: str, retry=None, retry_wait=10):
+        sym = pair_std_to_exchange(symbol, self.ID)
+        data = self._get("returnTicker", retry=retry, retry_wait=retry_wait)
+        return {'pair': symbol,
+                'feed': self.ID,
+                'bid': Decimal(data[sym]['lowestAsk']),
+                'ask': Decimal(data[sym]['highestBid'])
+            }
 
-    def tickers(self):
-        return self._get("returnTicker")
-
-    def past_day_volume(self):
-        return self._get("return24hVolume")
-
-    def order_books(self, options=None):
-        """
-        options: currencyPair=BTC_NXT depth=10
-        """
-        return self._get("returnOrderBook", options)
+    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+        sym = pair_std_to_exchange(symbol, self.ID)
+        data = self._get("returnOrderBook", {'currencyPair': sym}, retry=retry, retry_wait=retry_wait)
+        return {
+                BID: sd({
+                    Decimal(u[0]): Decimal(u[1])
+                    for u in data['bids']
+                }),
+                ASK: sd({
+                    Decimal(u[0]): Decimal(u[1])
+                    for u in data['asks']
+                })
+            }
 
     def _trade_normalize(self, trade, symbol):
         return {
@@ -87,10 +107,12 @@ class Poloniex(API):
             data.reverse()
             return data
 
-        if not start or not end:
+        if not start:
             yield map(lambda x: self._trade_normalize(x, symbol), helper())
 
         else:
+            if not end:
+                end = pd.Timestamp.utcnow()
             start = pd.Timestamp(start)
             end = pd.Timestamp(end) - pd.Timedelta(nanoseconds=1)
 
@@ -109,15 +131,6 @@ class Poloniex(API):
                 e += 21600
                 if s >= end:
                     break
-
-    def chart_data(self, options=None):
-        """
-        options: currencyPair=BTC_XMR start=1405699200 end=9999999999 period=14400
-        """
-        return self._get("returnChartData", options)
-
-    def currencies(self):
-        return self._get("returnCurrencies")
 
     # Trading API Routes
     # Private endpoints require a nonce, which must be an integer greater than the previous nonce used
@@ -183,35 +196,23 @@ class Poloniex(API):
         """
         return self._post("returnOrderStatus", payload)
 
-    def buy(self, payload):
-        """
-        Data FORMAT
-        {
-        "currencyPair": <pair>,
-        "rate": <rate>,
-        "amount": <amount>,
-        "fillOrKill" (optional)
-        "immediateOrCancel" (optional)
-        "postOnly" (optional)
+    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, fill_or_kill: str, immediate_or_cancel: str, post_only: str):
+        parameters = {
+            'currencyPair': pair,
+            'amount': amount,
+            'rate': price
         }
-        "fillOrKill", "immediateOrCancel", "postOnly" to 1
-        """
-        return self._post("buy", payload)
 
-    def sell(self, payload):
-        """
-        Data FORMAT
-        {
-        "currencyPair": <pair>,
-        "rate": <rate>,
-        "amount": <amount>,
-        "fillOrKill" (optional)
-        "immediateOrCancel" (optional)
-        "postOnly" (optional)
-        }
-        "fillOrKill", "immediateOrCancel", "postOnly" to 1
-        """
-        return self._post("sell", payload)
+        if fill_or_kill is not None:
+            parameters['fillOrKill'] = fill_or_kill
+
+        if immediate_or_cancel is not None:
+            parameters['immediateOrCancel'] = immediate_or_cancel
+
+        if post_only is not None:
+            parameters['postOnly'] = post_only
+
+        return self._post(side, parameters)
 
     def cancel_order(self, order_id):
         return self._post("cancelOrder", {"orderNumber": order_id})

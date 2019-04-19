@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import time
 from time import sleep
 from datetime import datetime as dt
@@ -6,6 +12,7 @@ import hashlib
 import hmac
 import calendar
 import logging
+from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
 import pandas as pd
@@ -23,6 +30,15 @@ LOG = logging.getLogger('rest')
 class Bitfinex(API):
     ID = BITFINEX
     api = "https://api-pub.bitfinex.com/v2/"
+
+
+    def _get(self, endpoint, retry, retry_wait):
+        @request_retry(self.ID, retry, retry_wait)
+        def helper():
+            r = requests.get(f"{self.api}{endpoint}")
+            self._handle_error(r, LOG)
+            return r.json()
+        return helper()
 
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
@@ -53,7 +69,7 @@ class Bitfinex(API):
             'timestamp': timestamp,
             'pair': pair_exchange_to_std(symbol),
             'id': trade_id,
-            'feed': 'BITFINEX',
+            'feed': self.ID,
             'side': SELL if amount < 0 else BUY,
             'amount': abs(amount),
             'price': price,
@@ -87,7 +103,9 @@ class Bitfinex(API):
         start = None
         end = None
 
-        if start_date and end_date:
+        if start_date:
+            if not end_date:
+                end_date = pd.Timestamp.utcnow()
             start = pd.Timestamp(start_date)
             end = pd.Timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
@@ -108,11 +126,11 @@ class Bitfinex(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 - %s", self.ID, r.text)
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                self.handle_error(r, LOG)
+                self._handle_error(r, LOG)
 
             data = r.json()
             if data == []:
@@ -139,12 +157,27 @@ class Bitfinex(API):
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    def ticker(self, symbol: str, retry=None, retry_wait=0):
+        sym = pair_std_to_exchange(symbol, self.ID)
+        data = self._get(f"ticker/{sym}", retry, retry_wait)
+        return {'pair': symbol,
+                'feed': self.ID,
+                'bid': Decimal(data[0]),
+                'ask': Decimal(data[2])
+               }
+
+    def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = f"f{symbol}"
         for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
             yield data
 
-    def book(self, symbol, l3=False, retry=0, retry_wait=0):
+    def l2_book(self, symbol: str, retry=0, retry_wait=0):
+        return self._book(symbol, retry=retry, retry_wait=retry_wait)
+
+    def l3_book(self, symbol: str, retry=0, retry_wait=0):
+        return self._book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
+
+    def _book(self, symbol: str, l3=False, retry=0, retry_wait=0):
         ret = {}
         sym = symbol
         funding = False
@@ -170,13 +203,13 @@ class Bitfinex(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 - %s", self.ID, r.text)
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 if retry == 0:
                     break
                 continue
             elif r.status_code != 200:
-                self.handle_error(r, LOG)
+                self._handle_error(r, LOG)
 
             data = r.json()
             break

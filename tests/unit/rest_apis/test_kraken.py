@@ -1,53 +1,19 @@
 import pytest
 from cryptofeed.rest import Rest
+from cryptofeed.defines import BID
 
 
 kraken = Rest('config.yaml').kraken
 
 
-def test_get_server_time():
-    server_time = kraken.get_server_time()
-    assert len(server_time['error']) == 0
-
-
-def test_get_assets():
-    info = kraken.get_asset_info()
-    assert 'ADA' in info['result']
-
-
-def test_get_assets_payload():
-    info = kraken.get_asset_info({"asset": "ada,eos,bch"})
-    assert 'ADA' in info['result']
-
-
-def test_tradeable_pairs():
-    tradeable = kraken.get_tradeable_pairs()
-    assert len(tradeable['result']) > 0
-
-
-def test_tradeable_pairs_payload():
-    tradeable = kraken.get_tradeable_pairs({"info": "leverage", "pair": "adacad"})
-    assert 'ADACAD' in tradeable['result']
-
-
-def test_get_ohlc_data():
-    ohlc = kraken.get_ohlc_data({"pair": "adacad"})
-    assert len(ohlc['result']['ADACAD']) > 0
-
-
 def test_get_order_book():
-    book = kraken.get_order_book({"pair": "adacad"})
-    assert len(book['result']['ADACAD']['asks']) > 0
+    book = kraken.l2_book('BTC-USD')
+    assert len(book[BID]) > 0
 
 
 def test_get_recent_trades():
-    trades = list(kraken.trades('ADA-CAD'))
+    trades = list(kraken.trades('BTC-USD'))
     assert len(trades) > 0
-
-
-def test_recent_spread_data():
-    data = kraken.get_recent_spread_data({"pair": "adacad"})
-    assert len(data['result']['ADACAD']) > 0
 
 
 @pytest.mark.skipif(kraken.key_id is None or kraken.key_secret is None, reason="No api key provided")

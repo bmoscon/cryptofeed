@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from cryptofeed.rest.bitmex import Bitmex
 from cryptofeed.rest.bitfinex import Bitfinex
 from cryptofeed.rest.coinbase import Coinbase
@@ -12,6 +18,15 @@ LOG = get_logger('rest', 'rest.log')
 
 
 class Rest:
+    """
+    The rest class is a common interface for accessing the individual exchanges
+
+    r = Rest()
+    r.bitmex.trades('XBTUSD', '2018-01-01', '2018-01-01')
+
+    The Rest class optionally takes two parameters, config, and sandbox. In the config file
+    the api key and secrets can be specified. sandbox enables sandbox mode, if supported by the exchange.
+    """
     def __init__(self, config=None, sandbox=False):
         self.config = config
         self.lookup = {

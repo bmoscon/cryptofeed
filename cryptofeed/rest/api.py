@@ -1,18 +1,26 @@
+'''
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import os
 from functools import wraps
 from time import sleep
 import logging
+from decimal import Decimal
 
 import requests
 import yaml
 
 from cryptofeed.standards import load_exchange_pair_mapping
 
-
 LOG = logging.getLogger('rest')
 
-
 def request_retry(exchange, retry, retry_wait):
+    """
+    decorator to retry request
+    """
     def wrap(f):
         @wraps(f)
         def wrapped_f(*args, **kwargs):
@@ -63,26 +71,37 @@ class API:
         except (KeyError, FileNotFoundError, TypeError):
             pass
 
-    def handle_error(self, resp, log):
+    def _handle_error(self, resp, log):
         if resp.status_code != 200:
-            log.error("%s: Status code %d", self.ID, resp.status_code)
+            log.error("%s: Status code %d for URL", self.ID, resp.url, resp.status_code)
             log.error("%s: Headers: %s", self.ID, resp.headers)
             log.error("%s: Resp: %s", self.ID, resp.text)
             resp.raise_for_status()
 
-    def trades(self, *args, **kwargs):
+    # public / non account specific
+    def ticker(self, symbol: str, retry=None, retry_wait=10):
         raise NotImplementedError
 
-    def funding(self, *args, **kwargs):
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def book(self, *args, **kwargs):
+    def funding(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def place_order(self):
+    def l2_book(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def cancel_order(self, order_id):
+    def l3_book(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    # account specific
+    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, **kwargs):
+        raise NotImplementedError
+
+    def cancel_order(self, order_id, *args, **kwargs):
+        raise NotImplementedError
+
+    def orders(self, *args, **kwargs):
         raise NotImplementedError
 
     def __getitem__(self, key):
@@ -93,5 +112,9 @@ class API:
             return self.trades
         elif key == 'funding':
             return self.funding
-        elif key == 'book':
-            return self.book
+        elif key == 'l2_book':
+            return self.l2_book
+        elif key == 'l3_book':
+            return self.l3_book
+        elif key == 'ticker':
+            return self.ticker

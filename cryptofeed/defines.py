@@ -46,6 +46,10 @@ BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
 
+LIMIT = 'limit'
+MARKET = 'market'
+
+
 """
 L2 Orderbook Layout
     * BID and ASK are SortedDictionaries

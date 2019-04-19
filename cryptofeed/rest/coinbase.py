@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import time
 import json
 import hashlib
@@ -10,7 +16,7 @@ import logging
 
 import pandas as pd
 
-from cryptofeed.rest.api import API
+from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import COINBASE, BUY, SELL
 from cryptofeed.standards import pair_std_to_exchange
 
@@ -41,342 +47,102 @@ class Coinbase(API):
             'Content-Type': 'Application/JSON',
         }
 
-    def _pagination(self, endpoint: str, body=None):
-        if body is None:
-            return endpoint
+    def _request(self, method: str, endpoint: str, auth=False, body=None, retry=None, retry_wait=0):
+        api = self.sandbox_api if self.sandbox else self.api
 
-        if 'before' in body:
-            if '?' in endpoint:
-                endpoint = '{}&before={}'.format(endpoint, 'before')
-            else:
-                endpoint = '{}?before={}'.format(endpoint, 'before')
-        if 'after' in body:
-            if '?' in endpoint:
-                endpoint = '{}&after={}'.format(endpoint, 'after')
-            else:
-                endpoint = '{}?after={}'.format(endpoint, 'after')
-        if 'limit' in body:
-            endpoint = '{}?limit={}'.format(endpoint, 'limit')
+        @request_retry(self.ID, retry, retry_wait)
+        def helper(verb, api, endpoint, body, auth):
+            header = None
+            if auth:
+                header = self._generate_signature(endpoint, verb, body=json.dumps(body) if body else None)
 
-        return endpoint
+            if method == "GET":
+                return requests.get(f'{api}{endpoint}', headers=header)
 
-    def _make_request(self, method: str, endpoint: str, header: dict, body=None, retry=None, retry_wait=0):
-        api = self.api
-        if self.sandbox:
-            api = self.sandbox_api
-
+        return helper(method, api, endpoint, body, auth)
+    
+    def _date_to_trade(self, symbol: str, date: pd.Timestamp) -> int:
+        """
+        Coinbase uses trade ids to query historical trades, so
+        need to search for the start date
+        """
+        upper = self._request('GET', f'/products/{symbol}/trades').json()[0]['trade_id']
+        lower = 0
+        bound = (upper - lower) // 2
         while True:
+            r =  self._request('GET', f'/products/{symbol}/trades?after={bound}')
+            if r.status_code == 429:
+                time.sleep(10)
+                continue
+            elif r.status_code != 200:
+                LOG.warning("Error %s: %s", r.status_code, r.text)
+                time.sleep(60)
+                continue
+            data = r.json()
             try:
-                if method == "GET":
-                    resp = requests.get('{}{}'.format(api, endpoint), headers=header)
-                elif method == "POST":
-                    resp = requests.post('{}{}'.format(api, endpoint), json=body, headers=header)
-                elif method == "DELETE":
-                    resp = requests.delete('{}{}'.format(api, endpoint), headers=header)
-            except TimeoutError as e:
-                LOG.warning("%s: Timeout - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
+                data = list(reversed(data))
+            except:
+                LOG.warning("Error %s: %s", r.status_code, r.text)
+                sleep(60)
                 continue
-            except requests.exceptions.ConnectionError as e:
-                LOG.warning("%s: Connection error - %s", self.ID, e)
-                if retry is not None:
-                    if retry == 0:
-                        raise
-                    else:
-                        retry -= 1
-                sleep(retry_wait)
-                continue
-
-            # 400 Bad Request – Invalid request format
-            # 401 Unauthorized – Invalid API Key
-            # 403 Forbidden – You do not have access to the requested resource
-            # 404 Not Found
-            # 500 Internal Server Error – We had a problem with our server
-            self.handle_error(resp, LOG)
-
-            return resp.json()
-
-    def _get_fills(self, symbol=None, retry=None, retry_wait=0, start_date=None, end_date=None):
-        endpoint = '/fills'
-        if symbol is not None:
-            symbol = pair_std_to_exchange(symbol, self.ID)
-            endpoint = '{}?product_id={}'.format(endpoint, symbol)
-
-        header = self._generate_signature(endpoint, "GET")
-        data = self._make_request("GET", endpoint, header, retry=retry)
-
-        if data == []:
-            LOG.warning("%s: No data", self.ID)
-        elif start_date is not None and end_date is not None:
-            # filter out data not in specified range
-            data_in_range = []
-            start_time = pd.Timestamp(start_date).to_pydatetime()
-            end_time = pd.Timestamp(end_date).to_pydatetime()
-            for entry in data:
-                entry_time = dt.strptime(entry['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
-
-                if entry_time >= start_time and entry_time <= end_time:
-                    data_in_range.append(entry)
-            data = data_in_range
-
-        data = list(map(self._trade_normalization, data))
-        return data
-
-    def _get_orders(self, body):
-        """
-        https://docs.gdax.com/?python#list-orders
-        """
-        endpoint = "/orders"
-        if 'status' in body:
-            for status in body['status']:
-                if 'status' not in endpoint:
-                    endpoint = '{}?status={}'.format(endpoint, status)
-                else:
-                    endpoint = '{}&status{}'.format(endpoint, status)
-
-        if 'product_id' in body:
-            product_id = pair_std_to_exchange(body['product_id'], self.ID)
-            if 'status' in endpoint:
-                endpoint = '{}&product_id={}'.format(endpoint, product_id)
+            if pd.Timestamp(data[0]['time'].replace("Z", '')) <= date <= pd.Timestamp(data[-1]['time'].replace("Z", '')):
+                for idx in range(len(data)):
+                    d = pd.Timestamp(data[idx]['time'].replace("Z", ''))
+                    if d >= date:
+                        return data[idx]['trade_id']
             else:
-                endpoint = '{}?product_id={}'.format(endpoint, product_id)
+                if date > pd.Timestamp(data[0]['time'].replace("Z", "")):
+                    lower = bound
+                    bound = (upper + lower) // 2
+                else:
+                    upper = bound
+                    bound = (upper + lower) // 2
+            time.sleep(0.2)
 
-        endpoint = self._pagination(endpoint, body)
-
-        header = self._generate_signature(endpoint, "GET")
-        data = self._make_request("GET", endpoint, header)
-        data = list(map(self._trade_normalization, data))
-
-        return data
-
-    def _get_order(self, order_id):
-        """
-        https://docs.gdax.com/?python#get-an-order
-        """
-        endpoint = "/orders/{}".format(order_id)
-        header = self._generate_signature(endpoint, "GET")
-        data = self._make_request("GET", endpoint, header)
-
-        return data
-
-    def _post_order(self, body, retry=None, retry_wait=0):
-        """
-        https://docs.gdax.com/?python#place-a-new-order
-        """
-        endpoint = "/orders"
-        header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
-        data = self._make_request("POST", endpoint, header, body, retry=retry, retry_wait=retry_wait)
-
-        return data
-
-    def _delete_order(self, order_id):
-        endpoint = "/orders"
-        endpoint = '{}/{}'.format(endpoint, order_id)
-
-        header = self._generate_signature(endpoint, "DELETE")
-        self._make_request("DELETE", endpoint, header)
-
-    def _get(self, endpoint):
-        header = self._generate_signature(endpoint, "GET")
-        return self._make_request("GET", endpoint, header)
-
-    def _post(self, endpoint, body):
-        header = self._generate_signature(endpoint, "POST", body=json.dumps(body))
-        return self._make_request("POST", endpoint, header, body)
-
-    def fills(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
-        """
-        data format
-
-        {
-            "trade_id": 74,
-            "product_id": "BTC-USD",
-            "price": "10.00",
-            "size": "0.01",
-            "order_id": "d50ec984-77a8-460a-b958-66f114b0de9b",
-            "created_at": "2014-11-07T22:19:28.578544Z",
-            "liquidity": "T",
-            "fee": "0.00025",
-            "settled": true,
-            "side": "buy"
-        }
-        """
-        return self._get_fills(symbol=symbol, retry=retry, retry_wait=retry_wait, start_date=start, end_date=end)
-
-    def execute_trades(self, trades_to_make: list):
-        """
-        https://docs.gdax.com/?python#place-a-new-order
-        data format
-        {
-            "size": "0.01",
-            "price": "0.100",
-            "side": "buy",
-            "product_id": "BTC-USD"
-        }
-
-        Param descriptions
-        client_oid	[optional] Order ID selected by you to identify your order
-        type	[optional] limit or market (default is limit)
-        side	buy or sell
-        product_id	A valid product id
-        stp	[optional] Self-trade prevention flag
-        stop	[optional] Either loss or entry. Requires stop_price to be defined.
-        stop_price	[optional] Only if stop is defined. Sets trigger price for stop order.
-
-        LIMIT ORDER PARAMETERS
-        Param	Description
-        price	Price per bitcoin
-        size	Amount of BTC to buy or sell
-        time_in_force	[optional] GTC, GTT, IOC, or FOK (default is GTC)
-        cancel_after	[optional]* min, hour, day
-        post_only	[optional]** Post only flag
-        * Requires time_in_force to be GTT
-
-        ** Invalid when time_in_force is IOC or FOK
-
-        MARKET ORDER PARAMETERS
-        Param	Description
-        size	[optional]* Desired amount in BTC
-        funds	[optional]* Desired amount of quote currency to use
-        * One of size or funds is required.
-        """
-
-        responses = []
-        for trade in trades_to_make:
-            responses.append(self._trade_normalization(
-                self._post_order(trade, retry=None, retry_wait=0)
-            ))
-
-        return responses
-
-    def cancel_order(self, order_id):
-        self._delete_order(order_id)
-
-    def get_orders(self, body):
-        """
-        body should be
-        {
-            'status':['open', 'pending', 'active'],
-            'product_id': 'BTC-USD' (optional)
-        }
-        """
-        return self._get_orders(body)
-
-    def get_order(self, order_id: str):
-        return self._trade_normalization(self._get_order(order_id))
-
-    def get_accounts(self):
-        return self._get("/accounts")
-
-    def get_account(self, account_id: str):
-        endpoint = "/accounts/{}".format(account_id)
-        return self._get(endpoint)
-
-    def get_account_history(self, account_id: str, pagination=None):
-        endpoint = "/accounts/{}/ledger".format(account_id)
-        endpoint = self._pagination(endpoint, pagination)
-
-        return self._get(endpoint)
-
-    def get_holds(self, account_id: str, pagination=None):
-        endpoint = "/accounts/{}/holds".format(account_id)
-        endpoint = self._pagination(endpoint, pagination)
-
-        return self._get(endpoint)
-
-    def deposit_funds(self, body):
-        """
-        Deposit funds from a payment method to the account the api key is associated with.
-
-        data format
-        {
-            "amount": 10.00,
-            "currency": "USD",
-            "payment_method_id": "bc677162-d934-5f1a-968c-a496b1c1270b"
-        }
-        """
-        return self._post("/deposits/payment-method", body)
-
-    def deposit_coinbase(self, body):
-        """
-        Deposit funds from a different coinbase account into the account the api key is associated with.
-
-        data format
-        {
-            "amount": 10.00,
-            "currency": "BTC",
-            "coinbase_account_id": "c13cd0fc-72ca-55e9-843b-b84ef628c198",
-        }
-        """
-        return self._post("/deposits/coinbase-account", body)
-
-    def withdrawal_funds(self, body):
-        """
-        Withdrawal funds from the account the api key is associated with to the specified account
-        data format
-        {
-            "amount": 10.00,
-            "currency": "USD",
-            "payment_method_id": "bc677162-d934-5f1a-968c-a496b1c1270b"
-        }
-        """
-        return self._post("/withdrawals/payment-method", body)
-
-    def withdrawal_coinbase(self, body):
-        """
-        Withdrawal funds from the account the api key is associated with to the specified coinbase account
-        data format
-        {
-            "amount": 10.00,
-            "currency": "BTC",
-            "coinbase_account_id": "c13cd0fc-72ca-55e9-843b-b84ef628c198",
-        }
-        """
-        return self._post("/withdrawals/coinbase-account", body)
-
-    def withdrawal_crypto(self, body):
-        """
-        Withdrawal funds from the account the api key is associated with to the specified crypto address
-        data format
-        {
-            "amount": 10.00,
-            "currency": "BTC",
-            "crypto_address": "0x5ad5769cd04681FeD900BCE3DDc877B50E83d469"
-        }
-        """
-        return self._post("/withdrawals/crypto", body)
-
-    def list_payment_methods(self):
-        return self._get("/payment-methods")
-
-    def list_coinbase_accounts(self):
-        return self._get("/coinbase-accounts")
-
-    def _trade_normalization(self, trade: dict) -> dict:
-        trade_data = {
-            'timestamp': trade['created_at'],
-            'pair': trade['product_id'],
+    def _trade_normalize(self, symbol: str, data: dict) -> dict:
+        return {
+            'timestamp': data['time'],
+            'pair': symbol,
+            'id': data['trade_id'],
             'feed': self.ID,
-            'side': BUY if trade['side'] == 'sell' else SELL,
-            'amount': trade['size'],
-            "settled": trade["settled"]
+            'side': SELL if data['side'] == 'buy' else BUY,
+            'amount': data['size'],
+            'price': data['price'],
         }
-        if 'order_id' in trade:
-            trade_data['id'] = trade['order_id']
-            trade_data['price'] = trade['price']
-            trade_data['fee'] = trade['fee']
-        else:
-            trade_data['type'] = trade['type']
-            trade_data['id'] = trade['id']
-            trade_data['type'] = trade['type']
-            trade_data["fill_fees"] = trade["fill_fees"]
-            trade_data["filled_size"] = trade["filled_size"]
-            trade_data["executed_value"] = trade["executed_value"]
-            trade_data["status"] = trade["status"]
 
-        return trade_data
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        if start:
+            if not end:
+                end = pd.Timestamp.utcnow()
+            start_id = self._date_to_trade(symbol, pd.Timestamp(start))
+            end_id = self._date_to_trade(symbol, pd.Timestamp(end))
+            while True:
+                limit = 100
+                start_id += 100
+                if start_id > end_id:
+                    limit = 100 - (start_id - end_id)
+                    start_id = end_id
+                if limit > 0:
+                    r =  self._request('GET', f'/products/{symbol}/trades?after={start_id}&limit={limit}')
+                    if r.status_code == 429:
+                        time.sleep(10)
+                        continue
+                    elif r.status_code != 200:
+                        LOG.warning("Error %s: %s", r.status_code, r.text)
+                        time.sleep(60)
+                        continue
+                    data = r.json()
+                    try:
+                        data = list(reversed(data))
+                    except:
+                        LOG.warning("Error %s: %s", r.status_code, r.text)
+                        sleep(60)
+                        continue
+                else:
+                    break
+
+                yield list(map(lambda x: self._trade_normalize(symbol, x), data))
+                if start_id >= end_id:
+                    break
+        else:
+            yield [self._trade_normalize(symbol, d) for d in self._request('GET', f"/product/{symbol}/trades")]
