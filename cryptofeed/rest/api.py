@@ -2,15 +2,14 @@ import os
 from functools import wraps
 from time import sleep
 import logging
+from decimal import Decimal
 
 import requests
 import yaml
 
 from cryptofeed.standards import load_exchange_pair_mapping
 
-
 LOG = logging.getLogger('rest')
-
 
 def request_retry(exchange, retry, retry_wait):
     """
@@ -77,7 +76,7 @@ class API:
     def ticker(self, symbol: str, retry=None, retry_wait=10):
         raise NotImplementedError
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
     def funding(self, symbol: str, retry=None, retry_wait=0):
@@ -90,7 +89,7 @@ class API:
         raise NotImplementedError
 
     # account specific
-    def place_order(self, *args, **kwargs):
+    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, **kwargs):
         raise NotImplementedError
 
     def cancel_order(self, order_id, *args, **kwargs):
@@ -111,3 +110,5 @@ class API:
             return self.l2_book
         elif key == 'l3_book':
             return self.l3_book
+        elif key == 'ticker':
+            return self.ticker

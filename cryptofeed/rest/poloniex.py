@@ -183,35 +183,23 @@ class Poloniex(API):
         """
         return self._post("returnOrderStatus", payload)
 
-    def buy(self, payload):
-        """
-        Data FORMAT
-        {
-        "currencyPair": <pair>,
-        "rate": <rate>,
-        "amount": <amount>,
-        "fillOrKill" (optional)
-        "immediateOrCancel" (optional)
-        "postOnly" (optional)
+    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, fill_or_kill: str, immediate_or_cancel: str, post_only: str):
+        parameters = {
+            'currencyPair': pair,
+            'amount': amount,
+            'rate': price
         }
-        "fillOrKill", "immediateOrCancel", "postOnly" to 1
-        """
-        return self._post("buy", payload)
 
-    def sell(self, payload):
-        """
-        Data FORMAT
-        {
-        "currencyPair": <pair>,
-        "rate": <rate>,
-        "amount": <amount>,
-        "fillOrKill" (optional)
-        "immediateOrCancel" (optional)
-        "postOnly" (optional)
-        }
-        "fillOrKill", "immediateOrCancel", "postOnly" to 1
-        """
-        return self._post("sell", payload)
+        if fill_or_kill is not None:
+            parameters['fillOrKill'] = fill_or_kill
+
+        if immediate_or_cancel is not None:
+            parameters['immediateOrCancel'] = immediate_or_cancel
+
+        if post_only is not None:
+            parameters['postOnly'] = post_only
+
+        return self._post(side, parameters)
 
     def cancel_order(self, order_id):
         return self._post("cancelOrder", {"orderNumber": order_id})

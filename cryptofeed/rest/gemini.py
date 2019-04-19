@@ -11,8 +11,8 @@ from sortedcontainers.sorteddict import SortedDict as sd
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import GEMINI, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.defines import GEMINI, BID, ASK, UNSUPPORTED
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, feed_to_exchange
 
 
 LOG = logging.getLogger('rest')
@@ -108,7 +108,10 @@ class Gemini(API):
 
         while True:
             data = reversed(self._get(f"/v1/trades/{sym}?", retry, retry_wait, params=params))
-            data = [_trade_normalize(d) for d in data if d['timestampms'] <= end_ts]
+            if end:
+                data = [_trade_normalize(d) for d in data if d['timestampms'] <= end_ts]
+            else:
+                data = [_trade_normalize(d) for d in data]
             yield data
 
             if start:
@@ -118,23 +121,28 @@ class Gemini(API):
                     print(data)
             if len(data) < 500:
                 break
+            if not start and not end:
+                break
             # GEMINI rate limits to 120 requests a minute
             sleep(0.5)
 
     # Order Placement API
-    def new_order(self, parameters):
-        """
-        Parameters:
-            client_order_id	string	Recommended. A client-specified order id
-            symbol	string	The symbol for the new order
-            amount	string	Quoted decimal amount to purchase
-            min_amount	string	Optional. Minimum decimal amount to purchase, for block trades only
-            price	string	Quoted decimal amount to spend per unit
-            side	string	"buy" or "sell"
-            type	string	The order type. Only "exchange limit" supported through this API
-            options	array	Optional. An optional array containing at most one supported order execution option. See Order execution
-                            options for details
-        """
+
+    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
+        ot = feed_to_exchange(self.ID, order_type)
+        sym = pair_std_to_exchange(self.ID, pair)
+
+        parameters = {
+            'type': ot,
+            'symbol': sym,
+            'side': side,
+            'amount': str(amount),
+            'price': str(price)
+        }
+
+        if client_order_id:
+            parameters['client_order_id'] = client_order_id
+
         return self._post("/v1/order/new", parameters)
 
     def cancel_order(self, order_id):

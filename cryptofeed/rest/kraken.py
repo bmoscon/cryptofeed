@@ -6,12 +6,14 @@ import urllib
 import base64
 import logging
 import calendar
+from decimal import Decimal
 
 import pandas as pd
+from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import KRAKEN, SELL, BUY
-from cryptofeed.standards import pair_std_to_exchange
+from cryptofeed.defines import KRAKEN, SELL, BUY, LIMIT, MARKET, BID, ASK
+from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange
 
 
 LOG = logging.getLogger('rest')
@@ -22,14 +24,15 @@ class Kraken(API):
 
     api = "https://api.kraken.com/0"
 
-    def _post_public(self, command: str, payload=None):
-        if payload is None:
-            payload = {}
+    def _post_public(self, command: str, payload=None, retry=None, retry_wait=0):
         url = f"{self.api}{command}"
-        resp = requests.post(url, data=payload)
-        self._handle_error(resp, LOG)
 
-        return resp.json()
+        @request_retry(self.ID, retry, retry_wait)
+        def helper():
+            resp = requests.post(url, data={} if not payload else payload)
+            self._handle_error(resp, LOG)
+            return resp.json()
+        return helper()
 
     def _post_private(self, command: str, payload=None):
         # API-Key = API key
@@ -61,56 +64,43 @@ class Kraken(API):
         return resp.json()
 
     # public API
-    def get_server_time(self):
-        return self._post_public("/public/Time")
+    def ticker(self, symbol: str, retry=None, retry_wait=0):
+        sym = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+        data = self._post_public(f"/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
-    def get_asset_info(self, payload=None):
-        """
-        Parameters (optional):
-            asset: comma delimited list of asset types (currencies)
-            aclass: asset class
-        """
-        return self._post_public("/public/Assets", payload)
+        data = data['result']
+        for _, val in data.items():
+            return {'pair': symbol,
+                    'feed': self.ID,
+                    'bid': Decimal(val['b'][0]),
+                    'ask': Decimal(val['a'][0])
+                }
 
-    def get_tradeable_pairs(self, payload=None):
-        """
-        Parameters:
-            info: info = all info (default), leverage = leverage info, fees = fees schedule, margin = margin info
-            pair: comma delimited list of asset pairs
-        """
-        return self._post_public("/public/AssetPairs", payload)
+    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+        sym = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+        data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
+        for _, val in data['result'].items():
+            return {
+                BID: sd({
+                    Decimal(u[0]): Decimal(u[1])
+                    for u in val['bids']
+                }),
+                ASK: sd({
+                    Decimal(u[0]): Decimal(u[1])
+                    for u in val['asks']
+                })
+            }
 
-    def get_ticker_info(self, payload: dict):
-        """
-        Parameters:
-            pair: comma delimited list of asset pairs (required)
-        """
-        return self._post_public("/public/Ticker", payload)
-
-    def get_ohlc_data(self, payload=None):
-        """
-        Parameters:
-            pair = asset pair to get OHLC data for (required)
-            interval = time frame interval in minutes (optional):
-                1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
-            since = return committed OHLC data since given id (optional.  exclusive)
-        """
-        return self._post_public("/public/OHLC", payload)
-
-    def get_order_book(self, payload=None):
-        """
-        Parameters:
-            pair = asset pair to get market depth for
-            count = maximum number of asks/bids (optional)
-        """
-        return self._post_public("/public/Depth", payload)
-
-    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
-        if start and end:
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        if start:
+            if not end:
+                end = pd.Timestamp.utcnow()
             for data in self._historical_trades(symbol, start, end, retry, retry_wait):
                 yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
         else:
-            yield self._post_public("/public/Trades", {'pair': symbol})
+            sym = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+            data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
+            yield [self._trade_normalization(d, symbol) for d in data]
 
 
     def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
@@ -160,14 +150,6 @@ class Kraken(API):
             'amount': trade[1],
             'price': trade[0]
         }
-
-    def get_recent_spread_data(self, payload=None):
-        """
-        Parameters:
-            pair = asset pair to get spread data for
-            since = return spread data since given id (optional.  inclusive)
-        """
-        return self._post_public("/public/Spread", payload)
 
     # Private API
     def get_account_balance(self, payload=None):
@@ -272,7 +254,7 @@ class Kraken(API):
         """
         return self._post_private('/private/TradeVolume', payload)
 
-    def add_standard_order(self, payload: dict):
+    def place_order(self, pair: str, side: str, order_type: str, amount: str, price: str, start_time: str, expire_time: str):
         """
         Parameters:
             pair = asset pair
@@ -311,7 +293,25 @@ class Kraken(API):
             userref = user reference id.  32-bit signed number.  (optional)
             validate = validate inputs only.  do not submit order (optional)
         """
-        return self._post_private('/private/AddOrder', payload)
+
+        ot = feed_to_exchange(self.ID, order_type)
+
+        parameters = {
+            'pair': pair,
+            'type': side,
+            'volume': amount
+        }
+
+        if price is not None:
+            parameters['price'] = price
+
+        if start_time is not None:
+            parameters['starttm'] = start_time
+
+        if expire_time is not None:
+            parameters['expiretm'] = expire_time
+
+        return self._post_private('/private/AddOrder', parameters)
 
     def cancel_order(self, order_id):
         return self._post_private('/private/CancelOrder', {'txid': order_id})
