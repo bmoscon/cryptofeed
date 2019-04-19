@@ -12,7 +12,7 @@ import pandas as pd
 from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import KRAKEN, SELL, BUY, LIMIT, MARKET, BID, ASK
+from cryptofeed.defines import KRAKEN, SELL, BUY, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange
 
 
