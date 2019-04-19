@@ -73,6 +73,9 @@ class API:
             resp.raise_for_status()
 
     # public / non account specific
+    def ticker(self, symbol: str, retry=None, retry_wait=10):
+        raise NotImplementedError
+
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
@@ -107,3 +110,5 @@ class API:
             return self.l2_book
         elif key == 'l3_book':
             return self.l3_book
+        elif key == 'ticker':
+            return self.ticker
