@@ -20,3 +20,7 @@ class UnsupportedTradingPair(Exception):
 
 class UnsupportedDataFeed(Exception):
     pass
+
+
+class UnsupportedOrderType(Exception):
+    pass

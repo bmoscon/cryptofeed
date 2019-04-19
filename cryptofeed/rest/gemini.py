@@ -11,8 +11,9 @@ from sortedcontainers.sorteddict import SortedDict as sd
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import GEMINI, BID, ASK, GEMINI_TYPES, TypeNotSupported
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.defines import GEMINI, BID, ASK, UNSUPPORTED
+from cryptofeed.exceptions import UnsupportedOrderType
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, feed_to_exchange
 
 
 LOG = logging.getLogger('rest')
@@ -43,11 +44,8 @@ class Gemini(API):
         payload['request'] = command
         payload['nonce'] = int(time() * 1000)
 
-        api = self.api
-        if self.sandbox:
-            api = self.sandbox_api
-
-        api = "{}{}".format(api, command)
+        api = self.api if not self.sandbox else self.sandbox_api
+        api = f"{api}{command}"
 
         b64_payload = base64.b64encode(json.dumps(payload).encode('utf-8'))
         signature = hmac.new(self.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
@@ -126,25 +124,21 @@ class Gemini(API):
 
     # Order Placement API
 
-    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, min_amount: str, client_order_id: str):
-        if type is None:
-            type = 'LIMIT'
-
-        if type not in GEMINI_TYPES:
-            raise TypeNotSupported
+    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
+        ot = feed_to_exchange(self.ID, order_type)
+        if ot is None:
+            raise UnsupportedOrderType
+        sym = pair_std_to_exchange(self.ID, pair)
 
         parameters = {
-            'type': self.type[type],
-            'symbol': pair, # btcusd
+            'type': ot,
+            'symbol': sym,
             'side': side,
-            'amount': amount,
-            'price': price
+            'amount': str(amount),
+            'price': str(price)
         }
 
-        if min_amount is not None:
-            parameters['min_amount'] = min_amount
-
-        if client_order_id is not None:
+        if client_order_id:
             parameters['client_order_id'] = client_order_id
 
         return self._post("/v1/order/new", parameters)

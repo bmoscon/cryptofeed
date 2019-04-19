@@ -13,9 +13,9 @@ from datetime import datetime as dt
 import calendar
 import logging
 
-from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX,
+from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
-                                OKEX, COINBENE, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP)
+                                OKEX, COINBENE, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed
 
@@ -151,6 +151,14 @@ _feed_to_exchange_map = {
     },
     L2_BOOK_SWAP: {
         OKEX: 'swap/depth'
+    },
+    LIMIT: {
+        KRAKEN: 'limit',
+        GEMINI: 'exchange limit'
+    },
+    MARKET: {
+        KRAKEN: 'market',
+        GEMINI: UNSUPPORTED
     }
 }
 

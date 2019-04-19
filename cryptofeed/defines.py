@@ -46,17 +46,9 @@ BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
 
-GEMINI_TYPES = {
-    "LIMIT": "exchange limit"
-}
+LIMIT = 'limit'
+MARKET = 'market'
 
-KRAKEN_TYPES = {
-    'LIMIT': 'limit',
-    'MARKET': 'market'
-}
-
-class TypeNotSupported(Exception):
-    pass
 
 """
 L2 Orderbook Layout

@@ -2,6 +2,7 @@ import os
 from functools import wraps
 from time import sleep
 import logging
+from decimal import Decimal
 
 import requests
 import yaml
@@ -72,17 +73,20 @@ class API:
             resp.raise_for_status()
 
     # public / non account specific
-    def trades(self, *args, **kwargs):
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def funding(self, *args, **kwargs):
+    def funding(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def book(self, *args, **kwargs):
+    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def l3_book(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
     # account specific
-    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, **kwargs):
+    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, **kwargs):
         raise NotImplementedError
 
     def cancel_order(self, order_id, *args, **kwargs):
@@ -99,5 +103,7 @@ class API:
             return self.trades
         elif key == 'funding':
             return self.funding
-        elif key == 'book':
-            return self.book
+        elif key == 'l2_book':
+            return self.l2_book
+        elif key == 'l3_book':
+            return self.l3_book
