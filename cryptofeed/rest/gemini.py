@@ -12,7 +12,6 @@ import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import GEMINI, BID, ASK, UNSUPPORTED
-from cryptofeed.exceptions import UnsupportedOrderType
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, feed_to_exchange
 
 
@@ -109,7 +108,10 @@ class Gemini(API):
 
         while True:
             data = reversed(self._get(f"/v1/trades/{sym}?", retry, retry_wait, params=params))
-            data = [_trade_normalize(d) for d in data if d['timestampms'] <= end_ts]
+            if end:
+                data = [_trade_normalize(d) for d in data if d['timestampms'] <= end_ts]
+            else:
+                data = [_trade_normalize(d) for d in data]
             yield data
 
             if start:
@@ -119,6 +121,8 @@ class Gemini(API):
                     print(data)
             if len(data) < 500:
                 break
+            if not start and not end:
+                break
             # GEMINI rate limits to 120 requests a minute
             sleep(0.5)
 
@@ -126,8 +130,6 @@ class Gemini(API):
 
     def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
         ot = feed_to_exchange(self.ID, order_type)
-        if ot is None:
-            raise UnsupportedOrderType
         sym = pair_std_to_exchange(self.ID, pair)
 
         parameters = {

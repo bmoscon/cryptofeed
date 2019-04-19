@@ -10,8 +10,8 @@ import calendar
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import KRAKEN, SELL, BUY, KRAKEN_TYPES, TypeNotSupported
-from cryptofeed.standards import pair_std_to_exchange
+from cryptofeed.defines import KRAKEN, SELL, BUY, LIMIT, MARKET
+from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange
 
 
 LOG = logging.getLogger('rest')
@@ -23,10 +23,8 @@ class Kraken(API):
     api = "https://api.kraken.com/0"
 
     def _post_public(self, command: str, payload=None):
-        if payload is None:
-            payload = {}
         url = f"{self.api}{command}"
-        resp = requests.post(url, data=payload)
+        resp = requests.post(url, data={} if not payload else payload)
         self._handle_error(resp, LOG)
 
         return resp.json()
@@ -272,7 +270,7 @@ class Kraken(API):
         """
         return self._post_private('/private/TradeVolume', payload)
 
-    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, start_time: str, expire_time: str):
+    def place_order(self, pair: str, side: str, order_type: str, amount: str, price: str, start_time: str, expire_time: str):
         """
         Parameters:
             pair = asset pair
@@ -312,8 +310,7 @@ class Kraken(API):
             validate = validate inputs only.  do not submit order (optional)
         """
 
-        if type not in KRAKEN_TYPES:
-            raise TypeNotSupported
+        ot = feed_to_exchange(self.ID, order_type)
 
         parameters = {
             'pair': pair,
