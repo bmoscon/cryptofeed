@@ -81,15 +81,15 @@ def test_heartbeat():
 
 
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-def test_new_order_and_cancel():
-    order_resp = sandbox.new_order({
-        "client_order_id": "1",
-        "symbol": "BTCUSD",
-        "amount": "1.0",
-        "price": "622.13",
-        "side": "buy",
-        "type": "exchange limit"
-    })
+def test_place_order_and_cancel():
+    order_resp = sandbox.place_order(
+        pair = 'btcusd',
+        side = 'buy',
+        type='LIMIT',
+        amount = '1.0',
+        price = '622.13',
+        client_order_id='1'
+    )
     assert 'order_id' in order_resp
     cancel_resp = sandbox.cancel_order({'order_id': order_resp['order_id']})
     assert 'order_id' in cancel_resp
@@ -109,14 +109,14 @@ def test_cancel_all_active_orders():
 
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 def test_order_status():
-    order_resp = sandbox.new_order({
-        "client_order_id": "1",
-        "symbol": "BTCUSD",
-        "amount": "1.0",
-        "price": "1.13",
-        "side": "buy",
-        "type": "exchange limit"
-    })
+    order_resp = sandbox.place_order(
+        pair = 'btcusd',
+        side = 'buy',
+        type='LIMIT',
+        amount = '1.0',
+        price = '1.13',
+        client_order_id='1'
+    )
     status = sandbox.order_status({'order_id': order_resp['order_id']})
     sandbox.cancel_all_active_orders()
 

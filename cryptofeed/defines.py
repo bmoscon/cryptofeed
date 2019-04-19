@@ -46,6 +46,18 @@ BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
 
+GEMINI_TYPES = {
+    "LIMIT": "exchange limit"
+}
+
+KRAKEN_TYPES = {
+    'LIMIT': 'limit',
+    'MARKET': 'market'
+}
+
+class TypeNotSupported(Exception):
+    pass
+
 """
 L2 Orderbook Layout
     * BID and ASK are SortedDictionaries

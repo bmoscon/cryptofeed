@@ -5,6 +5,7 @@ import requests
 import json
 import base64
 import logging
+<<<<<<< Updated upstream
 from decimal import Decimal
 
 from sortedcontainers.sorteddict import SortedDict as sd
@@ -13,6 +14,11 @@ import pandas as pd
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import GEMINI, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+=======
+
+from cryptofeed.rest.api import API
+from cryptofeed.defines import GEMINI, GEMINI_TYPES, TypeNotSupported
+>>>>>>> Stashed changes
 
 
 LOG = logging.getLogger('rest')
@@ -27,8 +33,19 @@ class Gemini(API):
     api = "https://api.gemini.com"
     sandbox_api = "https://api.sandbox.gemini.com"
 
+<<<<<<< Updated upstream
     def _get(self, command: str, retry, retry_wait, params=None):
         api = self.api if not self.sandbox else self.sandbox_api
+=======
+    def _get(self, command: str, options=None):
+        api = self.api
+        if self.sandbox:
+            api = self.sandbox_api
+
+        base_url = "{}{}".format(api, command)
+        resp = requests.get(base_url, params=options)
+        self._handle_error(resp, LOG)
+>>>>>>> Stashed changes
 
         @request_retry(self.ID, retry, retry_wait)
         def helper():
@@ -43,8 +60,11 @@ class Gemini(API):
         payload['request'] = command
         payload['nonce'] = int(time() * 1000)
 
-        api = self.api if not self.sandbox else self.sandbox_api
-        api = f"{api}{command}"
+        api = self.api
+        if self.sandbox:
+            api = self.sandbox_api
+
+        api = "{}{}".format(api, command)
 
         b64_payload = base64.b64encode(json.dumps(payload).encode('utf-8'))
         signature = hmac.new(self.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
@@ -122,19 +142,28 @@ class Gemini(API):
             sleep(0.5)
 
     # Order Placement API
-    def new_order(self, parameters):
-        """
-        Parameters:
-            client_order_id	string	Recommended. A client-specified order id
-            symbol	string	The symbol for the new order
-            amount	string	Quoted decimal amount to purchase
-            min_amount	string	Optional. Minimum decimal amount to purchase, for block trades only
-            price	string	Quoted decimal amount to spend per unit
-            side	string	"buy" or "sell"
-            type	string	The order type. Only "exchange limit" supported through this API
-            options	array	Optional. An optional array containing at most one supported order execution option. See Order execution
-                            options for details
-        """
+
+    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, min_amount: str, client_order_id: str):
+        if type is None:
+            type = 'LIMIT'
+
+        if type not in GEMINI_TYPES:
+            raise TypeNotSupported
+
+        parameters = {
+            'type': self.type[type],
+            'symbol': pair, # btcusd
+            'side': side,
+            'amount': amount,
+            'price': price
+        }
+
+        if min_amount is not None:
+            parameters['min_amount'] = min_amount
+
+        if client_order_id is not None:
+            parameters['client_order_id'] = client_order_id
+
         return self._post("/v1/order/new", parameters)
 
     def cancel_order(self, order_id):

@@ -10,7 +10,7 @@ import calendar
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import KRAKEN, SELL, BUY
+from cryptofeed.defines import KRAKEN, SELL, BUY, KRAKEN_TYPES, TypeNotSupported
 from cryptofeed.standards import pair_std_to_exchange
 
 
@@ -272,7 +272,7 @@ class Kraken(API):
         """
         return self._post_private('/private/TradeVolume', payload)
 
-    def add_standard_order(self, payload: dict):
+    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, start_time: str, expire_time: str):
         """
         Parameters:
             pair = asset pair
@@ -311,7 +311,26 @@ class Kraken(API):
             userref = user reference id.  32-bit signed number.  (optional)
             validate = validate inputs only.  do not submit order (optional)
         """
-        return self._post_private('/private/AddOrder', payload)
+
+        if type not in KRAKEN_TYPES:
+            raise TypeNotSupported
+
+        parameters = {
+            'pair': pair,
+            'type': side,
+            'volume': amount
+        }
+
+        if price is not None:
+            parameters['price'] = price
+
+        if start_time is not None:
+            parameters['starttm'] = start_time
+
+        if expire_time is not None:
+            parameters['expiretm'] = expire_time
+
+        return self._post_private('/private/AddOrder', parameters)
 
     def cancel_order(self, order_id):
         return self._post_private('/private/CancelOrder', {'txid': order_id})
