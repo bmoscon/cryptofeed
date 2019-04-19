@@ -1,4 +1,4 @@
-from time import time
+from time import time, sleep
 import hashlib
 import hmac
 import requests
@@ -8,8 +8,9 @@ import logging
 from decimal import Decimal
 
 from sortedcontainers.sorteddict import SortedDict as sd
+import pandas as pd
 
-from cryptofeed.rest.api import API
+from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import GEMINI, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
 
@@ -26,12 +27,15 @@ class Gemini(API):
     api = "https://api.gemini.com"
     sandbox_api = "https://api.sandbox.gemini.com"
 
-    def _get(self, command: str, options=None):
+    def _get(self, command: str, retry, retry_wait, params=None):
         api = self.api if not self.sandbox else self.sandbox_api
-        resp = requests.get(f"{api}{command}", params=options)
-        self._handle_error(resp, LOG)
 
-        return resp.json()
+        @request_retry(self.ID, retry, retry_wait)
+        def helper():
+            resp = requests.get(f"{api}{command}", params=params)
+            self._handle_error(resp, LOG)
+            return resp.json()
+        return helper()
 
     def _post(self, command: str, payload=None):
         if not payload:
@@ -60,18 +64,18 @@ class Gemini(API):
         return resp.json()
 
     # Public Routes
-    def ticker(self, symbol: str):
+    def ticker(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
-        data = self._get(f"/v1/pubticker/{sym}")
+        data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
         return {'pair': symbol,
                 'feed': self.ID,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
                }
 
-    def l2_book(self, symbol: str):
+    def l2_book(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
-        data = self._get(f"/v1/book/{sym}")
+        data = self._get(f"/v1/book/{sym}", retry, retry_wait)
         return {
             BID: sd({
                 Decimal(u['price']): Decimal(u['amount'])
@@ -83,37 +87,41 @@ class Gemini(API):
             })
         }
 
-    def trade_history(self, symbol: str, parameters=None):
-        """
-        Signature:
-            symbol: str, parameters: dict of params for get query
-        Parameters:
-            since	        timestamp	Optional. Only return trades after this timestamp. See Data Types: Timestamps for more information.
-                                        If not present, will show the most recent trades. For backwards compatibility, you may also use
-                                        the alias 'since'.
-            limit_trades	integer	    Optional. The maximum number of trades to return. The default is 50.
-            include_breaks	boolean	    Optional. Whether to display broken trades. False by default. Can be '1' or 'true' to activate
-        """
-        return self._get("/v1/trades/{}".format(symbol), parameters)
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        sym = pair_std_to_exchange(symbol, self.ID)
+        params = {'limit_trades': 500}
+        if start:
+            params['since'] = int(pd.Timestamp(start).timestamp() * 1000)
+        if end:
+            end_ts = int(pd.Timestamp(end).timestamp() * 1000)
 
-    def current_auction(self, symbol: str):
-        return self._get("/v1/auction/{}".format(symbol))
+        def _trade_normalize(trade):
+            return {
+                'feed': self.ID,
+                'order_id': trade['tid'],
+                'pair': sym,
+                'side': trade['type'],
+                'amount': Decimal(trade['amount']),
+                'price': Decimal(trade['price']),
+                'timestamp': trade['timestampms'] / 1000.0
+            }
 
-    def auction_history(self, symbol: str, parameters=None):
-        """
-        Signature:
-            symbol: str, parameters: dict of params for get query
-        Parameters:
-            since	                timestamp	Optional. Only returns auction events after the specified timestamp. If not present or empty,
-                                                will show the most recent auction events. You can also use the alias 'timestamp'.
-            limit_auction_results	integer	    Optional. The maximum number of auction events to return. The default is 50.
-            include_indicative	    boolean	    Optional. Whether to include publication of indicative prices and quantities. True by default,
-                                                true to explicitly enable, and false to disable
-        """
-        return self._get("/v1/auction/{}/history".format(symbol), parameters)
+        while True:
+            data = reversed(self._get(f"/v1/trades/{sym}?", retry, retry_wait, params=params))
+            data = [_trade_normalize(d) for d in data if d['timestampms'] <= end_ts]
+            yield data
+
+            if start:
+                try:
+                    params['since'] = int(data[-1]['timestamp'] * 1000) + 1
+                except:
+                    print(data)
+            if len(data) < 500:
+                break
+            # GEMINI rate limits to 120 requests a minute
+            sleep(0.5)
 
     # Order Placement API
-
     def new_order(self, parameters):
         """
         Parameters:

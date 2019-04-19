@@ -139,12 +139,18 @@ class Bitfinex(API):
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = f"f{symbol}"
         for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
             yield data
 
-    def book(self, symbol, l3=False, retry=0, retry_wait=0):
+    def l2_book(self, symbol: str, retry=0, retry_wait=0):
+        return self._book(symbol, retry=retry, retry_wait=retry_wait)
+
+    def l3_book(self, symbol: str, retry=0, retry_wait=0):
+        return self._book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
+
+    def _book(self, symbol: str, l3=False, retry=0, retry_wait=0):
         ret = {}
         sym = symbol
         funding = False
