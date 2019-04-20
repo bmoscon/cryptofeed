@@ -10,7 +10,6 @@ from datetime import datetime as dt
 import json
 import hashlib
 import hmac
-import calendar
 import logging
 from decimal import Decimal
 
@@ -106,11 +105,11 @@ class Bitfinex(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            start = pd.Timestamp(start_date)
-            end = pd.Timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+            start = API._timestamp(start_date)
+            end = API._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
-            start = int(calendar.timegm(start.utctimetuple()) * 1000)
-            end = int(calendar.timegm(end.utctimetuple()) * 1000)
+            start = int(start.timestamp() * 1000)
+            end = int(end.timestamp() * 1000)
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, end):

@@ -59,11 +59,11 @@ class Bitmex(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            dates = pd.interval_range(pd.Timestamp(start_date), pd.Timestamp(end_date), freq=freq).tolist()
+            dates = pd.interval_range(API._timestamp(start_date), API._timestamp(end_date), freq=freq).tolist()
             if len(dates) == 0:
-                dates.append(pd.Interval(left=pd.Timestamp(start_date), right=pd.Timestamp(end_date)))
-            elif dates[-1].right < pd.Timestamp(end_date):
-                dates.append(pd.Interval(dates[-1].right, pd.Timestamp(end_date)))
+                dates.append(pd.Interval(left=API._timestamp(start_date), right=API._timestamp(end_date)))
+            elif dates[-1].right < API._timestamp(end_date):
+                dates.append(pd.Interval(dates[-1].right, API._timestamp(end_date)))
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, start_date, end_date):

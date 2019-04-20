@@ -22,5 +22,5 @@ class UnsupportedDataFeed(Exception):
     pass
 
 
-class UnsupportedOrderType(Exception):
+class UnsupportedTradingOption(Exception):
     pass

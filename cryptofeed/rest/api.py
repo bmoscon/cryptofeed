@@ -10,6 +10,7 @@ from time import sleep
 import logging
 from decimal import Decimal
 
+import pandas as pd
 import requests
 import yaml
 
@@ -71,6 +72,12 @@ class API:
         except (KeyError, FileNotFoundError, TypeError):
             pass
 
+    @staticmethod
+    def _timestamp(ts):
+        if isinstance(ts, (float, int)):
+            return pd.to_datetime(ts, unit='s')
+        return pd.Timestamp(ts)
+
     def _handle_error(self, resp, log):
         if resp.status_code != 200:
             log.error("%s: Status code %d for URL", self.ID, resp.url, resp.status_code)
@@ -95,13 +102,31 @@ class API:
         raise NotImplementedError
 
     # account specific
-    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, **kwargs):
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price: Decimal, **kwargs):
         raise NotImplementedError
 
-    def cancel_order(self, order_id, *args, **kwargs):
+    def cancel_order(self, order_id: str):
         raise NotImplementedError
 
-    def orders(self, *args, **kwargs):
+    def orders(self):
+        """
+        Return outstanding orders
+        """
+        raise NotImplementedError
+
+    def order_status(self, order_id: str):
+        """
+        Look up status of an order by id
+        """
+        raise NotImplementedError
+
+    def trade_history(self, symbol: str, start=None, end=None):
+        """
+        Executed trade history
+        """
+        raise NotImplementedError
+
+    def balances(self):
         raise NotImplementedError
 
     def trade_history(self, *args, **kwargs):

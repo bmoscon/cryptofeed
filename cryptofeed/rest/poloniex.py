@@ -10,7 +10,6 @@ import hmac
 import requests
 import urllib
 from decimal import Decimal
-import calendar
 import logging
 
 import pandas as pd
@@ -18,7 +17,7 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import POLONIEX, BUY, SELL, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, normalize_trading_options
 
 
 LOG = logging.getLogger('rest')
@@ -113,11 +112,11 @@ class Poloniex(API):
         else:
             if not end:
                 end = pd.Timestamp.utcnow()
-            start = pd.Timestamp(start)
-            end = pd.Timestamp(end) - pd.Timedelta(nanoseconds=1)
+            start = API._timestamp(start)
+            end = API._timestamp(end) - pd.Timedelta(nanoseconds=1)
 
-            start = int(calendar.timegm(start.utctimetuple()))
-            end = int(calendar.timegm(end.utctimetuple()))
+            start = int(start.timestamp())
+            end = int(end.timestamp())
 
             s = start
             e = start + 21600
@@ -133,116 +132,52 @@ class Poloniex(API):
                     break
 
     # Trading API Routes
-    # Private endpoints require a nonce, which must be an integer greater than the previous nonce used
     def balances(self):
-        return self._post("returnBalances")
+        data = self._post("returnCompleteBalances")
+        return {
+            coin: {
+                'total': Decimal(data[coin]['available']) + Decimal(data[coin]['onOrders']),
+                'available': Decimal(data[coin]['available'])
+            } for coin in data }
 
-    def complete_balances(self, payload=None):
-        """
-        set {"account": "all"} to return margin and lending accounts
-        """
-        return self._post("returnCompleteBalances", payload)
+    def orders(self):
+        payload = {"currencyPair": "all"}
+        data = self._post("returnOpenOrders", payload)
+        if isinstance(data, dict):
+            return {pair_exchange_to_std(key): val for key, val in data.items()}
+        else:
+            return data
 
-    def deposit_addresses(self):
-        return self._post("returnDepositAddresses")
+    def trade_history(self, symbol: str, start=None, end=None):
+        payload = {'currencyPair': pair_std_to_exchange(symbol, self.ID)}
 
-    def generate_new_address(self, payload=None):
-        """
-        Generates a new deposit address for the currency specified by the "currency"
-        """
-        return self._post("generateNewAddress", payload)
+        if start:
+            payload['start'] = API._timestamp(start).timestamp()
+        if end:
+            payload['end'] = API._timestamp(end).timestamp()
 
-    def deposit_withdrawals(self, payload):
-        """
-        Data FORMAT
-        {"start": <UNIX Timestamp>,"end": <UNIX Timestamp>}
-        """
-        return self._post("returnDepositsWithdrawals", payload)
-
-    def open_orders(self, payload=None):
-        """
-        Data FORMAT
-        {"currencyPair": <pair>} ("all" will return open orders for all markets)
-        """
-        if not payload:
-            payload = {"currencyPair": "all"}
-        return self._post("returnOpenOrders", payload)
-
-    def trade_history(self, payload=None):
-        """
-        Data FORMAT
-        {
-        "currencyPair": <pair>,
-        "start": <UNIX Timestamp> (optional),
-        "end": <UNIX Timestamp> (optional)
-        "limit": int (optional, up to 10,000. only 500 if not specified)
-        } ("all" will return open orders for all markets)
-        """
-        if not payload:
-            payload = {"currencyPair": "all"}
+        payload['limit'] = 10000
         return self._post("returnTradeHistory", payload)
 
-    def order_trades(self, payload):
-        """
-        Data FORMAT
-        {"orderNumber": int} (if order number doesn't exist you'll get an error)
-        """
-        return self._post("returnOrderTrades", payload)
+    def order_status(self, order_id: str):
+        return self._post("returnOrderStatus", {int(order_id)})
 
-    def order_status(self, payload):
-        """
-        Data FORMAT
-        {"orderNumber": int} (if order number is not open or not yours you'll get an error)
-        """
-        return self._post("returnOrderStatus", payload)
-
-    def place_order(self, pair: str, side: str, type: str, amount: str, price: str, fill_or_kill: str, immediate_or_cancel: str, post_only: str):
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price: Decimal, options=None):
+        # Poloniex only supports limit orders, so check the order type
+        _ = normalize_trading_options(self.ID, order_type)
         parameters = {
-            'currencyPair': pair,
-            'amount': amount,
-            'rate': price
+            normalize_trading_options(self.ID, o): 1 for o in options
         }
+        parameters['currencyPair'] = pair_std_to_exchange(symbol, self.ID)
+        parameters['amount'] = str(amount)
+        parameters['rate'] = str(price)
 
-        if fill_or_kill is not None:
-            parameters['fillOrKill'] = fill_or_kill
+        endpoint = None
+        if side == BUY:
+            endpoint = 'buy'
+        elif side == SELL:
+            endpoint = 'sell'
+        return self._post(endpoint, parameters)
 
-        if immediate_or_cancel is not None:
-            parameters['immediateOrCancel'] = immediate_or_cancel
-
-        if post_only is not None:
-            parameters['postOnly'] = post_only
-
-        return self._post(side, parameters)
-
-    def cancel_order(self, order_id):
-        return self._post("cancelOrder", {"orderNumber": order_id})
-
-    def move_order(self, payload):
-        """
-        Data FORMAT
-        {"orderNumber": <order>, "rate": <rate>, "amount": <amount>(optional)}
-        """
-        return self._post("moveOrder", payload)
-
-    def withdraw(self, payload):
-        """
-        Data FORMAT
-        "currency", "amount", and "address".
-        """
-        return self._post("withdraw", payload)
-
-    def available_account_balances(self, payload=None):
-        """
-        "account" (optional)
-        """
-        return self._post("returnAvailableAccountBalances", payload)
-
-    def tradable_balances(self):
-        return self._post("returnTradableBalances")
-
-    def transfer_balance(self, payload):
-        """
-        Data FORMAT
-        "currency", "amount", "fromAccount", and "toAccount"
-        """
-        return self._post("transferBalance", payload)
+    def cancel_order(self, order_id: str):
+        return self._post("cancelOrder", {"orderNumber": int(order_id)})

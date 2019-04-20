@@ -15,9 +15,9 @@ import logging
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
-                                OKEX, COINBENE, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET)
+                                OKEX, COINBENE, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL)
 from cryptofeed.pairs import gen_pairs
-from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedOrderType
+from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
 
 
 LOG = logging.getLogger('feedhandler')
@@ -151,16 +151,46 @@ _feed_to_exchange_map = {
     },
     L2_BOOK_SWAP: {
         OKEX: 'swap/depth'
-    },
+    }
+}
+
+
+_exchange_options = {
     LIMIT: {
         KRAKEN: 'limit',
-        GEMINI: 'exchange limit'
+        GEMINI: 'exchange limit',
+        POLONIEX: 'limit'
     },
     MARKET: {
         KRAKEN: 'market',
-        GEMINI: UNSUPPORTED
+        GEMINI: UNSUPPORTED,
+        POLONIEX: UNSUPPORTED
+    },
+    FILL_OR_KILL: {
+        GEMINI: 'fill-or-kill',
+        POLONIEX: 'fillOrKill'
+    },
+    IMMEDIATE_OR_CANCEL: {
+        GEMINI: 'immediate-or-cancel',
+        POLONIEX: 'immediateOrCancel'
+    },
+    MAKER_OR_CANCEL: {
+        GEMINI: 'maker-or-cancel',
+        POLONIEX: 'postOnly'
     }
 }
+
+
+def normalize_trading_options(exchange, option):
+    if option not in _exchange_options:
+        raise UnsupportedTradingOption
+    if exchange not in _exchange_options[option]:
+        raise UnsupportedTradingOption
+
+    ret = _exchange_options[option][exchange]
+    if ret == UNSUPPORTED:
+        raise UnsupportedTradingOption
+    return ret
 
 
 def feed_to_exchange(exchange, feed):
@@ -171,8 +201,5 @@ def feed_to_exchange(exchange, feed):
     ret = _feed_to_exchange_map[feed][exchange]
     if ret == UNSUPPORTED:
         LOG.error(f"{feed} is not supported on {exchange}")
-        if feed in {LIMIT, MARKET}:
-            raise UnsupportedOrderType
-        else:
-            raise UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
+        raise UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
     return ret

@@ -11,8 +11,8 @@ from sortedcontainers.sorteddict import SortedDict as sd
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import GEMINI, BID, ASK, UNSUPPORTED
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, feed_to_exchange
+from cryptofeed.defines import GEMINI, BID, ASK, CANCELLED, FILLED, OPEN, PARTIAL, BUY, SELL, LIMIT
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, normalize_trading_options
 
 
 LOG = logging.getLogger('rest')
@@ -26,6 +26,29 @@ class Gemini(API):
 
     api = "https://api.gemini.com"
     sandbox_api = "https://api.sandbox.gemini.com"
+
+    @staticmethod
+    def _order_status(data):
+        status = PARTIAL
+        if data['is_cancelled']:
+            status = CANCELLED
+        elif Decimal(data['remaining_amount']) == 0:
+            status = FILLED
+        elif Decimal(data['executed_amount']) == 0:
+            status = OPEN
+
+        return {
+            'order_id': data['order_id'],
+            'symbol': pair_exchange_to_std(data['symbol']),
+            'side': BUY if data['side'] == 'buy' else SELL,
+            'order_type': LIMIT,
+            'price': Decimal(data['price']),
+            'total': Decimal(data['original_amount']),
+            'executed': Decimal(data['executed_amount']),
+            'pending': Decimal(data['remaining_amount']),
+            'timestamp': data['timestampms'] / 1000,
+            'order_status': status
+        }
 
     def _get(self, command: str, retry, retry_wait, params=None):
         api = self.api if not self.sandbox else self.sandbox_api
@@ -126,95 +149,67 @@ class Gemini(API):
             # GEMINI rate limits to 120 requests a minute
             sleep(0.5)
 
-    # Order Placement API
-
-    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
-        ot = feed_to_exchange(self.ID, order_type)
-        sym = pair_std_to_exchange(self.ID, pair)
+    # Trading APIs
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
+        ot = normalize_trading_options(self.ID, order_type)
+        sym = pair_std_to_exchange(symbol, self.ID)
 
         parameters = {
             'type': ot,
             'symbol': sym,
             'side': side,
             'amount': str(amount),
-            'price': str(price)
+            'price': str(price),
+            'options': [normalize_trading_options(self.ID, o) for o in options] if options else []
         }
 
         if client_order_id:
             parameters['client_order_id'] = client_order_id
 
-        return self._post("/v1/order/new", parameters)
+        data = self._post("/v1/order/new", parameters)
+        return Gemini._order_status(data)
 
-    def cancel_order(self, order_id):
-        return self._post("/v1/order/cancel", {'order_id': order_id})
+    def cancel_order(self, order_id: str):
+        data = self._post("/v1/order/cancel", {'order_id': int(order_id)})
+        return Gemini._order_status(data)
 
-    def cancel_all_session_orders(self):
-        return self._post("/v1/order/cancel/session")
+    def order_status(self, order_id: str):
+        data = self._post("/v1/order/status", {'order_id': int(order_id)})
+        return Gemini._order_status(data)
 
-    def cancel_all_active_orders(self):
-        return self._post("/v1/order/cancel/all")
+    def orders(self):
+        data = self._post("/v1/orders")
+        return [Gemini._order_status(d) for d in data]
 
-    # Order Status API
+    def trade_history(self, symbol: str, start=None, end=None):
+        sym = pair_std_to_exchange(symbol, self.ID)
 
-    def order_status(self, parameters):
-        """
-        Parameters:
-            order_id	integer	the order ID to be queried
-        """
-        return self._post("/v1/order/status", parameters)
+        params = {
+            'symbol': sym,
+            'limit_trades': 500
+        }
+        if start:
+            params['timestamp'] = API._timestamp(start).timestamp()
 
-    def get_active_orders(self):
-        return self._post("/v1/orders")
+        data = self._post("/v1/mytrades", params)
+        return [
+            {
+                'price': Decimal(trade['price']),
+                'amount': Decimal(trade['amount']),
+                'timestamp': trade['timestampms'] / 1000,
+                'side': BUY if trade['type'].lower() == 'buy' else SELL,
+                'fee_currency': trade['fee_currency'],
+                'fee_amount': trade['fee_amount'],
+                'trade_id': trade['tid'],
+                'order_id': trade['order_id']
+            }
+            for trade in data
+        ]
 
-    def get_past_trades(self, parameters):
-        """
-        Parameters:
-            symbol	string	The symbol to retrieve trades for
-            limit_trades	integer	Optional. The maximum number of trades to return. Default is 50, max is 500.
-            timestamp	  timestamp	Optional. Only return trades on or after this timestamp. See Data Types: Timestamps for more information.
-                                    If not present, will show the most recent orders.
-        """
-        return self._post("/v1/mytrades", parameters)
-
-    # Fee and Volume Volume API
-
-    def get_notional_volume(self):
-        return self._post("/v1/notionalvolume")
-
-    def get_trade_volume(self):
-        return self._post("/v1/tradevolume")
-
-    # Fund Managment API
-
-    def get_available_balances(self):
-        return self._post("/v1/balances")
-
-    def transfers(self, parameters=None):
-        """
-        Parameters:
-            timestamp	timestamp	Optional. Only return transfers on or after this timestamp. See Data Types: Timestamps for more
-                                    information. If not present, will show the most recent transfers.
-            limit_transfers	integer	Optional. The maximum number of transfers to return. The default is 10 and the maximum is 50.
-        """
-        return self._post("/v1/transfers", parameters)
-
-    def new_deposit_address(self, currency: str, parameters=None):
-        """
-        Parameters:
-            label	string	Optional. label for the deposit address
-        """
-        uri = "/v1/deposit/{}/newAddress".format(currency)
-        return self._post(uri, parameters)
-
-    def withdraw_crypto_to_address(self, currency: str, parameters):
-        """
-        Parameters:
-            address	string	Standard string format of a whitelisted cryptocurrency address.
-            amount	string	Quoted decimal amount to withdraw
-        """
-        uri = "/v1/withdraw/{}".format(currency)
-        parameters["request"] = uri
-        return self._post(uri, parameters)
-
-    def heartbeat(self):
-        return self._post("/v1/heartbeat")
+    def balances(self):
+        data = self._post("/v1/balances")
+        return {
+            entry['currency']: {
+                'total': Decimal(entry['amount']),
+                'available': Decimal(entry['available'])
+            } for entry in data }
