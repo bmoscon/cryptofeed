@@ -11,7 +11,6 @@ import requests
 import urllib
 import base64
 import logging
-import calendar
 from decimal import Decimal
 
 import pandas as pd
@@ -118,8 +117,8 @@ class Kraken(API):
             return requests.get(endpoint)
 
 
-        start_date = calendar.timegm(pd.Timestamp(start_date).timetuple()) * 1000000000
-        end_date = calendar.timegm(pd.Timestamp(end_date).timetuple()) * 1000000000
+        start_date = API._timestamp(start_date).timestamp() * 1000000000
+        end_date = API._timestamp(end_date).timestamp() * 1000000000
 
         while start_date < end_date:
             r = helper(start_date)
@@ -158,42 +157,14 @@ class Kraken(API):
         }
 
     # Private API
-    def get_account_balance(self, payload=None):
-        """
-        Parameters:
-            aclass = asset class (optional)
-            asset = base asset used to determine balance (default = ZUSD
-        """
-        return self._post_private('/private/Balance', payload)
+    def balances(self):
+        return self._post_private('/private/Balance')
 
-    def get_open_orders(self, payload=None):
-        """
-        Parameters:
-            trades = whether or not to include trades in output (optional.  default = false)
-            userref = restrict results to given user reference id (optional)
-        """
-        return self._post_private('/private/OpenOrders', payload)
+    def orders(self):
+        return self._post_private('/private/OpenOrders', None)
 
-    def get_closed_orders(self, payload=None):
-        """
-        Parameters:
-            trades = whether or not to include trades in output (optional.  default = false)
-            userref = restrict results to given user reference id (optional)
-            start = starting unix timestamp or order tx id of results (optional.  exclusive)
-            end = ending unix timestamp or order tx id of results (optional.  inclusive)
-            ofs = result offset
-            closetime = which time to use (optional)
-        """
-        return self._post_private('/private/ClosedOrders', payload)
-
-    def query_orders_info(self, payload=None):
-        """
-        Parameters:
-            txid = comma delimited list of transaction ids to query info about (20 maximum)
-            trades = whether or not to include trades in output (optional.  default = false)
-            userref = restrict results to given user reference id (optional)
-        """
-        return self._post_private('/private/QueryOrders', payload)
+    def order_status(self, order_id: str):
+        return self._post_private('/private/QueryOrders', {'txid': order_id})
 
     def get_trades_history(self, payload=None):
         """
@@ -251,14 +222,6 @@ class Kraken(API):
             id = comma delimited list of ledger ids to query info about (20 maximum)
         """
         return self._post_private('/private/QueryLedgers', payload)
-
-    def get_trade_volume(self, payload=None):
-        """
-        Parameters:
-            pair = comma delimited list of asset pairs to get fee info on (optional)
-            fee-info = whether or not to include fee info in results (optional)
-        """
-        return self._post_private('/private/TradeVolume', payload)
 
     def place_order(self, pair: str, side: str, order_type: str, amount: str, price: str, start_time: str, expire_time: str):
         """
@@ -319,5 +282,5 @@ class Kraken(API):
 
         return self._post_private('/private/AddOrder', parameters)
 
-    def cancel_order(self, order_id):
+    def cancel_order(self, order_id: str):
         return self._post_private('/private/CancelOrder', {'txid': order_id})

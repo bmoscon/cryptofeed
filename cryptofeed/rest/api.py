@@ -129,12 +129,6 @@ class API:
     def balances(self):
         raise NotImplementedError
 
-    def trade_history(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def balances(self, *args, **kwargs):
-        raise NotImplementedError
-
     def __getitem__(self, key):
         if not self.mapped:
             load_exchange_pair_mapping(self.ID)
