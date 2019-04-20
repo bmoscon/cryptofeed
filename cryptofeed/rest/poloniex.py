@@ -133,40 +133,19 @@ class Poloniex(API):
                     break
 
     # Trading API Routes
-    # Private endpoints require a nonce, which must be an integer greater than the previous nonce used
     def balances(self):
         return self._post("returnBalances")
 
-    def complete_balances(self, payload=None):
-        """
-        set {"account": "all"} to return margin and lending accounts
-        """
-        return self._post("returnCompleteBalances", payload)
-
-    def deposit_addresses(self):
-        return self._post("returnDepositAddresses")
-
-    def generate_new_address(self, payload=None):
-        """
-        Generates a new deposit address for the currency specified by the "currency"
-        """
-        return self._post("generateNewAddress", payload)
-
-    def deposit_withdrawals(self, payload):
-        """
-        Data FORMAT
-        {"start": <UNIX Timestamp>,"end": <UNIX Timestamp>}
-        """
-        return self._post("returnDepositsWithdrawals", payload)
-
-    def open_orders(self, payload=None):
-        """
-        Data FORMAT
-        {"currencyPair": <pair>} ("all" will return open orders for all markets)
-        """
-        if not payload:
+    def orders(self, symbol=None):
+        if not symbol:
             payload = {"currencyPair": "all"}
-        return self._post("returnOpenOrders", payload)
+        else:
+            payload = {"currencyPair": pair_std_to_exchange(symbol, self.ID)}
+        data = self._post("returnOpenOrders", payload)
+        if isinstance(data, dict):
+            return {pair_exchange_to_std(key): val for key, val in data.items()}
+        else:
+            return data
 
     def trade_history(self, payload=None):
         """
@@ -216,33 +195,3 @@ class Poloniex(API):
 
     def cancel_order(self, order_id):
         return self._post("cancelOrder", {"orderNumber": order_id})
-
-    def move_order(self, payload):
-        """
-        Data FORMAT
-        {"orderNumber": <order>, "rate": <rate>, "amount": <amount>(optional)}
-        """
-        return self._post("moveOrder", payload)
-
-    def withdraw(self, payload):
-        """
-        Data FORMAT
-        "currency", "amount", and "address".
-        """
-        return self._post("withdraw", payload)
-
-    def available_account_balances(self, payload=None):
-        """
-        "account" (optional)
-        """
-        return self._post("returnAvailableAccountBalances", payload)
-
-    def tradable_balances(self):
-        return self._post("returnTradableBalances")
-
-    def transfer_balance(self, payload):
-        """
-        Data FORMAT
-        "currency", "amount", "fromAccount", and "toAccount"
-        """
-        return self._post("transferBalance", payload)
