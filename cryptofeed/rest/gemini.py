@@ -12,7 +12,7 @@ import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import GEMINI, BID, ASK, UNSUPPORTED
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, feed_to_exchange
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, normalize_trading_options
 
 
 LOG = logging.getLogger('rest')
@@ -126,10 +126,9 @@ class Gemini(API):
             # GEMINI rate limits to 120 requests a minute
             sleep(0.5)
 
-    # Order Placement API
-
+    # Trading APIs
     def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
-        ot = feed_to_exchange(self.ID, order_type)
+        ot = normalize_trading_options(self.ID, order_type)
         sym = pair_std_to_exchange(self.ID, pair)
 
         parameters = {
@@ -137,7 +136,8 @@ class Gemini(API):
             'symbol': sym,
             'side': side,
             'amount': str(amount),
-            'price': str(price)
+            'price': str(price),
+            'options': [normalize_trading_options(self.ID, o) for o in options]
         }
 
         if client_order_id:
@@ -145,16 +145,8 @@ class Gemini(API):
 
         return self._post("/v1/order/new", parameters)
 
-    def cancel_order(self, order_id):
-        return self._post("/v1/order/cancel", {'order_id': order_id})
-
-    def cancel_all_session_orders(self):
-        return self._post("/v1/order/cancel/session")
-
-    def cancel_all_active_orders(self):
-        return self._post("/v1/order/cancel/all")
-
-    # Order Status API
+    def cancel_order(self, order_id: str):
+        return self._post("/v1/order/cancel", {'order_id': int(order_id)})
 
     def order_status(self, parameters):
         """
@@ -163,10 +155,10 @@ class Gemini(API):
         """
         return self._post("/v1/order/status", parameters)
 
-    def get_active_orders(self):
+    def orders(self):
         return self._post("/v1/orders")
 
-    def get_past_trades(self, parameters):
+    def trade_history(self, parameters):
         """
         Parameters:
             symbol	string	The symbol to retrieve trades for
@@ -176,45 +168,10 @@ class Gemini(API):
         """
         return self._post("/v1/mytrades", parameters)
 
-    # Fee and Volume Volume API
-
-    def get_notional_volume(self):
-        return self._post("/v1/notionalvolume")
-
-    def get_trade_volume(self):
-        return self._post("/v1/tradevolume")
-
-    # Fund Managment API
-
-    def get_available_balances(self):
-        return self._post("/v1/balances")
-
-    def transfers(self, parameters=None):
-        """
-        Parameters:
-            timestamp	timestamp	Optional. Only return transfers on or after this timestamp. See Data Types: Timestamps for more
-                                    information. If not present, will show the most recent transfers.
-            limit_transfers	integer	Optional. The maximum number of transfers to return. The default is 10 and the maximum is 50.
-        """
-        return self._post("/v1/transfers", parameters)
-
-    def new_deposit_address(self, currency: str, parameters=None):
-        """
-        Parameters:
-            label	string	Optional. label for the deposit address
-        """
-        uri = "/v1/deposit/{}/newAddress".format(currency)
-        return self._post(uri, parameters)
-
-    def withdraw_crypto_to_address(self, currency: str, parameters):
-        """
-        Parameters:
-            address	string	Standard string format of a whitelisted cryptocurrency address.
-            amount	string	Quoted decimal amount to withdraw
-        """
-        uri = "/v1/withdraw/{}".format(currency)
-        parameters["request"] = uri
-        return self._post(uri, parameters)
-
-    def heartbeat(self):
-        return self._post("/v1/heartbeat")
+    def balances(self):
+        data = self._post("/v1/balances")
+        return {
+            entry['currency']: {
+                'total': Decimal(entry['amount']),
+                'available': Decimal(entry['available'])
+            } for entry in data }

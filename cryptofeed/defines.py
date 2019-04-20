@@ -48,6 +48,9 @@ UND = 'undefined'
 
 LIMIT = 'limit'
 MARKET = 'market'
+MAKER_OR_CANCEL = 'maker-or-cancel'
+FILL_OR_KILL = 'fill-or-kill'
+IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
 
 
 """
@@ -129,4 +132,17 @@ for L3 books:
     For L2 books a size of 0 means the price level should be deleted.
     For L3 books, a size of 0 means the order should be deleted. If there are
     no orders at the price, the price level can be deleted.
+
+
+
+Trading Responses
+Balances:
+
+{
+    coin/fiat: {
+        total: Decimal, # total amount
+        available: Decimal # available for trading
+    },
+    ...
+}
 """
