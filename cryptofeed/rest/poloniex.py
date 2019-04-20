@@ -140,22 +140,17 @@ class Poloniex(API):
                 'available': Decimal(data[coin]['available'])
             } for coin in data }
 
-    def orders(self, symbol=None):
-        if not symbol:
-            payload = {"currencyPair": "all"}
-        else:
-            payload = {"currencyPair": pair_std_to_exchange(symbol, self.ID)}
+    def orders(self):
+        payload = {"currencyPair": "all"}
         data = self._post("returnOpenOrders", payload)
         if isinstance(data, dict):
             return {pair_exchange_to_std(key): val for key, val in data.items()}
         else:
             return data
 
-    def trade_history(self, symbol=None, start=None, end=None):
-        if not symbol:
-            payload = {"currencyPair": "all"}
-        else:
-            payload = {'currencyPair': pair_std_to_exchange(symbol, self.ID)}
+    def trade_history(self, symbol: str, start=None, end=None):
+        payload = {'currencyPair': pair_std_to_exchange(symbol, self.ID)}
+
         if start:
             payload['start'] = API._timestamp(start).timestamp()
         if end:

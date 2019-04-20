@@ -129,7 +129,7 @@ class Gemini(API):
     # Trading APIs
     def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
         ot = normalize_trading_options(self.ID, order_type)
-        sym = pair_std_to_exchange(self.ID, pair)
+        sym = pair_std_to_exchange(pair, self.ID)
 
         parameters = {
             'type': ot,
@@ -137,7 +137,7 @@ class Gemini(API):
             'side': side,
             'amount': str(amount),
             'price': str(price),
-            'options': [normalize_trading_options(self.ID, o) for o in options]
+            'options': [normalize_trading_options(self.ID, o) for o in options] if options else []
         }
 
         if client_order_id:
@@ -158,15 +158,17 @@ class Gemini(API):
     def orders(self):
         return self._post("/v1/orders")
 
-    def trade_history(self, parameters):
-        """
-        Parameters:
-            symbol	string	The symbol to retrieve trades for
-            limit_trades	integer	Optional. The maximum number of trades to return. Default is 50, max is 500.
-            timestamp	  timestamp	Optional. Only return trades on or after this timestamp. See Data Types: Timestamps for more information.
-                                    If not present, will show the most recent orders.
-        """
-        return self._post("/v1/mytrades", parameters)
+    def trade_history(self, symbol: str, start=None, end=None):
+        sym = pair_std_to_exchange(symbol, self.ID)
+
+        params = {
+            'symbol': sym,
+            'limit_trades': 500
+        }
+        if start:
+            params['timestamp'] = API._timestamp(start).timestamp()
+
+        return self._post("/v1/mytrades", params)
 
     def balances(self):
         data = self._post("/v1/balances")

@@ -108,16 +108,25 @@ class API:
     def cancel_order(self, order_id: str):
         raise NotImplementedError
 
-    def orders(self, *args, **kwargs):
+    def orders(self):
+        """
+        Return outstanding orders
+        """
         raise NotImplementedError
 
     def order_status(self, order_id: str):
+        """
+        Look up status of an order by id
+        """
         raise NotImplementedError
 
-    def trade_history(self, *args, **kwargs):
+    def trade_history(self, symbol: str, start=None, end=None):
+        """
+        Executed trade history
+        """
         raise NotImplementedError
 
-    def balances(self, *args, **kwargs):
+    def balances(self):
         raise NotImplementedError
 
     def __getitem__(self, key):
