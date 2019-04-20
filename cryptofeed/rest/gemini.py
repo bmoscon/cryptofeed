@@ -11,7 +11,7 @@ from sortedcontainers.sorteddict import SortedDict as sd
 import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import GEMINI, BID, ASK, UNSUPPORTED
+from cryptofeed.defines import GEMINI, BID, ASK, CANCELLED, FILLED, OPEN, PARTIAL, BUY, SELL, LIMIT
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, normalize_trading_options
 
 
@@ -26,6 +26,29 @@ class Gemini(API):
 
     api = "https://api.gemini.com"
     sandbox_api = "https://api.sandbox.gemini.com"
+
+    @staticmethod
+    def _order_status(data):
+        status = PARTIAL
+        if data['is_cancelled']:
+            status = CANCELLED
+        elif Decimal(data['remaining_amount']) == 0:
+            status = FILLED
+        elif Decimal(data['executed_amount']) == 0:
+            status = OPEN
+
+        return {
+            'order_id': data['order_id'],
+            'symbol': pair_exchange_to_std(data['symbol']),
+            'side': BUY if data['side'] == 'buy' else SELL,
+            'order_type': LIMIT,
+            'price': Decimal(data['price']),
+            'total': Decimal(data['original_amount']),
+            'executed': Decimal(data['executed_amount']),
+            'pending': Decimal(data['remaining_amount']),
+            'timestamp': data['timestampms'] / 1000,
+            'order_status': status
+        }
 
     def _get(self, command: str, retry, retry_wait, params=None):
         api = self.api if not self.sandbox else self.sandbox_api
@@ -127,9 +150,9 @@ class Gemini(API):
             sleep(0.5)
 
     # Trading APIs
-    def place_order(self, pair: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
         ot = normalize_trading_options(self.ID, order_type)
-        sym = pair_std_to_exchange(pair, self.ID)
+        sym = pair_std_to_exchange(symbol, self.ID)
 
         parameters = {
             'type': ot,
@@ -143,20 +166,20 @@ class Gemini(API):
         if client_order_id:
             parameters['client_order_id'] = client_order_id
 
-        return self._post("/v1/order/new", parameters)
+        data = self._post("/v1/order/new", parameters)
+        return Gemini._order_status(data)
 
     def cancel_order(self, order_id: str):
-        return self._post("/v1/order/cancel", {'order_id': int(order_id)})
+        data = self._post("/v1/order/cancel", {'order_id': int(order_id)})
+        return Gemini._order_status(data)
 
-    def order_status(self, parameters):
-        """
-        Parameters:
-            order_id	integer	the order ID to be queried
-        """
-        return self._post("/v1/order/status", parameters)
+    def order_status(self, order_id: str):
+        data = self._post("/v1/order/status", {'order_id': int(order_id)})
+        return Gemini._order_status(data)
 
     def orders(self):
-        return self._post("/v1/orders")
+        data = self._post("/v1/orders")
+        return [Gemini._order_status(d) for d in data]
 
     def trade_history(self, symbol: str, start=None, end=None):
         sym = pair_std_to_exchange(symbol, self.ID)

@@ -52,6 +52,11 @@ MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
 
+OPEN = 'open'
+FILLED = 'filled'
+PARTIAL = 'partial'
+CANCELLED = 'cancelled'
+
 
 """
 L2 Orderbook Layout
@@ -136,6 +141,7 @@ for L3 books:
 
 
 Trading Responses
+
 Balances:
 
 {
@@ -145,4 +151,40 @@ Balances:
     },
     ...
 }
+
+
+Orders:
+
+[
+    {
+        order_id: str,
+        symbol: str,
+        side: str,
+        order_type: limit/market/etc,
+        price: Decimal,
+        total: Decimal,
+        executed: Decimal,
+        pending: Decimal,
+        timestamp: float,
+        order_status: FILLED/PARTIAL/CANCELLED/OPEN
+    },
+    {...},
+    ...
+
+]
+
+
+Order Status (order_status, cancel_order, place_order)
+{
+        order_id: str,
+        symbol: str,
+        side: str,
+        order_type: limit/market/etc,
+        price: Decimal,
+        total: Decimal,
+        executed: Decimal,
+        pending: Decimal,
+        timestamp: float,
+        order_status: FILLED/PARTIAL/CANCELLED/OPEN
+    },
 """
