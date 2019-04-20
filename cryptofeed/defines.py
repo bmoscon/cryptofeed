@@ -186,5 +186,23 @@ Order Status (order_status, cancel_order, place_order)
         pending: Decimal,
         timestamp: float,
         order_status: FILLED/PARTIAL/CANCELLED/OPEN
+}
+
+
+Trade history:
+[{
+    'price': Decimal,
+    'amount': Decimal,
+    'timestamp': float,
+    'side': str
+    'fee_currency': str,
+    'fee_amount': Decimal,
+    'trade_id': str,
+    'order_id': str
     },
+    {
+        ...
+    }
+]
+
 """

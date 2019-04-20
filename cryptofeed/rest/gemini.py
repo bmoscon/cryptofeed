@@ -191,7 +191,20 @@ class Gemini(API):
         if start:
             params['timestamp'] = API._timestamp(start).timestamp()
 
-        return self._post("/v1/mytrades", params)
+        data = self._post("/v1/mytrades", params)
+        return [
+            {
+                'price': Decimal(trade['price']),
+                'amount': Decimal(trade['amount']),
+                'timestamp': trade['timestampms'] / 1000,
+                'side': BUY if trade['type'].lower() == 'buy' else SELL,
+                'fee_currency': trade['fee_currency'],
+                'fee_amount': trade['fee_amount'],
+                'trade_id': trade['tid'],
+                'order_id': trade['order_id']
+            }
+            for trade in data
+        ]
 
     def balances(self):
         data = self._post("/v1/balances")
