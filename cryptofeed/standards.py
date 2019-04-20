@@ -201,4 +201,5 @@ def feed_to_exchange(exchange, feed):
     ret = _feed_to_exchange_map[feed][exchange]
     if ret == UNSUPPORTED:
         LOG.error(f"{feed} is not supported on {exchange}")
+        raise UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
     return ret
