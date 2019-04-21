@@ -92,7 +92,7 @@ _feed_to_exchange_map = {
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
-        BITSTAMP: UNSUPPORTED,
+        BITSTAMP: 'detail_order_book',
         HITBTC: UNSUPPORTED,
         COINBASE: 'full',
         BITMEX: 'orderBookL2',
