@@ -20,7 +20,7 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import COINBASE, BUY, SELL, MARKET, LIMIT, FILLED, OPEN, PARTIAL, PENDING, CANCELLED, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, normalize_trading_options
+from cryptofeed.standards import normalize_trading_options
 
 
 REQUEST_LIMIT = 10
@@ -264,7 +264,7 @@ class Coinbase(API):
         if client_order_id:
             body['client_oid'] = client_order_id
         if options:
-            [body.update(normalize_trading_options(self.ID, o)) for o in options]
+            _ = [body.update(normalize_trading_options(self.ID, o)) for o in options]
         resp = self._request('POST', '/orders', auth=True, body=body)
         return Coinbase._order_status(resp.json())
 
