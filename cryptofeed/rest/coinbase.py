@@ -195,11 +195,11 @@ class Coinbase(API):
                 'ask': Decimal(data['ask'])
                }
 
-    def _book(self, symbol: str, level: int):
-        return self._request('GET', f'/products/{symbol}/book?level={level}').json()
+    def _book(self, symbol: str, level: int, retry, retry_wait):
+        return self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait).json()
 
     def l2_book(self, symbol: str, retry=None, retry_wait=10):
-        data = self._book(symbol, 2)
+        data = self._book(symbol, 2, retry, retry_wait)
         return {
             BID: sd({
                 Decimal(u[0]): Decimal(u[1])
@@ -212,7 +212,7 @@ class Coinbase(API):
         }
 
     def l3_book(self, symbol: str, retry=None, retry_wait=10):
-        orders = self._book(symbol, 3)
+        orders = self._book(symbol, 3, retry, retry_wait)
         ret = {BID: sd({}), ASK: sd({})}
         for side in (BID, ASK):
             for price, size, order_id in orders[side + 's']:
