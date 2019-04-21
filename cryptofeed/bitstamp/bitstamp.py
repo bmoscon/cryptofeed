@@ -97,10 +97,6 @@ class Bitstamp(Feed):
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
-        # if channel is order book we need to subscribe to the diff channel
-        # to get updates, hit the REST endpoint to get the current complete state,
-        # then process the updates from the diff channel, ignoring any updates that
-        # are pre-timestamp on the response from the REST endpoint
         for channel in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[channel]:
                 await websocket.send(
