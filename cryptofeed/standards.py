@@ -159,24 +159,29 @@ _exchange_options = {
     LIMIT: {
         KRAKEN: 'limit',
         GEMINI: 'exchange limit',
-        POLONIEX: 'limit'
+        POLONIEX: 'limit',
+        COINBASE: 'limit'
     },
     MARKET: {
         KRAKEN: 'market',
         GEMINI: UNSUPPORTED,
-        POLONIEX: UNSUPPORTED
+        POLONIEX: UNSUPPORTED,
+        COINBASE: 'market'
     },
     FILL_OR_KILL: {
         GEMINI: 'fill-or-kill',
-        POLONIEX: 'fillOrKill'
+        POLONIEX: 'fillOrKill',
+        COINBASE: {'time_in_force': 'FOK'}
     },
     IMMEDIATE_OR_CANCEL: {
         GEMINI: 'immediate-or-cancel',
-        POLONIEX: 'immediateOrCancel'
+        POLONIEX: 'immediateOrCancel',
+        COINBASE: {'time_in_force': 'IOC'}
     },
     MAKER_OR_CANCEL: {
         GEMINI: 'maker-or-cancel',
-        POLONIEX: 'postOnly'
+        POLONIEX: 'postOnly',
+        COINBASE: {'post_only': 1}
     }
 }
 

@@ -162,7 +162,9 @@ class Poloniex(API):
     def order_status(self, order_id: str):
         return self._post("returnOrderStatus", {int(order_id)})
 
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price: Decimal, options=None):
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
+        if not price:
+            raise ValueError('Poloniex only supports limit orders, must specify price')
         # Poloniex only supports limit orders, so check the order type
         _ = normalize_trading_options(self.ID, order_type)
         parameters = {
