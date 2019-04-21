@@ -150,7 +150,9 @@ class Gemini(API):
             sleep(0.5)
 
     # Trading APIs
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price: Decimal, client_order_id=None, options=None):
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
+        if not price:
+            raise ValueError('Gemini only supports limit orders, must specify price')
         ot = normalize_trading_options(self.ID, order_type)
         sym = pair_std_to_exchange(symbol, self.ID)
 

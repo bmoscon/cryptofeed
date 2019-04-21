@@ -102,7 +102,7 @@ class API:
         raise NotImplementedError
 
     # account specific
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price: Decimal, **kwargs):
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
     def cancel_order(self, order_id: str):
