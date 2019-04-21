@@ -4,6 +4,7 @@
   * Feature: Config support for Coinbene, Binance, EXX, BitMEX, Bitfinex, Bitstamp, HitBTC
   * Feature: Complete clean up of public REST endpoints
   * Feature: Improved book delta example
+  * Feature: Bitstamp Websocket V2 - L3 books now supported
 
 ### 0.21.0 (2019-04-07)
   * Bugfix: Coinbase L3 Book would get in cycle of reconnecting due to missing sequence numbers
