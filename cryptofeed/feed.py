@@ -22,10 +22,6 @@ class Feed:
         self.channels = []
         load_exchange_pair_mapping(self.id)
 
-        if channels is not None and FUNDING in channels and self.id == BITFINEX:
-            if len(channels) > 1:
-                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex or you must use config")
-
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")
 
