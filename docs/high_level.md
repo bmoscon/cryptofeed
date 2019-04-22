@@ -20,7 +20,7 @@ The feedhandler is the main object that a user of the library will configure. It
 
 `add_nbbo` lets you compose your own NBBO data feed. It takes the arguments `feeds`, `pairs` and `callback`, which are the normal arguments you'd supply for exchange objects when supplied to the feed handler. The exchanges in the `feeds` list will subscribe to the `pairs` and NBBO updates will be supplied to the `callback` method as they are received from the exchanges.
 
-`run` simply starts the feedhandler. The feedhandler uses asyncio, so nothing past `run` will block while the feedhandler runs.
+`run` simply starts the feedhandler. The feedhandler uses asyncio, so `run` will block while the feedhandler runs.
 
 ### Exchange Interface
 
