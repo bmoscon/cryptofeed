@@ -41,6 +41,9 @@ class Bitfinex(Feed):
     id = BITFINEX
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+        if channels is not None and FUNDING in channels:
+            if len(channels) > 1:
+                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex or you must use config")
         super().__init__('wss://api.bitfinex.com/ws/2', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
 
