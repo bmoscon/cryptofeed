@@ -18,7 +18,7 @@ The feedhandler is the main object that a user of the library will configure. It
 
 `add_feed`is the main method used to register an exchange with the feedhandler. You can supply an Exchange object, or a string matching the exchange's name (all uppercase). Currently if you wish to add multiple exchanges, you must call add_feed multiple times (one per exchange).
 
-`add_nbbo` lets you compose your own NBBO data feed. It takes the arguments `feeds`, `pairs` and `callback`, which are the normal arguments you'd supply for exchange objects when supplied to the feed handler. The exhanges in the `feeds` list will subscribe to the `pairs` and NBBO updates will be supplied to the `callback` method as they are received from the exchanges.
+`add_nbbo` lets you compose your own NBBO data feed. It takes the arguments `feeds`, `pairs` and `callback`, which are the normal arguments you'd supply for exchange objects when supplied to the feed handler. The exchanges in the `feeds` list will subscribe to the `pairs` and NBBO updates will be supplied to the `callback` method as they are received from the exchanges.
 
 `run` simply starts the feedhandler. The feedhandler uses asyncio, so nothing past `run` will block while the feedhandler runs.
 
