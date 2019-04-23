@@ -82,37 +82,38 @@ class Kraken(Feed):
 
     async def _book(self, msg, pair):
         delta = {BID: [], ASK: []}
-        msg = msg[1]
-        if 'as' in msg:
+        msg = msg[1:]
+        if len(msg) == 1 and 'as' in msg[0]:
             # Snapshot
             self.l2_book[pair] = {BID: sd({
-                Decimal(update[0]): Decimal(update[1]) for update in msg['bs']
+                Decimal(update[0]): Decimal(update[1]) for update in msg[0]['bs']
             }), ASK: sd({
-                Decimal(update[0]): Decimal(update[1]) for update in msg['as']
+                Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']
             })}
             await self.book_callback(pair, L2_BOOK, True, delta, time.time())
         else:
-            for s, updates in msg.items():
-                side = BID if s == 'b' else ASK
-                for update in updates:
-                    price, size, _ = update
-                    price = Decimal(price)
-                    size = Decimal(size)
-                    if size == 0:
-                        # Per Kraken's technical support
-                        # they deliver erroneous deletion messages
-                        # periodically which should be ignored
-                        if price in self.l2_book[pair][side]:
-                            del self.l2_book[pair][side][price]
-                            delta[side].append((price, 0))
-                    else:
-                        delta[side].append((price, size))
-                        self.l2_book[pair][side][price] = size
-                    if len(self.l2_book[pair][side]) > self.book_depth:
-                        del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
-                        del self.l2_book[pair][side][del_price]
-                        delta[side].append((del_price, 0))
-
+            for m in msg:
+                for s, updates in m.items():
+                    side = BID if s == 'b' else ASK
+                    for update in updates:
+                        price, size, _ = update
+                        price = Decimal(price)
+                        size = Decimal(size)
+                        if size == 0:
+                            # Per Kraken's technical support
+                            # they deliver erroneous deletion messages
+                            # periodically which should be ignored
+                            if price in self.l2_book[pair][side]:
+                                del self.l2_book[pair][side][price]
+                                delta[side].append((price, 0))
+                        else:
+                            delta[side].append((price, size))
+                            self.l2_book[pair][side][price] = size
+            for side in (BID, ASK):
+                while len(self.l2_book[pair][side]) > self.book_depth:
+                    del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
+                    del self.l2_book[pair][side][del_price]
+                    delta[side].append((del_price, 0))
             await self.book_callback(pair, L2_BOOK, False, delta, time.time())
 
     async def message_handler(self, msg):

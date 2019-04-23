@@ -8,9 +8,9 @@ from multiprocessing import Process
 
 from cryptofeed.backends.zmq import BookZMQ, TradeZMQ
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Coinbase
+from cryptofeed.exchanges import Kraken
 
-from cryptofeed.defines import L3_BOOK, TRADES
+from cryptofeed.defines import L2_BOOK, TRADES
 
 
 def receiver(port):
@@ -23,8 +23,6 @@ def receiver(port):
     while True:
         data = s.recv_json()
         print(data)
-        time.sleep(0.5)
-
 
 def main():
     try:
@@ -35,7 +33,7 @@ def main():
         p2.start()
 
         f = FeedHandler()
-        f.add_feed(Coinbase(channels=[L3_BOOK, TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeZMQ(), L3_BOOK: BookZMQ(depth=1, port=5556)}))
+        f.add_feed(Kraken(channels=[L2_BOOK], pairs=['ETH-USD'], callbacks={L2_BOOK: BookZMQ(depth=1, port=5556)}))
 
         f.run()
     finally:
