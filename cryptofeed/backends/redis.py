@@ -12,7 +12,7 @@ import aioredis
 
 from cryptofeed.standards import timestamp_normalize
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert
+from cryptofeed.backends._util import book_convert, book_flatten
 
 
 class RedisCallback:
@@ -142,4 +142,6 @@ class BookStream(BookRedis):
             self.previous[ASK] = data[ASK]
             self.previous[BID] = data[BID]
 
-        await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)
+        flat = book_flatten(data, data['timestamp'])
+        for update in flat:
+            await self.redis.xadd(f"{self.key}-{feed}-{pair}", update)
