@@ -45,7 +45,7 @@ class TradeRedis(RedisCallback):
             ts = timestamp_normalize(feed, timestamp)
 
         data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
-                           'side': side, 'amount': float(amount), 'price': float(price)})
+                           'side': side, 'amount': str(amount), 'price': str(price)})
 
         await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
@@ -56,7 +56,7 @@ class TradeStream(TradeRedis):
             self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
 
         data = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
-                'side': side, 'amount': float(amount), 'price': float(price)}
+                'side': side, 'amount': str(amount), 'price': str(price)}
 
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", data, message_id=f'0-{order_id}')
 
@@ -82,7 +82,7 @@ class FundingRedis(RedisCallback):
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
-                kwargs[key] = float(kwargs[key])
+                kwargs[key] = str(kwargs[key])
 
         data = json.dumps(kwargs)
 
@@ -96,7 +96,7 @@ class FundingStream(FundingRedis):
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
-                kwargs[key] = float(kwargs[key])
+                kwargs[key] = str(kwargs[key])
 
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", kwargs)
 
