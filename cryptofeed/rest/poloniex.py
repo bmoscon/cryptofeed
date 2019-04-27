@@ -16,7 +16,7 @@ import pandas as pd
 from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import POLONIEX, BUY, SELL, BID, ASK
+from cryptofeed.defines import POLONIEX, BUY, SELL, BID, ASK, LIMIT, OPEN, PARTIAL, FILLED, CANCELLED
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, normalize_trading_options
 
 
@@ -31,6 +31,64 @@ class Poloniex(API):
     # for public_api add "public" to the url, for trading add "tradingApi" (example: https://poloniex.com/public)
     rest_api = "https://poloniex.com/"
 
+    @staticmethod
+    def _order_status(order, symbol=None):
+        if symbol:
+            order_id = order['orderNumber']
+            data = order
+        else:
+            [(order_id, data)] = order.items()
+
+        if 'status' in data:
+            status = PARTIAL
+            if data['status'] == 'Open':
+                status = OPEN
+        else:
+            if data['startingAmount'] == data['amount']:
+                status = OPEN
+            else:
+                status = PARTIAL
+
+        return {
+            'order_id': order_id,
+            'symbol': symbol if symbol else pair_exchange_to_std(data['currencyPair']),
+            'side': BUY if data['type'] == 'buy' else SELL,
+            'order_type': LIMIT,
+            'price': Decimal(data['rate']),
+            'total': Decimal(data['startingAmount']),
+            'executed': Decimal(data['startingAmount']) - Decimal(data['amount']),
+            'pending': Decimal(data['amount']),
+            'timestamp': pd.Timestamp(data['date']).timestamp(),
+            'order_status': status
+        }
+
+    @staticmethod
+    def _trade_status(trades, symbol: str, order_id: str, total: str):
+        total = Decimal(total)
+        side = None
+        price = Decimal('0.0')
+        amount = Decimal('0.0')
+
+        for trade in trades:
+            date = trade['date']
+            side = BUY if trade['type'] == 'buy' else SELL
+            price += Decimal(trade['rate']) * Decimal(trade['amount'])
+            amount += Decimal(trade['amount'])
+
+        price /= amount
+
+        return {
+            'order_id': order_id,
+            'symbol': symbol,
+            'side': side,
+            'order_type': LIMIT,
+            'price': price,
+            'total': total,
+            'executed': amount,
+            'pending': total - amount,
+            'timestamp': pd.Timestamp(date).timestamp(),
+            'order_status': FILLED
+        }
 
     def _get(self, command: str, options=None, retry=None, retry_wait=0):
         base_url = f"{self.rest_api}public?command={command}"
@@ -144,9 +202,15 @@ class Poloniex(API):
         payload = {"currencyPair": "all"}
         data = self._post("returnOpenOrders", payload)
         if isinstance(data, dict):
-            return {pair_exchange_to_std(key): val for key, val in data.items()}
-        else:
-            return data
+            data = {pair_exchange_to_std(key): val for key, val in data.items()}
+
+        ret = []
+        for pair in data:
+            if data[pair] == []:
+                continue
+            for order in data[pair]:
+                ret.append(Poloniex._order_status(order, symbol=pair))
+        return ret
 
     def trade_history(self, symbol: str, start=None, end=None):
         payload = {'currencyPair': pair_std_to_exchange(symbol, self.ID)}
@@ -157,19 +221,39 @@ class Poloniex(API):
             payload['end'] = API._timestamp(end).timestamp()
 
         payload['limit'] = 10000
-        return self._post("returnTradeHistory", payload)
+        data = self._post("returnTradeHistory", payload)
+        ret = []
+        for trade in data:
+            ret.append({
+                'price': Decimal(trade['rate']),
+                'amount': Decimal(trade['amount']),
+                'timestamp': pd.Timestamp(trade['date']).timestamp(),
+                'side': BUY if trade['type'] == 'buy' else SELL,
+                'fee_currency': symbol.split('-')[1],
+                'fee_amount': Decimal(trade['fee']),
+                'trade_id': trade['tradeID'],
+                'order_id': trade['orderNumber']
+            })
+        return ret
 
     def order_status(self, order_id: str):
-        return self._post("returnOrderStatus", {int(order_id)})
+        data = self._post("returnOrderStatus", {'orderNumber': order_id})
+        if 'error' in data:
+            return {'error': data['error']}
+        elif 'error' in data['result']:
+            return {'error': data['result']['error']}
+        return Poloniex._order_status(data['result'])
 
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
         if not price:
             raise ValueError('Poloniex only supports limit orders, must specify price')
         # Poloniex only supports limit orders, so check the order type
         _ = normalize_trading_options(self.ID, order_type)
-        parameters = {
-            normalize_trading_options(self.ID, o): 1 for o in options
-        }
+        parameters = {}
+        if options:
+            parameters = {
+                normalize_trading_options(self.ID, o): 1 for o in options
+            }
         parameters['currencyPair'] = pair_std_to_exchange(symbol, self.ID)
         parameters['amount'] = str(amount)
         parameters['rate'] = str(price)
@@ -179,7 +263,24 @@ class Poloniex(API):
             endpoint = 'buy'
         elif side == SELL:
             endpoint = 'sell'
-        return self._post(endpoint, parameters)
+
+        data = self._post(endpoint, parameters)
+        order = self.order_status(data['orderNumber'])
+
+        if 'error' not in order:
+            if len(data['resultingTrades']) == 0:
+                return order
+            else:
+                return Poloniex._trade_status(data['resultingTrades'], symbol, data['orderNumber'], amount)
+        return data
 
     def cancel_order(self, order_id: str):
-        return self._post("cancelOrder", {"orderNumber": int(order_id)})
+        order = self.order_status(order_id)
+        data = self._post("cancelOrder", {"orderNumber": int(order_id)})
+        if 'error' in data:
+            return {'error': data['error']}
+        if 'message' in data and 'canceled' in data['message']:
+            order['status'] = CANCELLED
+            return order
+        else:
+            return data

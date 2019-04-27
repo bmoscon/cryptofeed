@@ -37,12 +37,13 @@ class Gemini(API):
         elif Decimal(data['executed_amount']) == 0:
             status = OPEN
 
+        price = Decimal(data['price']) if Decimal(data['avg_execution_price']) == 0 else Decimal(data['avg_execution_price'])
         return {
             'order_id': data['order_id'],
             'symbol': pair_exchange_to_std(data['symbol']),
             'side': BUY if data['side'] == 'buy' else SELL,
             'order_type': LIMIT,
-            'price': Decimal(data['price']),
+            'price': price,
             'total': Decimal(data['original_amount']),
             'executed': Decimal(data['executed_amount']),
             'pending': Decimal(data['remaining_amount']),

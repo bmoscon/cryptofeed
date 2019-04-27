@@ -80,7 +80,7 @@ class API:
 
     def _handle_error(self, resp, log):
         if resp.status_code != 200:
-            log.error("%s: Status code %d for URL", self.ID, resp.url, resp.status_code)
+            log.error("%s: Status code %d for URL %s", self.ID, resp.status_code, resp.url)
             log.error("%s: Headers: %s", self.ID, resp.headers)
             log.error("%s: Resp: %s", self.ID, resp.text)
             resp.raise_for_status()
