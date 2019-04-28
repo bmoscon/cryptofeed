@@ -11,7 +11,6 @@ import hmac
 import requests
 import base64
 from time import sleep
-from datetime import datetime as dt
 import logging
 from decimal import Decimal
 
@@ -172,7 +171,7 @@ class Coinbase(API):
                     data = r.json()
                     try:
                         data = list(reversed(data))
-                    except:
+                    except Exception:
                         LOG.warning("Error %s: %s", r.status_code, r.text)
                         sleep(60)
                         continue
