@@ -139,10 +139,7 @@ class Gemini(API):
             yield data
 
             if start:
-                try:
-                    params['since'] = int(data[-1]['timestamp'] * 1000) + 1
-                except:
-                    print(data)
+                params['since'] = int(data[-1]['timestamp'] * 1000) + 1
             if len(data) < 500:
                 break
             if not start and not end:
