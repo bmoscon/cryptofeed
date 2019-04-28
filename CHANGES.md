@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.21.1
+### 0.21.1 (2019-04-28)
   * Feature: Config support for Coinbene, Binance, EXX, BitMEX, Bitfinex, Bitstamp, HitBTC
   * Feature: Complete clean up of public REST endpoints
   * Feature: Improved book delta example
