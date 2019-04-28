@@ -102,10 +102,18 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 
 # Planned Work
 
+## Additional Channels
+* Instrument (Real-Time Open Interest)
+* [AUTH] Margin (Account Balance)
+* [AUTH] Positions
+* [AUTH] Orders
+* [AUTH] Executions
+* Liquidations (?)
+
 ## Future Feeds
-* CEX
-* BTCC
-* Many more...
+* Deribit
+* Bybit
+* Others???
 
 ## REST
 Continue to build out rest endpoints and standardize exchange interfaces and data
