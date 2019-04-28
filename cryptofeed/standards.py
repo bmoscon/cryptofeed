@@ -171,17 +171,20 @@ _exchange_options = {
     FILL_OR_KILL: {
         GEMINI: 'fill-or-kill',
         POLONIEX: 'fillOrKill',
-        COINBASE: {'time_in_force': 'FOK'}
+        COINBASE: {'time_in_force': 'FOK'},
+        KRAKEN: UNSUPPORTED
     },
     IMMEDIATE_OR_CANCEL: {
         GEMINI: 'immediate-or-cancel',
         POLONIEX: 'immediateOrCancel',
-        COINBASE: {'time_in_force': 'IOC'}
+        COINBASE: {'time_in_force': 'IOC'},
+        KRAKEN: UNSUPPORTED
     },
     MAKER_OR_CANCEL: {
         GEMINI: 'maker-or-cancel',
         POLONIEX: 'postOnly',
-        COINBASE: {'post_only': 1}
+        COINBASE: {'post_only': 1},
+        KRAKEN: 'post'
     }
 }
 

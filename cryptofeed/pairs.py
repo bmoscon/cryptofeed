@@ -106,6 +106,23 @@ def kraken_pairs():
     return ret
 
 
+def kraken_rest_pairs():
+    ret = {}
+    r = requests.get('https://api.kraken.com/0/public/AssetPairs')
+    data = r.json()
+    for pair in data['result']:
+        alt = data['result'][pair]['altname']
+        modifier = -3
+        if ".d" in alt:
+            modifier = -5
+        normalized = alt[:modifier] + '-' + alt[modifier:]
+        exch = normalized.replace("-", "")
+        normalized = normalized.replace('XBT', 'BTC')
+        normalized = normalized.replace('XDG', 'DOG')
+        ret[normalized] = exch
+    return ret
+
+
 def exx_pairs():
     r = requests.get('https://api.exx.com/data/v1/tickers').json()
 
@@ -152,6 +169,7 @@ _exchange_function_map = {
     POLONIEX: poloniex_pairs,
     BITSTAMP: bitstamp_pairs,
     KRAKEN: kraken_pairs,
+    KRAKEN+'REST': kraken_rest_pairs,
     BINANCE: binance_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
