@@ -17,8 +17,8 @@ import pandas as pd
 from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import KRAKEN, SELL, BUY, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange
+from cryptofeed.defines import KRAKEN, SELL, BUY, BID, ASK, CANCELLED, OPEN, FILLED, MARKET, LIMIT
+from cryptofeed.standards import pair_std_to_exchange, normalize_trading_options, pair_exchange_to_std, load_exchange_pair_mapping
 
 
 LOG = logging.getLogger('rest')
@@ -28,6 +28,45 @@ class Kraken(API):
     ID = KRAKEN
 
     api = "https://api.kraken.com/0"
+
+    @staticmethod
+    def _fix_currencies(currency: str):
+        cur_map = {
+            'XXBT': 'BTC',
+            'XXDG': 'DOGE',
+            'XXLM': 'XLM',
+            'XXMR': 'XMR',
+            'XXRP': 'XRP',
+            'ZUSD': 'USD',
+            'ZCAD': 'CAD',
+            'ZGBP': 'GBP',
+            'ZJPY': 'JPY'
+        }
+        if currency in cur_map:
+            return cur_map[currency]
+        return currency
+
+    @staticmethod
+    def _order_status(order_id: str, order: dict):
+        if order['status'] == 'canceled':
+            status = CANCELLED
+        if order['status'] == 'open':
+            status = OPEN
+        if order['status'] == 'closed':
+            status = FILLED
+
+        return {
+            'order_id': order_id,
+            'symbol': pair_exchange_to_std(order['descr']['pair']),
+            'side': SELL if order['descr']['type'] == 'sell' else BUY,
+            'order_type': LIMIT if order['descr']['ordertype'] == 'limit' else MARKET,
+            'price': Decimal(order['descr']['price']),
+            'total': Decimal(order['vol']),
+            'executed': Decimal(order['vol_exec']),
+            'pending': Decimal(order['vol']) - Decimal(order['vol_exec']),
+            'timestamp': order['opentm'],
+            'order_status': status
+        }
 
     def _post_public(self, command: str, payload=None, retry=None, retry_wait=0):
         url = f"{self.api}{command}"
@@ -70,7 +109,7 @@ class Kraken(API):
 
     # public API
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+        sym = pair_std_to_exchange(symbol, self.ID+'REST')
         data = self._post_public(f"/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
         data = data['result']
@@ -82,7 +121,7 @@ class Kraken(API):
                 }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+        sym = pair_std_to_exchange(symbol, self.ID+'REST')
         data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
         for _, val in data['result'].items():
             return {
@@ -103,13 +142,13 @@ class Kraken(API):
             for data in self._historical_trades(symbol, start, end, retry, retry_wait):
                 yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
         else:
-            sym = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+            sym = pair_std_to_exchange(symbol, self.ID+'REST')
             data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
             yield [self._trade_normalization(d, symbol) for d in data]
 
 
     def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
-        symbol = pair_std_to_exchange(symbol, self.ID).replace("/", "")
+        symbol = pair_std_to_exchange(symbol, self.ID+'REST')
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start_date):
@@ -158,129 +197,101 @@ class Kraken(API):
 
     # Private API
     def balances(self):
-        return self._post_private('/private/Balance')
+        data = self._post_private('/private/Balance')
+        if len(data['error']) != 0:
+            return data
+        return {
+            Kraken._fix_currencies(currency): {
+                'available': Decimal(value),
+                'total': Decimal(value)
+            }
+            for currency, value in data['result'].items()
+        }
 
     def orders(self):
-        return self._post_private('/private/OpenOrders', None)
+        data = self._post_private('/private/OpenOrders', None)
+        if len(data['error']) != 0:
+            return data
+
+        ret = []
+        for _, orders in data['result'].items():
+            for order_id, order in orders.items():
+                ret.append(Kraken._order_status(order_id, order))
+        return ret
 
     def order_status(self, order_id: str):
-        return self._post_private('/private/QueryOrders', {'txid': order_id})
+        data = self._post_private('/private/QueryOrders', {'txid': order_id})
+        if len(data['error']) != 0:
+            return data
 
-    def get_trades_history(self, payload=None):
-        """
-        Parameters:
-            type = type of trade (optional)
-                all = all types (default)
-                any position = any position (open or closed)
-                closed position = positions that have been closed
-                closing position = any trade closing all or part of a position
-                no position = non-positional trades
-            trades = whether or not to include trades related to position in output (optional.  default = false)
-            start = starting unix timestamp or trade tx id of results (optional.  exclusive)
-            end = ending unix timestamp or trade tx id of results (optional.  inclusive)
-            ofs = result offset
-        """
-        return self._post_private('/private/TradesHistory', payload)
+        for order_id, order in data['result'].items():
+            return Kraken._order_status(order_id, order)
 
-    def query_trades_info(self, payload: dict):
-        """
-        Parameters:
-            txid = comma delimited list of transaction ids to query info about (20 maximum)
-            trades = whether or not to include trades related to position in output (optional.  default = false)
-        """
-        return self._post_private('/private/QueryTrades', payload)
+    def get_trades_history(self, symbol:str, start=None, end=None):
+        params = {}
 
-    def get_open_positions(self, payload: dict):
-        """
-        Parameters:
-            txid = comma delimited list of transaction ids to restrict output to
-            docalcs = whether or not to include profit/loss calculations (optional.  default = false)
-        """
-        return self._post_private('/private/OpenPositions', payload)
+        if start:
+            params['start'] = API._timestamp(start).timestamp()
+        if end:
+            params['end'] = API._timestamp(end).timestamp()
 
-    def get_ledgers_info(self, payload=None):
-        """
-        Parameters:
-            aclass = asset class (optional):
-            currency (default)
-        asset = comma delimited list of assets to restrict output to (optional.  default = all)
-        type = type of ledger to retrieve (optional):
-            all (default)
-            deposit
-            withdrawal
-            trade
-            margin
-        start = starting unix timestamp or ledger id of results (optional.  exclusive)
-        end = ending unix timestamp or ledger id of results (optional.  inclusive)
-        ofs = result offset
-        """
-        return self._post_private('/private/Ledgers', payload)
+        data = self._post_private('/private/TradesHistory', params)
+        if len(data['error']) != 0:
+            return data
 
-    def query_ledgers(self, payload: dict):
-        """
-        Parameters:
-            id = comma delimited list of ledger ids to query info about (20 maximum)
-        """
-        return self._post_private('/private/QueryLedgers', payload)
+        ret = []
+        for trade_id, trade in data['result']['trades'].items():
+            sym = trade['pair']
+            sym = sym.replace('XX', 'X')
+            sym = sym.replace('ZUSD', 'USD')
+            sym = sym.replace('ZCAD', 'CAD')
+            sym = sym.replace('ZEUR', 'EUR')
+            sym = sym.replace('ZGBP', 'GBP')
+            sym = sym.replace('ZJPY', 'JPY')
 
-    def place_order(self, pair: str, side: str, order_type: str, amount: str, price: str, start_time: str, expire_time: str):
-        """
-        Parameters:
-            pair = asset pair
-            type = type of order (buy/sell)
-            ordertype = order type:
-                market
-                limit (price = limit price)
-                stop-loss (price = stop loss price)
-                take-profit (price = take profit price)
-                stop-loss-profit (price = stop loss price, price2 = take profit price)
-                stop-loss-profit-limit (price = stop loss price, price2 = take profit price)
-                stop-loss-limit (price = stop loss trigger price, price2 = triggered limit price)
-                take-profit-limit (price = take profit trigger price, price2 = triggered limit price)
-                trailing-stop (price = trailing stop offset)
-                trailing-stop-limit (price = trailing stop offset, price2 = triggered limit offset)
-                stop-loss-and-limit (price = stop loss price, price2 = limit price)
-                settle-position
-            price = price (optional.  dependent upon ordertype)
-            price2 = secondary price (optional.  dependent upon ordertype)
-            volume = order volume in lots
-            leverage = amount of leverage desired (optional.  default = none)
-            oflags = comma delimited list of order flags (optional):
-                viqc = volume in quote currency (not available for leveraged orders)
-                fcib = prefer fee in base currency
-                fciq = prefer fee in quote currency
-                nompp = no market price protection
-                post = post only order (available when ordertype = limit)
-            starttm = scheduled start time (optional):
-                0 = now (default)
-                +<n> = schedule start time <n> seconds from now
-                <n> = unix timestamp of start time
-            expiretm = expiration time (optional):
-                0 = no expiration (default)
-                +<n> = expire <n> seconds from now
-                <n> = unix timestamp of expiration time
-            userref = user reference id.  32-bit signed number.  (optional)
-            validate = validate inputs only.  do not submit order (optional)
-        """
+            if pair_exchange_to_std(sym) != symbol:
+                continue
 
-        ot = feed_to_exchange(self.ID, order_type)
+            ret.append({
+                'price': Decimal(trade['price']),
+                'amount': Decimal(trade['vol']),
+                'timestamp': trade['time'],
+                'side': SELL if trade['type'] == 'sell' else BUY,
+                'fee_currency': symbol.split('-')[1],
+                'fee_amount': Decimal(trade['fee']),
+                'trade_id': trade_id,
+                'order_id': trade['ordertxid']
+            })
+        return ret
+
+    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
+        ot = normalize_trading_options(self.ID, order_type)
 
         parameters = {
-            'pair': pair,
-            'type': side,
-            'volume': amount
+            'pair': pair_std_to_exchange(symbol, self.ID+'REST'),
+            'type': 'buy' if side == BUY else 'sell',
+            'volume': str(amount),
+            'ordertype': ot
         }
 
         if price is not None:
-            parameters['price'] = price
+            parameters['price'] = str(price)
 
-        if start_time is not None:
-            parameters['starttm'] = start_time
+        if options:
+            parameters['oflags'] = ','.join([normalize_trading_options(self.ID, o) for o in options])
 
-        if expire_time is not None:
-            parameters['expiretm'] = expire_time
-
-        return self._post_private('/private/AddOrder', parameters)
+        data = self._post_private('/private/AddOrder', parameters)
+        if len(data['error']) != 0:
+            return data
+        else:
+            if len(data['result']['txid']) == 1:
+                return self.order_status(data['result']['txid'][0])
+            else:
+                return [self.order_status(tx) for tx in data['result']['txid']]
 
     def cancel_order(self, order_id: str):
-        return self._post_private('/private/CancelOrder', {'txid': order_id})
+        data = self._post_private('/private/CancelOrder', {'txid': order_id})
+        if len(data['error']) != 0:
+            return data
+        else:
+            return self.order_status(order_id)

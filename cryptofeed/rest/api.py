@@ -131,7 +131,10 @@ class API:
 
     def __getitem__(self, key):
         if not self.mapped:
-            load_exchange_pair_mapping(self.ID)
+            try:
+                load_exchange_pair_mapping(self.ID + 'REST')
+            except KeyError:
+                load_exchange_pair_mapping(self.ID)
             self.mapped = True
         if key == 'trades':
             return self.trades
