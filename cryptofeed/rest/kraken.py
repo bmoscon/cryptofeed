@@ -18,7 +18,7 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import KRAKEN, SELL, BUY, BID, ASK, CANCELLED, OPEN, FILLED, MARKET, LIMIT
-from cryptofeed.standards import pair_std_to_exchange, normalize_trading_options, pair_exchange_to_std, load_exchange_pair_mapping
+from cryptofeed.standards import pair_std_to_exchange, normalize_trading_options, pair_exchange_to_std
 
 
 LOG = logging.getLogger('rest')
