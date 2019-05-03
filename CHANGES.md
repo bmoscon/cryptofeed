@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.22.0
+  * Bugfix: Timestamp normalization for backends were losing subsecond fidelity
+
 ### 0.21.1 (2019-04-28)
   * Feature: Config support for Coinbene, Binance, EXX, BitMEX, Bitfinex, Bitstamp, HitBTC
   * Feature: Complete clean up of public REST endpoints
