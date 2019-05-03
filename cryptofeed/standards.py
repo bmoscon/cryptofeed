@@ -9,9 +9,8 @@ Contains all code to normalize and standardize the differences
 between exchanges. These include trading pairs, timestamps, and
 data channel names
 '''
-from datetime import datetime as dt
-import calendar
 import logging
+import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
@@ -66,8 +65,7 @@ def pair_exchange_to_std(pair):
 
 def timestamp_normalize(exchange, ts):
     if exchange == BITMEX or exchange == COINBASE:
-        ts = dt.strptime(ts, "%Y-%m-%dT%H:%M:%S.%fZ")
-        return calendar.timegm(ts.utctimetuple())
+        return pd.Timestamp(ts).timestamp()
     elif exchange in  {HUOBI, BITFINEX}:
         return ts / 1000.0
     return ts
