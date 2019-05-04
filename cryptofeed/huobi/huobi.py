@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import HUOBI, BUY, SELL, TRADES, BID, ASK, L2_BOOK
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -43,7 +43,7 @@ class Huobi(Feed):
             })
         }
 
-        await self.book_callback(pair, L2_BOOK, False, False, msg['ts'])
+        await self.book_callback(pair, L2_BOOK, False, False, timestamp_normalize(self.id, msg['ts']))
 
     async def _trade(self, msg):
         """
@@ -63,7 +63,7 @@ class Huobi(Feed):
                 side=BUY if trade['direction'] == 'buy' else SELL,
                 amount=Decimal(trade['amount']),
                 price=Decimal(trade['price']),
-                timestamp=trade['ts']
+                timestamp=timestamp_normalize(self.id, trade['ts'])
             )
 
     async def message_handler(self, msg):

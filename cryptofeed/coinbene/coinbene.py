@@ -11,7 +11,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import RestFeed
 from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, COINBENE
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 import aiohttp
 
@@ -68,7 +68,7 @@ class Coinbene(RestFeed):
                                                  amount=amount,
                                                  price=price,
                                                  order_id=trade['tradeId'],
-                                                 timestamp=trade['time'])
+                                                 timestamp=timestamp_normalize(self.id, trade['time']))
                 self.last_trade_update[pair] = update
 
     async def _ticker(self, session, pair):
@@ -112,7 +112,7 @@ class Coinbene(RestFeed):
             await self.callbacks[L2_BOOK](feed=self.id,
                                           pair=pair_exchange_to_std(pair),
                                           book=book,
-                                          timestamp=data['timestamp'])
+                                          timestamp=timestamp_normalize(self.id, data['timestamp']))
 
     async def subscribe(self):
         self.__reset()

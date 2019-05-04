@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -67,7 +67,7 @@ class OKCoin(Feed):
                 side=BUY if trade['side'] == 'buy' else SELL,
                 amount=Decimal(trade['size']),
                 price=Decimal(trade['price']),
-                timestamp=trade['timestamp']
+                timestamp=timestamp_normalize(self.id, trade['timestamp'])
             )
 
     async def _book(self, msg):
@@ -83,7 +83,7 @@ class OKCoin(Feed):
                         Decimal(price) : Decimal(amount) for price, amount, _ in update['asks']
                     })
                 }
-                await self.book_callback(pair, L2_BOOK, True, None, update['timestamp'])
+                await self.book_callback(pair, L2_BOOK, True, None, timestamp_normalize(self.id, update['timestamp']))
         else:
             # update
             for update in msg['data']:
@@ -100,7 +100,7 @@ class OKCoin(Feed):
                         else:
                             delta[s].append((price, amount))
                             self.l2_book[pair][s][price] = amount
-                await self.book_callback(pair, L2_BOOK, False, delta, update['timestamp'])
+                await self.book_callback(pair, L2_BOOK, False, delta, timestamp_normalize(self.id, update['timestamp']))
 
     async def message_handler(self, msg):
         # DEFLATE compression, no header

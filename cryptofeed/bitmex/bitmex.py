@@ -8,13 +8,14 @@ import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
-from datetime import datetime as dt
+import time
 
 import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, L3_BOOK, BITMEX
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -79,20 +80,20 @@ class Bitmex(Feed):
         }
         """
         for data in msg['data']:
+            ts = timestamp_normalize(self.id, data['timestamp'])
             await self.callbacks[TRADES](feed=self.id,
                                          pair=data['symbol'],
                                          side=BUY if data['side'] == 'Buy' else SELL,
                                          amount=Decimal(data['size']),
                                          price=Decimal(data['price']),
                                          order_id=data['trdMatchID'],
-                                         timestamp=data['timestamp'])
+                                         timestamp=ts)
 
     async def _book(self, msg):
         """
         the Full bitmex book
         """
-        timestamp = dt.utcnow()
-        timestamp = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        timestamp = time.time()
         pair = None
         delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
@@ -157,6 +158,7 @@ class Bitmex(Feed):
         top 10 orders from each side
         """
         timestamp = msg['data'][0]['timestamp']
+        timestamp = timestamp_normalize(self.id, timestamp)
         pair = None
 
         for update in msg['data']:
@@ -202,9 +204,10 @@ class Bitmex(Feed):
         }
         """
         for data in msg['data']:
+            ts = timestamp_normalize(self.id, data['timestamp'])
             await self.callbacks[FUNDING](feed=self.id,
                                           pair=data['symbol'],
-                                          timestamp=data['timestamp'],
+                                          timestamp=ts,
                                           interval=data['fundingInterval'],
                                           rate=data['fundingRate'],
                                           rate_daily=data['fundingRateDaily']
