@@ -10,7 +10,6 @@ import json
 
 import aioredis
 
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert, book_flatten
 
@@ -36,24 +35,20 @@ class TradeRedis(RedisCallback):
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if self.redis is None:
-            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
-        ts = None
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
         if timestamp is None:
             timestamp = time.time()
-            ts = timestamp
-        else:
-            ts = timestamp_normalize(feed, timestamp)
 
         data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                            'side': side, 'amount': str(amount), 'price': str(price)})
 
-        await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+        await self.redis.zadd(f"{self.key}-{feed}-{pair}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
 class TradeStream(TradeRedis):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if self.redis is None:
-            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         data = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                 'side': side, 'amount': str(amount), 'price': str(price)}
@@ -69,16 +64,12 @@ class FundingRedis(RedisCallback):
 
     async def __call__(self, *, feed, pair, **kwargs):
         if self.redis is None:
-            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
-        ts = None
         timestamp = kwargs.get('timestamp', None)
 
         if timestamp is None:
             timestamp = time.time()
-            ts = timestamp
-        else:
-            ts = timestamp_normalize(feed, timestamp)
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
@@ -86,13 +77,13 @@ class FundingRedis(RedisCallback):
 
         data = json.dumps(kwargs)
 
-        await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+        await self.redis.zadd(f"{self.key}-{feed}-{pair}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
 class FundingStream(FundingRedis):
     async def __call__(self, *, feed, pair, **kwargs):
         if self.redis is None:
-            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
@@ -113,9 +104,9 @@ class BookRedis(RedisCallback):
         ts = time.time()
 
         if self.redis is None:
-            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
-        data = {'timestamp': timestamp_normalize(feed, timestamp), BID: {}, ASK: {}}
+        data = {'timestamp': timestamp, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
 
         if self.depth:
@@ -125,15 +116,15 @@ class BookRedis(RedisCallback):
             self.previous[BID] = data[BID]
 
         data = json.dumps(data)
-        await self.redis.zadd("{}-{}-{}".format(self.key, feed, pair), ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+        await self.redis.zadd(f"{self.key}-{feed}-{pair}", ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
 class BookStream(BookRedis):
     async def __call__(self, *, feed, pair, book, timestamp):
         if self.redis is None:
-            self.redis = await aioredis.create_redis_pool('redis://{}:{}'.format(self.host, self.port))
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
-        data = {'timestamp': timestamp_normalize(feed, timestamp), BID: {}, ASK: {}}
+        data = {'timestamp': timestamp, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
 
         if self.depth:

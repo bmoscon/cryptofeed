@@ -11,7 +11,6 @@ from datetime import datetime as dt
 import arctic
 import pandas as pd
 
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.defines import TRADES, FUNDING
 
 
@@ -46,11 +45,8 @@ class TradeArctic(ArcticCallback):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if timestamp is None:
             timestamp = time.time()
-            ts = timestamp
-        else:
-            ts = timestamp_normalize(feed, timestamp)
 
-        df = pd.DataFrame({'feed': [feed], 'pair': [pair], 'id': [order_id], 'date': [dt.utcfromtimestamp(ts)],
+        df = pd.DataFrame({'feed': [feed], 'pair': [pair], 'id': [order_id], 'date': [dt.utcfromtimestamp(timestamp)],
                            'side': [side], 'amount': [float(amount)], 'price': [float(price)]})
         df['date'] = pd.to_datetime(df.date)
         df.set_index(['date'], inplace=True)
@@ -64,7 +60,6 @@ class FundingArctic(ArcticCallback):
             self.key = FUNDING
 
     async def __call__(self, *, feed, pair, **kwargs):
-        ts = None
         timestamp = kwargs.get('timestamp', None)
 
         if 'timestamp' in kwargs:
@@ -72,9 +67,6 @@ class FundingArctic(ArcticCallback):
 
         if timestamp is None:
             timestamp = time.time()
-            ts = timestamp
-        else:
-            ts = timestamp_normalize(feed, timestamp)
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
@@ -82,7 +74,7 @@ class FundingArctic(ArcticCallback):
             else:
                 kwargs[key] = [kwargs[key]]
 
-        kwargs['date'] = dt.utcfromtimestamp(ts)
+        kwargs['date'] = dt.utcfromtimestamp(timestamp)
 
         df = pd.DataFrame(kwargs)
         df['date'] = pd.to_datetime(df.date)

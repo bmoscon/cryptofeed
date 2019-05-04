@@ -143,7 +143,7 @@ def huobi_us_pairs():
 
 def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
-    return {e['product_id'] : e['product_id'] for e in r}
+    return {e['instrument_id'] : e['instrument_id'] for e in r}
 
 
 def okex_pairs():
