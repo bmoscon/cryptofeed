@@ -2,6 +2,8 @@
 
 ### 0.22.0
   * Bugfix: Timestamp normalization for backends were losing subsecond fidelity
+  * Feature: All exchanges report timestamps in floating point unix time
+  * Bugfix: Implement change in OkEx's trading pair endpoint for pair generation
 
 ### 0.21.1 (2019-04-28)
   * Feature: Config support for Coinbene, Binance, EXX, BitMEX, Bitfinex, Bitstamp, HitBTC
