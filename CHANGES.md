@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.22.0
+### 0.22.0 (2019-05-04)
   * Bugfix: Timestamp normalization for backends were losing subsecond fidelity
   * Feature: All exchanges report timestamps in floating point unix time
   * Bugfix: Implement change in OkEx's trading pair endpoint for pair generation
