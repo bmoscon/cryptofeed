@@ -18,28 +18,20 @@ class Callback:
         if self.callback is None:
             return
         elif self.is_async:
-            await self.callback(**kwargs)
+            await self.callback(*args, **kwargs)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, **kwargs)
+            await loop.run_in_executor(None, self.callback, *args, **kwargs)
 
 
 class TradeCallback(Callback):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        if self.is_async:
-            await self.callback(feed, pair, order_id, timestamp, side, amount, price)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, order_id, timestamp, side, amount, price)
+        await super().__call__(feed, pair, order_id, timestamp, side, amount, price)
 
 
 class TickerCallback(Callback):
     async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal):
-        if self.is_async:
-            await self.callback(feed, pair, bid, ask)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, bid, ask)
+        await super().__call__(feed, pair, bid, ask)
 
 
 class BookCallback(Callback):
@@ -47,11 +39,7 @@ class BookCallback(Callback):
     For full L2/L3 book updates
     """
     async def __call__(self, *, feed: str, pair: str, book: dict, timestamp):
-        if self.is_async:
-            await self.callback(feed, pair, book, timestamp)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, book, timestamp)
+        await super().__call__(feed, pair, book, timestamp)
 
 
 class BookUpdateCallback(Callback):
@@ -78,11 +66,7 @@ class BookUpdateCallback(Callback):
         DEL - price levels should be deleted
         UPD - prices should have the quantity set to size (these are not price deltas)
         """
-        if self.is_async:
-            await self.callback(feed, pair, delta, timestamp)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, feed, pair, delta, timestamp)
+        await super().__call__(feed, pair, delta, timestamp)
 
 
 class VolumeCallback(Callback):
