@@ -1,8 +1,5 @@
 # FAQ and Oddities
 
-* Why does Poloniex not support trading pairs / Why does the demo have trading pairs in the channels on Poloniex?
-  - Poloniex supports a ticker channel that gives you information for ALL trading pairs, or you can subscribe to a trading pair to get updates for that trading pair (book and trades). It doesn't allow you to specify channels and pairs like most the other exchange APIs.
-
 * Why does Gemini not support channels / Why can I only supply one trading pair? 
   - Gemini only lets you register for a single trading pair per websocket. You receive all updates for the trading pair. Updates you are not interested in you can ignore by omitting a callback. For this reason every pair will require a new feed via the `add_feed` method. 
 
