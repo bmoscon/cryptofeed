@@ -74,7 +74,7 @@ def timestamp_normalize(exchange, ts):
 _feed_to_exchange_map = {
     L2_BOOK: {
         BITFINEX: 'book-P0-F0-100',
-        POLONIEX: UNSUPPORTED,
+        POLONIEX: L2_BOOK,
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
         BITMEX: 'orderBook10',
@@ -104,7 +104,7 @@ _feed_to_exchange_map = {
         OKEX: UNSUPPORTED
     },
     TRADES: {
-        POLONIEX: UNSUPPORTED,
+        POLONIEX: TRADES,
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
