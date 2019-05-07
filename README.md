@@ -19,7 +19,7 @@ fh = FeedHandler()
 # will be called when ticker, trade and book updates are received
 ticker_cb = {TICKER: TickerCallback(ticker)}
 trade_cb = {TRADES: TradeCallback(trade)}
-gemini_cb = {TRADES: TradeCallback(trade), L3_BOOK: BookCallback(book)}
+gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
 
 
 fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
