@@ -43,9 +43,6 @@ class TradeArctic(ArcticCallback):
             self.key = TRADES
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        if timestamp is None:
-            timestamp = time.time()
-
         df = pd.DataFrame({'feed': [feed], 'pair': [pair], 'id': [order_id], 'date': [dt.utcfromtimestamp(timestamp)],
                            'side': [side], 'amount': [float(amount)], 'price': [float(price)]})
         df['date'] = pd.to_datetime(df.date)

@@ -36,8 +36,6 @@ class TradeRedis(RedisCallback):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
-        if timestamp is None:
-            timestamp = time.time()
 
         data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                            'side': side, 'amount': str(amount), 'price': str(price)})
