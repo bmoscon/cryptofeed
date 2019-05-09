@@ -67,10 +67,7 @@ class TradeInflux(InfluxCallback):
         trade = f'{feed},pair={pair},feed=trades,side={side}'
         if order_id:
             trade += f',id={order_id}'
-        trade += f' amount={amount},price={price}'
-
-        if timestamp:
-            trade += f',timestamp="{timestamp}"'
+        trade += f' amount={amount},price={price},timestamp="{timestamp}"'
 
         await self.write(trade)
 

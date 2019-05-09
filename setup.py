@@ -59,6 +59,7 @@ setup(
         'redis': ['aioredis'],
         'arctic': ['arctic'],
         'zmq': ['pyzmq'],
-        'mongo': ['motor']
+        'mongo': ['motor'],
+        'kafka': ['aiokafka']
     },
 )
