@@ -6,7 +6,6 @@ associated with this software.
 '''
 import asyncio
 from decimal import Decimal
-import time
 import json
 
 from aiokafka import AIOKafkaProducer
