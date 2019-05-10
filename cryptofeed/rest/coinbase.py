@@ -16,10 +16,11 @@ from decimal import Decimal
 
 import pandas as pd
 from sortedcontainers.sorteddict import SortedDict as sd
+from pytz import UTC
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import COINBASE, BUY, SELL, MARKET, LIMIT, FILLED, OPEN, PARTIAL, PENDING, CANCELLED, BID, ASK
-from cryptofeed.standards import normalize_trading_options
+from cryptofeed.standards import normalize_trading_options, timestamp_normalize
 
 
 REQUEST_LIMIT = 10
@@ -116,19 +117,16 @@ class Coinbase(API):
                 time.sleep(60)
                 continue
             data = r.json()
-            try:
-                data = list(reversed(data))
-            except:
-                LOG.warning("Error %s: %s", r.status_code, r.text)
-                sleep(60)
-                continue
-            if pd.Timestamp(data[0]['time'].replace("Z", '')) <= date <= pd.Timestamp(data[-1]['time'].replace("Z", '')):
+            data = list(reversed(data))
+            if len(data) == 0:
+                return bound
+            if pd.Timestamp(data[0]['time']) <= date <= pd.Timestamp(data[-1]['time']):
                 for idx in range(len(data)):
-                    d = pd.Timestamp(data[idx]['time'].replace("Z", ''))
+                    d = pd.Timestamp(data[idx]['time'])
                     if d >= date:
                         return data[idx]['trade_id']
             else:
-                if date > pd.Timestamp(data[0]['time'].replace("Z", "")):
+                if date > pd.Timestamp(data[0]['time']):
                     lower = bound
                     bound = (upper + lower) // 2
                 else:
@@ -138,7 +136,7 @@ class Coinbase(API):
 
     def _trade_normalize(self, symbol: str, data: dict) -> dict:
         return {
-            'timestamp': data['time'],
+            'timestamp': timestamp_normalize(self.ID, data['time']),
             'pair': symbol,
             'id': data['trade_id'],
             'feed': self.ID,
@@ -148,11 +146,13 @@ class Coinbase(API):
         }
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        if end and not start:
+            start = '2014-12-01'
         if start:
             if not end:
                 end = pd.Timestamp.utcnow()
-            start_id = self._date_to_trade(symbol, pd.Timestamp(start))
-            end_id = self._date_to_trade(symbol, pd.Timestamp(end))
+            start_id = self._date_to_trade(symbol, pd.Timestamp(start, tzinfo=UTC))
+            end_id = self._date_to_trade(symbol, pd.Timestamp(end, tzinfo=UTC))
             while True:
                 limit = 100
                 start_id += 100
@@ -182,7 +182,7 @@ class Coinbase(API):
                 if start_id >= end_id:
                     break
         else:
-            yield [self._trade_normalize(symbol, d) for d in self._request('GET', f"/product/{symbol}/trades", retry=retry, retry_wait=retry_wait)]
+            yield [self._trade_normalize(symbol, d) for d in self._request('GET', f"/products/{symbol}/trades", retry=retry, retry_wait=retry_wait).json()]
 
     def ticker(self, symbol: str, retry=None, retry_wait=10):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
