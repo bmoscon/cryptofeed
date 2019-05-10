@@ -3,6 +3,7 @@
 ### 0.22.1
   * Feature: Cleanup callback code
   * Feature: Poloniex subscription now behaves like other exchanges
+  * Feature: Kafka Backend
 
 ### 0.22.0 (2019-05-04)
   * Bugfix: Timestamp normalization for backends were losing subsecond fidelity
