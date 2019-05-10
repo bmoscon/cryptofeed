@@ -10,6 +10,9 @@ import json
 
 from aiokafka import AIOKafkaProducer
 
+from cryptofeed.defines import BID, ASK
+from cryptofeed.backends._util import book_convert
+
 
 class KafkaCallback:
     def __init__(self, bootstrap='127.0.0.1', port=9092, topic=None, **kwargs):
@@ -20,12 +23,52 @@ class KafkaCallback:
                                          client_id='cryptofeed')
         self.topic = topic
 
-class TradeKafka(KafkaCallback):
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
+    async def _connect(self):
         if self.producer._sender.sender_task is None:
             await self.producer.start()
+
+
+class TradeKafka(KafkaCallback):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
+        await self._connect()
 
         data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                            'side': side, 'amount': str(amount), 'price': str(price)}).encode('utf8')
         topic = self.topic if self.topic else f"trades-{feed}-{pair}"
+        await self.producer.send_and_wait(topic, data)
+
+
+class FundingKafka(KafkaCallback):
+    async def __call__(self, *, feed, pair, **kwargs):
+        await self._connect()
+
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = str(kwargs[key])
+
+        data = json.dumps(kwargs).encode('utf8')
+        topic = self.topic if self.topic else f"trades-{feed}-{pair}"
+        await self.producer.send_and_wait(topic, data)
+
+
+class BookKafka(KafkaCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.depth = kwargs.get('depth', None)
+        self.previous = {BID: {}, ASK: {}}
+
+    async def __call__(self, *, feed, pair, book, timestamp):
+        await self._connect()
+
+        data = {'timestamp': timestamp, BID: {}, ASK: {}}
+        book_convert(book, data, self.depth)
+
+        if self.depth:
+            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
+                return
+            self.previous[ASK] = data[ASK]
+            self.previous[BID] = data[BID]
+
+        data = json.dumps(data).encode('utf8')
+        topic = self.topic if self.topic else f"book-{feed}-{pair}"
         await self.producer.send_and_wait(topic, data)
