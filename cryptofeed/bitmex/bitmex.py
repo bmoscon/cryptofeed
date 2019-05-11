@@ -31,9 +31,9 @@ class Bitmex(Feed):
         active_pairs = self.get_active_symbols()
         if self.config:
             pairs = list(self.config.values())
-            pairs = [pair for inner in pairs for pair in inner]
+            self.pairs = [pair for inner in pairs for pair in inner]
 
-        for pair in pairs:
+        for pair in self.pairs:
             if not pair.startswith('.'):
                 if pair not in active_pairs:
                     raise ValueError("{} is not active on BitMEX".format(pair))
@@ -160,7 +160,6 @@ class Bitmex(Feed):
         timestamp = msg['data'][0]['timestamp']
         timestamp = timestamp_normalize(self.id, timestamp)
         pair = None
-
         for update in msg['data']:
             pair = update['symbol']
             self.l2_book[pair][BID] = sd({
