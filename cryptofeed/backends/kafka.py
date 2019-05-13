@@ -15,13 +15,13 @@ from cryptofeed.backends._util import book_convert
 
 
 class KafkaCallback:
-    def __init__(self, bootstrap='127.0.0.1', port=9092, topic=None, **kwargs):
+    def __init__(self, bootstrap='127.0.0.1', port=9092, key=None, **kwargs):
         loop = asyncio.get_event_loop()
         self.producer = AIOKafkaProducer(acks=0,
                                          loop=loop,
                                          bootstrap_servers=f'{bootstrap}:{port}',
                                          client_id='cryptofeed')
-        self.topic = topic
+        self.key = key
 
     async def _connect(self):
         if self.producer._sender.sender_task is None:
@@ -34,7 +34,7 @@ class TradeKafka(KafkaCallback):
 
         data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                            'side': side, 'amount': str(amount), 'price': str(price)}).encode('utf8')
-        topic = self.topic if self.topic else f"trades-{feed}-{pair}"
+        topic =  f"{self.key}-{feed}-{pair}" if self.key else f"trades-{feed}-{pair}"
         await self.producer.send_and_wait(topic, data)
 
 
@@ -47,7 +47,7 @@ class FundingKafka(KafkaCallback):
                 kwargs[key] = str(kwargs[key])
 
         data = json.dumps(kwargs).encode('utf8')
-        topic = self.topic if self.topic else f"trades-{feed}-{pair}"
+        topic =  f"{self.key}-{feed}-{pair}" if self.key else f"funding-{feed}-{pair}"
         await self.producer.send_and_wait(topic, data)
 
 
@@ -70,5 +70,5 @@ class BookKafka(KafkaCallback):
             self.previous[BID] = data[BID]
 
         data = json.dumps(data).encode('utf8')
-        topic = self.topic if self.topic else f"book-{feed}-{pair}"
+        topic =  f"{self.key}-{feed}-{pair}" if self.key else f"book-{feed}-{pair}"
         await self.producer.send_and_wait(topic, data)
