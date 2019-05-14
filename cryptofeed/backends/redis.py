@@ -51,6 +51,9 @@ class TradeStream(TradeRedis):
         data = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                 'side': side, 'amount': str(amount), 'price': str(price)}
 
+        if data['id'] is None:
+            data['id'] = ''
+
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)
 
 
