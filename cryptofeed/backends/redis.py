@@ -134,6 +134,5 @@ class BookStream(BookRedis):
             self.previous[ASK] = data[ASK]
             self.previous[BID] = data[BID]
 
-        flat = book_flatten(data, data['timestamp'])
-        for update in flat:
-            await self.redis.xadd(f"{self.key}-{feed}-{pair}", update)
+        data = json.dumps(data)
+        await self.redis.xadd(f"{self.key}-{feed}-{pair}", {'data': data})
