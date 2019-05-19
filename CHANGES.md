@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.22.1
+### 0.22.1 (2019-05-19)
   * Feature: Cleanup callback code
   * Feature: Poloniex subscription now behaves like other exchanges
   * Feature: Kafka Backend
