@@ -1,5 +1,9 @@
 ## Changelog
 
+### 0.22.2
+  * Bugfix: Fix tagging issue in InfluxDB
+  * Bugfix: Fix book updates in InfluxDB
+
 ### 0.22.1 (2019-05-19)
   * Feature: Cleanup callback code
   * Feature: Poloniex subscription now behaves like other exchanges
