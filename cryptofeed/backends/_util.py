@@ -7,6 +7,22 @@ associated with this software.
 from cryptofeed.defines import BID, ASK
 
 
+def book_delta_convert(delta: dict, data: dict):
+    for side in (BID, ASK):
+        for entry in delta[side]:
+            if len(entry) == 2:
+                # level 2 updates
+                price, amount = entry
+                data[side][str(price)] = str(amount)
+            else:
+                order_id, price, amount = entry
+                price = str(price)
+                if price in delta[side]:
+                    delta[side][price][str(order_id)] = str(amount)
+                else:
+                    delta[side][price] = {str(order_id): str(amount)}
+
+
 def book_convert(book: dict, data: dict, depth: int):
     """
     Build depth levels of book into data, converting decimal.Decimal
@@ -37,27 +53,3 @@ def book_convert(book: dict, data: dict, depth: int):
         count += 1
         if depth and count >= depth:
             break
-
-
-def book_flatten(book: dict, timestamp: float) -> dict:
-    """
-    takes book and returns a list of dict, where each element in the list
-    is a dictionary with a single row of book data.
-
-    eg.
-    L2:
-    [{'side': str, 'price': float, 'size': float, 'timestamp': float}, {...}, ...]
-
-    L3:
-    [{'side': str, 'price': float, 'size': float, 'timestamp': float, 'order_id': str}, {...}, ...]
-    """
-    ret = []
-    for side in (BID, ASK):
-        for price, data in book[side].items():
-            if isinstance(data, dict):
-                # L3 book
-                for order_id, size in data.items():
-                    ret.append({'side': side, 'price': price, 'size': size, 'order_id': order_id, 'timestamp': timestamp})
-            else:
-                ret.append({'side': side, 'price': price, 'size': data, 'timestamp': timestamp})
-    return ret

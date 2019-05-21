@@ -11,7 +11,7 @@ import json
 import aioredis
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert, book_flatten
+from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 class RedisCallback:
@@ -107,7 +107,7 @@ class BookRedis(RedisCallback):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
-        data = {'timestamp': timestamp, BID: {}, ASK: {}}
+        data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
 
         if self.depth:
@@ -120,12 +120,30 @@ class BookRedis(RedisCallback):
         await self.redis.zadd(f"{self.key}-{feed}-{pair}", ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
+class BookUpdateRedis(RedisCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.key is None:
+            self.key = 'book'
+
+    async def __call__(self, *, feed, pair, delta, timestamp):
+        ts = time.time()
+
+        if self.redis is None:
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+
+        data = {'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
+        book_delta_convert(delta, data)
+        data = json.dumps(data)
+        await self.redis.zadd(f"{self.key}-{feed}-{pair}", ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+
+
 class BookStream(BookRedis):
     async def __call__(self, *, feed, pair, book, timestamp):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
-        data = {'timestamp': timestamp, BID: {}, ASK: {}}
+        data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
 
         if self.depth:
@@ -133,6 +151,18 @@ class BookStream(BookRedis):
                 return
             self.previous[ASK] = data[ASK]
             self.previous[BID] = data[BID]
+
+        data = json.dumps(data)
+        await self.redis.xadd(f"{self.key}-{feed}-{pair}", {'data': data})
+
+
+class BookDeltaStream(BookRedis):
+    async def __call__(self, *, feed, pair, delta, timestamp):
+        if self.redis is None:
+            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+
+        data = {'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
+        book_delta_convert(delta, data)
 
         data = json.dumps(data)
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", {'data': data})
