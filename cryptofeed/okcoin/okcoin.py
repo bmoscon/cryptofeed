@@ -21,6 +21,7 @@ LOG = logging.getLogger('feedhandler')
 
 class OKCoin(Feed):
     id = OKCOIN
+    table_prefix = 'spot'
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://real.okcoin.com:10442/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
@@ -77,10 +78,10 @@ class OKCoin(Feed):
                 pair = pair_exchange_to_std(update['instrument_id'])
                 self.l2_book[pair] = {
                     BID: sd({
-                        Decimal(price) : Decimal(amount) for price, amount, _ in update['bids']
+                        Decimal(price) : Decimal(amount) for price, amount, *_ in update['bids']
                     }),
                     ASK: sd({
-                        Decimal(price) : Decimal(amount) for price, amount, _ in update['asks']
+                        Decimal(price) : Decimal(amount) for price, amount, *_ in update['asks']
                     })
                 }
                 await self.book_callback(pair, L2_BOOK, True, None, timestamp_normalize(self.id, update['timestamp']))
@@ -91,7 +92,7 @@ class OKCoin(Feed):
                 pair = pair_exchange_to_std(update['instrument_id'])
                 for side in ('bids', 'asks'):
                     s = BID if side == 'bids' else ASK
-                    for price, amount, _ in update[side]:
+                    for price, amount, *_ in update[side]:
                         price = Decimal(price)
                         amount = Decimal(amount)
                         if amount == 0:
@@ -115,11 +116,11 @@ class OKCoin(Feed):
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'table' in msg:
-            if msg['table'] == 'spot/ticker':
+            if msg['table'] == f'{self.table_prefix}/ticker':
                 await self._ticker(msg)
-            elif msg['table'] == 'spot/trade':
+            elif msg['table'] == f'{self.table_prefix}/trade':
                 await self._trade(msg)
-            elif msg['table'] == 'spot/depth':
+            elif msg['table'] == f'{self.table_prefix}/depth':
                 await self._book(msg)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
