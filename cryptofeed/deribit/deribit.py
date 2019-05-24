@@ -132,6 +132,7 @@ class Deribit(Feed):
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         msg_dict = yaml.load(msg)
 
+        # As a first update after subscription, Deribit sends a notification with no data
         if "testnet" in msg_dict.keys():
             LOG.warning(
                 "%s: Test response from derbit accepted %s", self.id, msg)
