@@ -25,6 +25,7 @@ OKCOIN = 'OKCOIN'
 OKEX = 'OKEX'
 COINBENE = 'COINBENE'
 
+DERIBIT = 'DERIBIT'
 
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
