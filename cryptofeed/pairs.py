@@ -160,9 +160,8 @@ def coinbene_pairs():
     r = requests.get('http://api.coinbene.com/v1/market/symbol').json()
     return {f"{e['baseAsset']}-{e['quoteAsset']}" : e['ticker'] for e in r['symbol']}
 
-
 def deribit_pairs():
-      return "BTC-PERPETUAL"
+    return 'BTC-PERPETUAL'
 
 
 _exchange_function_map = {
