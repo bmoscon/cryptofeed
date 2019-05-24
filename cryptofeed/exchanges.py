@@ -19,3 +19,4 @@ from cryptofeed.huobi.huobi_us import HuobiUS
 from cryptofeed.okcoin.okcoin import OKCoin
 from cryptofeed.okex.okex import OKEx
 from cryptofeed.coinbene.coinbene import Coinbene
+from cryptofeed.deribit.deribit import Deribit

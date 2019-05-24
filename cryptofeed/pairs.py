@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE, DERIBIT
 
 
 def gen_pairs(exchange):
@@ -161,6 +161,10 @@ def coinbene_pairs():
     return {f"{e['baseAsset']}-{e['quoteAsset']}" : e['ticker'] for e in r['symbol']}
 
 
+def deribit_pairs():
+      return "BTC-PERPETUAL"
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -176,5 +180,6 @@ _exchange_function_map = {
     HUOBI_US: huobi_us_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
-    COINBENE: coinbene_pairs
+    COINBENE: coinbene_pairs,
+    DERIBIT:deribit_pairs
 }
