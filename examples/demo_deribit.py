@@ -14,7 +14,7 @@ async def ticker(feed, pair, bid, ask):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Deribit(pairs=['BTC-PERPETUAL'], channels=[TRADES, TICKER], callbacks={TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
+    f.add_feed(Deribit(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, TICKER], callbacks={TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
   
     f.run()
 

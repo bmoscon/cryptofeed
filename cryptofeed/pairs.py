@@ -161,7 +161,8 @@ def coinbene_pairs():
     return {f"{e['baseAsset']}-{e['quoteAsset']}" : e['ticker'] for e in r['symbol']}
 
 def deribit_pairs():
-    return 'BTC-PERPETUAL'
+    #for test purposes
+    return {"BTC-USD":'BTC-PERPETUAL',"ETH-USD":'ETH-PERPETUAL'}
 
 
 _exchange_function_map = {

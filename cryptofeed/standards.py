@@ -29,8 +29,6 @@ _exchange_to_std = {}
 def load_exchange_pair_mapping(exchange):
     if exchange == BITMEX:
         return
-    elif exchange == DERIBIT:
-        return
     mapping = gen_pairs(exchange)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
@@ -43,8 +41,6 @@ def load_exchange_pair_mapping(exchange):
 def pair_std_to_exchange(pair, exchange):
     # bitmex does its own validation of trading pairs dynamically
     if exchange == BITMEX:
-        return pair
-    if exchange == DERIBIT:
         return pair
     if pair in _std_trading_pairs:
         try:
@@ -64,10 +60,6 @@ def pair_exchange_to_std(pair):
     # Bitfinex funding currency
     if pair[0] == 'f':
         return pair[1:]
-    
-    #Deribit default
-    if pair == "BTC-PERPETUAL":
-        return "BTC-USD"
     return None
 
 

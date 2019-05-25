@@ -1,13 +1,9 @@
 import logging
-import json
-from decimal import Decimal
-import zlib
 import yaml
-
-from sortedcontainers import SortedDict as sd
+import json
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, L2_BOOK, TICKER
+from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -30,18 +26,18 @@ class Deribit(Feed):
         {
             "params" : 
             {
-                "data" : 
+                "data": 
                 [
                     {
-                        "trade_seq" : 933,
-                        "trade_id" : "9178",
-                        "timestamp" : 1550736299753,
-                        "tick_direction" : 3,
-                        "price" : 3948.69,
-                        "instrument_name" : "BTC-PERPETUAL",
-                        "index_price" : 3930.73,
-                        "direction" : "sell",
-                        "amount" : 10
+                        "trade_seq": 933,
+                        "trade_id": "9178",
+                        "timestamp": 1550736299753,
+                        "tick_direction": 3,
+                        "price": 3948.69,
+                        "instrument_name": "BTC-PERPETUAL",
+                        "index_price": 3930.73,
+                        "direction": "sell",
+                        "amount": 10
                     }
                 ],
                 "channel" : "trades.BTC-PERPETUAL.raw"
@@ -57,8 +53,8 @@ class Deribit(Feed):
                 pair=pair_exchange_to_std(trade["instrument_name"]),
                 order_id=trade['trade_id'],
                 side=BUY if trade['direction'] == 'buy' else SELL,
-                amount=Decimal(trade['amount']),
-                price=Decimal(trade['price']),
+                amount=trade['amount'],
+                price=trade['price'],
                 timestamp=timestamp_normalize(self.id, trade['timestamp'])
             )
 
@@ -98,9 +94,8 @@ class Deribit(Feed):
         await self.callbacks[TICKER](feed=self.id,
                                      pair=pair_exchange_to_std(
                                          msg["params"]["data"]["instrument_name"]),
-                                     bid=Decimal(
-                                         msg["params"]["data"]['best_bid_price']),
-                                     ask=Decimal(msg["params"]["data"]['best_ask_price']))
+                                     bid=msg["params"]["data"]['best_bid_price'],
+                                     ask=msg["params"]["data"]['best_ask_price'])
 
     async def subscribe(self, websocket):
         self.websocket = websocket
@@ -129,8 +124,8 @@ class Deribit(Feed):
                 ))
 
     async def message_handler(self, msg):
-        # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
-        msg_dict = yaml.load(msg)
+        # Converting msg we got from str to dict using yaml, because it contains singular quotes ' '
+        msg_dict = yaml.safe_load(msg)
 
         # As a first update after subscription, Deribit sends a notification with no data
         if "testnet" in msg_dict.keys():
