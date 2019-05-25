@@ -1,6 +1,7 @@
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
+from cryptofeed.callback import TickerCallback, TradeCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Coinbase, Deribit
+
+from cryptofeed.exchanges import Deribit
 from cryptofeed.defines import TRADES, TICKER
 
 
