@@ -29,6 +29,8 @@ _exchange_to_std = {}
 def load_exchange_pair_mapping(exchange):
     if exchange == BITMEX:
         return
+    if exchange == DERIBIT:
+        return
     mapping = gen_pairs(exchange)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
@@ -41,6 +43,8 @@ def load_exchange_pair_mapping(exchange):
 def pair_std_to_exchange(pair, exchange):
     # bitmex does its own validation of trading pairs dynamically
     if exchange == BITMEX:
+        return pair
+    if exchange == DERIBIT:
         return pair
     if pair in _std_trading_pairs:
         try:
@@ -86,7 +90,8 @@ _feed_to_exchange_map = {
         HUOBI_US: 'depth.step0',
         OKCOIN: 'spot/depth',
         OKEX: 'spot/depth',
-        COINBENE: L2_BOOK
+        COINBENE: L2_BOOK,
+        DERIBIT: 'book'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
