@@ -160,11 +160,6 @@ def coinbene_pairs():
     r = requests.get('http://api.coinbene.com/v1/market/symbol').json()
     return {f"{e['baseAsset']}-{e['quoteAsset']}" : e['ticker'] for e in r['symbol']}
 
-def deribit_pairs():
-    #for test purposes
-    return {"BTC-USD":'BTC-PERPETUAL',"ETH-USD":'ETH-PERPETUAL'}
-
-
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -180,6 +175,5 @@ _exchange_function_map = {
     HUOBI_US: huobi_us_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
-    COINBENE: coinbene_pairs,
-    DERIBIT:deribit_pairs
-}
+    COINBENE: coinbene_pairs
+    }
