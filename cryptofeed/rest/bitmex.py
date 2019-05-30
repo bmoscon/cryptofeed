@@ -17,6 +17,7 @@ import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import BITMEX, SELL, BUY, BID, ASK
+from cryptofeed.standards import timestamp_normalize
 
 
 API_MAX = 500
@@ -114,7 +115,7 @@ class Bitmex(API):
 
     def _trade_normalization(self, trade: dict) -> dict:
         return {
-            'timestamp': trade['timestamp'],
+            'timestamp': timestamp_normalize(self.ID, trade['timestamp']),
             'pair': trade['symbol'],
             'id': trade['trdMatchID'],
             'feed': self.ID,

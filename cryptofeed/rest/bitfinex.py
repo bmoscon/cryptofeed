@@ -19,7 +19,7 @@ import requests
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import BITFINEX, SELL, BUY, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std
+from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, timestamp_normalize
 
 
 REQUEST_LIMIT = 5000
@@ -65,7 +65,7 @@ class Bitfinex(API):
         timestamp = dt.utcfromtimestamp(timestamp / 1000.0).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         ret = {
-            'timestamp': timestamp,
+            'timestamp': timestamp_normalize(self.ID, timestamp),
             'pair': pair_exchange_to_std(symbol),
             'id': trade_id,
             'feed': self.ID,
