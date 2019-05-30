@@ -85,7 +85,7 @@ Cryptofeed supports the following channels:
 Cryptofeeds supports `backend` callbacks that will write directly to storage or other interfaces
 
 Supported Backends:
-* Redis
+* Redis (Streams and Sorted Sets)
 * [Arctic](https://github.com/manahl/arctic)
 * ZeroMQ
 * UDP Sockets
@@ -93,6 +93,7 @@ Supported Backends:
 * Unix Domain Sockets
 * [InfluxDB](https://github.com/influxdata/influxdb)
 * MongoDB
+* Kafka
 
 
 ## Rest API
