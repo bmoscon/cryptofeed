@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
+import re
 import logging
 from decimal import Decimal
 import zlib
@@ -21,7 +22,7 @@ LOG = logging.getLogger('feedhandler')
 
 class OKCoin(Feed):
     id = OKCOIN
-    table_prefix = 'spot'
+    table_prefixs = ['spot']
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://real.okcoin.com:10442/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
@@ -116,11 +117,11 @@ class OKCoin(Feed):
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'table' in msg:
-            if msg['table'] == f'{self.table_prefix}/ticker':
+            if re.match(f'^({"|".join(self.table_prefixs)})/ticker$', msg['table']):
                 await self._ticker(msg)
-            elif msg['table'] == f'{self.table_prefix}/trade':
+            elif re.match(f'^({"|".join(self.table_prefixs)})/trade$', msg['table']):
                 await self._trade(msg)
-            elif msg['table'] == f'{self.table_prefix}/depth':
+            elif re.match(f'^({"|".join(self.table_prefixs)})/depth$', msg['table']):
                 await self._book(msg)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
