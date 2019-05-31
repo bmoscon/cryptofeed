@@ -13,7 +13,7 @@ class OKEx(OKCoin):
     OKEx has the same api as OKCoin, just a different websocket endpoint
     """
     id = OKEX
-    table_prefix = 'swap'
+    table_prefixs = ['swap', "spot"]
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
