@@ -62,7 +62,6 @@ class Bitfinex(API):
         else:
             trade_id, timestamp, amount, price = trade
             period = None
-        timestamp = dt.utcfromtimestamp(timestamp / 1000.0).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         ret = {
             'timestamp': timestamp_normalize(self.ID, timestamp),

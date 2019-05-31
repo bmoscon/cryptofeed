@@ -12,7 +12,7 @@ def test_rest_bitmex():
 
 
 def test_rest_bitfinex():
-    expected = {'timestamp': '2017-01-01T00:00:12.000000Z',
+    expected = {'timestamp': 1483228812.0,
                 'pair': 'BTC-USD',
                 'id': 25291508,
                 'feed': 'BITFINEX',
