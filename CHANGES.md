@@ -2,6 +2,7 @@
 
 ### 0.23.0
   * Feature: Book delta support for InfluxDB
+  * Feature: Swaps on OkEX
 
 ### 0.22.2 (2019-05-23)
   * Bugfix: Fix tagging issue in InfluxDB
