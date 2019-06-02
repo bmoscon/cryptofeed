@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.23.0
+  * Feature: Book delta support for InfluxDB
+
 ### 0.22.2 (2019-05-23)
   * Bugfix: Fix tagging issue in InfluxDB
   * Bugfix: Fix book updates in InfluxDB

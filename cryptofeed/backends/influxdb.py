@@ -10,7 +10,7 @@ import aiohttp
 import requests
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert
+from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 LOG = logging.getLogger('feedhandler')
@@ -119,7 +119,25 @@ class BookInflux(InfluxCallback):
             self.previous[ASK] = data[ASK]
             self.previous[BID] = data[BID]
 
-        start = f"{self.key}-{feed},pair={pair}"
+        start = f"{self.key}-{feed},pair={pair},delta=False"
+        for side in (BID, ASK):
+            for price, val in data[side].items():
+                if isinstance(val, dict):
+                    for order_id, amount in val.items():
+                        await self.write(f'{start} side="{side}",id="{order_id}",timestamp={timestamp},price="{price}",amount="{amount}"')
+                else:
+                    await self.write(f'{start} side="{side}",price="{price}",timestamp={timestamp},amount="{val}"')
+
+
+class BookDeltaInflux(InfluxCallback):
+    def __init__(self, *args, key='book', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.key = key
+
+    async def __call__(self, *, feed, pair, delta, timestamp):
+        start = f"{self.key}-{feed},pair={pair},delta=True"
+        data = {BID: {}, ASK: {}}
+        book_delta_convert(delta, data)
         for side in (BID, ASK):
             for price, val in data[side].items():
                 if isinstance(val, dict):
