@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.23.0
+### 0.23.0 (2019-06-03)
   * Feature: Book delta support for InfluxDB
   * Feature: Swaps on OkEX
 
