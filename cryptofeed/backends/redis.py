@@ -120,7 +120,7 @@ class BookRedis(RedisCallback):
         await self.redis.zadd(f"{self.key}-{feed}-{pair}", ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
-class BookUpdateRedis(RedisCallback):
+class BookDeltaRedis(RedisCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.key is None:
