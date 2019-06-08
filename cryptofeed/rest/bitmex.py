@@ -90,8 +90,8 @@ class Bitmex(API):
             while True:
                 r = helper(start, start_date, end_date)
 
-                if r.status_code == 502:
-                    LOG.warning("%s: 502 for URL %s - %s", self.ID, r.url, r.text)
+                if r.status_code in {502, 504}:
+                    LOG.warning("%s: %d for URL %s - %s", self.ID, r.status_code, r.url, r.text)
                     sleep(retry_wait)
                     continue
                 elif r.status_code == 429:
