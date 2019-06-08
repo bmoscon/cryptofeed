@@ -28,7 +28,7 @@ class Deribit(Feed):
 
         for pair in self.pairs:
             if pair not in instruments:
-                raise ValueError("{} is not active on DERIBIT".format(pair))
+                raise ValueError(f"{pair} is not active on {self.id}")
         self.__reset()
 
     def __reset(self):
@@ -154,7 +154,7 @@ class Deribit(Feed):
             })
         }
 
-        await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, True, None, timestamp)
+        await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, True, None, timestamp_normalize(self.id, timestamp))
 
     async def _book_update(self, msg):
         timestamp = msg["params"]["data"]["timestamp"]
@@ -179,15 +179,14 @@ class Deribit(Feed):
             else:
                 del bidask[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, False, delta, timestamp)
+        await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, False, delta, timestamp_normalize(self.id, timestamp))
 
     async def message_handler(self, msg):
         msg_dict = json.loads(msg)
 
         # As a first update after subscription, Deribit sends a notification with no data
         if "testnet" in msg_dict.keys():
-            LOG.warning(
-                "%s: Test response from derbit accepted %s", self.id, msg)
+            LOG.debug("%s: Test response from derbit accepted %s", self.id, msg)
         elif "ticker" == msg_dict["params"]["channel"].split(".")[0]:
             await self._ticker(msg_dict)
         elif "trades" == msg_dict["params"]["channel"].split(".")[0]:

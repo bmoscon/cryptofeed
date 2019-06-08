@@ -27,9 +27,7 @@ _exchange_to_std = {}
 
 
 def load_exchange_pair_mapping(exchange):
-    if exchange == BITMEX:
-        return
-    if exchange == DERIBIT:
+    if exchange in {BITMEX, DERIBIT}:
         return
     mapping = gen_pairs(exchange)
     for std, exch in mapping.items():
@@ -42,9 +40,7 @@ def load_exchange_pair_mapping(exchange):
 
 def pair_std_to_exchange(pair, exchange):
     # bitmex does its own validation of trading pairs dynamically
-    if exchange == BITMEX:
-        return pair
-    if exchange == DERIBIT:
+    if exchange in {BITMEX, DERIBIT}:
         return pair
     if pair in _std_trading_pairs:
         try:
@@ -70,7 +66,7 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in  {HUOBI, BITFINEX, COINBENE}:
+    elif exchange in  {HUOBI, BITFINEX, COINBENE, DERIBIT}:
         return ts / 1000.0
     return ts
 
