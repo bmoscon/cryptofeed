@@ -2,6 +2,8 @@
 
 ### 0.24.0
   * Bugfix: Book Delta Conversion issue in backends
+  * Bugfix: Tweak BitMEX rest api to handle more errors more gracefully
+  * Feature: Deribit Exchange support
 
 ### 0.23.0 (2019-06-03)
   * Feature: Book delta support for InfluxDB
