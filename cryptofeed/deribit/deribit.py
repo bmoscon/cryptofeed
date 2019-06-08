@@ -1,5 +1,4 @@
 import logging
-import yaml
 import json
 import requests
 
@@ -10,6 +9,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 from sortedcontainers import SortedDict as sd
 from decimal import Decimal
 
+
 LOG = logging.getLogger('feedhandler')
 
 
@@ -17,7 +17,7 @@ class Deribit(Feed):
     id = DERIBIT
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        super().__init__('wss://test.deribit.com/ws/api/v2', pairs=pairs,
+        super().__init__('wss://www.deribit.com/ws/api/v2', pairs=pairs,
                          channels=channels, config=config, callbacks=callbacks, **kwargs)
 
         instruments = self.get_instruments()
@@ -182,8 +182,7 @@ class Deribit(Feed):
         await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, False, delta, timestamp)
 
     async def message_handler(self, msg):
-        # Converting msg we got from str to dict using yaml, because it contains singular quotes ' '
-        msg_dict = yaml.safe_load(msg)
+        msg_dict = json.loads(msg)
 
         # As a first update after subscription, Deribit sends a notification with no data
         if "testnet" in msg_dict.keys():
