@@ -49,9 +49,9 @@ class Deribit(Feed):
     async def _trade(self, msg):
         """
         {
-            "params": 
+            "params":
             {
-                "data": 
+                "data":
                 [
                     {
                         "trade_seq": 933,
@@ -112,7 +112,7 @@ class Deribit(Feed):
                 "channel" : "ticker.BTC-PERPETUAL.raw"
             },
             "method" : "subscription",
-            "jsonrpc" : "2.0"}   
+            "jsonrpc" : "2.0"}
         '''
         await self.callbacks[TICKER](feed=self.id,
                                      pair=msg["params"]["data"]["instrument_name"],
