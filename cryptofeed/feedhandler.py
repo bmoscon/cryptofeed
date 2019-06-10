@@ -14,8 +14,8 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE
-from cryptofeed.exchanges import Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase, Kraken, OKCoin, OKEx, Coinbene, HuobiUS
+from cryptofeed.defines import BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE
+from cryptofeed.exchanges import Binance, Gemini, HitBTC, Bitfinex, Bitmex, Bitstamp, Poloniex, Coinbase, Kraken, OKCoin, OKEx, Coinbene, HuobiUS
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
 
@@ -24,6 +24,7 @@ LOG = get_logger('feedhandler', 'feedhandler.log')
 
 
 _EXCHANGES = {
+    BINANCE: Binance,
     COINBASE: Coinbase,
     GEMINI: Gemini,
     HITBTC: HitBTC,
