@@ -6,6 +6,7 @@
   * Feature: Deribit Exchange support
   * Feature: Instrument channel
   * Bugfix: support Kraken websocket API changes
+  * Bugfix: correct USDT symbol mappings for Bitfinex
 
 ### 0.23.0 (2019-06-03)
   * Feature: Book delta support for InfluxDB
