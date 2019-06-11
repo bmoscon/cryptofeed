@@ -4,10 +4,10 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
+from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback, InstrumentCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, HuobiUS, OKCoin, OKEx, Coinbene
-from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE
+from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, INSTRUMENT
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -32,6 +32,10 @@ async def funding(**kwargs):
     print(kwargs)
 
 
+async def instrument(**kwargs):
+    print(f"Instrument update: {kwargs}")
+
+
 def main():
     f = FeedHandler()
 
@@ -50,6 +54,7 @@ def main():
     f.add_feed(Bitstamp(channels=[L2_BOOK, TRADES], pairs=['BTC-USD'], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
 
     bitmex_symbols = Bitmex.get_active_symbols()
+    f.add_feed(Bitmex(channels=[INSTRUMENT], pairs=['XBTUSD'], callbacks={INSTRUMENT: InstrumentCallback(instrument)}))
     f.add_feed(Bitmex(channels=[TRADES], pairs=bitmex_symbols, callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[FUNDING, TRADES], callbacks={FUNDING: FundingCallback(funding), TRADES: TradeCallback(trade)}))
 

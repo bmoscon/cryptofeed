@@ -75,3 +75,7 @@ class VolumeCallback(Callback):
 
 class FundingCallback(Callback):
     pass
+
+
+class InstrumentCallback(Callback):
+    pass

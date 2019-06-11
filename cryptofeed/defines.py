@@ -33,6 +33,7 @@ TRADES = 'trades'
 TICKER = 'ticker'
 VOLUME = 'volume'
 FUNDING = 'funding'
+INSTRUMENT = 'instrument'
 UNSUPPORTED = 'unsupported'
 
 L2_BOOK_SWAP = 'l2_book_swap'

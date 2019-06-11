@@ -14,7 +14,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, L3_BOOK, BITMEX
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, L3_BOOK, BITMEX, INSTRUMENT
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -212,6 +212,15 @@ class Bitmex(Feed):
                                           rate_daily=data['fundingRateDaily']
                                           )
 
+    async def _instrument(self, msg):
+        for data in msg['data']:
+            ts = timestamp_normalize(self.id, data['timestamp'])
+            data['timestamp'] = ts
+            await self.callbacks[INSTRUMENT](feed=self.id,
+                                            pair=data['symbol'],
+                                            **data
+                                            )
+
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
         if 'info' in msg:
@@ -230,6 +239,8 @@ class Bitmex(Feed):
                 await self._funding(msg)
             elif msg['table'] == 'orderBook10':
                 await self._l2_book(msg)
+            elif msg['table'] == 'instrument':
+                await self._instrument(msg)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
 
