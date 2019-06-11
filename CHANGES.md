@@ -4,6 +4,8 @@
   * Bugfix: Book Delta Conversion issue in backends
   * Bugfix: Tweak BitMEX rest api to handle more errors more gracefully
   * Feature: Deribit Exchange support
+  * Feature: Instrument channel
+  * Bugfix: support Kraken websocket API changes
 
 ### 0.23.0 (2019-06-03)
   * Feature: Book delta support for InfluxDB
