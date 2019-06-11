@@ -35,7 +35,9 @@ def bitfinex_pairs():
             continue
         else:
             normalized = pair[1:-3] + '-' + pair[-3:]
+            normalized = normalized.replace('UST', 'USDT')
             ret[normalized] = pair
+
     return ret
 
 
