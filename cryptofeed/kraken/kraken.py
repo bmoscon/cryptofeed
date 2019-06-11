@@ -82,8 +82,9 @@ class Kraken(Feed):
 
     async def _book(self, msg, pair):
         delta = {BID: [], ASK: []}
-        msg = msg[1:]
-        if len(msg) == 1 and 'as' in msg[0]:
+        msg = msg[1:-2]
+
+        if 'as' in msg[0]:
             # Snapshot
             self.l2_book[pair] = {BID: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg[0]['bs']
@@ -96,7 +97,7 @@ class Kraken(Feed):
                 for s, updates in m.items():
                     side = BID if s == 'b' else ASK
                     for update in updates:
-                        price, size, _ = update
+                        price, size, *_ = update
                         price = Decimal(price)
                         size = Decimal(size)
                         if size == 0:
