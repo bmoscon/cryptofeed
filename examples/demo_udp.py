@@ -6,12 +6,12 @@ associated with this software.
 '''
 from multiprocessing import Process
 import socket
+import json
 
-from cryptofeed.backends.socket import TradeSocket, BookSocket
-from cryptofeed.backends.aggregate import Throttle
+from cryptofeed.backends.socket import TradeSocket, BookSocket, BookDeltaSocket
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.defines import L2_BOOK, TRADES
+from cryptofeed.defines import L2_BOOK, TRADES, BOOK_DELTA
 
 
 def receiver(port):
@@ -19,8 +19,20 @@ def receiver(port):
     sock.bind(('127.0.0.1', port))
 
     while True:
-        data, _ = sock.recvfrom(1024 * 10)
+        data, _ = sock.recvfrom(1024 * 64)
         data = data.decode()
+        data = json.loads(data)
+        if data['type'] == 'chunked':
+            chunks = data['chunks']
+            buffer = []
+            buffer.append(data['data'])
+
+            for _ in range(chunks - 1):
+                data, _ = sock.recvfrom(1024 * 64)
+                data = data.decode()
+                data = json.loads(data)
+                buffer.append(data['data'])
+            data = json.loads(''.join(buffer))
         print(data)
 
 
@@ -30,22 +42,11 @@ def main():
         p.start()
 
         f = FeedHandler()
-        f.add_feed(
-            Coinbase(
-                channels=[
-                    L2_BOOK,
-                    TRADES],
-                pairs=['BTC-USD'],
-                callbacks={
-                    TRADES: TradeSocket(
-                        'udp://127.0.0.1',
-                        port=5555),
-                    L2_BOOK: Throttle(
-                        BookSocket(
-                            'udp://127.0.0.1',
-                            port=5555,
-                            depth=10),
-                        window=1)}))
+        f.add_feed(Coinbase(channels=[L2_BOOK, TRADES], pairs=['BTC-USD'],
+                            callbacks={TRADES: TradeSocket('udp://127.0.0.1', port=5555),
+                                       L2_BOOK: BookSocket('udp://127.0.0.1', port=5555),
+                                       BOOK_DELTA: BookDeltaSocket('udp://127.0.0.1', port=5555)
+                        }))
 
         f.run()
     finally:
