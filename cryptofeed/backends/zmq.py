@@ -10,7 +10,7 @@ import zmq
 import zmq.asyncio
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert
+from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 class ZMQCallback:
@@ -47,12 +47,21 @@ class BookZMQ(ZMQCallback):
     async def __call__(self, *, feed, pair, book, timestamp):
         data = {'timestamp': timestamp, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
-        upd = {'type': 'book', 'feed': feed, 'pair': pair, 'data': data}
+        upd = {'type': 'book', 'feed': feed, 'pair': pair, 'delta': False, 'data': data}
 
         if self.depth:
             if upd['data'][BID] == self.previous[BID] and upd['data'][ASK] == self.previous[ASK]:
                 return
             self.previous[ASK] = upd['data'][ASK]
             self.previous[BID] = upd['data'][BID]
+
+        await self.con.send_json(upd)
+
+
+class BookDeltaZMQ(ZMQCallback):
+    async def __call__(self, *, feed, pair, delta, timestamp):
+        data = {'timestamp': timestamp, BID: {}, ASK: {}}
+        book_delta_convert(delta, data)
+        upd = {'type': 'book', 'feed': feed, 'pair': pair, 'delta': True, 'data': data}
 
         await self.con.send_json(upd)
