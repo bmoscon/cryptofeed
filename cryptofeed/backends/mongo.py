@@ -47,6 +47,11 @@ class FundingMongo(MongoCallback):
 
 
 class BookMongo(MongoCallback):
+    """
+    Because periods cannot be in keys in documents in mongo, the prices in L2/L3 books
+    are converted to integers in the following way:
+    price is * 10000 and truncated
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.collection is None:
@@ -68,6 +73,11 @@ class BookMongo(MongoCallback):
 
 
 class BookDeltaMongo(MongoCallback):
+    """
+    Because periods cannot be in keys in documents in mongo, the prices in L2/L3 books
+    are converted to integers in the following way:
+    price is * 10000 and truncated
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.collection is None:
