@@ -4,8 +4,9 @@ import pandas as pd
 import requests
 
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import DERIBIT, SELL, BUY
+from cryptofeed.defines import DERIBIT, SELL, BUY, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange, timestamp_normalize
+from sortedcontainers import SortedDict as sd
 
 
 REQUEST_LIMIT = 1000
@@ -46,9 +47,11 @@ class Deribit(API):
 
             if r.status_code == 429:
                 sleep(int(r.headers['Retry-After']))
+                continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
+                continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
 
@@ -82,4 +85,43 @@ class Deribit(API):
             'amount': trade["amount"],
             'price':  trade["price"],
         }
+        return ret
+
+    def l2_book(self, symbol: str, retry=0, retry_wait=0):
+        return self._book(symbol, retry=retry, retry_wait=retry_wait)
+
+    def _book(self, symbol: str, retry=0, retry_wait=0):
+        ret = {}
+        symbol = pair_std_to_exchange(symbol, self.ID)
+        ret[symbol] = {BID: sd(), ASK: sd()}
+
+        @request_retry(self.ID, retry, retry_wait)
+        def helper():
+            return requests.get(f"{self.api}get_order_book?depth=10000&instrument_name={symbol}")
+
+        while True:
+            r = helper()
+
+            if r.status_code == 429:
+                sleep(int(r.headers['Retry-After']))
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(retry_wait)
+                if retry == 0:
+                    break
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+
+            data = r.json()
+            break
+
+        for entry_bid in data["result"]["bids"]:
+            price, amount = entry_bid
+            ret[symbol][BID][price] = amount
+
+        for entry_ask in data["result"]["asks"]:
+            price, amount = entry_ask
+            ret[symbol][ASK][price] = amount
         return ret
