@@ -1,12 +1,14 @@
 ## Changelog
 
-### 0.24.0
+### 0.24.0 (2019-06-19)
   * Bugfix: Book Delta Conversion issue in backends
   * Bugfix: Tweak BitMEX rest api to handle more errors more gracefully
   * Feature: Deribit Exchange support
   * Feature: Instrument channel
   * Bugfix: support Kraken websocket API changes
   * Bugfix: correct USDT symbol mappings for Bitfinex
+  * Bugfix: Fixed mongo book backend
+  * Feature: Book delta support for mongo, sockets, ZMQ
 
 ### 0.23.0 (2019-06-03)
   * Feature: Book delta support for InfluxDB
