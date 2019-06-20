@@ -41,7 +41,7 @@ class UDPProtocol:
 
 
 class SocketCallback:
-    def __init__(self, addr: str, port=None, **kwargs):
+    def __init__(self, addr: str, port=None, mtu=1400, **kwargs):
         """
         Common parent class for all socket callbacks
 
@@ -56,6 +56,8 @@ class SocketCallback:
           udp://127.0.0.1
         port: int
           port for connection. Should not be specified for UDS connections
+        mtu: int
+          MTU for UDP message size. Should be slightly less than actual MTU for overhead
         """
         self.conn_type = addr[:6]
         if self.conn_type not in {'tcp://', 'uds://', 'udp://'}:
@@ -64,6 +66,7 @@ class SocketCallback:
         self.protocol = None
         self.addr = addr[6:]
         self.port = port
+        self.mtu = mtu
 
     async def connect(self):
         if not self.conn:
@@ -77,11 +80,17 @@ class SocketCallback:
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
     def write(self, data):
-        data = json.dumps(data).encode()
+        data = json.dumps(data)
         if self.conn_type == 'udp://':
-            self.conn.sendto(data)
+            if len(data) > self.mtu:
+                chunks = wrap(data, self.mtu)
+                for chunk in chunks:
+                    msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
+                    self.conn.sendto(msg)
+            else:
+                self.conn.sendto(data.encode())
         else:
-            self.conn.write(data)
+            self.conn.write(data.encode())
 
 
 class TradeSocket(SocketCallback):
@@ -110,10 +119,6 @@ class BookSocket(SocketCallback):
         super().__init__(*args, **kwargs)
         self.depth = kwargs.get('depth', None)
         self.previous = {BID: {}, ASK: {}}
-        # MTU should be slightly less than real MTU to account for overhead in 
-        # serialized encapsulation
-        self.mtu = kwargs.get('mtu', 1400)
-
 
     async def __call__(self, *, feed, pair, book, timestamp):
         await self.connect()
@@ -128,14 +133,7 @@ class BookSocket(SocketCallback):
             self.previous[ASK] = upd['data'][ASK]
             self.previous[BID] = upd['data'][BID]
 
-        serialized = json.dumps(upd)
-        size = len(serialized)
-        if size > self.mtu:
-            chunks = wrap(serialized, self.mtu)
-            for chunk in chunks:
-                self.write({'type': 'chunked', 'chunks': len(chunks), 'data': chunk})
-        else:
-            self.write(upd)
+        self.write(upd)
 
 
 class BookDeltaSocket(SocketCallback):
