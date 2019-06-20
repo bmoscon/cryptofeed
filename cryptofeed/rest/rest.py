@@ -10,6 +10,7 @@ from cryptofeed.rest.coinbase import Coinbase
 from cryptofeed.rest.poloniex import Poloniex
 from cryptofeed.rest.gemini import Gemini
 from cryptofeed.rest.kraken import Kraken
+from cryptofeed.rest.deribit import Deribit
 from cryptofeed.log import get_logger
 from cryptofeed.standards import load_exchange_pair_mapping
 
@@ -35,7 +36,8 @@ class Rest:
             'coinbase': Coinbase(config, sandbox=sandbox),
             'poloniex': Poloniex(config),
             'gemini': Gemini(config, sandbox=sandbox),
-            'kraken': Kraken(config)
+            'kraken': Kraken(config),
+            'deribit': Deribit(config)
         }
 
     def __getitem__(self, key):
