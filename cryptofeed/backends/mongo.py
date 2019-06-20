@@ -55,7 +55,6 @@ class BookMongo(MongoCallback):
         self.previous = {BID: {}, ASK: {}}
 
     async def __call__(self, *, feed, pair, book, timestamp):
-        print("BOOK MONGO")
         data = {'timestamp': timestamp, 'feed': feed, 'pair': pair, 'delta': False, BID: {}, ASK: {}}
         book_convert(book, data, self.depth, convert=lambda x: str(int(x * 10000)))
 
