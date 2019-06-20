@@ -16,9 +16,9 @@ class Deribit(API):
     ID = DERIBIT
     api = "https://www.deribit.com/api/v2/public/"
 
-    def trades(self, instrument: str, start=None, end=None, retry=None, retry_wait=10):
-        instrument = pair_std_to_exchange(instrument, self.ID)
-        for data in self._get_trades(instrument, start, end, retry, retry_wait):
+    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        symbol = pair_std_to_exchange(symbol, self.ID)
+        for data in self._get_trades(symbol, start, end, retry, retry_wait):
             yield data
 
     def _get_trades(self, instrument, start_date, end_date, retry, retry_wait):
@@ -65,7 +65,7 @@ class Deribit(API):
                     start = data[-1]["timestamp"]
 
             orig_data = data
-            data = list(map(lambda x: self._trade_normalization(x), data))
+            data = [self._trade_normalization(x) for x in data]
             yield data
 
             if len(orig_data) < REQUEST_LIMIT:
