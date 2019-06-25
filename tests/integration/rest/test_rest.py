@@ -1,3 +1,5 @@
+import pandas as pd
+
 from cryptofeed.rest import Rest
 from cryptofeed.defines import BUY, SELL
 
@@ -5,10 +7,12 @@ from cryptofeed.defines import BUY, SELL
 def test_rest_bitmex():
     r = Rest()
     ret = []
-    for data in r.bitmex.trades('XBTUSD', start='2019-05-01 00:00:09', end='2019-05-01 00:00:15'):
+    end = pd.Timestamp.now()
+    start = end - pd.Timedelta(minutes=2)
+    for data in r.bitmex.trades('XBTUSD', start=start, end=end):
         ret.extend(data)
 
-    assert len(ret) == 2
+    assert len(ret) > 0
 
 
 def test_rest_bitfinex():
