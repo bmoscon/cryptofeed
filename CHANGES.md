@@ -1,5 +1,8 @@
 ## Changelog
 
+### 0.25.0
+  * Feature: Rest Endpoints for Historical Deribit data
+
 ### 0.24.0 (2019-06-19)
   * Bugfix: Book Delta Conversion issue in backends
   * Bugfix: Tweak BitMEX rest api to handle more errors more gracefully
