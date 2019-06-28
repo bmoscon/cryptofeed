@@ -41,7 +41,8 @@ _EXCHANGES = {
     OKEX: OKEx,
     COINBENE: Coinbene,
     DERIBIT: Deribit,
-    EXX_str: EXX
+    EXX_str: EXX,
+    Bybit: Bybit,
 }
 
 

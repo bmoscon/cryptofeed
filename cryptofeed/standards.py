@@ -14,7 +14,7 @@ import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
-                                OKEX, COINBENE, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT)
+                                OKEX, COINBENE, BYBIT, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -27,7 +27,7 @@ _exchange_to_std = {}
 
 
 def load_exchange_pair_mapping(exchange):
-    if exchange in {BITMEX, DERIBIT}:
+    if exchange in {BITMEX, DERIBIT, BYBIT}:
         return
     mapping = gen_pairs(exchange)
     for std, exch in mapping.items():
@@ -40,7 +40,7 @@ def load_exchange_pair_mapping(exchange):
 
 def pair_std_to_exchange(pair, exchange):
     # bitmex does its own validation of trading pairs dynamically
-    if exchange in {BITMEX, DERIBIT}:
+    if exchange in {BITMEX, DERIBIT, BYBIT}:
         return pair
     if pair in _std_trading_pairs:
         try:
@@ -119,7 +119,8 @@ _feed_to_exchange_map = {
         OKCOIN: 'spot/trade',
         OKEX: 'spot/trade',
         COINBENE: TRADES,
-        DERIBIT: 'trades'
+        DERIBIT: 'trades',
+        BYBIT:  'trade'
     },
     TICKER: {
         POLONIEX: 1002,

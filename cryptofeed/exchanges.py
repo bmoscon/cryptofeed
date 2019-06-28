@@ -20,3 +20,4 @@ from cryptofeed.okcoin.okcoin import OKCoin
 from cryptofeed.okex.okex import OKEx
 from cryptofeed.coinbene.coinbene import Coinbene
 from cryptofeed.deribit.deribit import Deribit
+from cryptofeed.bybit.bybit import Bybit
