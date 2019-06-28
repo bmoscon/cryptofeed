@@ -87,7 +87,8 @@ _feed_to_exchange_map = {
         OKCOIN: 'spot/depth',
         OKEX: 'spot/depth',
         COINBENE: L2_BOOK,
-        DERIBIT: 'book'
+        DERIBIT: 'book',
+        BYBIT: 'orderBook25'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',

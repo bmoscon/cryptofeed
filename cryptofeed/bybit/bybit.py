@@ -8,6 +8,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 from sortedcontainers import SortedDict as sd
 from decimal import Decimal
+import time
 
 LOG = logging.getLogger('feedhandler')
 
@@ -40,6 +41,8 @@ class Bybit(Feed):
             LOG.debug("%s: Response from bybit accepted %s", self.id, msg)
         elif "trade" in msg_dict["topic"]:
             await self._trade(msg_dict)
+        elif "orderBook25" in msg_dict["topic"]:
+            await self._book(msg_dict)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
@@ -81,3 +84,32 @@ class Bybit(Feed):
                     price=Decimal(trade['price']),
                     timestamp=trade['timestamp']
                 )
+
+
+
+    async def _book(self, msg):
+      pair = msg['topic'].split('.')[1]
+      data = msg['data']
+
+      BIDS = []
+      for bids in data["bids"]:
+          bid = [bids['price'], bids['quantity']]
+          BIDS.append(bid)
+
+      ASKS = []
+      for asks in data["asks"]:
+          ask = [asks['price'], asks['quantity']]
+          ASKS.append(ask)
+
+      self.l2_book[pair] = {
+            BID: sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in BIDS
+            }),
+            ASK: sd({
+                Decimal(price): Decimal(amount)
+                for price, amount in ASKS
+            })
+        }
+
+      await self.book_callback(pair, L2_BOOK, False, False, time.time())
