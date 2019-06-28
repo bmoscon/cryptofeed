@@ -1,25 +1,23 @@
 import logging
 import json
-
-from cryptofeed.feed import Feed
-from cryptofeed.defines import BYBIT, BUY, SELL, TRADES, BID, ASK, L2_BOOK
-from cryptofeed.standards import timestamp_normalize
-
-from sortedcontainers import SortedDict as sd
 from decimal import Decimal
 import time
 
+from sortedcontainers import SortedDict as sd
+
+from cryptofeed.feed import Feed
+from cryptofeed.defines import BYBIT, BUY, SELL, TRADES, BID, ASK, L2_BOOK
+from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std as normalize_pair
+
+
 LOG = logging.getLogger('feedhandler')
+
 
 class Bybit(Feed):
     id = BYBIT
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://stream.bybit.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
-        self.__reset()
-
-    def __reset(self):
-        pass
 
     async def message_handler(self, msg):
         msg_dict = json.loads(msg)
@@ -34,12 +32,8 @@ class Bybit(Feed):
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
-        self.websocket = websocket
-        self.__reset()
-        client_id = 0
         for chan in self.channels if self.channels else self.config:
             for pair in self.pairs if self.pairs else self.config[chan]:
-                client_id += 1
                 await websocket.send(json.dumps(
                     {
                         "op": "subscribe",
@@ -65,7 +59,7 @@ class Bybit(Feed):
             for trade in data:
                 await self.callbacks[TRADES](
                     feed=self.id,
-                    pair=trade['symbol'],
+                    pair=normalize_pair(trade['symbol']),
                     order_id=trade['trade_id'],
                     side=BUY if trade['side'] == 'Buy' else SELL,
                     amount=Decimal(trade['size']),
@@ -74,7 +68,7 @@ class Bybit(Feed):
                 )
 
     async def _book(self, msg):
-      pair = msg['topic'].split('.')[1]
+      pair = normalize_pair(msg['topic'].split('.')[1])
       data = msg['data']
 
       BIDS = []
