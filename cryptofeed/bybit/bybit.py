@@ -74,7 +74,8 @@ class Bybit(Feed):
                     "trade_id":"9d229f26-09a8-42f8-aff3-0ba047b0449d",
                     "cross_seq":163261271}]}
             """
-            for trade in msg['data']:
+            data = msg['data']
+            for trade in data:
                 await self.callbacks[TRADES](
                     feed=self.id,
                     pair=trade['symbol'],
@@ -82,7 +83,7 @@ class Bybit(Feed):
                     side=BUY if trade['side'] == 'Buy' else SELL,
                     amount=Decimal(trade['size']),
                     price=Decimal(trade['price']),
-                    timestamp=trade['timestamp']
+                    timestamp=timestamp_normalize(self.id, trade['timestamp'])
                 )
 
 
