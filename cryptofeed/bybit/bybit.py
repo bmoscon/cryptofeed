@@ -1,10 +1,9 @@
 import logging
 import json
-import requests
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BYBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.defines import BYBIT, BUY, SELL, TRADES, BID, ASK, L2_BOOK
+from cryptofeed.standards import timestamp_normalize
 
 from sortedcontainers import SortedDict as sd
 from decimal import Decimal
@@ -21,9 +20,6 @@ class Bybit(Feed):
 
     def __reset(self):
         pass
-
-    async def subscribe(self, websocket):
-        self.__reset()
 
     async def message_handler(self, msg):
         msg_dict = json.loads(msg)
@@ -72,8 +68,8 @@ class Bybit(Feed):
                     pair=trade['symbol'],
                     order_id=trade['trade_id'],
                     side=BUY if trade['side'] == 'Buy' else SELL,
-                    amount=trade['size'],
-                    price=trade['price'],
+                    amount=Decimal(trade['size']),
+                    price=Decimal(trade['price']),
                     timestamp=timestamp_normalize(self.id, trade['timestamp'])
                 )
 
