@@ -80,7 +80,12 @@ class TradeInflux(InfluxCallback):
 
         if order_id is None:
             order_id = 'None'
-        trade = f'{self.key}-{feed},pair={pair} side="{side}",id="{order_id}",amount="{amount}",price="{price}",timestamp={timestamp}'
+        if self.numeric_type is str:
+            trade = f'{self.key}-{feed},pair={pair} side="{side}",id="{order_id}",amount="{amount}",price="{price}",timestamp={timestamp}'
+        elif self.numeric_type is float:
+            trade = f'{self.key}-{feed},pair={pair} side="{side}",id="{order_id}",amount={amount},price={price},timestamp={timestamp}'
+        else:
+            raise UnsupportedType(f"Type {self.numeric_type} not supported")
 
         await self.write(trade)
 
@@ -98,8 +103,12 @@ class FundingInflux(InfluxCallback):
                 continue
             if isinstance(val, (Decimal, float)):
                 val = str(val)
+                if self.numeric_type is str:
+                    val = f'"{val}"'
+                elif self.numeric_type is not float:
+                    raise UnsupportedType(f"Type {self.numeric_type} not supported")
             elif isinstance(val, str):
-                val = f'"{kwargs[key]}"'
+                val = f'"{val}"'
             data += f"{key}={val},"
 
         data = data[:-1]
