@@ -1,4 +1,4 @@
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
+from cryptofeed.callback import TradeCallback, BookCallback
 from cryptofeed import FeedHandler
 
 from cryptofeed.exchanges import Bybit
