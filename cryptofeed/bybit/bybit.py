@@ -20,12 +20,12 @@ class Bybit(Feed):
         super().__init__('wss://stream.bybit.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
 
-        instruments = ["BTCUSD", "EOSUSD", "ETHUSD", "XRPUSD"]
-        self.pairs = pairs
+        #instruments = ["BTCUSD", "EOSUSD", "ETHUSD", "XRPUSD"]
+        #self.pairs = pairs
 
-        for pair in self.pairs:
-            if pair not in instruments:
-                raise ValueError(f"{pair} is not active on {self.id}")
+        #for pair in self.pairs:
+        #    if pair not in instruments:
+        #        raise ValueError(f"{pair} is not active on {self.id}")
 
 
     def __reset(self):
@@ -81,8 +81,8 @@ class Bybit(Feed):
                     pair=trade['symbol'],
                     order_id=trade['trade_id'],
                     side=BUY if trade['side'] == 'Buy' else SELL,
-                    amount=Decimal(trade['size']),
-                    price=Decimal(trade['price']),
+                    amount=trade['size'],
+                    price=trade['price'],
                     timestamp=timestamp_normalize(self.id, trade['timestamp'])
                 )
 

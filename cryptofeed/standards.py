@@ -27,7 +27,7 @@ _exchange_to_std = {}
 
 
 def load_exchange_pair_mapping(exchange):
-    if exchange in {BITMEX, DERIBIT, BYBIT}:
+    if exchange in {BITMEX, DERIBIT}:
         return
     mapping = gen_pairs(exchange)
     for std, exch in mapping.items():
@@ -40,7 +40,7 @@ def load_exchange_pair_mapping(exchange):
 
 def pair_std_to_exchange(pair, exchange):
     # bitmex does its own validation of trading pairs dynamically
-    if exchange in {BITMEX, DERIBIT, BYBIT}:
+    if exchange in {BITMEX, DERIBIT}:
         return pair
     if pair in _std_trading_pairs:
         try:

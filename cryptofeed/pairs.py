@@ -40,10 +40,12 @@ def bitfinex_pairs():
 
     return ret
 
+def bybit_pairs():
+    pairs = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "EOS-USD": "EOSUSD", "XRP-USD": "XRPUSD"}
+    return pairs
 
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
-
     return {data['id']: data['id'] for data in r}
 
 
@@ -178,4 +180,5 @@ _exchange_function_map = {
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
     COINBENE: coinbene_pairs,
+    BYBIT: bybit_pairs,
 }
