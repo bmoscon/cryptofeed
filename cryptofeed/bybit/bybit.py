@@ -12,21 +12,12 @@ import time
 
 LOG = logging.getLogger('feedhandler')
 
-
 class Bybit(Feed):
     id = BYBIT
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://stream.bybit.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
-
-        #instruments = ["BTCUSD", "EOSUSD", "ETHUSD", "XRPUSD"]
-        #self.pairs = pairs
-
-        #for pair in self.pairs:
-        #    if pair not in instruments:
-        #        raise ValueError(f"{pair} is not active on {self.id}")
-
 
     def __reset(self):
         pass
@@ -85,8 +76,6 @@ class Bybit(Feed):
                     price=trade['price'],
                     timestamp=timestamp_normalize(self.id, trade['timestamp'])
                 )
-
-
 
     async def _book(self, msg):
       pair = msg['topic'].split('.')[1]
