@@ -24,3 +24,7 @@ class UnsupportedDataFeed(Exception):
 
 class UnsupportedTradingOption(Exception):
     pass
+
+
+class UnsupportedType(Exception):
+    pass
