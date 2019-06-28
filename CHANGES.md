@@ -2,6 +2,8 @@
 
 ### 0.25.0
   * Feature: Rest Endpoints for Historical Deribit data
+  * Feature: Specify numeric datatype for InfluxDB
+  * Bugfix: Greatly improve performance of book writes for InfluxDB
 
 ### 0.24.0 (2019-06-19)
   * Bugfix: Book Delta Conversion issue in backends
