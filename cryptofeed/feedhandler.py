@@ -14,7 +14,7 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE, BYBIT
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.exchanges import *
 from cryptofeed.nbbo import NBBO
@@ -41,7 +41,8 @@ _EXCHANGES = {
     OKEX: OKEx,
     COINBENE: Coinbene,
     DERIBIT: Deribit,
-    EXX_str: EXX
+    EXX_str: EXX,
+    BYBIT: Bybit,
 }
 
 

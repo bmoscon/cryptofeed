@@ -47,6 +47,7 @@ Supports the following exchanges:
 * OKEx
 * Coinbene
 * Deribit
+* Bybit
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 

@@ -32,6 +32,7 @@ class Huobi(Feed):
     async def _book(self, msg):
         pair = pair_exchange_to_std(msg['ch'].split('.')[1])
         data = msg['tick']
+
         self.l2_book[pair] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
@@ -99,4 +100,3 @@ class Huobi(Feed):
                         "id": client_id
                     }
                 ))
-
