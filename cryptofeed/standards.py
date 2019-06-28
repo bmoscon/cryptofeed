@@ -103,7 +103,8 @@ _feed_to_exchange_map = {
         HUOBI: UNSUPPORTED,
         HUOBI_US: UNSUPPORTED,
         OKCOIN: UNSUPPORTED,
-        OKEX: UNSUPPORTED
+        OKEX: UNSUPPORTED,
+        BYBIT: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: TRADES,
@@ -137,7 +138,8 @@ _feed_to_exchange_map = {
         OKCOIN: 'spot/ticker',
         OKEX: 'spot/ticker',
         COINBENE: TICKER,
-        DERIBIT: "ticker"
+        DERIBIT: "ticker",
+        BYBIT: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003
