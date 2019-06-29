@@ -8,6 +8,7 @@ from cryptofeed.defines import TRADES, L2_BOOK, BID, ASK
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
     print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
+
 async def book(feed, pair, book, timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
