@@ -30,6 +30,9 @@ fh.add_feed(Gemini(pairs=['BTC-USD'], callbacks=gemini_cb)
 fh.run()
 ```
 
+To see an example of an application using cryptofeed to aggregate and store cryptocurrenty data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
+
+
 Supports the following exchanges:
 * Bitfinex
 * Coinbase
@@ -116,4 +119,8 @@ Continue to build out rest endpoints and standardize exchange interfaces and dat
 
 ## Additional Callback Methods / Backends
 * Postgres
-* RabbitMQ
+* ??
+
+# Contributing
+Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
+
