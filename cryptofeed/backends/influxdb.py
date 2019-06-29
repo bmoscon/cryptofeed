@@ -118,12 +118,9 @@ class FundingInflux(InfluxCallback):
 class InfluxBookCallback(InfluxCallback):
     async def _write_rows(self, start, data, timestamp):
         msg = []
-        counter = 0
         ts = int(timestamp * 1000000000)
         for side in (BID, ASK):
             for price, val in data[side].items():
-                ts += counter
-                counter += 1
                 if isinstance(val, dict):
                     for order_id, amount in val.items():
                         if self.numeric_type is str:
@@ -132,6 +129,7 @@ class InfluxBookCallback(InfluxCallback):
                             msg.append(f'{start} side="{side}",id="{order_id}",timestamp={timestamp},price={price},amount={amount} {ts}')
                         else:
                             raise UnsupportedType(f"Type {self.numeric_type} not supported")
+                        ts += 1
                 else:
                     if self.numeric_type is str:
                         msg.append(f'{start} side="{side}",timestamp={timestamp},price="{price}",amount="{val}" {ts}')
@@ -139,6 +137,7 @@ class InfluxBookCallback(InfluxCallback):
                         msg.append(f'{start} side="{side}",timestamp={timestamp},price={price},amount={val} {ts}')
                     else:
                         raise UnsupportedType(f"Type {self.numeric_type} not supported")
+                    ts += 1
         await self.write('\n'.join(msg))
 
 
