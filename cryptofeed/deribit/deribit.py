@@ -4,7 +4,7 @@ import requests
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 from sortedcontainers import SortedDict as sd
 from decimal import Decimal
