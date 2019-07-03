@@ -182,7 +182,7 @@ class Deribit(Feed):
         await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, False, delta, timestamp_normalize(self.id, timestamp))
 
     async def message_handler(self, msg):
-        msg_dict = json.loads(msg)
+        msg_dict = json.loads(msg, parse_float=Decimal)
 
         # As a first update after subscription, Deribit sends a notification with no data
         if "testnet" in msg_dict.keys():
