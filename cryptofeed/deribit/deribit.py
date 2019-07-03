@@ -77,8 +77,8 @@ class Deribit(Feed):
                 pair=trade["instrument_name"],
                 order_id=trade['trade_id'],
                 side=BUY if trade['direction'] == 'buy' else SELL,
-                amount=trade['amount'],
-                price=trade['price'],
+                amount=Decimal(trade['amount']),
+                price=Decimal(trade['price']),
                 timestamp=timestamp_normalize(self.id, trade['timestamp'])
             )
 
@@ -116,8 +116,8 @@ class Deribit(Feed):
         '''
         await self.callbacks[TICKER](feed=self.id,
                                      pair=msg["params"]["data"]["instrument_name"],
-                                     bid=msg["params"]["data"]['best_bid_price'],
-                                     ask=msg["params"]["data"]['best_ask_price'])
+                                     bid=Decimal(msg["params"]["data"]['best_bid_price']),
+                                     ask=Decimal(msg["params"]["data"]['best_ask_price']))
 
     async def subscribe(self, websocket):
         self.websocket = websocket
