@@ -52,6 +52,10 @@ If you use `channels` and `pairs` you cannot use `config`, likewise if `config` 
 {TRADES: ['BTC-USD', 'BTC-USDT', 'ETH-USD'], L2_BOOK: ['BTC-USD']}
 ```
 
+### Normalization
+
+Cryptofeed normalizes various parts of the data - primarily timestamps and trading pairs, to ensure they are consistent across all exchanges. Pairs take the format BASE-QUOTE (as previously mentioned) and timestamps are all converted to seconds since the epoch (traditional UNIX timestamps), in floating point. 
+
 ### Callbacks
 
 Callbacks are user defined functions that will be called on a data event, like when a trade update is received. Their format is specified in the `callbacks.py` file, and user defined callbacks should mirror their interface. 
