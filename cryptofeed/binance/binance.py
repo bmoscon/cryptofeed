@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -63,7 +63,7 @@ class Binance(Feed):
                                      side=SELL if msg['m'] else BUY,
                                      amount=amount,
                                      price=price,
-                                     timestamp=msg['E'])
+                                     timestamp=timestamp_normalize(self.id, msg['E']))
 
     async def _ticker(self, msg):
         """
@@ -126,7 +126,7 @@ class Binance(Feed):
             ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
         }
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=time.time() * 1000)
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=time.time())
 
     async def message_handler(self, msg):
         msg = json.loads(msg, parse_float=Decimal)
