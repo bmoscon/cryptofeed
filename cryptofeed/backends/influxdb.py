@@ -6,18 +6,18 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
-import aiohttp
 import requests
 
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert, book_delta_convert
+from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.exceptions import UnsupportedType
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class InfluxCallback:
+class InfluxCallback(HTTPCallback):
     def __init__(self, addr: str, db: str, create_db=True, numeric_type=str, **kwargs):
         """
         Parent class for InfluxDB callbacks
@@ -50,24 +50,14 @@ class InfluxCallback:
         numeric_type: str/float
           Convert types before writing (amount and price)
         """
+        super().__init__(addr, **kwargs)
         self.addr = f"{addr}/write?db={db}"
         self.session = None
         self.numeric_type = numeric_type
 
         if create_db:
             r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
-            if r.status_code != 200:
-                r.raise_for_status()
-
-    async def write(self, data):
-        if not self.session or self.session.closed:
-            self.session = aiohttp.ClientSession()
-
-        async with self.session.post(self.addr, data=data) as resp:
-            if resp.status != 204:
-                error = await resp.text()
-                LOG.error("Write to influxDB failed: %d - %s", resp.status, error)
-
+            r.raise_for_status()
 
 class TradeInflux(InfluxCallback):
     def __init__(self, *args, key='trades', **kwargs):
@@ -87,7 +77,7 @@ class TradeInflux(InfluxCallback):
         else:
             raise UnsupportedType(f"Type {self.numeric_type} not supported")
 
-        await self.write(trade)
+        await self.write('POST', trade)
 
 
 class FundingInflux(InfluxCallback):
@@ -112,7 +102,7 @@ class FundingInflux(InfluxCallback):
             data += f"{key}={val},"
 
         data = data[:-1]
-        await self.write(data)
+        await self.write('POST', data)
 
 
 class InfluxBookCallback(InfluxCallback):
@@ -138,7 +128,7 @@ class InfluxBookCallback(InfluxCallback):
                     else:
                         raise UnsupportedType(f"Type {self.numeric_type} not supported")
                     ts += 1
-        await self.write('\n'.join(msg))
+        await self.write('POST', '\n'.join(msg))
 
 
 class BookInflux(InfluxBookCallback):
