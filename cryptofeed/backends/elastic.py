@@ -12,7 +12,6 @@ import itertools
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert, book_delta_convert, book_flatten
 from cryptofeed.backends.http import HTTPCallback
-from cryptofeed.exceptions import UnsupportedType
 
 
 LOG = logging.getLogger('feedhandler')
