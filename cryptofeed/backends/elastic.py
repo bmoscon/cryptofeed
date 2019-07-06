@@ -98,5 +98,5 @@ class BookDeltaElastic(ElasticCallback):
         data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
         data = '\n'.join(data)
         data = f"{data}\n"
-        print("DELTA")
+
         await self.write('POST', data, headers={'content-type': 'application/x-ndjson'})
