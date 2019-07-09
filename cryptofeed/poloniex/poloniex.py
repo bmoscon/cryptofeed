@@ -138,7 +138,7 @@ class Poloniex(Feed):
                                                     side=side,
                                                     amount=amount,
                                                     price=price,
-                                                    timestamp=timestamp,
+                                                    timestamp=float(timestamp),
                                                     order_id=order_id)
                 else:
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
