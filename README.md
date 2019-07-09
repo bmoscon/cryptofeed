@@ -100,6 +100,7 @@ Supported Backends:
 * [InfluxDB](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
+* Elastic Search
 
 
 ## Rest API
