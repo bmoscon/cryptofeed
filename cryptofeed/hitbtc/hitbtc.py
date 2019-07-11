@@ -44,7 +44,8 @@ class HitBTC(Feed):
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
                 if size == 0:
-                    del self.l2_book[pair][side][price]
+                    if price in self.l2_book[pair][side]:
+                        del self.l2_book[pair][side][price]
                     delta[side].append((price, 0))
                 else:
                     self.l2_book[pair][side][price] = size
