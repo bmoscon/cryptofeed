@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.0.0
+  * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly
+
 ### 0.25.0 (2019-07-06)
   * Feature: Rest Endpoints for Historical Deribit data
   * Feature: Specify numeric datatype for InfluxDB
