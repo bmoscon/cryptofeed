@@ -60,7 +60,7 @@ class Bitstamp(Feed):
 
     async def _trades(self, msg):
         """
-		{'data': 
+		{'data':
 		 {
 		 'microtimestamp': '1562650233964229',      // Event time (micros)
 		 'amount': Decimal('0.014140160000000001'), // Quantity
