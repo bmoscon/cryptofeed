@@ -12,7 +12,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import BUY, SELL, BID, ASK, TRADES, L2_BOOK, L3_BOOK, BITSTAMP
-from cryptofeed.standards import pair_exchange_to_std, feed_to_exchange
+from cryptofeed.standards import pair_exchange_to_std, feed_to_exchange, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -59,6 +59,24 @@ class Bitstamp(Feed):
         await self.book_callback(pair=pair, book_type=L3_BOOK, forced=False, delta=False, timestamp=timestamp)
 
     async def _trades(self, msg):
+        """
+		{'data':
+		 {
+		 'microtimestamp': '1562650233964229',      // Event time (micros)
+		 'amount': Decimal('0.014140160000000001'), // Quantity
+		 'buy_order_id': 3709484695,                // Buyer order ID
+		 'sell_order_id': 3709484799,               // Seller order ID
+		 'amount_str': '0.01414016',                // Quantity string
+		 'price_str': '12700.00',                   // Price string
+		 'timestamp': '1562650233',                 // Event time
+		 'price': Decimal('12700.0'),               // Price
+		 'type': 1,
+		 'id': 93215787
+		 },
+		 'event': 'trade',
+		 'channel': 'live_trades_btcusd'
+		}
+        """
         data = msg['data']
         chan = msg['channel']
         pair = pair_exchange_to_std(chan.split('_')[-1])
@@ -66,14 +84,14 @@ class Bitstamp(Feed):
         side = BUY if data['type'] == 0 else SELL
         amount = Decimal(data['amount'])
         price = Decimal(data['price'])
-        timestamp = data['timestamp']
+        timestamp = int(data['microtimestamp'])
         order_id = data['id']
         await self.callbacks[TRADES](feed=self.id,
                                      pair=pair,
                                      side=side,
                                      amount=amount,
                                      price=price,
-                                     timestamp=timestamp,
+                                     timestamp=timestamp_normalize(self.id, timestamp),
                                      order_id=order_id
                                      )
 

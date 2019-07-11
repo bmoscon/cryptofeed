@@ -121,7 +121,7 @@ class EXX(Feed):
 
         ['T', '1', '1547947390', 'BTC_USDT', 'bid', '3683.74440000', '0.082', '33732290']
         """
-        timestamp = msg[2]
+        timestamp = float(msg[2])
         pair = pair_exchange_to_std(msg[3])
         side = BUY if msg[4] == 'bid' else SELL
         price = Decimal(msg[5])
