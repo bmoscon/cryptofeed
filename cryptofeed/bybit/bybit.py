@@ -21,7 +21,7 @@ class Bybit(Feed):
     def __reset(self):
         self.l2_book = {}
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg)
 
         if "success" in msg:

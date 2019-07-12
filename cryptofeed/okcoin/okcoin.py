@@ -104,7 +104,7 @@ class OKCoin(Feed):
                             self.l2_book[pair][s][price] = amount
                 await self.book_callback(pair, L2_BOOK, False, delta, timestamp_normalize(self.id, update['timestamp']))
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         # DEFLATE compression, no header
         msg = zlib.decompress(msg, -15)
         msg = json.loads(msg, parse_float=Decimal)

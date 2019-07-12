@@ -67,7 +67,7 @@ class Huobi(Feed):
                 timestamp=timestamp_normalize(self.id, trade['ts'])
             )
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         # unzip message
         msg = zlib.decompress(msg, 16+zlib.MAX_WBITS)
         msg = json.loads(msg, parse_float=Decimal)

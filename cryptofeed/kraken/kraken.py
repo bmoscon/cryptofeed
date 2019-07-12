@@ -7,7 +7,6 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -80,7 +79,7 @@ class Kraken(Feed):
                                      bid=Decimal(msg[1]['b'][0]),
                                      ask=Decimal(msg[1]['a'][0]))
 
-    async def _book(self, msg, pair):
+    async def _book(self, msg: dict, pair: str, timestamp: float):
         delta = {BID: [], ASK: []}
         msg = msg[1:-2]
 
@@ -91,7 +90,7 @@ class Kraken(Feed):
             }), ASK: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']
             })}
-            await self.book_callback(pair, L2_BOOK, True, delta, time.time())
+            await self.book_callback(pair, L2_BOOK, True, delta, timestamp)
         else:
             for m in msg:
                 for s, updates in m.items():
@@ -115,9 +114,9 @@ class Kraken(Feed):
                     del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
                     del self.l2_book[pair][side][del_price]
                     delta[side].append((del_price, 0))
-            await self.book_callback(pair, L2_BOOK, False, delta, time.time())
+            await self.book_callback(pair, L2_BOOK, False, delta, timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
@@ -126,7 +125,7 @@ class Kraken(Feed):
             elif self.channel_map[msg[0]][0] == 'ticker':
                 await self._ticker(msg, self.channel_map[msg[0]][1])
             elif self.channel_map[msg[0]][0] == 'book':
-                await self._book(msg, self.channel_map[msg[0]][1])
+                await self._book(msg, self.channel_map[msg[0]][1], timestamp)
             else:
                 LOG.warning("%s: No mapping for message %s", self.id, msg)
         else:

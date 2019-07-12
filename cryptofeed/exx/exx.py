@@ -138,7 +138,7 @@ class EXX(Feed):
             timestamp=timestamp
         )
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg[0], list):

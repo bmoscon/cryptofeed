@@ -8,7 +8,6 @@ import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
-import time
 
 import requests
 from sortedcontainers import SortedDict as sd
@@ -89,11 +88,10 @@ class Bitmex(Feed):
                                          order_id=data['trdMatchID'],
                                          timestamp=ts)
 
-    async def _book(self, msg):
+    async def _book(self, msg: dict, timestamp: float):
         """
         the Full bitmex book
         """
-        timestamp = time.time()
         pair = None
         delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
@@ -221,7 +219,7 @@ class Bitmex(Feed):
                                             **data
                                             )
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'info' in msg:
             LOG.info("%s - info message: %s", self.id, msg)
@@ -234,7 +232,7 @@ class Bitmex(Feed):
             if msg['table'] == 'trade':
                 await self._trade(msg)
             elif msg['table'] == 'orderBookL2':
-                await self._book(msg)
+                await self._book(msg, timestamp)
             elif msg['table'] == 'funding':
                 await self._funding(msg)
             elif msg['table'] == 'orderBook10':

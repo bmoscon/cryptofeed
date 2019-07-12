@@ -124,8 +124,7 @@ class Coinbase(Feed):
 
         )
 
-    async def _pair_level2_snapshot(self, msg):
-        timestamp = time.time()
+    async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
         self.l2_book[msg['product_id']] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
@@ -139,8 +138,7 @@ class Coinbase(Feed):
 
         await self.book_callback(msg['product_id'], L2_BOOK, True, None, timestamp)
 
-    async def _pair_level2_update(self, msg):
-        timestamp = time.time()
+    async def _pair_level2_update(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
             side = BID if side == 'buy' else ASK
@@ -157,7 +155,7 @@ class Coinbase(Feed):
 
         await self.book_callback(msg['product_id'], L2_BOOK, False, delta, timestamp)
 
-    async def _book_snapshot(self, pairs):
+    async def _book_snapshot(self, pairs: list):
         self.__reset()
         # Coinbase needs some time to send messages to us
         # before we request the snapshot. If we don't sleep
@@ -173,6 +171,7 @@ class Coinbase(Feed):
             ret = requests.get(url)
             results.append(ret)
 
+        timestamp = time.time()
         for res, pair in zip(results, pairs):
             orders = res.json()
             self.l3_book[pair] = {BID: sd(), ASK: sd()}
@@ -186,7 +185,6 @@ class Coinbase(Feed):
                     else:
                         self.l3_book[pair][side][price] = {order_id: size}
                     self.order_map[order_id] = (price, size)
-            timestamp = time.time()
             await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
 
     async def _open(self, msg):
@@ -257,7 +255,7 @@ class Coinbase(Feed):
 
         await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if 'product_id' in msg and 'sequence' in msg and ('full' in self.channels or ('full' in self.config and msg['product_id'] in self.config['full'])):
@@ -278,9 +276,9 @@ class Coinbase(Feed):
             elif msg['type'] == 'match' or msg['type'] == 'last_match':
                 await self._book_update(msg)
             elif msg['type'] == 'snapshot':
-                await self._pair_level2_snapshot(msg)
+                await self._pair_level2_snapshot(msg, timestamp)
             elif msg['type'] == 'l2update':
-                await self._pair_level2_update(msg)
+                await self._pair_level2_update(msg, timestamp)
             elif msg['type'] == 'open':
                 await self._open(msg)
             elif msg['type'] == 'done':

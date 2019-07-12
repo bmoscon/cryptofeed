@@ -8,7 +8,6 @@ import json
 import logging
 from decimal import Decimal
 from collections import defaultdict
-import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -60,7 +59,7 @@ class Bitfinex(Feed):
         self.order_map = defaultdict(dict)
         self.seq_no = 0
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         chan_id = msg[0]
         if msg[1] == 'hb':
             # ignore heartbeats
@@ -76,7 +75,7 @@ class Bitfinex(Feed):
                                          bid=bid,
                                          ask=ask)
 
-    async def _trades(self, msg):
+    async def _trades(self, msg: dict, timestamp: float):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         funding = pair[0] == 'f'
@@ -84,11 +83,11 @@ class Bitfinex(Feed):
 
         async def _trade_update(trade):
             if funding:
-                order_id, timestamp, amount, price, period = trade
+                order_id, ts, amount, price, period = trade
             else:
-                order_id, timestamp, amount, price = trade
+                order_id, ts, amount, price = trade
                 period = None
-            timestamp = timestamp_normalize(self.id, timestamp)
+            timestamp = timestamp_normalize(self.id, ts)
             side = SELL if amount < 0 else BUY
             amount = abs(amount)
             if period:
@@ -126,11 +125,10 @@ class Bitfinex(Feed):
             else:
                 LOG.warning("%s: Unexpected trade message %s", self.id, msg)
 
-    async def _book(self, msg):
+    async def _book(self, msg: dict, timestamp: float):
         """
         For L2 book updates
         """
-        timestamp = time.time()
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         pair = pair_exchange_to_std(pair)
@@ -180,12 +178,10 @@ class Bitfinex(Feed):
 
         await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
 
-    async def _raw_book(self, msg):
+    async def _raw_book(self, msg: dict, timestamp: float):
         """
         For L3 book updates
         """
-        timestamp = time.time()
-
         def add_to_book(pair, side, price, order_id, amount):
             if price in self.l3_book[pair][side]:
                 self.l3_book[pair][side][price][order_id] = amount
@@ -261,7 +257,7 @@ class Bitfinex(Feed):
 
         await self.book_callback(pair, L3_BOOK, forced, delta, timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
@@ -273,7 +269,7 @@ class Bitfinex(Feed):
                     raise MissingSequenceNumber
                 self.seq_no = seq_no
 
-                await self.channel_map[chan_id]['handler'](msg)
+                await self.channel_map[chan_id]['handler'](msg, timestamp)
             else:
                 LOG.warning("%s: Unexpected message on unregistered channel %s", self.id, msg)
         elif 'event' in msg and msg['event'] == 'error':

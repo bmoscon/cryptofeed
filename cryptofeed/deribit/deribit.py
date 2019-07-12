@@ -181,7 +181,7 @@ class Deribit(Feed):
                 delta[ASK].append((Decimal(price), Decimal(amount)))
         await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, False, delta, timestamp_normalize(self.id, timestamp))
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg_dict = json.loads(msg, parse_float=Decimal)
 
         # As a first update after subscription, Deribit sends a notification with no data
