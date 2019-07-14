@@ -63,7 +63,7 @@ class Feed:
             else:
                 await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         raise NotImplementedError
 
 

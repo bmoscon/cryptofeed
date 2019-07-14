@@ -7,7 +7,6 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -101,7 +100,7 @@ class Binance(Feed):
                                      bid=bid,
                                      ask=ask)
 
-    async def _book(self, msg, pair):
+    async def _book(self, msg: dict, pair: str, timestamp: float):
         """
         {
         "lastUpdateId": 160,  // Last update ID
@@ -126,9 +125,9 @@ class Binance(Feed):
             ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
         }
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=time.time())
+        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
@@ -140,7 +139,7 @@ class Binance(Feed):
         pair = pair_exchange_to_std(pair.upper())
 
         if event == 'depth20':
-            await self._book(msg, pair)
+            await self._book(msg, pair, timestamp)
         elif msg['e'] == 'trade':
             await self._trade(msg)
         elif msg['e'] == '24hrTicker':

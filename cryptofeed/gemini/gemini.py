@@ -91,7 +91,7 @@ class Gemini(Feed):
         if forced:
             await self.book_callback(self.pair, L2_BOOK, True, None, timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         seq_no = msg['socket_sequence']
 

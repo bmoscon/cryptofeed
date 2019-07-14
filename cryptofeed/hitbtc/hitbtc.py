@@ -7,7 +7,6 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -35,8 +34,7 @@ class HitBTC(Feed):
                                      bid=Decimal(msg['bid']),
                                      ask=Decimal(msg['ask']))
 
-    async def _book(self, msg):
-        timestamp = time.time()
+    async def _book(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
         pair = pair_exchange_to_std(msg['symbol'])
         for side in (BID, ASK):
@@ -52,8 +50,7 @@ class HitBTC(Feed):
                     delta[side].append((price, size))
         await self.book_callback(pair, L2_BOOK, False, delta, timestamp)
 
-    async def _snapshot(self, msg):
-        timestamp = time.time()
+    async def _snapshot(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['symbol'])
         self.l2_book[pair] = {ASK: sd(), BID: sd()}
         for side in (BID, ASK):
@@ -79,15 +76,15 @@ class HitBTC(Feed):
                                          order_id=order_id,
                                          timestamp=timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'method' in msg:
             if msg['method'] == 'ticker':
                 await self._ticker(msg['params'])
             elif msg['method'] == 'snapshotOrderbook':
-                await self._snapshot(msg['params'])
+                await self._snapshot(msg['params'], timestamp)
             elif msg['method'] == 'updateOrderbook':
-                await self._book(msg['params'])
+                await self._book(msg['params'], timestamp)
             elif msg['method'] == 'updateTrades' or msg['method'] == 'snapshotTrades':
                 await self._trades(msg['params'])
             else:

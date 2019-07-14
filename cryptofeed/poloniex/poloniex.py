@@ -7,7 +7,6 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
-import time
 
 from sortedcontainers import SortedDict as sd
 
@@ -87,8 +86,7 @@ class Poloniex(Feed):
         if self.__do_callback(VOLUME, pair):
             self.callbacks[VOLUME](feed=self.id, **top_vols)
 
-    async def _book(self, msg, chan_id):
-        timestamp = time.time()
+    async def _book(self, msg: dict, chan_id: int, timestamp: float):
         delta = {BID: [], ASK: []}
         msg_type = msg[0][0]
         pair = None
@@ -146,7 +144,7 @@ class Poloniex(Feed):
         if self.__do_callback(L2_BOOK, pair):
             await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
 
-    async def message_handler(self, msg):
+    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'error' in msg:
             LOG.error("%s: Error from exchange: %s", self.id, msg)
@@ -177,7 +175,7 @@ class Poloniex(Feed):
                 LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[chan_id] + 1)
                 raise MissingSequenceNumber
             self.seq_no[chan_id] = seq_no
-            await self._book(msg[2], chan_id)
+            await self._book(msg[2], chan_id, timestamp)
         elif chan_id == 1010:
             # heartbeat - ignore
             pass

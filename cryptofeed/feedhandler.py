@@ -187,7 +187,7 @@ class FeedHandler:
         async for message in websocket:
             self.last_msg[feed_id] = time()
             try:
-                await handler(message)
+                await handler(message, self.last_msg[feed_id])
             except Exception:
                 if feed_id in {HUOBI, HUOBI_US}:
                     message = zlib.decompress(message, 16+zlib.MAX_WBITS)
