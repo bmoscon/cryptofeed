@@ -15,7 +15,7 @@ from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 class RedisCallback:
-    def __init__(self, host='127.0.0.1', port=6379, key=None, **kwargs):
+    def __init__(self, host='127.0.0.1', port=6379, key=None, numeric_type=str, **kwargs):
         """
         setting key lets you override the prefix on the
         key used in redis. The defaults are related to the data
@@ -25,6 +25,7 @@ class RedisCallback:
         self.port = port
         self.redis = None
         self.key = key
+        self.numeric_type = numeric_type
 
 
 class TradeRedis(RedisCallback):
@@ -38,7 +39,7 @@ class TradeRedis(RedisCallback):
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
-                           'side': side, 'amount': str(amount), 'price': str(price)})
+                           'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price)})
 
         await self.redis.zadd(f"{self.key}-{feed}-{pair}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
@@ -49,11 +50,10 @@ class TradeStream(TradeRedis):
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         data = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
-                'side': side, 'amount': str(amount), 'price': str(price)}
+                'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price)}
 
         if data['id'] is None:
             data['id'] = ''
-
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)
 
 
@@ -74,7 +74,7 @@ class FundingRedis(RedisCallback):
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
-                kwargs[key] = str(kwargs[key])
+                kwargs[key] = self.numeric_type(kwargs[key])
 
         data = json.dumps(kwargs)
 
@@ -88,7 +88,7 @@ class FundingStream(FundingRedis):
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
-                kwargs[key] = str(kwargs[key])
+                kwargs[key] = self.numeric_type(kwargs[key])
 
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", kwargs)
 
@@ -108,7 +108,7 @@ class BookRedis(RedisCallback):
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
-        book_convert(book, data, self.depth)
+        book_convert(book, data, self.depth, convert=self.numeric_type)
 
         if self.depth:
             if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
@@ -133,7 +133,7 @@ class BookDeltaRedis(RedisCallback):
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         data = {'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
-        book_delta_convert(delta, data)
+        book_delta_convert(delta, data, convert=self.numeric_type)
         data = json.dumps(data)
         await self.redis.zadd(f"{self.key}-{feed}-{pair}", ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
@@ -144,7 +144,7 @@ class BookStream(BookRedis):
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
-        book_convert(book, data, self.depth)
+        book_convert(book, data, self.depth, convert=self.numeric_type)
 
         if self.depth:
             if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
@@ -162,7 +162,7 @@ class BookDeltaStream(BookRedis):
             self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
 
         data = {'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
-        book_delta_convert(delta, data)
+        book_delta_convert(delta, data, convert=self.numeric_type)
 
         data = json.dumps(data)
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", {'data': data})

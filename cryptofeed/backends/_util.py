@@ -18,9 +18,9 @@ def book_delta_convert(delta: dict, data: dict, convert=str):
                 order_id, price, amount = entry
                 price = convert(price)
                 if price in data[side]:
-                    data[side][price][convert(order_id)] = convert(amount)
+                    data[side][price][order_id] = convert(amount)
                 else:
-                    data[side][price] = {convert(order_id): convert(amount)}
+                    data[side][price] = {order_id: convert(amount)}
 
 
 def book_convert(book: dict, data: dict, depth: int, convert=str):
