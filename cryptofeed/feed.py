@@ -51,17 +51,25 @@ class Feed:
                 if cb_type == BOOK_DELTA:
                     self.do_deltas = True
 
+        for key, callback in self.callbacks.items():
+            if not isinstance(callback, list):
+                self.callbacks[key] = [callback]
+
     async def book_callback(self, pair, book_type, forced, delta, timestamp):
         if self.do_deltas and self.updates < self.book_update_interval and not forced:
             self.updates += 1
-            await self.callbacks[BOOK_DELTA](feed=self.id, pair=pair, delta=delta, timestamp=timestamp)
+            await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp)
 
         if self.updates >= self.book_update_interval or forced or not self.do_deltas:
             self.updates = 0
             if book_type == L2_BOOK:
-                await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair], timestamp=timestamp)
+                await self.callback(L2_BOOK, feed=self.id, pair=pair, book=self.l2_book[pair], timestamp=timestamp)
             else:
-                await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
+                await self.callback(L3_BOOK, feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
+
+    async def callback(self, data_type, **kwargs):
+        for cb in self.callbacks[data_type]:
+            await cb(**kwargs)
 
     async def message_handler(self, msg: str, timestamp: float):
         raise NotImplementedError

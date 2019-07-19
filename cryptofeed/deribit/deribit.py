@@ -72,7 +72,7 @@ class Deribit(Feed):
         }
         """
         for trade in msg["params"]["data"]:
-            await self.callbacks[TRADES](
+            await self.callback(TRADES,
                 feed=self.id,
                 pair=trade["instrument_name"],
                 order_id=trade['trade_id'],
@@ -114,7 +114,7 @@ class Deribit(Feed):
             "method" : "subscription",
             "jsonrpc" : "2.0"}
         '''
-        await self.callbacks[TICKER](feed=self.id,
+        await self.callback(TICKER, feed=self.id,
                                      pair=msg["params"]["data"]["instrument_name"],
                                      bid=Decimal(msg["params"]["data"]['best_bid_price']),
                                      ask=Decimal(msg["params"]["data"]['best_ask_price']))

@@ -29,7 +29,7 @@ class HitBTC(Feed):
                          **kwargs)
 
     async def _ticker(self, msg):
-        await self.callbacks[TICKER](feed=self.id,
+        await self.callback(TICKER, feed=self.id,
                                      pair=pair_exchange_to_std(msg['symbol']),
                                      bid=Decimal(msg['bid']),
                                      ask=Decimal(msg['ask']))
@@ -68,7 +68,7 @@ class HitBTC(Feed):
             side = BUY if update['side'] == 'buy' else SELL
             order_id = update['id']
             timestamp = timestamp_normalize(self.id, update['timestamp'])
-            await self.callbacks[TRADES](feed=self.id,
+            await self.callback(TRADES, feed=self.id,
                                          pair=pair,
                                          side=side,
                                          amount=quantity,

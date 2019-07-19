@@ -70,7 +70,7 @@ class Bitfinex(Feed):
             bid, _, ask, _, _, _, _, _, _, _ = msg[1]
             pair = self.channel_map[chan_id]['symbol']
             pair = pair_exchange_to_std(pair)
-            await self.callbacks[TICKER](feed=self.id,
+            await self.callback(TICKER, feed=self.id,
                                          pair=pair,
                                          bid=bid,
                                          ask=ask)
@@ -91,7 +91,7 @@ class Bitfinex(Feed):
             side = SELL if amount < 0 else BUY
             amount = abs(amount)
             if period:
-                await self.callbacks[FUNDING](feed=self.id,
+                await self.callback(FUNDING, feed=self.id,
                                               pair=pair,
                                               side=side,
                                               amount=amount,
@@ -100,7 +100,7 @@ class Bitfinex(Feed):
                                               timestamp=timestamp,
                                               period=period)
             else:
-                await self.callbacks[TRADES](feed=self.id,
+                await self.callback(TRADES, feed=self.id,
                                              pair=pair,
                                              side=side,
                                              amount=amount,

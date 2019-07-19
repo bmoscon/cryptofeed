@@ -128,7 +128,7 @@ class EXX(Feed):
         amount = Decimal(msg[6])
         trade_id = msg[7]
 
-        await self.callbacks[TRADES](
+        await self.callback(TRADES,
             feed=self.id,
             pair=pair,
             order_id=trade_id,

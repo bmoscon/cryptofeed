@@ -57,7 +57,7 @@ class Huobi(Feed):
                 'data': [{'id': '10006534098224147003732', 'amount': Decimal('0.0777'), 'price': Decimal('3669.69'), 'direction': 'buy', 'ts': 1549757127140}]}}
         """
         for trade in msg['tick']['data']:
-            await self.callbacks[TRADES](
+            await self.callback(TRADES,
                 feed=self.id,
                 pair=pair_exchange_to_std(msg['ch'].split('.')[1]),
                 order_id=trade['id'],

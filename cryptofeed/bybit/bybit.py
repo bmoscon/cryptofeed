@@ -63,7 +63,7 @@ class Bybit(Feed):
         """
         data = msg['data']
         for trade in data:
-            await self.callbacks[TRADES](
+            await self.callback(TRADES,
                 feed=self.id,
                 pair=normalize_pair(trade['symbol']),
                 order_id=trade['trade_id'],

@@ -51,7 +51,7 @@ class Kraken(RestFeed):
                     for trade in data['result'][pair]:
                         # <price>, <volume>, <time>, <buy/sell>, <market/limit>, <miscellaneous>
                         price, amount, timestamp, side, _, _ = trade
-                        await self.callbacks[TRADES](feed=self.id,
+                        await self.callback(TRADES, feed=self.id,
                                                      pair=pair_exchange_to_std(pair),
                                                      side=BUY if side == 'b' else SELL,
                                                      amount=Decimal(amount),
@@ -64,7 +64,7 @@ class Kraken(RestFeed):
             data = await response.json()
             bid = Decimal(data['result'][pair]['b'][0])
             ask = Decimal(data['result'][pair]['a'][0])
-            await self.callbacks[TICKER](feed=self.id,
+            await self.callback(TICKER, feed=self.id,
                                          pair=pair_exchange_to_std(pair),
                                          bid=bid,
                                          ask=ask)
@@ -86,7 +86,7 @@ class Kraken(RestFeed):
                 price = Decimal(price)
                 amount = Decimal(amount)
                 book[ASK][price] = amount
-            await self.callbacks[L2_BOOK](feed=self.id,
+            await self.callback(L2_BOOK, feed=self.id,
                                           pair=pair_exchange_to_std(pair),
                                           book=book,
                                           timestamp=ts)

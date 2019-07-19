@@ -62,7 +62,7 @@ class Gemini(Feed):
         price = Decimal(msg['price'])
         side = SELL if msg['makerSide'] == 'bid' else BUY
         amount = Decimal(msg['amount'])
-        await self.callbacks[TRADES](feed=self.id,
+        await self.callback(TRADES, feed=self.id,
                                      order_id=msg['tid'],
                                      pair=self.pair,
                                      side=side,

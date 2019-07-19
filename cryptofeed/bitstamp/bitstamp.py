@@ -86,7 +86,7 @@ class Bitstamp(Feed):
         price = Decimal(data['price'])
         timestamp = int(data['microtimestamp'])
         order_id = data['id']
-        await self.callbacks[TRADES](feed=self.id,
+        await self.callback(TRADES, feed=self.id,
                                      pair=pair,
                                      side=side,
                                      amount=amount,

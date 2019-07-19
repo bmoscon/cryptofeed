@@ -80,7 +80,7 @@ class Bitmex(Feed):
         """
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
-            await self.callbacks[TRADES](feed=self.id,
+            await self.callback(TRADES, feed=self.id,
                                          pair=data['symbol'],
                                          side=BUY if data['side'] == 'Buy' else SELL,
                                          amount=Decimal(data['size']),
@@ -169,7 +169,7 @@ class Bitmex(Feed):
                 for price, amount in update['asks']
             })
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book[pair], timestamp=timestamp)
+        await self.callback(L2_BOOK, feed=self.id, pair=pair, book=self.l2_book[pair], timestamp=timestamp)
 
     async def _funding(self, msg):
         """
@@ -202,7 +202,7 @@ class Bitmex(Feed):
         """
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
-            await self.callbacks[FUNDING](feed=self.id,
+            await self.callback(FUNDING, feed=self.id,
                                           pair=data['symbol'],
                                           timestamp=ts,
                                           interval=data['fundingInterval'],
@@ -214,7 +214,7 @@ class Bitmex(Feed):
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
             data['timestamp'] = ts
-            await self.callbacks[INSTRUMENT](feed=self.id,
+            await self.callback(INSTRUMENT, feed=self.id,
                                             pair=data['symbol'],
                                             **data
                                             )

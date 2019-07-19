@@ -61,7 +61,7 @@ class Kraken(Feed):
         """
         for trade in msg[1]:
             price, amount, timestamp, side, _, _ = trade
-            await self.callbacks[TRADES](feed=self.id,
+            await self.callback(TRADES, feed=self.id,
                                         pair=pair,
                                         side=BUY if side == 'b' else SELL,
                                         amount=Decimal(amount),
@@ -74,7 +74,7 @@ class Kraken(Feed):
         [93, {'a': ['105.85000', 0, '0.46100000'], 'b': ['105.77000', 45, '45.00000000'], 'c': ['105.83000', '5.00000000'], 'v': ['92170.25739498', '121658.17399954'], 'p': ['107.58276', '107.95234'], 't': [4966, 6717], 'l': ['105.03000', '105.03000'], 'h': ['110.33000', '110.33000'], 'o': ['109.45000', '106.78000']}]
         channel id, asks: price, wholeLotVol, vol, bids: price, wholeLotVol, close: ...,, vol: ..., VWAP: ..., trades: ..., low: ...., high: ..., open: ...
         """
-        await self.callbacks[TICKER](feed=self.id,
+        await self.callback(TICKER, feed=self.id,
                                      pair=pair,
                                      bid=Decimal(msg[1]['b'][0]),
                                      ask=Decimal(msg[1]['a'][0]))

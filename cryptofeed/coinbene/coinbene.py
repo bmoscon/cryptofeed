@@ -62,7 +62,7 @@ class Coinbene(RestFeed):
                     side = BUY if trade['take'] == 'buy' else SELL
                     update[trade['tradeId']] = (price, amount, side, trade['time'])
 
-                    await self.callbacks[TRADES](feed=self.id,
+                    await self.callback(TRADES, feed=self.id,
                                                  pair=pair_exchange_to_std(pair),
                                                  side=side,
                                                  amount=amount,
@@ -94,7 +94,7 @@ class Coinbene(RestFeed):
             data = await response.json()
             bid = Decimal(data['ticker'][0]['bid'])
             ask = Decimal(data['ticker'][0]['ask'])
-            await self.callbacks[TICKER](feed=self.id,
+            await self.callback(TICKER, feed=self.id,
                                          pair=pair_exchange_to_std(pair),
                                          bid=bid,
                                          ask=ask)
@@ -109,7 +109,7 @@ class Coinbene(RestFeed):
                 Decimal(entry['price']): Decimal(entry['quantity']) for entry in data['orderbook']['bids']
             })}
 
-            await self.callbacks[L2_BOOK](feed=self.id,
+            await self.callback(L2_BOOK, feed=self.id,
                                           pair=pair_exchange_to_std(pair),
                                           book=book,
                                           timestamp=timestamp_normalize(self.id, data['timestamp']))

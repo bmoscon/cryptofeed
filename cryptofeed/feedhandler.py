@@ -163,7 +163,7 @@ class FeedHandler:
                 # disable the interval in favor of the internal watcher, which will
                 # close the connection and reconnect in the event that no message from the exchange
                 # has been received (as opposed to a missing ping)
-                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None, max_size=2**21) as websocket:
+                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None, max_size=2**23) as websocket:
                     asyncio.ensure_future(self._watch(feed.id, websocket))
                     # connection was successful, reset retry count and delay
                     retries = 0

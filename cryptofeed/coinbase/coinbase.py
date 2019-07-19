@@ -68,7 +68,7 @@ class Coinbase(Feed):
             'last_size': '0.00241692'
         }
         '''
-        await self.callbacks[TICKER](feed=self.id,
+        await self.callback(TICKER, feed=self.id,
                                      pair=msg['product_id'],
                                      bid=Decimal(msg['best_bid']),
                                      ask=Decimal(msg['best_ask']))
@@ -113,7 +113,7 @@ class Coinbase(Feed):
 
             await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
 
-        await self.callbacks[TRADES](
+        await self.callback(TRADES,
             feed=self.id,
             pair=msg['product_id'],
             order_id=msg['trade_id'],
@@ -185,7 +185,7 @@ class Coinbase(Feed):
                     else:
                         self.l3_book[pair][side][price] = {order_id: size}
                     self.order_map[order_id] = (price, size)
-            await self.callbacks[L3_BOOK](feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
+            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
 
     async def _open(self, msg):
         delta = {BID: [], ASK: []}

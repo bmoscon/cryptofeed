@@ -56,7 +56,7 @@ class Binance(Feed):
         """
         price = Decimal(msg['p'])
         amount = Decimal(msg['q'])
-        await self.callbacks[TRADES](feed=self.id,
+        await self.callback(TRADES, feed=self.id,
                                      order_id=msg['t'],
                                      pair=pair_exchange_to_std(msg['s']),
                                      side=SELL if msg['m'] else BUY,
@@ -95,7 +95,7 @@ class Binance(Feed):
         pair = pair_exchange_to_std(msg['s'])
         bid = Decimal(msg['b'])
         ask = Decimal(msg['a'])
-        await self.callbacks[TICKER](feed=self.id,
+        await self.callback(TICKER, feed=self.id,
                                      pair=pair,
                                      bid=bid,
                                      ask=ask)
@@ -125,7 +125,7 @@ class Binance(Feed):
             ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
         }
 
-        await self.callbacks[L2_BOOK](feed=self.id, pair=pair, book=self.l2_book, timestamp=timestamp)
+        await self.callback(L2_BOOK, feed=self.id, pair=pair, book=self.l2_book, timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

@@ -72,7 +72,7 @@ class Poloniex(Feed):
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
         pair = pair_exchange_to_std(self.pair_mapping[pair_id])
         if self.__do_callback(TICKER, pair):
-            await self.callbacks[TICKER](feed=self.id,
+            await self.callback(TICKER, feed=self.id,
                                         pair=pair,
                                         bid=Decimal(bid),
                                         ask=Decimal(ask))
@@ -131,7 +131,7 @@ class Poloniex(Feed):
                     amount = Decimal(amount)
                     side = BUY if update[2] == 1 else SELL
                     if self.__do_callback(TRADES, pair):
-                        await self.callbacks[TRADES](feed=self.id,
+                        await self.callback(TRADES, feed=self.id,
                                                     pair=pair,
                                                     side=side,
                                                     amount=amount,
