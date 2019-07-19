@@ -3,6 +3,7 @@
 ### 1.0.0
   * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly
   * Feature: Generated timestamps now based on message receipt by feedhandler
+  * Feature: Multi-callback support
 
 ### 0.25.0 (2019-07-06)
   * Feature: Rest Endpoints for Historical Deribit data
