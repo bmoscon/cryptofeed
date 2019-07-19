@@ -18,27 +18,27 @@ def receiver(port):
     import time
     addr = 'tcp://127.0.0.1:{}'.format(port)
     ctx = zmq.Context.instance()
-    s = ctx.socket(zmq.PULL)
-    s.connect(addr)
+    s = ctx.socket(zmq.SUB)
+    s.setsockopt(zmq.SUBSCRIBE, b'')
+
+    s.bind(addr)
     while True:
-        data = s.recv_json()
+        data = s.recv_string()
         print(data)
 
 def main():
     try:
-        p = Process(target=receiver, args=(5555,))
-        p2 = Process(target=receiver, args=(5556,))
+        p = Process(target=receiver, args=(5678,))
 
         p.start()
-        p2.start()
 
         f = FeedHandler()
-        f.add_feed(Kraken(channels=[L2_BOOK], pairs=['ETH-USD'], callbacks={L2_BOOK: BookZMQ(depth=1, port=5556)}))
+        f.add_feed(Kraken(channels=[L2_BOOK], pairs=['ETH-USD'], callbacks={L2_BOOK: BookZMQ(depth=1, port=5678)}))
 
         f.run()
+
     finally:
         p.terminate()
-        p2.terminate()
 
 
 if __name__ == '__main__':
