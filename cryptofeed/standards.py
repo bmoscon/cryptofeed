@@ -116,7 +116,7 @@ _feed_to_exchange_map = {
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN: 'trade',
-        BINANCE: 'trade',
+        BINANCE: 'aggTrade',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
         HUOBI_US: 'trade.detail',

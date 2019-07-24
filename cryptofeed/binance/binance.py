@@ -41,23 +41,23 @@ class Binance(Feed):
     async def _trade(self, msg):
         """
         {
-        "e": "trade",     // Event type
-        "E": 123456789,   // Event time
-        "s": "BNBBTC",    // Symbol
-        "t": 12345,       // Trade ID
-        "p": "0.001",     // Price
-        "q": "100",       // Quantity
-        "b": 88,          // Buyer order ID
-        "a": 50,          // Seller order ID
-        "T": 123456785,   // Trade time
-        "m": true,        // Is the buyer the market maker?
-        "M": true         // Ignore
+            "e": "aggTrade",  // Event type
+            "E": 123456789,   // Event time
+            "s": "BNBBTC",    // Symbol
+            "a": 12345,       // Aggregate trade ID
+            "p": "0.001",     // Price
+            "q": "100",       // Quantity
+            "f": 100,         // First trade ID
+            "l": 105,         // Last trade ID
+            "T": 123456785,   // Trade time
+            "m": true,        // Is the buyer the market maker?
+            "M": true         // Ignore
         }
         """
         price = Decimal(msg['p'])
         amount = Decimal(msg['q'])
         await self.callback(TRADES, feed=self.id,
-                                     order_id=msg['t'],
+                                     order_id=msg['a'],
                                      pair=pair_exchange_to_std(msg['s']),
                                      side=SELL if msg['m'] else BUY,
                                      amount=amount,
@@ -140,7 +140,7 @@ class Binance(Feed):
 
         if event == 'depth20':
             await self._book(msg, pair, timestamp)
-        elif msg['e'] == 'trade':
+        elif msg['e'] == 'aggTrade':
             await self._trade(msg)
         elif msg['e'] == '24hrTicker':
             await self._ticker(msg)
