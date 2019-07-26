@@ -28,3 +28,7 @@ class UnsupportedTradingOption(Exception):
 
 class UnsupportedType(Exception):
     pass
+
+
+class ExhaustedRetries(Exception):
+    pass

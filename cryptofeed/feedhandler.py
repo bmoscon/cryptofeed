@@ -19,6 +19,7 @@ from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.exchanges import *
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
+from cryptofeed.exceptions import ExhaustedRetries
 
 
 LOG = get_logger('feedhandler', 'feedhandler.log')
@@ -149,6 +150,7 @@ class FeedHandler:
                 delay *= 2
 
         LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+        raise ExhaustedRetries()
 
     async def _connect(self, feed):
         """
@@ -182,6 +184,7 @@ class FeedHandler:
                 delay *= 2
 
         LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+        raise ExhaustedRetries()
 
     async def _handler(self, websocket, handler, feed_id):
         async for message in websocket:
