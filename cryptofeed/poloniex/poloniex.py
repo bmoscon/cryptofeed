@@ -57,6 +57,9 @@ class Poloniex(Feed):
             self.channels.append(p_ticker)
         if VOLUME in check:
             self.channels.append(p_volume)
+        # channels = pairs = cannot have duplicates
+        self.channels = list(set(self.channels))
+
         self.__reset()
 
     def __do_callback(self, channel, pair):
