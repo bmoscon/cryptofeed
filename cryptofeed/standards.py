@@ -14,7 +14,7 @@ import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
-                                OKEX, COINBENE, BYBIT, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT)
+                                OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -64,7 +64,7 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT}:
+    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX}:
         return pd.Timestamp(ts).timestamp()
     elif exchange in  {HUOBI, HUOBI_US, BITFINEX, COINBENE, DERIBIT, BINANCE}:
         return ts / 1000.0
@@ -90,7 +90,8 @@ _feed_to_exchange_map = {
         OKEX: 'spot/depth',
         COINBENE: L2_BOOK,
         DERIBIT: 'book',
-        BYBIT: 'order_book_25L1'
+        BYBIT: 'order_book_25L1',
+        FTX: 'orderbook'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -106,7 +107,8 @@ _feed_to_exchange_map = {
         HUOBI_US: UNSUPPORTED,
         OKCOIN: UNSUPPORTED,
         OKEX: UNSUPPORTED,
-        BYBIT: UNSUPPORTED
+        BYBIT: UNSUPPORTED,
+        FTX: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: TRADES,
@@ -124,7 +126,8 @@ _feed_to_exchange_map = {
         OKEX: 'spot/trade',
         COINBENE: TRADES,
         DERIBIT: 'trades',
-        BYBIT:  'trade'
+        BYBIT:  'trade',
+        FTX: 'trades'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -141,7 +144,8 @@ _feed_to_exchange_map = {
         OKEX: 'spot/ticker',
         COINBENE: TICKER,
         DERIBIT: "ticker",
-        BYBIT: UNSUPPORTED
+        BYBIT: UNSUPPORTED,
+        FTX: "ticker"
     },
     VOLUME: {
         POLONIEX: 1003
