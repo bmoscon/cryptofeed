@@ -4,6 +4,8 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import uuid
+
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
 from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, INSTRUMENT
@@ -13,6 +15,8 @@ class Feed:
     id = 'NotImplemented'
 
     def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, book_interval=1000):
+        self.hash = str(uuid.uuid4())
+        self.uuid = self.id + self.hash
         self.config = {}
         self.address = address
         self.book_update_interval = book_interval

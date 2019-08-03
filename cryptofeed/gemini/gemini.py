@@ -23,23 +23,22 @@ class Gemini(Feed):
     id = GEMINI
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        if len(pairs) != 1:
-            LOG.error("Gemini requires a websocket per trading pair")
-            raise ValueError("Gemini requires a websocket per trading pair")
-        if channels is not None:
-            LOG.error("Gemini does not support different channels")
-            raise ValueError("Gemini does not support different channels")
-        self.pair = pairs[0]
+        self.channels = None
+        if pairs and len(pairs) == 1:
+            self.pair = pairs[0]
+            super().__init__('wss://api.gemini.com/v1/marketdata/',
+                            pairs=None,
+                            channels=None,
+                            callbacks=callbacks,
+                            **kwargs)
 
-        super().__init__('wss://api.gemini.com/v1/marketdata/',
-                         pairs=None,
-                         channels=None,
-                         callbacks=callbacks,
-                         **kwargs)
-
-        self.address += pair_std_to_exchange(self.pair, self.id)
-        self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
-        self.seq_no = None
+            self.address += pair_std_to_exchange(self.pair, self.id)
+            self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
+            self.seq_no = None
+        else:
+            self.pairs = pairs
+            self.config = kwargs.get('config', None)
+            self.callbacks = callbacks
 
     async def _book(self, msg, timestamp):
         delta = {BID: [], ASK: []}
@@ -70,8 +69,8 @@ class Gemini(Feed):
                                      price=price,
                                      timestamp=timestamp)
 
-    async def _update(self, msg):
-        timestamp = None
+    async def _update(self, msg: dict, timestamp: float):
+        timestamp = timestamp
         if 'timestampms' in msg:
             timestamp = msg['timestampms'] / 1000.0
         forced = False
@@ -101,7 +100,7 @@ class Gemini(Feed):
         else:
             self.seq_no = seq_no
         if msg['type'] == 'update':
-            await self._update(msg)
+            await self._update(msg, timestamp)
         elif msg['type'] == 'heartbeat':
             pass
         else:

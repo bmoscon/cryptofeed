@@ -8,6 +8,8 @@ import asyncio
 from time import time as time
 from socket import error as socket_error
 import zlib
+from collections import defaultdict
+from copy import deepcopy
 
 import websockets
 from websockets import ConnectionClosed
@@ -75,14 +77,22 @@ class FeedHandler:
         """
         if isinstance(feed, str):
             if feed in _EXCHANGES:
-                self.feeds.append(_EXCHANGES[feed](**kwargs))
-                feed = _EXCHANGES[feed]
+                if feed == GEMINI:
+                    self._do_gemini_subscribe(feed, timeout, **kwargs)
+                else:
+                    self.feeds.append(_EXCHANGES[feed](**kwargs))
+                    feed = self.feeds[-1]
+                    self.last_msg[feed.uuid] = None
+                    self.timeout[feed.uuid] = timeout
             else:
                 raise ValueError("Invalid feed specified")
         else:
-            self.feeds.append(feed)
-        self.last_msg[feed.id] = None
-        self.timeout[feed.id] = timeout
+            if isinstance(feed, Gemini):
+                self._do_gemini_subscribe(feed, timeout)
+            else:
+                self.feeds.append(feed)
+                self.last_msg[feed.uuid] = None
+                self.timeout[feed.uuid] = timeout
 
     def add_nbbo(self, feeds, pairs, callback, timeout=120):
         """
@@ -159,19 +169,19 @@ class FeedHandler:
         retries = 0
         delay = 1
         while retries <= self.retries:
-            self.last_msg[feed.id] = None
+            self.last_msg[feed.uuid] = None
             try:
                 # Coinbase frequently will not respond to pings within the ping interval, so
                 # disable the interval in favor of the internal watcher, which will
                 # close the connection and reconnect in the event that no message from the exchange
                 # has been received (as opposed to a missing ping)
                 async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None, max_size=2**23) as websocket:
-                    asyncio.ensure_future(self._watch(feed.id, websocket))
+                    asyncio.ensure_future(self._watch(feed.uuid, websocket))
                     # connection was successful, reset retry count and delay
                     retries = 0
                     delay = 1
                     await feed.subscribe(websocket)
-                    await self._handler(websocket, feed.message_handler, feed.id)
+                    await self._handler(websocket, feed.message_handler, feed.uuid)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
                 LOG.warning("%s: encountered connection issue %s - reconnecting...", feed.id, str(e), exc_info=True)
                 await asyncio.sleep(delay)
@@ -200,3 +210,37 @@ class FeedHandler:
                 # exception will be logged with traceback when connection handler
                 # retries the connection
                 raise
+
+    def _do_gemini_subscribe(self, feed, timeout: int, **kwargs):
+        config = {}
+        pairs = []
+
+        if 'config' in kwargs:
+            config = kwargs.pop('config')
+        elif hasattr(feed, 'config'):
+            config = feed.config
+
+        if config:
+            new_config = defaultdict(list)
+            for cb, symbols in config.items():
+                for symbol in symbols:
+                    new_config[symbol].append(cb)
+
+            for symbol, cbs in new_config.items():
+                cb = {cb: deepcopy(feed.callbacks[cb]) for cb in cbs}
+                feed = Gemini(pairs=[symbol], callbacks=cb, **kwargs)
+                self.feeds.append(feed)
+                self.last_msg[feed.uuid] = None
+                self.timeout[feed.uuid] = timeout
+        else:
+            if 'pairs' in kwargs:
+                pairs = kwargs.pop('pairs')
+            elif hasattr(feed, 'pairs'):
+                pairs = feed.pairs
+                kwargs['callbacks'] = feed.callbacks
+
+            for pair in pairs:
+                feed = Gemini(pairs=[pair], **kwargs)
+                self.feeds.append(feed)
+                self.last_msg[feed.uuid] = None
+                self.timeout[feed.uuid] = timeout
