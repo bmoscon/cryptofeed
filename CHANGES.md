@@ -5,6 +5,9 @@
   * Feature: Generated timestamps now based on message receipt by feedhandler
   * Feature: Multi-callback support
   * Feature: Rework ZMQ using pub/sub with topics
+  * Feature: FTX Exchange
+  * Feature: Gemini subscriptions now work like all other exchanges
+  * Feature: Use unique id for each feed (as opposed to feed id/name)
 
 ### 0.25.0 (2019-07-06)
   * Feature: Rest Endpoints for Historical Deribit data
