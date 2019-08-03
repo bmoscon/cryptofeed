@@ -11,7 +11,8 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, FTX
+from cryptofeed.defines import FTX as FTX_id
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -19,7 +20,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class FTX(Feed):
-    id = FTX
+    id = FTX_id
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://ftexchange.com/ws/', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
