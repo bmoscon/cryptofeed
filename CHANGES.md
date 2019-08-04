@@ -8,6 +8,8 @@
   * Feature: FTX Exchange
   * Feature: Gemini subscriptions now work like all other exchanges
   * Feature: Use unique id for each feed (as opposed to feed id/name)
+  * Bugfix: fix Poloniex historical trade timestamps
+  * Bugfix: Bitmex L2 channel incorrectly classified
 
 ### 0.25.0 (2019-07-06)
   * Feature: Rest Endpoints for Historical Deribit data
