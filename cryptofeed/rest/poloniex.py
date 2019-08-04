@@ -146,7 +146,7 @@ class Poloniex(API):
 
     def _trade_normalize(self, trade, symbol):
         return {
-            'timestamp': trade['date'],
+            'timestamp': pd.Timestamp(trade['date']).timestamp(),
             'pair': pair_exchange_to_std(symbol),
             'id': trade['tradeID'],
             'feed': self.ID,
