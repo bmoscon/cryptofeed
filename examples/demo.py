@@ -7,7 +7,7 @@ associated with this software.
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback, InstrumentCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, HuobiUS, OKCoin, OKEx, Coinbene
-from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, INSTRUMENT, GEMINI
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, INSTRUMENT, GEMINI
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -59,7 +59,7 @@ def main():
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[FUNDING, TRADES], callbacks={FUNDING: FundingCallback(funding), TRADES: TradeCallback(trade)}))
 
     f.add_feed(Bitfinex(pairs=['BTC'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book)}))
+    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.add_feed(Kraken(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
 
     config={TRADES: ['BTC-USD', 'ETH-USD', 'BTC-USDT', 'ETH-USDT'], L2_BOOK: ['BTC-USD', 'BTC-USDT']}

@@ -72,7 +72,7 @@ class DeltaBook(object):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L3_BOOK], callbacks=DeltaBook("Bitmex").L3))
+    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitmex").L2))
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks=DeltaBook("Bitfinex-L3").L3))
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitfinex-L2").L2))
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks=DeltaBook("Coinbase-L3").L3))

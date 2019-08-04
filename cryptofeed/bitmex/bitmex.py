@@ -13,7 +13,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, L3_BOOK, BITMEX, INSTRUMENT
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, BITMEX, INSTRUMENT
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -42,7 +42,6 @@ class Bitmex(Feed):
         self.partial_received = False
         self.order_id = {}
         for pair in self.pairs:
-            self.l3_book[pair] = {BID: sd(), ASK: sd()}
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             self.order_id[pair] = defaultdict(dict)
 
@@ -112,12 +111,9 @@ class Bitmex(Feed):
                 size = Decimal(data['size'])
                 order_id = data['id']
 
-                if price in self.l3_book[pair][side]:
-                    self.l3_book[pair][side][price][order_id] = size
-                else:
-                    self.l3_book[pair][side][price] = {order_id: size}
-                self.order_id[pair][side][order_id] = (price, size)
-                delta[side].append((order_id, price, size))
+                self.l2_book[pair][side][price] = size
+                self.order_id[pair][side][order_id] = price
+                delta[side].append((price, size))
         elif msg['action'] == 'update':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
@@ -125,51 +121,28 @@ class Bitmex(Feed):
                 update_size = Decimal(data['size'])
                 order_id = data['id']
 
-                price, _ = self.order_id[pair][side][order_id]
+                price = self.order_id[pair][side][order_id]
 
-                self.l3_book[pair][side][price][order_id] = update_size
-                self.order_id[pair][side][order_id] = (price, update_size)
-                delta[side].append((order_id, price, update_size))
+                self.l2_book[pair][side][price] = update_size
+                self.order_id[pair][side][order_id] = price
+                delta[side].append((price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
                 pair = data['symbol']
                 side = BID if data['side'] == 'Buy' else ASK
                 order_id = data['id']
 
-                delete_price, _ = self.order_id[pair][side][order_id]
+                delete_price = self.order_id[pair][side][order_id]
                 del self.order_id[pair][side][order_id]
-                del self.l3_book[pair][side][delete_price][order_id]
+                del self.l2_book[pair][side][delete_price]
 
-                if len(self.l3_book[pair][side][delete_price]) == 0:
-                    del self.l3_book[pair][side][delete_price]
-
-                delta[side].append((order_id, delete_price, 0))
+                delta[side].append((delete_price, 0))
 
         else:
-            LOG.warning("%s: Unexpected L3 Book message %s", self.id, msg)
+            LOG.warning("%s: Unexpected l2 Book message %s", self.id, msg)
             return
 
-        await self.book_callback(pair, L3_BOOK, forced, delta, timestamp)
-
-    async def _l2_book(self, msg):
-        """
-        top 10 orders from each side
-        """
-        timestamp = msg['data'][0]['timestamp']
-        timestamp = timestamp_normalize(self.id, timestamp)
-        pair = None
-        for update in msg['data']:
-            pair = update['symbol']
-            self.l2_book[pair][BID] = sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in update['bids']
-            })
-            self.l2_book[pair][ASK] = sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in update['asks']
-            })
-
-        await self.callback(L2_BOOK, feed=self.id, pair=pair, book=self.l2_book[pair], timestamp=timestamp)
+        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
 
     async def _funding(self, msg):
         """
@@ -235,8 +208,6 @@ class Bitmex(Feed):
                 await self._book(msg, timestamp)
             elif msg['table'] == 'funding':
                 await self._funding(msg)
-            elif msg['table'] == 'orderBook10':
-                await self._l2_book(msg)
             elif msg['table'] == 'instrument':
                 await self._instrument(msg)
             else:

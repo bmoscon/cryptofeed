@@ -4,7 +4,7 @@ import collections
 from datetime import datetime
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback, InstrumentCallback
 from cryptofeed import FeedHandler
-from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, INSTRUMENT
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, INSTRUMENT
 from cryptofeed.defines import BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, GEMINI, HITBTC, HUOBI, HUOBI_US, KRAKEN, OKCOIN, OKEX, POLONIEX
 
 # Gathers the first trade of each exchange and prints out info on the timestamps.
