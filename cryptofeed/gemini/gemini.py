@@ -35,6 +35,7 @@ class Gemini(Feed):
             self.address += pair_std_to_exchange(self.pair, self.id)
             self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
             self.seq_no = None
+            self.pairs = pairs
         else:
             self.pairs = pairs
             self.config = kwargs.get('config', None)
