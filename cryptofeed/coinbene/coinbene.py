@@ -43,24 +43,16 @@ class Coinbene(RestFeed):
         if pair not in self.last_trade_update:
             async with session.get(f"{self.address}trades?symbol={pair}") as response:
                 data = await response.json()
-                update = {}
-                for trade in data['trades']:
-                    price = Decimal(trade['price'])
-                    amount = Decimal(trade['quantity'])
-                    side = BUY if trade['take'] == 'buy' else SELL
-                    update[trade['tradeId']] = (price, amount, side, trade['time'])
-                self.last_trade_update[pair] = update
+                self.last_trade_update[pair] = timestamp_normalize(self.id, data['trades'][-1]['time'])
         else:
             async with session.get(f"{self.address}trades?symbol={pair}&size=2000") as response:
                 data = await response.json()
-                update = {}
                 for trade in data['trades']:
-                    if trade['tradeId'] in self.last_trade_update[pair]:
+                    if timestamp_normalize(self.id, trade['time']) <= self.last_trade_update[pair]:
                         continue
                     price = Decimal(trade['price'])
                     amount = Decimal(trade['quantity'])
                     side = BUY if trade['take'] == 'buy' else SELL
-                    update[trade['tradeId']] = (price, amount, side, trade['time'])
 
                     await self.callback(TRADES, feed=self.id,
                                                  pair=pair_exchange_to_std(pair),
@@ -69,7 +61,7 @@ class Coinbene(RestFeed):
                                                  price=price,
                                                  order_id=trade['tradeId'],
                                                  timestamp=timestamp_normalize(self.id, trade['time']))
-                self.last_trade_update[pair] = update
+                self.last_trade_update[pair] = timestamp_normalize(self.id, data['trades'][-1]['time'])
 
     async def _ticker(self, session, pair):
         """
