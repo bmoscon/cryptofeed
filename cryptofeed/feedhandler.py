@@ -148,7 +148,7 @@ class FeedHandler:
         """
         retries = 0
         delay = 1
-        while retries <= self.retries:
+        while retries <= self.retries or self.retries == -1:
             await feed.subscribe()
             try:
                 while True:
@@ -168,7 +168,7 @@ class FeedHandler:
         """
         retries = 0
         delay = 1
-        while retries <= self.retries:
+        while retries <= self.retries or self.retries == -1:
             self.last_msg[feed.uuid] = None
             try:
                 # Coinbase frequently will not respond to pings within the ping interval, so
