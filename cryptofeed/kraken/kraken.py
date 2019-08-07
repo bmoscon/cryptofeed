@@ -21,7 +21,7 @@ LOG = logging.getLogger('feedhandler')
 class Kraken(Feed):
     id = KRAKEN
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, depth=10, **kwargs):
+    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
         super().__init__('wss://ws.kraken.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.book_depth = depth
 
