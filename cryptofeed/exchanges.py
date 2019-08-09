@@ -13,6 +13,7 @@ from cryptofeed.exchange.hitbtc import HitBTC
 from cryptofeed.exchange.poloniex import Poloniex
 from cryptofeed.exchange.bitmex import Bitmex
 from cryptofeed.exchange.kraken import Kraken
+from cryptofeed.exchange.kraken_futures import KrakenFutures
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.huobi import Huobi

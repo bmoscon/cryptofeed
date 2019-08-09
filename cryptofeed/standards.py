@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
                                 OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
@@ -27,7 +27,7 @@ _exchange_to_std = {}
 
 
 def load_exchange_pair_mapping(exchange):
-    if exchange in {BITMEX, DERIBIT}:
+    if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
     mapping = gen_pairs(exchange)
     for std, exch in mapping.items():
@@ -40,7 +40,7 @@ def load_exchange_pair_mapping(exchange):
 
 def pair_std_to_exchange(pair, exchange):
     # bitmex does its own validation of trading pairs dynamically
-    if exchange in {BITMEX, DERIBIT}:
+    if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return pair
     if pair in _std_trading_pairs:
         try:
@@ -82,6 +82,7 @@ _feed_to_exchange_map = {
         BITMEX: 'orderBookL2',
         BITSTAMP: 'order_book',
         KRAKEN: 'book',
+        KRAKEN_FUTURES: 'book',
         BINANCE: 'depth20',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
@@ -101,6 +102,7 @@ _feed_to_exchange_map = {
         BITMEX: UNSUPPORTED,
         POLONIEX: UNSUPPORTED,  # supported by specifying a trading pair as the channel,
         KRAKEN: UNSUPPORTED,
+        KRAKEN_FUTURES: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
@@ -118,6 +120,7 @@ _feed_to_exchange_map = {
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN: 'trade',
+        KRAKEN_FUTURES: 'trade',
         BINANCE: 'aggTrade',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
@@ -137,6 +140,7 @@ _feed_to_exchange_map = {
         COINBASE: 'ticker',
         BITMEX: UNSUPPORTED,
         KRAKEN: TICKER,
+        KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
         HUOBI: UNSUPPORTED,
         HUOBI_US: UNSUPPORTED,
