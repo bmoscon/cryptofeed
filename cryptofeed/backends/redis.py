@@ -15,18 +15,21 @@ from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 class RedisCallback:
-    def __init__(self, host='127.0.0.1', port=6379, key=None, numeric_type=str, **kwargs):
+    def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, numeric_type=str, **kwargs):
         """
         setting key lets you override the prefix on the
         key used in redis. The defaults are related to the data
         being stored, i.e. trade, funding, etc
         """
-        self.host = host
-        self.port = port
         self.redis = None
         self.key = key
         self.numeric_type = numeric_type
 
+        self.conn_str = socket if socket else f'redis://{host}:{port}'
+
+    async def connect(self):
+        if self.redis is None:
+            self.redis = await aioredis.create_redis_pool(self.conn_str)
 
 class TradeRedis(RedisCallback):
     def __init__(self, *args, **kwargs):
@@ -35,8 +38,7 @@ class TradeRedis(RedisCallback):
             self.key = 'trades'
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         data = json.dumps({'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                            'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price)})
@@ -46,8 +48,7 @@ class TradeRedis(RedisCallback):
 
 class TradeStream(TradeRedis):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         data = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp,
                 'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price)}
@@ -64,8 +65,7 @@ class FundingRedis(RedisCallback):
             self.key = 'funding'
 
     async def __call__(self, *, feed, pair, **kwargs):
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         timestamp = kwargs.get('timestamp', None)
 
@@ -83,8 +83,7 @@ class FundingRedis(RedisCallback):
 
 class FundingStream(FundingRedis):
     async def __call__(self, *, feed, pair, **kwargs):
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
@@ -103,9 +102,7 @@ class BookRedis(RedisCallback):
 
     async def __call__(self, *, feed, pair, book, timestamp):
         ts = time.time()
-
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
         book_convert(book, data, self.depth, convert=self.numeric_type)
@@ -128,9 +125,7 @@ class BookDeltaRedis(RedisCallback):
 
     async def __call__(self, *, feed, pair, delta, timestamp):
         ts = time.time()
-
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         data = {'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
         book_delta_convert(delta, data, convert=self.numeric_type)
@@ -140,8 +135,7 @@ class BookDeltaRedis(RedisCallback):
 
 class BookStream(BookRedis):
     async def __call__(self, *, feed, pair, book, timestamp):
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
         book_convert(book, data, self.depth, convert=self.numeric_type)
@@ -158,8 +152,7 @@ class BookStream(BookRedis):
 
 class BookDeltaStream(BookRedis):
     async def __call__(self, *, feed, pair, delta, timestamp):
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(f'redis://{self.host}:{self.port}')
+        await self.connect()
 
         data = {'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
         book_delta_convert(delta, data, convert=self.numeric_type)
