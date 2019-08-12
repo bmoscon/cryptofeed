@@ -7,7 +7,7 @@ associated with this software.
 import logging
 
 from cryptofeed.defines import HUOBI_US
-from cryptofeed.huobi.huobi import Huobi
+from cryptofeed.exchange.huobi import Huobi
 
 
 LOG = logging.getLogger('feedhandler')
