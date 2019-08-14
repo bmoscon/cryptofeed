@@ -214,13 +214,25 @@ class FeedHandler:
                 raise
 
     def _do_gemini_subscribe(self, feed, timeout: int, **kwargs):
+        """
+        Gemini is a special case, a separate websocket is needed for each symbol,
+        and each connection receives all data for that symbol. We allow the user
+        to configure Gemini like they would any other exchange and parse out the
+        relevant information to create a separate feed object per symbol.
+        """
         config = {}
         pairs = []
 
+        # Need to handle the two configuration cases - Feed object and Feed Name with config dict
         if 'config' in kwargs:
             config = kwargs.pop('config')
         elif hasattr(feed, 'config'):
             config = feed.config
+
+        if isinstance(feed, str):
+            callbacks = kwargs.pop('callbacks')
+        else:
+            callbacks = feed.callbacks
 
         if config:
             new_config = defaultdict(list)
@@ -228,8 +240,10 @@ class FeedHandler:
                 for symbol in symbols:
                     new_config[symbol].append(cb)
 
+
+
             for symbol, cbs in new_config.items():
-                cb = {cb: deepcopy(feed.callbacks[cb]) for cb in cbs}
+                cb = {cb: deepcopy(callbacks[cb]) for cb in cbs}
                 feed = Gemini(pairs=[symbol], callbacks=cb, **kwargs)
                 self.feeds.append(feed)
                 self.last_msg[feed.uuid] = None
@@ -239,10 +253,9 @@ class FeedHandler:
                 pairs = kwargs.pop('pairs')
             elif hasattr(feed, 'pairs'):
                 pairs = feed.pairs
-                kwargs['callbacks'] = feed.callbacks
 
             for pair in pairs:
-                feed = Gemini(pairs=[pair], **kwargs)
+                feed = Gemini(pairs=[pair], callbacks=callbacks, **kwargs)
                 self.feeds.append(feed)
                 self.last_msg[feed.uuid] = None
                 self.timeout[feed.uuid] = timeout
