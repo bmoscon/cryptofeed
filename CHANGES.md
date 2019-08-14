@@ -10,6 +10,8 @@
   * Feature: Use unique id for each feed (as opposed to feed id/name)
   * Bugfix: fix Poloniex historical trade timestamps
   * Bugfix: Bitmex L2 channel incorrectly classified
+  * Feature: Kraken Futures
+  * Feature: Redis backend supports UDS
 
 ### 0.25.0 (2019-07-06)
   * Feature: Rest Endpoints for Historical Deribit data
