@@ -18,6 +18,7 @@ from cryptofeed.exchange.binance import Binance
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.huobi import Huobi
 from cryptofeed.exchange.huobi_us import HuobiUS
+from cryptofeed.exchange.huobi_dm import HuobiDM
 from cryptofeed.exchange.okcoin import OKCoin
 from cryptofeed.exchange.okex import OKEx
 from cryptofeed.exchange.coinbene import Coinbene

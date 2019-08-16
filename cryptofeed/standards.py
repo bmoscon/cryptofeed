@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN,
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN,
                                 OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
@@ -66,7 +66,7 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in  {HUOBI, HUOBI_US, BITFINEX, COINBENE, DERIBIT, BINANCE}:
+    elif exchange in  {HUOBI, HUOBI_US, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -87,6 +87,7 @@ _feed_to_exchange_map = {
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
         HUOBI_US: 'depth.step0',
+        HUOBI_DM: 'depth.step0',
         OKCOIN: 'spot/depth',
         OKEX: 'spot/depth',
         COINBENE: L2_BOOK,
@@ -107,6 +108,7 @@ _feed_to_exchange_map = {
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_US: UNSUPPORTED,
+        HUOBI_DM: UNSUPPORTED,
         OKCOIN: UNSUPPORTED,
         OKEX: UNSUPPORTED,
         BYBIT: UNSUPPORTED,
@@ -125,6 +127,7 @@ _feed_to_exchange_map = {
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
         HUOBI_US: 'trade.detail',
+        HUOBI_DM: 'trade.detail',
         OKCOIN: 'spot/trade',
         OKEX: 'spot/trade',
         COINBENE: TRADES,
@@ -144,6 +147,7 @@ _feed_to_exchange_map = {
         BINANCE: 'ticker',
         HUOBI: UNSUPPORTED,
         HUOBI_US: UNSUPPORTED,
+        HUOBI_DM: UNSUPPORTED,
         OKCOIN: 'spot/ticker',
         OKEX: 'spot/ticker',
         COINBENE: TICKER,

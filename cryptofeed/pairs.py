@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE, BYBIT, FTX
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX
 
 
 def gen_pairs(exchange):
@@ -154,6 +154,23 @@ def huobi_us_pairs():
     return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
+def huobi_dm_pairs():
+    """
+    Mapping is, for instance: {"BTC_CW":"BTC190816"}
+    See comments in exchange/houbi_dm.py
+    """
+    mapping  = {
+        "this_week": "CW",
+        "next_week": "NW",
+        "quarter": "CQ"
+    }
+    r = requests.get('https://www.hbdm.com/api/v1/contract_contract_info').json()
+    pairs = {}
+    for e in r['data']:
+       pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
+    return pairs
+
+
 def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
     return {e['instrument_id'] : e['instrument_id'] for e in r}
@@ -186,6 +203,7 @@ _exchange_function_map = {
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
     HUOBI_US: huobi_us_pairs,
+    HUOBI_DM: huobi_dm_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
     COINBENE: coinbene_pairs,
