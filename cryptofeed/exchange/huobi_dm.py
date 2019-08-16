@@ -4,7 +4,7 @@ Huobi_DM has 3 futures per currency (with USD as base): weekly, bi-weekly(the ne
 You must subscribe to them with: CRY_TC
 where
    CRY = BTC, ETC, etc.
-   TC is the time code mapping below
+   TC is the time code mapping below:
      mapping  = {
          "this_week": "CW", # current week
          "next_week": "NW", # next week
@@ -12,8 +12,8 @@ where
      }
 
 So for example, to get the quarterly BTC future, you subscribe to "BTC_CQ", and it is returned to channel "market.BTC_CQ. ..."
-However since the actual contract changes over time, we want top pubish the pair name using the actual expiry date, which
-is contained in teh exchanges "contract_code".
+However since the actual contract changes over time, we want to pubish the pair name using the actual expiry date, which
+is contained in the exchanges "contract_code".
 
 Here's what you get for BTC querying https://www.hbdm.com/api/v1/contract_contract_info on 2019 Aug 16:
 [{"symbol":"BTC","contract_code":"BTC190816","contract_type":"this_week","contract_size":100.000000000000000000,"price_tick":0.010000000000000000,"delivery_date":"20190816","create_date":"20190802","contract_status":1}
