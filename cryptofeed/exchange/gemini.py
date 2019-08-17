@@ -44,16 +44,19 @@ class Gemini(Feed):
         data = msg['changes']
         forced = not len(self.l2_book[pair][BID])
         delta = {BID: [], ASK: []}
-
         for entry in data:
             side = ASK if entry[0] == 'sell' else BID
             price = Decimal(entry[1])
             amount = Decimal(entry[2])
-            self.l2_book[pair][side][price] = amount
-            delta[side].append((price, amount))
+            if amount == 0:
+                if price in self.l2_book[pair][side]:
+                    del self.l2_book[pair][side][price]
+                    delta[side].append((price, 0))
+            else:
+                self.l2_book[pair][side][price] = amount
+                delta[side].append((price, amount))
 
         await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
-
 
     async def _trade(self, msg, timestamp):
         pair = pair_exchange_to_std(msg['symbol'])
