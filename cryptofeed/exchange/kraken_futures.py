@@ -50,7 +50,7 @@ class KrakenFutures(Feed):
                 {
                     "event": "subscribe",
                     "feed": chan,
-                    "product_ids": self.pairs if not self.config else self.config[chan]
+                    "product_ids": self.pairs if not self.config else list(self.config[chan])
                 }
             ))
 
