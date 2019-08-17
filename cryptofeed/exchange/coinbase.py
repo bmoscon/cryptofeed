@@ -302,12 +302,12 @@ class Coinbase(Feed):
         if self.config:
             for chan in self.config:
                 await websocket.send(json.dumps({"type": "subscribe",
-                                         "product_ids": self.config[chan],
+                                         "product_ids": list(self.config[chan]),
                                          "channels": [chan]
                                          }))
                 if 'full' in chan:
                     snapshot = True
-                    self.book_pairs.extend(self.config[chan])
+                    self.book_pairs.extend(list(self.config[chan]))
         else:
             await websocket.send(json.dumps({"type": "subscribe",
                                             "product_ids": self.pairs,

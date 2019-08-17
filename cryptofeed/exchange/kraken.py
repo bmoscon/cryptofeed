@@ -38,7 +38,7 @@ class Kraken(Feed):
                     sub['depth'] = self.book_depth
                 await websocket.send(json.dumps({
                                         "event": "subscribe",
-                                        "pair": self.config[chan],
+                                        "pair": list(self.config[chan]),
                                         "subscription": sub
                                     }))
         else:

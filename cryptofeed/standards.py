@@ -66,7 +66,7 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in  {HUOBI, HUOBI_US, BITFINEX, COINBENE, DERIBIT, BINANCE}:
+    elif exchange in  {HUOBI, HUOBI_US, BITFINEX, COINBENE, DERIBIT, BINANCE, GEMINI}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -92,7 +92,8 @@ _feed_to_exchange_map = {
         COINBENE: L2_BOOK,
         DERIBIT: 'book',
         BYBIT: 'order_book_25L1',
-        FTX: 'orderbook'
+        FTX: 'orderbook',
+        GEMINI: L2_BOOK
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -110,7 +111,8 @@ _feed_to_exchange_map = {
         OKCOIN: UNSUPPORTED,
         OKEX: UNSUPPORTED,
         BYBIT: UNSUPPORTED,
-        FTX: UNSUPPORTED
+        FTX: UNSUPPORTED,
+        GEMINI: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: TRADES,
@@ -130,7 +132,8 @@ _feed_to_exchange_map = {
         COINBENE: TRADES,
         DERIBIT: 'trades',
         BYBIT:  'trade',
-        FTX: 'trades'
+        FTX: 'trades',
+        GEMINI: TRADES
     },
     TICKER: {
         POLONIEX: 1002,
@@ -149,7 +152,8 @@ _feed_to_exchange_map = {
         COINBENE: TICKER,
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
-        FTX: "ticker"
+        FTX: "ticker",
+        GEMINI: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003

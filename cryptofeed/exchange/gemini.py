@@ -12,8 +12,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, GEMINI
-from cryptofeed.standards import pair_std_to_exchange
-from cryptofeed.exceptions import MissingSequenceNumber
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,89 +22,67 @@ class Gemini(Feed):
     id = GEMINI
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        self.channels = None
-        if pairs and len(pairs) == 1:
-            self.pair = pairs[0]
-            super().__init__('wss://api.gemini.com/v1/marketdata/',
-                            pairs=None,
-                            channels=None,
+        super().__init__('wss://api.gemini.com/v2/marketdata/',
+                            pairs=pairs,
+                            channels=channels,
                             callbacks=callbacks,
                             **kwargs)
 
-            self.address += pair_std_to_exchange(self.pair, self.id)
-            self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
-            self.seq_no = None
-            self.pairs = pairs
-        else:
-            self.pairs = pairs
-            self.config = kwargs.get('config', None)
-            self.callbacks = callbacks
+    def __reset(self, pairs):
+        for pair in pairs:
+            self.l2_book[pair_exchange_to_std(pair)] = {BID: sd(), ASK: sd()}
 
     async def _book(self, msg, timestamp):
-        delta = {BID: [], ASK: []}
-        side = BID if msg['side'] == 'bid' else ASK
-        price = Decimal(msg['price'])
-        remaining = Decimal(msg['remaining'])
+        pair = pair_exchange_to_std(msg['symbol'])
+        # Gemini sends ALL data for the symbol, so if we don't actually want
+        # the book data, bail before parsing
+        if self.channels and L2_BOOK not in self.channels:
+            return
+        if self.config and ((L2_BOOK in self.config and msg['symbol'] not in self.config[L2_BOOK]) or L2_BOOK not in self.config):
+            return
 
-        if msg['reason'] == 'initial':
-            self.l2_book[self.pair][side][price] = remaining
-        else:
-            if remaining == 0:
-                del self.l2_book[self.pair][side][price]
-                delta[side].append((price, 0))
-            else:
-                self.l2_book[self.pair][side][price] = remaining
-                delta[side].append((price, remaining))
-            await self.book_callback(self.pair, L2_BOOK, False, delta, timestamp)
+        data = msg['changes']
+        forced = not len(self.l2_book[pair][BID])
+        delta = {BID: [], ASK: []}
+
+        for entry in data:
+            side = ASK if entry[0] == 'sell' else BID
+            price = Decimal(entry[1])
+            amount = Decimal(entry[2])
+            self.l2_book[pair][side][price] = amount
+            delta[side].append((price, amount))
+
+        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
+
 
     async def _trade(self, msg, timestamp):
+        pair = pair_exchange_to_std(msg['symbol'])
         price = Decimal(msg['price'])
-        side = SELL if msg['makerSide'] == 'bid' else BUY
-        amount = Decimal(msg['amount'])
+        side = SELL if msg['side'] == 'sell' else BUY
+        amount = Decimal(msg['quantity'])
         await self.callback(TRADES, feed=self.id,
-                                     order_id=msg['tid'],
-                                     pair=self.pair,
+                                     order_id=msg['event_id'],
+                                     pair=pair,
                                      side=side,
                                      amount=amount,
                                      price=price,
-                                     timestamp=timestamp)
-
-    async def _update(self, msg: dict, timestamp: float):
-        timestamp = timestamp
-        if 'timestampms' in msg:
-            timestamp = msg['timestampms'] / 1000.0
-        forced = False
-        for update in msg['events']:
-            if update['type'] == 'change':
-                await self._book(update, timestamp)
-                if update['reason'] == 'initial':
-                    forced = True
-            elif update['type'] == 'trade':
-                await self._trade(update, timestamp)
-            elif update['type'] == 'auction':
-                pass
-            elif update['type'] == 'block_trade':
-                pass
-            else:
-                LOG.warning("%s: Invalid update received %s", self.id, update)
-        if forced:
-            await self.book_callback(self.pair, L2_BOOK, True, None, timestamp)
+                                     timestamp=timestamp_normalize(self.id, msg['timestamp']))
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        seq_no = msg['socket_sequence']
 
-        if self.seq_no and self.seq_no + 1 != seq_no:
-            LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no + 1)
-            raise MissingSequenceNumber
-        else:
-            self.seq_no = seq_no
-        if msg['type'] == 'update':
-            await self._update(msg, timestamp)
+        if msg['type'] == 'l2_updates':
+            await self._book(msg, timestamp)
+        elif msg['type'] == 'trade':
+            await self._trade(msg, timestamp)
         elif msg['type'] == 'heartbeat':
-            pass
+            return
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
-    async def subscribe(self, *args):
-        return
+    async def subscribe(self, websocket):
+        pairs = self.pairs if not self.config else list(set.union(*list(self.config.values())))
+        self.__reset(pairs)
+
+        await websocket.send(json.dumps({"type": "subscribe",
+                                         "subscriptions":[{"name":"l2","symbols": pairs}]}))

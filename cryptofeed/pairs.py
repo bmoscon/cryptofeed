@@ -66,6 +66,7 @@ def gemini_pairs():
         std = "{}-{}".format(pair[:-3], pair[-3:])
         std = std.upper()
         ret[std] = pair
+        ret[std] = pair.upper()
 
     return ret
 

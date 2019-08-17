@@ -32,7 +32,7 @@ class Feed:
         if config is not None:
             for channel in config:
                 chan = feed_to_exchange(self.id, channel)
-                self.config[chan] = [pair_std_to_exchange(pair, self.id) for pair in config[channel]]
+                self.config[chan] = {pair_std_to_exchange(pair, self.id) for pair in config[channel]}
 
         if pairs:
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
