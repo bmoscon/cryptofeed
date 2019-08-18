@@ -16,7 +16,7 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE, BYBIT
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.exchanges import *
@@ -41,6 +41,7 @@ _EXCHANGES = {
     KRAKEN: Kraken,
     HUOBI: Huobi,
     HUOBI_US: HuobiUS,
+    HUOBI_DM: HuobiDM,
     OKCOIN: OKCoin,
     OKEX: OKEx,
     COINBENE: Coinbene,
@@ -195,7 +196,7 @@ class FeedHandler:
             try:
                 await handler(message, self.last_msg[feed_id])
             except Exception:
-                if feed_id in {HUOBI, HUOBI_US}:
+                if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
                     message = zlib.decompress(message, 16+zlib.MAX_WBITS)
                 elif feed_id in {OKCOIN, OKEX}:
                     message = zlib.decompress(message, -15)

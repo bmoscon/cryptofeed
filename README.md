@@ -46,6 +46,7 @@ Supports the following exchanges:
 * EXX
 * Huobi
 * HuobiUS
+* HuobiDM
 * OKCoin
 * OKEx
 * Coinbene
