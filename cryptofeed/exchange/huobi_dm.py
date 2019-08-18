@@ -31,24 +31,21 @@ import zlib
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import HUOBI_DM, BUY, SELL, TRADES, BID, ASK, L2_BOOK
-from cryptofeed.exchange.huobi import Huobi
+from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class HuobiDM(Huobi):
+class HuobiDM(Feed):
     id = HUOBI_DM
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, config=config, **kwargs)
-        self.address = 'wss://www.hbdm.com/ws'
-
+        super().__init__('wss://www.hbdm.com/ws', pairs=pairs, channels=channels, callbacks=callbacks, config=config, **kwargs)
 
     def __reset(self):
         self.l2_book = {}
-
 
     async def _book(self, msg):
         """
