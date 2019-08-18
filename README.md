@@ -34,26 +34,27 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 
 Supports the following exchanges:
-* Bitfinex
-* Coinbase
-* Poloniex
-* Gemini
-* HitBTC
-* Bitstamp
-* BitMEX
-* Kraken
-* Kraken Futures
 * Binance
-* EXX
-* Huobi
-* HuobiUS
-* HuobiDM
-* OKCoin
-* OKEx
+* Bitfinex
+* BitMEX
+* Bitstamp
+* Bybit
+* Coinbase
 * Coinbene
 * Deribit
-* Bybit
+* EXX
 * FTX
+* Gemini
+* HitBTC
+* Huobi
+* HuobiDM
+* HuobiUS
+* Kraken
+* Kraken Futures
+* OKCoin
+* OKEx
+* Poloniex
+
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
