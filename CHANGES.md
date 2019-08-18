@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.0.0
+### 1.0.0 (2019-08-18)
   * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly
   * Feature: Generated timestamps now based on message receipt by feedhandler
   * Feature: Multi-callback support
@@ -12,6 +12,8 @@
   * Bugfix: Bitmex L2 channel incorrectly classified
   * Feature: Kraken Futures
   * Feature: Redis backend supports UDS
+  * Feature: Binance full book (L2) with deltas
+  * Feature: Allow user to start event loop themselves (potentially scheduling other tasks before/after).
 
 ### 0.25.0 (2019-07-06)
   * Feature: Rest Endpoints for Historical Deribit data
