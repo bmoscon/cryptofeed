@@ -42,6 +42,7 @@ Supports the following exchanges:
 * Bitstamp
 * BitMEX
 * Kraken
+* Kraken Futures
 * Binance
 * EXX
 * Huobi
