@@ -4,10 +4,12 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import json
 import logging
 from decimal import Decimal
 
+import aiohttp
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
@@ -37,6 +39,7 @@ class Binance(Feed):
 
     def __reset(self):
         self.l2_book = {}
+        self.last_update_id = {}
 
     async def _trade(self, msg):
         """
@@ -100,45 +103,87 @@ class Binance(Feed):
                                      bid=bid,
                                      ask=ask)
 
+    async def _snapshot(self, pairs: list):
+        urls = [f'https://www.binance.com/api/v1/depth?symbol={sym}&limit=10000' for sym in pairs]
+        async def fetch(session, url):
+            async with session.get(url) as response:
+                response.raise_for_status()
+                return await response.json()
+
+        async with aiohttp.ClientSession() as session:
+            results = await asyncio.gather(*[fetch(session, url) for url in urls])
+
+        for r, pair in zip(results, pairs):
+            std_pair = pair_exchange_to_std(pair)
+            self.last_update_id[pair] = r['lastUpdateId']
+            self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
+            for s, side in (('bids', BID), ('asks', ASK)):
+                for update in r[s]:
+                    price = Decimal(update[0])
+                    amount = Decimal(update[1])
+                    self.l2_book[std_pair][side][price] = amount
+
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
         {
-        "lastUpdateId": 160,  // Last update ID
-        "bids": [             // Bids to be updated
-            [
-            "0.0024",         // Price level to be updated
-            "10",             // Quantity
-            []                // Ignore
+            "e": "depthUpdate", // Event type
+            "E": 123456789,     // Event time
+            "s": "BNBBTC",      // Symbol
+            "U": 157,           // First update ID in event
+            "u": 160,           // Final update ID in event
+            "b": [              // Bids to be updated
+                    [
+                        "0.0024",       // Price level to be updated
+                        "10"            // Quantity
+                    ]
+            ],
+            "a": [              // Asks to be updated
+                    [
+                        "0.0026",       // Price level to be updated
+                        "100"           // Quantity
+                    ]
             ]
-        ],
-        "asks": [             // Asks to be updated
-            [
-            "0.0026",         // Price level to be updated
-            "100",            // Quantity
-            []                // Ignore
-            ]
-        ]
         }
         """
-        self.l2_book = {
-            BID: sd({Decimal(bid[0]): Decimal(bid[1]) for bid in msg['bids']}),
-            ASK: sd({Decimal(ask[0]): Decimal(ask[1]) for ask in msg['asks']})
-        }
+        forced = False
+        delta = {BID: [], ASK: []}
+        if pair in self.last_update_id:
+            if msg['u'] <= self.last_update_id[pair]:
+                return
+            if msg['U'] <= self.last_update_id[pair]+1 <= msg['u']:
+                del self.last_update_id[pair]
+                forced = True
+            else:
+                raise Exception("Error - snaphot has no overlap with first update")
+        pair = pair_exchange_to_std(pair)
+        timestamp = msg['E']
 
-        await self.callback(L2_BOOK, feed=self.id, pair=pair, book=self.l2_book, timestamp=timestamp)
+        for s, side in (('b', BID), ('a', ASK)):
+            for update in msg[s]:
+                price = Decimal(update[0])
+                amount = Decimal(update[1])
+                if amount == 0:
+                    if price in self.l2_book[pair][side]:
+                        del self.l2_book[pair][side][price]
+                        delta[side].append((price, amount))
+                else:
+                    self.l2_book[pair][side][price] = amount
+                    delta[side].append((price, amount))
+
+        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp_normalize(self.id, timestamp))
+
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
-        pair, event = msg['stream'].split('@')
+        pair, _ = msg['stream'].split('@')
         msg = msg['data']
 
-        # All symbols for streams are lowercase
-        pair = pair_exchange_to_std(pair.upper())
+        pair = pair.upper()
 
-        if event == 'depth20':
+        if msg['e'] == 'depthUpdate':
             await self._book(msg, pair, timestamp)
         elif msg['e'] == 'aggTrade':
             await self._trade(msg)
@@ -151,4 +196,9 @@ class Binance(Feed):
         # Binance does not have a separate subscribe message, the
         # subsription information is included in the
         # connection endpoint
-        pass
+        self.__reset()
+        # If full book enabled, collect snapshot first
+        if 'depth' in self.channels:
+            await self._snapshot(self.pairs)
+        elif 'depth' in self.config:
+            await self._snapshot(self.config['depth'])
