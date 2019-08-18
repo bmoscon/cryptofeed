@@ -106,7 +106,7 @@ class FeedHandler:
         for feed in feeds:
             self.add_feed(feed(channels=[L2_BOOK], pairs=pairs, callbacks={L2_BOOK: cb}), timeout=timeout)
 
-    def run(self):
+    def run(self, start_loop=True):
         if len(self.feeds) == 0:
             LOG.error('No feeds specified')
             raise ValueError("No feeds specified")
@@ -119,7 +119,8 @@ class FeedHandler:
                     loop.create_task(self._rest_connect(feed))
                 else:
                     loop.create_task(self._connect(feed))
-            loop.run_forever()
+            if start_loop:
+                loop.run_forever()
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
         except Exception:
