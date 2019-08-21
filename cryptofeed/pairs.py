@@ -184,6 +184,10 @@ def okex_pairs():
     r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
     for update in r:
         data[update['instrument_id']] = update['instrument_id']
+    # futures
+    r = requests.get('https://www.okex.com/api/futures/v3/instruments/ticker').json()
+    for update in r:
+        data[update['instrument_id']] = update['instrument_id']
     return data
 
 

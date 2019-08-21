@@ -62,12 +62,16 @@ class OKCoin(Feed):
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}
         """
         for trade in msg['data']:
+            if msg['table'] == 'futures/trade':
+                amount_sym = 'qty'
+            else:
+                amount_sym = 'size'
             await self.callback(TRADES,
                 feed=self.id,
                 pair=pair_exchange_to_std(trade['instrument_id']),
                 order_id=trade['trade_id'],
                 side=BUY if trade['side'] == 'buy' else SELL,
-                amount=Decimal(trade['size']),
+                amount=Decimal(trade[amount_sym]),
                 price=Decimal(trade['price']),
                 timestamp=timestamp_normalize(self.id, trade['timestamp'])
             )
