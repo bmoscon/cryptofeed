@@ -144,7 +144,7 @@ _feed_to_exchange_map = {
         BITFINEX: 'ticker',
         BITSTAMP: UNSUPPORTED,
         COINBASE: 'ticker',
-        BITMEX: UNSUPPORTED,
+        BITMEX: 'quote',
         KRAKEN: TICKER,
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
