@@ -44,6 +44,10 @@ L2_BOOK_SWAP = 'l2_book_swap'
 TRADES_SWAP = 'trades_swap'
 TICKER_SWAP = 'ticker_swap'
 
+L2_BOOK_FUTURES = 'l2_book_futures'
+TRADES_FUTURES = 'trades_futures'
+TICKER_FUTURES = 'ticker_futures'
+
 BUY = 'buy'
 SELL = 'sell'
 
