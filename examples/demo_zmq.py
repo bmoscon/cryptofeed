@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from multiprocessing import Process
+import json
 
 from cryptofeed.backends.zmq import BookZMQ, TradeZMQ
 from cryptofeed import FeedHandler
@@ -19,12 +20,13 @@ def receiver(port):
     addr = 'tcp://127.0.0.1:{}'.format(port)
     ctx = zmq.Context.instance()
     s = ctx.socket(zmq.SUB)
+    # empty subscription for all data, could be book for just book data, etc
     s.setsockopt(zmq.SUBSCRIBE, b'')
 
     s.bind(addr)
     while True:
         data = s.recv_string()
-        print(data)
+        print(json.loads(data.split(" ", 1)[1]))
 
 def main():
     try:
