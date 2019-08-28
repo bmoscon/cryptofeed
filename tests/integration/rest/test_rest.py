@@ -1,3 +1,5 @@
+import pandas as pd
+
 from cryptofeed.rest import Rest
 from cryptofeed.defines import BUY, SELL
 
@@ -5,14 +7,16 @@ from cryptofeed.defines import BUY, SELL
 def test_rest_bitmex():
     r = Rest()
     ret = []
-    for data in r.bitmex.trades('XBTUSD', start='2019-05-01 00:00:09', end='2019-05-01 00:00:15'):
+    end = pd.Timestamp.now()
+    start = end - pd.Timedelta(minutes=2)
+    for data in r.bitmex.trades('XBTUSD', start=start, end=end):
         ret.extend(data)
 
-    assert len(ret) == 2
+    assert len(ret) > 0
 
 
 def test_rest_bitfinex():
-    expected = {'timestamp': '2017-01-01T00:00:12.000000Z',
+    expected = {'timestamp': 1483228812.0,
                 'pair': 'BTC-USD',
                 'id': 25291508,
                 'feed': 'BITFINEX',
@@ -25,4 +29,19 @@ def test_rest_bitfinex():
         ret.extend(data)
 
     assert len(ret) == 1
+    assert ret[0] == expected
+
+
+def test_rest_deribit():
+    expected = {'timestamp': 1550062892.378,
+                'pair': 'BTC-PERPETUAL',
+                'id': 15340745,
+                'feed': 'DERIBIT',
+                'side': BUY,
+                'amount': 700.0,
+                'price': 3580.25}
+    r = Rest()
+    ret = []
+    for data in r.deribit.trades('BTC-PERPETUAL', start='2019-02-13 12:59:10', end='2019-02-13 13:01:33'):
+        ret.extend(data)
     assert ret[0] == expected

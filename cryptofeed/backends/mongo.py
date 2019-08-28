@@ -9,7 +9,7 @@ from decimal import Decimal
 import motor.motor_asyncio
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert
+from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 class MongoCallback:
@@ -17,6 +17,7 @@ class MongoCallback:
         self.conn = motor.motor_asyncio.AsyncIOMotorClient(host, port)
         self.db = self.conn[db]
         self.collection = collection
+
 
 class TradeMongo(MongoCallback):
     def __init__(self, *args, **kwargs):
@@ -29,6 +30,7 @@ class TradeMongo(MongoCallback):
                 'side': side, 'amount': float(amount), 'price': float(price)}
 
         await self.db[self.collection].insert_one(data)
+
 
 class FundingMongo(MongoCallback):
     def __init__(self, *args, **kwargs):
@@ -45,6 +47,11 @@ class FundingMongo(MongoCallback):
 
 
 class BookMongo(MongoCallback):
+    """
+    Because periods cannot be in keys in documents in mongo, the prices in L2/L3 books
+    are converted to integers in the following way:
+    price is * 10000 and truncated
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.collection is None:
@@ -53,13 +60,31 @@ class BookMongo(MongoCallback):
         self.previous = {BID: {}, ASK: {}}
 
     async def __call__(self, *, feed, pair, book, timestamp):
-        data = {'timestamp': timestamp, 'feed': feed, 'pair': pair, BID: {}, ASK: {}}
-        book_convert(book, data, self.depth)
+        data = {'timestamp': timestamp, 'feed': feed, 'pair': pair, 'delta': False, BID: {}, ASK: {}}
+        book_convert(book, data, self.depth, convert=lambda x: str(int(x * 10000)))
 
         if self.depth:
             if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
                 return
             self.previous[ASK] = data[ASK]
             self.previous[BID] = data[BID]
+
+        await self.db[self.collection].insert_one(data)
+
+
+class BookDeltaMongo(MongoCallback):
+    """
+    Because periods cannot be in keys in documents in mongo, the prices in L2/L3 books
+    are converted to integers in the following way:
+    price is * 10000 and truncated
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.collection is None:
+            self.collection = 'book'
+
+    async def __call__(self, *, feed, pair, delta, timestamp):
+        data = {'timestamp': timestamp, 'feed': feed, 'pair': pair, 'delta': True, BID: {}, ASK: {}}
+        book_delta_convert(delta, data, convert=lambda x: str(int(x * 10000)))
 
         await self.db[self.collection].insert_one(data)

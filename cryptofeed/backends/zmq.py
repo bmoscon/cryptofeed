@@ -5,28 +5,27 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from decimal import Decimal
+import json
 
 import zmq
 import zmq.asyncio
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert
+from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 class ZMQCallback:
-    def __init__(self, host='127.0.0.1', port=5555, zmq_type=zmq.PUSH, **kwargs):
+    def __init__(self, host='127.0.0.1', port=5555, **kwargs):
         url = "tcp://{}:{}".format(host, port)
         ctx = zmq.asyncio.Context.instance()
-        self.con = ctx.socket(zmq_type)
-        self.con.bind(url)
+        self.con = ctx.socket(zmq.PUB)
+        self.con.connect(url)
 
 
 class TradeZMQ(ZMQCallback):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         trade = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp, 'side': side, 'amount': float(amount), 'price': float(price)}
-        data = {'type': 'trade', 'data': trade}
-        await self.con.send_json(data)
-
+        await self.con.send_string(f'trades {json.dumps(trade)}')
 
 class FundingZMQ(ZMQCallback):
     async def __call__(self, **kwargs):
@@ -34,8 +33,7 @@ class FundingZMQ(ZMQCallback):
             if isinstance(kwargs[key], Decimal):
                 kwargs[key] = float(kwargs[key])
 
-        data = {'type': 'funding', 'data': kwargs}
-        await self.con.send_json(data)
+        await self.con.send_string(f'funding {json.dumps(kwargs)}')
 
 
 class BookZMQ(ZMQCallback):
@@ -47,7 +45,7 @@ class BookZMQ(ZMQCallback):
     async def __call__(self, *, feed, pair, book, timestamp):
         data = {'timestamp': timestamp, BID: {}, ASK: {}}
         book_convert(book, data, self.depth)
-        upd = {'type': 'book', 'feed': feed, 'pair': pair, 'data': data}
+        upd = {'feed': feed, 'pair': pair, 'delta': False, 'data': data}
 
         if self.depth:
             if upd['data'][BID] == self.previous[BID] and upd['data'][ASK] == self.previous[ASK]:
@@ -55,4 +53,13 @@ class BookZMQ(ZMQCallback):
             self.previous[ASK] = upd['data'][ASK]
             self.previous[BID] = upd['data'][BID]
 
-        await self.con.send_json(upd)
+        await self.con.send_string(f'book {json.dumps(upd)}')
+
+
+class BookDeltaZMQ(ZMQCallback):
+    async def __call__(self, *, feed, pair, delta, timestamp):
+        data = {'timestamp': timestamp, BID: {}, ASK: {}}
+        book_delta_convert(delta, data)
+        upd = {'feed': feed, 'pair': pair, 'delta': True, 'data': data}
+
+        await self.con.send_string(f'book {json.dumps(upd)}')

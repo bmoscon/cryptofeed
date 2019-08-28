@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX
 
 
 def gen_pairs(exchange):
@@ -35,13 +35,26 @@ def bitfinex_pairs():
             continue
         else:
             normalized = pair[1:-3] + '-' + pair[-3:]
+            normalized = normalized.replace('UST', 'USDT')
             ret[normalized] = pair
+
     return ret
 
+def bybit_pairs():
+    pairs = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "EOS-USD": "EOSUSD", "XRP-USD": "XRPUSD"}
+    return pairs
+
+def ftx_pairs():
+    ret = {}
+    r = requests.get('https://ftx.com/api/markets').json()
+    for data in r['result']:
+        normalized = data['name'].replace("/", "-")
+        pair = data['name']
+        ret[normalized] = pair
+    return ret
 
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
-
     return {data['id']: data['id'] for data in r}
 
 
@@ -53,6 +66,7 @@ def gemini_pairs():
         std = "{}-{}".format(pair[:-3], pair[-3:])
         std = std.upper()
         ret[std] = pair
+        ret[std] = pair.upper()
 
     return ret
 
@@ -141,6 +155,23 @@ def huobi_us_pairs():
     return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
+def huobi_dm_pairs():
+    """
+    Mapping is, for instance: {"BTC_CW":"BTC190816"}
+    See comments in exchange/houbi_dm.py
+    """
+    mapping  = {
+        "this_week": "CW",
+        "next_week": "NW",
+        "quarter": "CQ"
+    }
+    r = requests.get('https://www.hbdm.com/api/v1/contract_contract_info').json()
+    pairs = {}
+    for e in r['data']:
+       pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
+    return pairs
+
+
 def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
     return {e['instrument_id'] : e['instrument_id'] for e in r}
@@ -153,13 +184,16 @@ def okex_pairs():
     r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
     for update in r:
         data[update['instrument_id']] = update['instrument_id']
+    # futures
+    r = requests.get('https://www.okex.com/api/futures/v3/instruments/ticker').json()
+    for update in r:
+        data[update['instrument_id']] = update['instrument_id']
     return data
 
 
 def coinbene_pairs():
     r = requests.get('http://api.coinbene.com/v1/market/symbol').json()
     return {f"{e['baseAsset']}-{e['quoteAsset']}" : e['ticker'] for e in r['symbol']}
-
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -174,7 +208,10 @@ _exchange_function_map = {
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
     HUOBI_US: huobi_us_pairs,
+    HUOBI_DM: huobi_dm_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
-    COINBENE: coinbene_pairs
+    COINBENE: coinbene_pairs,
+    BYBIT: bybit_pairs,
+    FTX: ftx_pairs
 }

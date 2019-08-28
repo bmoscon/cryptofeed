@@ -17,6 +17,7 @@ import pandas as pd
 
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.defines import BITMEX, SELL, BUY, BID, ASK
+from cryptofeed.standards import timestamp_normalize
 
 
 API_MAX = 500
@@ -89,8 +90,8 @@ class Bitmex(API):
             while True:
                 r = helper(start, start_date, end_date)
 
-                if r.status_code == 502:
-                    LOG.warning("%s: 502 for URL %s - %s", self.ID, r.url, r.text)
+                if r.status_code in {502, 504}:
+                    LOG.warning("%s: %d for URL %s - %s", self.ID, r.status_code, r.url, r.text)
                     sleep(retry_wait)
                     continue
                 elif r.status_code == 429:
@@ -114,7 +115,7 @@ class Bitmex(API):
 
     def _trade_normalization(self, trade: dict) -> dict:
         return {
-            'timestamp': trade['timestamp'],
+            'timestamp': timestamp_normalize(self.ID, trade['timestamp']),
             'pair': trade['symbol'],
             'id': trade['trdMatchID'],
             'feed': self.ID,

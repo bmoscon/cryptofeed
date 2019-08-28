@@ -144,6 +144,8 @@ class Kraken(API):
         else:
             sym = pair_std_to_exchange(symbol, self.ID+'REST')
             data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
+            data = data['result']
+            data = data[list(data.keys())[0]]
             yield [self._trade_normalization(d, symbol) for d in data]
 
 

@@ -24,3 +24,11 @@ class UnsupportedDataFeed(Exception):
 
 class UnsupportedTradingOption(Exception):
     pass
+
+
+class UnsupportedType(Exception):
+    pass
+
+
+class ExhaustedRetries(Exception):
+    pass

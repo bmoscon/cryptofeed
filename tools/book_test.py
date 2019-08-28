@@ -9,7 +9,7 @@ import time
 from cryptofeed.callback import BookCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Bitmex
-from cryptofeed.defines import L3_BOOK, L2_BOOK, BID, ASK
+from cryptofeed.defines import L2_BOOK, BID, ASK
 
 
 counter = 0
@@ -49,7 +49,7 @@ async def book(feed, pair, book, timestamp):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L3_BOOK], callbacks={L3_BOOK: BookCallback(book)}))
+    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.run()
 
 

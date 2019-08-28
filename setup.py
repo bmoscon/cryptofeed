@@ -21,13 +21,13 @@ except BaseException:
 class Test(TestCommand):
     def run_tests(self):
         import pytest
-        errno = pytest.main([])
+        errno = pytest.main(['tests/'])
         sys.exit(errno)
 
 
 setup(
     name="cryptofeed",
-    version="0.22.2",
+    version="1.0.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description=("Cryptocurrency feed handler and synthetic NBBO feed"),

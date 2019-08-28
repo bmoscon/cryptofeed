@@ -30,22 +30,31 @@ fh.add_feed(Gemini(pairs=['BTC-USD'], callbacks=gemini_cb)
 fh.run()
 ```
 
+To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
+
+
 Supports the following exchanges:
+* Binance
 * Bitfinex
+* BitMEX
+* Bitstamp
+* Bybit
 * Coinbase
-* Poloniex
+* Coinbene
+* Deribit
+* EXX
+* FTX
 * Gemini
 * HitBTC
-* Bitstamp
-* BitMEX
-* Kraken
-* Binance
-* EXX
 * Huobi
+* HuobiDM
 * HuobiUS
+* Kraken
+* Kraken Futures
 * OKCoin
 * OKEx
-* Coinbene
+* Poloniex
+
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
@@ -77,15 +86,17 @@ Cryptofeed supports the following channels:
 * TICKER
 * VOLUME
 * FUNDING
-* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
-
+* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
+* *_SWAP (L2/L3 Books, Trades, Ticker) - Swap data on supporting exchanges
+* *_FUTURES (L2/L3 Books, Trades, Ticker) - Futures data on supporting exchanges
+* INSTRUMENT - Exchange specific instrument information
 
 ## Backends
 
 Cryptofeeds supports `backend` callbacks that will write directly to storage or other interfaces
 
 Supported Backends:
-* Redis
+* Redis (Streams and Sorted Sets)
 * [Arctic](https://github.com/manahl/arctic)
 * ZeroMQ
 * UDP Sockets
@@ -93,6 +104,8 @@ Supported Backends:
 * Unix Domain Sockets
 * [InfluxDB](https://github.com/influxdata/influxdb)
 * MongoDB
+* Kafka
+* Elastic Search
 
 
 ## Rest API
@@ -120,4 +133,8 @@ Continue to build out rest endpoints and standardize exchange interfaces and dat
 
 ## Additional Callback Methods / Backends
 * Postgres
-* RabbitMQ
+* ??
+
+# Contributing
+Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
+

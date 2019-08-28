@@ -1,9 +1,47 @@
 ## Changelog
 
-### 0.22.2
+### 1.0.0 (2019-08-18)
+  * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly
+  * Feature: Generated timestamps now based on message receipt by feedhandler
+  * Feature: Multi-callback support
+  * Feature: Rework ZMQ using pub/sub with topics
+  * Feature: FTX Exchange
+  * Feature: Gemini subscriptions now work like all other exchanges
+  * Feature: Use unique id for each feed (as opposed to feed id/name)
+  * Bugfix: fix Poloniex historical trade timestamps
+  * Bugfix: Bitmex L2 channel incorrectly classified
+  * Feature: Kraken Futures
+  * Feature: Redis backend supports UDS
+  * Feature: Binance full book (L2) with deltas
+  * Feature: Allow user to start event loop themselves (potentially scheduling other tasks before/after).
+
+### 0.25.0 (2019-07-06)
+  * Feature: Rest Endpoints for Historical Deribit data
+  * Feature: Specify numeric datatype for InfluxDB
+  * Bugfix: Greatly improve performance of book writes for InfluxDB
+  * Feature: Bybit exchange support
+  * Bugfix: Deribit now returning floats in decimal.Decimal
+  * Feature: Elastic Search backend
+
+### 0.24.0 (2019-06-19)
+  * Bugfix: Book Delta Conversion issue in backends
+  * Bugfix: Tweak BitMEX rest api to handle more errors more gracefully
+  * Feature: Deribit Exchange support
+  * Feature: Instrument channel
+  * Bugfix: support Kraken websocket API changes
+  * Bugfix: correct USDT symbol mappings for Bitfinex
+  * Bugfix: Fixed mongo book backend
+  * Feature: Book delta support for mongo, sockets, ZMQ
+
+### 0.23.0 (2019-06-03)
+  * Feature: Book delta support for InfluxDB
+  * Feature: Swaps on OkEX
+
+### 0.22.2 (2019-05-23)
   * Bugfix: Fix tagging issue in InfluxDB
   * Bugfix: Fix book updates in InfluxDB
   * Feature: Book delta support in Redis backends
+  * Feature: Book delta support in Kafka backend
 
 ### 0.22.1 (2019-05-19)
   * Feature: Cleanup callback code
