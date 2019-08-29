@@ -8,12 +8,12 @@ from cryptofeed.backends.influxdb import TradeInflux, FundingInflux, BookInflux,
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Bitmex, Coinbase
 
-from cryptofeed.defines import TRADES, FUNDING, L2_BOOK, L3_BOOK, BOOK_DELTA
+from cryptofeed.defines import TRADES, FUNDING, L2_BOOK, BOOK_DELTA
 
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(channels=[FUNDING,L3_BOOK],pairs=['XBTUSD'],callbacks={FUNDING: FundingInflux('http://localhost:8086', 'example'), L3_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
+    f.add_feed(Bitmex(channels=[FUNDING, L2_BOOK],pairs=['XBTUSD'], callbacks={FUNDING: FundingInflux('http://localhost:8086', 'example'), L2_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
     f.add_feed(Coinbase(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeInflux('http://localhost:8086', 'example')}))
     f.add_feed(Coinbase(channels=[L2_BOOK], pairs=['BTC-USD'], callbacks={L2_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
 

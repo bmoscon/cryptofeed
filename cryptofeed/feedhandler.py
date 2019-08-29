@@ -8,17 +8,21 @@ import asyncio
 from time import time as time
 from socket import error as socket_error
 import zlib
+from collections import defaultdict
+from copy import deepcopy
 
 import websockets
 from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, HUOBI, HUOBI_US, OKCOIN, OKEX, COINBENE, BYBIT
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT
 from cryptofeed.defines import EXX as EXX_str
+from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.exchanges import *
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
+from cryptofeed.exceptions import ExhaustedRetries
 
 
 LOG = get_logger('feedhandler', 'feedhandler.log')
@@ -35,14 +39,17 @@ _EXCHANGES = {
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
     KRAKEN: Kraken,
+    KRAKEN_FUTURES: KrakenFutures,
     HUOBI: Huobi,
     HUOBI_US: HuobiUS,
+    HUOBI_DM: HuobiDM,
     OKCOIN: OKCoin,
     OKEX: OKEx,
     COINBENE: Coinbene,
     DERIBIT: Deribit,
     EXX_str: EXX,
     BYBIT: Bybit,
+    FTX_str: FTX
 }
 
 
@@ -75,13 +82,15 @@ class FeedHandler:
         if isinstance(feed, str):
             if feed in _EXCHANGES:
                 self.feeds.append(_EXCHANGES[feed](**kwargs))
-                feed = _EXCHANGES[feed]
+                feed = self.feeds[-1]
+                self.last_msg[feed.uuid] = None
+                self.timeout[feed.uuid] = timeout
             else:
                 raise ValueError("Invalid feed specified")
         else:
             self.feeds.append(feed)
-        self.last_msg[feed.id] = None
-        self.timeout[feed.id] = timeout
+            self.last_msg[feed.uuid] = None
+            self.timeout[feed.uuid] = timeout
 
     def add_nbbo(self, feeds, pairs, callback, timeout=120):
         """
@@ -97,13 +106,9 @@ class FeedHandler:
         """
         cb = NBBO(callback, pairs)
         for feed in feeds:
-            if feed.id == 'GEMINI':
-                for pair in pairs:
-                    self.add_feed(feed(pairs=[pair], callbacks={L2_BOOK: cb}), timeout=timeout)
-            else:
-                self.add_feed(feed(channels=[L2_BOOK], pairs=pairs, callbacks={L2_BOOK: cb}), timeout=timeout)
+            self.add_feed(feed(channels=[L2_BOOK], pairs=pairs, callbacks={L2_BOOK: cb}), timeout=timeout)
 
-    def run(self):
+    def run(self, start_loop=True):
         if len(self.feeds) == 0:
             LOG.error('No feeds specified')
             raise ValueError("No feeds specified")
@@ -116,7 +121,8 @@ class FeedHandler:
                     loop.create_task(self._rest_connect(feed))
                 else:
                     loop.create_task(self._connect(feed))
-            loop.run_forever()
+            if start_loop:
+                loop.run_forever()
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
         except Exception:
@@ -137,7 +143,7 @@ class FeedHandler:
         """
         retries = 0
         delay = 1
-        while retries <= self.retries:
+        while retries <= self.retries or self.retries == -1:
             await feed.subscribe()
             try:
                 while True:
@@ -149,6 +155,7 @@ class FeedHandler:
                 delay *= 2
 
         LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+        raise ExhaustedRetries()
 
     async def _connect(self, feed):
         """
@@ -156,20 +163,20 @@ class FeedHandler:
         """
         retries = 0
         delay = 1
-        while retries <= self.retries:
-            self.last_msg[feed.id] = None
+        while retries <= self.retries or self.retries == -1:
+            self.last_msg[feed.uuid] = None
             try:
                 # Coinbase frequently will not respond to pings within the ping interval, so
                 # disable the interval in favor of the internal watcher, which will
                 # close the connection and reconnect in the event that no message from the exchange
                 # has been received (as opposed to a missing ping)
-                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None, max_size=2**21) as websocket:
-                    asyncio.ensure_future(self._watch(feed.id, websocket))
+                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None, max_size=2**23) as websocket:
+                    asyncio.ensure_future(self._watch(feed.uuid, websocket))
                     # connection was successful, reset retry count and delay
                     retries = 0
                     delay = 1
                     await feed.subscribe(websocket)
-                    await self._handler(websocket, feed.message_handler, feed.id)
+                    await self._handler(websocket, feed.message_handler, feed.uuid)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
                 LOG.warning("%s: encountered connection issue %s - reconnecting...", feed.id, str(e), exc_info=True)
                 await asyncio.sleep(delay)
@@ -182,14 +189,15 @@ class FeedHandler:
                 delay *= 2
 
         LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+        raise ExhaustedRetries()
 
     async def _handler(self, websocket, handler, feed_id):
         async for message in websocket:
             self.last_msg[feed_id] = time()
             try:
-                await handler(message)
+                await handler(message, self.last_msg[feed_id])
             except Exception:
-                if feed_id in {HUOBI, HUOBI_US}:
+                if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
                     message = zlib.decompress(message, 16+zlib.MAX_WBITS)
                 elif feed_id in {OKCOIN, OKEX}:
                     message = zlib.decompress(message, -15)

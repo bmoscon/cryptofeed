@@ -34,23 +34,27 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 
 Supports the following exchanges:
-* Bitfinex
-* Coinbase
-* Poloniex
-* Gemini
-* HitBTC
-* Bitstamp
-* BitMEX
-* Kraken
 * Binance
-* EXX
-* Huobi
-* HuobiUS
-* OKCoin
-* OKEx
+* Bitfinex
+* BitMEX
+* Bitstamp
+* Bybit
+* Coinbase
 * Coinbene
 * Deribit
-* Bybit
+* EXX
+* FTX
+* Gemini
+* HitBTC
+* Huobi
+* HuobiDM
+* HuobiUS
+* Kraken
+* Kraken Futures
+* OKCoin
+* OKEx
+* Poloniex
+
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
@@ -84,6 +88,7 @@ Cryptofeed supports the following channels:
 * FUNDING
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * *_SWAP (L2/L3 Books, Trades, Ticker) - Swap data on supporting exchanges
+* *_FUTURES (L2/L3 Books, Trades, Ticker) - Futures data on supporting exchanges
 * INSTRUMENT - Exchange specific instrument information
 
 ## Backends

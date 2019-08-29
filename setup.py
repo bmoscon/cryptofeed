@@ -21,7 +21,7 @@ except BaseException:
 class Test(TestCommand):
     def run_tests(self):
         import pytest
-        errno = pytest.main([])
+        errno = pytest.main(['tests/'])
         sys.exit(errno)
 
 
