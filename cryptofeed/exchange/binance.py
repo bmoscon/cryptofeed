@@ -19,6 +19,13 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
+SNAPSHOT_DEPTH = 1000
+
+
+def set_snapshot_depth(value: int) -> None:
+    global SNAPSHOT_DEPTH
+    SNAPSHOT_DEPTH = value
+
 
 class Binance(Feed):
     id = BINANCE
@@ -104,7 +111,7 @@ class Binance(Feed):
                                      ask=ask)
 
     async def _snapshot(self, pairs: list):
-        urls = [f'https://www.binance.com/api/v1/depth?symbol={sym}&limit=10000' for sym in pairs]
+        urls = [f'https://www.binance.com/api/v1/depth?symbol={sym}&limit={SNAPSHOT_DEPTH}' for sym in pairs]
         async def fetch(session, url):
             async with session.get(url) as response:
                 response.raise_for_status()
