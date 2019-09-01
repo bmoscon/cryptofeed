@@ -25,7 +25,7 @@ gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
 fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
 fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
 fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
-fh.add_feed(Gemini(pairs=['BTC-USD'], callbacks=gemini_cb)
+fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb)
 
 fh.run()
 ```
