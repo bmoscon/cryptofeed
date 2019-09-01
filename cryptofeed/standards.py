@@ -81,7 +81,7 @@ _feed_to_exchange_map = {
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
         BITMEX: 'orderBookL2',
-        BITSTAMP: 'order_book',
+        BITSTAMP: 'diff_order_book',
         KRAKEN: 'book',
         KRAKEN_FUTURES: 'book',
         BINANCE: 'depth',

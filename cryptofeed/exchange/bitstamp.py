@@ -7,7 +7,9 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
+import asyncio
 
+import aiohttp
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
@@ -36,12 +38,30 @@ class Bitstamp(Feed):
         chan = msg['channel']
         timestamp = data['timestamp']
         pair = pair_exchange_to_std(chan.split('_')[-1])
+        forced = False
+        delta = {BID: [], ASK: []}
 
-        book = {}
+        if pair in self.last_update_id:
+            if data['timestamp'] < self.last_update_id[pair]:
+                return
+            else:
+                forced = True
+                del self.last_update_id[pair]
+
         for side in (BID, ASK):
-            book[side] = sd({Decimal(price): Decimal(size) for price, size in data[side + 's']})
-        self.l2_book[pair] = book
-        await self.book_callback(pair=pair, book_type=L2_BOOK, forced=False, delta=False, timestamp=timestamp)
+            for update in data[side + 's']:
+                price = Decimal(update[0])
+                size = Decimal(update[1])
+
+                if size == 0:
+                    if price in self.l2_book[pair][side]:
+                        del self.l2_book[pair][side][price]
+                        delta[side].append((price, size))
+                else:
+                    self.l2_book[pair][side][price] = size
+                    delta[side].append((price, size))
+
+        await self.book_callback(pair=pair, book_type=L2_BOOK, forced=forced, delta=delta, timestamp=timestamp)
 
     async def _l3_book(self, msg):
         data = msg['data']
@@ -114,7 +134,31 @@ class Bitstamp(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
+    async def _snapshot(self, pairs: list):
+        await asyncio.sleep(5)
+        urls = [f'https://www.bitstamp.net/api/order_book/{sym}' for sym in pairs]
+
+        async def fetch(session, url):
+            async with session.get(url) as response:
+                response.raise_for_status()
+                return await response.json()
+
+        async with aiohttp.ClientSession() as session:
+            results = await asyncio.gather(*[fetch(session, url) for url in urls])
+
+        for r, pair in zip(results, pairs):
+            std_pair = pair_exchange_to_std(pair) if pair else 'BTC-USD'
+            self.last_update_id[std_pair] = r['timestamp']
+            self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
+            for s, side in (('bids', BID), ('asks', ASK)):
+                for update in r[s]:
+                    price = Decimal(update[0])
+                    amount = Decimal(update[1])
+                    self.l2_book[std_pair][side][price] = amount
+
     async def subscribe(self, websocket):
+        snaps = []
+        self.last_update_id = {}
         for channel in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[channel]:
                 await websocket.send(
@@ -124,3 +168,8 @@ class Bitstamp(Feed):
                             "channel": "{}_{}".format(channel, pair)
                         }
                     }))
+                if 'diff_order_book' in channel:
+                    if pair == 'btcusd':
+                        pair = ''
+                    snaps.append(pair)
+        await self._snapshot(snaps)

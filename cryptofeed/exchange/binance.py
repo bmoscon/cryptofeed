@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed):
     id = BINANCE
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, depth=10000, **kwargs):
+    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
         super().__init__(None, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.book_depth = depth
         self.address = self.__address()
@@ -163,6 +163,7 @@ class Binance(Feed):
             for update in msg[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
+
                 if amount == 0:
                     if price in self.l2_book[pair][side]:
                         del self.l2_book[pair][side][price]
