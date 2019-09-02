@@ -41,7 +41,6 @@ setup(
     cmdclass={'test': Test},
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
     ],
     tests_require=["pytest"],
