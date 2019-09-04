@@ -33,6 +33,5 @@ class OKEx(OKCoin):
     def get_active_symbols():
         symbols = []
         for data in OKEx.get_active_symbols_info():
-            #print(data)
             symbols.append(data['instrument_id'])
         return symbols

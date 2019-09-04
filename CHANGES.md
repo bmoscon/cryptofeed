@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.0.1
+  * Feature: Backfill Bitmex historical trade data from S3 Bucket
+
 ### 1.0.0 (2019-08-18)
   * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly
   * Feature: Generated timestamps now based on message receipt by feedhandler

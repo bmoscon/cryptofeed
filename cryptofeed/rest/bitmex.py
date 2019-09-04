@@ -10,6 +10,9 @@ import hashlib
 import hmac
 from urllib.parse import urlparse
 import logging
+import zlib
+from datetime import datetime as dt
+from datetime import timedelta
 
 from sortedcontainers import SortedDict as sd
 import requests
@@ -20,6 +23,7 @@ from cryptofeed.defines import BITMEX, SELL, BUY, BID, ASK
 from cryptofeed.standards import timestamp_normalize
 
 
+S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/trade/{}.csv.gz'
 API_MAX = 500
 API_REFRESH = 300
 
@@ -141,8 +145,29 @@ class Bitmex(API):
             'foreignNotional': 1900
         }
         """
-        for data in self._get('trade', symbol, start, end, retry, retry_wait):
-            yield list(map(self._trade_normalization, data))
+        d = dt.utcnow().date()
+        rest_end_date = pd.Timestamp(dt(d.year, d.month, d.day))
+        start = API._timestamp(start)
+        end = API._timestamp(end)
+        rest_start = start
+        s3_scrape = False
+
+        if start:
+            if rest_end_date - pd.Timedelta(microseconds=1) > start:
+                rest_start = rest_end_date
+                s3_scrape = True
+
+        if s3_scrape:
+            rest_end_date -= pd.Timedelta(microseconds=1)
+            if API._timestamp(end) < rest_end_date:
+                rest_end_date = end
+            for data in self._scrape_s3(symbol, start, rest_end_date):
+                yield list(map(self._s3_data_normalization, data))
+
+        if end > rest_end_date:
+            for data in self._get('trade', symbol, rest_start, end, retry, retry_wait):
+                yield list(map(self._trade_normalization, data))
+
 
     def _funding_normalization(self, funding: dict) -> dict:
         return {
@@ -174,3 +199,38 @@ class Bitmex(API):
             side = ASK if update['side'] == 'Sell' else BID
             ret[symbol][side][update['price']] = update['size']
         return ret
+
+    def _s3_data_normalization(self, data):
+        vals = data.split(",")
+        return {
+            'timestamp': pd.Timestamp(vals[0].replace("D", "T")).timestamp(),
+            'pair': vals[1],
+            'id': vals[6],
+            'feed': self.ID,
+            'side': BUY if vals[2] == 'Buy' else SELL,
+            'amount': vals[3],
+            'price': vals[4]
+        }
+
+    def _scrape_s3(self, symbol: str, start_date, end_date):
+        date = dt(end_date.year, end_date.month, end_date.day)
+        end = dt(start_date.year, start_date.month, start_date.day)
+
+        while date >= end:
+            date_str = date.strftime('%Y%m%d')
+            count = 0
+            while True:
+                r = requests.get(S3_ENDPOINT.format(date_str))
+                if r.status_code == 200:
+                    break
+                else:
+                    count += 1
+                    if count == 10:
+                        r.raise_for_status()
+                    LOG.warning("%s: Error processing %s: %s - %s, trying again", self.ID, symbol, date, r.status_code)
+                    time.sleep(10)
+
+            data = zlib.decompress(r.content, zlib.MAX_WBITS|32)
+            yield filter(lambda x: len(x) and x.split(",")[1] == symbol and  end_date >= pd.Timestamp(x.split(",")[0].replace("D", "T")) >= start_date, data.decode().split("\n")[1:])
+
+            date -= timedelta(days=1)

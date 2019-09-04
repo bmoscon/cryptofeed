@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex, Kraken, OKCoin, Bybit, Binance
+from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex, Kraken, OKCoin, Bybit, Binance, Bitstamp
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, BOOK_DELTA
 
 
@@ -84,6 +84,7 @@ def main():
     f.add_feed(OKCoin(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("OKCoin").L2))
     f.add_feed(Bybit(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bybit").L2))
     f.add_feed(Binance(book_interval=30, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("Binance").L2))
+    f.add_feed(Bitstamp(book_interval=30, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitstamp").L2))
 
     f.run()
 

@@ -23,8 +23,9 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed):
     id = BINANCE
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
         super().__init__(None, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        self.book_depth = depth
         self.address = self.__address()
         self.__reset()
 
@@ -104,7 +105,7 @@ class Binance(Feed):
                                      ask=ask)
 
     async def _snapshot(self, pairs: list):
-        urls = [f'https://www.binance.com/api/v1/depth?symbol={sym}&limit=10000' for sym in pairs]
+        urls = [f'https://www.binance.com/api/v1/depth?symbol={sym}&limit={self.book_depth}' for sym in pairs]
         async def fetch(session, url):
             async with session.get(url) as response:
                 response.raise_for_status()
@@ -162,6 +163,7 @@ class Binance(Feed):
             for update in msg[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
+
                 if amount == 0:
                     if price in self.l2_book[pair][side]:
                         del self.l2_book[pair][side][price]
