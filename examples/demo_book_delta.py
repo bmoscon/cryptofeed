@@ -16,7 +16,6 @@ class DeltaBook(object):
     def __init__(self, name):
         self.book = None
         self.name = name
-        self.update = []
         self.L2 = {L2_BOOK: BookCallback(self.handle_book),
                    BOOK_DELTA: BookUpdateCallback(self.handle_l2_delta)}
         self.L3 = {L3_BOOK: BookCallback(self.handle_book),
@@ -26,23 +25,14 @@ class DeltaBook(object):
         """Check that master is equal to self.book."""
         for side in (BID, ASK):
             if len(master[side]) != len(self.book[side]):
-                print(self.update)
-                print(self.book)
-                print(master)
                 return False
 
             for price in master[side]:
                 if price not in self.book[side]:
-                    print(self.update)
-                    print(self.book)
-                    print(master)
                     return False
 
             for price in self.book[side]:
                 if price not in master[side]:
-                    print(self.update)
-                    print(self.book)
-                    print(master)
                     return False
         return True
 
@@ -56,11 +46,6 @@ class DeltaBook(object):
             print("%s: Books match!" % self.name)
 
     async def handle_l2_delta(self, feed, pair, update, timestamp):
-        if not self.update:
-            self.update = [update]
-        else:
-            self.update = [update, self.update[0]]
-
         """Handle L2 delta updates."""
         # handle updates for L2 books
         for side in (BID, ASK):
