@@ -35,7 +35,7 @@ def main():
         p.start()
 
         f = FeedHandler()
-        f.add_feed(Kraken(channels=[L2_BOOK], pairs=['ETH-USD'], callbacks={L2_BOOK: BookZMQ(depth=1, port=5678)}))
+        f.add_feed(Kraken(max_depth=1, channels=[L2_BOOK], pairs=['ETH-USD'], callbacks={L2_BOOK: BookZMQ(port=5678)}))
 
         f.run()
 

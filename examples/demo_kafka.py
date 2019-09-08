@@ -20,9 +20,9 @@ $ kafka-console-consumer --bootstrap-server 127.0.0.1:9092 --topic trades-COINBA
 
 def main():
     f = FeedHandler()
-    cbs = {TRADES: TradeKafka(), L2_BOOK: BookKafka(depth=10)}
+    cbs = {TRADES: TradeKafka(), L2_BOOK: BookKafka()}
     
-    f.add_feed(Coinbase(channels=[TRADES, L2_BOOK], pairs=['BTC-USD'], callbacks=cbs))
+    f.add_feed(Coinbase(max_depth=10, channels=[TRADES, L2_BOOK], pairs=['BTC-USD'], callbacks=cbs))
 
     f.run()
 
