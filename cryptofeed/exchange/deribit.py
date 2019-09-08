@@ -179,7 +179,7 @@ class Deribit(Feed):
             else:
                 del bidask[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(self.l2_book[pair],L2_BOOK, pair, False, delta, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, timestamp))
 
     async def message_handler(self, msg: str, timestamp: float):
         msg_dict = json.loads(msg, parse_float=Decimal)
