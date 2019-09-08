@@ -50,21 +50,10 @@ class BookUpdateCallback(Callback):
         """
         Delta is in format of:
         {
-            BID: {
-                ADD: [(price, size), (price, size), ...],
-                DEL: [price, price, price, ...]
-                UPD: [(price, size), (price, size), ...]
-            },
-            ASK: {
-                ADD: [(price, size), (price, size), ...],
-                DEL: [price, price, price, ...]
-                UPD: [(price, size), (price, size), ...]
-            }
+            BID: [(price, size), (price, size), ...]
+            ASK: [(price, size), (price, size), ...]
         }
-
-        ADD - these tuples should simply be inserted.
-        DEL - price levels should be deleted
-        UPD - prices should have the quantity set to size (these are not price deltas)
+        prices with size 0 should be deleted from the book
         """
         await super().__call__(feed, pair, delta, timestamp)
 

@@ -111,7 +111,7 @@ class Coinbase(Feed):
                 self.l3_book[pair][side][price][maker_order_id] = new_size
                 delta[side].append((maker_order_id, price, new_size))
 
-            await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
+            await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, timestamp)
 
         await self.callback(TRADES,
             feed=self.id,
@@ -136,7 +136,7 @@ class Coinbase(Feed):
             })
         }
 
-        await self.book_callback(msg['product_id'], L2_BOOK, True, None, timestamp)
+        await self.book_callback(self.l2_book[msg['product_id']], L2_BOOK, msg['product_id'], True, None, timestamp)
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -153,7 +153,7 @@ class Coinbase(Feed):
                 bidask[price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(msg['product_id'], L2_BOOK, False, delta, timestamp)
+        await self.book_callback(self.l2_book[msg['product_id']], L2_BOOK, msg['product_id'], False, delta, timestamp)
 
     async def _book_snapshot(self, pairs: list):
         self.__reset()
@@ -185,7 +185,7 @@ class Coinbase(Feed):
                     else:
                         self.l3_book[pair][side][price] = {order_id: size}
                     self.order_map[order_id] = (price, size)
-            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=self.l3_book[pair], timestamp=timestamp)
+            await self.book_callback(self.l3_book[pair], L3_BOOK, pair, True, None, timestamp=timestamp)
 
     async def _open(self, msg):
         delta = {BID: [], ASK: []}
@@ -204,7 +204,7 @@ class Coinbase(Feed):
 
         delta[side].append((order_id, price, size))
 
-        await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
+        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, timestamp)
 
     async def _done(self, msg):
         """
@@ -234,7 +234,7 @@ class Coinbase(Feed):
         delta[side].append((order_id, price, 0))
         del self.order_map[order_id]
 
-        await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
+        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, timestamp)
 
     async def _change(self, msg):
         delta = {BID: [], ASK: []}
@@ -253,7 +253,7 @@ class Coinbase(Feed):
 
         delta[side].append((order_id, price, new_size))
 
-        await self.book_callback(pair, L3_BOOK, False, delta, timestamp)
+        await self.book_callback(self.l3_book, L3_BOOK, pair, False, delta, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

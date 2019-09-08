@@ -61,7 +61,7 @@ class Bitstamp(Feed):
                     self.l2_book[pair][side][price] = size
                     delta[side].append((price, size))
 
-        await self.book_callback(pair=pair, book_type=L2_BOOK, forced=forced, delta=delta, timestamp=timestamp)
+        await self.book_callback(self.l2_book[pair], book_type=L2_BOOK, pair=pair, forced=forced, delta=delta, timestamp=timestamp)
 
     async def _l3_book(self, msg):
         data = msg['data']
@@ -76,7 +76,7 @@ class Bitstamp(Feed):
                 size = Decimal(size)
                 book[side].get(price, sd())[order_id] = size
         self.l3_book[pair] = book
-        await self.book_callback(pair=pair, book_type=L3_BOOK, forced=False, delta=False, timestamp=timestamp)
+        await self.book_callback(self.l3_book[pair], book_type=L3_BOOK, pair=pair, forced=False, delta=False, timestamp=timestamp)
 
     async def _trades(self, msg):
         """

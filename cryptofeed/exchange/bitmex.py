@@ -91,7 +91,6 @@ class Bitmex(Feed):
         """
         the Full bitmex book
         """
-        pair = None
         delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
         forced = False
@@ -103,11 +102,21 @@ class Bitmex(Feed):
             self.partial_received = True
             forced = True
 
-        if msg['action'] == 'partial' or msg['action'] == 'insert':
+        pair = msg['data'][0]['symbol']
+
+        if msg['action'] == 'partial':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 price = Decimal(data['price'])
-                pair = data['symbol']
+                size = Decimal(data['size'])
+                order_id = data['id']
+
+                self.l2_book[pair][side][price] = size
+                self.order_id[pair][side][order_id] = price
+        elif msg['action'] == 'insert':
+            for data in msg['data']:
+                side = BID if data['side'] == 'Buy' else ASK
+                price = Decimal(data['price'])
                 size = Decimal(data['size'])
                 order_id = data['id']
 
@@ -117,7 +126,6 @@ class Bitmex(Feed):
         elif msg['action'] == 'update':
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
-                pair = data['symbol']
                 update_size = Decimal(data['size'])
                 order_id = data['id']
 
@@ -128,21 +136,19 @@ class Bitmex(Feed):
                 delta[side].append((price, update_size))
         elif msg['action'] == 'delete':
             for data in msg['data']:
-                pair = data['symbol']
                 side = BID if data['side'] == 'Buy' else ASK
                 order_id = data['id']
 
                 delete_price = self.order_id[pair][side][order_id]
                 del self.order_id[pair][side][order_id]
                 del self.l2_book[pair][side][delete_price]
-
                 delta[side].append((delete_price, 0))
 
         else:
             LOG.warning("%s: Unexpected l2 Book message %s", self.id, msg)
             return
 
-        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
 
     async def _ticker(self, msg):
         for data in msg['data']:

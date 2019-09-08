@@ -92,7 +92,7 @@ class FTX(Feed):
                     Decimal(price) : Decimal(amount) for price, amount in msg['data']['asks']
                 })
             }
-            await self.book_callback(pair, L2_BOOK, True, None, float(msg['data']['time']))
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, float(msg['data']['time']))
         else:
             # update
             delta = {BID: [], ASK: []}
@@ -108,7 +108,7 @@ class FTX(Feed):
                     else:
                         delta[s].append((price, amount))
                         self.l2_book[pair][s][price] = amount
-            await self.book_callback(pair, L2_BOOK, False, delta, float(msg['data']['time']))
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']))
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

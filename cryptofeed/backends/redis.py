@@ -97,21 +97,13 @@ class BookRedis(RedisCallback):
         super().__init__(*args, **kwargs)
         if self.key is None:
             self.key = 'book'
-        self.depth = kwargs.get('depth', None)
-        self.previous = {BID: {}, ASK: {}}
 
     async def __call__(self, *, feed, pair, book, timestamp):
         ts = time.time()
         await self.connect()
 
         data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
-        book_convert(book, data, self.depth, convert=self.numeric_type)
-
-        if self.depth:
-            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
-                return
-            self.previous[ASK] = data[ASK]
-            self.previous[BID] = data[BID]
+        book_convert(book, data, convert=self.numeric_type)
 
         data = json.dumps(data)
         await self.redis.zadd(f"{self.key}-{feed}-{pair}", ts, data, exist=self.redis.ZSET_IF_NOT_EXIST)
@@ -138,13 +130,7 @@ class BookStream(BookRedis):
         await self.connect()
 
         data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
-        book_convert(book, data, self.depth, convert=self.numeric_type)
-
-        if self.depth:
-            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
-                return
-            self.previous[ASK] = data[ASK]
-            self.previous[BID] = data[BID]
+        book_convert(book, data, convert=self.numeric_type)
 
         data = json.dumps(data)
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", {'data': data})

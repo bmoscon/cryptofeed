@@ -132,21 +132,13 @@ class InfluxBookCallback(InfluxCallback):
 
 
 class BookInflux(InfluxBookCallback):
-    def __init__(self, *args, key='book', depth=None, **kwargs):
+    def __init__(self, *args, key='book', **kwargs):
         super().__init__(*args, **kwargs)
-        self.depth = depth
         self.key = key
-        self.previous = {BID: {}, ASK: {}}
 
     async def __call__(self, *, feed, pair, book, timestamp):
         data = {BID: {}, ASK: {}}
-        book_convert(book, data, self.depth)
-
-        if self.depth:
-            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
-                return
-            self.previous[ASK] = data[ASK]
-            self.previous[BID] = data[BID]
+        book_convert(book, data)
 
         start = f"{self.key}-{feed},pair={pair},delta=False"
         await self._write_rows(start, data, timestamp)

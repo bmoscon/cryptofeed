@@ -145,7 +145,7 @@ class Poloniex(Feed):
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
         if self.__do_callback(L2_BOOK, pair):
-            await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

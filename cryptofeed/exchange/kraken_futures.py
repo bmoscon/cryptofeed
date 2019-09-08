@@ -122,7 +122,7 @@ class KrakenFutures(Feed):
             BID: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['bids']}),
             ASK: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['asks']})
         }
-        await self.book_callback(pair, L2_BOOK, True, None, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
@@ -149,7 +149,7 @@ class KrakenFutures(Feed):
             delta[s].append((price, amount))
             self.l2_book[pair][s][price] = amount
 
-        await self.book_callback(pair, L2_BOOK, False, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

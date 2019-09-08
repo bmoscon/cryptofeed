@@ -44,7 +44,7 @@ class Huobi(Feed):
             })
         }
 
-        await self.book_callback(pair, L2_BOOK, False, False, timestamp_normalize(self.id, msg['ts']))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, False, timestamp_normalize(self.id, msg['ts']))
 
     async def _trade(self, msg):
         """

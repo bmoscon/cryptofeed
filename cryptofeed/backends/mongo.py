@@ -56,18 +56,10 @@ class BookMongo(MongoCallback):
         super().__init__(*args, **kwargs)
         if self.collection is None:
             self.collection = 'book'
-        self.depth = kwargs.get('depth', None)
-        self.previous = {BID: {}, ASK: {}}
 
     async def __call__(self, *, feed, pair, book, timestamp):
         data = {'timestamp': timestamp, 'feed': feed, 'pair': pair, 'delta': False, BID: {}, ASK: {}}
-        book_convert(book, data, self.depth, convert=lambda x: str(int(x * 10000)))
-
-        if self.depth:
-            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
-                return
-            self.previous[ASK] = data[ASK]
-            self.previous[BID] = data[BID]
+        book_convert(book, data, convert=lambda x: str(int(x * 10000)))
 
         await self.db[self.collection].insert_one(data)
 

@@ -59,21 +59,14 @@ class FundingElastic(ElasticCallback):
 
 
 class BookElastic(ElasticCallback):
-    def __init__(self, *args, index='book', depth=None, **kwargs):
+    def __init__(self, *args, index='book', **kwargs):
         super().__init__(*args, index=index, **kwargs)
-        self.depth = depth
-        self.previous = {BID: {}, ASK: {}}
         self.addr = f"{self.addr}/_bulk"
 
     async def __call__(self, *, feed, pair, book, timestamp):
         data = {BID: {}, ASK: {}}
-        book_convert(book, data, self.depth, convert=self.numeric_type)
+        book_convert(book, data, convert=self.numeric_type)
 
-        if self.depth:
-            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
-                return
-            self.previous[ASK] = data[ASK]
-            self.previous[BID] = data[BID]
         data = book_flatten(feed, pair, data, timestamp, False)
 
         data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
