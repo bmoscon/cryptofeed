@@ -8,7 +8,7 @@ from cryptofeed.defines import L2_BOOK, TRADES
 
 
 def callback(ch, method, properties, body):
-    print(" [x] Received %r" % body)
+    print(" [x] Received %r" % body.decode())
 
 
 def receiver(port):
@@ -30,8 +30,7 @@ def main():
         p.start()
 
         f = FeedHandler()
-        f.add_feed(Kraken(channels=[L2_BOOK], pairs=[
-                   'BTC-USD', 'ETH-USD'], callbacks={L2_BOOK: BookRabbit(depth=1, port=5672)}))
+        f.add_feed(Kraken(max_depth=2, channels=[L2_BOOK], pairs=['BTC-USD', 'ETH-USD'], callbacks={L2_BOOK: BookRabbit()}))
 
         f.run()
 
