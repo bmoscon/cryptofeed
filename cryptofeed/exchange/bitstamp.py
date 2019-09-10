@@ -136,7 +136,7 @@ class Bitstamp(Feed):
 
     async def _snapshot(self, pairs: list):
         await asyncio.sleep(5)
-        urls = [f'https://www.bitstamp.net/api/order_book/{sym}' for sym in pairs]
+        urls = [f'https://www.bitstamp.net/api/v2/order_book/{sym}' for sym in pairs]
 
         async def fetch(session, url):
             async with session.get(url) as response:
@@ -169,7 +169,5 @@ class Bitstamp(Feed):
                         }
                     }))
                 if 'diff_order_book' in channel:
-                    if pair == 'btcusd':
-                        pair = ''
                     snaps.append(pair)
         await self._snapshot(snaps)
