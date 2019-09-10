@@ -36,7 +36,7 @@ class Bitstamp(Feed):
     async def _l2_book(self, msg):
         data = msg['data']
         chan = msg['channel']
-        timestamp = data['timestamp']
+        timestamp = int(data['microtimestamp'])
         pair = pair_exchange_to_std(chan.split('_')[-1])
         forced = False
         delta = {BID: [], ASK: []}
@@ -61,12 +61,13 @@ class Bitstamp(Feed):
                     self.l2_book[pair][side][price] = size
                     delta[side].append((price, size))
 
-        await self.book_callback(pair=pair, book_type=L2_BOOK, forced=forced, delta=delta, timestamp=timestamp)
+        await self.book_callback(pair=pair, book_type=L2_BOOK, forced=forced, delta=delta,
+                                 timestamp=timestamp_normalize(self.id, timestamp))
 
     async def _l3_book(self, msg):
         data = msg['data']
         chan = msg['channel']
-        timestamp = data['timestamp']
+        timestamp = int(data['microtimestamp'])
         pair = pair_exchange_to_std(chan.split('_')[-1])
 
         book = {BID: sd(), ASK: sd()}
@@ -76,7 +77,8 @@ class Bitstamp(Feed):
                 size = Decimal(size)
                 book[side].get(price, sd())[order_id] = size
         self.l3_book[pair] = book
-        await self.book_callback(pair=pair, book_type=L3_BOOK, forced=False, delta=False, timestamp=timestamp)
+        await self.book_callback(pair=pair, book_type=L3_BOOK, forced=False, delta=False,
+                                 timestamp=timestamp_normalize(self.id, timestamp))
 
     async def _trades(self, msg):
         """
@@ -136,7 +138,7 @@ class Bitstamp(Feed):
 
     async def _snapshot(self, pairs: list):
         await asyncio.sleep(5)
-        urls = [f'https://www.bitstamp.net/api/order_book/{sym}' for sym in pairs]
+        urls = [f'https://www.bitstamp.net/api/v2/order_book/{sym}' for sym in pairs]
 
         async def fetch(session, url):
             async with session.get(url) as response:
@@ -169,7 +171,5 @@ class Bitstamp(Feed):
                         }
                     }))
                 if 'diff_order_book' in channel:
-                    if pair == 'btcusd':
-                        pair = ''
                     snaps.append(pair)
         await self._snapshot(snaps)
