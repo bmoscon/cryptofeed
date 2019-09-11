@@ -89,7 +89,7 @@ class OKCoin(Feed):
                         Decimal(price) : Decimal(amount) for price, amount, *_ in update['asks']
                     })
                 }
-                await self.book_callback(pair, L2_BOOK, True, None, timestamp_normalize(self.id, update['timestamp']))
+                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']))
         else:
             # update
             for update in msg['data']:
@@ -106,7 +106,7 @@ class OKCoin(Feed):
                         else:
                             delta[s].append((price, amount))
                             self.l2_book[pair][s][price] = amount
-                await self.book_callback(pair, L2_BOOK, False, delta, timestamp_normalize(self.id, update['timestamp']))
+                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']))
 
     async def message_handler(self, msg: str, timestamp: float):
         # DEFLATE compression, no header

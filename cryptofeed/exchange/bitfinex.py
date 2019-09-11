@@ -176,7 +176,7 @@ class Bitfinex(Feed):
         else:
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
 
-        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
 
     async def _raw_book(self, msg: dict, timestamp: float):
         """
@@ -255,7 +255,7 @@ class Bitfinex(Feed):
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
             return
 
-        await self.book_callback(pair, L3_BOOK, forced, delta, timestamp)
+        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, forced, delta, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

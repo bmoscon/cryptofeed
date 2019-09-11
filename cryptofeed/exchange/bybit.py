@@ -103,4 +103,4 @@ class Bybit(Feed):
                     self.l2_book[pair][side][price] = amount
 
         # timestamp is in microseconds
-        await self.book_callback(pair, L2_BOOK, forced, delta, msg['timestamp_e6'] / 1000000)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, msg['timestamp_e6'] / 1000000)

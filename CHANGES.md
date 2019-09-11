@@ -2,6 +2,8 @@
 
 ### 1.0.1
   * Feature: Backfill Bitmex historical trade data from S3 Bucket
+  * Feature: RabbitMQ backend
+  * Feature: Custom Depth and deltas for all L2 book updates
 
 ### 1.0.0 (2019-08-18)
   * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly

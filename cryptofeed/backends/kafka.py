@@ -52,22 +52,11 @@ class FundingKafka(KafkaCallback):
 
 
 class BookKafka(KafkaCallback):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.depth = kwargs.get('depth', None)
-        self.previous = {BID: {}, ASK: {}}
-
     async def __call__(self, *, feed, pair, book, timestamp):
         await self._connect()
 
         data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
-        book_convert(book, data, self.depth)
-
-        if self.depth:
-            if data[BID] == self.previous[BID] and data[ASK] == self.previous[ASK]:
-                return
-            self.previous[ASK] = data[ASK]
-            self.previous[BID] = data[BID]
+        book_convert(book, data)
 
         data = json.dumps(data).encode('utf8')
         topic =  f"{self.key}-{feed}-{pair}" if self.key else f"book-{feed}-{pair}"

@@ -48,7 +48,7 @@ class HitBTC(Feed):
                 else:
                     self.l2_book[pair][side][price] = size
                     delta[side].append((price, size))
-        await self.book_callback(pair, L2_BOOK, False, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['symbol'])
@@ -58,7 +58,7 @@ class HitBTC(Feed):
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
                 self.l2_book[pair][side][price] = size
-        await self.book_callback(pair, L2_BOOK, True, None, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp)
 
     async def _trades(self, msg):
         pair = pair_exchange_to_std(msg['symbol'])

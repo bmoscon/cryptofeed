@@ -90,7 +90,7 @@ class Kraken(Feed):
             }), ASK: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']
             })}
-            await self.book_callback(pair, L2_BOOK, True, delta, timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, delta, timestamp)
         else:
             for m in msg:
                 for s, updates in m.items():
@@ -114,7 +114,7 @@ class Kraken(Feed):
                     del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
                     del self.l2_book[pair][side][del_price]
                     delta[side].append((del_price, 0))
-            await self.book_callback(pair, L2_BOOK, False, delta, timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

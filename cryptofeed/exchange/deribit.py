@@ -142,7 +142,8 @@ class Deribit(Feed):
 
     async def _book_snapshot(self, msg):
         timestamp = msg["params"]["data"]["timestamp"]
-        self.l2_book[msg["params"]["data"]["instrument_name"]] = {
+        pair = msg["params"]["data"]["instrument_name"]
+        self.l2_book[pair] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
                 # _ is always 'new' for snapshot
@@ -154,15 +155,15 @@ class Deribit(Feed):
             })
         }
 
-        await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, True, None, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, timestamp))
 
     async def _book_update(self, msg):
         timestamp = msg["params"]["data"]["timestamp"]
+        pair = msg["params"]["data"]["instrument_name"]
         delta = {BID: [], ASK: []}
 
         for action, price, amount in msg["params"]["data"]["bids"]:
-            bidask = self.l2_book[msg["params"]
-                                  ["data"]["instrument_name"]][BID]
+            bidask = self.l2_book[pair][BID]
             if action != "delete":
                 bidask[price] = Decimal(amount)
                 delta[BID].append((Decimal(price), Decimal(amount)))
@@ -171,15 +172,14 @@ class Deribit(Feed):
                 delta[BID].append((Decimal(price), Decimal(amount)))
 
         for action, price, amount in msg["params"]["data"]["asks"]:
-            bidask = self.l2_book[msg["params"]
-                                  ["data"]["instrument_name"]][ASK]
+            bidask = self.l2_book[pair][ASK]
             if action != "delete":
                 bidask[price] = amount
                 delta[ASK].append((Decimal(price), Decimal(amount)))
             else:
                 del bidask[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(msg["params"]["data"]["instrument_name"], L2_BOOK, False, delta, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, timestamp))
 
     async def message_handler(self, msg: str, timestamp: float):
         msg_dict = json.loads(msg, parse_float=Decimal)

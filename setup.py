@@ -59,6 +59,7 @@ setup(
         'arctic': ['arctic'],
         'zmq': ['pyzmq'],
         'mongo': ['motor'],
-        'kafka': ['aiokafka']
+        'kafka': ['aiokafka'],
+        'rabbit': ['aio_pika', 'pika']
     },
 )

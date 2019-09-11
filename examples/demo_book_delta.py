@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex, Kraken, OKCoin, Bybit, Binance, Bitstamp
+from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex, Kraken, OKCoin, Bybit, Binance, Bitstamp, EXX
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, BOOK_DELTA
 
 
@@ -72,19 +72,21 @@ class DeltaBook(object):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitmex").L2))
+
+    f.add_feed(Bitmex(max_depth=100, book_interval=1000, pairs=['XBTUSD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitmex").L2))
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks=DeltaBook("Bitfinex-L3").L3))
-    f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitfinex-L2").L2))
+    f.add_feed(Bitfinex(max_depth=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitfinex-L2").L2))
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks=DeltaBook("Coinbase-L3").L3))
-    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Coinbase-L2").L2))
-    f.add_feed(Gemini(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Gemini").L2))
-    f.add_feed(HitBTC(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("HitBTC").L2))
-    f.add_feed(Poloniex(book_interval=100, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("Poloniex").L2))
-    f.add_feed(Kraken(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Kraken").L2))
-    f.add_feed(OKCoin(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("OKCoin").L2))
-    f.add_feed(Bybit(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bybit").L2))
-    f.add_feed(Binance(book_interval=30, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("Binance").L2))
-    f.add_feed(Bitstamp(book_interval=30, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitstamp").L2))
+    f.add_feed(Coinbase(max_depth=50, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Coinbase-L2").L2))
+    f.add_feed(EXX(max_depth=25, book_interval=100, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("EXX").L2))
+    f.add_feed(Gemini(max_depth=20, book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Gemini").L2))
+    f.add_feed(HitBTC(max_depth=10, book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("HitBTC").L2))
+    f.add_feed(Poloniex(max_depth=10, book_interval=100, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("Poloniex").L2))
+    f.add_feed(Kraken(max_depth=10, book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Kraken").L2))
+    f.add_feed(OKCoin(max_depth=100, book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("OKCoin").L2))
+    f.add_feed(Bybit(max_depth=100, book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bybit").L2))
+    f.add_feed(Binance(max_depth=100, book_interval=30, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("Binance").L2))
+    f.add_feed(Bitstamp(max_depth=100, book_interval=30, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitstamp").L2))
 
     f.run()
 

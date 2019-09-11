@@ -23,12 +23,11 @@ def book_delta_convert(delta: dict, data: dict, convert=str):
                     data[side][price] = {order_id: convert(amount)}
 
 
-def book_convert(book: dict, data: dict, depth: int, convert=str):
+def book_convert(book: dict, data: dict, convert=str):
     """
-    Build depth levels of book into data, converting decimal.Decimal
-    to str. Book will remain unmodified, data will be modified
+    Converting decimal.Decimal to str. Book will remain unmodified,
+    data will be modified
     """
-    count = 0
     for level in book[ASK]:
         _level = convert(level)
         if isinstance(book[ASK][level], dict):
@@ -37,11 +36,7 @@ def book_convert(book: dict, data: dict, depth: int, convert=str):
                 data[ASK][_level][order] = convert(data[ASK][_level][order])
         else:
             data[ASK][_level] = convert(book[ASK][level])
-        count += 1
-        if depth and count >= depth:
-            break
 
-    count = 0
     for level in reversed(book[BID]):
         _level = convert(level)
         if isinstance(book[BID][level], dict):
@@ -50,9 +45,6 @@ def book_convert(book: dict, data: dict, depth: int, convert=str):
                 data[BID][_level][order] = convert(data[BID][_level][order])
         else:
             data[BID][_level] = convert(book[BID][level])
-        count += 1
-        if depth and count >= depth:
-            break
 
 
 def book_flatten(feed: str, pair: str, book: dict, timestamp: float, delta: str) -> dict:

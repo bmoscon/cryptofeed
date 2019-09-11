@@ -56,7 +56,7 @@ class Gemini(Feed):
                 self.l2_book[pair][side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
 
     async def _trade(self, msg, timestamp):
         pair = pair_exchange_to_std(msg['symbol'])

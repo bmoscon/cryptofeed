@@ -80,8 +80,7 @@ class HuobiDM(Feed):
             })
         }
 
-        await self.book_callback(pair, L2_BOOK, False, False, timestamp_normalize(self.id, msg['ts']))
-
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, False, timestamp_normalize(self.id, msg['ts']))
 
     async def _trade(self, msg):
         """
@@ -104,7 +103,6 @@ class HuobiDM(Feed):
                 price=Decimal(trade['price']),
                 timestamp=timestamp_normalize(self.id, trade['ts'])
             )
-
 
     async def message_handler(self, msg: str, timestamp: float):
         # unzip message
@@ -140,4 +138,3 @@ class HuobiDM(Feed):
                         "id": str(client_id)
                     }
                 ))
-

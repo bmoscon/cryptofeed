@@ -172,7 +172,7 @@ class Binance(Feed):
                     self.l2_book[pair][side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(pair, L2_BOOK, forced, delta, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, timestamp))
 
 
     async def message_handler(self, msg: str, timestamp: float):

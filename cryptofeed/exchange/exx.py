@@ -81,8 +81,11 @@ class EXX(Feed):
 
         ['E', '1', '1547942636', 'BTC_USDT', 'ASK', '3674.91740000', '0.02600000']
         """
+        forced = False
+        delta = {BID: [], ASK: []}
         if msg[0] == 'AE':
             # snapshot
+            forced = True
             pair = pair_exchange_to_std(msg[2])
             timestamp = msg[3]
             asks = msg[4]['asks'] if 'asks' in msg[4] else msg[5]['asks']
@@ -106,14 +109,14 @@ class EXX(Feed):
             amount = Decimal(msg[6])
 
             if amount == 0:
-                try:
+                if price in self.l2_book[pair][side]:
                     del self.l2_book[pair][side][price]
-                except BaseException:
-                    pass
+                    delta[side].append((price, 0))
             else:
                 self.l2_book[pair][side][price] = amount
+                delta[side].append((price, amount))
 
-        await self.book_callback(pair, L2_BOOK, True, None, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
 
     async def _trade(self, msg):
         """
