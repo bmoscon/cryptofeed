@@ -79,7 +79,7 @@ class Feed:
                 await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
             else:
                 await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
-    
+
     async def callback(self, data_type, **kwargs):
         for cb in self.callbacks[data_type]:
             await cb(**kwargs)
