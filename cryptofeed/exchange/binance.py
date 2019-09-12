@@ -14,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize, feed_to_exchange
 
 
 LOG = logging.getLogger('feedhandler')
@@ -180,7 +180,7 @@ class Binance(Feed):
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
-        pair, _ = msg['stream'].split('@')
+        pair, _ = msg['stream'].split('@', 1)
         msg = msg['data']
 
         pair = pair.upper()
@@ -200,7 +200,7 @@ class Binance(Feed):
         # connection endpoint
         self.__reset()
         # If full book enabled, collect snapshot first
-        if 'depth' in self.channels:
+        if feed_to_exchange(self.id, L2_BOOK) in self.channels:
             await self._snapshot(self.pairs)
-        elif 'depth' in self.config:
-            await self._snapshot(self.config['depth'])
+        elif feed_to_exchange(self.id, L2_BOOK) in self.config:
+            await self._snapshot(self.config[feed_to_exchange(self.id, L2_BOOK)])

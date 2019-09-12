@@ -84,7 +84,7 @@ _feed_to_exchange_map = {
         BITSTAMP: 'diff_order_book',
         KRAKEN: 'book',
         KRAKEN_FUTURES: 'book',
-        BINANCE: 'depth',
+        BINANCE: 'depth@100ms',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
         HUOBI_US: 'depth.step0',
