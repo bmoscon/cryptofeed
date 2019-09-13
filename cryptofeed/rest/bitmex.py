@@ -146,6 +146,7 @@ class Bitmex(API):
         }
         """
         d = dt.utcnow().date()
+        d -= timedelta(days=1)
         rest_end_date = pd.Timestamp(dt(d.year, d.month, d.day))
         start = API._timestamp(start)
         end = API._timestamp(end)
