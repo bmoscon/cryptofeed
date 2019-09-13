@@ -10,7 +10,7 @@ import json
 
 import aioredis
 
-from cryptofeed.defines import BID, ASK
+from cryptofeed.defines import BID, ASK, TRADES, FUNDING 
 from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
@@ -35,7 +35,7 @@ class TradeRedis(RedisCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.key is None:
-            self.key = 'trades'
+            self.key = TRADES
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         await self.connect()
@@ -62,7 +62,7 @@ class FundingRedis(RedisCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.key is None:
-            self.key = 'funding'
+            self.key = FUNDING
 
     async def __call__(self, *, feed, pair, **kwargs):
         await self.connect()
