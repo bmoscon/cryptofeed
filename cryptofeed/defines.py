@@ -9,26 +9,28 @@ Defines contains all constant string definitions for Cryptofeed,
 as well as some documentation (in comment form) regarding
 the book definitions and structure
 '''
-BITSTAMP = 'BITSTAMP'
 BITFINEX = 'BITFINEX'
-COINBASE = 'COINBASE'
-GEMINI = 'GEMINI'
-HITBTC = 'HITBTC'
-POLONIEX = 'POLONIEX'
 BITMEX = 'BITMEX'
-KRAKEN = 'KRAKEN'
-KRAKEN_FUTURES = 'KRAKEN_FUTURES'
 BINANCE = 'BINANCE'
-EXX = 'EXX'
-HUOBI = 'HUOBI'
-HUOBI_US = 'HUOBI_US'
-HUOBI_DM = 'HUOBI_DM'
-OKCOIN = 'OKCOIN'
-OKEX = 'OKEX'
+BITSTAMP = 'BITSTAMP'
+BITTREX = 'BITTREX'
+BYBIT = 'BYBIT'
+COINBASE = 'COINBASE'
 COINBENE = 'COINBENE'
 DERIBIT = 'DERIBIT'
-BYBIT = 'BYBIT'
+EXX = 'EXX'
 FTX = 'FTX'
+GEMINI = 'GEMINI'
+HITBTC = 'HITBTC'
+HUOBI = 'HUOBI'
+HUOBI_DM = 'HUOBI_DM'
+HUOBI_US = 'HUOBI_US'
+KRAKEN = 'KRAKEN'
+KRAKEN_FUTURES = 'KRAKEN_FUTURES'
+OKCOIN = 'OKCOIN'
+OKEX = 'OKEX'
+POLONIEX = 'POLONIEX'
+
 
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
@@ -40,26 +42,30 @@ FUNDING = 'funding'
 INSTRUMENT = 'instrument'
 UNSUPPORTED = 'unsupported'
 
+
 L2_BOOK_SWAP = 'l2_book_swap'
 TRADES_SWAP = 'trades_swap'
 TICKER_SWAP = 'ticker_swap'
+
 
 L2_BOOK_FUTURES = 'l2_book_futures'
 TRADES_FUTURES = 'trades_futures'
 TICKER_FUTURES = 'ticker_futures'
 
+
 BUY = 'buy'
 SELL = 'sell'
-
 BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
+
 
 LIMIT = 'limit'
 MARKET = 'market'
 MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
+
 
 OPEN = 'open'
 PENDING = 'pending'

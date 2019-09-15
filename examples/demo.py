@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback, InstrumentCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, HuobiUS, OKCoin, OKEx, Coinbene, HuobiDM
+from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, HuobiUS, OKCoin, OKEx, Coinbene, HuobiDM, Bittrex
 from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, INSTRUMENT, GEMINI
 
 
@@ -72,6 +72,8 @@ def main():
     f.add_feed(OKCoin(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.add_feed(OKEx(pairs=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Coinbene(channels=[L2_BOOK, TRADES, TICKER], pairs=['BTC-USDT'], callbacks={L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
+    f.add_feed(Bittrex(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD'], L2_BOOK: ['BTC-USDT']}, callbacks={L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
+
     f.run()
 
 
