@@ -40,9 +40,11 @@ def bitfinex_pairs():
 
     return ret
 
+
 def bybit_pairs():
     pairs = {"BTC-USD": "BTCUSD", "ETH-USD": "ETHUSD", "EOS-USD": "EOSUSD", "XRP-USD": "XRPUSD"}
     return pairs
+
 
 def ftx_pairs():
     ret = {}
@@ -52,6 +54,7 @@ def ftx_pairs():
         pair = data['name']
         ret[normalized] = pair
     return ret
+
 
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
