@@ -100,7 +100,6 @@ class Bittrex(Feed):
         # For more signalR info see:
         # https://blog.3d-logic.com/2015/03/29/signalr-on-the-wire-an-informal-description-of-the-signalr-protocol/
         # http://blogs.microsoft.co.il/applisec/2014/03/12/signalr-message-format/
-        print(self.config)
         for channel in set(self.channels) if not self.config else set(self.config):
             symbols = self.pairs if not self.config else list(self.config[channel])
             i = 0
@@ -112,5 +111,4 @@ class Bittrex(Feed):
                 channel = 'SubscribeToExchangeDeltas'
             msg = {'A': symbols if channel != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': channel}
             i += 1
-            print(msg)
             await websocket.send(json.dumps(msg))
