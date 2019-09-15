@@ -6,6 +6,8 @@
   * Feature: Custom Depth and deltas for all L2 book updates
   * Feature: Support new 100ms book diff channel on binance
   * Feature: Bittrex exchange support
+  * Feature: Ticker support in Redis and Kafka Backends
+  * Feature: Ticker callbacks require/contain timestamp
 
 ### 1.0.0 (2019-08-18)
   * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly
