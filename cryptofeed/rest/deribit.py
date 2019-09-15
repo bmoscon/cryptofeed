@@ -117,11 +117,9 @@ class Deribit(API):
             data = r.json()
             break
 
-        for entry_bid in data["result"]["bids"]:
-            price, amount = entry_bid
-            ret[symbol][BID][price] = amount
+        for side, key in ((BID, 'bids'), (ASK, 'asks')):
+            for entry_bid in data["result"][key]:
+                price, amount = entry_bid
+                ret[symbol][side][price] = amount
 
-        for entry_ask in data["result"]["asks"]:
-            price, amount = entry_ask
-            ret[symbol][ASK][price] = amount
         return ret

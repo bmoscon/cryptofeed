@@ -15,7 +15,7 @@ import pandas as pd
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN,
                                 OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
-                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT)
+                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT, BITTREX)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -67,7 +67,7 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in  {HUOBI, HUOBI_US, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE, GEMINI}:
+    elif exchange in  {HUOBI, HUOBI_US, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE, GEMINI, BITTREX}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -95,7 +95,8 @@ _feed_to_exchange_map = {
         DERIBIT: 'book',
         BYBIT: 'order_book_25L1',
         FTX: 'orderbook',
-        GEMINI: L2_BOOK
+        GEMINI: L2_BOOK,
+        BITTREX: 'SubscribeToExchangeDeltas'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -137,7 +138,8 @@ _feed_to_exchange_map = {
         DERIBIT: 'trades',
         BYBIT:  'trade',
         FTX: 'trades',
-        GEMINI: TRADES
+        GEMINI: TRADES,
+        BITTREX: TRADES
     },
     TICKER: {
         POLONIEX: 1002,
@@ -158,7 +160,8 @@ _feed_to_exchange_map = {
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
         FTX: "ticker",
-        GEMINI: UNSUPPORTED
+        GEMINI: UNSUPPORTED,
+        BITTREX: 'SubscribeToSummaryDeltas'
     },
     VOLUME: {
         POLONIEX: 1003

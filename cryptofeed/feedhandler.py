@@ -8,15 +8,13 @@ import asyncio
 from time import time as time
 from socket import error as socket_error
 import zlib
-from collections import defaultdict
-from copy import deepcopy
 
 import websockets
 from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.exchanges import *
@@ -49,7 +47,8 @@ _EXCHANGES = {
     DERIBIT: Deribit,
     EXX_str: EXX,
     BYBIT: Bybit,
-    FTX_str: FTX
+    FTX_str: FTX,
+    BITTREX: Bittrex
 }
 
 
