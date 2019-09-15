@@ -1,7 +1,6 @@
 import logging
 import json
 from decimal import Decimal
-import uuid
 import requests
 import zlib
 import base64
@@ -26,8 +25,6 @@ class Bittrex(Feed):
         url = requests.Request('GET', 'https://socket.bittrex.com/signalr/connect', params={'transport': 'webSockets', 'connectionToken': token, 'connectionData': json.dumps([{"name": "c2"}]), 'clientProtocol': 1.5}).prepare().url
         url = url.replace('https://', 'wss://')
         self.address = url
-        self.hash = str(uuid.uuid4())
-        self.uuid = self.id + self.hash
 
     def __reset(self):
         self.l2_book = {}
