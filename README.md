@@ -38,6 +38,7 @@ Supports the following exchanges:
 * Bitfinex
 * BitMEX
 * Bitstamp
+* Bittrex
 * Bybit
 * Coinbase
 * Coinbene
