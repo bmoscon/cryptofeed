@@ -8,8 +8,6 @@ import asyncio
 from time import time as time
 from socket import error as socket_error
 import zlib
-from collections import defaultdict
-from copy import deepcopy
 
 import websockets
 from websockets import ConnectionClosed
