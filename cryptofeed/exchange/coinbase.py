@@ -71,7 +71,8 @@ class Coinbase(Feed):
         await self.callback(TICKER, feed=self.id,
                                      pair=msg['product_id'],
                                      bid=Decimal(msg['best_bid']),
-                                     ask=Decimal(msg['best_ask']))
+                                     ask=Decimal(msg['best_ask']),
+                                     timestamp=timestamp_normalize(self.id, msg['time']))
 
     async def _book_update(self, msg):
         '''

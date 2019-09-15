@@ -76,7 +76,7 @@ class KrakenFutures(Feed):
                             order_id=msg['uid'],
                             timestamp=float(msg['time']))
 
-    async def _ticker(self, msg: dict, pair: str):
+    async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
         {
             "feed": "ticker_lite",
@@ -92,7 +92,7 @@ class KrakenFutures(Feed):
             "maturityTime": 0
         }
         """
-        await self.callback(TICKER, feed=self.id, pair=pair, bid=msg['bid'], ask=msg['ask'])
+        await self.callback(TICKER, feed=self.id, pair=pair, bid=msg['bid'], ask=msg['ask'], timestamp=timestamp)
 
     async def _book_snapshot(self, msg: dict, pair: str, timestamp: float):
         """
@@ -167,7 +167,7 @@ class KrakenFutures(Feed):
             elif msg['feed'] == 'trade_snapshot':
                 return
             elif msg['feed'] == 'ticker_lite':
-                await self._ticker(msg, msg['product_id'])
+                await self._ticker(msg, msg['product_id'], timestamp)
             elif msg['feed'] == 'book_snapshot':
                 await self._book_snapshot(msg, msg['product_id'], timestamp)
             elif msg['feed'] == 'book':

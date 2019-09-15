@@ -24,7 +24,6 @@ class RedisCallback:
         self.redis = None
         self.key = key
         self.numeric_type = numeric_type
-
         self.conn_str = socket if socket else f'redis://{host}:{port}'
 
     async def connect(self):
@@ -145,3 +144,24 @@ class BookDeltaStream(BookRedis):
 
         data = json.dumps(data)
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", {'data': data})
+
+
+class TickerRedis(RedisCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.key is None:
+            self.key = 'ticker'
+
+    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
+        await self.connect()
+
+        data = json.dumps({'feed': feed, 'pair': pair, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'timestamp': timestamp})
+        await self.redis.zadd(f"{self.key}-{feed}-{pair}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+
+
+class TickerStream(TickerRedis):
+    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
+        await self.connect()
+
+        data = {'feed': feed, 'pair': pair, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'timestamp': timestamp}
+        await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)

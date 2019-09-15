@@ -69,7 +69,7 @@ class Poloniex(Feed):
         self.l2_book = {}
         self.seq_no = {}
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
@@ -78,7 +78,8 @@ class Poloniex(Feed):
             await self.callback(TICKER, feed=self.id,
                                         pair=pair,
                                         bid=Decimal(bid),
-                                        ask=Decimal(ask))
+                                        ask=Decimal(ask),
+                                        timestamp=timestamp)
 
     async def _volume(self, msg):
         # ['2018-01-02 00:45', 35361, {'BTC': '43811.201', 'ETH': '6747.243', 'XMR': '781.716', 'USDT': '196758644.806'}]
@@ -160,7 +161,7 @@ class Poloniex(Feed):
             # ack, in which case its 1
             seq_id = msg[1]
             if seq_id is None:
-                await self._ticker(msg[2])
+                await self._ticker(msg[2], timestamp)
         elif chan_id == 1003:
             # volume update channel is just like ticker - the
             # sequence id is None except for the initial ack

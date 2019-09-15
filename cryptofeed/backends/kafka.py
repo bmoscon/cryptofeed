@@ -73,3 +73,13 @@ class BookDeltaKafka(KafkaCallback):
         data = json.dumps(data).encode('utf8')
         topic =  f"{self.key}-{feed}-{pair}" if self.key else f"book-{feed}-{pair}"
         await self.producer.send_and_wait(topic, data)
+
+
+class TickerKafka(KafkaCallback):
+    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
+        await self._connect()
+
+        data = json.dumps({'feed': feed, 'pair': pair, 'timestamp': timestamp,
+                           'bid': str(bid), 'ask': str(ask)}).encode('utf8')
+        topic =  f"{self.key}-{feed}-{pair}" if self.key else f"ticker-{feed}-{pair}"
+        await self.producer.send_and_wait(topic, data)

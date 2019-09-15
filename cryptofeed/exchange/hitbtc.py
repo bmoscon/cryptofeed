@@ -32,7 +32,8 @@ class HitBTC(Feed):
         await self.callback(TICKER, feed=self.id,
                                      pair=pair_exchange_to_std(msg['symbol']),
                                      bid=Decimal(msg['bid']),
-                                     ask=Decimal(msg['ask']))
+                                     ask=Decimal(msg['ask']),
+                                     timestamp=timestamp_normalize(self.id, msg['timestamp']))
 
     async def _book(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}

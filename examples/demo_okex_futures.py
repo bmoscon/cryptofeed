@@ -20,8 +20,8 @@ async def book(feed, pair, book, timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
 
-async def ticker(feed, pair, bid, ask):
-    print(f'Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
+async def ticker(feed, pair, bid, ask, timestamp):
+    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
 
 def main():
     fh = FeedHandler()

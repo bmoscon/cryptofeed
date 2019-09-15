@@ -115,9 +115,10 @@ class Deribit(Feed):
             "jsonrpc" : "2.0"}
         '''
         await self.callback(TICKER, feed=self.id,
-                                     pair=msg["params"]["data"]["instrument_name"],
-                                     bid=Decimal(msg["params"]["data"]['best_bid_price']),
-                                     ask=Decimal(msg["params"]["data"]['best_ask_price']))
+                                    pair=msg["params"]["data"]["instrument_name"],
+                                    bid=Decimal(msg["params"]["data"]['best_bid_price']),
+                                    ask=Decimal(msg["params"]["data"]['best_ask_price']),
+                                    timestamp=timestamp_normalize(self.id, msg['params']['data']['timestamp']))
 
     async def subscribe(self, websocket):
         self.websocket = websocket

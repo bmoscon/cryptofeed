@@ -55,7 +55,8 @@ class OKCoin(Feed):
             await self.callback(TICKER, feed=self.id,
                                          pair=update['instrument_id'],
                                          bid=Decimal(update['best_bid']),
-                                         ask=Decimal(update['best_ask']))
+                                         ask=Decimal(update['best_ask']),
+                                         timestamp=timestamp_normalize(self.id, update['timestamp']))
 
     async def _trade(self, msg):
         """

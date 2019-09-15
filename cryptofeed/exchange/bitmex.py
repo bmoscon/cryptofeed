@@ -155,7 +155,8 @@ class Bitmex(Feed):
             await self.callback(TICKER, feed=self.id,
                             pair=data['symbol'],
                             bid=Decimal(data['bidPrice']),
-                            ask=Decimal(data['askPrice']))
+                            ask=Decimal(data['askPrice']),
+                            timestamp=timestamp_normalize(self.id, data['timestamp']))
 
 
 

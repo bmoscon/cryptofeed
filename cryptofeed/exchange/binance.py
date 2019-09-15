@@ -102,7 +102,8 @@ class Binance(Feed):
         await self.callback(TICKER, feed=self.id,
                                      pair=pair,
                                      bid=bid,
-                                     ask=ask)
+                                     ask=ask,
+                                     timestamp=timestamp_normalize(self.id, msg['E']))
 
     async def _snapshot(self, pairs: list):
         urls = [f'https://www.binance.com/api/v1/depth?symbol={sym}&limit={self.book_depth}' for sym in pairs]

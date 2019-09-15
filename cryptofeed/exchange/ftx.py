@@ -67,7 +67,8 @@ class FTX(Feed):
         await self.callback(TICKER, feed=self.id,
                             pair=pair_exchange_to_std(msg['market']),
                             bid=Decimal(msg['data']['bid']),
-                            ask=Decimal(msg['data']['ask']))
+                            ask=Decimal(msg['data']['ask']),
+                            timestamp=msg['data']['time'])
 
     async def _book(self, msg: dict):
         """

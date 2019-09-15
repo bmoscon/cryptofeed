@@ -69,7 +69,7 @@ class Kraken(Feed):
                                         order_id=None,
                                         timestamp=float(timestamp))
 
-    async def _ticker(self, msg, pair):
+    async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
         [93, {'a': ['105.85000', 0, '0.46100000'], 'b': ['105.77000', 45, '45.00000000'], 'c': ['105.83000', '5.00000000'], 'v': ['92170.25739498', '121658.17399954'], 'p': ['107.58276', '107.95234'], 't': [4966, 6717], 'l': ['105.03000', '105.03000'], 'h': ['110.33000', '110.33000'], 'o': ['109.45000', '106.78000']}]
         channel id, asks: price, wholeLotVol, vol, bids: price, wholeLotVol, close: ...,, vol: ..., VWAP: ..., trades: ..., low: ...., high: ..., open: ...
@@ -77,7 +77,8 @@ class Kraken(Feed):
         await self.callback(TICKER, feed=self.id,
                                      pair=pair,
                                      bid=Decimal(msg[1]['b'][0]),
-                                     ask=Decimal(msg[1]['a'][0]))
+                                     ask=Decimal(msg[1]['a'][0]),
+                                     timestamp=timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -123,7 +124,7 @@ class Kraken(Feed):
             if self.channel_map[msg[0]][0] == 'trade':
                 await self._trade(msg, self.channel_map[msg[0]][1])
             elif self.channel_map[msg[0]][0] == 'ticker':
-                await self._ticker(msg, self.channel_map[msg[0]][1])
+                await self._ticker(msg, self.channel_map[msg[0]][1], timestamp)
             elif self.channel_map[msg[0]][0] == 'book':
                 await self._book(msg, self.channel_map[msg[0]][1], timestamp)
             else:

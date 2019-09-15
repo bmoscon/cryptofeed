@@ -73,7 +73,8 @@ class Bitfinex(Feed):
             await self.callback(TICKER, feed=self.id,
                                          pair=pair,
                                          bid=bid,
-                                         ask=ask)
+                                         ask=ask,
+                                         timestamp=timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         chan_id = msg[0]

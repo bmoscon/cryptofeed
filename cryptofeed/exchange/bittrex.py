@@ -31,8 +31,8 @@ class Bittrex(Feed):
 
     async def ticker(self, msg):
         for t in msg['D']:
-            if (not self.config and t['M'] in self.pairs) or (t['M'] in self.config['SubscribeToSummaryDeltas']):
-                await self.callback(TICKER, feed=self.id, pair=pair_exchange_to_std(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']))
+            if (not self.config and t['M'] in self.pairs) or ('SubscribeToSummaryDeltas' in self.config and t['M'] in self.config['SubscribeToSummaryDeltas']):
+                await self.callback(TICKER, feed=self.id, pair=pair_exchange_to_std(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']), timestamp=timestamp_normalize(self.id, t['T']))
 
     async def _snapshot(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['M'])
