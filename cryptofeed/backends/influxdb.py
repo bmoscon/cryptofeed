@@ -59,6 +59,7 @@ class InfluxCallback(HTTPCallback):
             r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
             r.raise_for_status()
 
+
 class TradeInflux(InfluxCallback):
     def __init__(self, *args, key='trades', **kwargs):
         super().__init__(*args, **kwargs)
@@ -154,3 +155,22 @@ class BookDeltaInflux(InfluxBookCallback):
         data = {BID: {}, ASK: {}}
         book_delta_convert(delta, data)
         await self._write_rows(start, data, timestamp)
+
+
+class TickerInflux(InfluxCallback):
+    def __init__(self, *args, key='ticker', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.key = key
+
+    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
+        bid =  str(bid)
+        ask = str(ask)
+
+        if self.numeric_type is str:
+            ticker = f'{self.key}-{feed},pair={pair} bid="{bid}",ask"{ask}",timestamp={timestamp}'
+        elif self.numeric_type is float:
+            ticker = f'{self.key}-{feed},pair={pair} bid={bid},ask={ask},timestamp={timestamp}'
+        else:
+            raise UnsupportedType(f"Type {self.numeric_type} not supported")
+
+        await self.write('POST', ticker)
