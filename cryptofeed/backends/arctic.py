@@ -11,7 +11,7 @@ from datetime import datetime as dt
 import arctic
 import pandas as pd
 
-from cryptofeed.defines import TRADES, FUNDING
+from cryptofeed.defines import TRADES, FUNDING, OPEN_INTEREST
 
 
 class ArcticCallback:
@@ -77,3 +77,20 @@ class FundingArctic(ArcticCallback):
         df['date'] = pd.to_datetime(df.date)
         df.set_index(['date'], inplace=True)
         self.lib.append(self.key, df, upsert=True)
+
+
+class OpenInterestArctic(ArcticCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.key is None:
+            self.key = OPEN_INTEREST
+
+    async def __call__(self, **kwargs):
+        if 'openInterest' in kwargs:
+            open_interest = kwargs['openInterest']
+            timestamp = kwargs['timestamp']
+            df = pd.DataFrame({'open_interest': [open_interest], 'date': [
+                              dt.utcfromtimestamp(timestamp)]})
+            df['date'] = pd.to_datetime(df.date)
+            df.set_index(['date'], inplace=True)
+            self.lib.append(self.key, df, upsert=True)

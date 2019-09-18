@@ -41,6 +41,7 @@ VOLUME = 'volume'
 FUNDING = 'funding'
 INSTRUMENT = 'instrument'
 UNSUPPORTED = 'unsupported'
+OPEN_INTEREST = 'open_interest'
 
 
 L2_BOOK_SWAP = 'l2_book_swap'
