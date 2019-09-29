@@ -9,6 +9,8 @@
   * Feature: Ticker support in Redis and Kafka Backends
   * Feature: Ticker callbacks require/contain timestamp
   * Feature: Renko Aggregation
+  * Bugfix: Max Depth without deltas should only send updates when book changes
+  * Bugfix: Update count and previous book now associated with pair
 
 ### 1.0.0 (2019-08-18)
   * Bugfix #113: Fix remaining exchanges who are not reporting timestamps correctly
