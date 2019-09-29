@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import uuid
-from typing import Tuple
+from collections import defaultdict
 
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
@@ -22,11 +22,12 @@ class Feed:
         self.config = {}
         self.address = address
         self.book_update_interval = book_interval
-        self.updates = 0
+        self.updates = defaultdict(int)
         self.do_deltas = False
         self.pairs = []
         self.channels = []
         self.max_depth = max_depth
+        self.previous_book = defaultdict(dict)
         load_exchange_pair_mapping(self.id)
 
         if config is not None and (pairs is not None or channels is not None):
@@ -63,36 +64,55 @@ class Feed:
                 self.callbacks[key] = [callback]
 
     async def book_callback(self, book, book_type, pair, forced, delta, timestamp):
-        if self.do_deltas and self.updates < self.book_update_interval and not forced:
-            if self.max_depth:
-                delta, book = await self.apply_depth(book, True)
-                if not (delta[BID] or delta[ASK]):
-                    return
-            self.updates += 1
-            await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp)
+        """
+        Three cases we need to handle here
 
-        if self.updates >= self.book_update_interval or forced or not self.do_deltas:
-            if self.max_depth:
-                _, book= await self.apply_depth(book, False)
-            self.updates = 0
-            if book_type == L2_BOOK:
-                await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
-            else:
-                await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
+        1. Book deltas are enabled (application of max depth here is trivial)
+        2. Book deltas no enabled, but max depth is enabled
+        3. Neither deltas nor max depth enabled
+
+        2 and 3 can be combined into a single block as long as application of depth modification
+        happens first
+
+        For 1, need to handle separate cases where a full book is returned vs a delta
+        """
+        if self.do_deltas:
+            if not forced and self.updates[pair] < self.book_update_interval:
+                if self.max_depth:
+                    delta, book = await self.apply_depth(book, True, pair)
+                    if not (delta[BID] or delta[ASK]):
+                        return
+                self.updates[pair] += 1
+                await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp)
+                if self.updates[pair] != self.book_update_interval:
+                    return
+            elif forced and self.max_depth:
+                # We want to send a full book update but need to apply max depth first
+                _, book = await self.apply_depth(book, False, pair)
+        elif self.max_depth:
+            changed, book = await self.apply_depth(book, False, pair)
+            if not changed:
+                return
+        if book_type == L2_BOOK:
+            await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
+        else:
+            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
+        self.updates[pair] = 0
 
     async def callback(self, data_type, **kwargs):
         for cb in self.callbacks[data_type]:
             await cb(**kwargs)
 
-    async def apply_depth(self, book: dict, do_delta: bool) -> Tuple[list, dict]:
+    async def apply_depth(self, book: dict, do_delta: bool, pair: str):
         ret = depth(book, self.max_depth)
         if not do_delta:
-            self.previous_book = ret
-            return {BID: [], ASK: []}, ret
+            delta = self.previous_book[pair] != ret
+            self.previous_book[pair] = ret
+            return delta, ret
 
         delta = []
-        delta = book_delta(self.previous_book, ret)
-        self.previous_book = ret
+        delta = book_delta(self.previous_book[pair], ret)
+        self.previous_book[pair] = ret
         return delta, ret
 
     async def message_handler(self, msg: str, timestamp: float):
