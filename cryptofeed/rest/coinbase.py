@@ -24,6 +24,7 @@ from cryptofeed.standards import normalize_trading_options, timestamp_normalize
 
 
 REQUEST_LIMIT = 10
+RATE_LIMIT_SLEEP = 0.2
 LOG = logging.getLogger('rest')
 
 
@@ -132,7 +133,7 @@ class Coinbase(API):
                 else:
                     upper = bound
                     bound = (upper + lower) // 2
-            time.sleep(0.2)
+            time.sleep(RATE_LIMIT_SLEEP)
 
     def _trade_normalize(self, symbol: str, data: dict) -> dict:
         return {

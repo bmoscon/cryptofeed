@@ -22,6 +22,7 @@ from cryptofeed.standards import pair_std_to_exchange, normalize_trading_options
 
 
 LOG = logging.getLogger('rest')
+RATE_LIMIT_SLEEP = 1
 
 
 class Kraken(API):
@@ -170,6 +171,8 @@ class Kraken(API):
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
+            else:
+                time.sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()
             if 'error' in data and data['error']:

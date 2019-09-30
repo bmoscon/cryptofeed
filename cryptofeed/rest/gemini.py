@@ -16,6 +16,7 @@ from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, nor
 
 
 LOG = logging.getLogger('rest')
+RATE_LIMIT_SLEEP = 0.5
 
 
 # https://docs.gemini.com/rest-api/#introduction
@@ -145,7 +146,7 @@ class Gemini(API):
             if not start and not end:
                 break
             # GEMINI rate limits to 120 requests a minute
-            sleep(0.5)
+            sleep(RATE_LIMIT_SLEEP)
 
     # Trading APIs
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
