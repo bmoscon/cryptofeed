@@ -22,6 +22,7 @@ from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, tim
 
 
 REQUEST_LIMIT = 5000
+RATE_LIMIT_SLEEP = 3
 LOG = logging.getLogger('rest')
 
 
@@ -128,6 +129,8 @@ class Bitfinex(API):
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()
             if data == []:

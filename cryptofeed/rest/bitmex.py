@@ -24,6 +24,7 @@ from cryptofeed.standards import timestamp_normalize
 
 
 S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/trade/{}.csv.gz'
+RATE_LIMIT_SLEEP = 2
 API_MAX = 500
 API_REFRESH = 300
 
@@ -103,6 +104,8 @@ class Bitmex(API):
                     continue
                 elif r.status_code != 200:
                     self._handle_error(r, LOG)
+                else r.status_code != 200:
+                    sleep(RATE_LIMIT_SLEEP)
 
                 limit = int(r.headers['X-RateLimit-Remaining'])
                 data = r.json()

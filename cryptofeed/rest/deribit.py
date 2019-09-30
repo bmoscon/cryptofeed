@@ -10,6 +10,7 @@ from sortedcontainers import SortedDict as sd
 
 
 REQUEST_LIMIT = 1000
+RATE_LIMIT_SLEEP = 0.2
 LOG = logging.getLogger('rest')
 
 
@@ -54,6 +55,8 @@ class Deribit(API):
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()["result"]["trades"]
             if data == []:
