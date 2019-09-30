@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.0.1
+### 1.0.1 (2019-09-30)
   * Feature: Backfill Bitmex historical trade data from S3 Bucket
   * Feature: RabbitMQ backend
   * Feature: Custom Depth and deltas for all L2 book updates
