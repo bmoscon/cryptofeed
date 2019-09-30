@@ -104,7 +104,7 @@ class Bitmex(API):
                     continue
                 elif r.status_code != 200:
                     self._handle_error(r, LOG)
-                else r.status_code != 200:
+                else:
                     sleep(RATE_LIMIT_SLEEP)
 
                 limit = int(r.headers['X-RateLimit-Remaining'])
