@@ -10,7 +10,7 @@ import json
 
 import aioredis
 
-from cryptofeed.defines import BID, ASK
+from cryptofeed.defines import BID, ASK, OPEN_INTEREST
 from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
@@ -29,6 +29,7 @@ class RedisCallback:
     async def connect(self):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool(self.conn_str)
+
 
 class TradeRedis(RedisCallback):
     def __init__(self, *args, **kwargs):
@@ -89,6 +90,44 @@ class FundingStream(FundingRedis):
                 kwargs[key] = self.numeric_type(kwargs[key])
 
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", kwargs)
+
+
+class OpenInterestRedis(RedisCallback):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.key is None:
+            self.key = OPEN_INTEREST
+
+    async def __call__(self, *, feed, pair, **kwargs):
+        await self.connect()
+
+        if 'openInterest' in kwargs:
+
+            timestamp = kwargs.get('timestamp', None)
+
+            if timestamp == None:
+                timestamp = time.time()
+
+            open_interest = kwargs.get('openInterest')
+            data = json.dumps({'open_interest': open_interest})
+
+            await self.redis.zadd(f"{self.key}-{feed}-{pair}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+
+
+class OpenInterestStream(OpenInterestRedis):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.key is None:
+            self.key = OPEN_INTEREST
+
+    async def __call__(self, *, feed, pair, **kwargs):
+        await self.connect()
+
+        if 'openInterest' in kwargs:
+
+            data = {k: kwargs[k] for k in ['timestamp', 'openInterest']}
+
+            await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)
 
 
 class BookRedis(RedisCallback):
@@ -155,7 +194,8 @@ class TickerRedis(RedisCallback):
     async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
         await self.connect()
 
-        data = json.dumps({'feed': feed, 'pair': pair, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'timestamp': timestamp})
+        data = json.dumps({'feed': feed, 'pair': pair, 'bid': self.numeric_type(
+            bid), 'ask': self.numeric_type(ask), 'timestamp': timestamp})
         await self.redis.zadd(f"{self.key}-{feed}-{pair}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
@@ -163,5 +203,6 @@ class TickerStream(TickerRedis):
     async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
         await self.connect()
 
-        data = {'feed': feed, 'pair': pair, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'timestamp': timestamp}
+        data = {'feed': feed, 'pair': pair, 'bid': self.numeric_type(
+            bid), 'ask': self.numeric_type(ask), 'timestamp': timestamp}
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)

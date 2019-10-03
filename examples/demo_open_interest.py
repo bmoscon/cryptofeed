@@ -11,11 +11,13 @@ from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Bitmex
 from cryptofeed.defines import INSTRUMENT
 
+import arctic
+
 
 def main():
     f = FeedHandler()
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[INSTRUMENT], callbacks={
-               INSTRUMENT: OpenInterestArctic('cryptofeed-test')}))
+        INSTRUMENT: OpenInterestArctic('cryptofeed-test', library_type=arctic.CHUNK_STORE)}))
 
     f.run()
 
