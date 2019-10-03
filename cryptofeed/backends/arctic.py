@@ -85,12 +85,14 @@ class OpenInterestArctic(ArcticCallback):
         if self.key is None:
             self.key = OPEN_INTEREST
 
-    async def __call__(self, **kwargs):
+    async def __call__(self, *, feed, pair, **kwargs):
         if 'openInterest' in kwargs:
             open_interest = kwargs['openInterest']
             timestamp = kwargs['timestamp']
-            df = pd.DataFrame({'open_interest': [open_interest], 'date': [
-                              dt.utcfromtimestamp(timestamp)]})
+            df = pd.DataFrame(
+                {'feed': [feed], 'pair': [pair], 'open_interest': [open_interest],
+                 'date': [dt.utcfromtimestamp(timestamp)]}
+            )
             df['date'] = pd.to_datetime(df.date)
             df.set_index(['date'], inplace=True)
             self.lib.append(self.key, df, upsert=True)
