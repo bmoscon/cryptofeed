@@ -20,75 +20,61 @@ LOG = logging.getLogger('feedhandler')
 class ElasticCallback(HTTPCallback):
     def __init__(self, addr: str, index=None, numeric_type=str, **kwargs):
         super().__init__(addr, **kwargs)
+        index = index if index else self.default_index
         self.addr = f"{addr}/{index}/{index}"
         self.session = None
         self.numeric_type = numeric_type
+    
+    async def post(self, data):
+        await self.write('POST', json.dumps(data), headers={'content-type': 'application/json'})
+
+    async def post_bulk(self, data):
+        data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
+        data = '\n'.join(data)
+        data = f"{data}\n"
+        await self.write('POST', data, headers={'content-type': 'application/x-ndjson'})
 
 
 class TradeElastic(ElasticCallback):
-    def __init__(self, *args, index='trades', **kwargs):
-        super().__init__(*args, index=index, **kwargs)
+    default_index = 'trades'
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
         if order_id is None:
             order_id = 'None'
 
-        trade = {
-            'pair': pair,
-            'side': side,
-            'id': order_id,
-            'amount': self.numeric_type(amount),
-            'price': self.numeric_type(price),
-            'timestamp': timestamp
-        }
-        await self.write('POST', json.dumps(trade), headers={'content-type': 'application/json'})
+        trade = self.trade(feed, pair, side, amount, price, order_id, timestamp, self.numeric_type)
+        await self.post(trade)
 
 
 class FundingElastic(ElasticCallback):
-    def __init__(self, *args, index='funding', **kwargs):
-        super().__init__(*args, index=index, **kwargs)
+    default_index = 'funding'
 
     async def __call__(self, *, feed, pair, **kwargs):
-        data = {}
-        for key, val in kwargs.items():
-            if isinstance(val, (Decimal, float)):
-                val = self.numeric_type(val)
-            data[key] = val
-
+        data = self.funding(self.numeric_type, kwargs)
         await self.write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
 
 class BookElastic(ElasticCallback):
+    default_index = 'book'
+
     def __init__(self, *args, index='book', **kwargs):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
     async def __call__(self, *, feed, pair, book, timestamp):
-        data = {BID: {}, ASK: {}}
-        book_convert(book, data, convert=self.numeric_type)
-
+        data = self.book(book, timestamp, self.numeric_type)
         data = book_flatten(feed, pair, data, timestamp, False)
-
-        data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
-        data = '\n'.join(data)
-        data = f"{data}\n"
-
-        await self.write('POST', data, headers={'content-type': 'application/x-ndjson'})
+        await self.post_bulk(data)
 
 
 class BookDeltaElastic(ElasticCallback):
+    default_index = 'book'
+
     def __init__(self, *args, index='book', **kwargs):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
     async def __call__(self, *, feed, pair, delta, timestamp):
-        data = {BID: {}, ASK: {}}
-
-        book_delta_convert(delta, data, convert=self.numeric_type)
+        self.book_delta(delta, timestamp, self.numeric_type)
         data = book_flatten(feed, pair, data, timestamp, True)
-
-        data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
-        data = '\n'.join(data)
-        data = f"{data}\n"
-
-        await self.write('POST', data, headers={'content-type': 'application/x-ndjson'})
+        await self.post_bulk(data)

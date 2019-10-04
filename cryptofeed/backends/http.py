@@ -7,11 +7,13 @@ associated with this software.
 import logging
 import aiohttp
 
+from cryptofeed.backends.backend import Backend
+
 
 LOG = logging.getLogger('feedhandler')
 
 
-class HTTPCallback:
+class HTTPCallback(Backend):
     def __init__(self, addr: str, **kwargs):
         self.addr = addr
         self.session = None

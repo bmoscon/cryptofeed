@@ -12,9 +12,9 @@ import arctic
 import pandas as pd
 
 from cryptofeed.defines import TRADES, FUNDING
+from cryptofeed.backends.backend import Backend
 
-
-class ArcticCallback:
+class ArcticCallback(Backend):
     def __init__(self, library, host='127.0.0.1', key=None, **kwargs):
         """
         library: str
@@ -33,46 +33,34 @@ class ArcticCallback:
             lib_type = kwargs.get('lib_type', arctic.VERSION_STORE)
             con.initialize_library(library, lib_type=lib_type)
         self.lib = con[library]
-        self.key = key
+        self.key = key if key else self.default_key
 
 
 class TradeArctic(ArcticCallback):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.key is None:
-            self.key = TRADES
+    default_key = TRADES
 
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        df = pd.DataFrame({'feed': [feed], 'pair': [pair], 'id': [order_id], 'date': [dt.utcfromtimestamp(timestamp)],
-                           'side': [side], 'amount': [float(amount)], 'price': [float(price)]})
-        df['date'] = pd.to_datetime(df.date)
+        data = self.trade(feed, pair, side, amount, price, order_id, timestamp, float)
+        df = pd.DataFrame(data)
+        df['date'] = pd.to_datetime(df.timestamp)
         df.set_index(['date'], inplace=True)
+        df.drop(columns=['timestamp'], inplace=True)
         self.lib.append(self.key, df, upsert=True)
 
 
 class FundingArctic(ArcticCallback):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.key is None:
-            self.key = FUNDING
+    default_key = FUNDING
 
     async def __call__(self, *, feed, pair, **kwargs):
-        timestamp = kwargs.get('timestamp', None)
-
         if 'timestamp' in kwargs:
+            timestamp = kwargs['timestamp']
             del kwargs['timestamp']
-
-        if timestamp is None:
+        else:
             timestamp = time.time()
 
-        for key in kwargs:
-            if isinstance(kwargs[key], Decimal):
-                kwargs[key] = [float(kwargs[key])]
-            else:
-                kwargs[key] = [kwargs[key]]
+        data = self.funding(float, kwargs)
 
         kwargs['date'] = dt.utcfromtimestamp(timestamp)
-
         df = pd.DataFrame(kwargs)
         df['date'] = pd.to_datetime(df.date)
         df.set_index(['date'], inplace=True)
