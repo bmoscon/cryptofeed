@@ -107,6 +107,7 @@ Supported Backends:
 * MongoDB
 * Kafka
 * Elastic Search
+* RabbitMQ
 
 
 ## Rest API
