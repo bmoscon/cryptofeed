@@ -25,10 +25,10 @@ class ElasticCallback(HTTPCallback):
         self.session = None
         self.numeric_type = numeric_type
     
-    async def post(self, data):
+    async def write(self, feed, pair, timestamp, data):
         await self.write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
-    async def post_bulk(self, data):
+    async def write_bulk(self, data):
         data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
         data = '\n'.join(data)
         data = f"{data}\n"
@@ -38,20 +38,14 @@ class ElasticCallback(HTTPCallback):
 class TradeElastic(ElasticCallback):
     default_index = 'trades'
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        if order_id is None:
-            order_id = 'None'
-
-        trade = self.trade(feed, pair, side, amount, price, order_id, timestamp, self.numeric_type)
-        await self.post(trade)
+    async def write(self, feed, pair, timestamp, data):
+        if data['id'] is None:
+            data['id'] = 'None'
+        await super().write(feed, pair, timestamp, data)
 
 
 class FundingElastic(ElasticCallback):
     default_index = 'funding'
-
-    async def __call__(self, *, feed, pair, **kwargs):
-        data = self.funding(self.numeric_type, kwargs)
-        await self.write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
 
 class BookElastic(ElasticCallback):
@@ -61,8 +55,7 @@ class BookElastic(ElasticCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def __call__(self, *, feed, pair, book, timestamp):
-        data = self.book(book, timestamp, self.numeric_type)
+    async def write(self, feed, pair, timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, False)
         await self.post_bulk(data)
 
@@ -74,7 +67,6 @@ class BookDeltaElastic(ElasticCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def __call__(self, *, feed, pair, delta, timestamp):
-        self.book_delta(delta, timestamp, self.numeric_type)
+    async def write(self, feed, pair, timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, True)
         await self.post_bulk(data)

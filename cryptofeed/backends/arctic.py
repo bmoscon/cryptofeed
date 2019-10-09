@@ -11,11 +11,12 @@ from datetime import datetime as dt
 import arctic
 import pandas as pd
 
-from cryptofeed.defines import TRADES, FUNDING
-from cryptofeed.backends.backend import Backend
+from cryptofeed.defines import TRADES, FUNDING, TICKER
+from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback
 
-class ArcticCallback(Backend):
-    def __init__(self, library, host='127.0.0.1', key=None, **kwargs):
+
+class ArcticCallback:
+    def __init__(self, library, host='127.0.0.1', key=None, numeric_type=float, **kwargs):
         """
         library: str
             arctic library. Will be created if does not exist.
@@ -34,34 +35,23 @@ class ArcticCallback(Backend):
             con.initialize_library(library, lib_type=lib_type)
         self.lib = con[library]
         self.key = key if key else self.default_key
+        self.numeric_type = numeric_type
 
-
-class TradeArctic(ArcticCallback):
-    default_key = TRADES
-
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        data = self.trade(feed, pair, side, amount, price, order_id, timestamp, float)
-        df = pd.DataFrame(data)
-        df['date'] = pd.to_datetime(df.timestamp)
+    async def write(self, feed, pair, timestamp, data):
+        df = pd.DataFrame({key: [value] for key, value in data.items()})
+        df['date'] = pd.to_datetime(df.timestamp, unit='s')
         df.set_index(['date'], inplace=True)
         df.drop(columns=['timestamp'], inplace=True)
         self.lib.append(self.key, df, upsert=True)
 
 
-class FundingArctic(ArcticCallback):
+class TradeArctic(ArcticCallback, BackendTradeCallback):
+    default_key = TRADES
+
+
+class FundingArctic(ArcticCallback, BackendFundingCallback):
     default_key = FUNDING
 
-    async def __call__(self, *, feed, pair, **kwargs):
-        if 'timestamp' in kwargs:
-            timestamp = kwargs['timestamp']
-            del kwargs['timestamp']
-        else:
-            timestamp = time.time()
 
-        data = self.funding(float, kwargs)
-
-        kwargs['date'] = dt.utcfromtimestamp(timestamp)
-        df = pd.DataFrame(kwargs)
-        df['date'] = pd.to_datetime(df.date)
-        df.set_index(['date'], inplace=True)
-        self.lib.append(self.key, df, upsert=True)
+class TickerArctic(ArcticCallback, BackendTickerCallback):
+    default_key = TICKER

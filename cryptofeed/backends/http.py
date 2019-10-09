@@ -7,18 +7,16 @@ associated with this software.
 import logging
 import aiohttp
 
-from cryptofeed.backends.backend import Backend
-
 
 LOG = logging.getLogger('feedhandler')
 
 
-class HTTPCallback(Backend):
+class HTTPCallback:
     def __init__(self, addr: str, **kwargs):
         self.addr = addr
         self.session = None
 
-    async def write(self, method: str, data, headers=None):
+    async def http_write(self, method: str, data, headers=None):
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()
 
