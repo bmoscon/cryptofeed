@@ -7,11 +7,11 @@ associated with this software.
 from multiprocessing import Process
 import json
 
-from cryptofeed.backends.zmq import BookZMQ, TradeZMQ
+from cryptofeed.backends.zmq import BookZMQ, TickerZMQ
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Kraken
+from cryptofeed.exchanges import Kraken, Coinbase
 
-from cryptofeed.defines import L2_BOOK, TRADES
+from cryptofeed.defines import L2_BOOK, TRADES, TICKER
 
 
 def receiver(port):
@@ -26,7 +26,9 @@ def receiver(port):
     s.bind(addr)
     while True:
         data = s.recv_string()
-        print(json.loads(data.split(" ", 1)[1]))
+        key, msg = data.split(" ", 1)
+        print(key)
+        print(json.loads(msg))
 
 def main():
     try:
@@ -36,6 +38,7 @@ def main():
 
         f = FeedHandler()
         f.add_feed(Kraken(max_depth=1, channels=[L2_BOOK], pairs=['ETH-USD'], callbacks={L2_BOOK: BookZMQ(port=5678)}))
+        f.add_feed(Coinbase(channels=[TICKER], pairs=['BTC-USD'], callbacks={TICKER: TickerZMQ(port=5678)}))
 
         f.run()
 
