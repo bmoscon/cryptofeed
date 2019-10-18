@@ -4,9 +4,6 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import time
-from datetime import datetime as dt
-
 import arctic
 import pandas as pd
 
