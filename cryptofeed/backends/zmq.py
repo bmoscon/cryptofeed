@@ -9,7 +9,6 @@ import json
 import zmq
 import zmq.asyncio
 
-from cryptofeed.defines import BID, ASK
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
 
 

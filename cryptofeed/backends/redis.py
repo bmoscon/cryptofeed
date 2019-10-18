@@ -9,8 +9,6 @@ import json
 import aioredis
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendTickerCallback, BackendTradeCallback, BackendFundingCallback
-from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert, book_delta_convert
 
 
 class RedisCallback:

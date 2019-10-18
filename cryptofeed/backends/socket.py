@@ -9,7 +9,6 @@ import asyncio
 import json
 from textwrap import wrap
 
-from cryptofeed.defines import BID, ASK
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
 
 

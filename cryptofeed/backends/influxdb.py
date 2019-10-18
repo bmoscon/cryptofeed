@@ -9,7 +9,6 @@ import logging
 import requests
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert, book_delta_convert
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.exceptions import UnsupportedType
 from cryptofeed.backends.backend import BackendTradeCallback, BackendBookDeltaCallback, BackendBookCallback, BackendFundingCallback, BackendTickerCallback

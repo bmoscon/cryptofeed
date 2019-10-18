@@ -8,7 +8,6 @@ import logging
 import json
 import itertools
 
-from cryptofeed.defines import BID, ASK
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.backends._util import book_flatten
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback

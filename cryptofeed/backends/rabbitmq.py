@@ -9,7 +9,6 @@ import asyncio
 
 import aio_pika
 
-from cryptofeed.defines import BID, ASK
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
 
 

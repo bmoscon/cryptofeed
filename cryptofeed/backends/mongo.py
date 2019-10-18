@@ -6,7 +6,6 @@ associated with this software.
 '''
 import motor.motor_asyncio
 
-from cryptofeed.defines import BID, ASK
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
 
 
