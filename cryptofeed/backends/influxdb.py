@@ -64,7 +64,7 @@ class InfluxCallback(HTTPCallback):
         if create_db:
             r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
             r.raise_for_status()
-    
+
     async def write(self, feed, pair, timestamp, data):
         d = ''
 

@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-from decimal import Decimal
 import json
 
 from aiokafka import AIOKafkaProducer

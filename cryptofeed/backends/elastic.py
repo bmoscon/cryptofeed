@@ -4,7 +4,6 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from decimal import Decimal
 import logging
 import json
 import itertools
@@ -25,7 +24,7 @@ class ElasticCallback(HTTPCallback):
         self.addr = f"{addr}/{index}/{index}"
         self.session = None
         self.numeric_type = numeric_type
-    
+
     async def write(self, feed, pair, timestamp, data):
         await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 

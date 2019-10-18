@@ -1,4 +1,9 @@
-from decimal import Decimal
+'''
+Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import json
 import asyncio
 
@@ -20,7 +25,7 @@ class RabbitCallback:
             connection = await aio_pika.connect_robust(f"amqp://{self.host}/", loop=asyncio.get_running_loop())
             self.conn = await connection.channel()
             await self.conn.declare_queue('cryptofeed', auto_delete=False)
-    
+
     async def write(self, feed: str, pair: str, timestamp: float, data: dict):
         await self.connect()
         await self.conn.default_exchange.publish(
