@@ -10,8 +10,9 @@ import json
 import itertools
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert, book_delta_convert, book_flatten
 from cryptofeed.backends.http import HTTPCallback
+from cryptofeed.backends._util import book_flatten
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -26,16 +27,16 @@ class ElasticCallback(HTTPCallback):
         self.numeric_type = numeric_type
     
     async def write(self, feed, pair, timestamp, data):
-        await self.write('POST', json.dumps(data), headers={'content-type': 'application/json'})
+        await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
     async def write_bulk(self, data):
         data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
         data = '\n'.join(data)
         data = f"{data}\n"
-        await self.write('POST', data, headers={'content-type': 'application/x-ndjson'})
+        await self.http_write('POST', data, headers={'content-type': 'application/x-ndjson'})
 
 
-class TradeElastic(ElasticCallback):
+class TradeElastic(ElasticCallback, BackendTradeCallback):
     default_index = 'trades'
 
     async def write(self, feed, pair, timestamp, data):
@@ -44,11 +45,11 @@ class TradeElastic(ElasticCallback):
         await super().write(feed, pair, timestamp, data)
 
 
-class FundingElastic(ElasticCallback):
+class FundingElastic(ElasticCallback, BackendFundingCallback):
     default_index = 'funding'
 
 
-class BookElastic(ElasticCallback):
+class BookElastic(ElasticCallback, BackendBookCallback):
     default_index = 'book'
 
     def __init__(self, *args, index='book', **kwargs):
@@ -57,10 +58,10 @@ class BookElastic(ElasticCallback):
 
     async def write(self, feed, pair, timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, False)
-        await self.post_bulk(data)
+        await self.write_bulk(data)
 
 
-class BookDeltaElastic(ElasticCallback):
+class BookDeltaElastic(ElasticCallback, BackendBookDeltaCallback):
     default_index = 'book'
 
     def __init__(self, *args, index='book', **kwargs):
@@ -69,4 +70,8 @@ class BookDeltaElastic(ElasticCallback):
 
     async def write(self, feed, pair, timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, True)
-        await self.post_bulk(data)
+        await self.write_bulk(data)
+
+
+class TickerElastic(ElasticCallback, BackendTickerCallback):
+    default_index = 'ticker'

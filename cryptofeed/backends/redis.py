@@ -10,7 +10,7 @@ import json
 
 import aioredis
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendTickerCallback, BackendTradeCallback, BackendFundingCallback
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends._util import book_convert, book_delta_convert
 
@@ -37,7 +37,7 @@ class RedisZSetCallback(RedisCallback):
 
 
 class RedisStreamCallback(RedisCallback):
-    async def write(self, feed: str, pair: str, data: dict):
+    async def write(self, feed: str, pair: str, timestamp: float, data: dict):
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool(self.conn_str)
         await self.redis.xadd(f"{self.key}-{feed}-{pair}", data)
@@ -51,40 +51,36 @@ class TradeStream(RedisStreamCallback, BackendTradeCallback):
     default_key = 'trades'
 
 
-class FundingRedis(RedisZSetCallback):
+class FundingRedis(RedisZSetCallback, BackendFundingCallback):
     default_key = 'funding'
 
-    async def __call__(self, *, feed, pair, **kwargs):
-        timestamp = kwargs.get('timestamp', None)
-        if timestamp is None:
-            timestamp = time.time()
 
-        data = json.dumps(self.funding(self.numeric_type, kwargs))
-        await self.write(feed, pair, timestamp, data)
-
-
-class FundingStream(RedisStreamCallback):
+class FundingStream(RedisStreamCallback, BackendFundingCallback):
     default_key = 'funding'
-
-    async def __call__(self, *, feed, pair, **kwargs):
-        data = json.dumps(self.funding(self.numeric_type, kwargs))
-        await self.write(feed, pair, data)
 
 
 class BookRedis(RedisZSetCallback, BackendBookCallback):
     default_key = 'book'
 
 
-class BookDeltaRedis(BookRedis, BackendBookDeltaCallback):
-    pass
+class BookDeltaRedis(RedisZSetCallback, BackendBookDeltaCallback):
+    default_key = 'book'
 
 
 class BookStream(RedisStreamCallback, BackendBookCallback):
     default_key = 'book'
 
+    async def write(self, feed, pair, timestamp, data):
+        data = {'data': json.dumps(data)}
+        await super().write(feed, pair, timestamp, data)
 
-class BookDeltaStream(BookStream, BackendBookDeltaCallback):
-    pass
+
+class BookDeltaStream(RedisStreamCallback, BackendBookDeltaCallback):
+    default_key = 'book'
+
+    async def write(self, feed, pair, timestamp, data):
+        data = {'data': json.dumps(data)}
+        await super().write(feed, pair, timestamp, data)
 
 
 class TickerRedis(RedisZSetCallback, BackendTickerCallback):
