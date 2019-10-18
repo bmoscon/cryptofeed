@@ -53,18 +53,21 @@ _EXCHANGES = {
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
         timeout_interval: int
             number of seconds between checks to see if a feed has timed out
+        log_messages_on_error: boolean
+            if true, log the message from the exchange on exceptions
         """
         self.feeds = []
         self.retries = retries
         self.timeout = {}
         self.last_msg = {}
         self.timeout_interval = timeout_interval
+        self.log_messages_on_error = log_messages_on_error
 
     def add_feed(self, feed, timeout=120, **kwargs):
         """
@@ -196,11 +199,12 @@ class FeedHandler:
             try:
                 await handler(message, self.last_msg[feed_id])
             except Exception:
-                if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
-                    message = zlib.decompress(message, 16+zlib.MAX_WBITS)
-                elif feed_id in {OKCOIN, OKEX}:
-                    message = zlib.decompress(message, -15)
-                LOG.error("%s: error handling message %s", feed_id, message)
+                if self.log_messages_on_error:
+                    if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
+                        message = zlib.decompress(message, 16+zlib.MAX_WBITS)
+                    elif feed_id in {OKCOIN, OKEX}:
+                        message = zlib.decompress(message, -15)
+                    LOG.error("%s: error handling message %s", feed_id, message)
                 # exception will be logged with traceback when connection handler
                 # retries the connection
                 raise
