@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.0.2
+  * Feature: User enabled logging of exchange messages on error
+
 ### 1.0.1 (2019-09-30)
   * Feature: Backfill Bitmex historical trade data from S3 Bucket
   * Feature: RabbitMQ backend
