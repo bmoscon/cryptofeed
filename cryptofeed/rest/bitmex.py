@@ -130,7 +130,7 @@ class Bitmex(API):
             'amount': trade['size'],
             'price': trade['price']
         }
-    
+
 
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         #return list(self._get('quote', symbol, start, end, retry, retry_wait))
