@@ -23,7 +23,7 @@ from cryptofeed.defines import BITMEX, SELL, BUY, BID, ASK
 from cryptofeed.standards import timestamp_normalize
 
 
-S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/trade/{}.csv.gz'
+S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/{}/{}.csv.gz'
 RATE_LIMIT_SLEEP = 2
 API_MAX = 500
 API_REFRESH = 300
@@ -131,6 +131,13 @@ class Bitmex(API):
             'price': trade['price']
         }
 
+
+    def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+        #return list(self._get('quote', symbol, start, end, retry, retry_wait))
+        for data in self._scrape_s3(symbol, 'quote', start, end):
+            yield data
+
+
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         """
         data format
@@ -151,8 +158,8 @@ class Bitmex(API):
         d = dt.utcnow().date()
         d -= timedelta(days=1)
         rest_end_date = pd.Timestamp(dt(d.year, d.month, d.day))
-        start = API._timestamp(start)
-        end = API._timestamp(end)
+        start = API._timestamp(start) if start else start
+        end = API._timestamp(end) if end else end
         rest_start = start
         s3_scrape = False
 
@@ -165,10 +172,11 @@ class Bitmex(API):
             rest_end_date -= pd.Timedelta(microseconds=1)
             if API._timestamp(end) < rest_end_date:
                 rest_end_date = end
-            for data in self._scrape_s3(symbol, start, rest_end_date):
+            for data in self._scrape_s3(symbol, 'trade', start, rest_end_date):
                 yield list(map(self._s3_data_normalization, data))
 
-        if end > rest_end_date:
+        if end is None or end > rest_end_date:
+            print("TRUE")
             for data in self._get('trade', symbol, rest_start, end, retry, retry_wait):
                 yield list(map(self._trade_normalization, data))
 
@@ -216,7 +224,7 @@ class Bitmex(API):
             'price': vals[4]
         }
 
-    def _scrape_s3(self, symbol: str, start_date, end_date):
+    def _scrape_s3(self, symbol: str, dtype: str, start_date, end_date):
         date = dt(end_date.year, end_date.month, end_date.day)
         end = dt(start_date.year, start_date.month, start_date.day)
 
@@ -224,7 +232,7 @@ class Bitmex(API):
             date_str = date.strftime('%Y%m%d')
             count = 0
             while True:
-                r = requests.get(S3_ENDPOINT.format(date_str))
+                r = requests.get(S3_ENDPOINT.format(dtype, date_str))
                 if r.status_code == 200:
                     break
                 else:

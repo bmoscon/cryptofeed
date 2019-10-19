@@ -10,10 +10,10 @@ import json
 from decimal import Decimal
 import os
 
-from cryptofeed.backends.socket import TradeSocket
+from cryptofeed.backends.socket import TradeSocket, TickerSocket
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.defines import TRADES
+from cryptofeed.defines import TRADES, TICKER
 
 
 async def reader(reader, writer):
@@ -38,7 +38,8 @@ async def main():
 
 def writer(path):
     f = FeedHandler()
-    f.add_feed(Coinbase(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket(path)}))
+    f.add_feed(Coinbase(channels=[TRADES, TICKER], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket(path), TICKER: TickerSocket(path)}))
+
     f.run()
 
 

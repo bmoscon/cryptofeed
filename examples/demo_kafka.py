@@ -13,7 +13,7 @@ from cryptofeed.defines import TRADES, L2_BOOK
 
 """
 You can run a consumer in the console with the following command
-(ssuminng the defaults for the consumer group and bootstrap server)
+(assuminng the defaults for the consumer group and bootstrap server)
 
 $ kafka-console-consumer --bootstrap-server 127.0.0.1:9092 --topic trades-COINBASE-BTC-USD
 """

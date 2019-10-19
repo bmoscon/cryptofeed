@@ -4,15 +4,12 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from decimal import Decimal
 import logging
 import asyncio
 import json
 from textwrap import wrap
 
-from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert, book_delta_convert
-from cryptofeed.defines import TRADES, FUNDING
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -41,7 +38,7 @@ class UDPProtocol:
 
 
 class SocketCallback:
-    def __init__(self, addr: str, port=None, mtu=1400, **kwargs):
+    def __init__(self, addr: str, port=None, numeric_type=float, key=None, mtu=1400, **kwargs):
         """
         Common parent class for all socket callbacks
 
@@ -67,6 +64,8 @@ class SocketCallback:
         self.addr = addr[6:]
         self.port = port
         self.mtu = mtu
+        self.numeric_type = numeric_type
+        self.key = key if key else self.default_key
 
     async def connect(self):
         if not self.conn:
@@ -79,8 +78,11 @@ class SocketCallback:
             elif self.conn_type == 'uds://':
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
-    def write(self, data):
+    async def write(self, feed, pair, timestamp, data):
+        await self.connect()
+        data = {'type': self.key, 'data': data}
         data = json.dumps(data)
+
         if self.conn_type == 'udp://':
             if len(data) > self.mtu:
                 chunks = wrap(data, self.mtu)
@@ -93,44 +95,21 @@ class SocketCallback:
             self.conn.write(data.encode())
 
 
-class TradeSocket(SocketCallback):
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        await self.connect()
-
-        trade = {'feed': feed, 'pair': pair, 'id': order_id, 'timestamp': timestamp, 'side': side, 'amount': float(amount), 'price': float(price)}
-        data = {'type': TRADES, 'data': trade}
-        self.write(data)
+class TradeSocket(SocketCallback, BackendTradeCallback):
+    default_key = 'trades'
 
 
-class FundingSocket(SocketCallback):
-    async def __call__(self, **kwargs):
-        await self.connect()
-
-        for key in kwargs:
-            if isinstance(kwargs[key], Decimal):
-                kwargs[key] = float(kwargs[key])
-
-        data = {'type': FUNDING, 'data': kwargs}
-        self.write(data)
+class FundingSocket(SocketCallback, BackendFundingCallback):
+    default_key = 'funding'
 
 
-class BookSocket(SocketCallback):
-    async def __call__(self, *, feed, pair, book, timestamp):
-        await self.connect()
-
-        data = {'timestamp': timestamp, BID: {}, ASK: {}}
-        book_convert(book, data)
-        upd = {'type': 'book', 'feed': feed, 'pair': pair, 'delta': False, 'data': data}
-
-        self.write(upd)
+class BookSocket(SocketCallback, BackendBookCallback):
+    default_key = 'book'
 
 
-class BookDeltaSocket(SocketCallback):
-    async def __call__(self, *, feed, pair, delta, timestamp):
-        await self.connect()
+class BookDeltaSocket(SocketCallback, BackendBookDeltaCallback):
+    default_key = 'book'
 
-        data = {'timestamp': timestamp, BID: {}, ASK: {}}
-        book_delta_convert(delta, data)
-        upd = {'type': 'book', 'feed': feed, 'pair': pair, 'delta': True, 'data': data}
 
-        self.write(upd)
+class TickerSocket(SocketCallback, BackendTickerCallback):
+    default_key = 'ticker'

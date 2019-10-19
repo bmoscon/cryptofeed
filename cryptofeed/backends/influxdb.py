@@ -9,16 +9,16 @@ import logging
 import requests
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.backends._util import book_convert, book_delta_convert
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.exceptions import UnsupportedType
+from cryptofeed.backends.backend import BackendTradeCallback, BackendBookDeltaCallback, BackendBookCallback, BackendFundingCallback, BackendTickerCallback
 
 
 LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, db: str, create_db=True, numeric_type=str, **kwargs):
+    def __init__(self, addr: str, db: str, key=None, create_db=True, numeric_type=str, **kwargs):
         """
         Parent class for InfluxDB callbacks
 
@@ -47,6 +47,10 @@ class InfluxCallback(HTTPCallback):
           http(s)://<ip addr>:port
         db: str
           Database to write to
+        key: str
+          key to use when writing data, will be a combination of key-datatype
+        create_db: bool
+          Create database if not exists
         numeric_type: str/float
           Convert types before writing (amount and price)
         """
@@ -54,59 +58,44 @@ class InfluxCallback(HTTPCallback):
         self.addr = f"{addr}/write?db={db}"
         self.session = None
         self.numeric_type = numeric_type
+        self.key = key if key else self.default_key
 
         if create_db:
             r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
             r.raise_for_status()
 
+    async def write(self, feed, pair, timestamp, data):
+        d = ''
 
-class TradeInflux(InfluxCallback):
-    def __init__(self, *args, key='trades', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.key = key
-
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        amount = str(amount)
-        price = str(price)
-
-        if order_id is None:
-            order_id = 'None'
-        if self.numeric_type is str:
-            trade = f'{self.key}-{feed},pair={pair} side="{side}",id="{order_id}",amount="{amount}",price="{price}",timestamp={timestamp}'
-        elif self.numeric_type is float:
-            trade = f'{self.key}-{feed},pair={pair} side="{side}",id="{order_id}",amount={amount},price={price},timestamp={timestamp}'
-        else:
-            raise UnsupportedType(f"Type {self.numeric_type} not supported")
-
-        await self.write('POST', trade)
-
-
-class FundingInflux(InfluxCallback):
-    def __init__(self, *args, key='funding', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.key = key
-
-    async def __call__(self, *, feed, pair, **kwargs):
-        data = f"{self.key}-{feed},pair={pair} "
-
-        for key, val in kwargs.items():
-            if key in {'feed', 'pair'}:
+        for key, value in data.items():
+            if key in {'timestamp', 'feed', 'pair'}:
                 continue
-            if isinstance(val, (Decimal, float)):
-                val = str(val)
-                if self.numeric_type is str:
-                    val = f'"{val}"'
-                elif self.numeric_type is not float:
-                    raise UnsupportedType(f"Type {self.numeric_type} not supported")
-            elif isinstance(val, str):
-                val = f'"{val}"'
-            data += f"{key}={val},"
+            if isinstance(value, str) or (self.numeric_type is str and isinstance(value, (Decimal, float))):
+                d += f'{key}="{value}",'
+            else:
+                d += f'{key}={value},'
+        d = d[:-1]
 
-        data = data[:-1]
-        await self.write('POST', data)
+        update = f'{self.key}-{feed},pair={pair} {d},timestamp={timestamp}'
+        await self.http_write('POST', update)
+
+
+class TradeInflux(InfluxCallback, BackendTradeCallback):
+    default_key = 'trades'
+
+    async def write(self, feed, pair, timestamp, data):
+        if data['id'] is None:
+            data['id'] = 'None'
+        await super().write(feed, pair, timestamp, data)
+
+
+class FundingInflux(InfluxCallback, BackendFundingCallback):
+    default_key = 'funding'
 
 
 class InfluxBookCallback(InfluxCallback):
+    default_key = 'book'
+
     async def _write_rows(self, start, data, timestamp):
         msg = []
         ts = int(timestamp * 1000000000)
@@ -129,48 +118,21 @@ class InfluxBookCallback(InfluxCallback):
                     else:
                         raise UnsupportedType(f"Type {self.numeric_type} not supported")
                     ts += 1
-        await self.write('POST', '\n'.join(msg))
+        await self.http_write('POST', '\n'.join(msg))
 
 
-class BookInflux(InfluxBookCallback):
-    def __init__(self, *args, key='book', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.key = key
-
-    async def __call__(self, *, feed, pair, book, timestamp):
-        data = {BID: {}, ASK: {}}
-        book_convert(book, data)
-
+class BookInflux(InfluxBookCallback, BackendBookCallback):
+    async def write(self, feed, pair, timestamp, data):
         start = f"{self.key}-{feed},pair={pair},delta=False"
         await self._write_rows(start, data, timestamp)
 
 
-class BookDeltaInflux(InfluxBookCallback):
-    def __init__(self, *args, key='book', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.key = key
-
-    async def __call__(self, *, feed, pair, delta, timestamp):
+class BookDeltaInflux(InfluxBookCallback, BackendBookDeltaCallback):
+    async def write(self, feed, pair, timestamp, data):
         start = f"{self.key}-{feed},pair={pair},delta=True"
-        data = {BID: {}, ASK: {}}
-        book_delta_convert(delta, data)
         await self._write_rows(start, data, timestamp)
 
 
-class TickerInflux(InfluxCallback):
-    def __init__(self, *args, key='ticker', **kwargs):
-        super().__init__(*args, **kwargs)
-        self.key = key
+class TickerInflux(InfluxCallback, BackendTickerCallback):
+    default_key = 'ticker'
 
-    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
-        bid =  str(bid)
-        ask = str(ask)
-
-        if self.numeric_type is str:
-            ticker = f'{self.key}-{feed},pair={pair} bid="{bid}",ask"{ask}",timestamp={timestamp}'
-        elif self.numeric_type is float:
-            ticker = f'{self.key}-{feed},pair={pair} bid={bid},ask={ask},timestamp={timestamp}'
-        else:
-            raise UnsupportedType(f"Type {self.numeric_type} not supported")
-
-        await self.write('POST', ticker)

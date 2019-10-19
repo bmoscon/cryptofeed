@@ -4,18 +4,15 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from decimal import Decimal
-import time
-from datetime import datetime as dt
-
 import arctic
 import pandas as pd
 
-from cryptofeed.defines import TRADES, FUNDING
+from cryptofeed.defines import TRADES, FUNDING, TICKER
+from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback
 
 
 class ArcticCallback:
-    def __init__(self, library, host='127.0.0.1', key=None, **kwargs):
+    def __init__(self, library, host='127.0.0.1', key=None, numeric_type=float, **kwargs):
         """
         library: str
             arctic library. Will be created if does not exist.
@@ -33,47 +30,24 @@ class ArcticCallback:
             lib_type = kwargs.get('lib_type', arctic.VERSION_STORE)
             con.initialize_library(library, lib_type=lib_type)
         self.lib = con[library]
-        self.key = key
+        self.key = key if key else self.default_key
+        self.numeric_type = numeric_type
 
-
-class TradeArctic(ArcticCallback):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.key is None:
-            self.key = TRADES
-
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        df = pd.DataFrame({'feed': [feed], 'pair': [pair], 'id': [order_id], 'date': [dt.utcfromtimestamp(timestamp)],
-                           'side': [side], 'amount': [float(amount)], 'price': [float(price)]})
-        df['date'] = pd.to_datetime(df.date)
+    async def write(self, feed, pair, timestamp, data):
+        df = pd.DataFrame({key: [value] for key, value in data.items()})
+        df['date'] = pd.to_datetime(df.timestamp, unit='s')
         df.set_index(['date'], inplace=True)
+        df.drop(columns=['timestamp'], inplace=True)
         self.lib.append(self.key, df, upsert=True)
 
 
-class FundingArctic(ArcticCallback):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.key is None:
-            self.key = FUNDING
+class TradeArctic(ArcticCallback, BackendTradeCallback):
+    default_key = TRADES
 
-    async def __call__(self, *, feed, pair, **kwargs):
-        timestamp = kwargs.get('timestamp', None)
 
-        if 'timestamp' in kwargs:
-            del kwargs['timestamp']
+class FundingArctic(ArcticCallback, BackendFundingCallback):
+    default_key = FUNDING
 
-        if timestamp is None:
-            timestamp = time.time()
 
-        for key in kwargs:
-            if isinstance(kwargs[key], Decimal):
-                kwargs[key] = [float(kwargs[key])]
-            else:
-                kwargs[key] = [kwargs[key]]
-
-        kwargs['date'] = dt.utcfromtimestamp(timestamp)
-
-        df = pd.DataFrame(kwargs)
-        df['date'] = pd.to_datetime(df.date)
-        df.set_index(['date'], inplace=True)
-        self.lib.append(self.key, df, upsert=True)
+class TickerArctic(ArcticCallback, BackendTickerCallback):
+    default_key = TICKER
