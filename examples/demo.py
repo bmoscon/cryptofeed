@@ -15,8 +15,8 @@ from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINB
 # Handlers can be normal methods/functions or async. The feedhandler is paused
 # while the callbacks are being handled (unless they in turn await other functions or I/O)
 # so they should be as lightweight as possible
-async def ticker(feed, pair, bid, ask):
-    print(f'Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
+async def ticker(feed, pair, bid, ask, timestamp):
+    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
 
 
 async def trade(feed, pair, order_id, timestamp, side, amount, price):

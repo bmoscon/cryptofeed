@@ -175,10 +175,12 @@ class Poloniex(Feed):
 
             if chan_id not in self.seq_no:
                 self.seq_no[chan_id] = seq_no
-            elif self.seq_no[chan_id] + 1 != seq_no:
+            elif self.seq_no[chan_id] + 1 != seq_no and msg[0][0] != 'i':
                 LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[chan_id] + 1)
                 raise MissingSequenceNumber
             self.seq_no[chan_id] = seq_no
+            if msg[2][0][0] == 'i':
+                del self.seq_no[chan_id]
             await self._book(msg[2], chan_id, timestamp)
         elif chan_id == 1010:
             # heartbeat - ignore
