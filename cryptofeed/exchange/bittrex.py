@@ -90,6 +90,8 @@ class Bittrex(Feed):
         elif 'R' in msg and isinstance(msg['R'], str):
             data = json.loads(zlib.decompress(base64.b64decode(msg['R']), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
             await self._snapshot(data, timestamp)
+        elif 'E' in msg:
+            LOG.error("%s: Error from exchange %s", self.id, msg)
 
     async def subscribe(self, websocket):
         self.__reset()
@@ -101,11 +103,13 @@ class Bittrex(Feed):
             symbols = self.pairs if not self.config else list(self.config[channel])
             i = 0
             if channel == 'SubscribeToExchangeDeltas':
-                msg = {'A': symbols, 'H': 'c2', 'I': i, 'M': 'QueryExchangeState'}
-                await websocket.send(json.dumps(msg))
-                i += 1
+                for symbol in symbols:
+                    msg = {'A': [symbol], 'H': 'c2', 'I': i, 'M': 'QueryExchangeState'}
+                    await websocket.send(json.dumps(msg))
+                    i += 1
             if channel == TRADES:
                 channel = 'SubscribeToExchangeDeltas'
-            msg = {'A': symbols if channel != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': channel}
-            i += 1
-            await websocket.send(json.dumps(msg))
+            for symbol in symbols:
+                msg = {'A': [symbol] if channel != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': channel}
+                i += 1
+                await websocket.send(json.dumps(msg))
