@@ -26,11 +26,13 @@ class Binance(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
         super().__init__(None, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.book_depth = depth
-        self.address = self.__address()
+        self.ws_endpoint = 'wss://stream.binance.com:9443'
+        self.rest_endpoint = 'https://www.binance.com/api/v1'
+        self.address = self._address()
         self.__reset()
 
-    def __address(self):
-        address = "wss://stream.binance.com:9443/stream?streams="
+    def _address(self):
+        address = self.ws_endpoint+'/stream?streams='
         for chan in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
@@ -106,7 +108,7 @@ class Binance(Feed):
                                      timestamp=timestamp_normalize(self.id, msg['E']))
 
     async def _snapshot(self, pairs: list):
-        urls = [f'https://www.binance.com/api/v1/depth?symbol={sym}&limit={self.book_depth}' for sym in pairs]
+        urls = [f'{self.rest_endpoint}/depth?symbol={sym}&limit={self.book_depth}' for sym in pairs]
         async def fetch(session, url):
             async with session.get(url) as response:
                 response.raise_for_status()

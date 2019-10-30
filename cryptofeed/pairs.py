@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX
 
 
 def gen_pairs(exchange):
@@ -19,6 +19,16 @@ def gen_pairs(exchange):
 def binance_pairs():
     ret = {}
     pairs = requests.get('https://api.binance.com/api/v1/exchangeInfo').json()
+    for symbol in pairs['symbols']:
+        split = len(symbol['baseAsset'])
+        normalized = symbol['symbol'][:split] + '-' + symbol['symbol'][split:]
+        ret[normalized] = symbol['symbol']
+    return ret
+
+
+def binance_us_pairs():
+    ret = {}
+    pairs = requests.get('https://api.binance.us/api/v1/exchangeInfo').json()
     for symbol in pairs['symbols']:
         split = len(symbol['baseAsset'])
         normalized = symbol['symbol'][:split] + '-' + symbol['symbol'][split:]
@@ -215,6 +225,7 @@ _exchange_function_map = {
     KRAKEN: kraken_pairs,
     KRAKEN+'REST': kraken_rest_pairs,
     BINANCE: binance_pairs,
+    BINANCE_US: binance_us_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
     HUOBI_US: huobi_us_pairs,
