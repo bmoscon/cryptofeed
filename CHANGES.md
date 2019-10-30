@@ -4,6 +4,9 @@
   * Feature: User enabled logging of exchange messages on error
   * Refactor: Overhaul of backends - new base classes and simplified code
   * Bugfix: Handle i messages from poloniex more correctly
+  * Bugfix: Report bittrex errors correctly
+  * Feature: New exchange: Bitcoin.com
+  * Feature: New exchange: BinanceUS
 
 ### 1.0.1 (2019-09-30)
   * Feature: Backfill Bitmex historical trade data from S3 Bucket
