@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM
 
 
 def gen_pairs(exchange):
@@ -214,6 +214,9 @@ def bittrex_pairs():
     r = r['result']
     return {f"{e['MarketCurrency']}-{e['BaseCurrency']}": e['MarketName'] for e in r if e['IsActive']}
 
+def bitcoincom_pairs():
+    r = requests.get('https://api.exchange.bitcoin.com/api/2/public/symbol').json()
+    return {f"{data['baseCurrency']}-{data['quoteCurrency'].replace('USD', 'USDT')}": data['id'] for data in r}
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -235,5 +238,6 @@ _exchange_function_map = {
     COINBENE: coinbene_pairs,
     BYBIT: bybit_pairs,
     FTX: ftx_pairs,
-    BITTREX: bittrex_pairs
+    BITTREX: bittrex_pairs,
+    BITCOINCOM: bitcoincom_pairs
 }

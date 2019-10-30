@@ -27,3 +27,4 @@ from cryptofeed.exchange.deribit import Deribit
 from cryptofeed.exchange.bybit import Bybit
 from cryptofeed.exchange.ftx import FTX
 from cryptofeed.exchange.bittrex import Bittrex
+from cryptofeed.exchange.bitcoincom import BitcoinCom
