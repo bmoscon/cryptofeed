@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.0.2
+### 1.1.0
   * Feature: User enabled logging of exchange messages on error
   * Refactor: Overhaul of backends - new base classes and simplified code
   * Bugfix: Handle i messages from poloniex more correctly
