@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.exchange.binance import Binance
+from cryptofeed.exchange.binance_us import BinanceUS
 from cryptofeed.exchange.bitfinex import Bitfinex
 from cryptofeed.exchange.bitstamp import Bitstamp
 from cryptofeed.exchange.coinbase import Coinbase
