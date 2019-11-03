@@ -12,7 +12,7 @@ data channel names
 import logging
 import pandas as pd
 
-from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI,
+from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN,
                                 OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
                                 LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT, BITTREX, BITCOINCOM, BINANCE_US)
@@ -67,7 +67,7 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, BITCOINCOM}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in  {HUOBI, HUOBI_US, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, GEMINI, BITTREX}:
+    elif exchange in  {HUOBI, HUOBI_US, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, GEMINI, BITTREX, BITMAX}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -98,7 +98,8 @@ _feed_to_exchange_map = {
         FTX: 'orderbook',
         GEMINI: L2_BOOK,
         BITTREX: 'SubscribeToExchangeDeltas',
-        BITCOINCOM: 'subscribeOrderbook'
+        BITCOINCOM: 'subscribeOrderbook',
+        BITMAX: L2_BOOK
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -120,7 +121,8 @@ _feed_to_exchange_map = {
         BYBIT: UNSUPPORTED,
         FTX: UNSUPPORTED,
         GEMINI: UNSUPPORTED,
-        BITCOINCOM: UNSUPPORTED
+        BITCOINCOM: UNSUPPORTED,
+        BITMAX: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: TRADES,
@@ -145,7 +147,8 @@ _feed_to_exchange_map = {
         FTX: 'trades',
         GEMINI: TRADES,
         BITTREX: TRADES,
-        BITCOINCOM: 'subscribeTrades'
+        BITCOINCOM: 'subscribeTrades',
+        BITMAX: TRADES
     },
     TICKER: {
         POLONIEX: 1002,
@@ -169,7 +172,8 @@ _feed_to_exchange_map = {
         FTX: "ticker",
         GEMINI: UNSUPPORTED,
         BITTREX: 'SubscribeToSummaryDeltas',
-        BITCOINCOM: 'subscribeTicker'
+        BITCOINCOM: 'subscribeTicker',
+        BITMAX: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003
