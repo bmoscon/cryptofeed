@@ -7,6 +7,7 @@
   * Bugfix: Report bittrex errors correctly
   * Feature: New exchange: Bitcoin.com
   * Feature: New exchange: BinanceUS
+  * Feature: New exchange: Bitmax
 
 ### 1.0.1 (2019-09-30)
   * Feature: Backfill Bitmex historical trade data from S3 Bucket
