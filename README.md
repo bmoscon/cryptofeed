@@ -38,6 +38,7 @@ Supports the following exchanges:
 * BinanceUS
 * Bitcoin.com
 * Bitfinex
+* BitMax
 * BitMEX
 * Bitstamp
 * Bittrex
