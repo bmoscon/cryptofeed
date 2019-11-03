@@ -8,6 +8,8 @@ import asyncio
 from time import time as time
 from socket import error as socket_error
 import zlib
+from collections import defaultdict
+from copy import deepcopy
 
 import websockets
 from websockets import ConnectionClosed
@@ -86,16 +88,22 @@ class FeedHandler:
         """
         if isinstance(feed, str):
             if feed in _EXCHANGES:
-                self.feeds.append(_EXCHANGES[feed](**kwargs))
-                feed = self.feeds[-1]
-                self.last_msg[feed.uuid] = None
-                self.timeout[feed.uuid] = timeout
+                if feed == BITMAX:
+                    self._do_bitmax_subscribe(feed, timeout, **kwargs)
+                else:
+                    self.feeds.append(_EXCHANGES[feed](**kwargs))
+                    feed = self.feeds[-1]
+                    self.last_msg[feed.uuid] = None
+                    self.timeout[feed.uuid] = timeout
             else:
                 raise ValueError("Invalid feed specified")
         else:
-            self.feeds.append(feed)
-            self.last_msg[feed.uuid] = None
-            self.timeout[feed.uuid] = timeout
+            if isinstance(feed, Bitmax):
+                self._do_bitmax_subscribe(feed, timeout)
+            else:
+                self.feeds.append(feed)
+                self.last_msg[feed.uuid] = None
+                self.timeout[feed.uuid] = timeout
 
     def add_nbbo(self, feeds, pairs, callback, timeout=120):
         """
@@ -211,3 +219,48 @@ class FeedHandler:
                 # exception will be logged with traceback when connection handler
                 # retries the connection
                 raise
+
+    def _do_bitmax_subscribe(self, feed, timeout: int, **kwargs):
+        """
+        Bitmax is a special case, a separate websocket is needed for each symbol,
+        and each connection receives all data for that symbol. We allow the user
+        to configure Bitmax like they would any other exchange and parse out the
+        relevant information to create a separate feed object per symbol.
+        """
+        config = {}
+        pairs = []
+
+        # Need to handle the two configuration cases - Feed object and Feed Name with config dict
+        if 'config' in kwargs:
+            config = kwargs.pop('config')
+        elif hasattr(feed, 'config'):
+            config = feed.config
+
+        if isinstance(feed, str):
+            callbacks = kwargs.pop('callbacks')
+        else:
+            callbacks = feed.callbacks
+
+        if config:
+            new_config = defaultdict(list)
+            for cb, symbols in config.items():
+                for symbol in symbols:
+                    new_config[symbol].append(cb)
+
+            for symbol, cbs in new_config.items():
+                cb = {cb: deepcopy(callbacks[cb]) for cb in cbs}
+                feed = Bitmax(pairs=[symbol], callbacks=cb, **kwargs)
+                self.feeds.append(feed)
+                self.last_msg[feed.uuid] = None
+                self.timeout[feed.uuid] = timeout
+        else:
+            if 'pairs' in kwargs:
+                pairs = kwargs.pop('pairs')
+            elif hasattr(feed, 'pairs'):
+                pairs = feed.pairs
+
+            for pair in pairs:
+                feed = Bitmax(pairs=[pair], callbacks=callbacks, **kwargs)
+                self.feeds.append(feed)
+                self.last_msg[feed.uuid] = None
+                self.timeout[feed.uuid] = timeout

@@ -22,16 +22,17 @@ LOG = logging.getLogger('feedhandler')
 class Bitmax(Feed):
     id = BITMAX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        if pairs is None:
-            pairs = list(set([pair for s in config.values() for pair in s]))
-        if len(pairs) != 1:
-            LOG.error("Bitmax requires a websocket per trading pair")
-            raise ValueError("Bitmax requires a websocket per trading pair")
-        self.pair = pairs[0]
-
-        super().__init__('wss://bitmax.io/api/public/', pairs=None, channels=channels, callbacks=callbacks, **kwargs)
-        self.address += pair_std_to_exchange(self.pair, self.id).replace('/', '-')
+    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+        self.channels = None
+        if pairs and len(pairs) == 1:
+            self.pair = pairs[0]
+            super().__init__('wss://bitmax.io/api/public/', pairs=None, channels=None, callbacks=callbacks, **kwargs)
+            self.address += pair_std_to_exchange(self.pair, self.id).replace('/', '-')
+            self.pairs = pairs
+        else:
+            self.pairs = pairs
+            self.config = kwargs.get('config', None)
+            self.callbacks = callbacks
 
     def __reset(self):
         self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
