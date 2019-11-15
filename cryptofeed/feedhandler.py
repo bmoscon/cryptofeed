@@ -58,7 +58,7 @@ _EXCHANGES = {
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -66,6 +66,8 @@ class FeedHandler:
             number of seconds between checks to see if a feed has timed out
         log_messages_on_error: boolean
             if true, log the message from the exchange on exceptions
+        raw_message_capture: callback
+            if defined, callback to save/process/handle raw message (primarily for debugging purposes)
         """
         self.feeds = []
         self.retries = retries
@@ -73,6 +75,7 @@ class FeedHandler:
         self.last_msg = {}
         self.timeout_interval = timeout_interval
         self.log_messages_on_error = log_messages_on_error
+        self.raw_message_capture = raw_message_capture
 
     def add_feed(self, feed, timeout=120, **kwargs):
         """
@@ -205,20 +208,26 @@ class FeedHandler:
         raise ExhaustedRetries()
 
     async def _handler(self, websocket, handler, feed_id):
-        async for message in websocket:
-            self.last_msg[feed_id] = time()
-            try:
-                await handler(message, self.last_msg[feed_id])
-            except Exception:
-                if self.log_messages_on_error:
-                    if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
-                        message = zlib.decompress(message, 16+zlib.MAX_WBITS)
-                    elif feed_id in {OKCOIN, OKEX}:
-                        message = zlib.decompress(message, -15)
-                    LOG.error("%s: error handling message %s", feed_id, message)
-                # exception will be logged with traceback when connection handler
-                # retries the connection
-                raise
+        try:
+            if self.raw_message_capture:
+                async for message in websocket:
+                    self.last_msg[feed_id] = time()
+                    await self.raw_message_capture(message, self.last_msg[feed_id], feed_id)
+                    await handler(message, self.last_msg[feed_id])
+            else:
+                async for message in websocket:
+                    self.last_msg[feed_id] = time()
+                    await handler(message, self.last_msg[feed_id])
+        except Exception:
+            if self.log_messages_on_error:
+                if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
+                    message = zlib.decompress(message, 16+zlib.MAX_WBITS)
+                elif feed_id in {OKCOIN, OKEX}:
+                    message = zlib.decompress(message, -15)
+                LOG.error("%s: error handling message %s", feed_id, message)
+            # exception will be logged with traceback when connection handler
+            # retries the connection
+            raise
 
     def _do_bitmax_subscribe(self, feed, timeout: int, **kwargs):
         """

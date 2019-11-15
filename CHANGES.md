@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.1.0
+### 1.1.0 (2019-11-14)
   * Feature: User enabled logging of exchange messages on error
   * Refactor: Overhaul of backends - new base classes and simplified code
   * Bugfix: Handle i messages from poloniex more correctly
@@ -8,6 +8,7 @@
   * Feature: New exchange: Bitcoin.com
   * Feature: New exchange: BinanceUS
   * Feature: New exchange: Bitmax
+  * Feature: Ability to store raw messages from exchanges
 
 ### 1.0.1 (2019-09-30)
   * Feature: Backfill Bitmex historical trade data from S3 Bucket
