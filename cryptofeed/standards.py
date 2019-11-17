@@ -151,7 +151,7 @@ _feed_to_exchange_map = {
         KRAKEN: TICKER,
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
-        HUOBI: UNSUPPORTED,
+        HUOBI: 'bbo',
         HUOBI_US: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
         OKCOIN: 'spot/ticker',

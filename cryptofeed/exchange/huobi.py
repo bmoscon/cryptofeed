@@ -46,6 +46,25 @@ class Huobi(Feed):
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, False, timestamp_normalize(self.id, msg['ts']))
 
+    async def _ticker(self, msg):
+        """
+        {'ch': 'market.usdthusd.bbo', 'ts': 1573975549146, 'tick': {'seqId': 100293506352, 'ask': Decimal('0.999'), 'askSize': Decimal('1842
+877.2855307306'), 'bid': Decimal('0.9988'), 'bidSize': Decimal('8127.7179'), 'quoteTime': 1573975549135, 'symbol': 'usdthusd'}}
+        """
+        if not 'bbo' in msg['ch']:
+            pass
+        else:
+            bid = msg['tick']['bid']
+            ask = msg['tick']['ask']
+            timestamp = msg['tick']['quoteTime']
+            pair = msg['tick']['symbol']
+            pair = pair_exchange_to_std(pair)
+            await self.callback(TICKER, feed=self.id,
+                                         pair=pair,
+                                         bid=bid,
+                                         ask=ask,
+                                         timestamp=timestamp)
+
     async def _trade(self, msg):
         """
         {
@@ -78,7 +97,9 @@ class Huobi(Feed):
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
-            if 'trade' in msg['ch']:
+            if 'bbo' in msg['ch']:
+                await self._ticker(msg)
+            elif 'trade' in msg['ch']:
                 await self._trade(msg)
             elif 'depth' in msg['ch']:
                 await self._book(msg)
