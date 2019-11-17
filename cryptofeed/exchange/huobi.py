@@ -12,7 +12,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import HUOBI, BUY, SELL, TRADES, BID, ASK, L2_BOOK
+from cryptofeed.defines import HUOBI, BUY, SELL, TRADES, BID, ASK, L2_BOOK, TICKER
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
