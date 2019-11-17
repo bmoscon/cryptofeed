@@ -56,6 +56,8 @@ class Huobi(Feed):
         else:
             bid = msg['tick']['bid']
             ask = msg['tick']['ask']
+            bsize = msg['tick']['bidSize']
+            asize = msg['tick']['askSize']
             timestamp = msg['tick']['quoteTime']
             pair = msg['tick']['symbol']
             pair = pair_exchange_to_std(pair)
@@ -63,7 +65,9 @@ class Huobi(Feed):
                                          pair=pair,
                                          bid=bid,
                                          ask=ask,
-                                         timestamp=timestamp)
+                                         timestamp=timestamp,
+                                         bid_sz=bsize,
+                                         ask_sz=asize)
 
     async def _trade(self, msg):
         """
