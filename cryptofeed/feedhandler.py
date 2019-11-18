@@ -16,7 +16,7 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.exchanges import *
@@ -32,6 +32,8 @@ LOG = get_logger('feedhandler', 'feedhandler.log')
 _EXCHANGES = {
     BINANCE: Binance,
     BINANCE_US: BinanceUS,
+    BINANCE_JERSEY: BinanceJersey,
+    BINANCE_FUTURES: BinanceFutures,
     COINBASE: Coinbase,
     GEMINI: Gemini,
     HITBTC: HitBTC,

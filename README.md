@@ -38,7 +38,9 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 Supports the following exchanges:
 * Binance
-* BinanceUS
+* Binance US
+* Binance Jersey
+* Binance Futures
 * Bitcoin.com
 * Bitfinex
 * BitMax

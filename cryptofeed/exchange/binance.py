@@ -127,6 +127,21 @@ class Binance(Feed):
                     amount = Decimal(update[1])
                     self.l2_book[std_pair][side][price] = amount
 
+    def _check_update_id(self, pair: str, msg: dict):
+        skip_update = False
+        forced = False
+
+        if pair in self.last_update_id:
+            if msg['u'] <= self.last_update_id[pair]:
+                skip_update = True
+            elif msg['U'] <= self.last_update_id[pair]+1 <= msg['u']:
+                del self.last_update_id[pair]
+                forced = True
+            else:
+                raise Exception("Error - snaphot has no overlap with first update")
+
+        return skip_update, forced
+
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
         {
@@ -149,16 +164,11 @@ class Binance(Feed):
             ]
         }
         """
-        forced = False
+        skip_update, forced = self._check_update_id(pair, msg)
+        if skip_update:
+            return
+
         delta = {BID: [], ASK: []}
-        if pair in self.last_update_id:
-            if msg['u'] <= self.last_update_id[pair]:
-                return
-            if msg['U'] <= self.last_update_id[pair]+1 <= msg['u']:
-                del self.last_update_id[pair]
-                forced = True
-            else:
-                raise Exception("Error - snaphot has no overlap with first update")
         pair = pair_exchange_to_std(pair)
         timestamp = msg['E']
 
@@ -176,7 +186,6 @@ class Binance(Feed):
                     delta[side].append((price, amount))
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, timestamp))
-
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
