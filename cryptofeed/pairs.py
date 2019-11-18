@@ -9,31 +9,37 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX
 
 
 def gen_pairs(exchange):
     return _exchange_function_map[exchange]()
 
 
-def binance_pairs():
+def _binance_pairs(endpoint: str):
     ret = {}
-    pairs = requests.get('https://api.binance.com/api/v1/exchangeInfo').json()
+    pairs = requests.get(endpoint).json()
     for symbol in pairs['symbols']:
         split = len(symbol['baseAsset'])
         normalized = symbol['symbol'][:split] + '-' + symbol['symbol'][split:]
         ret[normalized] = symbol['symbol']
     return ret
+
+
+def binance_pairs():
+    return _binance_pairs('https://api.binance.com/api/v1/exchangeInfo')
 
 
 def binance_us_pairs():
-    ret = {}
-    pairs = requests.get('https://api.binance.us/api/v1/exchangeInfo').json()
-    for symbol in pairs['symbols']:
-        split = len(symbol['baseAsset'])
-        normalized = symbol['symbol'][:split] + '-' + symbol['symbol'][split:]
-        ret[normalized] = symbol['symbol']
-    return ret
+    return _binance_pairs('https://api.binance.us/api/v1/exchangeInfo')
+
+
+def binance_jersey_pairs():
+    return _binance_pairs('https://api.binance.je/api/v1/exchangeInfo')
+
+
+def binance_futures_pairs():
+    return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo')
 
 
 def bitfinex_pairs():
@@ -235,6 +241,8 @@ _exchange_function_map = {
     KRAKEN+'REST': kraken_rest_pairs,
     BINANCE: binance_pairs,
     BINANCE_US: binance_us_pairs,
+    BINANCE_JERSEY: binance_jersey_pairs,
+    BINANCE_FUTURES: binance_futures_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
     HUOBI_US: huobi_us_pairs,

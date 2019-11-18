@@ -15,7 +15,8 @@ import pandas as pd
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN,
                                 OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
-                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT, BITTREX, BITCOINCOM, BINANCE_US)
+                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, INSTRUMENT, BITTREX, BITCOINCOM, BINANCE_US,
+                                BINANCE_JERSEY, BINANCE_FUTURES)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -67,7 +68,7 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, BITCOINCOM}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in  {HUOBI, HUOBI_US, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, GEMINI, BITTREX, BITMAX}:
+    elif exchange in  {HUOBI, HUOBI_US, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -86,6 +87,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'book',
         BINANCE: 'depth@100ms',
         BINANCE_US: 'depth@100ms',
+        BINANCE_JERSEY: 'depth@100ms',
+        BINANCE_FUTURES: 'depth@100ms',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
         HUOBI_US: 'depth.step0',
@@ -112,6 +115,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
         BINANCE_US: UNSUPPORTED,
+        BINANCE_JERSEY: UNSUPPORTED,
+        BINANCE_FUTURES: UNSUPPORTED,
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_US: UNSUPPORTED,
@@ -135,6 +140,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'trade',
         BINANCE: 'aggTrade',
         BINANCE_US: 'aggTrade',
+        BINANCE_JERSEY: 'aggTrade',
+        BINANCE_FUTURES: 'aggTrade',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
         HUOBI_US: 'trade.detail',
@@ -161,6 +168,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
         BINANCE_US: 'ticker',
+        BINANCE_JERSEY: 'ticker',
+        BINANCE_FUTURES: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_US: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,

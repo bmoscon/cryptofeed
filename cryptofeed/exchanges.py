@@ -6,6 +6,8 @@ associated with this software.
 '''
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.exchange.binance_us import BinanceUS
+from cryptofeed.exchange.binance_jersey import BinanceJersey
+from cryptofeed.exchange.binance_futures import BinanceFutures
 from cryptofeed.exchange.bitfinex import Bitfinex
 from cryptofeed.exchange.bitstamp import Bitstamp
 from cryptofeed.exchange.coinbase import Coinbase
@@ -15,7 +17,6 @@ from cryptofeed.exchange.poloniex import Poloniex
 from cryptofeed.exchange.bitmex import Bitmex
 from cryptofeed.exchange.kraken import Kraken
 from cryptofeed.exchange.kraken_futures import KrakenFutures
-from cryptofeed.exchange.binance import Binance
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.huobi import Huobi
 from cryptofeed.exchange.huobi_us import HuobiUS
