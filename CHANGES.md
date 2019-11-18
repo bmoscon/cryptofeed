@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.2.0
+  * Feature: New exchange: Binance Futures
+  * Feature: New Exchange: Binance Jersey
+
 ### 1.1.0 (2019-11-14)
   * Feature: User enabled logging of exchange messages on error
   * Refactor: Overhaul of backends - new base classes and simplified code
