@@ -15,7 +15,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BUY, SELL, BID, ASK, TRADES, TICKER, COINBASE
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -69,7 +69,7 @@ class Coinbase(Feed):
         }
         '''
         await self.callback(TICKER, feed=self.id,
-                                     pair=msg['product_id'],
+                                     pair=pair_exchange_to_std(msg['product_id']),
                                      bid=Decimal(msg['best_bid']),
                                      ask=Decimal(msg['best_ask']),
                                      timestamp=timestamp_normalize(self.id, msg['time']))
@@ -89,7 +89,7 @@ class Coinbase(Feed):
             'time': '2018-05-21T00:26:05.585000Z'
         }
         '''
-        pair = msg['product_id']
+        pair = pair_exchange_to_std(msg['product_id'])
 
         if 'full' in self.channels or ('full' in self.config and pair in self.config['full']):
             delta = {BID: [], ASK: []}
@@ -116,7 +116,7 @@ class Coinbase(Feed):
 
         await self.callback(TRADES,
             feed=self.id,
-            pair=msg['product_id'],
+            pair=pair_exchange_to_std(msg['product_id']),
             order_id=msg['trade_id'],
             side=SELL if msg['side'] == 'buy' else BUY,
             amount=Decimal(msg['size']),
@@ -126,7 +126,8 @@ class Coinbase(Feed):
         )
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
-        self.l2_book[msg['product_id']] = {
+        pair = pair_exchange_to_std(msg['product_id'])
+        self.l2_book[pair] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
                 for price, amount in msg['bids']
@@ -137,15 +138,16 @@ class Coinbase(Feed):
             })
         }
 
-        await self.book_callback(self.l2_book[msg['product_id']], L2_BOOK, msg['product_id'], True, None, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp)
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
+        pair = pair_exchange_to_std(msg['product_id'])
         delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
             side = BID if side == 'buy' else ASK
             price = Decimal(price)
             amount = Decimal(amount)
-            bidask = self.l2_book[msg['product_id']][side]
+            bidask = self.l2_book[pair][side]
 
             if amount == 0:
                 del bidask[price]
@@ -154,7 +156,7 @@ class Coinbase(Feed):
                 bidask[price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[msg['product_id']], L2_BOOK, msg['product_id'], False, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
 
     async def _book_snapshot(self, pairs: list):
         self.__reset()
@@ -175,25 +177,26 @@ class Coinbase(Feed):
         timestamp = time.time()
         for res, pair in zip(results, pairs):
             orders = res.json()
-            self.l3_book[pair] = {BID: sd(), ASK: sd()}
-            self.seq_no[pair] = orders['sequence']
+            npair = pair_exchange_to_std(pair)
+            self.l3_book[npair] = {BID: sd(), ASK: sd()}
+            self.seq_no[npair] = orders['sequence']
             for side in (BID, ASK):
                 for price, size, order_id in orders[side + 's']:
                     price = Decimal(price)
                     size = Decimal(size)
-                    if price in self.l3_book[pair][side]:
-                        self.l3_book[pair][side][price][order_id] = size
+                    if price in self.l3_book[npair][side]:
+                        self.l3_book[npair][side][price][order_id] = size
                     else:
-                        self.l3_book[pair][side][price] = {order_id: size}
+                        self.l3_book[npair][side][price] = {order_id: size}
                     self.order_map[order_id] = (price, size)
-            await self.book_callback(self.l3_book[pair], L3_BOOK, pair, True, None, timestamp=timestamp)
+            await self.book_callback(self.l3_book[npair], L3_BOOK, npair, True, None, timestamp=timestamp)
 
     async def _open(self, msg):
         delta = {BID: [], ASK: []}
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         size = Decimal(msg['remaining_size'])
-        pair = msg['product_id']
+        pair = pair_exchange_to_std(msg['product_id'])
         order_id = msg['order_id']
         timestamp = timestamp_normalize(self.id, msg['time'])
 
@@ -226,7 +229,7 @@ class Coinbase(Feed):
 
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
-        pair = msg['product_id']
+        pair = pair_exchange_to_std(msg['product_id'])
         timestamp = timestamp_normalize(self.id, msg['time'])
 
         del self.l3_book[pair][side][price][order_id]
@@ -247,7 +250,7 @@ class Coinbase(Feed):
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         new_size = Decimal(msg['new_size'])
-        pair = msg['product_id']
+        pair = pair_exchange_to_std(msg['product_id'])
 
         self.l3_book[pair][side][price][order_id] = new_size
         self.order_map[order_id] = (price, new_size)
@@ -260,7 +263,7 @@ class Coinbase(Feed):
         msg = json.loads(msg, parse_float=Decimal)
 
         if 'product_id' in msg and 'sequence' in msg and ('full' in self.channels or ('full' in self.config and msg['product_id'] in self.config['full'])):
-            pair = msg['product_id']
+            pair = pair_exchange_to_std(msg['product_id'])
             if msg['sequence'] <= self.seq_no[pair]:
                 return
             elif ('full' in self.channels or 'full' in self.config) and msg['sequence'] != self.seq_no[pair] + 1:
