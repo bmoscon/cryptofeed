@@ -42,6 +42,7 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8"
     ],
     tests_require=["pytest"],
     install_requires=[
