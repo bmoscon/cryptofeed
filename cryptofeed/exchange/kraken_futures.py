@@ -12,7 +12,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, KRAKEN_FUTURES
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, FUNDING, L2_BOOK, KRAKEN_FUTURES
 from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
@@ -152,6 +152,27 @@ class KrakenFutures(Feed):
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
 
+    async def _funding(self, msg: dict, pair: str):
+        if msg['tag'] == 'perpetual':
+            await self.callback(FUNDING,
+                                feed=self.id,
+                                pair=pair,
+                                timestamp=timestamp_normalize(self.id, msg['time']),
+                                tag=msg['tag'],
+                                rate=msg['funding_rate'],
+                                rate_prediction=msg['funding_rate_prediction'],
+                                relative_rate=msg['relative_funding_rate'],
+                                relative_rate_prediction=msg['relative_funding_rate_prediction'],
+                                next_rate_timestamp=timestamp_normalize(self.id, msg['next_funding_rate_time']))
+        else:
+            await self.callback(FUNDING,
+                                feed=self.id,
+                                pair=pair,
+                                timestamp=timestamp_normalize(self.id, msg['time']),
+                                tag=msg['tag'],
+                                premium=msg['premium'],
+                                maturity_timestamp=timestamp_normalize(self.id, msg['maturityTime']))
+
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -169,6 +190,8 @@ class KrakenFutures(Feed):
                 return
             elif msg['feed'] == 'ticker_lite':
                 await self._ticker(msg, msg['product_id'], timestamp)
+            elif msg['feed'] == 'ticker':
+                await self._funding(msg, msg['product_id'])
             elif msg['feed'] == 'book_snapshot':
                 await self._book_snapshot(msg, msg['product_id'], timestamp)
             elif msg['feed'] == 'book':
