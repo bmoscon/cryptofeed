@@ -3,6 +3,8 @@
 ### 1.2.0
   * Feature: New exchange: Binance Futures
   * Feature: New Exchange: Binance Jersey
+  * Feature: Funding data on Kraken Futures
+  * Feature: User defined pair seperator (default still -)
 
 ### 1.1.0 (2019-11-14)
   * Feature: User enabled logging of exchange messages on error
