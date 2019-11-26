@@ -13,6 +13,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, KRAKEN_FUTURES
+from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
@@ -74,7 +75,7 @@ class KrakenFutures(Feed):
                             amount=Decimal(msg['qty']),
                             price=Decimal(msg['price']),
                             order_id=msg['uid'],
-                            timestamp=float(msg['time']))
+                            timestamp=timestamp_normalize(self.id, msg['time']))
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
