@@ -140,7 +140,7 @@ def kraken_pairs():
         if ".d" in alt:
             modifier = -5
         normalized = alt[:modifier] + PAIR_SEP + alt[modifier:]
-        exch = normalized.replace({PAIR_SEP}, "/")
+        exch = normalized.replace(PAIR_SEP, "/")
         normalized = normalized.replace('XBT', 'BTC')
         normalized = normalized.replace('XDG', 'DOG')
         ret[normalized] = exch
