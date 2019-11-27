@@ -83,11 +83,6 @@ class InfluxCallback(HTTPCallback):
 class TradeInflux(InfluxCallback, BackendTradeCallback):
     default_key = 'trades'
 
-    async def write(self, feed, pair, timestamp, data):
-        if data['id'] is None:
-            data['id'] = 'None'
-        await super().write(feed, pair, timestamp, data)
-
 
 class FundingInflux(InfluxCallback, BackendFundingCallback):
     default_key = 'funding'

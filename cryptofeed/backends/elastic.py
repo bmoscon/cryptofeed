@@ -37,11 +37,6 @@ class ElasticCallback(HTTPCallback):
 class TradeElastic(ElasticCallback, BackendTradeCallback):
     default_index = 'trades'
 
-    async def write(self, feed, pair, timestamp, data):
-        if data['id'] is None:
-            data['id'] = 'None'
-        await super().write(feed, pair, timestamp, data)
-
 
 class FundingElastic(ElasticCallback, BackendFundingCallback):
     default_index = 'funding'
