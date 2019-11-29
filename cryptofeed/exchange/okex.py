@@ -20,7 +20,7 @@ class OKEx(OKCoin):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
-        self.address = 'wss://real.okex.com:10442/ws/v3'
+        self.address = 'wss://real.okex.com:8443/ws/v3'
         self.book_depth = 200
 
 
