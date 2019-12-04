@@ -25,7 +25,7 @@ class OKCoin(Feed):
     table_prefixs = ['spot']
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://real.okcoin.com:10442/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__('wss://real.okcoin.com:8443/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.book_depth = 200
 
     def __reset(self):
