@@ -52,8 +52,8 @@ class Bittrex(Feed):
                     size = update['Q']
                     if size == 0:
                         delta[side].append((price, 0))
-                        # changing because of error
-                        #del self.l2_book[pair][side][price]
+                        # changing because of error when no value
+                        # del self.l2_book[pair][side][price]
                         self.l2_book[pair][side].pop(price, None)
                     else:
                         self.l2_book[pair][side][price] = size
