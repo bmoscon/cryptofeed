@@ -52,7 +52,9 @@ class Bittrex(Feed):
                     size = update['Q']
                     if size == 0:
                         delta[side].append((price, 0))
-                        del self.l2_book[pair][side][price]
+                        # changing because of error when no value
+                        # del self.l2_book[pair][side][price]
+                        self.l2_book[pair][side].pop(price, None)
                     else:
                         self.l2_book[pair][side][price] = size
                         delta[side].append((price, size))
@@ -60,7 +62,9 @@ class Bittrex(Feed):
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
 
     async def trades(self, pair: str, msg: dict):
-        if self.config and pair in self.config[TRADES] or not self.config:
+        # adding because of error
+        trade_q = self.config.get(TRADES, [])
+        if self.config and pair in trade_q or not self.config:
             pair = pair_exchange_to_std(pair)
             for trade in msg:
                 await self.callback(TRADES, feed=self.id,
