@@ -7,8 +7,8 @@ associated with this software.
 import arctic
 import pandas as pd
 
-from cryptofeed.defines import TRADES, FUNDING, TICKER
-from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback
+from cryptofeed.defines import TRADES, FUNDING, TICKER, OPEN_INTEREST
+from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback, BackendOpenInterestCallback
 
 
 class ArcticCallback:
@@ -51,3 +51,6 @@ class FundingArctic(ArcticCallback, BackendFundingCallback):
 
 class TickerArctic(ArcticCallback, BackendTickerCallback):
     default_key = TICKER
+
+class OpenInterestArctic(ArcticCallback, BackendOpenInterestCallback):
+    default_key = OPEN_INTEREST
