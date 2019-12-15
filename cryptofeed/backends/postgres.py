@@ -6,11 +6,12 @@ associated with this software.
 '''
 from datetime import datetime as dt
 from decimal import Decimal
+import json
 
 import asyncpg
 
 from cryptofeed.defines import TRADES, FUNDING, TICKER, OPEN_INTEREST
-from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback, BackendOpenInterestCallback
+from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback, BackendOpenInterestCallback, BackendBookCallback, BackendBookDeltaCallback
 
 
 class PostgresCallback:
@@ -34,15 +35,15 @@ class PostgresCallback:
         self.db = db
         self.pw = pw
         self.host = host
-    
+
     async def _connect(self):
         if self.conn is None:
             self.conn = await asyncpg.connect(user=self.user, password=self.pw, database=self.db, host=self.host)
 
-    async def _write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, data):
         await self._connect()
         async with self.conn.transaction():
-            time = dt.fromtimestamp(timestamp)
+            time = dt.utcfromtimestamp(timestamp)
             await self.conn.execute(f"INSERT INTO {self.table} VALUES('{feed}','{pair}','{time}',{data})")
 
 
@@ -54,23 +55,14 @@ class TradePostgres(PostgresCallback, BackendTradeCallback):
             d = f"'{data['side']}',{data['amount']},{data['price']},'{data['id']}'"
         else:
             d = f"'{data['side']}',{data['amount']},{data['price']},NULL"
-        await self._write(feed, pair, timestamp, d)
+        await super().write(feed, pair, timestamp, d)
 
 
 class FundingPostgres(PostgresCallback, BackendFundingCallback):
     default_table = FUNDING
 
     async def write(self, feed, pair, timestamp, data):
-        s = []
-        for key, value in data:
-            if key in {'feed', 'pair', 'timestamp'}:
-                continue
-            if isinstance(value, (float, Decimal)):
-                s.append(value)
-            else:
-                s.append(f"'{value}'")
-
-        await self._write(feed, pair, timestamp, ','.join(map(str, s)))
+        await super().write(feed, pair, timestamp, f"'{json.dumps(data)}'")
 
 
 class TickerPostgres(PostgresCallback, BackendTickerCallback):
@@ -78,11 +70,25 @@ class TickerPostgres(PostgresCallback, BackendTickerCallback):
 
     async def write(self, feed, pair, timestamp, data):
         d = f"{data['bid']},{data['ask']}"
-        await self._write(feed, pair, timestamp, d)
+        await super().write(feed, pair, timestamp, d)
 
 
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
     default_table = OPEN_INTEREST
 
     async def write(self, feed, pair, timestamp, data):
-        await self._write(feed, pair, timestamp, data['open_interest'])
+        await super().write(feed, pair, timestamp, data['open_interest'])
+
+
+class BookPostgres(PostgresCallback, BackendBookCallback):
+    default_table = 'book'
+
+    async def write(self, feed, pair, timestamp, data):
+        await super().write(feed, pair, timestamp, f"'{json.dumps(data)}'")
+
+
+class BookDeltaPostgres(PostgresCallback, BackendBookDeltaCallback):
+    default_table = 'book'
+
+    async def write(self, feed, pair, timestamp, data):
+        await super().write(feed, pair, timestamp, f"'{json.dumps(data)}'")
