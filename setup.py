@@ -62,6 +62,7 @@ setup(
         'zmq': ['pyzmq'],
         'mongo': ['motor'],
         'kafka': ['aiokafka'],
-        'rabbit': ['aio_pika', 'pika']
+        'rabbit': ['aio_pika', 'pika'],
+        'postgres': ['asyncpg']
     },
 )
