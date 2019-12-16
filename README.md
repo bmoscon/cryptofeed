@@ -113,6 +113,7 @@ Supported Backends:
 * Kafka
 * Elastic Search
 * RabbitMQ
+* Postgres
 
 
 ## Rest API
@@ -131,7 +132,6 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 Continue to build out rest endpoints and standardize exchange interfaces and data
 
 ## Additional Callback Methods / Backends
-* Postgres
 * ??
 
 # Contributing
