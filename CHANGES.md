@@ -5,6 +5,7 @@
   * Feature: New Exchange: Binance Jersey
   * Feature: Funding data on Kraken Futures
   * Feature: User defined pair seperator (default still -)
+  * Feature: Postgres backend
 
 ### 1.1.0 (2019-11-14)
   * Feature: User enabled logging of exchange messages on error
