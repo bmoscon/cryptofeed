@@ -9,7 +9,6 @@ import json
 import aioredis
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendTickerCallback, BackendTradeCallback, BackendFundingCallback, BackendOpenInterestCallback
-from cryptofeed.defines import OPEN_INTEREST
 
 
 class RedisCallback:
@@ -88,9 +87,9 @@ class TickerStream(RedisStreamCallback, BackendTickerCallback):
     
 
 class OpenInterestRedis(RedisZSetCallback, BackendOpenInterestCallback):
-    default_key = OPEN_INTEREST
+    default_key = 'open_interest'
 
 
-class TradeStream(RedisStreamCallback, BackendOpenInterestCallback):
-    default_key = OPEN_INTEREST
+class OpenInterestStream(RedisStreamCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'
 
