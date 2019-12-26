@@ -68,7 +68,7 @@ class FTX(Feed):
                             pair=pair_exchange_to_std(msg['market']),
                             bid=Decimal(msg['data']['bid']),
                             ask=Decimal(msg['data']['ask']),
-                            timestamp=msg['data']['time'])
+                            timestamp=float(msg['data']['time']))
 
     async def _book(self, msg: dict):
         """
