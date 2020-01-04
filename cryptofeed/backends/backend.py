@@ -13,14 +13,14 @@ from cryptofeed.backends._util import book_convert, book_delta_convert
 
 class BackendBookCallback:
     async def __call__(self, *, feed, pair, book, timestamp):
-        data = {'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
+        data = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'delta': False, BID: {}, ASK: {}}
         book_convert(book, data, convert=self.numeric_type)
         await self.write(feed, pair, timestamp, data)
 
 
 class BackendBookDeltaCallback:
     async def __call__(self, *, feed, pair, delta, timestamp):
-        data = {'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
+        data = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'delta': True, BID: {}, ASK: {}}
         book_delta_convert(delta, data, convert=self.numeric_type)
         await self.write(feed, pair, timestamp, data)
 
