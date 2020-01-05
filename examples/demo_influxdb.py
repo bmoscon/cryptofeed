@@ -20,7 +20,8 @@ def main():
     f.add_feed(Coinbase(channels=[L2_BOOK], pairs=['BTC-USD'], callbacks={L2_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
     f.add_feed(Coinbase(channels=[TICKER], pairs=['BTC-USD'], callbacks={TICKER: TickerInflux('http://localhost:8086', 'example', numeric_type=float)}))
     
-    """
+    """ 
+    # Uncomment Here When Using InfluxDB 2.0
     # For InfluxDB 2.0, provide additional org, bucket(instead of db), token and precision(optional) 
     # [Note] In order to use visualization and aggregation, numeric_type with float is strongly recommended. 
     
