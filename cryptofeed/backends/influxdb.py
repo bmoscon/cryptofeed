@@ -66,7 +66,6 @@ class InfluxCallback(HTTPCallback):
         if (org and bucket and token):
             self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
             self.headers = {"Authorization": f"Token {token}"}
-
         else:
             if create_db:
                 r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
