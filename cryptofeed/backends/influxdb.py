@@ -63,7 +63,7 @@ class InfluxCallback(HTTPCallback):
           Precision level among (s, ms, us, ns) 
         """
         super().__init__(addr, **kwargs)
-        if (org and bucket and token):
+        if org and bucket and token:
             self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
             self.headers = {"Authorization": f"Token {token}"}
         else:
