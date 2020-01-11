@@ -190,7 +190,8 @@ _feed_to_exchange_map = {
     FUNDING: {
         BITMEX: 'funding',
         BITFINEX: 'trades',
-        KRAKEN_FUTURES: 'ticker'
+        KRAKEN_FUTURES: 'ticker',
+        DERIBIT: "ticker",
     },
     TRADES_SWAP: {
         OKEX: 'swap/trade'

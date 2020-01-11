@@ -19,7 +19,7 @@ class Feed:
     def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
-        self.config = {}
+        self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
         self.updates = defaultdict(int)
@@ -36,12 +36,12 @@ class Feed:
         if config is not None:
             for channel in config:
                 chan = feed_to_exchange(self.id, channel)
-                self.config[chan] = {pair_std_to_exchange(pair, self.id) for pair in config[channel]}
+                self.config[chan].update([pair_std_to_exchange(pair, self.id) for pair in config[channel]])
 
         if pairs:
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
         if channels:
-            self.channels = [feed_to_exchange(self.id, chan) for chan in channels]
+            self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
 
         self.l3_book = {}
         self.l2_book = {}

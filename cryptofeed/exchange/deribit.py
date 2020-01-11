@@ -3,7 +3,7 @@ import json
 import requests
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK
+from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK, FUNDING
 from cryptofeed.standards import timestamp_normalize
 
 from sortedcontainers import SortedDict as sd
@@ -21,12 +21,13 @@ class Deribit(Feed):
                          channels=channels, config=config, callbacks=callbacks, **kwargs)
 
         instruments = self.get_instruments()
+        pairs = None
         if self.config:
             config_instruments = list(self.config.values())
-            self.pairs = [
+            pairs = [
                 pair for inner in config_instruments for pair in inner]
 
-        for pair in self.pairs:
+        for pair in self.pairs if self.pairs else pairs:
             if pair not in instruments:
                 raise ValueError(f"{pair} is not active on {self.id}")
         self.__reset()
@@ -114,17 +115,23 @@ class Deribit(Feed):
             "method" : "subscription",
             "jsonrpc" : "2.0"}
         '''
+        timestamp = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
         await self.callback(TICKER, feed=self.id,
                                     pair=msg["params"]["data"]["instrument_name"],
                                     bid=Decimal(msg["params"]["data"]['best_bid_price']),
                                     ask=Decimal(msg["params"]["data"]['best_ask_price']),
-                                    timestamp=timestamp_normalize(self.id, msg['params']['data']['timestamp']))
+                                    timestamp=timestamp)
+
+        await self.callback(FUNDING, feed=self.id,
+                                     pair=msg["params"]["data"]["instrument_name"],
+                                     timestamp=timestamp,
+                                     rate=msg["params"]["data"]["current_funding"],
+                                     rate_8h=msg["params"]["data"]["funding_8h"])
 
     async def subscribe(self, websocket):
         self.websocket = websocket
         self.__reset()
         client_id = 0
-
         for chan in self.channels if self.channels else self.config:
             for pair in self.pairs if self.pairs else self.config[chan]:
                 client_id += 1
