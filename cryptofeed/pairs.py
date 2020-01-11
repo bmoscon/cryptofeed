@@ -136,10 +136,13 @@ def kraken_pairs():
     data = r.json()
     for pair in data['result']:
         alt = data['result'][pair]['altname']
-        modifier = -3
+
         if ".d" in alt:
-            modifier = -5
-        normalized = alt[:modifier] + PAIR_SEP + alt[modifier:]
+            # https://blog.kraken.com/post/259/introducing-the-kraken-dark-pool/
+            # .d is for dark pool pairs
+            continue
+
+        normalized = alt[:-3] + PAIR_SEP + alt[-3:]
         exch = normalized.replace(PAIR_SEP, "/")
         normalized = normalized.replace('XBT', 'BTC')
         normalized = normalized.replace('XDG', 'DOG')
