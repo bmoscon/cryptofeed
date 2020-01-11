@@ -13,11 +13,10 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCal
 
 
 class RabbitCallback:
-    def __init__(self, host='localhost', key=None, numeric_type=float, **kwargs):
+    def __init__(self, host='localhost', numeric_type=float, **kwargs):
         self.conn = None
         self.host = host
         self.numeric_type = numeric_type
-        self.key = key if key else self.default_key
 
     async def connect(self):
         if not self.conn:
@@ -27,29 +26,31 @@ class RabbitCallback:
 
     async def write(self, feed: str, pair: str, timestamp: float, data: dict):
         await self.connect()
+        data['feed'] = feed
+        data['pair'] = pair
         await self.conn.default_exchange.publish(
             aio_pika.Message(
-                body=f'{self.key} {json.dumps(data)}'.encode()
+                body=json.dumps(data).encode()
             ),
             routing_key='cryptofeed'
         )
 
 
 class TradeRabbit(RabbitCallback, BackendTradeCallback):
-    default_key = 'trades'
+    pass
 
 
 class FundingRabbit(RabbitCallback, BackendFundingCallback):
-    default_key = 'funding'
+    pass
 
 
 class BookRabbit(RabbitCallback, BackendBookCallback):
-    default_key = 'book'
+    pass
 
 
 class BookDeltaRabbit(RabbitCallback, BackendBookDeltaCallback):
-    default_key = 'book'
+    pass
 
 
 class TickerRabbit(RabbitCallback, BackendTickerCallback):
-    default_key = 'ticker'
+    pass
