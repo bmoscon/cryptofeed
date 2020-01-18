@@ -96,6 +96,7 @@ Cryptofeed supports the following channels:
 * *_SWAP (L2/L3 Books, Trades, Ticker) - Swap data on supporting exchanges
 * *_FUTURES (L2/L3 Books, Trades, Ticker) - Futures data on supporting exchanges
 * INSTRUMENT - Exchange specific instrument information
+* OPEN_INTEREST - Open interest data
 
 ## Backends
 
