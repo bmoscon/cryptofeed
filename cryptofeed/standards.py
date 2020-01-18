@@ -213,6 +213,9 @@ _feed_to_exchange_map = {
     },
     INSTRUMENT: {
         BITMEX: 'instrument'
+    },
+    OPEN_INTEREST: {
+        OKEX: 'swap/ticker'
     }
 }
 

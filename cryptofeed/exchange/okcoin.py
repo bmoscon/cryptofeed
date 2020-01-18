@@ -13,7 +13,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN, OPEN_INTEREST
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -27,9 +27,11 @@ class OKCoin(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.book_depth = 200
+        self.open_interest = {}
 
     def __reset(self):
         self.l2_book = {}
+        self.open_interest = {}
 
     async def subscribe(self, websocket):
         self.__reset()
@@ -52,11 +54,19 @@ class OKCoin(Feed):
         {'table': 'spot/ticker', 'data': [{'instrument_id': 'BTC-USD', 'last': '3977.74', 'best_bid': '3977.08', 'best_ask': '3978.73', 'open_24h': '3978.21', 'high_24h': '3995.43', 'low_24h': '3961.02', 'base_volume_24h': '248.245', 'quote_volume_24h': '988112.225861', 'timestamp': '2019-03-22T22:26:34.019Z'}]}
         """
         for update in msg['data']:
+            pair = update['instrument_id']
+            timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,
-                                         pair=update['instrument_id'],
+                                         pair=pair,
                                          bid=Decimal(update['best_bid']),
                                          ask=Decimal(update['best_ask']),
-                                         timestamp=timestamp_normalize(self.id, update['timestamp']))
+                                         timestamp=timestamp)
+            if 'open_interest' in update:
+                oi = update['open_interest']
+                if pair in self.open_interest and oi == self.open_interest[pair]:
+                        continue
+                self.open_interest[pair] = oi
+                await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=timestamp)
 
     async def _trade(self, msg):
         """
