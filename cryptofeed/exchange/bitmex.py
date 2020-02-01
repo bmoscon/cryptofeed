@@ -39,7 +39,7 @@ class Bitmex(Feed):
         self._reset()
 
     def _reset(self):
-        self.partial_received = False
+        self.partial_received = defaultdict(bool)
         self.order_id = {}
         for pair in self.pairs:
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
@@ -94,15 +94,14 @@ class Bitmex(Feed):
         delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
         forced = False
-        if not self.partial_received:
+        pair = msg['data'][0]['symbol']
+        if not self.partial_received[pair]:
             # per bitmex documentation messages received before partial
             # should be discarded
             if msg['action'] != 'partial':
                 return
-            self.partial_received = True
+            self.partial_received[pair] = True
             forced = True
-
-        pair = msg['data'][0]['symbol']
 
         if msg['action'] == 'partial':
             for data in msg['data']:

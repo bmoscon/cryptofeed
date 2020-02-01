@@ -68,7 +68,7 @@ class Feed:
         Three cases we need to handle here
 
         1. Book deltas are enabled (application of max depth here is trivial)
-        2. Book deltas no enabled, but max depth is enabled
+        2. Book deltas not enabled, but max depth is enabled
         3. Neither deltas nor max depth enabled
 
         2 and 3 can be combined into a single block as long as application of depth modification
