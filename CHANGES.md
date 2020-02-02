@@ -2,6 +2,10 @@
 
 ### 1.3.0
   * Bugfix: Enabling multiple symbols on Bitmex with deltas and max depth configured could cause crashes.
+  * Bugfix: Default open interest callback missing
+  * Change: Mongo backend stores book data in BSON
+  * Feature: Open Interest callbacks added to all backends
+  * Change: Instrument removed in favor of open interest 
 
 ### 1.2.0 (2020-01-18)
   * Feature: New exchange: Binance Futures
