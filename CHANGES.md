@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.3.0
+  * Bugfix: Enabling multiple symbols on Bitmex with deltas and max depth configured could cause crashes.
+
 ### 1.2.0 (2020-01-18)
   * Feature: New exchange: Binance Futures
   * Feature: New Exchange: Binance Jersey
