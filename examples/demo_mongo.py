@@ -13,12 +13,11 @@ from cryptofeed.defines import TRADES, L2_BOOK, BOOK_DELTA
 
 def main():
     """
-    Because periods cannot be in keys in documents in mongo, the prices in L2/L3 books
-    are converted to integers in the following way:
-    price is * 10000 and truncated
+    Because periods cannot be in keys in documents in mongo, the bids and asks dictionaries
+    are converted to BSON. They will need to be decoded after being read
     """
     f = FeedHandler()
-    f.add_feed(Coinbase(channels=[TRADES, L2_BOOK],
+    f.add_feed(Coinbase(max_depth=10, channels=[L2_BOOK],
                         pairs=['BTC-USD'],
                         callbacks={TRADES: TradeMongo('coinbase', collection='trades'),
                                    L2_BOOK: BookMongo('coinbase', collection='l2_book'),

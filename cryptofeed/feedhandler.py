@@ -16,7 +16,7 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.exchanges import *
@@ -44,7 +44,6 @@ _EXCHANGES = {
     KRAKEN: Kraken,
     KRAKEN_FUTURES: KrakenFutures,
     HUOBI: Huobi,
-    HUOBI_US: HuobiUS,
     HUOBI_DM: HuobiDM,
     OKCOIN: OKCoin,
     OKEX: OKEx,
@@ -133,6 +132,8 @@ class FeedHandler:
 
         try:
             loop = asyncio.get_event_loop()
+            # Good to endable when debugging
+            # loop.set_debug(True)
 
             for feed in self.feeds:
                 if isinstance(feed, RestFeed):
@@ -222,7 +223,7 @@ class FeedHandler:
                     await handler(message, self.last_msg[feed_id])
         except Exception:
             if self.log_messages_on_error:
-                if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
+                if feed_id in {HUOBI, HUOBI_DM}:
                     message = zlib.decompress(message, 16+zlib.MAX_WBITS)
                 elif feed_id in {OKCOIN, OKEX}:
                     message = zlib.decompress(message, -15)

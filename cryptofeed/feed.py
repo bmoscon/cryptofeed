@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
-from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, INSTRUMENT, BID, ASK
+from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, OPEN_INTEREST, BID, ASK
 from cryptofeed.util.book import book_delta, depth
 
 
@@ -51,7 +51,7 @@ class Feed:
                           L3_BOOK: Callback(None),
                           VOLUME: Callback(None),
                           FUNDING: Callback(None),
-                          INSTRUMENT: Callback(None)}
+                          OPEN_INTEREST: Callback(None)}
 
         if callbacks:
             for cb_type, cb_func in callbacks.items():

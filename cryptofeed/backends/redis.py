@@ -92,4 +92,3 @@ class OpenInterestRedis(RedisZSetCallback, BackendOpenInterestCallback):
 
 class OpenInterestStream(RedisStreamCallback, BackendOpenInterestCallback):
     default_key = 'open_interest'
-

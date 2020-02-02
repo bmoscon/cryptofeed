@@ -5,19 +5,21 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import motor.motor_asyncio
+import bson
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 class MongoCallback:
-    def __init__(self, db, host='127.0.0.1', port=27017, key=None, numeric_type=float, **kwargs):
+    def __init__(self, db, host='127.0.0.1', port=27017, key=None, numeric_type=str, **kwargs):
         self.conn = motor.motor_asyncio.AsyncIOMotorClient(host, port)
         self.db = self.conn[db]
         self.numeric_type = numeric_type
         self.collection = key if key else self.default_key
 
     async def write(self, feed: str, pair: str, timestamp: float, data: dict):
-        await self.db[self.collection].insert_one(data)
+        d = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'delta': data['delta'], 'bid': bson.BSON.encode(data['bid']), 'ask': bson.BSON.encode(data['ask'])}
+        await self.db[self.collection].insert_one(d)
 
 
 class TradeMongo(MongoCallback, BackendTradeCallback):
@@ -29,30 +31,16 @@ class FundingMongo(MongoCallback, BackendFundingCallback):
 
 
 class BookMongo(MongoCallback, BackendBookCallback):
-    """
-    Because periods (decimal point) cannot be in keys in documents in mongo, the prices in L2/L3 books
-    are converted to integers in the following way:
-    price is * 10000 and truncated
-    """
     default_key = 'book'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.numeric_type = lambda x: str(int(x * 10000))
 
 
 class BookDeltaMongo(MongoCallback, BackendBookDeltaCallback):
-    """
-    Because periods (decimal point) cannot be in keys in documents in mongo, the prices in L2/L3 books
-    are converted to integers in the following way:
-    price is * 10000 and truncated
-    """
     default_key = 'book'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.numeric_type = lambda x: str(int(x * 10000))
 
 
 class TickerMongo(MongoCallback, BackendTickerCallback):
     default_key = 'ticker'
+
+
+class OpenInterestMongo(MongoCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

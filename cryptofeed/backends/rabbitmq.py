@@ -9,7 +9,7 @@ import asyncio
 
 import aio_pika
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 class RabbitCallback:
@@ -53,4 +53,8 @@ class BookDeltaRabbit(RabbitCallback, BackendBookDeltaCallback):
 
 
 class TickerRabbit(RabbitCallback, BackendTickerCallback):
+    pass
+
+
+class OpenInterestRabbit(RabbitCallback, BackendOpenInterestCallback):
     pass

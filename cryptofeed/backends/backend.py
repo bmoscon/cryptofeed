@@ -55,11 +55,6 @@ class BackendTickerCallback:
 
         
 class BackendOpenInterestCallback:
-    async def __call__(self, *, feed, pair, **kwargs):
-        if 'openInterest' in kwargs:
-            open_interest = kwargs['openInterest']
-            timestamp = kwargs['timestamp']
-            data = {'feed': feed, 'pair': pair, 'open_interest': self.numeric_type(open_interest), 'timestamp': timestamp}
-            await self.write(feed, pair, timestamp, data)
-
-    
+    async def __call__(self, *, feed, pair, open_interest, timestamp):
+        data = {'feed': feed, 'pair': pair, 'open_interest': self.numeric_type(open_interest), 'timestamp': timestamp}
+        await self.write(feed, pair, timestamp, data)

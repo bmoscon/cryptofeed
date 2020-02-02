@@ -57,17 +57,14 @@ class BookUpdateCallback(Callback):
         """
         await super().__call__(feed, pair, delta, timestamp)
 
+
 class OpenInterestCallback(Callback):
-        async def __call__(self, *, feed, pair, **kwargs):
-            await super().__call__(feed, pair, **kwargs)
-            
+    pass
+
+
 class VolumeCallback(Callback):
     pass
 
 
 class FundingCallback(Callback):
-    pass
-
-
-class InstrumentCallback(Callback):
     pass

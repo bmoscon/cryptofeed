@@ -9,7 +9,7 @@ import json
 
 from aiokafka import AIOKafkaProducer
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 class KafkaCallback:
@@ -47,3 +47,7 @@ class BookDeltaKafka(KafkaCallback, BackendBookDeltaCallback):
 
 class TickerKafka(KafkaCallback, BackendTickerCallback):
     default_key = 'ticker'
+
+
+class OpenInterestKafka(KafkaCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

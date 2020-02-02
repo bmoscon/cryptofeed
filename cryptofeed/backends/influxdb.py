@@ -11,7 +11,7 @@ import requests
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.exceptions import UnsupportedType
-from cryptofeed.backends.backend import BackendTradeCallback, BackendBookDeltaCallback, BackendBookCallback, BackendFundingCallback, BackendTickerCallback
+from cryptofeed.backends.backend import BackendTradeCallback, BackendBookDeltaCallback, BackendBookCallback, BackendFundingCallback, BackendTickerCallback, BackendOpenInterestCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -131,3 +131,6 @@ class BookDeltaInflux(InfluxBookCallback, BackendBookDeltaCallback):
 class TickerInflux(InfluxCallback, BackendTickerCallback):
     default_key = 'ticker'
 
+
+class OpenInterestInflux(InfluxCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

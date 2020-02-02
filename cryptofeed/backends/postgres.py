@@ -76,9 +76,6 @@ class TickerPostgres(PostgresCallback, BackendTickerCallback):
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
     default_table = OPEN_INTEREST
 
-    async def write(self, feed, pair, timestamp, data):
-        await super().write(feed, pair, timestamp, data['open_interest'])
-
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
     default_table = 'book'

@@ -9,7 +9,7 @@ import asyncio
 import json
 from textwrap import wrap
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -113,3 +113,7 @@ class BookDeltaSocket(SocketCallback, BackendBookDeltaCallback):
 
 class TickerSocket(SocketCallback, BackendTickerCallback):
     default_key = 'ticker'
+
+
+class OpenInterestSocket(SocketCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

@@ -10,7 +10,7 @@ import itertools
 
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.backends._util import book_flatten
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -68,3 +68,7 @@ class BookDeltaElastic(ElasticCallback, BackendBookDeltaCallback):
 
 class TickerElastic(ElasticCallback, BackendTickerCallback):
     default_index = 'ticker'
+
+
+class OpenInterestElastic(ElasticCallback, BackendOpenInterestCallback):
+    default_index = 'open_interest'

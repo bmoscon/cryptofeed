@@ -8,13 +8,13 @@ from cryptofeed.backends.aggregate import OHLCV
 
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Bitmex
-from cryptofeed.defines import TRADES, INSTRUMENT
+from cryptofeed.defines import TRADES, OPEN_INTEREST
 
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[TRADES, INSTRUMENT], callbacks={
-               INSTRUMENT: OpenInterestArctic('cryptofeed-test2'), TRADES: TradeArctic('cryptofeed-test2')}))
+    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[TRADES, OPEN_INTEREST], callbacks={
+               OPEN_INTEREST: OpenInterestArctic('cryptofeed-test2'), TRADES: TradeArctic('cryptofeed-test2')}))
 
     f.run()
 
