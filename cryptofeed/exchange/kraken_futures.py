@@ -12,7 +12,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, FUNDING, L2_BOOK, KRAKEN_FUTURES
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, FUNDING, L2_BOOK, KRAKEN_FUTURES, OPEN_INTEREST
 from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
@@ -37,6 +37,7 @@ class KrakenFutures(Feed):
         self.__reset()
 
     def __reset(self):
+        self.open_interest = {}
         self.l2_book = {}
 
     @staticmethod
@@ -172,6 +173,17 @@ class KrakenFutures(Feed):
                                 tag=msg['tag'],
                                 premium=msg['premium'],
                                 maturity_timestamp=timestamp_normalize(self.id, msg['maturityTime']))
+
+        oi = msg['openInterest']
+        if pair in self.open_interest and oi == self.open_interest[pair]:
+            return
+        self.open_interest[pair] = oi
+        await self.callback(OPEN_INTEREST,
+                            feed=self.id,
+                            pair=pair,
+                            open_interest=msg['openInterest'],
+                            timestamp=timestamp_normalize(self.id, msg['time'])
+                        )
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

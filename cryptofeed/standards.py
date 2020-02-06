@@ -209,7 +209,8 @@ _feed_to_exchange_map = {
     },
     OPEN_INTEREST: {
         OKEX: 'swap/ticker',
-        BITMEX: 'instrument'
+        BITMEX: 'instrument',
+        KRAKEN_FUTURES: 'ticker'
     }
 }
 
