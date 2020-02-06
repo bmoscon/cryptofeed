@@ -160,9 +160,9 @@ class KrakenFutures(Feed):
                                 timestamp=timestamp_normalize(self.id, msg['time']),
                                 tag=msg['tag'],
                                 rate=msg['funding_rate'],
-                                rate_prediction=msg['funding_rate_prediction'],
+                                rate_prediction=msg.get('funding_rate_prediction', None),
                                 relative_rate=msg['relative_funding_rate'],
-                                relative_rate_prediction=msg['relative_funding_rate_prediction'],
+                                relative_rate_prediction=msg.get('relative_funding_rate_prediction', None),
                                 next_rate_timestamp=timestamp_normalize(self.id, msg['next_funding_rate_time']))
         else:
             await self.callback(FUNDING,

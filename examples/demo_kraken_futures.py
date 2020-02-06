@@ -7,7 +7,7 @@ associated with this software.
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import KrakenFutures
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING
 
 
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
@@ -22,11 +22,15 @@ async def ticker(feed, pair, bid, ask, timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
 
 
+async def funding(**kwargs):
+    print(f"Funding: {kwargs}")
+
+
 def main():
     fh = FeedHandler()
 
-    config = {TRADES: ['PI_XBTUSD'], TICKER: ['PI_XBTUSD', 'PI_ETHUSD'], L2_BOOK: ['PI_XBTUSD']}
-    fh.add_feed(KrakenFutures(config=config, callbacks={TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
+    config = {TRADES: ['PI_XBTUSD'], TICKER: ['PI_XBTUSD', 'PI_ETHUSD'], L2_BOOK: ['PI_XBTUSD'], FUNDING: ['PI_XBTUSD']}
+    fh.add_feed(KrakenFutures(config=config, callbacks={FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
 
     fh.run()
 

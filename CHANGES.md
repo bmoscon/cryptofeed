@@ -7,6 +7,7 @@
   * Feature: Open Interest callbacks added to all backends
   * Change: Instrument removed in favor of open interest
   * Bugfix: Huobi feedhandlers not properly setting forced indicator for book updates, breaking deltas
+  * Bugfix: Some kraken futures funding fields not always populated
 
 ### 1.2.0 (2020-01-18)
   * Feature: New exchange: Binance Futures
