@@ -18,7 +18,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, db: str, key=None, create_db=True, numeric_type=str, **kwargs):
+    def __init__(self, addr: str, db=None, key=None, create_db=True, numeric_type=str, org=None, bucket=None, token=None, precision='ns', **kwargs):
         """
         Parent class for InfluxDB callbacks
 
@@ -53,16 +53,29 @@ class InfluxCallback(HTTPCallback):
           Create database if not exists
         numeric_type: str/float
           Convert types before writing (amount and price)
+        org: str (For InfluxDB 2.0 compatibility)
+          Orgnaization name for authentication
+        bucket: str (For InfluxDB 2.0 compatibility)
+          Bucket name for authentication
+        token: str (For InfluxDB 2.0 compatibility)
+          Token string for authentication
+        precision: str (For InfluxDB 2.0 compatibility)
+          Precision level among (s, ms, us, ns) 
         """
         super().__init__(addr, **kwargs)
-        self.addr = f"{addr}/write?db={db}"
+        if org and bucket and token:
+            self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
+            self.headers = {"Authorization": f"Token {token}"}
+        else:
+            if create_db:
+                r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
+                r.raise_for_status()
+            self.addr = f"{addr}/write?db={db}"
+            self.headers = {}
+            
         self.session = None
         self.numeric_type = numeric_type
         self.key = key if key else self.default_key
-
-        if create_db:
-            r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
-            r.raise_for_status()
 
     async def write(self, feed, pair, timestamp, data):
         d = ''
@@ -77,7 +90,7 @@ class InfluxCallback(HTTPCallback):
         d = d[:-1]
 
         update = f'{self.key}-{feed},pair={pair} {d},timestamp={timestamp}'
-        await self.http_write('POST', update)
+        await self.http_write('POST', update, self.headers)
 
 
 class TradeInflux(InfluxCallback, BackendTradeCallback):
@@ -113,7 +126,7 @@ class InfluxBookCallback(InfluxCallback):
                     else:
                         raise UnsupportedType(f"Type {self.numeric_type} not supported")
                     ts += 1
-        await self.http_write('POST', '\n'.join(msg))
+        await self.http_write('POST', '\n'.join(msg), self.headers)
 
 
 class BookInflux(InfluxBookCallback, BackendBookCallback):
