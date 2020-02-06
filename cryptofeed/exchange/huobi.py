@@ -32,6 +32,8 @@ class Huobi(Feed):
     async def _book(self, msg):
         pair = pair_exchange_to_std(msg['ch'].split('.')[1])
         data = msg['tick']
+        forced = pair not in self.l2_book
+
 
         self.l2_book[pair] = {
             BID: sd({
@@ -44,7 +46,7 @@ class Huobi(Feed):
             })
         }
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, False, timestamp_normalize(self.id, msg['ts']))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']))
 
     async def _trade(self, msg):
         """

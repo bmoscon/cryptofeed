@@ -49,25 +49,27 @@ class HuobiDM(Feed):
 
     async def _book(self, msg):
         """
-    {
-   'ch':'market.BTC_CW.depth.step0',
-   'ts':1565857755564,
-   'tick':{
-      'mrid':14848858327,
-      'id':1565857755,
-      'bids':[
-         [  Decimal('9829.99'), 1], ...
-             ]
-      'asks':[
-         [ 9830, 625], ...
-             ]
-      'ts':1565857755552,
-      'version':1565857755,
-      'ch':'market.BTC_CW.depth.step0'
-      }
+        {
+            'ch':'market.BTC_CW.depth.step0',
+            'ts':1565857755564,
+            'tick':{
+                'mrid':14848858327,
+                'id':1565857755,
+                'bids':[
+                    [  Decimal('9829.99'), 1], ...
+                ]
+                'asks':[
+                    [ 9830, 625], ...
+                ]
+            },
+            'ts':1565857755552,
+            'version':1565857755,
+            'ch':'market.BTC_CW.depth.step0'
+        }
         """
         pair = pair_std_to_exchange(msg['ch'].split('.')[1], self.id)
         data = msg['tick']
+        forced = pair not in self.l2_book
 
         self.l2_book[pair] = {
             BID: sd({
@@ -80,7 +82,7 @@ class HuobiDM(Feed):
             })
         }
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, False, timestamp_normalize(self.id, msg['ts']))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']))
 
     async def _trade(self, msg):
         """
