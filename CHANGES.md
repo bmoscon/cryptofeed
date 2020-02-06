@@ -9,6 +9,7 @@
   * Bugfix: Huobi feedhandlers not properly setting forced indicator for book updates, breaking deltas
   * Bugfix: Some kraken futures funding fields not always populated
   * Feature: Open interest updates for kraken futures
+  * Feature: Open interest updates for Deribit
 
 ### 1.2.0 (2020-01-18)
   * Feature: New exchange: Binance Futures

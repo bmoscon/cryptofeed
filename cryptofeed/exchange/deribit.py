@@ -3,7 +3,7 @@ import json
 import requests
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK, FUNDING
+from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK, FUNDING, OPEN_INTEREST
 from cryptofeed.standards import timestamp_normalize
 
 from sortedcontainers import SortedDict as sd
@@ -33,6 +33,7 @@ class Deribit(Feed):
         self.__reset()
 
     def __reset(self):
+        self.open_interest = {}
         self.l2_book = {}
 
     @staticmethod
@@ -88,45 +89,56 @@ class Deribit(Feed):
         {
             "params" : {
                 "data" : {
-                "timestamp" : 1550652954406,
-                "stats" : {
-                    "volume" : null,
-                    "low" : null,
-                    "high" : null
-                },
-                "state" : "open",
-                "settlement_price" : 3960.14,
-                "open_interest" : 0.12759952124659626,
-                "min_price" : 3943.21,
-                "max_price" : 3982.84,
-                "mark_price" : 3940.06,
-                "last_price" : 3906,
-                "instrument_name" : "BTC-PERPETUAL",
-                "index_price" : 3918.51,
-                "funding_8h" : 0.01520525,
-                "current_funding" : 0.00499954,
-                "best_bid_price" : 3914.97,
-                "best_bid_amount" : 40,
-                "best_ask_price" : 3996.61,
-                "best_ask_amount" : 50
-                },
+                    "timestamp" : 1550652954406,
+                    "stats" : {
+                        "volume" : null,
+                        "low" : null,
+                        "high" : null
+                    },
+                    "state" : "open",
+                    "settlement_price" : 3960.14,
+                    "open_interest" : 0.12759952124659626,
+                    "min_price" : 3943.21,
+                    "max_price" : 3982.84,
+                    "mark_price" : 3940.06,
+                    "last_price" : 3906,
+                    "instrument_name" : "BTC-PERPETUAL",
+                    "index_price" : 3918.51,
+                    "funding_8h" : 0.01520525,
+                    "current_funding" : 0.00499954,
+                    "best_bid_price" : 3914.97,
+                    "best_bid_amount" : 40,
+                    "best_ask_price" : 3996.61,
+                    "best_ask_amount" : 50
+                    },
                 "channel" : "ticker.BTC-PERPETUAL.raw"
             },
             "method" : "subscription",
             "jsonrpc" : "2.0"}
         '''
+        pair = msg['params']['data']['instrument_name']
         timestamp = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
         await self.callback(TICKER, feed=self.id,
-                                    pair=msg["params"]["data"]["instrument_name"],
+                                    pair=pair,
                                     bid=Decimal(msg["params"]["data"]['best_bid_price']),
                                     ask=Decimal(msg["params"]["data"]['best_ask_price']),
                                     timestamp=timestamp)
 
         await self.callback(FUNDING, feed=self.id,
-                                     pair=msg["params"]["data"]["instrument_name"],
+                                     pair=pair,
                                      timestamp=timestamp,
                                      rate=msg["params"]["data"]["current_funding"],
                                      rate_8h=msg["params"]["data"]["funding_8h"])
+        oi = msg['params']['data']['open_interest']
+        if pair in self.open_interest and oi == self.open_interest[pair]:
+            return
+        self.open_interest[pair] = oi
+        await self.callback(OPEN_INTEREST,
+                            feed=self.id,
+                            pair=pair,
+                            open_interest=oi,
+                            timestamp=timestamp_normalize(self.id, timestamp)
+                        )
 
     async def subscribe(self, websocket):
         self.websocket = websocket
