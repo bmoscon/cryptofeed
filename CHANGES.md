@@ -11,6 +11,7 @@
   * Feature: Open interest updates for kraken futures
   * Feature: Open interest updates for Deribit
   * Bugfix: FTX ticker can have Nones for bid/ask
+  * Feature: InfluxDB 2.0 support
 
 ### 1.2.0 (2020-01-18)
   * Feature: New exchange: Binance Futures
