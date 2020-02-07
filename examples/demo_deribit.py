@@ -35,6 +35,8 @@ def main():
     f.add_feed(Deribit(config=config, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
     f.add_feed(Deribit(pairs=['BTC-PERPETUAL'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
 
+    f.add_feed(Deribit(pairs=['BTC-26JUN20', 'BTC-25SEP20-11000-P'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)}))
+
     f.run()
 
 
