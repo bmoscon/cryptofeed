@@ -124,11 +124,12 @@ class Deribit(Feed):
                                     ask=Decimal(msg["params"]["data"]['best_ask_price']),
                                     timestamp=timestamp)
 
-        await self.callback(FUNDING, feed=self.id,
-                                     pair=pair,
-                                     timestamp=timestamp,
-                                     rate=msg["params"]["data"]["current_funding"],
-                                     rate_8h=msg["params"]["data"]["funding_8h"])
+        if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
+            await self.callback(FUNDING, feed=self.id,
+                                         pair=pair,
+                                         timestamp=timestamp,
+                                         rate=msg["params"]["data"]["current_funding"],
+                                         rate_8h=msg["params"]["data"]["funding_8h"])
         oi = msg['params']['data']['open_interest']
         if pair in self.open_interest and oi == self.open_interest[pair]:
             return
