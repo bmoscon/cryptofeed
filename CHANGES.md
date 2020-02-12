@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.3.0
+### 1.3.0 (2020-02-11)
   * Bugfix: Enabling multiple symbols on Bitmex with deltas and max depth configured could cause crashes.
   * Bugfix: Default open interest callback missing
   * Change: Mongo backend stores book data in BSON
