@@ -34,8 +34,7 @@ class Huobi(Feed):
         data = msg['tick']
         forced = pair not in self.l2_book
 
-
-        self.l2_book[pair] = {
+        update = {
             BID: sd({
                 Decimal(price): Decimal(amount)
                 for price, amount in data['bids']
@@ -45,6 +44,10 @@ class Huobi(Feed):
                 for price, amount in data['asks']
             })
         }
+
+        if not forced:
+            self.previous_book[pair] = self.l2_book[pair]
+        self.l2_book[pair] = update
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']))
 
