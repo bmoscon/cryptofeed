@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 from decimal import Decimal
+from collections import defaultdict
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
@@ -41,6 +42,7 @@ class Binance(Feed):
         return address[:-1]
 
     def __reset(self):
+        self.forced = defaultdict(bool)
         self.l2_book = {}
         self.last_update_id = {}
 
@@ -107,38 +109,38 @@ class Binance(Feed):
                                      ask=ask,
                                      timestamp=timestamp_normalize(self.id, msg['E']))
 
-    async def _snapshot(self, pairs: list):
-        urls = [f'{self.rest_endpoint}/depth?symbol={sym}&limit={self.book_depth}' for sym in pairs]
-        async def fetch(session, url):
-            async with session.get(url) as response:
-                response.raise_for_status()
-                return await response.json()
+    async def _snapshot(self, pair: str) -> None:
+        url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
 
         async with aiohttp.ClientSession() as session:
-            results = await asyncio.gather(*[fetch(session, url) for url in urls])
+            async with session.get(url) as response:
+                response.raise_for_status()
+                resp = await response.json()
 
-        for r, pair in zip(results, pairs):
-            std_pair = pair_exchange_to_std(pair)
-            self.last_update_id[pair] = r['lastUpdateId']
-            self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
-            for s, side in (('bids', BID), ('asks', ASK)):
-                for update in r[s]:
-                    price = Decimal(update[0])
-                    amount = Decimal(update[1])
-                    self.l2_book[std_pair][side][price] = amount
+                std_pair = pair_exchange_to_std(pair)
+                self.last_update_id[std_pair] = resp['lastUpdateId']
+                self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
+                for s, side in (('bids', BID), ('asks', ASK)):
+                    for update in resp[s]:
+                        price = Decimal(update[0])
+                        amount = Decimal(update[1])
+                        self.l2_book[std_pair][side][price] = amount
 
-    def _check_update_id(self, pair: str, msg: dict):
+    def _check_update_id(self, pair: str, msg: dict) -> [bool, bool]:
         skip_update = False
-        forced = False
+        forced = not self.forced[pair]
 
-        if pair in self.last_update_id:
-            if msg['u'] <= self.last_update_id[pair]:
-                skip_update = True
-            elif msg['U'] <= self.last_update_id[pair]+1 <= msg['u']:
-                del self.last_update_id[pair]
-                forced = True
-            else:
-                raise Exception("Error - snaphot has no overlap with first update")
+        if forced and msg['u'] <= self.last_update_id[pair]:
+            skip_update = True
+        elif forced and msg['U'] <= self.last_update_id[pair]+1 <= msg['u']:
+            self.last_update_id[pair] = msg['u']
+            self.forced[pair] = True
+        elif not forced and self.last_update_id[pair]+1 == msg['U']:
+            self.last_update_id[pair] = msg['u']
+        else:
+            self.__reset()
+            LOG.warning("%s: Missing book update detected, resetting book", self.id)
+            skip_update = True
 
         return skip_update, forced
 
@@ -164,12 +166,17 @@ class Binance(Feed):
             ]
         }
         """
+        exchange_pair = pair
+        pair = pair_exchange_to_std(pair)
+
+        if pair not in self.l2_book:
+            await self._snapshot(exchange_pair)
+
         skip_update, forced = self._check_update_id(pair, msg)
         if skip_update:
             return
 
         delta = {BID: [], ASK: []}
-        pair = pair_exchange_to_std(pair)
         timestamp = msg['E']
 
         for s, side in (('b', BID), ('a', ASK)):
@@ -211,8 +218,3 @@ class Binance(Feed):
         # subsription information is included in the
         # connection endpoint
         self.__reset()
-        # If full book enabled, collect snapshot first
-        if feed_to_exchange(self.id, L2_BOOK) in self.channels:
-            await self._snapshot(self.pairs)
-        elif feed_to_exchange(self.id, L2_BOOK) in self.config:
-            await self._snapshot(self.config[feed_to_exchange(self.id, L2_BOOK)])
