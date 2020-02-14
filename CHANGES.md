@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.3.1
+  * Feature: Add missing update detection to orderbooks in Binance
+
 ### 1.3.0 (2020-02-11)
   * Bugfix: Enabling multiple symbols on Bitmex with deltas and max depth configured could cause crashes.
   * Bugfix: Default open interest callback missing
