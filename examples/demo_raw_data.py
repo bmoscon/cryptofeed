@@ -11,7 +11,7 @@ from cryptofeed.defines import L2_BOOK
 
 
 def main():
-    f = FeedHandler(raw_message_capture=AsyncFileCallback('./'))
+    f = FeedHandler(raw_message_capture=AsyncFileCallback('./'), handler_enabled=False)
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK]))
 
     f.run()
