@@ -54,7 +54,7 @@ setup(
         "aiohttp",
         "aiodns",
         "cchardet",
-        "aiofiles"
+        "aiofile"
     ],
     extras_require={
         'redis': ['aioredis'],

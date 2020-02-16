@@ -7,12 +7,12 @@ associated with this software.
 from cryptofeed.util.async_file import AsyncFileCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.defines import L2_BOOK
+from cryptofeed.defines import L3_BOOK, TICKER, TRADES
 
 
 def main():
     f = FeedHandler(raw_message_capture=AsyncFileCallback('./'), handler_enabled=False)
-    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK]))
+    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L3_BOOK, TICKER, TRADES]))
 
     f.run()
 
