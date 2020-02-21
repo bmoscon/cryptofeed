@@ -31,7 +31,7 @@ def init(data):
     called at start of each new interval. We just need to clear the
     internal state
     """
-    data = {}
+    data.clear()
 
 
 def main():
