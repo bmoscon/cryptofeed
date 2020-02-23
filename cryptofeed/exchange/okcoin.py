@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
-import re
 import logging
 from decimal import Decimal
 import zlib
@@ -22,7 +21,6 @@ LOG = logging.getLogger('feedhandler')
 
 class OKCoin(Feed):
     id = OKCOIN
-    table_prefixs = ['spot']
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
@@ -112,8 +110,9 @@ class OKCoin(Feed):
                         price = Decimal(price)
                         amount = Decimal(amount)
                         if amount == 0:
-                            delta[s].append((price, 0))
-                            del self.l2_book[pair][s][price]
+                            if price in self.l2_book[pair][s]:
+                                delta[s].append((price, 0))
+                                del self.l2_book[pair][s][price]
                         else:
                             delta[s].append((price, amount))
                             self.l2_book[pair][s][price] = amount
@@ -132,11 +131,12 @@ class OKCoin(Feed):
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'table' in msg:
-            if re.match(f'^({"|".join(self.table_prefixs)})/ticker$', msg['table']):
+
+            if 'ticker' in msg['table']:
                 await self._ticker(msg)
-            elif re.match(f'^({"|".join(self.table_prefixs)})/trade$', msg['table']):
+            elif 'trade' in msg['table']:
                 await self._trade(msg)
-            elif re.match(f'^({"|".join(self.table_prefixs)})/depth$', msg['table']):
+            elif 'depth_l2_tbt' in msg['table']:
                 await self._book(msg)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)

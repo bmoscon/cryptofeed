@@ -92,8 +92,8 @@ _feed_to_exchange_map = {
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
         HUOBI_DM: 'depth.step0',
-        OKCOIN: 'spot/depth',
-        OKEX: 'spot/depth',
+        OKCOIN: 'spot/depth_l2_tbt',
+        OKEX: 'spot/depth_l2_tbt',
         COINBENE: L2_BOOK,
         DERIBIT: 'book',
         BYBIT: 'order_book_25L1',
@@ -196,7 +196,7 @@ _feed_to_exchange_map = {
         OKEX: 'swap/ticker'
     },
     L2_BOOK_SWAP: {
-        OKEX: 'swap/depth'
+        OKEX: 'swap/depth_l2_tbt'
     },
     TRADES_FUTURES: {
         OKEX: 'futures/trade'
@@ -205,7 +205,7 @@ _feed_to_exchange_map = {
         OKEX: 'futures/ticker'
     },
     L2_BOOK_FUTURES: {
-        OKEX: 'futures/depth'
+        OKEX: 'futures/depth_l2_tbt'
     },
     OPEN_INTEREST: {
         OKEX: 'swap/ticker',
