@@ -21,18 +21,3 @@ class BinanceFutures(Binance):
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
-
-    def _check_update_id(self, pair: str, msg: dict):
-        skip_update = False
-        forced = False
-
-        if pair in self.last_update_id:
-            if msg['u'] < self.last_update_id[pair]:
-                skip_update = True
-            elif msg['U'] <= self.last_update_id[pair] <= msg['u']:
-                del self.last_update_id[pair]
-                forced = True
-            else:
-                raise Exception("Error - snaphot has no overlap with first update")
-
-        return skip_update, forced
