@@ -126,7 +126,7 @@ class Binance(Feed):
                         amount = Decimal(update[1])
                         self.l2_book[std_pair][side][price] = amount
 
-    def _check_update_id(self, pair: str, msg: dict) -> [bool, bool]:
+    def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
         skip_update = False
         forced = not self.forced[pair]
 
