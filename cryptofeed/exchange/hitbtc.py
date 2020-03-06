@@ -28,12 +28,13 @@ class HitBTC(Feed):
                          callbacks=callbacks,
                          **kwargs)
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         await self.callback(TICKER, feed=self.id,
                                      pair=pair_exchange_to_std(msg['symbol']),
                                      bid=Decimal(msg['bid']),
                                      ask=Decimal(msg['ask']),
-                                     timestamp=timestamp_normalize(self.id, msg['timestamp']))
+                                     timestamp=timestamp_normalize(self.id, msg['timestamp']),
+                                     receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -49,7 +50,7 @@ class HitBTC(Feed):
                 else:
                     self.l2_book[pair][side][price] = size
                     delta[side].append((price, size))
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['symbol'])
@@ -59,9 +60,9 @@ class HitBTC(Feed):
                 price = Decimal(entry['price'])
                 size = Decimal(entry['size'])
                 self.l2_book[pair][side][price] = size
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
-    async def _trades(self, msg):
+    async def _trades(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['symbol'])
         for update in msg['data']:
             price = Decimal(update['price'])
@@ -75,24 +76,25 @@ class HitBTC(Feed):
                                          amount=quantity,
                                          price=price,
                                          order_id=order_id,
-                                         timestamp=timestamp)
+                                         timestamp=timestamp,
+                                         receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'method' in msg:
             if msg['method'] == 'ticker':
-                await self._ticker(msg['params'])
+                await self._ticker(msg['params'], timestamp)
             elif msg['method'] == 'snapshotOrderbook':
                 await self._snapshot(msg['params'], timestamp)
             elif msg['method'] == 'updateOrderbook':
                 await self._book(msg['params'], timestamp)
             elif msg['method'] == 'updateTrades' or msg['method'] == 'snapshotTrades':
-                await self._trades(msg['params'])
+                await self._trades(msg['params'], timestamp)
             else:
                 LOG.warning("%s: Invalid message received: %s", self.id, msg)
         elif 'channel' in msg:
             if msg['channel'] == 'ticker':
-                await self._ticker(msg['data'])
+                await self._ticker(msg['data'], timestamp)
             else:
                 LOG.warning("%s: Invalid message received: %s", self.id, msg)
         else:

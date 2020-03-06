@@ -48,7 +48,7 @@ class Deribit(Feed):
         instruments = [instr['instrumentName'] for instr in r['result']]
         return instruments
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         {
             "params":
@@ -81,10 +81,11 @@ class Deribit(Feed):
                 side=BUY if trade['direction'] == 'buy' else SELL,
                 amount=Decimal(trade['amount']),
                 price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['timestamp'])
+                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                receipt_timestamp=timestamp,
             )
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         '''
         {
             "params" : {
@@ -117,17 +118,19 @@ class Deribit(Feed):
             "jsonrpc" : "2.0"}
         '''
         pair = msg['params']['data']['instrument_name']
-        timestamp = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
+        ts = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
         await self.callback(TICKER, feed=self.id,
                                     pair=pair,
                                     bid=Decimal(msg["params"]["data"]['best_bid_price']),
                                     ask=Decimal(msg["params"]["data"]['best_ask_price']),
-                                    timestamp=timestamp)
+                                    timestamp=ts,
+                                    receipt_timestamp=timestamp)
 
         if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
             await self.callback(FUNDING, feed=self.id,
                                          pair=pair,
-                                         timestamp=timestamp,
+                                         timestamp=ts,
+                                         receipt_timestamp=timestamp,
                                          rate=msg["params"]["data"]["current_funding"],
                                          rate_8h=msg["params"]["data"]["funding_8h"])
         oi = msg['params']['data']['open_interest']
@@ -138,7 +141,8 @@ class Deribit(Feed):
                             feed=self.id,
                             pair=pair,
                             open_interest=oi,
-                            timestamp=timestamp_normalize(self.id, timestamp)
+                            timestamp=ts,
+                            receipt_timestamp=timestamp
                         )
 
     async def subscribe(self, websocket):
@@ -161,8 +165,8 @@ class Deribit(Feed):
                     }
                 ))
 
-    async def _book_snapshot(self, msg):
-        timestamp = msg["params"]["data"]["timestamp"]
+    async def _book_snapshot(self, msg: dict, timestamp: float):
+        ts = msg["params"]["data"]["timestamp"]
         pair = msg["params"]["data"]["instrument_name"]
         self.l2_book[pair] = {
             BID: sd({
@@ -176,10 +180,10 @@ class Deribit(Feed):
             })
         }
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, ts), timestamp)
 
-    async def _book_update(self, msg):
-        timestamp = msg["params"]["data"]["timestamp"]
+    async def _book_update(self, msg: dict, timestamp: float):
+        ts = msg["params"]["data"]["timestamp"]
         pair = msg["params"]["data"]["instrument_name"]
         delta = {BID: [], ASK: []}
 
@@ -200,7 +204,7 @@ class Deribit(Feed):
             else:
                 del bidask[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg_dict = json.loads(msg, parse_float=Decimal)
@@ -209,16 +213,16 @@ class Deribit(Feed):
         if "testnet" in msg_dict.keys():
             LOG.debug("%s: Test response from derbit accepted %s", self.id, msg)
         elif "ticker" == msg_dict["params"]["channel"].split(".")[0]:
-            await self._ticker(msg_dict)
+            await self._ticker(msg_dict, timestamp)
         elif "trades" == msg_dict["params"]["channel"].split(".")[0]:
-            await self._trade(msg_dict)
+            await self._trade(msg_dict, timestamp)
         elif "book" == msg_dict["params"]["channel"].split(".")[0]:
 
             # cheking if we got full book or its update
             # if it's update there is 'prev_change_id' field
             if "prev_change_id" not in msg_dict["params"]["data"].keys():
-                await self._book_snapshot(msg_dict)
+                await self._book_snapshot(msg_dict, timestamp)
             elif "prev_change_id" in msg_dict["params"]["data"].keys():
-                await self._book_update(msg_dict)
+                await self._book_update(msg_dict, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)

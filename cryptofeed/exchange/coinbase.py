@@ -34,7 +34,7 @@ class Coinbase(Feed):
         self.l3_book = {}
         self.l2_book = {}
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         '''
         {
             'type': 'ticker',
@@ -72,9 +72,10 @@ class Coinbase(Feed):
                                      pair=pair_exchange_to_std(msg['product_id']),
                                      bid=Decimal(msg['best_bid']),
                                      ask=Decimal(msg['best_ask']),
-                                     timestamp=timestamp_normalize(self.id, msg['time']))
+                                     timestamp=timestamp_normalize(self.id, msg['time']),
+                                     receipt_timestamp=timestamp)
 
-    async def _book_update(self, msg):
+    async def _book_update(self, msg: dict, timestamp: float):
         '''
         {
             'type': 'match', or last_match
@@ -97,7 +98,7 @@ class Coinbase(Feed):
             side = ASK if msg['side'] == 'sell' else BID
             size = Decimal(msg['size'])
             maker_order_id = msg['maker_order_id']
-            timestamp = timestamp_normalize(self.id, msg['time'])
+            ts = timestamp_normalize(self.id, msg['time'])
 
             _, new_size = self.order_map[maker_order_id]
             new_size -= size
@@ -112,7 +113,7 @@ class Coinbase(Feed):
                 self.l3_book[pair][side][price][maker_order_id] = new_size
                 delta[side].append((maker_order_id, price, new_size))
 
-            await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, timestamp)
+            await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
         await self.callback(TRADES,
             feed=self.id,
@@ -121,8 +122,8 @@ class Coinbase(Feed):
             side=SELL if msg['side'] == 'buy' else BUY,
             amount=Decimal(msg['size']),
             price=Decimal(msg['price']),
-            timestamp=timestamp_normalize(self.id, msg['time'])
-
+            timestamp=timestamp_normalize(self.id, msg['time']),
+            receipt_timestamp=timestamp
         )
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
@@ -138,7 +139,7 @@ class Coinbase(Feed):
             })
         }
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['product_id'])
@@ -156,7 +157,7 @@ class Coinbase(Feed):
                 bidask[price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def _book_snapshot(self, pairs: list):
         self.__reset()
@@ -189,16 +190,16 @@ class Coinbase(Feed):
                     else:
                         self.l3_book[npair][side][price] = {order_id: size}
                     self.order_map[order_id] = (price, size)
-            await self.book_callback(self.l3_book[npair], L3_BOOK, npair, True, None, timestamp=timestamp)
+            await self.book_callback(self.l3_book[npair], L3_BOOK, npair, True, None, timestamp, timestamp)
 
-    async def _open(self, msg):
+    async def _open(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         size = Decimal(msg['remaining_size'])
         pair = pair_exchange_to_std(msg['product_id'])
         order_id = msg['order_id']
-        timestamp = timestamp_normalize(self.id, msg['time'])
+        ts = timestamp_normalize(self.id, msg['time'])
 
         if price in self.l3_book[pair][side]:
             self.l3_book[pair][side][price][order_id] = size
@@ -208,9 +209,9 @@ class Coinbase(Feed):
 
         delta[side].append((order_id, price, size))
 
-        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, timestamp)
+        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
-    async def _done(self, msg):
+    async def _done(self, msg: dict, timestamp: float):
         """
         per Coinbase API Docs:
 
@@ -230,7 +231,7 @@ class Coinbase(Feed):
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         pair = pair_exchange_to_std(msg['product_id'])
-        timestamp = timestamp_normalize(self.id, msg['time'])
+        ts = timestamp_normalize(self.id, msg['time'])
 
         del self.l3_book[pair][side][price][order_id]
         if len(self.l3_book[pair][side][price]) == 0:
@@ -238,14 +239,14 @@ class Coinbase(Feed):
         delta[side].append((order_id, price, 0))
         del self.order_map[order_id]
 
-        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, timestamp)
+        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
-    async def _change(self, msg):
+    async def _change(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
 
         if 'price' not in msg or not msg['price']:
             return
-        timestamp = timestamp_normalize(self.id, msg['time'])
+        ts = timestamp_normalize(self.id, msg['time'])
         order_id = msg['order_id']
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
@@ -257,7 +258,7 @@ class Coinbase(Feed):
 
         delta[side].append((order_id, price, new_size))
 
-        await self.book_callback(self.l3_book, L3_BOOK, pair, False, delta, timestamp)
+        await self.book_callback(self.l3_book, L3_BOOK, pair, False, delta, ts, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -276,19 +277,19 @@ class Coinbase(Feed):
 
         if 'type' in msg:
             if msg['type'] == 'ticker':
-                await self._ticker(msg)
+                await self._ticker(msg, timestamp)
             elif msg['type'] == 'match' or msg['type'] == 'last_match':
-                await self._book_update(msg)
+                await self._book_update(msg, timestamp)
             elif msg['type'] == 'snapshot':
                 await self._pair_level2_snapshot(msg, timestamp)
             elif msg['type'] == 'l2update':
                 await self._pair_level2_update(msg, timestamp)
             elif msg['type'] == 'open':
-                await self._open(msg)
+                await self._open(msg, timestamp)
             elif msg['type'] == 'done':
-                await self._done(msg)
+                await self._done(msg, timestamp)
             elif msg['type'] == 'change':
-                await self._change(msg)
+                await self._change(msg, timestamp)
             elif msg['type'] == 'received':
                 pass
             elif msg['type'] == 'activate':
