@@ -29,7 +29,7 @@ class EXX(Feed):
     def __reset(self):
         self.l2_book = {}
 
-    async def _book_update(self, msg):
+    async def _book_update(self, msg: dict, timestamp: float):
         """
         Snapshot:
 
@@ -87,7 +87,7 @@ class EXX(Feed):
             # snapshot
             forced = True
             pair = pair_exchange_to_std(msg[2])
-            timestamp = msg[3]
+            ts = msg[3]
             asks = msg[4]['asks'] if 'asks' in msg[4] else msg[5]['asks']
             bids = msg[5]['bids'] if 'bids' in msg[5] else msg[4]['bids']
             self.l2_book[pair] = {
@@ -102,7 +102,7 @@ class EXX(Feed):
             }
         else:
             # Update
-            timestamp = msg[2]
+            ts = msg[2]
             pair = pair_exchange_to_std(msg[3])
             side = ASK if msg[4] == 'ASK' else BID
             price = Decimal(msg[5])
@@ -116,15 +116,15 @@ class EXX(Feed):
                 self.l2_book[pair][side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, ts, timestamp)
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         Trade message
 
         ['T', '1', '1547947390', 'BTC_USDT', 'bid', '3683.74440000', '0.082', '33732290']
         """
-        timestamp = float(msg[2])
+        ts = float(msg[2])
         pair = pair_exchange_to_std(msg[3])
         side = BUY if msg[4] == 'bid' else SELL
         price = Decimal(msg[5])
@@ -138,7 +138,8 @@ class EXX(Feed):
             side=side,
             amount=amount,
             price=price,
-            timestamp=timestamp
+            timestamp=ts,
+            receipt_timestamp=timestamp,
         )
 
     async def message_handler(self, msg: str, timestamp: float):
@@ -148,9 +149,9 @@ class EXX(Feed):
             msg = msg[0]
 
         if msg[0] == 'E' or msg[0] == 'AE':
-            await self._book_update(msg)
+            await self._book_update(msg, timestamp)
         elif msg[0] == 'T':
-            await self._trade(msg)
+            await self._trade(msg, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 

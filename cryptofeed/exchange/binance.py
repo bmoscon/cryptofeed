@@ -30,7 +30,7 @@ class Binance(Feed):
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.address = self._address()
-        self.__reset()
+        self._reset()
 
     def _address(self):
         address = self.ws_endpoint+'/stream?streams='
@@ -41,12 +41,12 @@ class Binance(Feed):
                 address += stream
         return address[:-1]
 
-    def __reset(self):
+    def _reset(self):
         self.forced = defaultdict(bool)
         self.l2_book = {}
         self.last_update_id = {}
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         {
             "e": "aggTrade",  // Event type
@@ -70,9 +70,10 @@ class Binance(Feed):
                                      side=SELL if msg['m'] else BUY,
                                      amount=amount,
                                      price=price,
-                                     timestamp=timestamp_normalize(self.id, msg['E']))
+                                     timestamp=timestamp_normalize(self.id, msg['E']),
+                                     receipt_timestamp=timestamp)
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         """
         {
         "e": "24hrTicker",  // Event type
@@ -107,7 +108,8 @@ class Binance(Feed):
                                      pair=pair,
                                      bid=bid,
                                      ask=ask,
-                                     timestamp=timestamp_normalize(self.id, msg['E']))
+                                     timestamp=timestamp_normalize(self.id, msg['E']),
+                                     receipt_timestamp=timestamp)
 
     async def _snapshot(self, pair: str) -> None:
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
@@ -138,7 +140,7 @@ class Binance(Feed):
         elif not forced and self.last_update_id[pair]+1 == msg['U']:
             self.last_update_id[pair] = msg['u']
         else:
-            self.__reset()
+            self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
 
@@ -177,7 +179,7 @@ class Binance(Feed):
             return
 
         delta = {BID: [], ASK: []}
-        timestamp = msg['E']
+        ts = msg['E']
 
         for s, side in (('b', BID), ('a', ASK)):
             for update in msg[s]:
@@ -192,7 +194,7 @@ class Binance(Feed):
                     self.l2_book[pair][side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -207,9 +209,9 @@ class Binance(Feed):
         if msg['e'] == 'depthUpdate':
             await self._book(msg, pair, timestamp)
         elif msg['e'] == 'aggTrade':
-            await self._trade(msg)
+            await self._trade(msg, timestamp)
         elif msg['e'] == '24hrTicker':
-            await self._ticker(msg)
+            await self._ticker(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
@@ -217,4 +219,4 @@ class Binance(Feed):
         # Binance does not have a separate subscribe message, the
         # subsription information is included in the
         # connection endpoint
-        self.__reset()
+        self._reset()

@@ -29,7 +29,7 @@ class Huobi(Feed):
     def __reset(self):
         self.l2_book = {}
 
-    async def _book(self, msg):
+    async def _book(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['ch'].split('.')[1])
         data = msg['tick']
         forced = pair not in self.l2_book
@@ -49,9 +49,9 @@ class Huobi(Feed):
             self.previous_book[pair] = self.l2_book[pair]
         self.l2_book[pair] = update
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         {
             'ch': 'market.btcusd.trade.detail',
@@ -69,8 +69,8 @@ class Huobi(Feed):
                 side=BUY if trade['direction'] == 'buy' else SELL,
                 amount=Decimal(trade['amount']),
                 price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['ts'])
-            )
+                timestamp=timestamp_normalize(self.id, trade['ts']),
+                receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         # unzip message
@@ -84,9 +84,9 @@ class Huobi(Feed):
             return
         elif 'ch' in msg:
             if 'trade' in msg['ch']:
-                await self._trade(msg)
+                await self._trade(msg, timestamp)
             elif 'depth' in msg['ch']:
-                await self._book(msg)
+                await self._book(msg, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
