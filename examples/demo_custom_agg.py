@@ -16,7 +16,7 @@ async def callback(data=None):
     print(data)
 
 
-def custom_agg(data, feed=None, pair=None, side=None, amount=None, price=None, order_id=None, timestamp=None):
+def custom_agg(data, feed=None, pair=None, side=None, amount=None, price=None, order_id=None, timestamp=None, receipt_timestamp=None):
     if pair not in data:
         data[pair] = {'min': price, 'max': price}
     else:
