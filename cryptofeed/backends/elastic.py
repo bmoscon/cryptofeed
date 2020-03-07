@@ -24,7 +24,7 @@ class ElasticCallback(HTTPCallback):
         self.session = None
         self.numeric_type = numeric_type
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
     async def write_bulk(self, data):
@@ -49,7 +49,7 @@ class BookElastic(ElasticCallback, BackendBookCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, False)
         await self.write_bulk(data)
 
@@ -61,7 +61,7 @@ class BookDeltaElastic(ElasticCallback, BackendBookDeltaCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, True)
         await self.write_bulk(data)
 
