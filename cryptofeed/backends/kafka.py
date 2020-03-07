@@ -22,7 +22,7 @@ class KafkaCallback:
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
 
-    async def write(self, feed: str, pair: str, timestamp: float, data: dict):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         if self.producer._sender.sender_task is None:
             await self.producer.start()
         topic =  f"{self.key}-{feed}-{pair}"
