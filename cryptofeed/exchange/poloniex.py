@@ -7,6 +7,8 @@ associated with this software.
 import json
 import logging
 from decimal import Decimal
+import time
+import calendar
 
 from sortedcontainers import SortedDict as sd
 
@@ -79,16 +81,18 @@ class Poloniex(Feed):
                                         pair=pair,
                                         bid=Decimal(bid),
                                         ask=Decimal(ask),
-                                        timestamp=timestamp)
+                                        timestamp=timestamp,
+                                        receipt_timestamp=timestamp)
 
-    async def _volume(self, msg):
+    async def _volume(self, msg: list, timestamp: float):
         # ['2018-01-02 00:45', 35361, {'BTC': '43811.201', 'ETH': '6747.243', 'XMR': '781.716', 'USDT': '196758644.806'}]
         # timestamp, exchange volume, dict of top volumes
-        _, _, top_vols = msg
+        server_timestamp, exchange_vol, top_vols = msg
+        server_timestamp = calendar.timegm(time.strptime(server_timestamp, '%Y-%m-%d %H:%M'))
         for pair in top_vols:
             top_vols[pair] = Decimal(top_vols[pair])
-        if self.__do_callback(VOLUME, pair):
-            self.callbacks[VOLUME](feed=self.id, **top_vols)
+
+        await self.callback(VOLUME, feed=self.id, exchange_volume=exchange_vol, timestamp=server_timestamp, receipt_timestamp=timestamp, **top_vols)
 
     async def _book(self, msg: dict, chan_id: int, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -130,7 +134,7 @@ class Poloniex(Feed):
                         self.l2_book[pair][side][price] = amount
                 elif msg_type == 't':
                     # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp
-                    _, order_id, _, price, amount, timestamp = update
+                    _, order_id, _, price, amount, server_ts = update
                     price = Decimal(price)
                     amount = Decimal(amount)
                     side = BUY if update[2] == 1 else SELL
@@ -140,13 +144,14 @@ class Poloniex(Feed):
                                                     side=side,
                                                     amount=amount,
                                                     price=price,
-                                                    timestamp=float(timestamp),
-                                                    order_id=order_id)
+                                                    timestamp=float(server_ts),
+                                                    order_id=order_id,
+                                                    receipt_timestamp=timestamp)
                 else:
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
         if self.__do_callback(L2_BOOK, pair):
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -167,7 +172,7 @@ class Poloniex(Feed):
             # sequence id is None except for the initial ack
             seq_id = msg[1]
             if seq_id is None:
-                await self._volume(msg[2])
+                await self._volume(msg[2], timestamp)
         elif chan_id < 1000:
             # order book updates - the channel id refers to
             # the trading pair being updated

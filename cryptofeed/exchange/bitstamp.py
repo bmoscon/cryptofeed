@@ -33,10 +33,10 @@ class Bitstamp(Feed):
             **kwargs
         )
 
-    async def _l2_book(self, msg):
+    async def _l2_book(self, msg: dict, timestamp: float):
         data = msg['data']
         chan = msg['channel']
-        timestamp = int(data['microtimestamp'])
+        ts = int(data['microtimestamp'])
         pair = pair_exchange_to_std(chan.split('_')[-1])
         forced = False
         delta = {BID: [], ASK: []}
@@ -61,12 +61,12 @@ class Bitstamp(Feed):
                     self.l2_book[pair][side][price] = size
                     delta[side].append((price, size))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
 
-    async def _l3_book(self, msg):
+    async def _l3_book(self, msg: dict, timestamp: float):
         data = msg['data']
         chan = msg['channel']
-        timestamp = int(data['microtimestamp'])
+        ts = int(data['microtimestamp'])
         pair = pair_exchange_to_std(chan.split('_')[-1])
 
         book = {BID: sd(), ASK: sd()}
@@ -76,9 +76,9 @@ class Bitstamp(Feed):
                 size = Decimal(size)
                 book[side].get(price, sd())[order_id] = size
         self.l3_book[pair] = book
-        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, False, timestamp_normalize(self.id, timestamp))
+        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, False, timestamp_normalize(self.id, ts), timestamp)
 
-    async def _trades(self, msg):
+    async def _trades(self, msg: dict, timestamp: float):
         """
 		{'data':
 		 {
@@ -104,16 +104,16 @@ class Bitstamp(Feed):
         side = BUY if data['type'] == 0 else SELL
         amount = Decimal(data['amount'])
         price = Decimal(data['price'])
-        timestamp = int(data['microtimestamp'])
+        ts = int(data['microtimestamp'])
         order_id = data['id']
         await self.callback(TRADES, feed=self.id,
                                      pair=pair,
                                      side=side,
                                      amount=amount,
                                      price=price,
-                                     timestamp=timestamp_normalize(self.id, timestamp),
-                                     order_id=order_id
-                                     )
+                                     timestamp=timestamp_normalize(self.id, ts),
+                                     receipt_timestamp=timestamp,
+                                     order_id=order_id)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -125,12 +125,12 @@ class Bitstamp(Feed):
             else:
                 LOG.warning("%s: Unexpected message %s", self.id, msg)
         elif msg['event'] == 'trade':
-            await self._trades(msg)
+            await self._trades(msg, timestamp)
         elif msg['event'] == 'data':
             if msg['channel'].startswith(feed_to_exchange(self.id, L2_BOOK)):
-                await self._l2_book(msg)
+                await self._l2_book(msg, timestamp)
             if msg['channel'].startswith(feed_to_exchange(self.id, L3_BOOK)):
-                await self._l3_book(msg)
+                await self._l3_book(msg, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 

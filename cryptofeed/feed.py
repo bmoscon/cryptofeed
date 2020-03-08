@@ -63,7 +63,7 @@ class Feed:
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
-    async def book_callback(self, book, book_type, pair, forced, delta, timestamp):
+    async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """
         Three cases we need to handle here
 
@@ -91,7 +91,7 @@ class Feed:
                     if not (delta[BID] or delta[ASK]):
                         return
                 self.updates[pair] += 1
-                await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp)
+                await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
                 if self.updates[pair] != self.book_update_interval:
                     return
             elif forced and self.max_depth:
@@ -102,9 +102,9 @@ class Feed:
             if not changed:
                 return
         if book_type == L2_BOOK:
-            await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
+            await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         else:
-            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
+            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         self.updates[pair] = 0
 
     async def callback(self, data_type, **kwargs):

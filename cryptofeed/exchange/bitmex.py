@@ -60,7 +60,7 @@ class Bitmex(Feed):
             symbols.append(data['symbol'])
         return symbols
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         trade msg example
 
@@ -85,7 +85,8 @@ class Bitmex(Feed):
                                          amount=Decimal(data['size']),
                                          price=Decimal(data['price']),
                                          order_id=data['trdMatchID'],
-                                         timestamp=ts)
+                                         timestamp=ts,
+                                         receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -147,19 +148,18 @@ class Bitmex(Feed):
             LOG.warning("%s: Unexpected l2 Book message %s", self.id, msg)
             return
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         for data in msg['data']:
             await self.callback(TICKER, feed=self.id,
                             pair=data['symbol'],
                             bid=Decimal(data['bidPrice']),
                             ask=Decimal(data['askPrice']),
-                            timestamp=timestamp_normalize(self.id, data['timestamp']))
+                            timestamp=timestamp_normalize(self.id, data['timestamp']),
+                            receipt_timestamp=timestamp)
 
-
-
-    async def _funding(self, msg):
+    async def _funding(self, msg: dict, timestamp: float):
         """
         {'table': 'funding',
          'action': 'partial',
@@ -193,12 +193,13 @@ class Bitmex(Feed):
             await self.callback(FUNDING, feed=self.id,
                                           pair=data['symbol'],
                                           timestamp=ts,
+                                          receipt_timestamp=timestamp,
                                           interval=data['fundingInterval'],
                                           rate=data['fundingRate'],
                                           rate_daily=data['fundingRateDaily']
                                           )
 
-    async def _instrument(self, msg):
+    async def _instrument(self, msg: dict, timestamp: float):
         """
         Example instrument data
 
@@ -439,8 +440,8 @@ class Bitmex(Feed):
                 await self.callback(OPEN_INTEREST, feed=self.id,
                                                 pair=data['symbol'],
                                                 open_interest=data['openInterest'],
-                                                timestamp=ts
-                                )
+                                                timestamp=ts,
+                                                receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -453,17 +454,15 @@ class Bitmex(Feed):
             LOG.error("%s: Error message from exchange: %s", self.id, msg)
         else:
             if msg['table'] == 'trade':
-                await self._trade(msg)
+                await self._trade(msg, timestamp)
             elif msg['table'] == 'orderBookL2':
                 await self._book(msg, timestamp)
             elif msg['table'] == 'funding':
-                await self._funding(msg)
+                await self._funding(msg, timestamp)
             elif msg['table'] == 'instrument':
-                await self._instrument(msg)
+                await self._instrument(msg, timestamp)
             elif msg['table'] == 'quote':
-                await self._ticker(msg)
-
-
+                await self._ticker(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
 

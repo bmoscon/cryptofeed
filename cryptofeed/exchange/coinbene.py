@@ -17,8 +17,12 @@ import aiohttp
 
 
 """
+**** DEPRECATED ****
+
 Coinbene is deprecating the V1 API and the data it provides is of questionable quality. This file
 remains only to serve as an example of how a REST only exchange might be supported
+
+**** DEPRECATED ****
 """
 
 class Coinbene(RestFeed):

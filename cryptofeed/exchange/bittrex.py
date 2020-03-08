@@ -29,10 +29,10 @@ class Bittrex(Feed):
     def __reset(self):
         self.l2_book = {}
 
-    async def ticker(self, msg):
+    async def ticker(self, msg: dict, timestamp: float):
         for t in msg['D']:
             if (not self.config and t['M'] in self.pairs) or ('SubscribeToSummaryDeltas' in self.config and t['M'] in self.config['SubscribeToSummaryDeltas']):
-                await self.callback(TICKER, feed=self.id, pair=pair_exchange_to_std(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']), timestamp=timestamp_normalize(self.id, t['T']))
+                await self.callback(TICKER, feed=self.id, pair=pair_exchange_to_std(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']), timestamp=timestamp_normalize(self.id, t['T']), receipt_timestamp=timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['M'])
@@ -40,7 +40,7 @@ class Bittrex(Feed):
             BID: sd({entry['R']: entry['Q'] for entry in msg['Z']}),
             ASK: sd({entry['R']: entry['Q'] for entry in msg['S']})
         }
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, False, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, False, timestamp, timestamp)
 
     async def book(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['M'])
@@ -59,9 +59,9 @@ class Bittrex(Feed):
                         self.l2_book[pair][side][price] = size
                         delta[side].append((price, size))
 
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
-    async def trades(self, pair: str, msg: dict):
+    async def trades(self, pair: str, msg: dict, timestamp: float):
         # adding because of error
         trade_q = self.config.get(TRADES, [])
         if self.config and pair in trade_q or not self.config:
@@ -73,7 +73,8 @@ class Bittrex(Feed):
                                             side=BUY if trade['OT'] == 'BUY' else SELL,
                                             amount=trade['Q'],
                                             price=trade['R'],
-                                            timestamp=timestamp_normalize(self.id, trade['T']))
+                                            timestamp=timestamp_normalize(self.id, trade['T']),
+                                            receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg)
@@ -85,12 +86,12 @@ class Bittrex(Feed):
                         data = json.loads(zlib.decompress(base64.b64decode(message), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
                         await self.book(data, timestamp)
                         if 'f' in data and data['f']:
-                            await self.trades(data['M'], data['f'])
+                            await self.trades(data['M'], data['f'], timestamp)
                 if update['M'] == 'uS':
                     # Tickers
                     for message in update['A']:
                         data = json.loads(zlib.decompress(base64.b64decode(message), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
-                        await self.ticker(data)
+                        await self.ticker(data, timestamp)
         elif 'R' in msg and isinstance(msg['R'], str):
             data = json.loads(zlib.decompress(base64.b64decode(msg['R']), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
             await self._snapshot(data, timestamp)

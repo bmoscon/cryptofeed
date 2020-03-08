@@ -50,7 +50,7 @@ class Bitmax(Feed):
             }
         ))
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         for trade in msg['trades']:
             await self.callback(TRADES, feed=self.id,
                                 pair=pair_exchange_to_std(msg['s']),
@@ -58,9 +58,10 @@ class Bitmax(Feed):
                                 amount=Decimal(trade['q']),
                                 price=Decimal(trade['p']),
                                 order_id=None,
-                                timestamp=timestamp_normalize(self.id, trade['t']))
+                                timestamp=timestamp_normalize(self.id, trade['t']),
+                                receipt_timestamp=timestamp)
 
-    async def _book(self, msg: dict):
+    async def _book(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
         pair = pair_exchange_to_std(msg['s'])
         for side in ('bids', 'asks'):
@@ -75,15 +76,15 @@ class Bitmax(Feed):
                 else:
                     delta[s].append((price, size))
                     self.l2_book[pair][s][price] = size
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, delta, timestamp_normalize(self.id, msg['ts']))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, delta, timestamp_normalize(self.id, msg['ts']), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'm' in msg:
             if msg['m'] == 'depth':
-                await self._book(msg)
+                await self._book(msg, timestamp)
             elif msg['m'] == 'marketTrades':
-                await self._trade(msg)
+                await self._trade(msg, timestamp)
             elif msg['m'] == 'pong':
                 return
             elif msg['m'] == 'summary':

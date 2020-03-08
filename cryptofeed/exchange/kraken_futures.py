@@ -56,7 +56,7 @@ class KrakenFutures(Feed):
                 }
             ))
 
-    async def _trade(self, msg: dict, pair: str):
+    async def _trade(self, msg: dict, pair: str, timestamp: float):
         """
         {
             "feed": "trade",
@@ -76,7 +76,8 @@ class KrakenFutures(Feed):
                             amount=Decimal(msg['qty']),
                             price=Decimal(msg['price']),
                             order_id=msg['uid'],
-                            timestamp=timestamp_normalize(self.id, msg['time']))
+                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
@@ -94,7 +95,7 @@ class KrakenFutures(Feed):
             "maturityTime": 0
         }
         """
-        await self.callback(TICKER, feed=self.id, pair=pair, bid=msg['bid'], ask=msg['ask'], timestamp=timestamp)
+        await self.callback(TICKER, feed=self.id, pair=pair, bid=msg['bid'], ask=msg['ask'], timestamp=timestamp, receipt_timestamp=timestamp)
 
     async def _book_snapshot(self, msg: dict, pair: str, timestamp: float):
         """
@@ -124,7 +125,7 @@ class KrakenFutures(Feed):
             BID: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['bids']}),
             ASK: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['asks']})
         }
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
@@ -151,14 +152,15 @@ class KrakenFutures(Feed):
             delta[s].append((price, amount))
             self.l2_book[pair][s][price] = amount
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
-    async def _funding(self, msg: dict, pair: str):
+    async def _funding(self, msg: dict, pair: str, timestamp: float):
         if msg['tag'] == 'perpetual':
             await self.callback(FUNDING,
                                 feed=self.id,
                                 pair=pair,
                                 timestamp=timestamp_normalize(self.id, msg['time']),
+                                receipt_timestamp=timestamp,
                                 tag=msg['tag'],
                                 rate=msg['funding_rate'],
                                 rate_prediction=msg.get('funding_rate_prediction', None),
@@ -170,6 +172,7 @@ class KrakenFutures(Feed):
                                 feed=self.id,
                                 pair=pair,
                                 timestamp=timestamp_normalize(self.id, msg['time']),
+                                receipt_timestamp=timestamp,
                                 tag=msg['tag'],
                                 premium=msg['premium'],
                                 maturity_timestamp=timestamp_normalize(self.id, msg['maturityTime']))
@@ -182,7 +185,8 @@ class KrakenFutures(Feed):
                             feed=self.id,
                             pair=pair,
                             open_interest=msg['openInterest'],
-                            timestamp=timestamp_normalize(self.id, msg['time'])
+                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            receipt_timestamp=timestamp
                         )
 
     async def message_handler(self, msg: str, timestamp: float):
@@ -197,13 +201,13 @@ class KrakenFutures(Feed):
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
             if msg['feed'] == 'trade':
-                await self._trade(msg, msg['product_id'])
+                await self._trade(msg, msg['product_id'], timestamp)
             elif msg['feed'] == 'trade_snapshot':
                 return
             elif msg['feed'] == 'ticker_lite':
                 await self._ticker(msg, msg['product_id'], timestamp)
             elif msg['feed'] == 'ticker':
-                await self._funding(msg, msg['product_id'])
+                await self._funding(msg, msg['product_id'], timestamp)
             elif msg['feed'] == 'book_snapshot':
                 await self._book_snapshot(msg, msg['product_id'], timestamp)
             elif msg['feed'] == 'book':

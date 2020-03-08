@@ -47,26 +47,27 @@ class OKCoin(Feed):
                                     "args": chans
                                 }))
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         """
         {'table': 'spot/ticker', 'data': [{'instrument_id': 'BTC-USD', 'last': '3977.74', 'best_bid': '3977.08', 'best_ask': '3978.73', 'open_24h': '3978.21', 'high_24h': '3995.43', 'low_24h': '3961.02', 'base_volume_24h': '248.245', 'quote_volume_24h': '988112.225861', 'timestamp': '2019-03-22T22:26:34.019Z'}]}
         """
         for update in msg['data']:
             pair = update['instrument_id']
-            timestamp = timestamp_normalize(self.id, update['timestamp'])
+            update_timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,
                                          pair=pair,
                                          bid=Decimal(update['best_bid']),
                                          ask=Decimal(update['best_ask']),
-                                         timestamp=timestamp)
+                                         timestamp=update_timestamp,
+                                         receipt_timestamp=timestamp)
             if 'open_interest' in update:
                 oi = update['open_interest']
                 if pair in self.open_interest and oi == self.open_interest[pair]:
                         continue
                 self.open_interest[pair] = oi
-                await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=timestamp)
+                await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}
         """
@@ -82,10 +83,11 @@ class OKCoin(Feed):
                 side=BUY if trade['side'] == 'buy' else SELL,
                 amount=Decimal(trade[amount_sym]),
                 price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['timestamp'])
+                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                receipt_timestamp=timestamp
             )
 
-    async def _book(self, msg):
+    async def _book(self, msg: dict, timestamp: float):
         if msg['action'] == 'partial':
             # snapshot
             for update in msg['data']:
@@ -98,7 +100,7 @@ class OKCoin(Feed):
                         Decimal(price) : Decimal(amount) for price, amount, *_ in update['asks']
                     })
                 }
-                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']))
+                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']), timestamp)
         else:
             # update
             for update in msg['data']:
@@ -116,7 +118,7 @@ class OKCoin(Feed):
                         else:
                             delta[s].append((price, amount))
                             self.l2_book[pair][s][price] = amount
-                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']))
+                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         # DEFLATE compression, no header
@@ -131,13 +133,12 @@ class OKCoin(Feed):
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'table' in msg:
-
             if 'ticker' in msg['table']:
-                await self._ticker(msg)
+                await self._ticker(msg, timestamp)
             elif 'trade' in msg['table']:
-                await self._trade(msg)
+                await self._trade(msg, timestamp)
             elif 'depth_l2_tbt' in msg['table']:
-                await self._book(msg)
+                await self._book(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
         else:

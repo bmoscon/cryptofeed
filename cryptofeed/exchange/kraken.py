@@ -52,7 +52,7 @@ class Kraken(Feed):
                                         "subscription": sub
                                     }))
 
-    async def _trade(self, msg, pair):
+    async def _trade(self, msg: dict, pair: str, timestamp: float):
         """
         example message:
 
@@ -60,14 +60,15 @@ class Kraken(Feed):
         channel id, price, amount, timestamp, size, limit/market order, misc
         """
         for trade in msg[1]:
-            price, amount, timestamp, side, _, _ = trade
+            price, amount, server_timestamp, side, _, _ = trade
             await self.callback(TRADES, feed=self.id,
                                         pair=pair,
                                         side=BUY if side == 'b' else SELL,
                                         amount=Decimal(amount),
                                         price=Decimal(price),
                                         order_id=None,
-                                        timestamp=float(timestamp))
+                                        timestamp=float(server_timestamp),
+                                        receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
@@ -78,7 +79,8 @@ class Kraken(Feed):
                                      pair=pair,
                                      bid=Decimal(msg[1]['b'][0]),
                                      ask=Decimal(msg[1]['a'][0]),
-                                     timestamp=timestamp)
+                                     timestamp=timestamp,
+                                     receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -91,7 +93,7 @@ class Kraken(Feed):
             }), ASK: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']
             })}
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, delta, timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, delta, timestamp, timestamp)
         else:
             for m in msg:
                 for s, updates in m.items():
@@ -115,14 +117,14 @@ class Kraken(Feed):
                     del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
                     del self.l2_book[pair][side][del_price]
                     delta[side].append((del_price, 0))
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
             if self.channel_map[msg[0]][0] == 'trade':
-                await self._trade(msg, self.channel_map[msg[0]][1])
+                await self._trade(msg, self.channel_map[msg[0]][1], timestamp)
             elif self.channel_map[msg[0]][0] == 'ticker':
                 await self._ticker(msg, self.channel_map[msg[0]][1], timestamp)
             elif self.channel_map[msg[0]][0] == 'book':
