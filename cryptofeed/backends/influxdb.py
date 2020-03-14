@@ -68,12 +68,10 @@ class InfluxCallback(HTTPCallback):
             self.headers = {"Authorization": f"Token {token}"}
         else:
             if create_db:
-                r = requests.post(
-                    f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
+                r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
                 r.raise_for_status()
             self.addr = f"{addr}/write?db={db}"
             self.headers = {}
-
         self.session = None
         self.numeric_type = numeric_type
         self.key = key if key else self.default_key
@@ -113,25 +111,19 @@ class InfluxBookCallback(InfluxCallback):
                 if isinstance(val, dict):
                     for order_id, amount in val.items():
                         if self.numeric_type is str:
-                            msg.append(
-                                f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
+                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
                         elif self.numeric_type is float:
-                            msg.append(
-                                f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
+                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
                         else:
-                            raise UnsupportedType(
-                                f"Type {self.numeric_type} not supported")
+                            raise UnsupportedType(f"Type {self.numeric_type} not supported")
                         ts += 1
                 else:
                     if self.numeric_type is str:
-                        msg.append(
-                            f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
+                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
                     elif self.numeric_type is float:
-                        msg.append(
-                            f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
+                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
                     else:
-                        raise UnsupportedType(
-                            f"Type {self.numeric_type} not supported")
+                        raise UnsupportedType(f"Type {self.numeric_type} not supported")
                     ts += 1
         await self.http_write('POST', '\n'.join(msg), self.headers)
 
