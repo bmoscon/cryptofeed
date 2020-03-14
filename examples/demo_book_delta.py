@@ -36,7 +36,7 @@ class DeltaBook(object):
                     return False
         return True
 
-    async def handle_book(self, feed, pair, book, timestamp):
+    async def handle_book(self, feed, pair, book, timestamp, receipt_timestamp):
         """Handle full book updates."""
         if not self.book:
             self.book = deepcopy(book)
@@ -45,7 +45,7 @@ class DeltaBook(object):
             assert(self.check_books(book))
             print("%s: Books match!" % self.name)
 
-    async def handle_l2_delta(self, feed, pair, update, timestamp):
+    async def handle_l2_delta(self, feed, pair, update, timestamp, receipt_timestamp):
         """Handle L2 delta updates."""
         # handle updates for L2 books
         for side in (BID, ASK):
@@ -55,7 +55,7 @@ class DeltaBook(object):
                 else:
                     self.book[side][price] = size
 
-    async def handle_l3_delta(self, feed, pair, update, timestamp):
+    async def handle_l3_delta(self, feed, pair, update, timestamp, receipt_timestamp):
         """Handle L3 delta updates."""
         for side in (BID, ASK):
             for order, price, size in update[side]:
