@@ -2,10 +2,10 @@ import os
 import time
 import collections
 from datetime import datetime
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback, InstrumentCallback
+from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, INSTRUMENT
-from cryptofeed.defines import BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, GEMINI, HITBTC, HUOBI, HUOBI_US, KRAKEN, OKCOIN, OKEX, POLONIEX
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING
+from cryptofeed.defines import BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, DERIBIT, EXX, GEMINI, HITBTC, HUOBI, KRAKEN, OKCOIN, OKEX, POLONIEX
 
 # Gathers the first trade of each exchange and prints out info on the timestamps.
 # To add an exchange, setup exch_sym_map with the most liquid pair.
@@ -19,24 +19,20 @@ Starting: 1562808668.105481
 [3]: Subscribing to Bitstamp
 [4]: Subscribing to Bybit
 [5]: Subscribing to Coinbase
-[6]: Subscribing to Coinbene
-[7]: Subscribing to Deribit
-[8]: Subscribing to EXX
-[9]: Subscribing to Gemini
-[10]: Subscribing to HitBTC
-[11]: Subscribing to Huobi
-[12]: Subscribing to Huobi_US
-[13]: Subscribing to Kraken
-[14]: Subscribing to OKCoin
-[15]: Subscribing to OKEx
-[16]: Subscribing to Poloniex
+[6]: Subscribing to Deribit
+[7]: Subscribing to EXX
+[8]: Subscribing to Gemini
+[9]: Subscribing to HitBTC
+[10]: Subscribing to Huobi
+[11]: Subscribing to Kraken
+[12]: Subscribing to OKCoin
+[13]: Subscribing to OKEx
+[14]: Subscribing to Poloniex
 Added OKEX.
 Added EXX.
 Added OKCOIN.
-Added HUOBI_US.
 Added HUOBI.
 Added BINANCE.
-Added COINBENE.
 Added BYBIT.
 Added KRAKEN.
 Added COINBASE.
@@ -53,13 +49,11 @@ BITMEX      : timestamp:1562808675.125       <class 'float'> 2019-07-11 09:31:15
 BITSTAMP    : timestamp:1562808680.724683    <class 'float'> 2019-07-11 09:31:20.724683
 BYBIT       : timestamp:1562808676.485       <class 'float'> 2019-07-11 09:31:16.485000
 COINBASE    : timestamp:1562808676.184       <class 'float'> 2019-07-11 09:31:16.184000
-COINBENE    : timestamp:1562807951.0         <class 'float'> 2019-07-11 09:19:11
 DERIBIT     : timestamp:1562808678.384       <class 'float'> 2019-07-11 09:31:18.384000
 EXX         : timestamp:1562808674.0         <class 'float'> 2019-07-11 09:31:14
 GEMINI      : timestamp:1562808706.132       <class 'float'> 2019-07-11 09:31:46.132000
 HITBTC      : timestamp:1562808491.473       <class 'float'> 2019-07-11 09:28:11.473000
 HUOBI       : timestamp:1562808675.644       <class 'float'> 2019-07-11 09:31:15.644000
-HUOBI_US    : timestamp:1562697782.977       <class 'float'> 2019-07-10 02:43:02.977000
 KRAKEN      : timestamp:1562808676.238593    <class 'float'> 2019-07-11 09:31:16.238593
 OKCOIN      : timestamp:1562808671.739       <class 'float'> 2019-07-11 09:31:11.739000
 OKEX        : timestamp:1562808675.317       <class 'float'> 2019-07-11 09:31:15.317000
@@ -95,13 +89,11 @@ def main():
     exch_sym_map['Bitstamp'] = ['BTC-USD']
     exch_sym_map['Bybit'] = ['BTC-USD']
     exch_sym_map['Coinbase'] = ['BTC-USD']
-    exch_sym_map['Coinbene'] = ['BTC-USDT']
     exch_sym_map['Deribit'] = ['BTC-PERPETUAL']
     exch_sym_map['EXX'] = ['BTC-USDT']
     exch_sym_map['Gemini'] = ['BTC-USD']
     exch_sym_map['HitBTC'] = ['BTC-USD']
     exch_sym_map['Huobi'] = ['BTC-USDT']
-    exch_sym_map['Huobi_US'] = ['BTC-USD']
     exch_sym_map['Kraken'] = ['BTC-USD']
     exch_sym_map['OKCoin'] = ['BTC-USD']
     exch_sym_map['OKEx'] = ['BTC-USDT']

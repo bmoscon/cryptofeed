@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -40,17 +40,19 @@ class PostgresCallback:
         if self.conn is None:
             self.conn = await asyncpg.connect(user=self.user, password=self.pw, database=self.db, host=self.host)
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self._connect()
         async with self.conn.transaction():
             time = dt.utcfromtimestamp(timestamp)
-            await self.conn.execute(f"INSERT INTO {self.table} VALUES('{feed}','{pair}','{time}',{data})")
+            rtime = dt.utcfromtimestamp(timestamp)
+
+            await self.conn.execute(f"INSERT INTO {self.table} VALUES('{feed}','{pair}','{time}','{rtime}',{data})")
 
 
 class TradePostgres(PostgresCallback, BackendTradeCallback):
     default_table = TRADES
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         if 'id' in data:
             d = f"'{data['side']}',{data['amount']},{data['price']},'{data['id']}'"
         else:
@@ -61,34 +63,31 @@ class TradePostgres(PostgresCallback, BackendTradeCallback):
 class FundingPostgres(PostgresCallback, BackendFundingCallback):
     default_table = FUNDING
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         await super().write(feed, pair, timestamp, f"'{json.dumps(data)}'")
 
 
 class TickerPostgres(PostgresCallback, BackendTickerCallback):
     default_table = TICKER
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         d = f"{data['bid']},{data['ask']}"
-        await super().write(feed, pair, timestamp, d)
+        await super().write(feed, pair, timestamp, receipt_timestamp, d)
 
 
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
     default_table = OPEN_INTEREST
 
-    async def write(self, feed, pair, timestamp, data):
-        await super().write(feed, pair, timestamp, data['open_interest'])
-
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
     default_table = 'book'
 
-    async def write(self, feed, pair, timestamp, data):
-        await super().write(feed, pair, timestamp, f"'{json.dumps(data)}'")
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, pair, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
 class BookDeltaPostgres(PostgresCallback, BackendBookDeltaCallback):
     default_table = 'book'
 
-    async def write(self, feed, pair, timestamp, data):
-        await super().write(feed, pair, timestamp, f"'{json.dumps(data)}'")
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, pair, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")

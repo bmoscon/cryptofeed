@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -7,8 +7,8 @@ associated with this software.
 import atexit
 from collections import defaultdict
 
-import aiofiles
-import aiofiles.os
+from aiofile import AIOFile
+
 
 
 class AsyncFileCallback:
@@ -18,6 +18,7 @@ class AsyncFileCallback:
         self.data = defaultdict(list)
         self.rotate = rotate
         self.count = defaultdict(int)
+        self.pointer = defaultdict(int)
         atexit.register(self.__del__)
 
     def __del__(self):
@@ -27,13 +28,14 @@ class AsyncFileCallback:
 
     async def write(self, uuid):
         p = f"{self.path}/{uuid}.{self.count[uuid]}"
-        async with aiofiles.open(p, mode='a') as fp:
-            await fp.write("\n".join(self.data[uuid]))
-        self.data[uuid] = []
+        async with AIOFile(p, mode='a') as fp:
+            r = await fp.write("\n".join(self.data[uuid])+"\n", offset=self.pointer[uuid])
+            self.pointer[uuid] += len(r)
+            self.data[uuid] = []
 
-        stats = await aiofiles.os.stat(p)
-        if stats.st_size >= self.rotate:
+        if self.pointer[uuid] >= self.rotate:
             self.count[uuid] += 1
+            self.pointer[uuid] = 0
 
     async def __call__(self, data: str, timestamp: float, uuid: str):
         self.data[uuid].append(f"{timestamp}: {data}")

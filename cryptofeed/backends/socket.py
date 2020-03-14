@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,7 @@ import asyncio
 import json
 from textwrap import wrap
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -78,7 +78,7 @@ class SocketCallback:
             elif self.conn_type == 'uds://':
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self.connect()
         data = {'type': self.key, 'data': data}
         data = json.dumps(data)
@@ -113,3 +113,7 @@ class BookDeltaSocket(SocketCallback, BackendBookDeltaCallback):
 
 class TickerSocket(SocketCallback, BackendTickerCallback):
     default_key = 'ticker'
+
+
+class OpenInterestSocket(SocketCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

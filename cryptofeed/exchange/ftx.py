@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -41,7 +41,7 @@ class FTX(Feed):
                     }
                 ))
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         example message:
 
@@ -55,9 +55,10 @@ class FTX(Feed):
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
                                 order_id=None,
-                                timestamp=float(timestamp_normalize(self.id, trade['time'])))
+                                timestamp=float(timestamp_normalize(self.id, trade['time'])),
+                                receipt_timestamp=timestamp)
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         """
         example message:
 
@@ -66,11 +67,12 @@ class FTX(Feed):
         """
         await self.callback(TICKER, feed=self.id,
                             pair=pair_exchange_to_std(msg['market']),
-                            bid=Decimal(msg['data']['bid']),
-                            ask=Decimal(msg['data']['ask']),
-                            timestamp=float(msg['data']['time']))
+                            bid=Decimal(msg['data']['bid'] if msg['data']['bid'] else 0.0),
+                            ask=Decimal(msg['data']['ask'] if msg['data']['ask'] else 0.0),
+                            timestamp=float(msg['data']['time']),
+                            receipt_timestamp=timestamp)
 
-    async def _book(self, msg: dict):
+    async def _book(self, msg: dict, timestamp: float):
         """
         example messages:
 
@@ -93,7 +95,7 @@ class FTX(Feed):
                     Decimal(price) : Decimal(amount) for price, amount in msg['data']['asks']
                 })
             }
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, float(msg['data']['time']))
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, float(msg['data']['time']), timestamp)
         else:
             # update
             delta = {BID: [], ASK: []}
@@ -109,7 +111,7 @@ class FTX(Feed):
                     else:
                         delta[s].append((price, amount))
                         self.l2_book[pair][s][price] = amount
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']))
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -117,11 +119,11 @@ class FTX(Feed):
             return
         elif 'channel' in msg:
             if msg['channel'] == 'orderbook':
-                await self._book(msg)
+                await self._book(msg, timestamp)
             elif msg['channel'] == 'trades':
-                await self._trade(msg)
+                await self._trade(msg, timestamp)
             elif msg['channel'] == 'ticker':
-                await self._ticker(msg)
+                await self._ticker(msg, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:

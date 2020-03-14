@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -22,17 +22,19 @@ class BinanceFutures(Binance):
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
 
-    def _check_update_id(self, pair: str, msg: dict):
-        skip_update = False
-        forced = False
+    def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
+            skip_update = False
+            forced = not self.forced[pair]
 
-        if pair in self.last_update_id:
-            if msg['u'] < self.last_update_id[pair]:
+            if forced and msg['u'] < self.last_update_id[pair]:
                 skip_update = True
-            elif msg['U'] <= self.last_update_id[pair] <= msg['u']:
-                del self.last_update_id[pair]
-                forced = True
+            elif forced and msg['U'] <= self.last_update_id[pair] <= msg['u']:
+                self.last_update_id[pair] = msg['u']
+                self.forced[pair] = True
+            elif not forced and self.last_update_id[pair] == msg['pu']:
+                self.last_update_id[pair] = msg['u']
             else:
-                raise Exception("Error - snaphot has no overlap with first update")
-
-        return skip_update, forced
+                self._reset()
+                LOG.warning("%s: Missing book update detected, resetting book", self.id)
+                skip_update = True
+            return skip_update, forced

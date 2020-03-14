@@ -20,3 +20,6 @@ kraken:
 deribit:
     key_id: null
     key_secret: null
+ftx:
+    key_id: null
+    key_secret: null

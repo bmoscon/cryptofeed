@@ -1,11 +1,35 @@
 ## Changelog
 
-### 1.2.0
+### 1.3.1
+  * Feature: Add missing update detection to orderbooks in Binance
+  * Feature: REST support for FTX
+  * Feature: Added new field, receipt timestamp, to all callbacks. This contains the time the message was received by cryptofeed. 
+
+### 1.3.0 (2020-02-11)
+  * Bugfix: Enabling multiple symbols on Bitmex with deltas and max depth configured could cause crashes.
+  * Bugfix: Default open interest callback missing
+  * Change: Mongo backend stores book data in BSON
+  * Feature: Open Interest callbacks added to all backends
+  * Change: Instrument removed in favor of open interest
+  * Bugfix: Huobi feedhandlers not properly setting forced indicator for book updates, breaking deltas
+  * Bugfix: Some kraken futures funding fields not always populated
+  * Feature: Open interest updates for kraken futures
+  * Feature: Open interest updates for Deribit
+  * Bugfix: FTX ticker can have Nones for bid/ask
+  * Feature: InfluxDB 2.0 support
+  * Bugfix: Deribit funding only available on perpetuals
+  * Feature: Enable deltas (with out max depth) on exchanges that do not support them
+
+### 1.2.0 (2020-01-18)
   * Feature: New exchange: Binance Futures
   * Feature: New Exchange: Binance Jersey
   * Feature: Funding data on Kraken Futures
   * Feature: User defined pair seperator (default still -)
   * Feature: Postgres backend
+  * Feature: Deribit Funding
+  * Bugfix: Deribit subscriptions using config subscribed to symbols incorrectly
+  * Bugfix: Some RabbitMQ messages were missing symbol and exchange data
+  * Feature: Open interest data for OKEX swaps
 
 ### 1.1.0 (2019-11-14)
   * Feature: User enabled logging of exchange messages on error

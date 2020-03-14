@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,7 @@ import json
 
 from aiokafka import AIOKafkaProducer
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 class KafkaCallback:
@@ -22,7 +22,7 @@ class KafkaCallback:
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
 
-    async def write(self, feed: str, pair: str, timestamp: float, data: dict):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         if self.producer._sender.sender_task is None:
             await self.producer.start()
         topic =  f"{self.key}-{feed}-{pair}"
@@ -47,3 +47,7 @@ class BookDeltaKafka(KafkaCallback, BackendBookDeltaCallback):
 
 class TickerKafka(KafkaCallback, BackendTickerCallback):
     default_key = 'ticker'
+
+
+class OpenInterestKafka(KafkaCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

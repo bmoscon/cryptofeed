@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -11,7 +11,7 @@ import requests
 from cryptofeed.defines import BID, ASK
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.exceptions import UnsupportedType
-from cryptofeed.backends.backend import BackendTradeCallback, BackendBookDeltaCallback, BackendBookCallback, BackendFundingCallback, BackendTickerCallback
+from cryptofeed.backends.backend import BackendTradeCallback, BackendBookDeltaCallback, BackendBookCallback, BackendFundingCallback, BackendTickerCallback, BackendOpenInterestCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -32,7 +32,7 @@ class InfluxCallback(HTTPCallback):
 
         Example data in InfluxDB
         ------------------------
-        > select * from COINBASE-book;
+        > select * from "book-COINBASE";
         name: COINBASE
         time                amount    pair    price   side timestamp
         ----                ------    ----    -----   ---- ---------
@@ -68,20 +68,21 @@ class InfluxCallback(HTTPCallback):
             self.headers = {"Authorization": f"Token {token}"}
         else:
             if create_db:
-                r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
+                r = requests.post(
+                    f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
                 r.raise_for_status()
             self.addr = f"{addr}/write?db={db}"
             self.headers = {}
-            
+
         self.session = None
         self.numeric_type = numeric_type
         self.key = key if key else self.default_key
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         d = ''
 
         for key, value in data.items():
-            if key in {'timestamp', 'feed', 'pair'}:
+            if key in {'timestamp', 'feed', 'pair', 'receipt_timestamp'}:
                 continue
             if isinstance(value, str) or (self.numeric_type is str and isinstance(value, (Decimal, float))):
                 d += f'{key}="{value}",'
@@ -89,7 +90,7 @@ class InfluxCallback(HTTPCallback):
                 d += f'{key}={value},'
         d = d[:-1]
 
-        update = f'{self.key}-{feed},pair={pair} {d},timestamp={timestamp}'
+        update = f'{self.key}-{feed},pair={pair} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp}'
         await self.http_write('POST', update, self.headers)
 
 
@@ -104,7 +105,7 @@ class FundingInflux(InfluxCallback, BackendFundingCallback):
 class InfluxBookCallback(InfluxCallback):
     default_key = 'book'
 
-    async def _write_rows(self, start, data, timestamp):
+    async def _write_rows(self, start, data, timestamp, receipt_timestamp):
         msg = []
         ts = int(timestamp * 1000000000)
         for side in (BID, ASK):
@@ -112,35 +113,44 @@ class InfluxBookCallback(InfluxCallback):
                 if isinstance(val, dict):
                     for order_id, amount in val.items():
                         if self.numeric_type is str:
-                            msg.append(f'{start} side="{side}",id="{order_id}",timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
+                            msg.append(
+                                f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
                         elif self.numeric_type is float:
-                            msg.append(f'{start} side="{side}",id="{order_id}",timestamp={timestamp},price={price},amount={amount} {ts}')
+                            msg.append(
+                                f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
                         else:
-                            raise UnsupportedType(f"Type {self.numeric_type} not supported")
+                            raise UnsupportedType(
+                                f"Type {self.numeric_type} not supported")
                         ts += 1
                 else:
                     if self.numeric_type is str:
-                        msg.append(f'{start} side="{side}",timestamp={timestamp},price="{price}",amount="{val}" {ts}')
+                        msg.append(
+                            f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
                     elif self.numeric_type is float:
-                        msg.append(f'{start} side="{side}",timestamp={timestamp},price={price},amount={val} {ts}')
+                        msg.append(
+                            f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
                     else:
-                        raise UnsupportedType(f"Type {self.numeric_type} not supported")
+                        raise UnsupportedType(
+                            f"Type {self.numeric_type} not supported")
                     ts += 1
         await self.http_write('POST', '\n'.join(msg), self.headers)
 
 
 class BookInflux(InfluxBookCallback, BackendBookCallback):
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         start = f"{self.key}-{feed},pair={pair},delta=False"
-        await self._write_rows(start, data, timestamp)
+        await self._write_rows(start, data, timestamp, receipt_timestamp)
 
 
 class BookDeltaInflux(InfluxBookCallback, BackendBookDeltaCallback):
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         start = f"{self.key}-{feed},pair={pair},delta=True"
-        await self._write_rows(start, data, timestamp)
+        await self._write_rows(start, data, timestamp, receipt_timestamp)
 
 
 class TickerInflux(InfluxCallback, BackendTickerCallback):
     default_key = 'ticker'
 
+
+class OpenInterestInflux(InfluxCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

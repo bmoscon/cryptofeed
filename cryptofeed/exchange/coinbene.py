@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -15,6 +15,15 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 import aiohttp
 
+
+"""
+**** DEPRECATED ****
+
+Coinbene is deprecating the V1 API and the data it provides is of questionable quality. This file
+remains only to serve as an example of how a REST only exchange might be supported
+
+**** DEPRECATED ****
+"""
 
 class Coinbene(RestFeed):
     id = COINBENE

@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -32,7 +32,7 @@ class Gemini(Feed):
         for pair in pairs:
             self.l2_book[pair_exchange_to_std(pair)] = {BID: sd(), ASK: sd()}
 
-    async def _book(self, msg, timestamp):
+    async def _book(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['symbol'])
         # Gemini sends ALL data for the symbol, so if we don't actually want
         # the book data, bail before parsing
@@ -56,9 +56,9 @@ class Gemini(Feed):
                 self.l2_book[pair][side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
-    async def _trade(self, msg, timestamp):
+    async def _trade(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['symbol'])
         price = Decimal(msg['price'])
         side = SELL if msg['side'] == 'sell' else BUY
@@ -69,7 +69,8 @@ class Gemini(Feed):
                                      side=side,
                                      amount=amount,
                                      price=price,
-                                     timestamp=timestamp_normalize(self.id, msg['timestamp']))
+                                     timestamp=timestamp_normalize(self.id, msg['timestamp']),
+                                     receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

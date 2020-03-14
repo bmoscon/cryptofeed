@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,15 +9,14 @@ import asyncio
 
 import aio_pika
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 class RabbitCallback:
-    def __init__(self, host='localhost', key=None, numeric_type=float, **kwargs):
+    def __init__(self, host='localhost', numeric_type=float, **kwargs):
         self.conn = None
         self.host = host
         self.numeric_type = numeric_type
-        self.key = key if key else self.default_key
 
     async def connect(self):
         if not self.conn:
@@ -25,31 +24,37 @@ class RabbitCallback:
             self.conn = await connection.channel()
             await self.conn.declare_queue('cryptofeed', auto_delete=False)
 
-    async def write(self, feed: str, pair: str, timestamp: float, data: dict):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self.connect()
+        data['feed'] = feed
+        data['pair'] = pair
         await self.conn.default_exchange.publish(
             aio_pika.Message(
-                body=f'{self.key} {json.dumps(data)}'.encode()
+                body=json.dumps(data).encode()
             ),
             routing_key='cryptofeed'
         )
 
 
 class TradeRabbit(RabbitCallback, BackendTradeCallback):
-    default_key = 'trades'
+    pass
 
 
 class FundingRabbit(RabbitCallback, BackendFundingCallback):
-    default_key = 'funding'
+    pass
 
 
 class BookRabbit(RabbitCallback, BackendBookCallback):
-    default_key = 'book'
+    pass
 
 
 class BookDeltaRabbit(RabbitCallback, BackendBookDeltaCallback):
-    default_key = 'book'
+    pass
 
 
 class TickerRabbit(RabbitCallback, BackendTickerCallback):
-    default_key = 'ticker'
+    pass
+
+
+class OpenInterestRabbit(RabbitCallback, BackendOpenInterestCallback):
+    pass

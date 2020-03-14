@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -46,7 +46,7 @@ class BitcoinCom(Feed):
                     }
                 ))
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         for trade in msg['data']:
             await self.callback(TRADES, feed=self.id,
                                 pair=pair_exchange_to_std(msg['symbol']),
@@ -54,16 +54,18 @@ class BitcoinCom(Feed):
                                 amount=Decimal(trade['quantity']),
                                 price=Decimal(trade['price']),
                                 order_id=None,
-                                timestamp=timestamp_normalize(self.id, trade['timestamp']))
+                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                receipt_timestamp=timestamp)
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         await self.callback(TICKER, feed=self.id,
                             pair=pair_exchange_to_std(msg['symbol']),
                             bid=Decimal(msg['bid']),
                             ask=Decimal(msg['ask']),
-                            timestamp=timestamp_normalize(self.id, msg['timestamp']))
+                            timestamp=timestamp_normalize(self.id, msg['timestamp']),
+                            receipt_timestamp=timestamp)
 
-    async def _book_snapshot(self, msg: dict):
+    async def _book_snapshot(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['symbol'])
         self.l2_book[pair] = {
             BID: sd({
@@ -73,9 +75,9 @@ class BitcoinCom(Feed):
                 Decimal(ask['price']): Decimal(ask['size']) for ask in msg['ask']
             })
         }
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, msg['timestamp']))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, msg['timestamp']), timestamp)
 
-    async def _book_update(self, msg: dict):
+    async def _book_update(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
         pair = pair_exchange_to_std(msg['symbol'])
         for side in ('bid', 'ask'):
@@ -89,7 +91,7 @@ class BitcoinCom(Feed):
                 else:
                     delta[s].append((price, amount))
                     self.l2_book[pair][s][price] = amount
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, msg['timestamp']))
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, msg['timestamp']), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -108,15 +110,15 @@ class BitcoinCom(Feed):
                 self.seq_no[data['symbol']] = data['sequence']
 
             if msg['method'] == 'snapshotOrderbook':
-                await self._book_snapshot(data)
+                await self._book_snapshot(data, timestamp)
             elif msg['method'] == 'updateOrderbook':
-                await self._book_update(data)
+                await self._book_update(data, timestamp)
             elif msg['method'] == 'snapshotTrades':
                 return
             elif msg['method'] == 'updateTrades':
-                await self._trade(data)
+                await self._trade(data, timestamp)
             elif msg['method'] == 'ticker':
-                await self._ticker(data)
+                await self._ticker(data, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:

@@ -46,7 +46,6 @@ Supports the following exchanges:
 * Bittrex
 * Bybit
 * Coinbase
-* Coinbene
 * Deribit
 * EXX
 * FTX
@@ -54,7 +53,6 @@ Supports the following exchanges:
 * HitBTC
 * Huobi
 * HuobiDM
-* HuobiUS
 * Kraken
 * Kraken Futures
 * OKCoin
@@ -95,7 +93,7 @@ Cryptofeed supports the following channels:
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * *_SWAP (L2/L3 Books, Trades, Ticker) - Swap data on supporting exchanges
 * *_FUTURES (L2/L3 Books, Trades, Ticker) - Futures data on supporting exchanges
-* INSTRUMENT - Exchange specific instrument information
+* OPEN_INTEREST - Open interest data
 
 ## Backends
 
@@ -132,7 +130,8 @@ Cryptofeed supports some REST interfaces for retrieving historical data and plac
 Continue to build out rest endpoints and standardize exchange interfaces and data
 
 ## Additional Callback Methods / Backends
-* ??
+* Pulsar
+* More ZMQ improvements/options
 
 # Contributing
 Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)

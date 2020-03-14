@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -27,7 +27,6 @@ GEMINI = 'GEMINI'
 HITBTC = 'HITBTC'
 HUOBI = 'HUOBI'
 HUOBI_DM = 'HUOBI_DM'
-HUOBI_US = 'HUOBI_US'
 KRAKEN = 'KRAKEN'
 KRAKEN_FUTURES = 'KRAKEN_FUTURES'
 OKCOIN = 'OKCOIN'
@@ -44,7 +43,6 @@ TRADES = 'trades'
 TICKER = 'ticker'
 VOLUME = 'volume'
 FUNDING = 'funding'
-INSTRUMENT = 'instrument'
 OPEN_INTEREST = 'open_interest'
 UNSUPPORTED = 'unsupported'
 

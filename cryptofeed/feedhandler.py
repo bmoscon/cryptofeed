@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -16,7 +16,7 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.exchanges import *
@@ -44,7 +44,6 @@ _EXCHANGES = {
     KRAKEN: Kraken,
     KRAKEN_FUTURES: KrakenFutures,
     HUOBI: Huobi,
-    HUOBI_US: HuobiUS,
     HUOBI_DM: HuobiDM,
     OKCOIN: OKCoin,
     OKEX: OKEx,
@@ -60,7 +59,7 @@ _EXCHANGES = {
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -70,6 +69,8 @@ class FeedHandler:
             if true, log the message from the exchange on exceptions
         raw_message_capture: callback
             if defined, callback to save/process/handle raw message (primarily for debugging purposes)
+        handler_enabled: boolean
+            run message handlers (and any registered callbacks) when raw message capture is enabled
         """
         self.feeds = []
         self.retries = retries
@@ -78,6 +79,7 @@ class FeedHandler:
         self.timeout_interval = timeout_interval
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture
+        self.handler_enabled = handler_enabled
 
     def add_feed(self, feed, timeout=120, **kwargs):
         """
@@ -133,6 +135,8 @@ class FeedHandler:
 
         try:
             loop = asyncio.get_event_loop()
+            # Good to endable when debugging
+            # loop.set_debug(True)
 
             for feed in self.feeds:
                 if isinstance(feed, RestFeed):
@@ -211,18 +215,22 @@ class FeedHandler:
 
     async def _handler(self, websocket, handler, feed_id):
         try:
-            if self.raw_message_capture:
+            if self.raw_message_capture and self.handler_enabled:
                 async for message in websocket:
                     self.last_msg[feed_id] = time()
                     await self.raw_message_capture(message, self.last_msg[feed_id], feed_id)
                     await handler(message, self.last_msg[feed_id])
+            elif self.raw_message_capture:
+                async for message in websocket:
+                    self.last_msg[feed_id] = time()
+                    await self.raw_message_capture(message, self.last_msg[feed_id], feed_id)
             else:
                 async for message in websocket:
                     self.last_msg[feed_id] = time()
                     await handler(message, self.last_msg[feed_id])
         except Exception:
             if self.log_messages_on_error:
-                if feed_id in {HUOBI, HUOBI_US, HUOBI_DM}:
+                if feed_id in {HUOBI, HUOBI_DM}:
                     message = zlib.decompress(message, 16+zlib.MAX_WBITS)
                 elif feed_id in {OKCOIN, OKEX}:
                     message = zlib.decompress(message, -15)

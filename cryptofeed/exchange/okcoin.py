@@ -1,11 +1,10 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import json
-import re
 import logging
 from decimal import Decimal
 import zlib
@@ -13,7 +12,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN, OPEN_INTEREST
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -22,14 +21,15 @@ LOG = logging.getLogger('feedhandler')
 
 class OKCoin(Feed):
     id = OKCOIN
-    table_prefixs = ['spot']
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.book_depth = 200
+        self.open_interest = {}
 
     def __reset(self):
         self.l2_book = {}
+        self.open_interest = {}
 
     async def subscribe(self, websocket):
         self.__reset()
@@ -47,18 +47,27 @@ class OKCoin(Feed):
                                     "args": chans
                                 }))
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         """
         {'table': 'spot/ticker', 'data': [{'instrument_id': 'BTC-USD', 'last': '3977.74', 'best_bid': '3977.08', 'best_ask': '3978.73', 'open_24h': '3978.21', 'high_24h': '3995.43', 'low_24h': '3961.02', 'base_volume_24h': '248.245', 'quote_volume_24h': '988112.225861', 'timestamp': '2019-03-22T22:26:34.019Z'}]}
         """
         for update in msg['data']:
+            pair = update['instrument_id']
+            update_timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,
-                                         pair=update['instrument_id'],
+                                         pair=pair,
                                          bid=Decimal(update['best_bid']),
                                          ask=Decimal(update['best_ask']),
-                                         timestamp=timestamp_normalize(self.id, update['timestamp']))
+                                         timestamp=update_timestamp,
+                                         receipt_timestamp=timestamp)
+            if 'open_interest' in update:
+                oi = update['open_interest']
+                if pair in self.open_interest and oi == self.open_interest[pair]:
+                        continue
+                self.open_interest[pair] = oi
+                await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}
         """
@@ -74,10 +83,11 @@ class OKCoin(Feed):
                 side=BUY if trade['side'] == 'buy' else SELL,
                 amount=Decimal(trade[amount_sym]),
                 price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['timestamp'])
+                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                receipt_timestamp=timestamp
             )
 
-    async def _book(self, msg):
+    async def _book(self, msg: dict, timestamp: float):
         if msg['action'] == 'partial':
             # snapshot
             for update in msg['data']:
@@ -90,7 +100,7 @@ class OKCoin(Feed):
                         Decimal(price) : Decimal(amount) for price, amount, *_ in update['asks']
                     })
                 }
-                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']))
+                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']), timestamp)
         else:
             # update
             for update in msg['data']:
@@ -102,12 +112,13 @@ class OKCoin(Feed):
                         price = Decimal(price)
                         amount = Decimal(amount)
                         if amount == 0:
-                            delta[s].append((price, 0))
-                            del self.l2_book[pair][s][price]
+                            if price in self.l2_book[pair][s]:
+                                delta[s].append((price, 0))
+                                del self.l2_book[pair][s][price]
                         else:
                             delta[s].append((price, amount))
                             self.l2_book[pair][s][price] = amount
-                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']))
+                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         # DEFLATE compression, no header
@@ -122,12 +133,12 @@ class OKCoin(Feed):
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'table' in msg:
-            if re.match(f'^({"|".join(self.table_prefixs)})/ticker$', msg['table']):
-                await self._ticker(msg)
-            elif re.match(f'^({"|".join(self.table_prefixs)})/trade$', msg['table']):
-                await self._trade(msg)
-            elif re.match(f'^({"|".join(self.table_prefixs)})/depth$', msg['table']):
-                await self._book(msg)
+            if 'ticker' in msg['table']:
+                await self._ticker(msg, timestamp)
+            elif 'trade' in msg['table']:
+                await self._trade(msg, timestamp)
+            elif 'depth_l2_tbt' in msg['table']:
+                await self._book(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
         else:

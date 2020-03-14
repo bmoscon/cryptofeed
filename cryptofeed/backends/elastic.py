@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -10,7 +10,7 @@ import itertools
 
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.backends._util import book_flatten
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -24,7 +24,7 @@ class ElasticCallback(HTTPCallback):
         self.session = None
         self.numeric_type = numeric_type
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
     async def write_bulk(self, data):
@@ -49,7 +49,7 @@ class BookElastic(ElasticCallback, BackendBookCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, False)
         await self.write_bulk(data)
 
@@ -61,10 +61,14 @@ class BookDeltaElastic(ElasticCallback, BackendBookDeltaCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         data = book_flatten(feed, pair, data, timestamp, True)
         await self.write_bulk(data)
 
 
 class TickerElastic(ElasticCallback, BackendTickerCallback):
     default_index = 'ticker'
+
+
+class OpenInterestElastic(ElasticCallback, BackendOpenInterestCallback):
+    default_index = 'open_interest'

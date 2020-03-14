@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -16,7 +16,7 @@ async def callback(data=None):
     print(data)
 
 
-def custom_agg(data, feed=None, pair=None, side=None, amount=None, price=None, order_id=None, timestamp=None):
+def custom_agg(data, feed=None, pair=None, side=None, amount=None, price=None, order_id=None, timestamp=None, receipt_timestamp=None):
     if pair not in data:
         data[pair] = {'min': price, 'max': price}
     else:
@@ -31,7 +31,7 @@ def init(data):
     called at start of each new interval. We just need to clear the
     internal state
     """
-    data = {}
+    data.clear()
 
 
 def main():

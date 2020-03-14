@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -176,7 +176,6 @@ class Bitmex(API):
                 yield list(map(self._s3_data_normalization, data))
 
         if end is None or end > rest_end_date:
-            print("TRUE")
             for data in self._get('trade', symbol, rest_start, end, retry, retry_wait):
                 yield list(map(self._trade_normalization, data))
 

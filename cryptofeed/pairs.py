@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_US, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX
 
 
 PAIR_SEP = '-'
@@ -136,10 +136,13 @@ def kraken_pairs():
     data = r.json()
     for pair in data['result']:
         alt = data['result'][pair]['altname']
-        modifier = -3
+
         if ".d" in alt:
-            modifier = -5
-        normalized = alt[:modifier] + PAIR_SEP + alt[modifier:]
+            # https://blog.kraken.com/post/259/introducing-the-kraken-dark-pool/
+            # .d is for dark pool pairs
+            continue
+
+        normalized = alt[:-3] + PAIR_SEP + alt[-3:]
         exch = normalized.replace(PAIR_SEP, "/")
         normalized = normalized.replace('XBT', 'BTC')
         normalized = normalized.replace('XDG', 'DOG')
@@ -174,11 +177,6 @@ def exx_pairs():
 
 def huobi_pairs():
     r = requests.get('https://api.huobi.pro/v1/common/symbols').json()
-    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
-
-
-def huobi_us_pairs():
-    r = requests.get('https://api.huobi.com/v1/common/symbols').json()
     return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
@@ -253,7 +251,6 @@ _exchange_function_map = {
     BINANCE_FUTURES: binance_futures_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
-    HUOBI_US: huobi_us_pairs,
     HUOBI_DM: huobi_dm_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,

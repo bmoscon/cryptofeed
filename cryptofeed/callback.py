@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -25,28 +25,28 @@ class Callback:
 
 
 class TradeCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
-        await super().__call__(feed, pair, order_id, timestamp, side, amount, price)
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float):
+        await super().__call__(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp)
 
 
 class TickerCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float):
-        await super().__call__(feed, pair, bid, ask, timestamp)
+    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float, receipt_timestamp: float):
+        await super().__call__(feed, pair, bid, ask, timestamp, receipt_timestamp)
 
 
 class BookCallback(Callback):
     """
     For full L2/L3 book updates
     """
-    async def __call__(self, *, feed: str, pair: str, book: dict, timestamp):
-        await super().__call__(feed, pair, book, timestamp)
+    async def __call__(self, *, feed: str, pair: str, book: dict, timestamp: float, receipt_timestamp: float):
+        await super().__call__(feed, pair, book, timestamp, receipt_timestamp)
 
 
 class BookUpdateCallback(Callback):
     """
     For Book Deltas
     """
-    async def __call__(self, *, feed: str, pair: str, delta: dict, timestamp):
+    async def __call__(self, *, feed: str, pair: str, delta: dict, timestamp: float, receipt_timestamp: float):
         """
         Delta is in format of:
         {
@@ -55,19 +55,16 @@ class BookUpdateCallback(Callback):
         }
         prices with size 0 should be deleted from the book
         """
-        await super().__call__(feed, pair, delta, timestamp)
+        await super().__call__(feed, pair, delta, timestamp, receipt_timestamp)
+
 
 class OpenInterestCallback(Callback):
-        async def __call__(self, *, feed, pair, **kwargs):
-            await super().__call__(feed, pair, **kwargs)
-            
+    pass
+
+
 class VolumeCallback(Callback):
     pass
 
 
 class FundingCallback(Callback):
-    pass
-
-
-class InstrumentCallback(Callback):
     pass

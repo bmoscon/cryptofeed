@@ -30,9 +30,9 @@ class Bybit(Feed):
             else:
                 LOG.error("%s: Error from exchange %s", self.id, msg)
         elif "trade" in msg["topic"]:
-            await self._trade(msg)
+            await self._trade(msg, timestamp)
         elif "order_book_25L1" in msg["topic"]:
-            await self._book(msg)
+            await self._book(msg, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
@@ -47,7 +47,7 @@ class Bybit(Feed):
                     }
                 ))
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         {"topic":"trade.BTCUSD",
         "data":[
@@ -70,16 +70,16 @@ class Bybit(Feed):
                 side=BUY if trade['side'] == 'Buy' else SELL,
                 amount=Decimal(trade['size']),
                 price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['timestamp'])
+                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                receipt_timestamp=timestamp
             )
 
-    async def _book(self, msg):
+    async def _book(self, msg: dict, timestamp: float):
         pair = normalize_pair(msg['topic'].split('.')[1])
         update_type = msg['type']
         data = msg['data']
         forced = False
         delta = {BID: [], ASK: []}
-
 
         if update_type == 'snapshot':
             self.l2_book[pair] = {BID: sd({}), ASK: sd({})}
@@ -103,4 +103,4 @@ class Bybit(Feed):
                     self.l2_book[pair][side][price] = amount
 
         # timestamp is in microseconds
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, msg['timestamp_e6'] / 1000000)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, msg['timestamp_e6'] / 1000000, timestamp)

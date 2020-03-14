@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -57,7 +57,7 @@ class OHLCV(AggregateCallback):
             self.data[pair]['low'] = price
         self.data[pair]['vwap'] += price * amount
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
@@ -127,7 +127,7 @@ class RenkoFixed(AggregateCallback):
         else:
             self.new_brick = False
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp=None):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float):
         if self.new_brick:
             await self.handler(data=self.data)
         self._agg(pair, price)

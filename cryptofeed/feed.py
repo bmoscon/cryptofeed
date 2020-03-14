@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
-from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, INSTRUMENT, BID, ASK
+from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, OPEN_INTEREST, BID, ASK
 from cryptofeed.util.book import book_delta, depth
 
 
@@ -19,7 +19,7 @@ class Feed:
     def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
-        self.config = {}
+        self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
         self.updates = defaultdict(int)
@@ -36,12 +36,12 @@ class Feed:
         if config is not None:
             for channel in config:
                 chan = feed_to_exchange(self.id, channel)
-                self.config[chan] = {pair_std_to_exchange(pair, self.id) for pair in config[channel]}
+                self.config[chan].update([pair_std_to_exchange(pair, self.id) for pair in config[channel]])
 
         if pairs:
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
         if channels:
-            self.channels = [feed_to_exchange(self.id, chan) for chan in channels]
+            self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
 
         self.l3_book = {}
         self.l2_book = {}
@@ -51,7 +51,7 @@ class Feed:
                           L3_BOOK: Callback(None),
                           VOLUME: Callback(None),
                           FUNDING: Callback(None),
-                          INSTRUMENT: Callback(None)}
+                          OPEN_INTEREST: Callback(None)}
 
         if callbacks:
             for cb_type, cb_func in callbacks.items():
@@ -63,13 +63,14 @@ class Feed:
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
-    async def book_callback(self, book, book_type, pair, forced, delta, timestamp):
+    async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """
         Three cases we need to handle here
 
-        1. Book deltas are enabled (application of max depth here is trivial)
-        2. Book deltas no enabled, but max depth is enabled
-        3. Neither deltas nor max depth enabled
+        1.  Book deltas are enabled (application of max depth here is trivial)
+        1a. Book deltas are enabled, max depth is not, and exchange does not support deltas. Rare
+        2.  Book deltas not enabled, but max depth is enabled
+        3.  Neither deltas nor max depth enabled
 
         2 and 3 can be combined into a single block as long as application of depth modification
         happens first
@@ -82,8 +83,15 @@ class Feed:
                     delta, book = await self.apply_depth(book, True, pair)
                     if not (delta[BID] or delta[ASK]):
                         return
+                elif not delta:
+                    # this will only happen in cases where an exchange does not support deltas and max depth is not enabled.
+                    # this is an uncommon situation. Exchanges that do not support deltas will need
+                    # to populate self.previous internally to avoid the unncesessary book copy on all other exchanges
+                    delta = book_delta(self.previous_book[pair], book, book_type=book_type)
+                    if not (delta[BID] or delta[ASK]):
+                        return
                 self.updates[pair] += 1
-                await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp)
+                await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
                 if self.updates[pair] != self.book_update_interval:
                     return
             elif forced and self.max_depth:
@@ -94,9 +102,9 @@ class Feed:
             if not changed:
                 return
         if book_type == L2_BOOK:
-            await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
+            await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         else:
-            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp)
+            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         self.updates[pair] = 0
 
     async def callback(self, data_type, **kwargs):

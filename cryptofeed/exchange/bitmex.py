@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -13,7 +13,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, BITMEX, INSTRUMENT, TICKER
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, BITMEX, OPEN_INTEREST, TICKER
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -39,7 +39,7 @@ class Bitmex(Feed):
         self._reset()
 
     def _reset(self):
-        self.partial_received = False
+        self.partial_received = defaultdict(bool)
         self.order_id = {}
         for pair in self.pairs:
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
@@ -60,7 +60,7 @@ class Bitmex(Feed):
             symbols.append(data['symbol'])
         return symbols
 
-    async def _trade(self, msg):
+    async def _trade(self, msg: dict, timestamp: float):
         """
         trade msg example
 
@@ -85,7 +85,8 @@ class Bitmex(Feed):
                                          amount=Decimal(data['size']),
                                          price=Decimal(data['price']),
                                          order_id=data['trdMatchID'],
-                                         timestamp=ts)
+                                         timestamp=ts,
+                                         receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -94,15 +95,14 @@ class Bitmex(Feed):
         delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
         forced = False
-        if not self.partial_received:
+        pair = msg['data'][0]['symbol']
+        if not self.partial_received[pair]:
             # per bitmex documentation messages received before partial
             # should be discarded
             if msg['action'] != 'partial':
                 return
-            self.partial_received = True
+            self.partial_received[pair] = True
             forced = True
-
-        pair = msg['data'][0]['symbol']
 
         if msg['action'] == 'partial':
             for data in msg['data']:
@@ -148,19 +148,18 @@ class Bitmex(Feed):
             LOG.warning("%s: Unexpected l2 Book message %s", self.id, msg)
             return
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
-    async def _ticker(self, msg):
+    async def _ticker(self, msg: dict, timestamp: float):
         for data in msg['data']:
             await self.callback(TICKER, feed=self.id,
                             pair=data['symbol'],
                             bid=Decimal(data['bidPrice']),
                             ask=Decimal(data['askPrice']),
-                            timestamp=timestamp_normalize(self.id, data['timestamp']))
+                            timestamp=timestamp_normalize(self.id, data['timestamp']),
+                            receipt_timestamp=timestamp)
 
-
-
-    async def _funding(self, msg):
+    async def _funding(self, msg: dict, timestamp: float):
         """
         {'table': 'funding',
          'action': 'partial',
@@ -194,19 +193,255 @@ class Bitmex(Feed):
             await self.callback(FUNDING, feed=self.id,
                                           pair=data['symbol'],
                                           timestamp=ts,
+                                          receipt_timestamp=timestamp,
                                           interval=data['fundingInterval'],
                                           rate=data['fundingRate'],
                                           rate_daily=data['fundingRateDaily']
                                           )
 
-    async def _instrument(self, msg):
+    async def _instrument(self, msg: dict, timestamp: float):
+        """
+        Example instrument data
+
+        {
+        'table':'instrument',
+        'action':'partial',
+        'keys':[
+            'symbol'
+        ],
+        'types':{
+            'symbol':'symbol',
+            'rootSymbol':'symbol',
+            'state':'symbol',
+            'typ':'symbol',
+            'listing':'timestamp',
+            'front':'timestamp',
+            'expiry':'timestamp',
+            'settle':'timestamp',
+            'relistInterval':'timespan',
+            'inverseLeg':'symbol',
+            'sellLeg':'symbol',
+            'buyLeg':'symbol',
+            'optionStrikePcnt':'float',
+            'optionStrikeRound':'float',
+            'optionStrikePrice':'float',
+            'optionMultiplier':'float',
+            'positionCurrency':'symbol',
+            'underlying':'symbol',
+            'quoteCurrency':'symbol',
+            'underlyingSymbol':'symbol',
+            'reference':'symbol',
+            'referenceSymbol':'symbol',
+            'calcInterval':'timespan',
+            'publishInterval':'timespan',
+            'publishTime':'timespan',
+            'maxOrderQty':'long',
+            'maxPrice':'float',
+            'lotSize':'long',
+            'tickSize':'float',
+            'multiplier':'long',
+            'settlCurrency':'symbol',
+            'underlyingToPositionMultiplier':'long',
+            'underlyingToSettleMultiplier':'long',
+            'quoteToSettleMultiplier':'long',
+            'isQuanto':'boolean',
+            'isInverse':'boolean',
+            'initMargin':'float',
+            'maintMargin':'float',
+            'riskLimit':'long',
+            'riskStep':'long',
+            'limit':'float',
+            'capped':'boolean',
+            'taxed':'boolean',
+            'deleverage':'boolean',
+            'makerFee':'float',
+            'takerFee':'float',
+            'settlementFee':'float',
+            'insuranceFee':'float',
+            'fundingBaseSymbol':'symbol',
+            'fundingQuoteSymbol':'symbol',
+            'fundingPremiumSymbol':'symbol',
+            'fundingTimestamp':'timestamp',
+            'fundingInterval':'timespan',
+            'fundingRate':'float',
+            'indicativeFundingRate':'float',
+            'rebalanceTimestamp':'timestamp',
+            'rebalanceInterval':'timespan',
+            'openingTimestamp':'timestamp',
+            'closingTimestamp':'timestamp',
+            'sessionInterval':'timespan',
+            'prevClosePrice':'float',
+            'limitDownPrice':'float',
+            'limitUpPrice':'float',
+            'bankruptLimitDownPrice':'float',
+            'bankruptLimitUpPrice':'float',
+            'prevTotalVolume':'long',
+            'totalVolume':'long',
+            'volume':'long',
+            'volume24h':'long',
+            'prevTotalTurnover':'long',
+            'totalTurnover':'long',
+            'turnover':'long',
+            'turnover24h':'long',
+            'homeNotional24h':'float',
+            'foreignNotional24h':'float',
+            'prevPrice24h':'float',
+            'vwap':'float',
+            'highPrice':'float',
+            'lowPrice':'float',
+            'lastPrice':'float',
+            'lastPriceProtected':'float',
+            'lastTickDirection':'symbol',
+            'lastChangePcnt':'float',
+            'bidPrice':'float',
+            'midPrice':'float',
+            'askPrice':'float',
+            'impactBidPrice':'float',
+            'impactMidPrice':'float',
+            'impactAskPrice':'float',
+            'hasLiquidity':'boolean',
+            'openInterest':'long',
+            'openValue':'long',
+            'fairMethod':'symbol',
+            'fairBasisRate':'float',
+            'fairBasis':'float',
+            'fairPrice':'float',
+            'markMethod':'symbol',
+            'markPrice':'float',
+            'indicativeTaxRate':'float',
+            'indicativeSettlePrice':'float',
+            'optionUnderlyingPrice':'float',
+            'settledPrice':'float',
+            'timestamp':'timestamp'
+        },
+        'foreignKeys':{
+            'inverseLeg':'instrument',
+            'sellLeg':'instrument',
+            'buyLeg':'instrument'
+        },
+        'attributes':{
+            'symbol':'unique'
+        },
+        'filter':{
+            'symbol':'XBTUSD'
+        },
+        'data':[
+            {
+                'symbol':'XBTUSD',
+                'rootSymbol':'XBT',
+                'state':'Open',
+                'typ':'FFWCSX',
+                'listing':'2016-05-13T12:00:00.000Z',
+                'front':'2016-05-13T12:00:00.000Z',
+                'expiry':None,
+                'settle':None,
+                'relistInterval':None,
+                'inverseLeg':'',
+                'sellLeg':'',
+                'buyLeg':'',
+                'optionStrikePcnt':None,
+                'optionStrikeRound':None,
+                'optionStrikePrice':None,
+                'optionMultiplier':None,
+                'positionCurrency':'USD',
+                'underlying':'XBT',
+                'quoteCurrency':'USD',
+                'underlyingSymbol':'XBT=',
+                'reference':'BMEX',
+                'referenceSymbol':'.BXBT',
+                'calcInterval':None,
+                'publishInterval':None,
+                'publishTime':None,
+                'maxOrderQty':10000000,
+                'maxPrice':1000000,
+                'lotSize':1,
+                'tickSize':Decimal(         '0.5'         ),
+                'multiplier':-100000000,
+                'settlCurrency':'XBt',
+                'underlyingToPositionMultiplier':None,
+                'underlyingToSettleMultiplier':-100000000,
+                'quoteToSettleMultiplier':None,
+                'isQuanto':False,
+                'isInverse':True,
+                'initMargin':Decimal(         '0.01'         ),
+                'maintMargin':Decimal(         '0.005'         ),
+                'riskLimit':20000000000,
+                'riskStep':10000000000,
+                'limit':None,
+                'capped':False,
+                'taxed':True,
+                'deleverage':True,
+                'makerFee':Decimal(         '-0.00025'         ),
+                'takerFee':Decimal(         '0.00075'         ),
+                'settlementFee':0,
+                'insuranceFee':0,
+                'fundingBaseSymbol':'.XBTBON8H',
+                'fundingQuoteSymbol':'.USDBON8H',
+                'fundingPremiumSymbol':'.XBTUSDPI8H',
+                'fundingTimestamp':'2020-02-02T04:00:00.000Z',
+                'fundingInterval':'2000-01-01T08:00:00.000Z',
+                'fundingRate':Decimal(         '0.000106'         ),
+                'indicativeFundingRate':Decimal(         '0.0001'         ),
+                'rebalanceTimestamp':None,
+                'rebalanceInterval':None,
+                'openingTimestamp':'2020-02-02T00:00:00.000Z',
+                'closingTimestamp':'2020-02-02T01:00:00.000Z',
+                'sessionInterval':'2000-01-01T01:00:00.000Z',
+                'prevClosePrice':Decimal(         '9340.63'         ),
+                'limitDownPrice':None,
+                'limitUpPrice':None,
+                'bankruptLimitDownPrice':None,
+                'bankruptLimitUpPrice':None,
+                'prevTotalVolume':1999389257669,
+                'totalVolume':1999420432348,
+                'volume':31174679,
+                'volume24h':1605909209,
+                'prevTotalTurnover':27967114248663460,
+                'totalTurnover':27967447182062520,
+                'turnover':332933399058,
+                'turnover24h':17126993087717,
+                'homeNotional24h':Decimal(         '171269.9308771703'         ),
+                'foreignNotional24h':1605909209,
+                'prevPrice24h':9348,
+                'vwap':Decimal(         '9377.3443'         ),
+                'highPrice':9464,
+                'lowPrice':Decimal(         '9287.5'         ),
+                'lastPrice':9352,
+                'lastPriceProtected':9352,
+                'lastTickDirection':'ZeroMinusTick',
+                'lastChangePcnt':Decimal(         '0.0004'         ),
+                'bidPrice':9352,
+                'midPrice':Decimal(         '9352.25'         ),
+                'askPrice':Decimal(         '9352.5'         ),
+                'impactBidPrice':Decimal(         '9351.9125'         ),
+                'impactMidPrice':Decimal(         '9352.25'         ),
+                'impactAskPrice':Decimal(         '9352.7871'         ),
+                'hasLiquidity':True,
+                'openInterest':983043322,
+                'openValue':10518563545400,
+                'fairMethod':'FundingRate',
+                'fairBasisRate':Decimal(         '0.11607'         ),
+                'fairBasis':Decimal(         '0.43'         ),
+                'fairPrice':Decimal(         '9345.36'         ),
+                'markMethod':'FairPrice',
+                'markPrice':Decimal(         '9345.36'         ),
+                'indicativeTaxRate':0,
+                'indicativeSettlePrice':Decimal(         '9344.93'         ),
+                'optionUnderlyingPrice':None,
+                'settledPrice':None,
+                'timestamp':'2020-02-02T00:30:43.772Z'
+            }
+        ]
+        }
+        """
         for data in msg['data']:
-            ts = timestamp_normalize(self.id, data['timestamp'])
-            data['timestamp'] = ts
-            await self.callback(INSTRUMENT, feed=self.id,
-                                            pair=data['symbol'],
-                                            **data
-                                            )
+            if 'openInterest' in data:
+                ts = timestamp_normalize(self.id, data['timestamp'])
+                await self.callback(OPEN_INTEREST, feed=self.id,
+                                                pair=data['symbol'],
+                                                open_interest=data['openInterest'],
+                                                timestamp=ts,
+                                                receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -219,17 +454,15 @@ class Bitmex(Feed):
             LOG.error("%s: Error message from exchange: %s", self.id, msg)
         else:
             if msg['table'] == 'trade':
-                await self._trade(msg)
+                await self._trade(msg, timestamp)
             elif msg['table'] == 'orderBookL2':
                 await self._book(msg, timestamp)
             elif msg['table'] == 'funding':
-                await self._funding(msg)
+                await self._funding(msg, timestamp)
             elif msg['table'] == 'instrument':
-                await self._instrument(msg)
+                await self._instrument(msg, timestamp)
             elif msg['table'] == 'quote':
-                await self._ticker(msg)
-
-
+                await self._ticker(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
 

@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -11,6 +11,7 @@ from cryptofeed.rest.poloniex import Poloniex
 from cryptofeed.rest.gemini import Gemini
 from cryptofeed.rest.kraken import Kraken
 from cryptofeed.rest.deribit import Deribit
+from cryptofeed.rest.ftx import FTX
 from cryptofeed.log import get_logger
 from cryptofeed.standards import load_exchange_pair_mapping
 
@@ -37,7 +38,8 @@ class Rest:
             'poloniex': Poloniex(config),
             'gemini': Gemini(config, sandbox=sandbox),
             'kraken': Kraken(config),
-            'deribit': Deribit(config)
+            'deribit': Deribit(config),
+            'ftx': FTX(config)
         }
 
     def __getitem__(self, key):

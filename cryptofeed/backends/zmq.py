@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,7 @@ import json
 import zmq
 import zmq.asyncio
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback
+from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback
 
 
 class ZMQCallback:
@@ -22,7 +22,7 @@ class ZMQCallback:
         self.numeric_type = numeric_type
         self.dynamic_key = dynamic_key
 
-    async def write(self, feed, pair, timestamp, data):
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         if self.dynamic_key:
             await self.con.send_string(f'{feed}-{self.key}-{pair} {json.dumps(data)}')
         else:
@@ -47,3 +47,7 @@ class BookZMQ(ZMQCallback, BackendBookCallback):
 
 class BookDeltaZMQ(ZMQCallback, BackendBookDeltaCallback):
     default_key = 'book'
+
+
+class OpenInterestZMQ(ZMQCallback, BackendOpenInterestCallback):
+    default_key = 'open_interest'

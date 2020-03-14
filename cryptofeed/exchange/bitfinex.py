@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -74,7 +74,8 @@ class Bitfinex(Feed):
                                          pair=pair,
                                          bid=bid,
                                          ask=ask,
-                                         timestamp=timestamp)
+                                         timestamp=timestamp,
+                                         receipt_timestamp=timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         chan_id = msg[0]
@@ -82,41 +83,43 @@ class Bitfinex(Feed):
         funding = pair[0] == 'f'
         pair = pair_exchange_to_std(pair)
 
-        async def _trade_update(trade):
+        async def _trade_update(trade: list, timestamp: float):
             if funding:
                 order_id, ts, amount, price, period = trade
             else:
                 order_id, ts, amount, price = trade
                 period = None
-            timestamp = timestamp_normalize(self.id, ts)
+            ts = timestamp_normalize(self.id, ts)
             side = SELL if amount < 0 else BUY
             amount = abs(amount)
             if period:
                 await self.callback(FUNDING, feed=self.id,
                                               pair=pair,
                                               side=side,
-                                              amount=amount,
-                                              price=price,
+                                              amount=Decimal(amount),
+                                              price=Decimal(price),
                                               order_id=order_id,
-                                              timestamp=timestamp,
+                                              timestamp=ts,
+                                              receipt_timestamp=timestamp,
                                               period=period)
             else:
                 await self.callback(TRADES, feed=self.id,
                                              pair=pair,
                                              side=side,
-                                             amount=amount,
-                                             price=price,
+                                             amount=Decimal(amount),
+                                             price=Decimal(price),
                                              order_id=order_id,
-                                             timestamp=timestamp)
+                                             timestamp=ts,
+                                             receipt_timestamp=timestamp)
 
         if isinstance(msg[1], list):
             # snapshot
             for trade_update in msg[1]:
-                await _trade_update(trade_update)
+                await _trade_update(trade_update, timestamp)
         else:
             # update
             if msg[1] == 'te' or msg[1] == 'fte':
-                await _trade_update(msg[2])
+                await _trade_update(msg[2], timestamp)
             elif msg[1] == 'tu' or msg[1] == 'ftu':
                 # ignore trade updates
                 pass
@@ -177,7 +180,7 @@ class Bitfinex(Feed):
         else:
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _raw_book(self, msg: dict, timestamp: float):
         """
@@ -256,7 +259,7 @@ class Bitfinex(Feed):
             LOG.warning("%s: Unexpected book msg %s", self.id, msg)
             return
 
-        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, forced, delta, timestamp)
+        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
