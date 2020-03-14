@@ -154,3 +154,4 @@ class TickerInflux(InfluxCallback, BackendTickerCallback):
 
 class OpenInterestInflux(InfluxCallback, BackendOpenInterestCallback):
     default_key = 'open_interest'
+
