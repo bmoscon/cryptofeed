@@ -12,7 +12,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN, OPEN_INTEREST
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN, OPEN_INTEREST, FUNDING
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -87,6 +87,17 @@ class OKCoin(Feed):
                 receipt_timestamp=timestamp
             )
 
+    async def _funding(self, msg: dict, timestamp: float):
+        for update in msg['data']:
+            await self.callback(FUNDING,
+                                feed=self.id,
+                                pair=pair_exchange_to_std(update['instrument_id']),
+                                timestamp=timestamp_normalize(self.id, update['funding_time']),
+                                receipt_timestamp=timestamp,
+                                rate=update['funding_rate'],
+                                estimated_rate=update['estimated_rate'],
+                                settlement_time=timestamp_normalize(self.id, update['settlement_time']))
+
     async def _book(self, msg: dict, timestamp: float):
         if msg['action'] == 'partial':
             # snapshot
@@ -139,6 +150,8 @@ class OKCoin(Feed):
                 await self._trade(msg, timestamp)
             elif 'depth_l2_tbt' in msg['table']:
                 await self._book(msg, timestamp)
+            elif 'swap/funding_rate' in msg['table']:
+                await self._funding(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
         else:
