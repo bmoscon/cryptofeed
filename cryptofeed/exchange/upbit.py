@@ -7,7 +7,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
 from cryptofeed.defines import UPBIT, BUY, SELL, TRADES, BID, ASK, L2_BOOK, TICKER
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std
+from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std, load_exchange_pair_mapping
 
 
 LOG = logging.getLogger('feedhandler')
@@ -15,6 +15,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Upbit(Feed):
     id = UPBIT
+    api = 'https://api.upbit.com/v1/'
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.upbit.com/websocket/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
@@ -23,6 +24,18 @@ class Upbit(Feed):
 
     def __reset(self):
         pass
+
+    @staticmethod
+    def get_active_symbols_info():
+        return requests.get(Upbit.api+'market/all').json()
+
+    @staticmethod
+    def get_active_symbols():
+        load_exchange_pair_mapping(Upbit.id)
+        symbols = []
+        for data in Upbit.get_active_symbols_info():
+            symbols.append(pair_exchange_to_std(data['market']))
+        return symbols
 
     async def _snapshot(self, pair: str):
         self.l2_book[pair] = {BID: sd(), ASK: sd()}
