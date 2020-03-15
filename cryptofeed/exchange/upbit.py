@@ -1,10 +1,8 @@
 import logging
 import json
 from decimal import Decimal
-import requests
-import zlib
-import base64
 
+import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
