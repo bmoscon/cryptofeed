@@ -56,7 +56,7 @@ class Upbit(Feed):
                                      amount=amount,
                                      price=price,
                                      timestamp=timestamp_normalize(self.id, msg['ttms']),
-                                     receipt_timestamp=timestamp
+                                     receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
