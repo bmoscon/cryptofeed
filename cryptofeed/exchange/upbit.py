@@ -27,7 +27,7 @@ class Upbit(Feed):
 
     async def _trade(self, msg: dict, timestamp: float):
         """
-        trade msg example
+        Doc : https://docs.upbit.com/v1.0.7/reference#시세-체결-조회
 
         {
             'ty': 'trade'             // Event type
@@ -43,7 +43,7 @@ class Upbit(Feed):
             'st': 'SNAPSHOT',         // 'SNAPSHOT' or 'REALTIME'
             'td': '2020-03-15',       // Trade date utc
             'ttm': '07:27:08',        // Trade time utc
-            'c': 'FALL',              // Change
+            'c': 'FALL',              // Change - 'FALL' / 'RISE' / 'EVEN'
         }
         """
 
@@ -56,15 +56,92 @@ class Upbit(Feed):
                                      amount=amount,
                                      price=price,
                                      timestamp=timestamp_normalize(self.id, msg['ttms']),
-                                     receipt_timestamp=timestamp_normalize(self.id, msg['tms']))
+                                     receipt_timestamp=timestamp
 
     async def _book(self, msg: dict, timestamp: float):
+        """
+        Doc : https://docs.upbit.com/v1.0.7/reference#시세-호가-정보orderbook-조회
+
+        Currently, Upbit orderbook api only provides 15 depth book state
+        
+        {
+            'ty': 'orderbook'       // Event type
+            'cd': 'KRW-BTC',        // Symbol
+            'obu': [{'ap': 6727000.0, 'as': 0.4744314, 'bp': 6721000.0, 'bs': 0.0014551},     // orderbook units
+                    {'ap': 6728000.0, 'as': 1.85862302, 'bp': 6719000.0, 'bs': 0.00926683},
+                    {'ap': 6729000.0, 'as': 5.43556558, 'bp': 6718000.0, 'bs': 0.40908977},
+                    {'ap': 6730000.0, 'as': 4.41993651, 'bp': 6717000.0, 'bs': 0.48052204},
+                    {'ap': 6731000.0, 'as': 0.09207, 'bp': 6716000.0, 'bs': 6.52612927},
+                    {'ap': 6732000.0, 'as': 1.42736812, 'bp': 6715000.0, 'bs': 610.45535023},
+                    {'ap': 6734000.0, 'as': 0.173, 'bp': 6714000.0, 'bs': 1.09218395},
+                    {'ap': 6735000.0, 'as': 1.08739294, 'bp': 6713000.0, 'bs': 0.46785444},
+                    {'ap': 6737000.0, 'as': 3.34450006, 'bp': 6712000.0, 'bs': 0.01300915},
+                    {'ap': 6738000.0, 'as': 0.26, 'bp': 6711000.0, 'bs': 0.24701799},
+                    {'ap': 6739000.0, 'as': 0.086, 'bp': 6710000.0, 'bs': 1.97964014},
+                    {'ap': 6740000.0, 'as': 0.00658782, 'bp': 6708000.0, 'bs': 0.0002},
+                    {'ap': 6741000.0, 'as': 0.8004, 'bp': 6707000.0, 'bs': 0.02022364},
+                    {'ap': 6742000.0, 'as': 0.11040396, 'bp': 6706000.0, 'bs': 0.29082183},
+                    {'ap': 6743000.0, 'as': 1.1, 'bp': 6705000.0, 'bs': 0.94493254}],
+            'st': 'REALTIME',      // Streaming type - 'REALTIME' or 'SNAPSHOT'
+            'tas': 20.67627941,    // Total ask size for given 15 depth (not total ask order size)
+            'tbs': 622.93769692,   // Total bid size for given 15 depth (not total bid order size)
+            'tms': 1584263923870,  // Timestamp
+        }
+        """
         pass
+
     async def _ticker(self, msg: dict, timestamp: float):
-        pass
+        """
+        Doc : https://docs.upbit.com/v1.0.7/reference#시세-ticker-조회
+
+        {
+            'ty': 'ticker'                // Event type
+            'cd': 'KRW-BTC',              // Symbol
+            'hp': 6904000.0,              // High price
+            'lp': 6660000.0,              // Low price
+            'cp': 81000.0,                // Change price
+            'tp': 6742000.0,              // Trade price
+            'tv': 0.022112,               // Trade volume(amount)
+            'op': 6823000.0,              // Opening price
+            'pcp': 6823000.0,             // Previous closing price
+            'st': 'REALTIME',             // 'SNAPSHOT' or 'REALTIME'
+            'tms': 1584261867032,         // Receipt timestamp
+            'ttms': 1584261866000,        // Trade timestamp
+            'ab': 'ASK',                  // 'BID' or 'ASK'
+            'aav': 1223.62809015,
+            'abv': 1273.40780697,
+            'atp': 16904032846.03822,
+            'atp24h': 60900534403.85303,
+            'atv': 2497.03589712,
+            'atv24h': 8916.84161476,
+            'c': 'FALL',                 // Change - 'FALL' / 'RISE' / 'EVEN'
+            'cr': 0.0118716107,
+            'dd': None,
+            'h52wdt': '2019-06-26',
+            'h52wp': 16840000.0,
+            'its': False,
+            'l52wdt': '2019-03-17',
+            'l52wp': 4384000.0,
+            'ms': 'ACTIVE',              // Market Status 'ACTIVE' or 
+            'msfi': None,
+            'mw': 'NONE',                // Market warning 'NONE' or
+            'scp': -81000.0,
+            'scr': -0.0118716107,
+            'tdt': '20200315',
+            'ts': None,
+            'ttm': '084426',
+        }
+        
+        """
+
+        # Currently, Upbit ticker api does not support best_ask and best_bid price.
+        # Only way for tracking best_ask and best_bid price is looking at the orderbook directly.
+        raise NotImplementedError
   
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg)
+        print(msg)
+        return 
         if msg['ty'] == "trade":
             await self._trade(msg, timestamp)
         elif msg['ty'] == "orderbook":
