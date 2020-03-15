@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, '../')
-
 from cryptofeed.callback import TradeCallback, BookCallback, TickerCallback
 from cryptofeed import FeedHandler
 
@@ -17,7 +14,7 @@ async def book(feed, pair, book, timestamp, receipt_timestamp):
 
 def main():
     upbit_active_pairs = Upbit.get_active_symbols()
-    
+
     f = FeedHandler()
     f.add_feed(Upbit(pairs=upbit_active_pairs, channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Upbit(pairs=upbit_active_pairs, channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
