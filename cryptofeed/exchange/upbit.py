@@ -24,10 +24,55 @@ class Upbit(Feed):
 
     def __reset(self):
         pass
+
+    async def _trade(self, msg: dict, timestamp: float):
+        """
+        trade msg example
+
+        {
+            'ty': 'trade'             // Event type
+            'cd': 'KRW-BTC',          // Symbol
+            'tp': 6759000.0,          // Trade Price
+            'tv': 0.03243003,         // Trade volume(amount)
+            'tms': 1584257228806,     // Timestamp
+            'ttms': 1584257228000,    // Trade Timestamp
+            'ab': 'BID',              // 'BID' or 'ASK'
+            'cp': 64000.0,            // Change of price
+            'pcp': 6823000.0,         // Previous closing price
+            'sid': 1584257228000000,  // Sequential ID
+            'st': 'SNAPSHOT',         // 'SNAPSHOT' or 'REALTIME'
+            'td': '2020-03-15',       // Trade date utc
+            'ttm': '07:27:08',        // Trade time utc
+            'c': 'FALL',              // Change
+        }
+        """
+
+        price = Decimal(msg['tp'])
+        amount = Decimal(msg['tv'])
+        await self.callback(TRADES, feed=self.id,
+                                     order_id=msg['sid'],
+                                     pair=pair_exchange_to_std(msg['cd']),
+                                     side=BUY if msg['ab'] == 'BID' else SELL,
+                                     amount=amount,
+                                     price=price,
+                                     timestamp=timestamp_normalize(self.id, msg['ttms']),
+                                     receipt_timestamp=timestamp_normalize(self.id, msg['tms']))
+
+    async def _book(self, msg: dict, timestamp: float):
+        pass
+    async def _ticker(self, msg: dict, timestamp: float):
+        pass
   
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg)
-        print(msg)
+        if msg['ty'] == "trade":
+            await self._trade(msg, timestamp)
+        elif msg['ty'] == "orderbook":
+            await self._book(msg, timestamp)
+        elif msg['ty'] == "ticker":
+            await self._ticker(msg, timestamp)
+        else:
+            LOG.warning("%s: Unhandled message %s", self.id, msg)
 
     async def subscribe(self, websocket):
         """
