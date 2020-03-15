@@ -158,8 +158,6 @@ class Upbit(Feed):
   
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg)
-        # print(msg)
-        # return 
         if msg['ty'] == "trade":
             await self._trade(msg, timestamp)
         elif msg['ty'] == "orderbook":
