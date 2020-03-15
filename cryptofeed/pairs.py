@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT
 
 
 PAIR_SEP = '-'
@@ -236,6 +236,12 @@ def bitmax_pairs():
     r = requests.get('https://bitmax.io/api/v1/products').json()
     return {f"{data['baseAsset']}{PAIR_SEP}{data['quoteAsset']}": data['symbol'] for data in r}
 
+
+def upbit_pairs():
+    r = requests.get('https://api.upbit.com/v1/market/all').json()
+    return {f"{data['market'].split('-')[1]}{PAIR_SEP}{data['market'].split('-')[0]}": data['market'] for data in r}
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -259,5 +265,6 @@ _exchange_function_map = {
     FTX: ftx_pairs,
     BITTREX: bittrex_pairs,
     BITCOINCOM: bitcoincom_pairs,
-    BITMAX: bitmax_pairs
+    BITMAX: bitmax_pairs,
+    UPBIT: upbit_pairs
 }
