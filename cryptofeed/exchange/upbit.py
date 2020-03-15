@@ -21,9 +21,13 @@ class Upbit(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.upbit.com/websocket/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
+        self.max_depth = 15
 
     def __reset(self):
         pass
+
+    async def _snapshot(self, pair: str):
+        self.l2_book[pair] = {BID: sd(), ASK: sd()}
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -62,7 +66,7 @@ class Upbit(Feed):
         """
         Doc : https://docs.upbit.com/v1.0.7/reference#시세-호가-정보orderbook-조회
 
-        Currently, Upbit orderbook api only provides 15 depth book state
+        Currently, Upbit orderbook api only provides 15 depth book state and does not support delta
         
         {
             'ty': 'orderbook'       // Event type
@@ -88,7 +92,21 @@ class Upbit(Feed):
             'tms': 1584263923870,  // Timestamp
         }
         """
-        pass
+        pair = pair_exchange_to_std(msg['cd'])
+        orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
+        delta = False
+
+        if pair not in self.l2_book:
+            await self._snapshot(pair)
+
+        # forced = True if the snapshot received, otherwise(realtime) forced set to be false     
+        forced = True if msg['st'] == 'SNAPSHOT' else False
+
+        for unit in msg['obu']:
+            self.l2_book[pair][ASK][Decimal(unit['ap'])] = Decimal(unit['as'])
+            self.l2_book[pair][BID][Decimal(unit['bp'])] = Decimal(unit['bs'])
+
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, orderbook_timestamp, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -140,8 +158,8 @@ class Upbit(Feed):
   
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg)
-        print(msg)
-        return 
+        # print(msg)
+        # return 
         if msg['ty'] == "trade":
             await self._trade(msg, timestamp)
         elif msg['ty'] == "orderbook":

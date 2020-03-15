@@ -182,7 +182,7 @@ _feed_to_exchange_map = {
         BITTREX: 'SubscribeToSummaryDeltas',
         BITCOINCOM: 'subscribeTicker',
         BITMAX: UNSUPPORTED,
-        UPBIT: TICKER
+        UPBIT: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003
