@@ -60,7 +60,7 @@ class InfluxCallback(HTTPCallback):
         token: str (For InfluxDB 2.0 compatibility)
           Token string for authentication
         precision: str (For InfluxDB 2.0 compatibility)
-          Precision level among (s, ms, us, ns) 
+          Precision level among (s, ms, us, ns)
         """
         super().__init__(addr, **kwargs)
         if org and bucket and token:

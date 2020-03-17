@@ -1,10 +1,9 @@
 from multiprocessing import Process
-import json
 
 from cryptofeed import FeedHandler
-from cryptofeed.backends.rabbitmq import BookRabbit, TradeRabbit
+from cryptofeed.backends.rabbitmq import BookRabbit
 from cryptofeed.exchanges import Kraken
-from cryptofeed.defines import L2_BOOK, TRADES
+from cryptofeed.defines import L2_BOOK
 
 
 def callback(ch, method, properties, body):

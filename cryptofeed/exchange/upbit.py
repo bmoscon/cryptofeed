@@ -151,7 +151,7 @@ class Upbit(Feed):
             'its': False,
             'l52wdt': '2019-03-17',
             'l52wp': 4384000.0,
-            'ms': 'ACTIVE',              // Market Status 'ACTIVE' or 
+            'ms': 'ACTIVE',              // Market Status 'ACTIVE' or
             'msfi': None,
             'mw': 'NONE',                // Market warning 'NONE' or
             'scp': -81000.0,
@@ -189,10 +189,10 @@ class Upbit(Feed):
 
         Examples (Note that the positions of the base and quote currencies are swapped.)
 
-        1. In order to get TRADES of "BTC-KRW" and "XRP-BTC" markets. 
+        1. In order to get TRADES of "BTC-KRW" and "XRP-BTC" markets.
         > [{"ticket":"UNIQUE_TICKET"},{"type":"trade","codes":["KRW-BTC","BTC-XRP"]}]
 
-        2. In order to get ORDERBOOK of "BTC-KRW" and "XRP-BTC" markets. 
+        2. In order to get ORDERBOOK of "BTC-KRW" and "XRP-BTC" markets.
         > [{"ticket":"UNIQUE_TICKET"},{"type":"orderbook","codes":["KRW-BTC","BTC-XRP"]}]
 
         3. In order to get TRADES of "BTC-KRW" and ORDERBOOK of "ETH-KRW"

@@ -11,12 +11,11 @@ from cryptofeed.backends.zmq import BookZMQ, TickerZMQ
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Kraken, Coinbase
 
-from cryptofeed.defines import L2_BOOK, TRADES, TICKER
+from cryptofeed.defines import L2_BOOK, TICKER
 
 
 def receiver(port):
     import zmq
-    import time
     addr = 'tcp://127.0.0.1:{}'.format(port)
     ctx = zmq.Context.instance()
     s = ctx.socket(zmq.SUB)
