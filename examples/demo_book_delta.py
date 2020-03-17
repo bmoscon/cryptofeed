@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex, Kraken, OKCoin, Bybit, Binance, Bitstamp, EXX, Bittrex
+from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex, Kraken, OKCoin, Bybit, Binance, Bitstamp, EXX, Bittrex, Upbit
 from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, BOOK_DELTA
 
 
@@ -72,7 +72,6 @@ class DeltaBook(object):
 
 def main():
     f = FeedHandler()
-
     f.add_feed(Bitmex(max_depth=100, book_interval=1000, pairs=['XBTUSD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitmex").L2))
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks=DeltaBook("Bitfinex-L3").L3))
     f.add_feed(Bitfinex(max_depth=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitfinex-L2").L2))
@@ -88,6 +87,7 @@ def main():
     f.add_feed(Binance(max_depth=100, book_interval=30, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("Binance").L2))
     f.add_feed(Bitstamp(max_depth=100, book_interval=30, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitstamp").L2))
     f.add_feed(Bittrex(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bittrex").L2))
+    f.add_feed(Upbit(book_interval=2, pairs=['BTC-KRW'], channels=[L2_BOOK], callbacks=DeltaBook("Upbit").L2))
 
     f.run()
 

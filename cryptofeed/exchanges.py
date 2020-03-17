@@ -29,3 +29,4 @@ from cryptofeed.exchange.ftx import FTX
 from cryptofeed.exchange.bittrex import Bittrex
 from cryptofeed.exchange.bitcoincom import BitcoinCom
 from cryptofeed.exchange.bitmax import Bitmax
+from cryptofeed.exchange.upbit import Upbit
