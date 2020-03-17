@@ -4,10 +4,10 @@ from cryptofeed.defines import BID, ASK
 
 def test_book_delta_simple():
     a = {BID: {
-            1.0: 1,
-            0.9: 0.5,
-            0.8: 2
-        },
+        1.0: 1,
+        0.9: 0.5,
+        0.8: 2
+    },
         ASK: {
             1.1: 1.1,
             1.2: 0.6,
@@ -16,9 +16,9 @@ def test_book_delta_simple():
     }
 
     b = {BID: {
-            0.9: 0.5,
-            0.8: 2
-        },
+        0.9: 0.5,
+        0.8: 2
+    },
         ASK: {
             1.1: 1.1,
             1.2: 0.6,
@@ -32,10 +32,10 @@ def test_book_delta_simple():
 
 def test_book_delta_empty():
     a = {BID: {
-            1.0: 1,
-            0.9: 0.5,
-            0.8: 2
-        },
+        1.0: 1,
+        0.9: 0.5,
+        0.8: 2
+    },
         ASK: {
             1.1: 1.1,
             1.2: 0.6,

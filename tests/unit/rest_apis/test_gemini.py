@@ -1,5 +1,3 @@
-import time
-
 from cryptofeed.rest import Rest
 
 import pytest
@@ -38,11 +36,11 @@ def test_heartbeat():
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 def test_place_order_and_cancel():
     order_resp = sandbox.place_order(
-        pair = 'btcusd',
-        side = 'buy',
+        pair='btcusd',
+        side='buy',
         type='LIMIT',
-        amount = '1.0',
-        price = '622.13',
+        amount='1.0',
+        price='622.13',
         client_order_id='1'
     )
     assert 'order_id' in order_resp
@@ -65,11 +63,11 @@ def test_cancel_all_active_orders():
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 def test_order_status():
     order_resp = sandbox.place_order(
-        pair = 'btcusd',
-        side = 'buy',
+        pair='btcusd',
+        side='buy',
         type='LIMIT',
-        amount = '1.0',
-        price = '1.13',
+        amount='1.0',
+        price='1.13',
         client_order_id='1'
     )
     status = sandbox.order_status({'order_id': order_resp['order_id']})
