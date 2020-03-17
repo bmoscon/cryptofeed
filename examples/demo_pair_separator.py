@@ -18,6 +18,7 @@ async def ticker(feed, pair, bid, ask, timestamp):
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
     print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
+
 async def book(feed, pair, book, timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
@@ -27,7 +28,7 @@ def main():
     f = FeedHandler()
     f.add_feed(COINBASE, pairs=['BTC/USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)})
     f.add_feed(Gemini(pairs=['BTC/USD'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Coinbase(config={L2_BOOK: ['ETH/USD'], L3_BOOK: ['BTC/USD'] }, callbacks={L3_BOOK: BookCallback(book), L2_BOOK: BookCallback(book)}))
+    f.add_feed(Coinbase(config={L2_BOOK: ['ETH/USD'], L3_BOOK: ['BTC/USD']}, callbacks={L3_BOOK: BookCallback(book), L2_BOOK: BookCallback(book)}))
 
     f.run()
 

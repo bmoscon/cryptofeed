@@ -18,10 +18,11 @@ You can run a consumer in the console with the following command
 $ kafka-console-consumer --bootstrap-server 127.0.0.1:9092 --topic trades-COINBASE-BTC-USD
 """
 
+
 def main():
     f = FeedHandler()
     cbs = {TRADES: TradeKafka(), L2_BOOK: BookKafka()}
-    
+
     f.add_feed(Coinbase(max_depth=10, channels=[TRADES, L2_BOOK], pairs=['BTC-USD'], callbacks=cbs))
 
     f.run()

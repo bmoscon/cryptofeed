@@ -6,7 +6,7 @@ associated with this software.
 '''
 import asyncio
 
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback 
+from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase, Binance
 from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, COINBASE

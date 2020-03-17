@@ -116,4 +116,3 @@ def main():
 if __name__ == '__main__':
     trades = collections.defaultdict(dict)
     main()
-

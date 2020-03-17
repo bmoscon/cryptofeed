@@ -46,7 +46,7 @@ def main():
                             callbacks={TRADES: TradeSocket('udp://127.0.0.1', port=5555),
                                        L2_BOOK: BookSocket('udp://127.0.0.1', port=5555),
                                        BOOK_DELTA: BookDeltaSocket('udp://127.0.0.1', port=5555)
-                        }))
+                                       }))
 
         f.run()
     finally:

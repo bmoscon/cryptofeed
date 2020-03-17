@@ -22,6 +22,7 @@ curl -X GET "localhost:9200/book/book/_search" -H 'Content-Type: application/jso
 '
 """
 
+
 def main():
     f = FeedHandler()
 

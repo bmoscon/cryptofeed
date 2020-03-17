@@ -10,8 +10,6 @@ from cryptofeed.exchanges import OKEx
 from cryptofeed.defines import L2_BOOK_SWAP, L2_BOOK, BID, ASK, TRADES, TRADES_SWAP, OPEN_INTEREST, FUNDING
 
 
-
-
 async def trade(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp):
     print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 

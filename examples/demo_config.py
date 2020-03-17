@@ -10,7 +10,6 @@ from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import L3_BOOK, BID, ASK, TRADES
 
 
-
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
     print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, order_id, side, amount, price))
 

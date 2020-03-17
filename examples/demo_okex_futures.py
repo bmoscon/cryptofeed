@@ -10,8 +10,6 @@ from cryptofeed.exchanges import OKEx
 from cryptofeed.defines import L2_BOOK_FUTURES, L2_BOOK, BID, ASK, TRADES, TRADES_FUTURES, TICKER, TICKER_FUTURES
 
 
-
-
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
     print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
@@ -22,6 +20,7 @@ async def book(feed, pair, book, timestamp):
 
 async def ticker(feed, pair, bid, ask, timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
+
 
 def main():
     fh = FeedHandler()

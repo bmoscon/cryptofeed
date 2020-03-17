@@ -30,6 +30,7 @@ def receiver(port):
         print(key)
         print(json.loads(msg))
 
+
 def main():
     try:
         p = Process(target=receiver, args=(5678,))
