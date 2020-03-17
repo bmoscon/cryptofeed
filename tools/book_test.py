@@ -27,17 +27,17 @@ async def book(feed, pair, book, timestamp):
     bids = list(book[BID].keys())
     asks = list(book[ASK].keys())
     avg += (t - timestamp)
-    
+
     try:
-        assert (t - timestamp) < 2 
+        assert (t - timestamp) < 2
         assert bids[-1] < asks[0]
-    except:
+    except Exception:
         print("FAILED")
         print("BID", bids[-1])
         print("ASKS", asks[0])
         print("DELTA", t - timestamp)
         print*("COUNTER", counter)
-    
+
     if counter % STATS == 0:
         print("Checked", counter, "updates")
         print("Runtime", t - START)

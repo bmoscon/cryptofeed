@@ -168,7 +168,8 @@ class Upbit(Feed):
         raise NotImplementedError
   
     async def message_handler(self, msg: str, timestamp: float):
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
+
         if msg['ty'] == "trade":
             await self._trade(msg, timestamp)
         elif msg['ty'] == "orderbook":

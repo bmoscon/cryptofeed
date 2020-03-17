@@ -1,10 +1,9 @@
 import asyncio
 import websockets
-import json
 import zlib
 import argparse
 
-parser= argparse.ArgumentParser()
+parser = argparse.ArgumentParser()
 parser.add_argument('--uri', default='wss://api.huobi.pro/ws', help='URI to connect to')
 parser.add_argument('--sub', default='{"sub": "market.btcusdt.trade.detail", "id": 4}', help='Subscription string')
 parser.add_argument('--count', default=3, type=int, help='Number of messages to receive before exiting')

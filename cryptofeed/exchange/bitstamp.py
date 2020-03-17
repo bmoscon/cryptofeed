@@ -80,22 +80,22 @@ class Bitstamp(Feed):
 
     async def _trades(self, msg: dict, timestamp: float):
         """
-		{'data':
-		 {
-		 'microtimestamp': '1562650233964229',      // Event time (micros)
-		 'amount': Decimal('0.014140160000000001'), // Quantity
-		 'buy_order_id': 3709484695,                // Buyer order ID
-		 'sell_order_id': 3709484799,               // Seller order ID
-		 'amount_str': '0.01414016',                // Quantity string
-		 'price_str': '12700.00',                   // Price string
-		 'timestamp': '1562650233',                 // Event time
-		 'price': Decimal('12700.0'),               // Price
-		 'type': 1,
-		 'id': 93215787
-		 },
-		 'event': 'trade',
-		 'channel': 'live_trades_btcusd'
-		}
+        {'data':
+         {
+         'microtimestamp': '1562650233964229',      // Event time (micros)
+         'amount': Decimal('0.014140160000000001'), // Quantity
+         'buy_order_id': 3709484695,                // Buyer order ID
+         'sell_order_id': 3709484799,               // Seller order ID
+         'amount_str': '0.01414016',                // Quantity string
+         'price_str': '12700.00',                   // Price string
+         'timestamp': '1562650233',                 // Event time
+         'price': Decimal('12700.0'),               // Price
+         'type': 1,
+         'id': 93215787
+         },
+         'event': 'trade',
+         'channel': 'live_trades_btcusd'
+        }
         """
         data = msg['data']
         chan = msg['channel']

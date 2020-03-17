@@ -31,7 +31,7 @@ async def book(feed, pair, book, timestamp):
     if counter % 10 == 0:
         print(".", end='', flush=True)
 
-   
+
 def main():
     f = FeedHandler()
 

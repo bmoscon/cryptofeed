@@ -14,13 +14,14 @@ def main(filename):
         for line in fp.readlines():
             timestamp, line = line.split(":", 1)
             try:
-                data = json.loads(line)
-            except:
+                _ = json.loads(line)
+            except Exception:
                 print(f"Failed on line {counter}: ")
                 print(line)
                 raise
             counter += 1
         print(f"Successfully verified {counter} updates")
+
 
 if __name__ == '__main__':
     main(sys.argv[1])

@@ -30,7 +30,7 @@ class KafkaCallback:
 
 
 class TradeKafka(KafkaCallback, BackendTradeCallback):
-   default_key = 'trades'
+    default_key = 'trades'
 
 
 class FundingKafka(KafkaCallback, BackendFundingCallback):
