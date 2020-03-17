@@ -232,7 +232,7 @@ class FeedHandler:
         except Exception:
             if self.log_messages_on_error:
                 if feed_id in {HUOBI, HUOBI_DM}:
-                    message = zlib.decompress(message, 16+zlib.MAX_WBITS)
+                    message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
                 elif feed_id in {OKCOIN, OKEX}:
                     message = zlib.decompress(message, -15)
                 LOG.error("%s: error handling message %s", feed_id, message)

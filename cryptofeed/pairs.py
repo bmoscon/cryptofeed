@@ -177,7 +177,7 @@ def exx_pairs():
 
 def huobi_pairs():
     r = requests.get('https://api.huobi.pro/v1/common/symbols').json()
-    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
+    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
 def huobi_dm_pairs():
@@ -185,7 +185,7 @@ def huobi_dm_pairs():
     Mapping is, for instance: {"BTC_CW":"BTC190816"}
     See comments in exchange/houbi_dm.py
     """
-    mapping  = {
+    mapping = {
         "this_week": "CW",
         "next_week": "NW",
         "quarter": "CQ"
@@ -193,18 +193,18 @@ def huobi_dm_pairs():
     r = requests.get('https://www.hbdm.com/api/v1/contract_contract_info').json()
     pairs = {}
     for e in r['data']:
-       pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
+        pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
     return pairs
 
 
 def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
-    return {e['instrument_id'] : e['instrument_id'] for e in r}
+    return {e['instrument_id']: e['instrument_id'] for e in r}
 
 
 def okex_pairs():
     r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
-    data = {e['instrument_id'] : e['instrument_id'] for e in r}
+    data = {e['instrument_id']: e['instrument_id'] for e in r}
     # swaps
     r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
     for update in r:
@@ -218,7 +218,7 @@ def okex_pairs():
 
 def coinbene_pairs():
     r = requests.get('http://api.coinbene.com/v1/market/symbol').json()
-    return {f"{e['baseAsset']}{PAIR_SEP}{e['quoteAsset']}" : e['ticker'] for e in r['symbol']}
+    return {f"{e['baseAsset']}{PAIR_SEP}{e['quoteAsset']}": e['ticker'] for e in r['symbol']}
 
 
 def bittrex_pairs():
@@ -250,7 +250,7 @@ _exchange_function_map = {
     POLONIEX: poloniex_pairs,
     BITSTAMP: bitstamp_pairs,
     KRAKEN: kraken_pairs,
-    KRAKEN+'REST': kraken_rest_pairs,
+    KRAKEN + 'REST': kraken_rest_pairs,
     BINANCE: binance_pairs,
     BINANCE_US: binance_us_pairs,
     BINANCE_JERSEY: binance_jersey_pairs,
