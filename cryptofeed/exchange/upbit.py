@@ -20,7 +20,7 @@ class Upbit(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.upbit.com/websocket/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
-        self.max_depth = 15
+        self.max_depth = 100
 
     def __reset(self):
         pass
