@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.3.1
+### 1.3.1 (2020-03-17)
   * Feature: Add missing update detection to orderbooks in Binance
   * Feature: REST support for FTX
   * Feature: Added new field, receipt timestamp, to all callbacks. This contains the time the message was received by cryptofeed.
