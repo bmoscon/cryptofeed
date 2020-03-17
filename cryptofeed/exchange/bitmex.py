@@ -80,13 +80,13 @@ class Bitmex(Feed):
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
             await self.callback(TRADES, feed=self.id,
-                                         pair=data['symbol'],
-                                         side=BUY if data['side'] == 'Buy' else SELL,
-                                         amount=Decimal(data['size']),
-                                         price=Decimal(data['price']),
-                                         order_id=data['trdMatchID'],
-                                         timestamp=ts,
-                                         receipt_timestamp=timestamp)
+                                pair=data['symbol'],
+                                side=BUY if data['side'] == 'Buy' else SELL,
+                                amount=Decimal(data['size']),
+                                price=Decimal(data['price']),
+                                order_id=data['trdMatchID'],
+                                timestamp=ts,
+                                receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -153,11 +153,11 @@ class Bitmex(Feed):
     async def _ticker(self, msg: dict, timestamp: float):
         for data in msg['data']:
             await self.callback(TICKER, feed=self.id,
-                            pair=data['symbol'],
-                            bid=Decimal(data['bidPrice']),
-                            ask=Decimal(data['askPrice']),
-                            timestamp=timestamp_normalize(self.id, data['timestamp']),
-                            receipt_timestamp=timestamp)
+                                pair=data['symbol'],
+                                bid=Decimal(data['bidPrice']),
+                                ask=Decimal(data['askPrice']),
+                                timestamp=timestamp_normalize(self.id, data['timestamp']),
+                                receipt_timestamp=timestamp)
 
     async def _funding(self, msg: dict, timestamp: float):
         """
@@ -191,13 +191,13 @@ class Bitmex(Feed):
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
             await self.callback(FUNDING, feed=self.id,
-                                          pair=data['symbol'],
-                                          timestamp=ts,
-                                          receipt_timestamp=timestamp,
-                                          interval=data['fundingInterval'],
-                                          rate=data['fundingRate'],
-                                          rate_daily=data['fundingRateDaily']
-                                          )
+                                pair=data['symbol'],
+                                timestamp=ts,
+                                receipt_timestamp=timestamp,
+                                interval=data['fundingInterval'],
+                                rate=data['fundingRate'],
+                                rate_daily=data['fundingRateDaily']
+                                )
 
     async def _instrument(self, msg: dict, timestamp: float):
         """
@@ -438,10 +438,10 @@ class Bitmex(Feed):
             if 'openInterest' in data:
                 ts = timestamp_normalize(self.id, data['timestamp'])
                 await self.callback(OPEN_INTEREST, feed=self.id,
-                                                pair=data['symbol'],
-                                                open_interest=data['openInterest'],
-                                                timestamp=ts,
-                                                receipt_timestamp=timestamp)
+                                    pair=data['symbol'],
+                                    open_interest=data['openInterest'],
+                                    timestamp=ts,
+                                    receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

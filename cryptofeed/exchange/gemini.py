@@ -23,10 +23,10 @@ class Gemini(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.gemini.com/v2/marketdata/',
-                            pairs=pairs,
-                            channels=channels,
-                            callbacks=callbacks,
-                            **kwargs)
+                         pairs=pairs,
+                         channels=channels,
+                         callbacks=callbacks,
+                         **kwargs)
 
     def __reset(self, pairs):
         for pair in pairs:
@@ -64,13 +64,13 @@ class Gemini(Feed):
         side = SELL if msg['side'] == 'sell' else BUY
         amount = Decimal(msg['quantity'])
         await self.callback(TRADES, feed=self.id,
-                                     order_id=msg['event_id'],
-                                     pair=pair,
-                                     side=side,
-                                     amount=amount,
-                                     price=price,
-                                     timestamp=timestamp_normalize(self.id, msg['timestamp']),
-                                     receipt_timestamp=timestamp)
+                            order_id=msg['event_id'],
+                            pair=pair,
+                            side=side,
+                            amount=amount,
+                            price=price,
+                            timestamp=timestamp_normalize(self.id, msg['timestamp']),
+                            receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -89,4 +89,4 @@ class Gemini(Feed):
         self.__reset(pairs)
 
         await websocket.send(json.dumps({"type": "subscribe",
-                                         "subscriptions":[{"name":"l2","symbols": pairs}]}))
+                                         "subscriptions": [{"name": "l2", "symbols": pairs}]}))

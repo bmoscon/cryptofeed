@@ -23,18 +23,18 @@ class BinanceFutures(Binance):
         self.address = self._address()
 
     def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
-            skip_update = False
-            forced = not self.forced[pair]
+        skip_update = False
+        forced = not self.forced[pair]
 
-            if forced and msg['u'] < self.last_update_id[pair]:
-                skip_update = True
-            elif forced and msg['U'] <= self.last_update_id[pair] <= msg['u']:
-                self.last_update_id[pair] = msg['u']
-                self.forced[pair] = True
-            elif not forced and self.last_update_id[pair] == msg['pu']:
-                self.last_update_id[pair] = msg['u']
-            else:
-                self._reset()
-                LOG.warning("%s: Missing book update detected, resetting book", self.id)
-                skip_update = True
-            return skip_update, forced
+        if forced and msg['u'] < self.last_update_id[pair]:
+            skip_update = True
+        elif forced and msg['U'] <= self.last_update_id[pair] <= msg['u']:
+            self.last_update_id[pair] = msg['u']
+            self.forced[pair] = True
+        elif not forced and self.last_update_id[pair] == msg['pu']:
+            self.last_update_id[pair] = msg['u']
+        else:
+            self._reset()
+            LOG.warning("%s: Missing book update detected, resetting book", self.id)
+            skip_update = True
+        return skip_update, forced

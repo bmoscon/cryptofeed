@@ -89,10 +89,10 @@ class FTX(Feed):
             pair = pair_exchange_to_std(msg['market'])
             self.l2_book[pair] = {
                 BID: sd({
-                    Decimal(price) : Decimal(amount) for price, amount in msg['data']['bids']
+                    Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']
                 }),
                 ASK: sd({
-                    Decimal(price) : Decimal(amount) for price, amount in msg['data']['asks']
+                    Decimal(price): Decimal(amount) for price, amount in msg['data']['asks']
                 })
             }
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, float(msg['data']['time']), timestamp)

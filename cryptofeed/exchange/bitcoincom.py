@@ -42,7 +42,7 @@ class BitcoinCom(Feed):
                         "params": {
                             "symbol": pair,
                         },
-                        "id": chan+pair
+                        "id": chan + pair
                     }
                 ))
 

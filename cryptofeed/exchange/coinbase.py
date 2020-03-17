@@ -69,11 +69,11 @@ class Coinbase(Feed):
         }
         '''
         await self.callback(TICKER, feed=self.id,
-                                     pair=pair_exchange_to_std(msg['product_id']),
-                                     bid=Decimal(msg['best_bid']),
-                                     ask=Decimal(msg['best_ask']),
-                                     timestamp=timestamp_normalize(self.id, msg['time']),
-                                     receipt_timestamp=timestamp)
+                            pair=pair_exchange_to_std(msg['product_id']),
+                            bid=Decimal(msg['best_bid']),
+                            ask=Decimal(msg['best_ask']),
+                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            receipt_timestamp=timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
         '''
@@ -116,15 +116,15 @@ class Coinbase(Feed):
             await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
         await self.callback(TRADES,
-            feed=self.id,
-            pair=pair_exchange_to_std(msg['product_id']),
-            order_id=msg['trade_id'],
-            side=SELL if msg['side'] == 'buy' else BUY,
-            amount=Decimal(msg['size']),
-            price=Decimal(msg['price']),
-            timestamp=timestamp_normalize(self.id, msg['time']),
-            receipt_timestamp=timestamp
-        )
+                            feed=self.id,
+                            pair=pair_exchange_to_std(msg['product_id']),
+                            order_id=msg['trade_id'],
+                            side=SELL if msg['side'] == 'buy' else BUY,
+                            amount=Decimal(msg['size']),
+                            price=Decimal(msg['price']),
+                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            receipt_timestamp=timestamp
+                            )
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['product_id'])
@@ -307,16 +307,16 @@ class Coinbase(Feed):
         if self.config:
             for chan in self.config:
                 await websocket.send(json.dumps({"type": "subscribe",
-                                         "product_ids": list(self.config[chan]),
-                                         "channels": [chan]
-                                         }))
+                                                 "product_ids": list(self.config[chan]),
+                                                 "channels": [chan]
+                                                 }))
                 if 'full' in chan:
                     snapshot = True
                     self.book_pairs.extend(list(self.config[chan]))
         else:
             await websocket.send(json.dumps({"type": "subscribe",
-                                            "product_ids": self.pairs,
-                                            "channels": self.channels
-                                            }))
+                                             "product_ids": self.pairs,
+                                             "channels": self.channels
+                                             }))
         if 'full' in self.channels or snapshot:
             await self._book_snapshot(self.pairs or self.book_pairs)

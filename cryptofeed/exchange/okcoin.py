@@ -37,15 +37,15 @@ class OKCoin(Feed):
             for chan in self.config:
                 args = [f"{chan}:{pair}" for pair in self.config[chan]]
                 await websocket.send(json.dumps({
-                        "op": "subscribe",
-                        "args": args
-                    }))
+                    "op": "subscribe",
+                    "args": args
+                }))
         else:
             chans = [f"{chan}:{pair}" for chan in self.channels for pair in self.pairs]
             await websocket.send(json.dumps({
-                                    "op": "subscribe",
-                                    "args": chans
-                                }))
+                "op": "subscribe",
+                "args": chans
+            }))
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -55,15 +55,15 @@ class OKCoin(Feed):
             pair = update['instrument_id']
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,
-                                         pair=pair,
-                                         bid=Decimal(update['best_bid']),
-                                         ask=Decimal(update['best_ask']),
-                                         timestamp=update_timestamp,
-                                         receipt_timestamp=timestamp)
+                                pair=pair,
+                                bid=Decimal(update['best_bid']),
+                                ask=Decimal(update['best_ask']),
+                                timestamp=update_timestamp,
+                                receipt_timestamp=timestamp)
             if 'open_interest' in update:
                 oi = update['open_interest']
                 if pair in self.open_interest and oi == self.open_interest[pair]:
-                        continue
+                    continue
                 self.open_interest[pair] = oi
                 await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
 
@@ -77,15 +77,15 @@ class OKCoin(Feed):
             else:
                 amount_sym = 'size'
             await self.callback(TRADES,
-                feed=self.id,
-                pair=pair_exchange_to_std(trade['instrument_id']),
-                order_id=trade['trade_id'],
-                side=BUY if trade['side'] == 'buy' else SELL,
-                amount=Decimal(trade[amount_sym]),
-                price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['timestamp']),
-                receipt_timestamp=timestamp
-            )
+                                feed=self.id,
+                                pair=pair_exchange_to_std(trade['instrument_id']),
+                                order_id=trade['trade_id'],
+                                side=BUY if trade['side'] == 'buy' else SELL,
+                                amount=Decimal(trade[amount_sym]),
+                                price=Decimal(trade['price']),
+                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                receipt_timestamp=timestamp
+                                )
 
     async def _funding(self, msg: dict, timestamp: float):
         for update in msg['data']:
@@ -105,10 +105,10 @@ class OKCoin(Feed):
                 pair = pair_exchange_to_std(update['instrument_id'])
                 self.l2_book[pair] = {
                     BID: sd({
-                        Decimal(price) : Decimal(amount) for price, amount, *_ in update['bids']
+                        Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']
                     }),
                     ASK: sd({
-                        Decimal(price) : Decimal(amount) for price, amount, *_ in update['asks']
+                        Decimal(price): Decimal(amount) for price, amount, *_ in update['asks']
                     })
                 }
                 await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']), timestamp)

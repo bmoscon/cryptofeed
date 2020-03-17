@@ -30,11 +30,11 @@ class HitBTC(Feed):
 
     async def _ticker(self, msg: dict, timestamp: float):
         await self.callback(TICKER, feed=self.id,
-                                     pair=pair_exchange_to_std(msg['symbol']),
-                                     bid=Decimal(msg['bid']),
-                                     ask=Decimal(msg['ask']),
-                                     timestamp=timestamp_normalize(self.id, msg['timestamp']),
-                                     receipt_timestamp=timestamp)
+                            pair=pair_exchange_to_std(msg['symbol']),
+                            bid=Decimal(msg['bid']),
+                            ask=Decimal(msg['ask']),
+                            timestamp=timestamp_normalize(self.id, msg['timestamp']),
+                            receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -71,13 +71,13 @@ class HitBTC(Feed):
             order_id = update['id']
             timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TRADES, feed=self.id,
-                                         pair=pair,
-                                         side=side,
-                                         amount=quantity,
-                                         price=price,
-                                         order_id=order_id,
-                                         timestamp=timestamp,
-                                         receipt_timestamp=timestamp)
+                                pair=pair,
+                                side=side,
+                                amount=quantity,
+                                price=price,
+                                order_id=order_id,
+                                timestamp=timestamp,
+                                receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

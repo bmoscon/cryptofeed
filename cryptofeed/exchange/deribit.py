@@ -75,15 +75,15 @@ class Deribit(Feed):
         """
         for trade in msg["params"]["data"]:
             await self.callback(TRADES,
-                feed=self.id,
-                pair=trade["instrument_name"],
-                order_id=trade['trade_id'],
-                side=BUY if trade['direction'] == 'buy' else SELL,
-                amount=Decimal(trade['amount']),
-                price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['timestamp']),
-                receipt_timestamp=timestamp,
-            )
+                                feed=self.id,
+                                pair=trade["instrument_name"],
+                                order_id=trade['trade_id'],
+                                side=BUY if trade['direction'] == 'buy' else SELL,
+                                amount=Decimal(trade['amount']),
+                                price=Decimal(trade['price']),
+                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                receipt_timestamp=timestamp,
+                                )
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''
@@ -120,19 +120,19 @@ class Deribit(Feed):
         pair = msg['params']['data']['instrument_name']
         ts = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
         await self.callback(TICKER, feed=self.id,
-                                    pair=pair,
-                                    bid=Decimal(msg["params"]["data"]['best_bid_price']),
-                                    ask=Decimal(msg["params"]["data"]['best_ask_price']),
-                                    timestamp=ts,
-                                    receipt_timestamp=timestamp)
+                            pair=pair,
+                            bid=Decimal(msg["params"]["data"]['best_bid_price']),
+                            ask=Decimal(msg["params"]["data"]['best_ask_price']),
+                            timestamp=ts,
+                            receipt_timestamp=timestamp)
 
         if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
             await self.callback(FUNDING, feed=self.id,
-                                         pair=pair,
-                                         timestamp=ts,
-                                         receipt_timestamp=timestamp,
-                                         rate=msg["params"]["data"]["current_funding"],
-                                         rate_8h=msg["params"]["data"]["funding_8h"])
+                                pair=pair,
+                                timestamp=ts,
+                                receipt_timestamp=timestamp,
+                                rate=msg["params"]["data"]["current_funding"],
+                                rate_8h=msg["params"]["data"]["funding_8h"])
         oi = msg['params']['data']['open_interest']
         if pair in self.open_interest and oi == self.open_interest[pair]:
             return
@@ -143,7 +143,7 @@ class Deribit(Feed):
                             open_interest=oi,
                             timestamp=ts,
                             receipt_timestamp=timestamp
-                        )
+                            )
 
     async def subscribe(self, websocket):
         self.websocket = websocket

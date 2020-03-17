@@ -68,13 +68,13 @@ class Bittrex(Feed):
             pair = pair_exchange_to_std(pair)
             for trade in msg:
                 await self.callback(TRADES, feed=self.id,
-                                            order_id=trade['FI'],
-                                            pair=pair,
-                                            side=BUY if trade['OT'] == 'BUY' else SELL,
-                                            amount=trade['Q'],
-                                            price=trade['R'],
-                                            timestamp=timestamp_normalize(self.id, trade['T']),
-                                            receipt_timestamp=timestamp)
+                                    order_id=trade['FI'],
+                                    pair=pair,
+                                    side=BUY if trade['OT'] == 'BUY' else SELL,
+                                    amount=trade['Q'],
+                                    price=trade['R'],
+                                    timestamp=timestamp_normalize(self.id, trade['T']),
+                                    receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg)

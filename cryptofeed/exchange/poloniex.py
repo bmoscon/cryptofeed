@@ -78,11 +78,11 @@ class Poloniex(Feed):
         pair = pair_exchange_to_std(self.pair_mapping[pair_id])
         if self.__do_callback(TICKER, pair):
             await self.callback(TICKER, feed=self.id,
-                                        pair=pair,
-                                        bid=Decimal(bid),
-                                        ask=Decimal(ask),
-                                        timestamp=timestamp,
-                                        receipt_timestamp=timestamp)
+                                pair=pair,
+                                bid=Decimal(bid),
+                                ask=Decimal(ask),
+                                timestamp=timestamp,
+                                receipt_timestamp=timestamp)
 
     async def _volume(self, msg: list, timestamp: float):
         # ['2018-01-02 00:45', 35361, {'BTC': '43811.201', 'ETH': '6747.243', 'XMR': '781.716', 'USDT': '196758644.806'}]
@@ -140,13 +140,13 @@ class Poloniex(Feed):
                     side = BUY if update[2] == 1 else SELL
                     if self.__do_callback(TRADES, pair):
                         await self.callback(TRADES, feed=self.id,
-                                                    pair=pair,
-                                                    side=side,
-                                                    amount=amount,
-                                                    price=price,
-                                                    timestamp=float(server_ts),
-                                                    order_id=order_id,
-                                                    receipt_timestamp=timestamp)
+                                            pair=pair,
+                                            side=side,
+                                            amount=amount,
+                                            price=price,
+                                            timestamp=float(server_ts),
+                                            order_id=order_id,
+                                            receipt_timestamp=timestamp)
                 else:
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 

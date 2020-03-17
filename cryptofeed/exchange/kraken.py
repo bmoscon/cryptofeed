@@ -37,20 +37,20 @@ class Kraken(Feed):
                 if 'book' in chan:
                     sub['depth'] = self.book_depth
                 await websocket.send(json.dumps({
-                                        "event": "subscribe",
-                                        "pair": list(self.config[chan]),
-                                        "subscription": sub
-                                    }))
+                    "event": "subscribe",
+                    "pair": list(self.config[chan]),
+                    "subscription": sub
+                }))
         else:
             for chan in self.channels:
                 sub = {"name": chan}
                 if 'book' in chan:
                     sub['depth'] = self.book_depth
                 await websocket.send(json.dumps({
-                                        "event": "subscribe",
-                                        "pair": self.pairs,
-                                        "subscription": sub
-                                    }))
+                    "event": "subscribe",
+                    "pair": self.pairs,
+                    "subscription": sub
+                }))
 
     async def _trade(self, msg: dict, pair: str, timestamp: float):
         """
@@ -62,13 +62,13 @@ class Kraken(Feed):
         for trade in msg[1]:
             price, amount, server_timestamp, side, _, _ = trade
             await self.callback(TRADES, feed=self.id,
-                                        pair=pair,
-                                        side=BUY if side == 'b' else SELL,
-                                        amount=Decimal(amount),
-                                        price=Decimal(price),
-                                        order_id=None,
-                                        timestamp=float(server_timestamp),
-                                        receipt_timestamp=timestamp)
+                                pair=pair,
+                                side=BUY if side == 'b' else SELL,
+                                amount=Decimal(amount),
+                                price=Decimal(price),
+                                order_id=None,
+                                timestamp=float(server_timestamp),
+                                receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
@@ -76,11 +76,11 @@ class Kraken(Feed):
         channel id, asks: price, wholeLotVol, vol, bids: price, wholeLotVol, close: ...,, vol: ..., VWAP: ..., trades: ..., low: ...., high: ..., open: ...
         """
         await self.callback(TICKER, feed=self.id,
-                                     pair=pair,
-                                     bid=Decimal(msg[1]['b'][0]),
-                                     ask=Decimal(msg[1]['a'][0]),
-                                     timestamp=timestamp,
-                                     receipt_timestamp=timestamp)
+                            pair=pair,
+                            bid=Decimal(msg[1]['b'][0]),
+                            ask=Decimal(msg[1]['a'][0]),
+                            timestamp=timestamp,
+                            receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         delta = {BID: [], ASK: []}

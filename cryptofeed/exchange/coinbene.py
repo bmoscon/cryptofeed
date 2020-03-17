@@ -25,6 +25,7 @@ remains only to serve as an example of how a REST only exchange might be support
 **** DEPRECATED ****
 """
 
+
 class Coinbene(RestFeed):
     id = COINBENE
 
@@ -64,12 +65,12 @@ class Coinbene(RestFeed):
                     side = BUY if trade['take'] == 'buy' else SELL
 
                     await self.callback(TRADES, feed=self.id,
-                                                 pair=pair_exchange_to_std(pair),
-                                                 side=side,
-                                                 amount=amount,
-                                                 price=price,
-                                                 order_id=trade['tradeId'],
-                                                 timestamp=timestamp_normalize(self.id, trade['time']))
+                                        pair=pair_exchange_to_std(pair),
+                                        side=side,
+                                        amount=amount,
+                                        price=price,
+                                        order_id=trade['tradeId'],
+                                        timestamp=timestamp_normalize(self.id, trade['time']))
                 self.last_trade_update[pair] = timestamp_normalize(self.id, data['trades'][-1]['time'])
 
     async def _ticker(self, session, pair):
@@ -96,10 +97,10 @@ class Coinbene(RestFeed):
             bid = Decimal(data['ticker'][0]['bid'])
             ask = Decimal(data['ticker'][0]['ask'])
             await self.callback(TICKER, feed=self.id,
-                                         pair=pair_exchange_to_std(pair),
-                                         bid=bid,
-                                         ask=ask,
-                                         timestamp=timestamp_normalize(self.id, data['timestamp']))
+                                pair=pair_exchange_to_std(pair),
+                                bid=bid,
+                                ask=ask,
+                                timestamp=timestamp_normalize(self.id, data['timestamp']))
 
     async def _book(self, session, pair):
         async with session.get("{}orderbook?symbol={}".format(self.address, pair)) as response:
@@ -112,9 +113,9 @@ class Coinbene(RestFeed):
             })}
 
             await self.callback(L2_BOOK, feed=self.id,
-                                          pair=pair_exchange_to_std(pair),
-                                          book=book,
-                                          timestamp=timestamp_normalize(self.id, data['timestamp']))
+                                pair=pair_exchange_to_std(pair),
+                                book=book,
+                                timestamp=timestamp_normalize(self.id, data['timestamp']))
 
     async def subscribe(self):
         self.__reset()

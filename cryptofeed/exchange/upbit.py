@@ -27,7 +27,7 @@ class Upbit(Feed):
 
     @staticmethod
     def get_active_symbols_info():
-        return requests.get(Upbit.api+'market/all').json()
+        return requests.get(Upbit.api + 'market/all').json()
 
     @staticmethod
     def get_active_symbols():
@@ -65,20 +65,20 @@ class Upbit(Feed):
         price = Decimal(msg['tp'])
         amount = Decimal(msg['tv'])
         await self.callback(TRADES, feed=self.id,
-                                     order_id=msg['sid'],
-                                     pair=pair_exchange_to_std(msg['cd']),
-                                     side=BUY if msg['ab'] == 'BID' else SELL,
-                                     amount=amount,
-                                     price=price,
-                                     timestamp=timestamp_normalize(self.id, msg['ttms']),
-                                     receipt_timestamp=timestamp)
+                            order_id=msg['sid'],
+                            pair=pair_exchange_to_std(msg['cd']),
+                            side=BUY if msg['ab'] == 'BID' else SELL,
+                            amount=amount,
+                            price=price,
+                            timestamp=timestamp_normalize(self.id, msg['ttms']),
+                            receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
         Doc : https://docs.upbit.com/v1.0.7/reference#시세-호가-정보orderbook-조회
 
         Currently, Upbit orderbook api only provides 15 depth book state and does not support delta
-        
+
         {
             'ty': 'orderbook'       // Event type
             'cd': 'KRW-BTC',        // Symbol
@@ -110,7 +110,7 @@ class Upbit(Feed):
         if pair not in self.l2_book:
             await self._snapshot(pair)
 
-        # forced = True if the snapshot received, otherwise(realtime) forced set to be false     
+        # forced = True if the snapshot received, otherwise(realtime) forced set to be false
         forced = True if msg['st'] == 'SNAPSHOT' else False
 
         for unit in msg['obu']:
@@ -160,13 +160,13 @@ class Upbit(Feed):
             'ts': None,
             'ttm': '084426',
         }
-        
+
         """
 
         # Currently, Upbit ticker api does not support best_ask and best_bid price.
         # Only way for tracking best_ask and best_bid price is looking at the orderbook directly.
         raise NotImplementedError
-  
+
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -182,10 +182,10 @@ class Upbit(Feed):
     async def subscribe(self, websocket):
         """
         Doc : https://docs.upbit.com/docs/upbit-quotation-websocket
-        
+
         For subscription, ticket information is commonly required.
         In order to reduce the data size, format parameter is set to 'SIMPLE' instead of 'DEFAULT'
-        
+
 
         Examples (Note that the positions of the base and quote currencies are swapped.)
 
@@ -204,14 +204,14 @@ class Upbit(Feed):
         5. In order to get TRADES of "BTC-KRW", ORDERBOOK of "ETH-KRW and TICKER of "EOS-KRW" with in shorter format
         > [{"ticket":"UNIQUE_TICKET"},{"format":"SIMPLE"},{"type":"trade","codes":["KRW-BTC"]},{"type":"orderbook","codes":["KRW-ETH"]},{"type":"ticker", "codes":["KRW-EOS"]}]
         """
-        
+
         self.__reset()
-        chans = [{"ticket":"UNIQUE_TICKET"}, {"format":"SIMPLE"}]
+        chans = [{"ticket": "UNIQUE_TICKET"}, {"format": "SIMPLE"}]
         for channel in self.channels if not self.config else self.config:
             codes = list()
             for pair in self.pairs if not self.config else self.config[channel]:
                 codes.append(pair)
-            
+
             if channel == L2_BOOK:
                 chans.append({"type": "orderbook", "codes": codes})
             if channel == TRADES:

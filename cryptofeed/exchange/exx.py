@@ -132,15 +132,15 @@ class EXX(Feed):
         trade_id = msg[7]
 
         await self.callback(TRADES,
-            feed=self.id,
-            pair=pair,
-            order_id=trade_id,
-            side=side,
-            amount=amount,
-            price=price,
-            timestamp=ts,
-            receipt_timestamp=timestamp,
-        )
+                            feed=self.id,
+                            pair=pair,
+                            order_id=trade_id,
+                            side=side,
+                            amount=amount,
+                            price=price,
+                            timestamp=ts,
+                            receipt_timestamp=timestamp,
+                            )
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

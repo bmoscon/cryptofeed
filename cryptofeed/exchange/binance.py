@@ -33,7 +33,7 @@ class Binance(Feed):
         self._reset()
 
     def _address(self):
-        address = self.ws_endpoint+'/stream?streams='
+        address = self.ws_endpoint + '/stream?streams='
         for chan in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
@@ -65,13 +65,13 @@ class Binance(Feed):
         price = Decimal(msg['p'])
         amount = Decimal(msg['q'])
         await self.callback(TRADES, feed=self.id,
-                                     order_id=msg['a'],
-                                     pair=pair_exchange_to_std(msg['s']),
-                                     side=SELL if msg['m'] else BUY,
-                                     amount=amount,
-                                     price=price,
-                                     timestamp=timestamp_normalize(self.id, msg['E']),
-                                     receipt_timestamp=timestamp)
+                            order_id=msg['a'],
+                            pair=pair_exchange_to_std(msg['s']),
+                            side=SELL if msg['m'] else BUY,
+                            amount=amount,
+                            price=price,
+                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -105,11 +105,11 @@ class Binance(Feed):
         bid = Decimal(msg['b'])
         ask = Decimal(msg['a'])
         await self.callback(TICKER, feed=self.id,
-                                     pair=pair,
-                                     bid=bid,
-                                     ask=ask,
-                                     timestamp=timestamp_normalize(self.id, msg['E']),
-                                     receipt_timestamp=timestamp)
+                            pair=pair,
+                            bid=bid,
+                            ask=ask,
+                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp)
 
     async def _snapshot(self, pair: str) -> None:
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
@@ -134,10 +134,10 @@ class Binance(Feed):
 
         if forced and msg['u'] <= self.last_update_id[pair]:
             skip_update = True
-        elif forced and msg['U'] <= self.last_update_id[pair]+1 <= msg['u']:
+        elif forced and msg['U'] <= self.last_update_id[pair] + 1 <= msg['u']:
             self.last_update_id[pair] = msg['u']
             self.forced[pair] = True
-        elif not forced and self.last_update_id[pair]+1 == msg['U']:
+        elif not forced and self.last_update_id[pair] + 1 == msg['U']:
             self.last_update_id[pair] = msg['u']
         else:
             self._reset()

@@ -64,15 +64,15 @@ class Bybit(Feed):
         data = msg['data']
         for trade in data:
             await self.callback(TRADES,
-                feed=self.id,
-                pair=normalize_pair(trade['symbol']),
-                order_id=trade['trade_id'],
-                side=BUY if trade['side'] == 'Buy' else SELL,
-                amount=Decimal(trade['size']),
-                price=Decimal(trade['price']),
-                timestamp=timestamp_normalize(self.id, trade['timestamp']),
-                receipt_timestamp=timestamp
-            )
+                                feed=self.id,
+                                pair=normalize_pair(trade['symbol']),
+                                order_id=trade['trade_id'],
+                                side=BUY if trade['side'] == 'Buy' else SELL,
+                                amount=Decimal(trade['size']),
+                                price=Decimal(trade['price']),
+                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                receipt_timestamp=timestamp
+                                )
 
     async def _book(self, msg: dict, timestamp: float):
         pair = normalize_pair(msg['topic'].split('.')[1])

@@ -187,7 +187,7 @@ class KrakenFutures(Feed):
                             open_interest=msg['openInterest'],
                             timestamp=timestamp_normalize(self.id, msg['time']),
                             receipt_timestamp=timestamp
-                        )
+                            )
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

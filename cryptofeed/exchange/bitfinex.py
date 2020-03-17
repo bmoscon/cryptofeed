@@ -71,11 +71,11 @@ class Bitfinex(Feed):
             pair = self.channel_map[chan_id]['symbol']
             pair = pair_exchange_to_std(pair)
             await self.callback(TICKER, feed=self.id,
-                                         pair=pair,
-                                         bid=bid,
-                                         ask=ask,
-                                         timestamp=timestamp,
-                                         receipt_timestamp=timestamp)
+                                pair=pair,
+                                bid=bid,
+                                ask=ask,
+                                timestamp=timestamp,
+                                receipt_timestamp=timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         chan_id = msg[0]
@@ -94,23 +94,23 @@ class Bitfinex(Feed):
             amount = abs(amount)
             if period:
                 await self.callback(FUNDING, feed=self.id,
-                                              pair=pair,
-                                              side=side,
-                                              amount=Decimal(amount),
-                                              price=Decimal(price),
-                                              order_id=order_id,
-                                              timestamp=ts,
-                                              receipt_timestamp=timestamp,
-                                              period=period)
+                                    pair=pair,
+                                    side=side,
+                                    amount=Decimal(amount),
+                                    price=Decimal(price),
+                                    order_id=order_id,
+                                    timestamp=ts,
+                                    receipt_timestamp=timestamp,
+                                    period=period)
             else:
                 await self.callback(TRADES, feed=self.id,
-                                             pair=pair,
-                                             side=side,
-                                             amount=Decimal(amount),
-                                             price=Decimal(price),
-                                             order_id=order_id,
-                                             timestamp=ts,
-                                             receipt_timestamp=timestamp)
+                                    pair=pair,
+                                    side=side,
+                                    amount=Decimal(amount),
+                                    price=Decimal(price),
+                                    order_id=order_id,
+                                    timestamp=ts,
+                                    receipt_timestamp=timestamp)
 
         if isinstance(msg[1], list):
             # snapshot

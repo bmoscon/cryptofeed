@@ -10,7 +10,6 @@ from collections import defaultdict
 from aiofile import AIOFile
 
 
-
 class AsyncFileCallback:
     def __init__(self, path, length=10000, rotate=1024 * 1024 * 100):
         self.path = path
@@ -29,7 +28,7 @@ class AsyncFileCallback:
     async def write(self, uuid):
         p = f"{self.path}/{uuid}.{self.count[uuid]}"
         async with AIOFile(p, mode='a') as fp:
-            r = await fp.write("\n".join(self.data[uuid])+"\n", offset=self.pointer[uuid])
+            r = await fp.write("\n".join(self.data[uuid]) + "\n", offset=self.pointer[uuid])
             self.pointer[uuid] += len(r)
             self.data[uuid] = []
 

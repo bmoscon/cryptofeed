@@ -107,13 +107,13 @@ class Bitstamp(Feed):
         ts = int(data['microtimestamp'])
         order_id = data['id']
         await self.callback(TRADES, feed=self.id,
-                                     pair=pair,
-                                     side=side,
-                                     amount=amount,
-                                     price=price,
-                                     timestamp=timestamp_normalize(self.id, ts),
-                                     receipt_timestamp=timestamp,
-                                     order_id=order_id)
+                            pair=pair,
+                            side=side,
+                            amount=amount,
+                            price=price,
+                            timestamp=timestamp_normalize(self.id, ts),
+                            receipt_timestamp=timestamp,
+                            order_id=order_id)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

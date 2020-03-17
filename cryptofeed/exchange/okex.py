@@ -22,11 +22,9 @@ class OKEx(OKCoin):
         self.address = 'wss://real.okex.com:8443/ws/v3'
         self.book_depth = 200
 
-
     @staticmethod
     def get_active_symbols_info():
         return requests.get(OKEx.api + 'futures/v3/instruments').json()
-
 
     @staticmethod
     def get_active_symbols():
