@@ -27,7 +27,7 @@ class TradeMongo(MongoCallback, BackendTradeCallback):
 
 
 class FundingMongo(MongoCallback, BackendFundingCallback):
-   default_key = 'funding'
+    default_key = 'funding'
 
 
 class BookMongo(MongoCallback, BackendBookCallback):

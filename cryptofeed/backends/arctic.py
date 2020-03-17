@@ -53,5 +53,6 @@ class FundingArctic(ArcticCallback, BackendFundingCallback):
 class TickerArctic(ArcticCallback, BackendTickerCallback):
     default_key = TICKER
 
+
 class OpenInterestArctic(ArcticCallback, BackendOpenInterestCallback):
     default_key = OPEN_INTEREST

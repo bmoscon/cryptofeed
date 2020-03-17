@@ -52,7 +52,7 @@ class BackendTickerCallback:
         data = {'feed': feed, 'pair': pair, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
         await self.write(feed, pair, timestamp, receipt_timestamp, data)
 
-        
+
 class BackendOpenInterestCallback:
     async def __call__(self, *, feed: str, pair: str, open_interest: Decimal, timestamp: float, receipt_timestamp: float):
         data = {'feed': feed, 'pair': pair, 'open_interest': self.numeric_type(open_interest), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}

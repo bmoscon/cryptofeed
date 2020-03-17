@@ -25,7 +25,7 @@ class KafkaCallback:
     async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         if self.producer._sender.sender_task is None:
             await self.producer.start()
-        topic =  f"{self.key}-{feed}-{pair}"
+        topic = f"{self.key}-{feed}-{pair}"
         await self.producer.send_and_wait(topic, json.dumps(data).encode('utf-8'))
 
 

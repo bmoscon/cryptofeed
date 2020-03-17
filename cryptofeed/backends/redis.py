@@ -46,6 +46,7 @@ class TradeRedis(RedisZSetCallback, BackendTradeCallback):
 class TradeStream(RedisStreamCallback, BackendTradeCallback):
     default_key = 'trades'
 
+
 class FundingRedis(RedisZSetCallback, BackendFundingCallback):
     default_key = 'funding'
 
@@ -84,7 +85,7 @@ class TickerRedis(RedisZSetCallback, BackendTickerCallback):
 
 class TickerStream(RedisStreamCallback, BackendTickerCallback):
     default_key = 'ticker'
-    
+
 
 class OpenInterestRedis(RedisZSetCallback, BackendOpenInterestCallback):
     default_key = 'open_interest'

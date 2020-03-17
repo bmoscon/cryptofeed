@@ -28,7 +28,7 @@ class ElasticCallback(HTTPCallback):
         await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
     async def write_bulk(self, data):
-        data = itertools.chain(*zip([json.dumps({ "index":{} })] * len(data), [json.dumps(d) for d in data]))
+        data = itertools.chain(*zip([json.dumps({"index": {}})] * len(data), [json.dumps(d) for d in data]))
         data = '\n'.join(data)
         data = f"{data}\n"
         await self.http_write('POST', data, headers={'content-type': 'application/x-ndjson'})
