@@ -18,6 +18,7 @@ from cryptofeed.standards import load_exchange_pair_mapping
 
 LOG = logging.getLogger('rest')
 
+
 def request_retry(exchange, retry, retry_wait):
     """
     decorator to retry request

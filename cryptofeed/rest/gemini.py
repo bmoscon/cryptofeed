@@ -96,7 +96,7 @@ class Gemini(API):
                 'feed': self.ID,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
-               }
+                }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
@@ -213,4 +213,4 @@ class Gemini(API):
             entry['currency']: {
                 'total': Decimal(entry['amount']),
                 'available': Decimal(entry['available'])
-            } for entry in data }
+            } for entry in data}

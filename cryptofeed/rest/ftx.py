@@ -122,7 +122,7 @@ class FTX(API):
             if data == []:
                 LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
-                end = int(API._timestamp(data[-1]["time"]).timestamp())+1
+                end = int(API._timestamp(data[-1]["time"]).timestamp()) + 1
 
             orig_data = list(data)
             data = self._dedupe(data, last)

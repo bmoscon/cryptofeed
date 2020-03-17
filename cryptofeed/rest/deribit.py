@@ -86,7 +86,7 @@ class Deribit(API):
             'feed': self.ID,
             'side': BUY if trade["direction"] == 'buy' else SELL,
             'amount': trade["amount"],
-            'price':  trade["price"],
+            'price': trade["price"],
         }
         return ret
 

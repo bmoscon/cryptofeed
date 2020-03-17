@@ -29,6 +29,7 @@ class Rest:
     The Rest class optionally takes two parameters, config, and sandbox. In the config file
     the api key and secrets can be specified. sandbox enables sandbox mode, if supported by the exchange.
     """
+
     def __init__(self, config=None, sandbox=False):
         self.config = config
         self.lookup = {

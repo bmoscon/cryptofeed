@@ -110,7 +110,7 @@ class Kraken(API):
 
     # public API
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = pair_std_to_exchange(symbol, self.ID+'REST')
+        sym = pair_std_to_exchange(symbol, self.ID + 'REST')
         data = self._post_public(f"/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
         data = data['result']
@@ -119,10 +119,10 @@ class Kraken(API):
                     'feed': self.ID,
                     'bid': Decimal(val['b'][0]),
                     'ask': Decimal(val['a'][0])
-                }
+                    }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = pair_std_to_exchange(symbol, self.ID+'REST')
+        sym = pair_std_to_exchange(symbol, self.ID + 'REST')
         data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
         for _, val in data['result'].items():
             return {
@@ -143,21 +143,19 @@ class Kraken(API):
             for data in self._historical_trades(symbol, start, end, retry, retry_wait):
                 yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
         else:
-            sym = pair_std_to_exchange(symbol, self.ID+'REST')
+            sym = pair_std_to_exchange(symbol, self.ID + 'REST')
             data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
             data = data['result']
             data = data[list(data.keys())[0]]
             yield [self._trade_normalization(d, symbol) for d in data]
 
-
     def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
-        symbol = pair_std_to_exchange(symbol, self.ID+'REST')
+        symbol = pair_std_to_exchange(symbol, self.ID + 'REST')
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start_date):
             endpoint = f"{self.api}/public/Trades?pair={symbol}&since={start_date}"
             return requests.get(endpoint)
-
 
         start_date = API._timestamp(start_date).timestamp() * 1000000000
         end_date = API._timestamp(end_date).timestamp() * 1000000000
@@ -232,7 +230,7 @@ class Kraken(API):
         for order_id, order in data['result'].items():
             return Kraken._order_status(order_id, order)
 
-    def get_trades_history(self, symbol:str, start=None, end=None):
+    def get_trades_history(self, symbol: str, start=None, end=None):
         params = {}
 
         if start:
@@ -273,7 +271,7 @@ class Kraken(API):
         ot = normalize_trading_options(self.ID, order_type)
 
         parameters = {
-            'pair': pair_std_to_exchange(symbol, self.ID+'REST'),
+            'pair': pair_std_to_exchange(symbol, self.ID + 'REST'),
             'type': 'buy' if side == BUY else 'sell',
             'volume': str(amount),
             'ordertype': ot

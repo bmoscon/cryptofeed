@@ -30,7 +30,6 @@ class Bitfinex(API):
     ID = BITFINEX
     api = "https://api-pub.bitfinex.com/v2/"
 
-
     def _get(self, endpoint, retry, retry_wait):
         @request_retry(self.ID, retry, retry_wait)
         def helper():
@@ -164,7 +163,7 @@ class Bitfinex(API):
                 'feed': self.ID,
                 'bid': Decimal(data[0]),
                 'ask': Decimal(data[2])
-               }
+                }
 
     def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = f"f{symbol}"
@@ -222,7 +221,7 @@ class Bitfinex(API):
                 else:
                     order_id, price, amount = entry
                     update = abs(amount)
-                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True)  else ASK
+                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True) else ASK
                 if price not in ret[sym][side]:
                     ret[sym][side][price] = {order_id: update}
                 else:
@@ -235,6 +234,6 @@ class Bitfinex(API):
                 else:
                     price, _, amount = entry
                     update = abs(amount)
-                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True)  else ASK
+                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True) else ASK
                 ret[sym][side][price] = update
         return ret

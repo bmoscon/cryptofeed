@@ -131,12 +131,10 @@ class Bitmex(API):
             'price': trade['price']
         }
 
-
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
-        #return list(self._get('quote', symbol, start, end, retry, retry_wait))
+        # return list(self._get('quote', symbol, start, end, retry, retry_wait))
         for data in self._scrape_s3(symbol, 'quote', start, end):
             yield data
-
 
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         """
@@ -178,7 +176,6 @@ class Bitmex(API):
         if end is None or end > rest_end_date:
             for data in self._get('trade', symbol, rest_start, end, retry, retry_wait):
                 yield list(map(self._trade_normalization, data))
-
 
     def _funding_normalization(self, funding: dict) -> dict:
         return {
@@ -241,7 +238,7 @@ class Bitmex(API):
                     LOG.warning("%s: Error processing %s: %s - %s, trying again", self.ID, symbol, date, r.status_code)
                     time.sleep(10)
 
-            data = zlib.decompress(r.content, zlib.MAX_WBITS|32)
-            yield filter(lambda x: len(x) and x.split(",")[1] == symbol and  end_date >= pd.Timestamp(x.split(",")[0].replace("D", "T")) >= start_date, data.decode().split("\n")[1:])
+            data = zlib.decompress(r.content, zlib.MAX_WBITS | 32)
+            yield filter(lambda x: len(x) and x.split(",")[1] == symbol and end_date >= pd.Timestamp(x.split(",")[0].replace("D", "T")) >= start_date, data.decode().split("\n")[1:])
 
             date -= timedelta(days=1)

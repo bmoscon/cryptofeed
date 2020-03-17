@@ -109,7 +109,7 @@ class Coinbase(API):
         lower = 0
         bound = (upper - lower) // 2
         while True:
-            r =  self._request('GET', f'/products/{symbol}/trades?after={bound}')
+            r = self._request('GET', f'/products/{symbol}/trades?after={bound}')
             if r.status_code == 429:
                 time.sleep(10)
                 continue
@@ -161,7 +161,7 @@ class Coinbase(API):
                     limit = 100 - (start_id - end_id)
                     start_id = end_id
                 if limit > 0:
-                    r =  self._request('GET', f'/products/{symbol}/trades?after={start_id}&limit={limit}', retry=retry, retry_wait=retry_wait)
+                    r = self._request('GET', f'/products/{symbol}/trades?after={start_id}&limit={limit}', retry=retry, retry_wait=retry_wait)
                     if r.status_code == 429:
                         time.sleep(10)
                         continue
@@ -193,7 +193,7 @@ class Coinbase(API):
                 'feed': self.ID,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
-               }
+                }
 
     def _book(self, symbol: str, level: int, retry, retry_wait):
         return self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait).json()
