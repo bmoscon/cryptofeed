@@ -173,8 +173,9 @@ class Bitfinex(Feed):
                     self.l2_book[pair][side][price] = amount
                 else:
                     # remove price level
-                    del self.l2_book[pair][side][price]
-                    delta[side].append((price, 0))
+                    if price in l2_book[pair][side]:
+                        del self.l2_book[pair][side][price]
+                        delta[side].append((price, 0))
         elif msg[1] == 'hb':
             pass
         else:
