@@ -2,6 +2,7 @@
 
 ### 1.4.1
   * Feature: Support for disabling timeouts on feeds
+  * Bugfix: #224 Ignore newly added trading pairs in Poloniex while running
 
 ### 1.3.1 (2020-03-17)
   * Feature: Add missing update detection to orderbooks in Binance
