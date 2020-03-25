@@ -75,6 +75,9 @@ class Poloniex(Feed):
         # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
         # quoteVolume, isFrozen, 24hrHigh, 24hrLow
         pair_id, _, ask, bid, _, _, _, _, _, _ = msg
+        if pair_id not in self.pair_mapping:
+            # Ignore new trading pairs that are added during long running sessions
+            return
         pair = pair_exchange_to_std(self.pair_mapping[pair_id])
         if self.__do_callback(TICKER, pair):
             await self.callback(TICKER, feed=self.id,
