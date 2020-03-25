@@ -89,7 +89,8 @@ class FeedHandler:
         timeout: int
             number of seconds without a message before the feed is considered
             to be timed out. The connection will be closed, and if retries
-            have not been exhausted, the connection will be restablished
+            have not been exhausted, the connection will be restablished.
+            If set to -1, no timeout will occur.
         kwargs: dict
             if a string is used for the feed, kwargs will be passed to the
             newly instantiated object
@@ -152,6 +153,9 @@ class FeedHandler:
             LOG.error("Unhandled exception", exc_info=True)
 
     async def _watch(self, feed_id, websocket):
+        if self.timeout[feed_id] == -1:
+            return
+
         while websocket.open:
             if self.last_msg[feed_id]:
                 if time() - self.last_msg[feed_id] > self.timeout[feed_id]:
