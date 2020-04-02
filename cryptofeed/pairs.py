@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT, DSX
 
 
 PAIR_SEP = '-'
@@ -83,6 +83,12 @@ def ftx_pairs():
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
     return {data['id'].replace("-", PAIR_SEP): data['id'] for data in r}
+
+
+def dsx_pairs():
+    r = requests.get('https://api.dsxglobal.com/api/2/public/symbol').json()
+    return {f"{e['baseCurrency']}{PAIR_SEP}{e['quoteCurrency']}": e['id'] for e in r}
+
 
 
 def gemini_pairs():
@@ -266,5 +272,6 @@ _exchange_function_map = {
     BITTREX: bittrex_pairs,
     BITCOINCOM: bitcoincom_pairs,
     BITMAX: bitmax_pairs,
-    UPBIT: upbit_pairs
+    UPBIT: upbit_pairs,
+    DSX: dsx_pairs
 }
