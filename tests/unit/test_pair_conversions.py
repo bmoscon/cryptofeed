@@ -5,14 +5,20 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, load_exchange_pair_mapping
-from cryptofeed.defines import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP, BITCOINCOM
-from cryptofeed.pairs import coinbase_pairs, poloniex_pairs, bitfinex_pairs, hitbtc_pairs, gemini_pairs, bitstamp_pairs, bitcoincom_pairs
+from cryptofeed.defines import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP, BITCOINCOM, DSX
+from cryptofeed.pairs import coinbase_pairs, poloniex_pairs, bitfinex_pairs, hitbtc_pairs, gemini_pairs, bitstamp_pairs, bitcoincom_pairs, dsx_pairs
 
 
 def test_coinbase_pair_conversions():
     load_exchange_pair_mapping(COINBASE)
     for _, pair in coinbase_pairs().items():
         assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, COINBASE))
+
+
+def test_dsx_pair_conversion():
+    load_exchange_pair_mapping(DSX)
+    for _, pair in dsx_pairs().items():
+        assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, DSX))
 
 
 def test_poloniex_pair_conversions():
