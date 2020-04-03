@@ -11,7 +11,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, L2_BOOK, TRADES, BUY, SELL, BID, ASK, DSX
+from cryptofeed.defines import TICKER, L2_BOOK, TRADES, BUY, SELL, BID, ASK, DSX as DSX_id
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -19,7 +19,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class DSX(Feed):
-    id = DSX
+    id = DSX_id
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.dsxglobal.com/api/2/ws',

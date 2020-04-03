@@ -46,6 +46,7 @@ Supports the following exchanges:
 * Bittrex
 * Bybit
 * Coinbase
+* DSX
 * Deribit
 * EXX
 * FTX
