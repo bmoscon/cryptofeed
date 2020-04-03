@@ -19,6 +19,7 @@ from cryptofeed.log import get_logger
 from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
+from cryptofeed.defines import DSX as DSX_str
 from cryptofeed.exchanges import *
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
@@ -55,7 +56,8 @@ _EXCHANGES = {
     BITTREX: Bittrex,
     BITCOINCOM: BitcoinCom,
     BITMAX: Bitmax,
-    UPBIT: Upbit
+    UPBIT: Upbit,
+    DSX_str: DSX
 }
 
 
