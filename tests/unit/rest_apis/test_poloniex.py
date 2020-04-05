@@ -21,7 +21,7 @@ def test_order_book():
 
 
 def test_trade_history():
-    trade_history = list(next(poloniex.trades('BTC-USDT', start='2018-10-01', end='2018-10-02')))
+    trade_history = list(next(poloniex.trades('BTC-USDT', start='2020-01-01', end='2020-01-02')))
     assert len(trade_history) > 0
     assert float(trade_history[0]['amount']) > 0
 

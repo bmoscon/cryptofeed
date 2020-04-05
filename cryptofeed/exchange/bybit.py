@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2018-2020  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import logging
 import orjson as json
 from decimal import Decimal
@@ -22,7 +28,7 @@ class Bybit(Feed):
         self.l2_book = {}
 
     async def message_handler(self, msg: str, timestamp: float):
-        msg = json.loads(msg)
+        msg = json.loads(msg, parse_float=Decimal)
 
         if "success" in msg:
             if msg['success']:
@@ -31,13 +37,14 @@ class Bybit(Feed):
                 LOG.error("%s: Error from exchange %s", self.id, msg)
         elif "trade" in msg["topic"]:
             await self._trade(msg, timestamp)
-        elif "order_book_25L1" in msg["topic"]:
+        elif "orderBookL2" in msg["topic"]:
             await self._book(msg, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
         self.__reset()
+
         for chan in self.channels if self.channels else self.config:
             for pair in self.pairs if self.pairs else self.config[chan]:
                 await websocket.send(json.dumps(

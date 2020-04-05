@@ -18,7 +18,8 @@ def test_coinbase_pair_conversions():
 def test_dsx_pair_conversion():
     load_exchange_pair_mapping(DSX)
     for _, pair in dsx_pairs().items():
-        assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, DSX))
+        std = pair_exchange_to_std(pair)
+        assert(pair == pair_std_to_exchange(std, DSX))
 
 
 def test_poloniex_pair_conversions():
