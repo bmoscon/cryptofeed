@@ -1,5 +1,5 @@
 import logging
-import json
+import orjson as json
 import requests
 
 from cryptofeed.feed import Feed

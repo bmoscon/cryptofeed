@@ -6,7 +6,7 @@ associated with this software.
 '''
 import time
 from time import sleep
-import json
+import orjson as json
 import hashlib
 import hmac
 import logging

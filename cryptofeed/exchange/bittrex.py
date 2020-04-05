@@ -1,5 +1,5 @@
 import logging
-import json
+import orjson as json
 from decimal import Decimal
 import requests
 import zlib

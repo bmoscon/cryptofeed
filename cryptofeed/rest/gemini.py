@@ -2,7 +2,7 @@ from time import time, sleep
 import hashlib
 import hmac
 import requests
-import json
+import orjson as json
 import base64
 import logging
 from decimal import Decimal

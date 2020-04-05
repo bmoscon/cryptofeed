@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import time
-import json
+import orjson as json
 import hashlib
 import hmac
 import requests

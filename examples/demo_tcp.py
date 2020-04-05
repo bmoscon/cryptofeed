@@ -6,7 +6,7 @@ associated with this software.
 '''
 import asyncio
 from multiprocessing import Process
-import json
+import orjson as json
 from decimal import Decimal
 
 from cryptofeed.backends.socket import TradeSocket, BookDeltaSocket, BookSocket

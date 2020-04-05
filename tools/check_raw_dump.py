@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import sys
-import json
+import orjson as json
 
 
 def main(filename):
