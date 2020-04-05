@@ -97,7 +97,7 @@ _feed_to_exchange_map = {
         OKEX: 'spot/depth_l2_tbt',
         COINBENE: L2_BOOK,
         DERIBIT: 'book',
-        BYBIT: 'order_book_25L1',
+        BYBIT: 'orderBookL2_25',
         FTX: 'orderbook',
         GEMINI: L2_BOOK,
         BITTREX: 'SubscribeToExchangeDeltas',

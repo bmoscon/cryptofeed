@@ -66,8 +66,13 @@ def bitfinex_pairs():
 
 
 def bybit_pairs():
-    pairs = {f"BTC{PAIR_SEP}USD": "BTCUSD", f"ETH{PAIR_SEP}USD": "ETHUSD", f"EOS{PAIR_SEP}USD": "EOSUSD", f"XRP{PAIR_SEP}USD": "XRPUSD"}
-    return pairs
+    ret = {}
+    r = requests.get('https://api.bybit.com/v2/public/tickers').json()
+    for pair in r['result']:
+        symbol = pair['symbol']
+        normalized = symbol.replace("USD", f"{PAIR_SEP}USD")
+        ret[normalized] = symbol
+    return ret
 
 
 def ftx_pairs():
