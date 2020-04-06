@@ -4,7 +4,7 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import orjson as json
+from yapic import json
 
 import aioredis
 
@@ -26,7 +26,7 @@ class RedisCallback:
 
 class RedisZSetCallback(RedisCallback):
     async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        data = json.dumps(data)
+        data = json.dumps(data,json.OPT_NON_STR_KEYS)
         if self.redis is None:
             self.redis = await aioredis.create_redis_pool(self.conn_str)
         await self.redis.zadd(f"{self.key}-{feed}-{pair}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)

@@ -24,7 +24,7 @@ So we return BTC190927 as the pair name for the BTC quaterly future.
 
 '''
 import logging
-import orjson as json
+from yapic import json
 from decimal import Decimal
 import zlib
 

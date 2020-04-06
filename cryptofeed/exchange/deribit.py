@@ -1,5 +1,5 @@
 import logging
-import orjson as json
+from yapic import json
 import requests
 
 from cryptofeed.feed import Feed

@@ -1,5 +1,5 @@
 import logging
-import orjson as json
+from yapic import json
 from decimal import Decimal
 
 import requests

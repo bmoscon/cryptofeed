@@ -6,7 +6,7 @@ associated with this software.
 '''
 from urllib.request import urlopen
 import requests
-import orjson as json
+from yapic import json
 
 
 """
