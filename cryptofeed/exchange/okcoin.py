@@ -4,7 +4,7 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import json
+from yapic import json
 import logging
 from decimal import Decimal
 import zlib
@@ -134,7 +134,7 @@ class OKCoin(Feed):
     async def message_handler(self, msg: str, timestamp: float):
         # DEFLATE compression, no header
         msg = zlib.decompress(msg, -15)
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(msg, parse_float=Decimal).decode(encoding='utf-8', errors='strict')
 
         if 'event' in msg:
             if msg['event'] == 'error':

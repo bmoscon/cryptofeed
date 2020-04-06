@@ -24,7 +24,7 @@ So we return BTC190927 as the pair name for the BTC quaterly future.
 
 '''
 import logging
-import json
+from yapic import json
 from decimal import Decimal
 import zlib
 
@@ -113,7 +113,7 @@ class HuobiDM(Feed):
 
     async def message_handler(self, msg: str, timestamp: float):
         # unzip message
-        msg = zlib.decompress(msg, 16 + zlib.MAX_WBITS)
+        msg = zlib.decompress(msg, 16 + zlib.MAX_WBITS).decode(encoding='utf-8', errors='strict')
         msg = json.loads(msg, parse_float=Decimal)
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it

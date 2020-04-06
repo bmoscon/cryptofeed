@@ -54,7 +54,8 @@ setup(
         "aiohttp",
         "aiodns",
         "cchardet",
-        "aiofile"
+        "aiofile",
+        'yapic'
     ],
     extras_require={
         'redis': ['aioredis'],

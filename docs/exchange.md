@@ -121,7 +121,7 @@ async def _trade(self, msg):
 
     async def message_handler(self, msg, timestamp):
         # unzip message
-        msg = zlib.decompress(msg, 16+zlib.MAX_WBITS)
+        msg = zlib.decompress(msg, 16+zlib.MAX_WBITS).decode(encoding='utf-8', errors='strict')
         msg = json.loads(msg, parse_float=Decimal)
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it

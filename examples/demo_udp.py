@@ -6,7 +6,7 @@ associated with this software.
 '''
 from multiprocessing import Process
 import socket
-import json
+from yapic import json
 
 from cryptofeed.backends.socket import TradeSocket, BookSocket, BookDeltaSocket
 from cryptofeed import FeedHandler

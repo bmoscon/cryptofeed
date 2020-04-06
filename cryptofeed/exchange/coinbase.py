@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-import json
+from yapic import json
 import logging
 from decimal import Decimal
 import time

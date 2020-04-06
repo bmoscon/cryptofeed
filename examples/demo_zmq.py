@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from multiprocessing import Process
-import json
+from yapic import json
 
 from cryptofeed.backends.zmq import BookZMQ, TickerZMQ
 from cryptofeed import FeedHandler
