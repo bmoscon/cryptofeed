@@ -46,6 +46,7 @@ TICKER = 'ticker'
 VOLUME = 'volume'
 FUNDING = 'funding'
 OPEN_INTEREST = 'open_interest'
+LIQUIDATIONS = 'liquidations'
 UNSUPPORTED = 'unsupported'
 
 
