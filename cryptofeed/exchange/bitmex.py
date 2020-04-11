@@ -13,7 +13,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, BITMEX, OPEN_INTEREST, TICKER
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, BITMEX, OPEN_INTEREST, TICKER, LIQUIDATIONS
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -443,6 +443,28 @@ class Bitmex(Feed):
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
 
+    async def _liquidation(self, msg: dict, timestamp: float):
+        """
+        liquidation msg example
+
+        {
+	    'orderID': '9513c849-ca0d-4e11-8190-9d221972288c',
+	    'symbol': 'XBTUSD',
+	    'side': 'Buy',
+	    'price': 6833.5,
+	    'leavesQty': 2020
+	}
+        """
+        if msg['action'] == 'insert':
+            for data in msg['data']:
+                await self.callback(LIQUIDATIONS, feed=self.id,
+                                    pair=data['symbol'],
+                                    side=BUY if data['side'] == 'Buy' else SELL,
+                                    leaves_qty=Decimal(data['leavesQty']),
+                                    price=Decimal(data['price']),
+                                    order_id=data['orderID'],
+                                    receipt_timestamp=timestamp)
+
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'info' in msg:
@@ -463,6 +485,8 @@ class Bitmex(Feed):
                 await self._instrument(msg, timestamp)
             elif msg['table'] == 'quote':
                 await self._ticker(msg, timestamp)
+            elif msg['table'] == 'liquidation':
+                await self._liquidation(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
 
