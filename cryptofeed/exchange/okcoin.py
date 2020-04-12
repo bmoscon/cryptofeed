@@ -12,7 +12,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN, OPEN_INTEREST, FUNDING
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, OKCOIN, OPEN_INTEREST, FUNDING, TICKER_FUTURES, TICKER_SWAP, TRADES_FUTURES, TRADES_SWAP
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -51,10 +51,17 @@ class OKCoin(Feed):
         """
         {'table': 'spot/ticker', 'data': [{'instrument_id': 'BTC-USD', 'last': '3977.74', 'best_bid': '3977.08', 'best_ask': '3978.73', 'open_24h': '3978.21', 'high_24h': '3995.43', 'low_24h': '3961.02', 'base_volume_24h': '248.245', 'quote_volume_24h': '988112.225861', 'timestamp': '2019-03-22T22:26:34.019Z'}]}
         """
+        if 'swap' in msg['table']:
+            callback_type = TICKER_SWAP
+        elif 'futures' in msg['table']:
+            callback_type = TICKER_FUTURES
+        else:
+            callback_type = TICKER
+
         for update in msg['data']:
             pair = update['instrument_id']
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
-            await self.callback(TICKER, feed=self.id,
+            await self.callback(callback_type, feed=self.id,
                                 pair=pair,
                                 bid=Decimal(update['best_bid']),
                                 ask=Decimal(update['best_ask']),
@@ -71,12 +78,19 @@ class OKCoin(Feed):
         """
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}
         """
+        if 'swap' in msg['table']:
+            callback_type = TRADES_SWAP
+        elif 'futures' in msg['table']:
+            callback_type = TRADES_FUTURES
+        else:
+            callback_type = TRADES
+
         for trade in msg['data']:
             if msg['table'] == 'futures/trade':
                 amount_sym = 'qty'
             else:
                 amount_sym = 'size'
-            await self.callback(TRADES,
+            await self.callback(callback_type,
                                 feed=self.id,
                                 pair=pair_exchange_to_std(trade['instrument_id']),
                                 order_id=trade['trade_id'],
