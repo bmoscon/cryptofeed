@@ -6,11 +6,14 @@ associated with this software.
 '''
 import uuid
 from collections import defaultdict
+from sortedcontainers import SortedDict as sd
+
 
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
 from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, OPEN_INTEREST, BID, ASK
 from cryptofeed.util.book import book_delta, depth
+from cryptofeed.exceptions import BidAskOverlapping
 
 
 class Feed:
@@ -91,6 +94,7 @@ class Feed:
                     if not (delta[BID] or delta[ASK]):
                         return
                 self.updates[pair] += 1
+                self.check_bid_ask_overlapping(book, pair)
                 await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
                 if self.updates[pair] != self.book_update_interval:
                     return
@@ -101,11 +105,21 @@ class Feed:
             changed, book = await self.apply_depth(book, False, pair)
             if not changed:
                 return
+
+        self.check_bid_ask_overlapping(book, pair)
         if book_type == L2_BOOK:
             await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         else:
             await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         self.updates[pair] = 0
+
+    def check_bid_ask_overlapping(self, book, pair):
+        bid, ask = book[BID], book[ASK]
+        assert isinstance(bid, sd) and isinstance(ask, sd)
+        if len(bid) > 0 and len(ask) > 0:
+            best_bid, best_ask = bid.keys()[-1], ask.keys()[0]
+            if best_bid >= best_ask:
+                raise BidAskOverlapping(f"{self.id} {pair} best bid {best_bid} >= best ask {best_ask}")
 
     async def callback(self, data_type, **kwargs):
         for cb in self.callbacks[data_type]:
