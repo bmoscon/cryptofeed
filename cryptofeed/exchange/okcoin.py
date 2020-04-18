@@ -134,7 +134,7 @@ class OKCoin(Feed):
     async def message_handler(self, msg: str, timestamp: float):
         # DEFLATE compression, no header
         msg = zlib.decompress(msg, -15)
-        msg = json.loads(msg, parse_float=Decimal).decode(encoding='utf-8', errors='strict')
+        msg = json.loads(msg, parse_float=Decimal)
 
         if 'event' in msg:
             if msg['event'] == 'error':
