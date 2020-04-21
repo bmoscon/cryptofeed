@@ -205,6 +205,9 @@ def huobi_dm_pairs():
     pairs = {}
     for e in r['data']:
         pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
+    r = requests.get('https://api.hbdm.com/swap-api/v1/swap_contract_info').json()
+    for e in r['data']:
+        pairs[e['contract_code']] = e['contract_code']
     return pairs
 
 

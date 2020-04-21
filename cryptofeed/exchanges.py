@@ -20,6 +20,7 @@ from cryptofeed.exchange.kraken_futures import KrakenFutures
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.huobi import Huobi
 from cryptofeed.exchange.huobi_dm import HuobiDM
+from cryptofeed.exchange.huobi_swap import HuobiSwap
 from cryptofeed.exchange.okcoin import OKCoin
 from cryptofeed.exchange.okex import OKEx
 from cryptofeed.exchange.coinbene import Coinbene
