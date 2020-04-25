@@ -20,7 +20,6 @@ class Upbit(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://api.upbit.com/websocket/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
-        self.max_depth = 100
 
     def __reset(self):
         pass
@@ -105,7 +104,6 @@ class Upbit(Feed):
         """
         pair = pair_exchange_to_std(msg['cd'])
         orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
-        delta = False
 
         if pair not in self.l2_book:
             await self._snapshot(pair)
@@ -113,11 +111,22 @@ class Upbit(Feed):
         # forced = True if the snapshot received, otherwise(realtime) forced set to be false
         forced = True if msg['st'] == 'SNAPSHOT' else False
 
-        for unit in msg['obu']:
-            self.l2_book[pair][ASK][Decimal(unit['ap'])] = Decimal(unit['as'])
-            self.l2_book[pair][BID][Decimal(unit['bp'])] = Decimal(unit['bs'])
+        update = {
+            BID: sd({
+                Decimal(unit['bp']): Decimal(unit['bs'])
+                for unit in msg['obu'] if unit['bp'] > 0
+            }),
+            ASK: sd({
+                Decimal(unit['ap']): Decimal(unit['as'])
+                for unit in msg['obu'] if unit['ap'] > 0
+            })
+        }
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, orderbook_timestamp, timestamp)
+        if not forced:
+            self.previous_book[pair] = self.l2_book[pair]
+        self.l2_book[pair] = update
+
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, orderbook_timestamp, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
