@@ -55,7 +55,7 @@ setup(
         "aiodns",
         "cchardet",
         "aiofile",
-        'yapic.json>=1.4.1'
+        'yapic.json>=1.4.3'
     ],
     extras_require={
         'redis': ['aioredis'],
