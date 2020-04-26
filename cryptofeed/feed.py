@@ -6,8 +6,6 @@ associated with this software.
 '''
 import uuid
 from collections import defaultdict
-from sortedcontainers import SortedDict as sd
-
 
 from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
@@ -115,7 +113,6 @@ class Feed:
 
     def check_bid_ask_overlapping(self, book, pair):
         bid, ask = book[BID], book[ASK]
-        assert isinstance(bid, sd) and isinstance(ask, sd)
         if len(bid) > 0 and len(ask) > 0:
             best_bid, best_ask = bid.keys()[-1], ask.keys()[0]
             if best_bid >= best_ask:
