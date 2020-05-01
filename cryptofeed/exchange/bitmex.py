@@ -8,6 +8,7 @@ from yapic import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
+from datetime import datetime as dt
 
 import requests
 from sortedcontainers import SortedDict as sd
@@ -190,11 +191,13 @@ class Bitmex(Feed):
         """
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
+            interval = data['fundingInterval']
+            interval = int((interval - dt(interval.year, interval.month, interval.day, tzinfo=interval.tzinfo)).total_seconds())
             await self.callback(FUNDING, feed=self.id,
                                 pair=data['symbol'],
                                 timestamp=ts,
                                 receipt_timestamp=timestamp,
-                                interval=data['fundingInterval'],
+                                interval=interval,
                                 rate=data['fundingRate'],
                                 rate_daily=data['fundingRateDaily']
                                 )
