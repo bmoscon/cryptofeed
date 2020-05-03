@@ -12,11 +12,15 @@ data channel names
 import logging
 import pandas as pd
 
-from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, OPEN_INTEREST, VOLUME, FUNDING, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, OKCOIN,
-                                OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
-                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, BITTREX, BITCOINCOM, BINANCE_US,
-                                BINANCE_JERSEY, BINANCE_FUTURES, UPBIT)
+from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, OPEN_INTEREST, VOLUME, FUNDING,
+                                UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN,
+                                KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, OKCOIN,
+                                OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP,
+                                TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
+                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL,
+                                DERIBIT, BITTREX, BITCOINCOM, BINANCE_US,
+                                BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, BLOCKCHAIN)
 from cryptofeed.pairs import gen_pairs
 from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -66,7 +70,7 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, BITCOINCOM}:
+    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, BITCOINCOM, BLOCKCHAIN}:
         return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
@@ -89,6 +93,7 @@ _feed_to_exchange_map = {
         BINANCE_US: 'depth@100ms',
         BINANCE_JERSEY: 'depth@100ms',
         BINANCE_FUTURES: 'depth@100ms',
+        BLOCKCHAIN: 'l2',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
         HUOBI_DM: 'depth.step0',
@@ -117,6 +122,7 @@ _feed_to_exchange_map = {
         BINANCE_US: UNSUPPORTED,
         BINANCE_JERSEY: UNSUPPORTED,
         BINANCE_FUTURES: UNSUPPORTED,
+        BLOCKCHAIN: 'l3',
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
@@ -142,6 +148,7 @@ _feed_to_exchange_map = {
         BINANCE_US: 'aggTrade',
         BINANCE_JERSEY: 'aggTrade',
         BINANCE_FUTURES: 'aggTrade',
+        BLOCKCHAIN: 'trades',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
         HUOBI_DM: 'trade.detail',
@@ -170,6 +177,7 @@ _feed_to_exchange_map = {
         BINANCE_US: 'ticker',
         BINANCE_JERSEY: 'ticker',
         BINANCE_FUTURES: UNSUPPORTED,
+        BLOCKCHAIN: 'ticker',
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
         OKCOIN: 'spot/ticker',
@@ -226,25 +234,29 @@ _exchange_options = {
         KRAKEN: 'limit',
         GEMINI: 'exchange limit',
         POLONIEX: 'limit',
-        COINBASE: 'limit'
+        COINBASE: 'limit',
+        BLOCKCHAIN: 'limit',
     },
     MARKET: {
         KRAKEN: 'market',
         GEMINI: UNSUPPORTED,
         POLONIEX: UNSUPPORTED,
-        COINBASE: 'market'
+        COINBASE: 'market',
+        BLOCKCHAIN: 'market',
     },
     FILL_OR_KILL: {
         GEMINI: 'fill-or-kill',
         POLONIEX: 'fillOrKill',
         COINBASE: {'time_in_force': 'FOK'},
-        KRAKEN: UNSUPPORTED
+        KRAKEN: UNSUPPORTED,
+        BLOCKCHAIN: 'FOK'
     },
     IMMEDIATE_OR_CANCEL: {
         GEMINI: 'immediate-or-cancel',
         POLONIEX: 'immediateOrCancel',
         COINBASE: {'time_in_force': 'IOC'},
-        KRAKEN: UNSUPPORTED
+        KRAKEN: UNSUPPORTED,
+        BLOCKCHAIN: 'IOC'
     },
     MAKER_OR_CANCEL: {
         GEMINI: 'maker-or-cancel',

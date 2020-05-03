@@ -16,7 +16,8 @@ from cryptofeed.util.book import book_delta, depth
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None,
+                 max_depth=None, book_interval=1000, origin=None):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
         self.config = defaultdict(set)
@@ -28,6 +29,7 @@ class Feed:
         self.channels = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
+        self.origin = origin
         load_exchange_pair_mapping(self.id)
 
         if config is not None and (pairs is not None or channels is not None):
@@ -51,7 +53,9 @@ class Feed:
                           L3_BOOK: Callback(None),
                           VOLUME: Callback(None),
                           FUNDING: Callback(None),
-                          OPEN_INTEREST: Callback(None)}
+                          OPEN_INTEREST: Callback(None),
+                          BOOK_DELTA: Callback(None)
+                          }
 
         if callbacks:
             for cb_type, cb_func in callbacks.items():
@@ -101,6 +105,7 @@ class Feed:
             changed, book = await self.apply_depth(book, False, pair)
             if not changed:
                 return
+
         if book_type == L2_BOOK:
             await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         else:
@@ -118,7 +123,6 @@ class Feed:
             self.previous_book[pair] = ret
             return delta, ret
 
-        delta = []
         delta = book_delta(self.previous_book[pair], ret)
         self.previous_book[pair] = ret
         return delta, ret

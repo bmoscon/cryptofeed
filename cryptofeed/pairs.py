@@ -9,8 +9,9 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT
-
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, \
+    BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, \
+    COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN
 
 PAIR_SEP = '-'
 
@@ -241,6 +242,10 @@ def upbit_pairs():
     r = requests.get('https://api.upbit.com/v1/market/all').json()
     return {f"{data['market'].split('-')[1]}{PAIR_SEP}{data['market'].split('-')[0]}": data['market'] for data in r}
 
+def blockchain_pairs():
+    r= requests.get("https://api.blockchain.com/mercury-gateway/v1/instruments").json()
+    return {data["symbol"].replace("-", PAIR_SEP): data["symbol"] for data in r}
+
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -255,6 +260,7 @@ _exchange_function_map = {
     BINANCE_US: binance_us_pairs,
     BINANCE_JERSEY: binance_jersey_pairs,
     BINANCE_FUTURES: binance_futures_pairs,
+    BLOCKCHAIN: blockchain_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
     HUOBI_DM: huobi_dm_pairs,
