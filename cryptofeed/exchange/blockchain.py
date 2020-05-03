@@ -32,16 +32,21 @@ class Blockchain(Feed):
         self.seq_no = None
         self.l2_book = {}
         self.l3_book = {}
+        self.ticker = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
-        """Incompatible ticker update - websocket returns last traded prices"""
+        """TODO: Incompatible ticker update - websocket returns last traded prices"""
         if msg['event'] == 'subscribed':
             LOG.info("Subscribed to ticker ")
-        elif msg['event'] == 'snapshot':
+        elif msg['event'] in ['snapshot', 'updated']:
+            pair = pair_exchange_to_std(msg['symbol'])
+            ticker = self.ticker.get(pair, {})
+            ticker.update(msg)
+            self.ticker[pair] = ticker
             await self.callback(TICKER, feed=self.id,
                                 pair=pair_exchange_to_std(msg['symbol']),
-                                bid=msg["last_trade_price"],
-                                ask=msg["last_trade_price"],
+                                bid=ticker["last_trade_price"],
+                                ask=ticker["last_trade_price"],
                                 timestamp=timestamp,
                                 receipt_timestamp=timestamp)
         else:
