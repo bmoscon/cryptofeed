@@ -77,7 +77,7 @@ def main():
     f.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks=DeltaBook("Bitfinex-L3").L3))
     f.add_feed(Bitfinex(max_depth=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bitfinex-L2").L2))
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L3_BOOK], callbacks=DeltaBook("Coinbase-L3").L3))
-    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Coinbase-L2").L2))
+    f.add_feed(Coinbase(max_depth=50, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Coinbase-L2").L2))
     f.add_feed(EXX(max_depth=25, book_interval=100, pairs=['BTC-USDT'], channels=[L2_BOOK], callbacks=DeltaBook("EXX").L2))
     f.add_feed(Gemini(max_depth=20, book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Gemini").L2))
     f.add_feed(HitBTC(max_depth=10, book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("HitBTC").L2))
