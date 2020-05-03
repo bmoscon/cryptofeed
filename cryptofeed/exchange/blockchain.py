@@ -50,11 +50,11 @@ class Blockchain(Feed):
     async def _pair_l2_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
         pair = pair_exchange_to_std(msg['symbol'])
-
+        forced = False
         if msg['event'] == 'snapshot':
             # Reset the book
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
-
+            forced = True
         book = self.l2_book[pair]
 
         for side in (BID, ASK):
@@ -69,7 +69,7 @@ class Blockchain(Feed):
         self.l2_book[pair] = book
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair,
-                                 False, delta, timestamp_normalize(self.id, timestamp), timestamp)
+                                 forced, delta, timestamp_normalize(self.id, timestamp), timestamp)
 
     async def _handle_l2_msg(self, msg: str, timestamp: float):
         """
