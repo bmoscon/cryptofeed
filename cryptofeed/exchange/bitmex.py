@@ -4,16 +4,17 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import json
+from yapic import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
+from datetime import datetime as dt
 
 import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, BITMEX, OPEN_INTEREST, TICKER
+from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, FUNDING, BITMEX, OPEN_INTEREST, TICKER, LIQUIDATIONS
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -190,11 +191,13 @@ class Bitmex(Feed):
         """
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
+            interval = data['fundingInterval']
+            interval = int((interval - dt(interval.year, interval.month, interval.day, tzinfo=interval.tzinfo)).total_seconds())
             await self.callback(FUNDING, feed=self.id,
                                 pair=data['symbol'],
                                 timestamp=ts,
                                 receipt_timestamp=timestamp,
-                                interval=data['fundingInterval'],
+                                interval=interval,
                                 rate=data['fundingRate'],
                                 rate_daily=data['fundingRateDaily']
                                 )
@@ -443,6 +446,28 @@ class Bitmex(Feed):
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
 
+    async def _liquidation(self, msg: dict, timestamp: float):
+        """
+        liquidation msg example
+
+        {
+	    'orderID': '9513c849-ca0d-4e11-8190-9d221972288c',
+	    'symbol': 'XBTUSD',
+	    'side': 'Buy',
+	    'price': 6833.5,
+	    'leavesQty': 2020
+	}
+        """
+        if msg['action'] == 'insert':
+            for data in msg['data']:
+                await self.callback(LIQUIDATIONS, feed=self.id,
+                                    pair=data['symbol'],
+                                    side=BUY if data['side'] == 'Buy' else SELL,
+                                    leaves_qty=Decimal(data['leavesQty']),
+                                    price=Decimal(data['price']),
+                                    order_id=data['orderID'],
+                                    receipt_timestamp=timestamp)
+
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'info' in msg:
@@ -463,6 +488,8 @@ class Bitmex(Feed):
                 await self._instrument(msg, timestamp)
             elif msg['table'] == 'quote':
                 await self._ticker(msg, timestamp)
+            elif msg['table'] == 'liquidation':
+                await self._liquidation(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
 

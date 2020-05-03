@@ -6,7 +6,7 @@ associated with this software.
 '''
 import logging
 import asyncio
-import json
+from yapic import json
 from textwrap import wrap
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback, BackendTickerCallback, BackendTradeCallback, BackendOpenInterestCallback

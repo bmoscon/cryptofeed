@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-import json
+from yapic import json
 import itertools
 
 from cryptofeed.backends.http import HTTPCallback

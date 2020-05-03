@@ -4,7 +4,7 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import json
+from yapic import json
 import logging
 from decimal import Decimal
 from collections import defaultdict
@@ -173,8 +173,9 @@ class Bitfinex(Feed):
                     self.l2_book[pair][side][price] = amount
                 else:
                     # remove price level
-                    del self.l2_book[pair][side][price]
-                    delta[side].append((price, 0))
+                    if price in self.l2_book[pair][side]:
+                        del self.l2_book[pair][side][price]
+                        delta[side].append((price, 0))
         elif msg[1] == 'hb':
             pass
         else:

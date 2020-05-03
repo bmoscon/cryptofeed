@@ -46,6 +46,7 @@ Supports the following exchanges:
 * Bittrex
 * Bybit
 * Coinbase
+* DSX
 * Deribit
 * EXX
 * FTX
@@ -58,6 +59,7 @@ Supports the following exchanges:
 * OKCoin
 * OKEx
 * Poloniex
+* Upbit
 
 
 Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.

@@ -9,9 +9,8 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, \
-    BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, \
-    COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT, DSX, BLOCKCHAIN
+
 
 PAIR_SEP = '-'
 
@@ -67,8 +66,13 @@ def bitfinex_pairs():
 
 
 def bybit_pairs():
-    pairs = {f"BTC{PAIR_SEP}USD": "BTCUSD", f"ETH{PAIR_SEP}USD": "ETHUSD", f"EOS{PAIR_SEP}USD": "EOSUSD", f"XRP{PAIR_SEP}USD": "XRPUSD"}
-    return pairs
+    ret = {}
+    r = requests.get('https://api.bybit.com/v2/public/tickers').json()
+    for pair in r['result']:
+        symbol = pair['symbol']
+        normalized = symbol.replace("USD", f"{PAIR_SEP}USD")
+        ret[normalized] = symbol
+    return ret
 
 
 def ftx_pairs():
@@ -84,6 +88,12 @@ def ftx_pairs():
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
     return {data['id'].replace("-", PAIR_SEP): data['id'] for data in r}
+
+
+def dsx_pairs():
+    r = requests.get('https://api.dsxglobal.com/api/2/public/symbol').json()
+    return {f"{e['baseCurrency']}{PAIR_SEP}{e['quoteCurrency']}": e['id'] for e in r}
+
 
 
 def gemini_pairs():
@@ -195,6 +205,9 @@ def huobi_dm_pairs():
     pairs = {}
     for e in r['data']:
         pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
+    r = requests.get('https://api.hbdm.com/swap-api/v1/swap_contract_info').json()
+    for e in r['data']:
+        pairs[e['contract_code']] = e['contract_code']
     return pairs
 
 
@@ -272,5 +285,6 @@ _exchange_function_map = {
     BITTREX: bittrex_pairs,
     BITCOINCOM: bitcoincom_pairs,
     BITMAX: bitmax_pairs,
-    UPBIT: upbit_pairs
+    UPBIT: upbit_pairs,
+    DSX: dsx_pairs
 }

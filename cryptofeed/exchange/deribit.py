@@ -1,5 +1,5 @@
 import logging
-import json
+from yapic import json
 import requests
 
 from cryptofeed.feed import Feed
@@ -149,21 +149,20 @@ class Deribit(Feed):
         self.websocket = websocket
         self.__reset()
         client_id = 0
+        channels = []
         for chan in self.channels if self.channels else self.config:
             for pair in self.pairs if self.pairs else self.config[chan]:
-                client_id += 1
-                await websocket.send(json.dumps(
-                    {
-                        "jsonrpc": "2.0",
-                        "id": client_id,
-                        "method": "public/subscribe",
-                        "params": {
-                            "channels": [
-                                f"{chan}.{pair}.raw"
-                            ]
-                        }
-                    }
-                ))
+                channels.append(f"{chan}.{pair}.raw")
+        await websocket.send(json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": client_id,
+                "method": "public/subscribe",
+                "params": {
+                    "channels": channels
+                }
+            }
+        ))
 
     async def _book_snapshot(self, msg: dict, timestamp: float):
         ts = msg["params"]["data"]["timestamp"]

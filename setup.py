@@ -27,7 +27,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.3.1",
+    version="1.4.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description=("Cryptocurrency feed handler and synthetic NBBO feed"),
@@ -54,7 +54,8 @@ setup(
         "aiohttp",
         "aiodns",
         "cchardet",
-        "aiofile"
+        "aiofile",
+        'yapic.json>=1.4.3'
     ],
     extras_require={
         'redis': ['aioredis'],

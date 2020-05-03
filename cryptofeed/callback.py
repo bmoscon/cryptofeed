@@ -58,6 +58,10 @@ class BookUpdateCallback(Callback):
         await super().__call__(feed, pair, delta, timestamp, receipt_timestamp)
 
 
+class LiquidationCallback(Callback):
+    pass
+
+
 class OpenInterestCallback(Callback):
     pass
 
