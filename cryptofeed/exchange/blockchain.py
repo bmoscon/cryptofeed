@@ -32,25 +32,6 @@ class Blockchain(Feed):
         self.seq_no = None
         self.l2_book = {}
         self.l3_book = {}
-        self.ticker = {}
-
-    async def _ticker(self, msg: dict, timestamp: float):
-        """TODO: Incompatible ticker update - websocket returns last traded prices"""
-        if msg['event'] == 'subscribed':
-            LOG.info("Subscribed to ticker ")
-        elif msg['event'] in ['snapshot', 'updated']:
-            pair = pair_exchange_to_std(msg['symbol'])
-            ticker = self.ticker.get(pair, {})
-            ticker.update(msg)
-            self.ticker[pair] = ticker
-            await self.callback(TICKER, feed=self.id,
-                                pair=pair_exchange_to_std(msg['symbol']),
-                                bid=ticker["last_trade_price"],
-                                ask=ticker["last_trade_price"],
-                                timestamp=timestamp,
-                                receipt_timestamp=timestamp)
-        else:
-            LOG.warning("%s: Unexpected message %s", self.id, msg)
 
     async def _pair_l2_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -175,9 +156,7 @@ class Blockchain(Feed):
         self.seq_no = msg['seqnum']
 
         if 'channel' in msg:
-            if msg['channel'] == 'ticker':
-                await self._ticker(msg, timestamp)
-            elif msg['channel'] == 'l2':
+            if msg['channel'] == 'l2':
                 await self._handle_l2_msg(msg, timestamp)
             elif msg['channel'] == 'l3':
                 await self._handle_l3_msg(msg, timestamp)

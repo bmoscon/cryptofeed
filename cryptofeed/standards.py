@@ -177,7 +177,7 @@ _feed_to_exchange_map = {
         BINANCE_US: 'ticker',
         BINANCE_JERSEY: 'ticker',
         BINANCE_FUTURES: UNSUPPORTED,
-        BLOCKCHAIN: 'ticker',
+        BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
         OKCOIN: 'spot/ticker',
