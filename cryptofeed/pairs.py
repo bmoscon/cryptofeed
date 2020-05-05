@@ -95,7 +95,6 @@ def dsx_pairs():
     return {f"{e['baseCurrency']}{PAIR_SEP}{e['quoteCurrency']}": e['id'] for e in r}
 
 
-
 def gemini_pairs():
     ret = {}
     r = requests.get('https://api.gemini.com/v1/symbols').json()

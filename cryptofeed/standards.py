@@ -163,7 +163,7 @@ _feed_to_exchange_map = {
     TICKER: {
         POLONIEX: 1002,
         HITBTC: 'subscribeTicker',
-        DSX : 'subscribeTicker',
+        DSX: 'subscribeTicker',
         BITFINEX: 'ticker',
         BITSTAMP: UNSUPPORTED,
         COINBASE: 'ticker',

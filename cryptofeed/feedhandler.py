@@ -16,7 +16,7 @@ from websockets import ConnectionClosed
 
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT
+from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, HUOBI_SWAP
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import DSX as DSX_str
@@ -35,29 +35,30 @@ _EXCHANGES = {
     BINANCE_US: BinanceUS,
     BINANCE_JERSEY: BinanceJersey,
     BINANCE_FUTURES: BinanceFutures,
-    COINBASE: Coinbase,
-    GEMINI: Gemini,
-    HITBTC: HitBTC,
-    POLONIEX: Poloniex,
+    BITCOINCOM: BitcoinCom,
     BITFINEX: Bitfinex,
+    BITMAX: Bitmax,
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
-    KRAKEN: Kraken,
-    KRAKEN_FUTURES: KrakenFutures,
-    HUOBI: Huobi,
-    HUOBI_DM: HuobiDM,
-    OKCOIN: OKCoin,
-    OKEX: OKEx,
+    BITTREX: Bittrex,
+    BYBIT: Bybit,
+    COINBASE: Coinbase,
     COINBENE: Coinbene,
     DERIBIT: Deribit,
+    DSX_str: DSX,
     EXX_str: EXX,
-    BYBIT: Bybit,
     FTX_str: FTX,
-    BITTREX: Bittrex,
-    BITCOINCOM: BitcoinCom,
-    BITMAX: Bitmax,
-    UPBIT: Upbit,
-    DSX_str: DSX
+    GEMINI: Gemini,
+    HITBTC: HitBTC,
+    HUOBI_DM: HuobiDM,
+    HUOBI_SWAP: HuobiSwap,
+    HUOBI: Huobi,
+    KRAKEN_FUTURES: KrakenFutures,
+    KRAKEN: Kraken,
+    OKCOIN: OKCoin,
+    OKEX: OKEx,
+    POLONIEX: Poloniex,
+    UPBIT: Upbit
 }
 
 

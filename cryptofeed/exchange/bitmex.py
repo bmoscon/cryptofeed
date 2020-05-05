@@ -451,12 +451,12 @@ class Bitmex(Feed):
         liquidation msg example
 
         {
-	    'orderID': '9513c849-ca0d-4e11-8190-9d221972288c',
-	    'symbol': 'XBTUSD',
-	    'side': 'Buy',
-	    'price': 6833.5,
-	    'leavesQty': 2020
-	}
+        'orderID': '9513c849-ca0d-4e11-8190-9d221972288c',
+        'symbol': 'XBTUSD',
+        'side': 'Buy',
+        'price': 6833.5,
+        'leavesQty': 2020
+    }
         """
         if msg['action'] == 'insert':
             for data in msg['data']:
