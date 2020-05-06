@@ -17,12 +17,13 @@ from cryptofeed.exceptions import BidAskOverlapping
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, cross_check=False):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
+        self.cross_check = cross_check
         self.updates = defaultdict(int)
         self.do_deltas = False
         self.pairs = []
@@ -93,7 +94,8 @@ class Feed:
                     if not (delta[BID] or delta[ASK]):
                         return
                 self.updates[pair] += 1
-                self.check_bid_ask_overlapping(book, pair)
+                if self.cross_check:
+                    self.check_bid_ask_overlapping(book, pair)
                 await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
                 if self.updates[pair] != self.book_update_interval:
                     return
@@ -105,7 +107,8 @@ class Feed:
             if not changed:
                 return
 
-        self.check_bid_ask_overlapping(book, pair)
+        if self.cross_check:
+            self.check_bid_ask_overlapping(book, pair)
         if book_type == L2_BOOK:
             await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         else:
