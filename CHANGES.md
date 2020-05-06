@@ -8,6 +8,7 @@
   * Bugfix: Deribit subscription condensed into a single message to avoid issues with rate limit
   * Bugfix: Funding interval for bitmex not converted to integer
   * Bugfix: HuobiSwap missing from feedhandler
+  * Feature: Optional flag on Feed to enable check for crossed books
 
 ### 1.3.1 (2020-03-17)
   * Feature: Add missing update detection to orderbooks in Binance
