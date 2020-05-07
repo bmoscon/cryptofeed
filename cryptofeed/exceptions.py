@@ -32,3 +32,7 @@ class UnsupportedType(Exception):
 
 class ExhaustedRetries(Exception):
     pass
+
+
+class BidAskOverlapping(Exception):
+    pass

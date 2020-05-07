@@ -11,18 +11,20 @@ from cryptofeed.callback import Callback
 from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
 from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, OPEN_INTEREST, BID, ASK, LIQUIDATIONS
 from cryptofeed.util.book import book_delta, depth
+from cryptofeed.exceptions import BidAskOverlapping
 
 
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None,
-                 max_depth=None, book_interval=1000, origin=None):
+
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, cross_check=False, origin=None):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
+        self.cross_check = cross_check
         self.updates = defaultdict(int)
         self.do_deltas = False
         self.pairs = []
@@ -94,6 +96,8 @@ class Feed:
                     if not (delta[BID] or delta[ASK]):
                         return
                 self.updates[pair] += 1
+                if self.cross_check:
+                    self.check_bid_ask_overlapping(book, pair)
                 await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
                 if self.updates[pair] != self.book_update_interval:
                     return
@@ -105,11 +109,20 @@ class Feed:
             if not changed:
                 return
 
+        if self.cross_check:
+            self.check_bid_ask_overlapping(book, pair)
         if book_type == L2_BOOK:
             await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         else:
             await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         self.updates[pair] = 0
+
+    def check_bid_ask_overlapping(self, book, pair):
+        bid, ask = book[BID], book[ASK]
+        if len(bid) > 0 and len(ask) > 0:
+            best_bid, best_ask = bid.keys()[-1], ask.keys()[0]
+            if best_bid >= best_ask:
+                raise BidAskOverlapping(f"{self.id} {pair} best bid {best_bid} >= best ask {best_ask}")
 
     async def callback(self, data_type, **kwargs):
         for cb in self.callbacks[data_type]:
