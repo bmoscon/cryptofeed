@@ -54,7 +54,6 @@ class Feed:
                           VOLUME: Callback(None),
                           FUNDING: Callback(None),
                           OPEN_INTEREST: Callback(None),
-                          BOOK_DELTA: Callback(None),
                           LIQUIDATIONS: Callback(None)}
 
         if callbacks:
