@@ -14,7 +14,8 @@ from copy import deepcopy
 import websockets
 from websockets import ConnectionClosed
 
-from cryptofeed.defines import L2_BOOK
+from cryptofeed.defines import L2_BOOK, BLOCKCHAIN
+from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.log import get_logger
 from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, HUOBI_SWAP
 from cryptofeed.defines import EXX as EXX_str
@@ -41,6 +42,7 @@ _EXCHANGES = {
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
     BITTREX: Bittrex,
+    BLOCKCHAIN: Blockchain,
     BYBIT: Bybit,
     COINBASE: Coinbase,
     COINBENE: Coinbene,
@@ -200,7 +202,8 @@ class FeedHandler:
                 # disable the interval in favor of the internal watcher, which will
                 # close the connection and reconnect in the event that no message from the exchange
                 # has been received (as opposed to a missing ping)
-                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None, max_size=2**23) as websocket:
+                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None,
+                        max_size=2**23, origin=feed.origin) as websocket:
                     asyncio.ensure_future(self._watch(feed.uuid, websocket))
                     # connection was successful, reset retry count and delay
                     retries = 0

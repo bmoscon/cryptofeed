@@ -17,7 +17,8 @@ from cryptofeed.exceptions import BidAskOverlapping
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, cross_check=False):
+
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, cross_check=False, origin=None):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
         self.config = defaultdict(set)
@@ -30,6 +31,7 @@ class Feed:
         self.channels = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
+        self.origin = origin
         load_exchange_pair_mapping(self.id)
 
         if config is not None and (pairs is not None or channels is not None):
@@ -133,7 +135,6 @@ class Feed:
             self.previous_book[pair] = ret
             return delta, ret
 
-        delta = []
         delta = book_delta(self.previous_book[pair], ret)
         self.previous_book[pair] = ret
         return delta, ret

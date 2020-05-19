@@ -9,7 +9,8 @@ from decimal import Decimal
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, OKCoin, OKEx, HuobiDM, Bittrex, FTX
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, OPEN_INTEREST, GEMINI, VOLUME
+from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, OPEN_INTEREST, \
+    GEMINI, VOLUME, BLOCKCHAIN
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -80,6 +81,12 @@ def main():
     f.add_feed(OKEx(pairs=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bittrex(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD'], L2_BOOK: ['BTC-USDT']}, callbacks={L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
     f.add_feed(FTX(pairs=['ADA-PERP', 'ALGO-PERP', 'ALT-PERP', 'ATOM-PERP', 'BCH-PERP', 'BNB-PERP', 'BSV-PERP', 'BTC-PERP', 'BTMX-PERP', 'DOGE-PERP', 'DRGN-PERP', 'EOS-PERP', 'ETC-PERP'], channels=[TICKER], callbacks={TICKER: ticker, TRADES: TradeCallback(trade)}))
+
+    f.add_feed(BLOCKCHAIN, pairs=['BTC-USD', 'ETH-USD'], channels=[L2_BOOK, TRADES], callbacks={
+                  L2_BOOK: BookCallback(book),
+                  TRADES: trade,
+              })
+
     f.run()
 
 

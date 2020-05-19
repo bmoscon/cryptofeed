@@ -5,8 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, load_exchange_pair_mapping
-from cryptofeed.defines import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP, BITCOINCOM, DSX
-from cryptofeed.pairs import coinbase_pairs, poloniex_pairs, bitfinex_pairs, hitbtc_pairs, gemini_pairs, bitstamp_pairs, bitcoincom_pairs, dsx_pairs
+from cryptofeed.defines import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP, BITCOINCOM, DSX, BLOCKCHAIN
+from cryptofeed.pairs import coinbase_pairs, poloniex_pairs, bitfinex_pairs, hitbtc_pairs, gemini_pairs, bitstamp_pairs, bitcoincom_pairs, dsx_pairs, blockchain_pairs
 
 
 def test_coinbase_pair_conversions():
@@ -62,3 +62,9 @@ def test_bitcoincom_pair_conversions():
     for _, pair in bitcoincom_pairs().items():
         std = pair_exchange_to_std(pair)
         assert(pair == pair_std_to_exchange(std, BITCOINCOM))
+
+
+def test_blockchain_pair_conversions():
+    load_exchange_pair_mapping(BLOCKCHAIN)
+    for _, pair in blockchain_pairs().items():
+        assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, BLOCKCHAIN))
