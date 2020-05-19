@@ -9,6 +9,7 @@
   * Bugfix: Funding interval for bitmex not converted to integer
   * Bugfix: HuobiSwap missing from feedhandler
   * Feature: Optional flag on Feed to enable check for crossed books
+  * Feature: Blockchain Exchange
 
 ### 1.3.1 (2020-03-17)
   * Feature: Add missing update detection to orderbooks in Binance
