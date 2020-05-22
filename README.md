@@ -44,6 +44,7 @@ Supports the following exchanges:
 * BitMEX
 * Bitstamp
 * Bittrex
+* Blockchain
 * Bybit
 * Coinbase
 * DSX

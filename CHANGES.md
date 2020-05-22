@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.4.1
+### 1.4.1 (2020-05-22)
   * Feature: Support for disabling timeouts on feeds
   * Bugfix: #224 Ignore newly added trading pairs in Poloniex while running
   * Feature: New exchange, DSX
