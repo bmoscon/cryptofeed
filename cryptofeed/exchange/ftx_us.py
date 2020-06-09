@@ -18,5 +18,4 @@ class FTXUS(FTX):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
-        self.ws_endpoint = 'wss://ftx.us/ws/'
-        self.rest_endpoint = 'https://ftx.us/api'
+        self.address = 'wss://ftx.us/ws/'
