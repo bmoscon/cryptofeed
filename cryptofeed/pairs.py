@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, BITTREX, BITCOINCOM, BITMAX, UPBIT, DSX, BLOCKCHAIN
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, DSX, BLOCKCHAIN
 
 
 PAIR_SEP = '-'
@@ -78,6 +78,15 @@ def bybit_pairs():
 def ftx_pairs():
     ret = {}
     r = requests.get('https://ftx.com/api/markets').json()
+    for data in r['result']:
+        normalized = data['name'].replace("/", PAIR_SEP)
+        pair = data['name']
+        ret[normalized] = pair
+    return ret
+
+def ftx_us_pairs():
+    ret = {}
+    r = requests.get('https://ftx.us/api/markets').json()
     for data in r['result']:
         normalized = data['name'].replace("/", PAIR_SEP)
         pair = data['name']
@@ -281,6 +290,7 @@ _exchange_function_map = {
     COINBENE: coinbene_pairs,
     BYBIT: bybit_pairs,
     FTX: ftx_pairs,
+    FTX_US: ftx_us_pairs,
     BITTREX: bittrex_pairs,
     BITCOINCOM: bitcoincom_pairs,
     BITMAX: bitmax_pairs,
