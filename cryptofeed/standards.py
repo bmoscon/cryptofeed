@@ -14,7 +14,7 @@ import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, OPEN_INTEREST, VOLUME, FUNDING, LIQUIDATIONS, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, OKCOIN,
-                                OKEX, COINBENE, BYBIT, FTX, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
+                                OKEX, COINBENE, BYBIT, FTX, FTX_US, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
                                 LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, BITTREX, BITCOINCOM, BINANCE_US,
                                 BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, DSX, BLOCKCHAIN)
 from cryptofeed.pairs import gen_pairs
@@ -100,6 +100,7 @@ _feed_to_exchange_map = {
         DERIBIT: 'book',
         BYBIT: 'orderBookL2_25',
         FTX: 'orderbook',
+        FTX_US: 'orderbook',
         GEMINI: L2_BOOK,
         BITTREX: 'SubscribeToExchangeDeltas',
         BITCOINCOM: 'subscribeOrderbook',
@@ -128,6 +129,7 @@ _feed_to_exchange_map = {
         OKEX: UNSUPPORTED,
         BYBIT: UNSUPPORTED,
         FTX: UNSUPPORTED,
+        FTX_US: UNSUPPORTED,
         GEMINI: UNSUPPORTED,
         BITCOINCOM: UNSUPPORTED,
         BITMAX: UNSUPPORTED,
@@ -157,6 +159,7 @@ _feed_to_exchange_map = {
         DERIBIT: 'trades',
         BYBIT: 'trade',
         FTX: 'trades',
+        FTX_US: 'trades',
         GEMINI: TRADES,
         BITTREX: TRADES,
         BITCOINCOM: 'subscribeTrades',
@@ -186,6 +189,7 @@ _feed_to_exchange_map = {
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
         FTX: "ticker",
+        FTX_US: "ticker",
         GEMINI: UNSUPPORTED,
         BITTREX: 'SubscribeToSummaryDeltas',
         BITCOINCOM: 'subscribeTicker',
