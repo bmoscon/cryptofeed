@@ -51,7 +51,7 @@ _EXCHANGES = {
     DSX_str: DSX,
     EXX_str: EXX,
     FTX_str: FTX,
-    FTX_US_str: FTX_US,
+    FTX_US_str: FTXUS,
     GEMINI: Gemini,
     HITBTC: HitBTC,
     HUOBI_DM: HuobiDM,
