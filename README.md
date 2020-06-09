@@ -51,6 +51,7 @@ Supports the following exchanges:
 * Deribit
 * EXX
 * FTX
+* FTX US
 * Gemini
 * HitBTC
 * Huobi
