@@ -2,6 +2,7 @@
 
 ### 1.5.0
   * Feature: New Exchange - FTX US
+  * Feature: Add funding data to rest library
 
 ### 1.4.1 (2020-05-22)
   * Feature: Support for disabling timeouts on feeds
