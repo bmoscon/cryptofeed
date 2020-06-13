@@ -24,6 +24,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
+
 class FTX(Feed):
     id = FTX_id
 
@@ -142,6 +143,7 @@ class FTXRest(RestFeed):
         super().__init__('https://ftx.com/api/', pairs=pairs, channels=channels, config=config,
                          callbacks=callbacks, **kwargs)
         self.funding_fetched = False
+        self.first_time = True
 
 
     def __reset(self):
@@ -196,10 +198,9 @@ class FTXRest(RestFeed):
         async with aiohttp.ClientSession() as session:
             # date in Timestamp constructor is dummy, but needed by Pandas. Current minute is stored
             minute = pd.Timestamp(2016, 1, 1, 12, 25, 16, 28).now().minute
-            if minute == 0 and not self.funding_fetched:
+            if minute == 1 and not self.funding_fetched or self.first_time:
                 # because funding will only be paid every hour, it doesn't make sense to
                 # fetch funding every second or less
-
                 if self.config:
                     for chan in self.config:
                         for pair in self.config[chan]:
@@ -209,26 +210,8 @@ class FTXRest(RestFeed):
                         for pair in self.pairs:
                             await handle(session, pair, chan)
                 self.funding_fetched = True
-            elif minute != 0:
+                self.first_time = False
+            elif minute != 1:
                 self.funding_fetched = False
             else:
                 pass
-
-
-class FTXFeed(object):
-    def __init__(self, pairs, channels, callbacks, config=None, **kwargs):
-        self.rest_api = None
-        index = -1
-        i = 0
-        for chan in channels if channels else config:
-            if chan == 'funding':
-                if kwargs['feed_handler']:
-                    kwargs['feed_handler'].add_feed(FTXRest(pairs=pairs, channels=[FUNDING], callbacks=callbacks))
-                index = i
-            i += 1
-        # now remove the funding feed, because it shouldn't be added to the websocket
-        # also remove belonging callback and kwarg containg the feed_handler
-        if index > -1:
-            channels.pop(index)
-            callbacks.pop('funding')
-        kwargs['feed_handler'].add_feed(FTX(pairs=pairs, channels=channels, callbacks=callbacks))
