@@ -21,6 +21,7 @@ from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITME
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import FTX_US as FTX_US_str
+from cryptofeed.defines import DSX as DSX_str
 from cryptofeed.exchanges import *
 from cryptofeed.nbbo import NBBO
 from cryptofeed.feed import RestFeed
