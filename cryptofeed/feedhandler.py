@@ -102,9 +102,10 @@ class FeedHandler:
         """
         if isinstance(feed, str):
             if feed in _EXCHANGES:
-                # TODO: add _do_ftx_subscribe
                 if feed == BITMAX:
                     self._do_bitmax_subscribe(feed, timeout, **kwargs)
+                elif feed == FTX:
+                    self._do_ftx_subscribe(feed, timeout, **kwargs)
                 else:
                     self.feeds.append(_EXCHANGES[feed](**kwargs))
                     feed = self.feeds[-1]
@@ -300,28 +301,41 @@ class FeedHandler:
                 self.timeout[feed.uuid] = timeout
 
     def _do_ftx_subscribe(self, feed, timeout, **kwargs):
-        # TODO: support for feed is str shall be added
         config = {}
-        index = -1
-        i = 0
 
         if 'config' in kwargs:
             config = kwargs.pop('config')
+        elif hasattr(feed, 'config'):
+            config = feed.config
 
-        for chan in feed.channels if feed.channels else config:
-            if chan == 'funding':
-                self.feeds.append(FTXRest(pairs=feed.pairs, channels=[FUNDING], callbacks=feed.callbacks))
-                self.last_msg[feed.uuid] = None
-                self.timeout[feed.uuid] = timeout
-                index = i
-                break
-            i += 1
-        # now remove the funding feed, because it shouldn't be added to the websocket
-        # also remove belonging callback and kwarg containg the feed_handler
-        if index > -1:
-            feed.channels.pop(index)
-            # feed.callbacks.pop('funding')
+        if isinstance(feed, str):
+            callbacks = kwargs.pop('callbacks')
+        else:
+            callbacks = feed.callbacks
 
-        self.feeds.append(feed)
-        self.last_msg[feed.uuid] = None
-        self.timeout[feed.uuid] = timeout
+        if FUNDING in feed.channels:
+            pairs = feed.pairs
+            feed.channels.pop(feed.channels.index(FUNDING))
+            funding = True
+        elif FUNDING in config:
+            pairs = config[FUNDING]
+            config.pop(FUNDING)
+            funding = True
+        else:
+            pairs = None
+            funding = False
+
+        if pairs is not None and funding:
+            self.feeds.append(FTXRest(pairs=pairs, channels=[FUNDING], callbacks=callbacks))
+            self.last_msg[feed.uuid] = None
+            self.timeout[feed.uuid] = timeout
+
+        if isinstance(feed, str):
+            self.feeds.append(_EXCHANGES[feed](**kwargs))
+            feed = self.feeds[-1]
+            self.last_msg[feed.uuid] = None
+            self.timeout[feed.uuid] = timeout
+        else:
+            self.feeds.append(feed)
+            self.last_msg[feed.uuid] = None
+            self.timeout[feed.uuid] = timeout
