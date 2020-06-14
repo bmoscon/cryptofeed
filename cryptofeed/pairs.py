@@ -291,6 +291,7 @@ _exchange_function_map = {
     COINBENE: coinbene_pairs,
     BYBIT: bybit_pairs,
     FTX: ftx_pairs,
+    FTX_REST: ftx_pairs,
     FTX_US: ftx_us_pairs,
     BITTREX: bittrex_pairs,
     BITCOINCOM: bitcoincom_pairs,
