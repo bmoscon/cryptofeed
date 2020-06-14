@@ -45,3 +45,20 @@ def test_rest_deribit():
     for data in r.deribit.trades('BTC-PERPETUAL', start='2019-02-13 12:59:10', end='2019-02-13 13:01:33'):
         ret.extend(data)
     assert ret[0] == expected
+
+
+def test_rest_ftx():
+    expected = {'timestamp': 1591992000.0,
+                'pair': 'BTC-PERP',
+                'feed': 'FTX',
+                'rate': -9e-06}
+
+    r = Rest()
+    ret = []
+    data = r.ftx.funding('BTC-PERP', start_date='2020-06-10 12:59:10', end_date='2020-06-13 13:01:33')
+    ret.extend(data)
+    try:
+        assert ret[0] == expected
+    except AssertionError as ex:
+        print('test_rest_ftx failed: AssertionError')
+        print('Please check the start_date, because FTX only saves 4 months worth of funding data')

@@ -64,7 +64,60 @@ class FTX(API):
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def _dedupe(self, data, last):
+    def funding(self, symbol: str, start_date=None, end_date=None, retry=None, retry_wait=10):
+        last = []
+        start = None
+        end = None
+
+        if end_date and not start_date:
+            start_date = '2019-01-01'
+
+        if start_date:
+            if not end_date:
+                end_date = pd.Timestamp.utcnow()
+            start = API._timestamp(start_date)
+            end = API._timestamp(end_date)
+
+            start = int(start.timestamp())
+            end = int(end.timestamp())
+
+        @request_retry(self.ID, retry, retry_wait)
+        def helper(start, end):
+            if start and end:
+                return requests.get(f"{self.api}/funding_rates?future={symbol}&start_time={start}&end_time={end}")
+            else:
+                return requests.get(f"{self.api}/funding_rates?symbol={symbol}")
+
+        while True:
+            r = helper(start, end)
+
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(retry_wait)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
+            if data == []:
+                LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
+            else:
+                end = int(API._timestamp(data[-1]["time"]).timestamp()) + 1
+
+            orig_data = list(data)
+            # data = self._dedupe(data, last)
+            # last = list(orig_data)
+
+            data = [self._funding_normalization(x, symbol) for x in data]
+            return data
+
+    @staticmethod
+    def _dedupe(data, last):
         if len(last) == 0:
             return data
 
@@ -143,4 +196,13 @@ class FTX(API):
             'side': SELL if trade['side'] == 'sell' else BUY,
             'amount': trade['size'],
             'price': trade['price']
+        }
+
+    def _funding_normalization(self, funding: dict, symbol: str) -> dict:
+        ts = pd.to_datetime(funding['time'], format="%Y-%m-%dT%H:%M:%S%z")
+        return {
+            'timestamp': API._timestamp(funding['time']).timestamp(),
+            'pair': funding['future'],
+            'feed': self.ID,
+            'rate': funding['rate']
         }

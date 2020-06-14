@@ -33,4 +33,3 @@ from cryptofeed.exchange.bitcoincom import BitcoinCom
 from cryptofeed.exchange.bitmax import Bitmax
 from cryptofeed.exchange.upbit import Upbit
 from cryptofeed.exchange.blockchain import Blockchain
-from cryptofeed.exchange.dsx import DSX
