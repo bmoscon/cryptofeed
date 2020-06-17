@@ -203,12 +203,13 @@ def huobi_pairs():
 def huobi_dm_pairs():
     """
     Mapping is, for instance: {"BTC_CW":"BTC190816"}
-    See comments in exchange/houbi_dm.py
+    See comments in exchange/huobi_dm.py
     """
     mapping = {
         "this_week": "CW",
         "next_week": "NW",
-        "quarter": "CQ"
+        "quarter": "CQ",
+        "next_quarter": "NQ"
     }
     r = requests.get('https://www.hbdm.com/api/v1/contract_contract_info').json()
     pairs = {}
