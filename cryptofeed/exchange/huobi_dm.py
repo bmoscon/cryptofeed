@@ -1,14 +1,16 @@
 '''
-Huobi_DM has 3 futures per currency (with USD as base): weekly, bi-weekly(the next week), and quarterly.
+Huobi_DM has 3 futures per currency (with USD as base): weekly, bi-weekly(the next week), quarterly and next quarter.
 
 You must subscribe to them with: CRY_TC
 where
    CRY = BTC, ETC, etc.
    TC is the time code mapping below:
      mapping  = {
-         "this_week": "CW", # current week
-         "next_week": "NW", # next week
-         "quarter": "CQ"    # current quarter
+         "this_week": "CW",   # current week
+         "next_week": "NW",   # next week
+         "quarter": "CQ",     # current quarter
+         "next_quarter": "NQ" # Next quarter
+
      }
 
 So for example, to get the quarterly BTC future, you subscribe to "BTC_CQ", and it is returned to channel "market.BTC_CQ. ..."
