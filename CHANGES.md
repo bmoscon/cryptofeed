@@ -4,6 +4,8 @@
   * Feature: New Exchange - FTX US
   * Feature: Add funding data to rest library
   * Bugfix: DSX updated their api, websocket no longer supported. Removing DSX
+  * Feature: Websocket client now uses unbounded message queue
+  * Feature: Support for HuobiDM next quarter contracts
 
 ### 1.4.1 (2020-05-22)
   * Feature: Support for disabling timeouts on feeds
