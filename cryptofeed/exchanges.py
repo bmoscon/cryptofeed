@@ -26,7 +26,7 @@ from cryptofeed.exchange.okex import OKEx
 from cryptofeed.exchange.coinbene import Coinbene
 from cryptofeed.exchange.deribit import Deribit
 from cryptofeed.exchange.bybit import Bybit
-from cryptofeed.exchange.ftx import FTX
+from cryptofeed.exchange.ftx import FTX, FTXRest
 from cryptofeed.exchange.ftx_us import FTXUS
 from cryptofeed.exchange.bittrex import Bittrex
 from cryptofeed.exchange.bitcoincom import BitcoinCom
