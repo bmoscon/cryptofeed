@@ -5,8 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from yapic import json
 import itertools
+from datetime import datetime as dt
+from yapic import json
 
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.backends._util import book_flatten
@@ -26,7 +27,10 @@ class ElasticCallback(HTTPCallback):
 
     async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         if 'timestamp' in data:
-            data['timestamp'] *= 1000
+            data['timestamp'] = dt.fromtimestamp(data['timestamp']).isoformat()
+        if 'receipt_timestamp' in data:
+            data['receipt_timestamp'] = dt.fromtimestamp(data['receipt_timestamp']).isoformat()
+
         await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
 
     async def write_bulk(self, data):
@@ -52,7 +56,14 @@ class BookElastic(ElasticCallback, BackendBookCallback):
         self.addr = f"{self.addr}/_bulk"
 
     async def write(self, feed, pair, timestamp, receipt_timestamp, data):
-        data = book_flatten(feed, pair, data, timestamp * 1000, False)
+        if 'timestamp' in data:
+            data['timestamp'] = dt.fromtimestamp(data['timestamp']).isoformat()
+        if 'receipt_timestamp' in data:
+            data['receipt_timestamp'] = dt.fromtimestamp(data['receipt_timestamp']).isoformat()
+        timestamp = dt.fromtimestamp(timestamp).isoformat()
+        receipt_timestamp = dt.fromtimestamp(receipt_timestamp).isoformat()
+
+        data = book_flatten(feed, pair, data, timestamp, False)
         await self.write_bulk(data)
 
 
@@ -64,7 +75,14 @@ class BookDeltaElastic(ElasticCallback, BackendBookDeltaCallback):
         self.addr = f"{self.addr}/_bulk"
 
     async def write(self, feed, pair, timestamp, receipt_timestamp, data):
-        data = book_flatten(feed, pair, data, timestamp * 1000, True)
+        if 'timestamp' in data:
+            data['timestamp'] = dt.fromtimestamp(data['timestamp']).isoformat()
+        if 'receipt_timestamp' in data:
+            data['receipt_timestamp'] = dt.fromtimestamp(data['receipt_timestamp']).isoformat()
+        timestamp = dt.fromtimestamp(timestamp).isoformat()
+        receipt_timestamp = dt.fromtimestamp(receipt_timestamp).isoformat()
+
+        data = book_flatten(feed, pair, data, timestamp, True)
         await self.write_bulk(data)
 
 
