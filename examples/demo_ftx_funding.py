@@ -5,10 +5,10 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
-from cryptofeed.callback import FundingCallback, BookCallback
+from cryptofeed.callback import FundingCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import FTX
-from cryptofeed.defines import L2_BOOK, BID, ASK, FUNDING
+from cryptofeed.defines import FUNDING
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -22,14 +22,9 @@ async def funding(**kwargs):
     print(kwargs)
 
 
-async def book(feed, pair, book, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
-
-
 def main():
     f = FeedHandler()
-    f.add_feed(FTX(pairs=['BTC-PERP', 'THETA-PERP'], channels=[L2_BOOK, FUNDING],
-                   callbacks={L2_BOOK: BookCallback(book), FUNDING: FundingCallback(funding)}))
+    f.add_feed(FTX(pairs=['BTC-PERP', 'THETA-PERP'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
     f.run()
 
 

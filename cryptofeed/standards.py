@@ -14,7 +14,7 @@ import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, OPEN_INTEREST, VOLUME, FUNDING, LIQUIDATIONS, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
                                 POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, OKCOIN,
-                                OKEX, COINBENE, BYBIT, FTX, FTX_REST, FTX_US, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
+                                OKEX, COINBENE, BYBIT, FTX, FTX_US, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
                                 LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, BITTREX, BITCOINCOM, BINANCE_US,
                                 BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, BLOCKCHAIN)
 from cryptofeed.pairs import gen_pairs
@@ -201,8 +201,7 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: 'swap/funding_rate',
-        FTX: 'funding',
-        FTX_REST: FUNDING
+        FTX: 'funding'
     },
     TRADES_SWAP: {
         OKEX: 'swap/trade'

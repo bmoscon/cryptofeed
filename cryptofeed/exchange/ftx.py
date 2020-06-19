@@ -17,7 +17,6 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed, RestFeed
 from cryptofeed.defines import FTX as FTX_id
-from cryptofeed.defines import FTX_REST as FTX_REST_id
 from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, FUNDING
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
@@ -33,11 +32,15 @@ class FTX(Feed):
 
     def __reset(self):
         self.l2_book = {}
+        self.funding = {}
 
     async def subscribe(self, websocket):
         self.websocket = websocket
         self.__reset()
         for chan in self.channels if self.channels else self.config:
+            if chan == 'funding':
+                asyncio.create_task(self._funding(self.pairs if self.pairs else self.config[chan]))
+                continue
             for pair in self.pairs if self.pairs else self.config[chan]:
                 await websocket.send(json.dumps(
                     {
@@ -46,6 +49,40 @@ class FTX(Feed):
                         "op": "subscribe"
                     }
                 ))
+
+    async def _funding(self, pairs: list):
+        """
+            {
+              "success": true,
+              "result": [
+                {
+                  "future": "BTC-PERP",
+                  "rate": 0.0025,
+                  "time": "2019-06-02T08:00:00+00:00"
+                }
+              ]
+            }
+        """
+        wait_time = len(pairs) / 30
+        async with aiohttp.ClientSession() as session:
+            while True:
+                for pair in pairs:
+                    async with session.get(f"https://ftx.com/api/funding_rates?future={pair}") as response:
+                        data = await response.text()
+                        data = json.loads(data, parse_float=Decimal)
+
+                        last_update = self.funding.get(pair, None)
+                        update = str(data['result'][0]['rate']) + str(data['result'][0]['time'])
+                        if last_update and last_update == update:
+                            continue
+                        else:
+                            self.funding[pair] = update
+
+                        await self.callback(FUNDING, feed=self.id,
+                                            pair=pair_exchange_to_std(data['result'][0]['future']),
+                                            rate=data['result'][0]['rate'],
+                                            timestamp=timestamp_normalize(self.id, data['result'][0]['time']))
+                    await asyncio.sleep(wait_time)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -134,84 +171,3 @@ class FTX(Feed):
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
-
-
-class FTXRest(RestFeed):
-    id = FTX_REST_id
-
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        super().__init__('https://ftx.com/api/', pairs=pairs, channels=channels, config=config,
-                         callbacks=callbacks, **kwargs)
-        self.funding_fetched = False
-        self.first_time = True
-
-
-    def __reset(self):
-        self.last_trade_update = {}
-
-    async def _trades(self, session, pair):
-        raise NotImplementedError
-
-    async def _ticker(self, session, pair):
-        raise NotImplementedError
-
-    async def _funding(self, session, pair):
-        """
-            {
-              "success": true,
-              "result": [
-                {
-                  "future": "BTC-PERP",
-                  "rate": 0.0025,
-                  "time": "2019-06-02T08:00:00+00:00"
-                }
-              ]
-            }
-        """
-        async with session.get(f"{self.address}funding_rates?future={pair}") as response:
-            data = await response.json()
-            await self.callback(FUNDING, feed=self.id,
-                                pair=pair_exchange_to_std(data['result'][0]['future']),
-                                rate=data['result'][0]['rate'],
-                                timestamp=timestamp_normalize(self.id, data['result'][0]['time']))
-
-    async def _book(self, session, pair):
-        raise NotImplemented
-
-    async def subscribe(self):
-        self.__reset()
-        return
-
-    async def message_handler(self):
-        async def handle(session, pair, chan):
-            if chan == TRADES:
-                await self._trades(session, pair)
-            elif chan == TICKER:
-                await self._ticker(session, pair)
-            elif chan == L2_BOOK:
-                await self._book(session, pair)
-            elif chan == FUNDING:
-                await self._funding(session, pair)
-            # We can do 15 requests a second
-            await asyncio.sleep(0.07)
-
-        async with aiohttp.ClientSession() as session:
-            # date in Timestamp constructor is dummy, but needed by Pandas. Current minute is stored
-            minute = pd.Timestamp(2016, 1, 1, 12, 25, 16, 28).now().minute
-            if minute == 1 and not self.funding_fetched or self.first_time:
-                # because funding will only be paid every hour, it doesn't make sense to
-                # fetch funding every second or less
-                if self.config:
-                    for chan in self.config:
-                        for pair in self.config[chan]:
-                            await handle(session, pair, chan)
-                else:
-                    for chan in self.channels:
-                        for pair in self.pairs:
-                            await handle(session, pair, chan)
-                self.funding_fetched = True
-                self.first_time = False
-            elif minute != 1:
-                self.funding_fetched = False
-            else:
-                pass

@@ -51,7 +51,7 @@ setup(
         "sortedcontainers>=1.5.9",
         "pandas",
         "pyyaml",
-        "aiohttp",
+        "aiohttp==3.6.2",
         "aiodns",
         "cchardet",
         "aiofile",
