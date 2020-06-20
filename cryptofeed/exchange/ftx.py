@@ -248,6 +248,8 @@ class FTX(Feed):
                 await self._trade(msg, timestamp)
             elif msg['channel'] == 'ticker':
                 await self._ticker(msg, timestamp)
+            elif msg['channel'] == 'fills':
+                await self._fills(msg, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
