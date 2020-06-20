@@ -219,6 +219,8 @@ class FeedHandler:
                     # connection was successful, reset retry count and delay
                     retries = 0
                     delay = 1
+                    if isinstance(feed, FTX):
+                        await feed.login(websocket)
                     await feed.subscribe(websocket)
                     await self._handler(websocket, feed.message_handler, feed.uuid)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:

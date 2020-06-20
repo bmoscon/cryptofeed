@@ -239,7 +239,7 @@ class FTX(Feed):
         elif 'type' in msg and msg['type'] == 'error' and 'Not logged in' in msg['msg']:
             self.logged_in = False
             await self.login(None)
-        elif 'type' in msg and msg['type'] == 'error' and 'Already logged in' in msg['msg']:
+        elif 'type' in msg and msg['type'] == 'error' and 'Already' in msg['msg']:
             return
         elif 'channel' in msg:
             if msg['channel'] == 'orderbook':

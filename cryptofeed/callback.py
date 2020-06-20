@@ -27,9 +27,9 @@ class Callback:
 class FillsCallback(Callback):
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, fee: Decimal,
                        fee_rate=None, id=None, order_id=None, trade_id=None, timestamp: float,
-                       liquidity=None, type=None, receipt_timestamp: float):
+                       liquidity=None, order_type=None, receipt_timestamp: float):
         await super().__call__(feed, pair, side, amount, price, fee, fee_rate, id, order_id, trade_id, timestamp,
-                               liquidity, type, receipt_timestamp)
+                               liquidity, order_type, receipt_timestamp)
 
 
 class TradeCallback(Callback):
