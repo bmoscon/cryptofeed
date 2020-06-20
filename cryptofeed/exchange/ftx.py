@@ -67,6 +67,8 @@ class FTX(Feed):
         async with aiohttp.ClientSession() as session:
             while True:
                 for pair in pairs:
+                    if '-PERP' not in pair:
+                        continue
                     async with session.get(f"https://ftx.com/api/funding_rates?future={pair}") as response:
                         data = await response.text()
                         data = json.loads(data, parse_float=Decimal)
