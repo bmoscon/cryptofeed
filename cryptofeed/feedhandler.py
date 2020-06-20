@@ -64,7 +64,8 @@ _EXCHANGES = {
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None,
+                 handler_enabled=True):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -85,6 +86,10 @@ class FeedHandler:
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture
         self.handler_enabled = handler_enabled
+        self.user_task = []
+
+    def add_user_task(self, *user_task):
+        self.user_task = user_task
 
     def add_feed(self, feed, timeout=120, **kwargs):
         """
@@ -144,6 +149,8 @@ class FeedHandler:
             # Good to enable when debugging
             # loop.set_debug(True)
 
+            if self.user_task:
+                loop.create_task(self._user_task())
             for feed in self.feeds:
                 if isinstance(feed, RestFeed):
                     loop.create_task(self._rest_connect(feed))
@@ -167,6 +174,11 @@ class FeedHandler:
                     await websocket.close()
                     break
             await asyncio.sleep(self.timeout_interval)
+
+    async def _user_task(self):
+        while True:
+            await self.user_task[0][0](self.user_task[0][1])
+            await asyncio.sleep(10)
 
     async def _rest_connect(self, feed):
         """

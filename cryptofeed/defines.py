@@ -49,6 +49,7 @@ VOLUME = 'volume'
 FUNDING = 'funding'
 OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
+FILLS = 'fills'
 UNSUPPORTED = 'unsupported'
 
 

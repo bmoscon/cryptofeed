@@ -7,6 +7,10 @@ associated with this software.
 
 import asyncio
 import aiohttp
+import hmac
+import time
+import os
+import yaml
 import pandas as pd
 
 from yapic import json
@@ -17,7 +21,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed, RestFeed
 from cryptofeed.defines import FTX as FTX_id
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, FUNDING
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, FUNDING, FILLS
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -29,10 +33,41 @@ class FTX(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://ftexchange.com/ws/', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        self.logged_in = False
+        path = os.path.dirname(os.path.abspath(__file__))
+        self.key_id, self.key_secret, self.key_passphrase = None, None, None
+        config = "api_keys.yaml"
+
+        try:
+            with open(os.path.join(path, config), 'r') as fp:
+                data = yaml.safe_load(fp)
+                self.key_id = data['ftx']['key_id']
+                self.key_secret = data['ftx']['key_secret']
+        except (KeyError, FileNotFoundError, TypeError):
+            pass
 
     def __reset(self):
         self.l2_book = {}
         self.funding = {}
+
+    async def login(self, websocket=None):
+        if self.logged_in:
+            return
+        self.logged_in = True
+        ts = int(time.time() * 1000)
+        signature = hmac.new(self.key_secret.encode(), f'{ts}websocket_login'.encode(), 'sha256').hexdigest()
+        if websocket is not None:
+            self.websocket = websocket
+        await self.websocket.send(json.dumps(
+            {
+                "args": {
+                    "key": self.key_id,
+                    "sign": signature,
+                    "time": ts
+                },
+                "op": "login"
+            }
+        ))
 
     async def subscribe(self, websocket):
         self.websocket = websocket
@@ -49,6 +84,45 @@ class FTX(Feed):
                         "op": "subscribe"
                     }
                 ))
+
+    async def unsubscribe(self, websocket):
+        self.websocket = websocket
+        for chan in self.channels if self.channels else self.config:
+            for pair in self.pairs if self.pairs else self.config[chan]:
+                await websocket.send(json.dumps(
+                    {
+                        "channel": chan,
+                        "market": pair,
+                        "op": "unsubscribe"
+                    }
+                ))
+
+    async def _fills(self, msg: dict, timestamp: float):
+        """
+        example message:
+
+        {'channel': 'fills', 'type': 'update', 'data': {'id': 109096206, 'market': 'BTC-MOVE-WK-0619',
+        'future': 'BTC-MOVE-WK-0619', 'baseCurrency': None, 'quoteCurrency': None, 'type': 'order', 'side': 'sell',
+        'price': Decimal('133.0'), 'size': Decimal('0.0001'), 'orderId': 6039056668,
+        'time': datetime.datetime(2020, 6, 19, 15, 31, 15, 479586, tzinfo=datetime.timezone.utc), 'tradeId': 54158600,
+        'feeRate': Decimal('0.000965'), 'fee': Decimal('0.0009030854920944018'), 'feeCurrency': 'USD',
+        'liquidity': 'taker'}}
+        """
+
+        await self.callback(FILLS, feed=self.id,
+                            pair=pair_exchange_to_std(msg['data']['market']),
+                            side=BUY if msg['data']['side'] == 'buy' else SELL,
+                            amount=Decimal(msg['data']['size']),
+                            price=Decimal(msg['data']['price']),
+                            fee=msg['data']['fee'],
+                            fee_rate=msg['data']['feeRate'],
+                            id=msg['data']['id'],
+                            order_id=msg['data']['orderId'],
+                            trade_id=msg['data']['tradeId'],
+                            timestamp=float(timestamp_normalize(self.id, msg['data']['time'])),
+                            liquidity=msg['data']['liquidity'],
+                            type=msg['data']['type'],
+                            receipt_timestamp=timestamp)
 
     async def _funding(self, pairs: list):
         """
@@ -67,7 +141,7 @@ class FTX(Feed):
         async with aiohttp.ClientSession() as session:
             while True:
                 for pair in pairs:
-                    if '-PERP' not in pair:
+                    if not '-PERP' in pair:
                         continue
                     async with session.get(f"https://ftx.com/api/funding_rates?future={pair}") as response:
                         data = await response.text()
@@ -160,7 +234,12 @@ class FTX(Feed):
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        if 'type' in msg and msg['type'] == 'subscribed':
+        if 'type' in msg and (msg['type'] == 'subscribed' or msg['type'] == 'unsubscribed'):
+            return
+        elif 'type' in msg and msg['type'] == 'error' and 'Not logged in' in msg['msg']:
+            self.logged_in = False
+            await self.login(None)
+        elif 'type' in msg and msg['type'] == 'error' and 'Already logged in' in msg['msg']:
             return
         elif 'channel' in msg:
             if msg['channel'] == 'orderbook':
