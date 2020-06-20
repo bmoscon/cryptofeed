@@ -37,12 +37,12 @@ class FTX(Feed):
         path = os.path.dirname(os.path.abspath(__file__))
         self.key_id, self.key_secret, self.key_passphrase = None, None, None
         config = "api_keys.yaml"
-
+        self.account = 'ftx_artur'
         try:
             with open(os.path.join(path, config), 'r') as fp:
                 data = yaml.safe_load(fp)
-                self.key_id = data['ftx']['key_id']
-                self.key_secret = data['ftx']['key_secret']
+                self.key_id = data['ftx']['ftx_artur']['key_id']
+                self.key_secret = data['ftx']['ftx_artur']['key_secret']
         except (KeyError, FileNotFoundError, TypeError):
             pass
 

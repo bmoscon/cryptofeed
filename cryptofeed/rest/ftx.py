@@ -5,8 +5,10 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import requests
+import hmac
+from requests import Request
 import logging
-from time import sleep
+from time import sleep, time
 
 import pandas as pd
 from sortedcontainers.sorteddict import SortedDict as sd
@@ -64,8 +66,129 @@ class FTX(API):
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
+    def deposits(self):
+        h = self._sign(f"{self.api}/wallet/deposits")
+        r = requests.get(f"{self.api}/wallet/deposits", headers=h.headers)
+
+        while True:
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(10)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
+            for deposit in data:
+                deposit['time'] = API._timestamp(deposit['time']).timestamp()
+            if data == []:
+                LOG.warning("%s: No data", self.ID)
+
+            return data
+
+    def withdrawals(self):
+        h = self._sign(f"{self.api}/wallet/withdrawals")
+        r = requests.get(f"{self.api}/wallet/withdrawals", headers=h.headers)
+
+        while True:
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(10)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
+            for withdrawal in data:
+                withdrawal['time'] = API._timestamp(withdrawal['time']).timestamp()
+            if data == []:
+                LOG.warning("%s: No data", self.ID)
+
+            return data
+
+    def all_balances(self):
+        h = self._sign(f"{self.api}/wallet/all_balances")
+        r = requests.get(f"{self.api}/wallet/all_balances", headers=h.headers)
+
+        while True:
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(10)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
+            if data == []:
+                LOG.warning("%s: No data", self.ID)
+
+            return data
+
+
+    def positions(self):
+        h = self._sign(f"{self.api}/positions")
+        r = requests.get(f"{self.api}/positions", headers=h.headers)
+
+        while True:
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(10)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
+            if data == []:
+                LOG.warning("%s: No data", self.ID)
+
+            return data
+
+    def funding_payments(self):
+        h = self._sign(f"{self.api}/funding_payments")
+        r = requests.get(f"{self.api}/funding_payments", headers=h.headers)
+
+        while True:
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(10)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
+            for payment in data:
+                payment['time'] = API._timestamp(payment['time']).timestamp()
+            if data == []:
+                LOG.warning("%s: No data", self.ID)
+
+            return data
+
     def funding(self, symbol: str, start_date=None, end_date=None, retry=None, retry_wait=10):
-        last = []
         start = None
         end = None
 
@@ -206,3 +329,26 @@ class FTX(API):
             'feed': self.ID,
             'rate': funding['rate']
         }
+
+    def _sign(self, url):
+        ts = int(time() * 1000)
+        request = Request('GET', url)
+        prepared = request.prepare()
+        signature_payload = f'{ts}{prepared.method}{prepared.path_url}'
+        if prepared.body:
+            signature_payload += prepared.body
+        signature_payload = signature_payload.encode()
+        signature = hmac.new(self.key_secret.encode(), signature_payload, 'sha256').hexdigest()
+
+        request.headers['FTX-KEY'] = self.key_id
+        request.headers['FTX-SIGN'] = signature
+        request.headers['FTX-TS'] = str(ts)
+        return request
+
+        # Only include this line if you want to access a subaccount. Remember to URI-encode the subaccount name if it contains special characters!
+        # request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote('my_subaccount_name')
+
+
+if __name__ == "__main__":
+    e = FTX(None)
+    e.trade_history('BTC-MOVE-0619', end=time())
