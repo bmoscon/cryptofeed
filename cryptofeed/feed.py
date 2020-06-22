@@ -17,8 +17,8 @@ from cryptofeed.exceptions import BidAskOverlapping
 class Feed:
     id = 'NotImplemented'
 
-
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, cross_check=False, origin=None):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None,
+                 book_interval=1000, cross_check=False, origin=None, **kwargs):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
         self.config = defaultdict(set)

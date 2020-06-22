@@ -37,12 +37,15 @@ class FTX(Feed):
         path = os.path.dirname(os.path.abspath(__file__))
         self.key_id, self.key_secret, self.key_passphrase = None, None, None
         config = "api_keys.yaml"
-        self.account = 'ftx_artur'
+        if 'account' in kwargs:
+            self.account = kwargs['account']
+        else:
+            self.account = 'ftx_artur_main'
         try:
             with open(os.path.join(path, config), 'r') as fp:
                 data = yaml.safe_load(fp)
-                self.key_id = data['ftx']['ftx_artur']['key_id']
-                self.key_secret = data['ftx']['ftx_artur']['key_secret']
+                self.key_id = data['ftx'][self.account]['key_id']
+                self.key_secret = data['ftx'][self.account]['key_secret']
         except (KeyError, FileNotFoundError, TypeError):
             pass
 
@@ -84,6 +87,9 @@ class FTX(Feed):
                         "op": "subscribe"
                     }
                 ))
+                if chan == FILLS:
+                    # FILLS is not based on pairs, so break out once subscribed
+                    break
 
     async def unsubscribe(self, websocket):
         self.websocket = websocket
@@ -109,7 +115,7 @@ class FTX(Feed):
         'liquidity': 'taker'}}
         """
 
-        await self.callback(FILLS, feed=self.id,
+        await self.callback(FILLS, feed=self.account,
                             pair=pair_exchange_to_std(msg['data']['market']),
                             side=BUY if msg['data']['side'] == 'buy' else SELL,
                             amount=Decimal(msg['data']['size']),
@@ -121,7 +127,7 @@ class FTX(Feed):
                             trade_id=msg['data']['tradeId'],
                             timestamp=float(timestamp_normalize(self.id, msg['data']['time'])),
                             liquidity=msg['data']['liquidity'],
-                            type=msg['data']['type'],
+                            order_type=msg['data']['type'],
                             receipt_timestamp=timestamp)
 
     async def _funding(self, pairs: list):
@@ -239,6 +245,8 @@ class FTX(Feed):
         elif 'type' in msg and msg['type'] == 'error' and 'Not logged in' in msg['msg']:
             self.logged_in = False
             await self.login(None)
+        elif 'type' in msg and msg['type'] == 'error' and 'Already subscribed' in msg['msg']:
+            return
         elif 'type' in msg and msg['type'] == 'error' and 'Already' in msg['msg']:
             return
         elif 'channel' in msg:

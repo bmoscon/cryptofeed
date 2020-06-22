@@ -6,6 +6,7 @@ associated with this software.
 '''
 import requests
 import hmac
+from urllib import parse
 from requests import Request
 import logging
 from time import sleep, time
@@ -26,6 +27,13 @@ class FTX(API):
     ID = FTX_ID
 
     api = "https://ftx.com/api"
+
+    def __init__(self, config, sandbox=False, **kwargs):
+        super().__init__(config, sandbox, **kwargs)
+        if 'subaccount' in kwargs:
+            self.subaccount = kwargs['subaccount']
+        else:
+            self.subaccount = None
 
     def _get(self, command: str, params=None, retry=None, retry_wait=0):
         url = f"{self.api}{command}"
@@ -163,9 +171,26 @@ class FTX(API):
 
             return data
 
-    def funding_payments(self):
-        h = self._sign(f"{self.api}/funding_payments")
-        r = requests.get(f"{self.api}/funding_payments", headers=h.headers)
+    def funding_payments(self, symbol=None, start_date=None, end_date=None):
+        if not start_date:
+            start_date = '2019-01-01'
+
+        if not end_date:
+            end_date = pd.Timestamp.utcnow()
+
+        start = API._timestamp(start_date)
+        end = API._timestamp(end_date)
+
+        start = int(start.timestamp())
+        end = int(end.timestamp())
+
+        if symbol == None:
+            url = f"{self.api}/funding_payments?start_time={start}&end_time={end}"
+        else:
+            url = f"{self.api}/funding_payments?symbol={symbol}&start_time={start}&end_time={end}"
+
+        h = self._sign(url)
+        r = requests.get(url, headers=h.headers)
 
         while True:
             if r.status_code == 429:
@@ -183,6 +208,77 @@ class FTX(API):
             data = r.json()['result']
             for payment in data:
                 payment['time'] = API._timestamp(payment['time']).timestamp()
+            if data == []:
+                LOG.warning("%s: No data", self.ID)
+
+            return data
+
+    def fills(self, symbol=None, start_date=None, end_date=None):
+        start = None
+        end = None
+
+        if not start_date:
+            start_date = '2019-01-01'
+
+        if not end_date:
+            end_date = pd.Timestamp.utcnow()
+
+        start = API._timestamp(start_date)
+        end = API._timestamp(end_date)
+
+        start = int(start.timestamp())
+        end = int(end.timestamp())
+
+        if symbol == None:
+            url = f"{self.api}/fills?start_time={start}&end_time={end}"
+        else:
+            url = f"{self.api}/fills?symbol={symbol}&start_time={start}&end_time={end}"
+
+        h = self._sign(url)
+        r = requests.get(url, headers=h.headers)
+
+        while True:
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(10)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
+            for fills in data:
+                fills['time'] = API._timestamp(fills['time']).timestamp()
+            if data == []:
+                LOG.warning("%s: No data", self.ID)
+
+            if len(data) == 5000:
+                end_date = data[4999]['time'] - 1
+                data += self.fills(end_date=end_date)
+            return data
+
+    def subaccounts(self):
+        h = self._sign(f"{self.api}/subaccounts")
+        r = requests.get(f"{self.api}/subaccounts", headers=h.headers)
+
+        while True:
+            if r.status_code == 429:
+                sleep(RATE_LIMIT_SLEEP)
+                continue
+            elif r.status_code == 500:
+                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                sleep(10)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r, LOG)
+            else:
+                sleep(RATE_LIMIT_SLEEP)
+
+            data = r.json()['result']
             if data == []:
                 LOG.warning("%s: No data", self.ID)
 
@@ -343,12 +439,11 @@ class FTX(API):
         request.headers['FTX-KEY'] = self.key_id
         request.headers['FTX-SIGN'] = signature
         request.headers['FTX-TS'] = str(ts)
+        if self.subaccount is not None:
+            request.headers['FTX-SUBACCOUNT'] = parse.quote(self.subaccount)
         return request
-
-        # Only include this line if you want to access a subaccount. Remember to URI-encode the subaccount name if it contains special characters!
-        # request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote('my_subaccount_name')
 
 
 if __name__ == "__main__":
-    e = FTX(None)
-    e.trade_history('BTC-MOVE-0619', end=time())
+    e = FTX(None, account='ftx_coen')
+    e.fills()

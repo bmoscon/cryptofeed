@@ -55,7 +55,7 @@ def request_retry(exchange, retry, retry_wait):
 class API:
     ID = 'NotImplemented'
 
-    def __init__(self, config, sandbox=False):
+    def __init__(self, config, sandbox=False, **kwargs):
         self.mapped = False
         path = os.path.dirname(os.path.abspath(__file__))
         self.key_id, self.key_secret, self.key_passphrase = None, None, None
@@ -63,12 +63,19 @@ class API:
         if not config:
             config = "config.yaml"
 
-        self.account = 'ftx_government'
+        if 'account' in kwargs:
+            self.account = kwargs['account']
+        else:
+            self.account = ''
         try:
             with open(os.path.join(path, config), 'r') as fp:
                 data = yaml.safe_load(fp)
-                self.key_id = data[self.ID.lower()][self.account]['key_id']
-                self.key_secret = data[self.ID.lower()][self.account]['key_secret']
+                if self.account in data[self.ID.lower()]:
+                    self.key_id = data[self.ID.lower()][self.account]['key_id']
+                    self.key_secret = data[self.ID.lower()][self.account]['key_secret']
+                else:
+                    self.key_id = data[self.ID.lower()]['key_id']
+                    self.key_secret = data[self.ID.lower()]['key_secret']
                 if 'key_passphrase' in data[self.ID.lower()]:
                     self.key_passphrase = data[self.ID.lower()][self.account]['key_passphrase']
         except (KeyError, FileNotFoundError, TypeError):

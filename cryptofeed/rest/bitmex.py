@@ -74,9 +74,15 @@ class Bitmex(API):
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, start_date, end_date):
             if start_date and end_date:
-                endpoint = f'/api/v1/{ep}?symbol={symbol}&count={API_MAX}&reverse=false&start={start}&startTime={start_date}&endTime={end_date}'
+                if symbol is None:
+                    endpoint = f'/api/v1/{ep}?count={API_MAX}&reverse=false&start={start}&startTime={start_date}&endTime={end_date}'
+                else:
+                    endpoint = f'/api/v1/{ep}?symbol={symbol}&count={API_MAX}&reverse=false&start={start}&startTime={start_date}&endTime={end_date}'
             else:
-                endpoint = f'/api/v1/{ep}?symbol={symbol}&reverse=true'
+                if symbol is None:
+                    endpoint = f'/api/v1/{ep}?count={API_MAX}&start={start}&reverse=true'
+                else:
+                    endpoint = f'/api/v1/{ep}?symbol={symbol}&count={API_MAX}&start={start}&reverse=true'
             header = {}
             if self.key_id and self.key_secret:
                 header = self._generate_signature("GET", endpoint)
@@ -130,6 +136,62 @@ class Bitmex(API):
             'amount': trade['size'],
             'price': trade['price']
         }
+
+    def _fills_normalization(self, fills: dict) -> dict:
+        """
+         {'execID': '03c4d502-2e40-174e-36d8-08f9806654d0', 'orderID': '97291bdf-4955-b905-3ca8-bce62c125666',
+         'clOrdID': '', 'clOrdLinkID': '', 'account': 1223021, 'symbol': 'XBTUSD', 'side': 'Buy', 'lastQty': 1000,
+         'lastPx': 9270, 'underlyingLastPx': None, 'lastMkt': 'XBME', 'lastLiquidityInd': 'AddedLiquidity',
+         'simpleOrderQty': None, 'orderQty': 1000, 'price': 9270, 'displayQty': None, 'stopPx': None,
+         'pegOffsetValue': None, 'pegPriceType': '', 'currency': 'USD', 'settlCurrency': 'XBt', 'execType': 'Trade',
+         'ordType': 'Limit', 'timeInForce': 'GoodTillCancel', 'execInst': 'ParticipateDoNotInitiate',
+         'contingencyType': '', 'exDestination': 'XBME', 'ordStatus': 'Filled', 'triggered': '',
+         'workingIndicator': False, 'ordRejReason': '', 'simpleLeavesQty': None, 'leavesQty': 0, 'simpleCumQty': None,
+         'cumQty': 1000, 'avgPx': 9270.5, 'commission': -0.00025, 'tradePublishIndicator': 'PublishTrade',
+         'multiLegReportingType': 'SingleSecurity', 'text': 'Submission from www.bitmex.com',
+         'trdMatchID': '615d1fac-63e9-8287-951a-6a15aa4cebb4', 'execCost': -10787000, 'execComm': -2696,
+         'homeNotional': 0.10787, 'foreignNotional': -1000, 'transactTime': '2020-06-19T07:37:00.623Z',
+         'timestamp': '2020-06-19T07:37:00.623Z'}
+        """
+        return {
+            'time': API._timestamp(fills['timestamp']).timestamp(),
+            'symbol': fills['symbol'],
+            'side': fills['side'].lower(),
+            'size': fills['lastQty'],
+            'price': fills['price'],
+            'fees': fills['execComm'] * 0.00000001,
+            'rate': fills['commission'],
+            'text': fills['text']
+        }
+
+    def fills(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
+        for data in self._get('execution/tradeHistory', symbol, start, end, retry, retry_wait):
+            yield list(map(self._fills_normalization, data))
+
+    def _money_flow_normalization(self, mf: dict) -> dict:
+        """
+        {'transactID': 'd16912d9-557c-ef38-a035-7a4426a428d6', 'account': 1223021, 'currency': 'XBt',
+         'transactType': 'Withdrawal', 'amount': -14420000, 'fee': 20000, 'transactStatus': 'Completed',
+         'address': '32mjqoLSZe5gG9bMWgPVhTxTqnyrvRTnVj', 'tx': '3BMEXEMgfMT75tctrbgB88q4373CwTopR1', 'text': '',
+         'transactTime': '2020-04-18T11:48:55.018Z', 'walletBalance': 84196394, 'marginBalance': None,
+         'timestamp': '2020-04-18T13:13:50.808Z'}
+         """
+
+        if mf['fee'] is not None:
+            fee = mf['fee'] * 0.00000001
+        else:
+            fee = 0.0
+        return {
+            'time': API._timestamp(mf['timestamp']).timestamp(),
+            'coin': mf['currency'],
+            'amount': mf['amount'] * 0.00000001,
+            'fee': fee,
+            'tx_type': mf['transactType'].lower()
+        }
+
+    def money_flow(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
+        for data in self._get('user/walletHistory', symbol, start, end, retry, retry_wait):
+            yield list(map(self._money_flow_normalization, data))
 
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         # return list(self._get('quote', symbol, start, end, retry, retry_wait))
@@ -242,3 +304,9 @@ class Bitmex(API):
             yield filter(lambda x: len(x) and x.split(",")[1] == symbol and end_date >= pd.Timestamp(x.split(",")[0].replace("D", "T")) >= start_date, data.decode().split("\n")[1:])
 
             date -= timedelta(days=1)
+
+
+if __name__ == '__main__':
+    b = Bitmex(None)
+    for data in b.money_flow():
+        print(data)

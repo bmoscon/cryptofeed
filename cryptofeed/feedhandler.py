@@ -178,7 +178,7 @@ class FeedHandler:
     async def _user_task(self):
         while True:
             await self.user_task[0][0](self.user_task[0][1])
-            await asyncio.sleep(10)
+            await asyncio.sleep(0.4)
 
     async def _rest_connect(self, feed):
         """
