@@ -116,6 +116,10 @@ class Bitmex(API):
                 limit = int(r.headers['X-RateLimit-Remaining'])
                 data = r.json()
 
+                if not isinstance(data, list):
+                    temp = []
+                    temp.append(data)
+                    data = temp
                 yield data
 
                 if len(data) != API_MAX:
@@ -155,6 +159,7 @@ class Bitmex(API):
         """
         return {
             'time': API._timestamp(fills['timestamp']).timestamp(),
+            'trade_id': str(fills['orderID']),
             'symbol': fills['symbol'],
             'side': fills['side'].lower(),
             'size': fills['lastQty'],
@@ -192,6 +197,29 @@ class Bitmex(API):
     def money_flow(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
         for data in self._get('user/walletHistory', symbol, start, end, retry, retry_wait):
             yield list(map(self._money_flow_normalization, data))
+
+    def _wallet_value_normalization(self, wv: dict) -> dict:
+        """
+        {'account': 1223021, 'currency': 'XBt', 'prevDeposited': 148268671, 'prevWithdrawn': 44050000,
+         'prevTransferIn': 0, 'prevTransferOut': 0, 'prevAmount': 62780593,
+         'prevTimestamp': '2020-06-21T12:00:00.000Z', 'deltaDeposited': 0, 'deltaWithdrawn': 0,
+         'deltaTransferIn': 0, 'deltaTransferOut': 0, 'deltaAmount': 0, 'deposited': 148268671,
+         'withdrawn': 44050000, 'transferIn': 0, 'transferOut': 0, 'amount': 62780593, 'pendingCredit': 0,
+         'pendingDebit': 0, 'confirmedDebit': 0, 'timestamp': '2020-06-22T12:00:02.665Z',
+         'addr': '3BMEXkCRHABGzWMufvPfABPoKxGA57Vbzh',
+         'script': '534104220936c3245597b1513a9a7fe96d96facf1a840ee21432a1b73c2cf42c1810284dd730f21ded9d818b84402863a2b5cd1afe3a3d13719d524482592fb23c88a3410472225d3abc8665cf01f703a270ee65be5421c6a495ce34830061eb0690ec27dfd1194e27b6b0b659418d9f91baec18923078aac18dc19699aae82583561fefe54104a24db5c0e8ed34da1fd3b6f9f797244981b928a8750c8f11f9252041daad7b2d95309074fed791af77dc85abdd8bb2774ed8d53379d28cd49f251b9c08cab7fc4104aae30a232ba3521fec1e6490d1588a66f641f5cc7ac38f7cfa34b5de20d0a90f53f553ad45bc13a8dd057b0dadf91bb91969abee13f4c39fb0ab2b9d262929aa54ae',
+         'withdrawalLock': []}
+        """
+
+        return {
+            'time': API._timestamp(wv['timestamp']).timestamp(),
+            'coin': wv['currency'],
+            'amount': wv['amount'] * 0.00000001
+        }
+
+    def wallet_value(self, symbol=None, start=None, end=None, retry=None, retry_wait=10):
+        for data in self._get('user/wallet', symbol, start, end, retry, retry_wait):
+            yield list(map(self._wallet_value_normalization, data))
 
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         # return list(self._get('quote', symbol, start, end, retry, retry_wait))
@@ -308,5 +336,5 @@ class Bitmex(API):
 
 if __name__ == '__main__':
     b = Bitmex(None)
-    for data in b.money_flow():
+    for data in b.wallet_value():
         print(data)

@@ -93,7 +93,7 @@ class FTX(API):
 
             data = r.json()['result']
             for deposit in data:
-                deposit['time'] = API._timestamp(deposit['time']).timestamp()
+                deposit['time'] = API._timestamp(deposit['time']).timestamp() * 1000
             if data == []:
                 LOG.warning("%s: No data", self.ID)
 
@@ -118,7 +118,7 @@ class FTX(API):
 
             data = r.json()['result']
             for withdrawal in data:
-                withdrawal['time'] = API._timestamp(withdrawal['time']).timestamp()
+                withdrawal['time'] = API._timestamp(withdrawal['time']).timestamp() * 1000
             if data == []:
                 LOG.warning("%s: No data", self.ID)
 
@@ -207,7 +207,7 @@ class FTX(API):
 
             data = r.json()['result']
             for payment in data:
-                payment['time'] = API._timestamp(payment['time']).timestamp()
+                payment['time'] = API._timestamp(payment['time']).timestamp() * 1000
             if data == []:
                 LOG.warning("%s: No data", self.ID)
 
@@ -252,7 +252,7 @@ class FTX(API):
 
             data = r.json()['result']
             for fills in data:
-                fills['time'] = API._timestamp(fills['time']).timestamp()
+                fills['time'] = API._timestamp(fills['time']).timestamp() * 1000
             if data == []:
                 LOG.warning("%s: No data", self.ID)
 
@@ -323,7 +323,7 @@ class FTX(API):
                 sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()['result']
-            if data == []:
+            if not data:
                 LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
                 end = int(API._timestamp(data[-1]["time"]).timestamp()) + 1
@@ -408,7 +408,7 @@ class FTX(API):
 
     def _trade_normalization(self, trade: dict, symbol: str) -> dict:
         return {
-            'timestamp': API._timestamp(trade['time']).timestamp(),
+            'timestamp': API._timestamp(trade['time']).timestamp() * 1000,
             'pair': symbol,
             'id': trade['id'],
             'feed': self.ID,
@@ -420,7 +420,7 @@ class FTX(API):
     def _funding_normalization(self, funding: dict, symbol: str) -> dict:
         ts = pd.to_datetime(funding['time'], format="%Y-%m-%dT%H:%M:%S%z")
         return {
-            'timestamp': API._timestamp(funding['time']).timestamp(),
+            'timestamp': API._timestamp(funding['time']).timestamp() * 1000,
             'pair': funding['future'],
             'feed': self.ID,
             'rate': funding['rate']

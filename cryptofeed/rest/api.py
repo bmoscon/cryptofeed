@@ -84,7 +84,10 @@ class API:
     @staticmethod
     def _timestamp(ts):
         if isinstance(ts, (float, int)):
-            return pd.to_datetime(ts, unit='s')
+            try:
+                return pd.to_datetime(ts, unit='s')
+            except ValueError as ex:
+                return pd.to_datetime(ts, unit='ms')
         return pd.Timestamp(ts)
 
     def _handle_error(self, resp, log):
