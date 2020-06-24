@@ -260,6 +260,9 @@ def bitmax_pairs():
     r = requests.get('https://bitmax.io/api/v1/products').json()
     return {f"{data['baseAsset']}{PAIR_SEP}{data['quoteAsset']}": data['symbol'] for data in r}
 
+def bitmex_pairs():
+    r = requests.get('https://www.bitmex.com/api/v1/instrument/active').json()
+    return {f"{data['symbol']}{PAIR_SEP}{data['quoteCurrency']}": data['symbol'] for data in r}
 
 def upbit_pairs():
     r = requests.get('https://api.upbit.com/v1/market/all').json()
