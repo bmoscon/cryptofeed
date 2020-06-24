@@ -212,7 +212,7 @@ class Bitmex(API):
         """
 
         return {
-            'time': API._timestamp(wv['timestamp']).timestamp(),
+            'time': API._timestamp(wv['timestamp']).timestamp() * 1000,
             'coin': wv['currency'],
             'amount': wv['amount'] * 0.00000001
         }

@@ -142,6 +142,7 @@ class FTX(API):
                 sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()['result']
+
             if data == []:
                 LOG.warning("%s: No data", self.ID)
 

@@ -33,26 +33,59 @@ class Deribit(API):
         super().__init__(config, sandbox, **kwargs)
         self.token = None
 
-    def _withdrawal_normalization(self, funding: dict) -> dict:
+    def _wallet_value_normalization(self, wallet_value: dict) -> dict:
         return {
-            'time': funding['confirmed_timestamp'],
-            'coin': funding['currency'],
-            'amount': funding['amount'] * -1,
-            'fee': funding['fee']
+            'coin': wallet_value['currency'],
+            'available': wallet_value['available_withdrawal_funds'],
+            'balance': wallet_value['balance']
         }
 
-    async def get_withdrawals(self):
+    async def wallet_value(self):
+        msg = self._get_wallet_value_msg()
+        stop = False
+        total_records_fetched = 0
+        await self._call_api(json.dumps(msg))
+        yield self._wallet_value_normalization(self.result)
+
+    def _money_flow_normalization(self, funding: dict) -> dict:
+        if 'confirmed_timestamp' in funding:
+            return {
+                'time': funding['confirmed_timestamp'],
+                'coin': funding['currency'],
+                'amount': funding['amount'] * -1,
+                'fee': funding['fee']
+            }
+        else:
+            return {
+                'time': funding['received_timestamp'],
+                'coin': funding['currency'],
+                'amount': funding['amount']
+            }
+
+    async def get_money_flow(self):
         msg = self._get_withdrawals_msg()
         stop = False
         total_records_fetched = 0
         while not stop:
             await self._call_api(json.dumps(msg))
-            yield list(map(self._withdrawal_normalization, self.result['data']))
+            yield list(map(self._money_flow_normalization, self.result['data']))
             total_records_fetched += len(self.result['data'])
             if total_records_fetched < self.result['count']:
-                msg = self._get_withdrawals_msg(self.result['count'] - 1)
+                msg = self._get_withdrawals_msg(total_records_fetched)
             else:
                 stop = True
+        msg = self._get_deposits_msg()
+        stop = False
+        total_records_fetched = 0
+        while not stop:
+            await self._call_api(json.dumps(msg))
+            yield list(map(self._money_flow_normalization, self.result['data']))
+            total_records_fetched += len(self.result['data'])
+            if total_records_fetched < self.result['count']:
+                msg = self._get_deposits_msg(total_records_fetched)
+            else:
+                stop = True
+
 
     def _funding_normalization(self, funding: dict) -> dict:
         """{'type': 'settlement', 'timestamp': 1586073600409, 'session_profit_loss': 121.931867297,
@@ -310,6 +343,20 @@ class Deribit(API):
             }
         return msg
 
+    def _get_wallet_value_msg(self, offset=0):
+        # give the end if, because result are returned youngest to oldest
+        msg = \
+            {
+                "jsonrpc": "2.0",
+                "id": 2515,
+                "method": "private/get_account_summary",
+                "params": {
+                    "currency": "BTC",
+                    "extended": True
+                }
+            }
+        return msg
+
     def _get_withdrawals_msg(self, offset=0):
         # give the end if, because result are returned youngest to oldest
         msg = \
@@ -319,13 +366,14 @@ class Deribit(API):
                 "method": "private/get_withdrawals",
                 "params": {
                     "currency": "BTC",
-                    "count": 3,
+                    "count": self.API_MAX,
                     "offset": offset
                 }
             }
         return msg
 
+
 if __name__ == "__main__":
     e = Deribit(None)
-    for x in e.funding_payment():
+    for x in e.transaction_log():
         print(' ')
