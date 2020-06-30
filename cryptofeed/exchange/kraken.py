@@ -97,21 +97,26 @@ class Kraken(Feed):
         else:
             for m in msg:
                 for s, updates in m.items():
-                    side = BID if s == 'b' else ASK
-                    for update in updates:
-                        price, size, *_ = update
-                        price = Decimal(price)
-                        size = Decimal(size)
-                        if size == 0:
-                            # Per Kraken's technical support
-                            # they deliver erroneous deletion messages
-                            # periodically which should be ignored
-                            if price in self.l2_book[pair][side]:
-                                del self.l2_book[pair][side][price]
-                                delta[side].append((price, 0))
-                        else:
-                            delta[side].append((price, size))
-                            self.l2_book[pair][side][price] = size
+                    side = False
+                    if s == 'b':
+                        side = BID
+                    elif s == 'a':
+                        side = ASK
+                    if side:
+                        for update in updates:
+                            price, size, *_ = update
+                            price = Decimal(price)
+                            size = Decimal(size)
+                            if size == 0:
+                                # Per Kraken's technical support
+                                # they deliver erroneous deletion messages
+                                # periodically which should be ignored
+                                if price in self.l2_book[pair][side]:
+                                    del self.l2_book[pair][side][price]
+                                    delta[side].append((price, 0))
+                            else:
+                                delta[side].append((price, size))
+                                self.l2_book[pair][side][price] = size
             for side in (BID, ASK):
                 while len(self.l2_book[pair][side]) > self.book_depth:
                     del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
