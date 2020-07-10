@@ -3,7 +3,7 @@ from yapic import json
 import requests
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK, FUNDING, OPEN_INTEREST
+from cryptofeed.defines import DERIBIT, BUY, SELL, TRADES, BID, ASK, TICKER, L2_BOOK, FUNDING, OPEN_INTEREST, LIQUIDATIONS
 from cryptofeed.standards import timestamp_normalize
 
 from sortedcontainers import SortedDict as sd
@@ -84,6 +84,16 @@ class Deribit(Feed):
                                 timestamp=timestamp_normalize(self.id, trade['timestamp']),
                                 receipt_timestamp=timestamp,
                                 )
+            if 'liquidation' in trade:
+                await self.callback(LIQUIDATIONS,
+                                    feed=self.id,
+                                    pair=trade["instrument_name"],
+                                    side=BUY if trade['direction'] == 'buy' else SELL,
+                                    leaves_qty=Decimal(trade['amount']),
+                                    price=Decimal(trade['price']),
+                                    order_id=trade['trade_id'],
+                                    receipt_timestamp=timestamp
+                                    )
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''

@@ -175,7 +175,7 @@ _feed_to_exchange_map = {
         BINANCE: 'ticker',
         BINANCE_US: 'ticker',
         BINANCE_JERSEY: 'ticker',
-        BINANCE_FUTURES: UNSUPPORTED,
+        BINANCE_FUTURES: 'ticker',
         BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
@@ -225,10 +225,15 @@ _feed_to_exchange_map = {
         OKEX: 'swap/ticker',
         BITMEX: 'instrument',
         KRAKEN_FUTURES: 'ticker',
-        DERIBIT: 'ticker'
+        DERIBIT: 'ticker',
+        FTX: 'open_interest',
+        BINANCE_FUTURES: 'open_interest'
     },
     LIQUIDATIONS: {
-        BITMEX: 'liquidation'
+        BITMEX: 'liquidation',
+        BINANCE_FUTURES: 'forceOrder',
+        FTX: 'trades',
+        DERIBIT: 'trades'
     }
 }
 
