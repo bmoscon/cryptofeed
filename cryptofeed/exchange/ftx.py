@@ -12,12 +12,14 @@ import pandas as pd
 from yapic import json
 import logging
 from decimal import Decimal
+from time import time as time
+from datetime import datetime
 
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed, RestFeed
 from cryptofeed.defines import FTX as FTX_id
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, FUNDING
+from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, FUNDING, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -33,13 +35,17 @@ class FTX(Feed):
     def __reset(self):
         self.l2_book = {}
         self.funding = {}
+        self.open_interest = {}
 
     async def subscribe(self, websocket):
         self.websocket = websocket
         self.__reset()
         for chan in self.channels if self.channels else self.config:
-            if chan == 'funding':
+            if chan == FUNDING:
                 asyncio.create_task(self._funding(self.pairs if self.pairs else self.config[chan]))
+                continue
+            if chan == OPEN_INTEREST:
+                asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.config[chan]))
                 continue
             for pair in self.pairs if self.pairs else self.config[chan]:
                 await websocket.send(json.dumps(
@@ -49,6 +55,48 @@ class FTX(Feed):
                         "op": "subscribe"
                     }
                 ))
+
+    async def _open_interest(self, pairs: list):
+        """
+            {
+              "success": true,
+              "result": {
+                "volume": 1000.23,
+                "nextFundingRate": 0.00025,
+                "nextFundingTime": "2019-03-29T03:00:00+00:00",
+                "expirationPrice": 3992.1,
+                "predictedExpirationPrice": 3993.6,
+                "strikePrice": 8182.35,
+                "openInterest": 21124.583
+              }
+            }
+        """
+
+        rate_limiter = 1  # don't fetch too many pairs too fast
+        async with aiohttp.ClientSession() as session:
+            while True:
+                for pair in pairs:
+                    # OI only for perp and futures, so check for / in pair name indicating spot
+                    if '/' in pair:
+                        continue
+                    end_point = f"https://ftx.com/api/futures/{pair}/stats"
+                    async with session.get(end_point) as response:
+                        data = await response.text()
+                        data = json.loads(data, parse_float=Decimal)
+                        if 'result' in data:
+                            oi = data['result']['openInterest']
+                            if oi != self.open_interest.get(pair, None):
+                                await self.callback(OPEN_INTEREST,
+                                                    feed=self.id,
+                                                    pair=pair,
+                                                    open_interest=oi,
+                                                    timestamp=None,
+                                                    receipt_timestamp=time()
+                                                    )
+                                self.open_interest[pair] = oi
+                                await asyncio.sleep(rate_limiter)
+                wait_time = 60
+                await asyncio.sleep(wait_time)
 
     async def _funding(self, pairs: list):
         """
@@ -102,6 +150,16 @@ class FTX(Feed):
                                 order_id=None,
                                 timestamp=float(timestamp_normalize(self.id, trade['time'])),
                                 receipt_timestamp=timestamp)
+            if bool(trade['liquidation']):
+                await self.callback(LIQUIDATIONS,
+                                    feed=self.id,
+                                    pair=pair_exchange_to_std(msg['market']),
+                                    side=BUY if trade['side'] == 'buy' else SELL,
+                                    leaves_qty=Decimal(trade['size']),
+                                    price=Decimal(trade['price']),
+                                    order_id=None,
+                                    receipt_timestamp=timestamp
+                                    )
 
     async def _ticker(self, msg: dict, timestamp: float):
         """

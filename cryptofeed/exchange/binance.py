@@ -10,10 +10,13 @@ from decimal import Decimal
 from collections import defaultdict
 
 import aiohttp
+import asyncio
+from time import time as time
+from datetime import datetime as datetime
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE
+from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -34,6 +37,8 @@ class Binance(Feed):
     def _address(self):
         address = self.ws_endpoint + '/stream?streams='
         for chan in self.channels if not self.config else self.config:
+            if chan == OPEN_INTEREST:
+                continue
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
@@ -44,6 +49,7 @@ class Binance(Feed):
         self.forced = defaultdict(bool)
         self.l2_book = {}
         self.last_update_id = {}
+        self.open_interest = {}
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -109,6 +115,37 @@ class Binance(Feed):
                             ask=ask,
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
+
+    async def _liquidations(self, msg: dict, timestamp: float):
+        """
+        {
+        "e":"forceOrder",       // Event Type
+        "E":1568014460893,      // Event Time
+        "o":{
+            "s":"BTCUSDT",      // Symbol
+            "S":"SELL",         // Side
+            "o":"LIMIT",        // Order Type
+            "f":"IOC",          // Time in Force
+            "q":"0.014",        // Original Quantity
+            "p":"9910",         // Price
+            "ap":"9910",        // Average Price
+            "X":"FILLED",       // Order Status
+            "l":"0.014",        // Order Last Filled Quantity
+            "z":"0.014",        // Order Filled Accumulated Quantity
+            "T":1568014460893,  // Order Trade Time
+            }
+        }
+        """
+        pair = pair_exchange_to_std(msg['o']['s'])
+        await self.callback(LIQUIDATIONS,
+                            feed=self.id,
+                            pair=pair,
+                            side=msg['o']['S'],
+                            leaves_qty=Decimal(msg['o']['q']),
+                            price=Decimal(msg['o']['p']),
+                            order_id=None,
+                            receipt_timestamp=timestamp)
+
 
     async def _snapshot(self, pair: str) -> None:
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
@@ -195,6 +232,39 @@ class Binance(Feed):
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
 
+    async def _open_interest(self, pairs: list):
+        """
+        {
+            "openInterest": "10659.509",
+            "symbol": "BTCUSDT",
+            "time": 1589437530011   // Transaction time
+        }
+        """
+
+        rate_limiter = 2  # don't fetch too many pairs too fast
+        async with aiohttp.ClientSession() as session:
+            while True:
+                for pair in pairs:
+                    end_point = f"https://fapi.binance.com/fapi/v1/openInterest?symbol={pair}"
+                    async with session.get(end_point) as response:
+                        data = await response.text()
+                        data = json.loads(data, parse_float=Decimal)
+                        oi = data['openInterest']
+                        saved_oi = self.open_interest.get(pair, None)
+                        if oi != self.open_interest.get(pair, None):
+                            await self.callback(OPEN_INTEREST,
+                                                feed=self.id,
+                                                pair=pair,
+                                                open_interest=oi,
+                                                timestamp=data['time'],
+                                                receipt_timestamp=time()
+                                                )
+                            self.open_interest[pair] = oi
+                            await asyncio.sleep(rate_limiter)
+                # Binance updates OI every 15 minutes, however not all pairs are ready exactly at :15 :30 :45 :00
+                wait_time = (17 - (datetime.now().minute % 15)) * 60
+                await asyncio.sleep(wait_time)
+
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -211,6 +281,8 @@ class Binance(Feed):
             await self._trade(msg, timestamp)
         elif msg['e'] == '24hrTicker':
             await self._ticker(msg, timestamp)
+        elif msg['e'] == 'forceOrder':
+            await self._liquidations(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
@@ -218,4 +290,8 @@ class Binance(Feed):
         # Binance does not have a separate subscribe message, the
         # subsription information is included in the
         # connection endpoint
+        for chan in self.channels if self.channels else self.config:
+            if chan == 'open_interest':
+                asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.config[chan]))
+                break
         self._reset()
