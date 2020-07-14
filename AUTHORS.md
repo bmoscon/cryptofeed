@@ -2,3 +2,4 @@ Cryptofeed was originally created by Bryant Moscon, but many others have contrib
 
 
 * [Archie Norman](https://github.com/archienorman11) - <archie@mercuryassets.io>
+* [Quantfiction](https://github.com/quantfiction)
