@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 
 from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, OPEN_INTEREST, VOLUME, FUNDING, LIQUIDATIONS, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, OKCOIN,
+                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN,
                                 OKEX, COINBENE, BYBIT, FTX, FTX_US, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
                                 LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, BITTREX, BITCOINCOM, BINANCE_US,
                                 BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, BLOCKCHAIN)
@@ -93,6 +93,7 @@ _feed_to_exchange_map = {
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
         HUOBI_DM: 'depth.step0',
+        HUOBI_SWAP: 'depth.step0',
         OKCOIN: 'spot/depth_l2_tbt',
         OKEX: 'spot/depth_l2_tbt',
         COINBENE: L2_BOOK,
@@ -150,6 +151,7 @@ _feed_to_exchange_map = {
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
         HUOBI_DM: 'trade.detail',
+        HUOBI_SWAP: 'trade.detail',
         OKCOIN: 'spot/trade',
         OKEX: 'spot/trade',
         COINBENE: TRADES,
@@ -295,6 +297,7 @@ def feed_to_exchange(exchange, feed):
 
     ret = _feed_to_exchange_map[feed][exchange]
     if ret == UNSUPPORTED:
-        LOG.error(f"{feed} is not supported on {exchange}")
-        raise UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
+        exception = UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
+        LOG.error("Raise %r", exception)
+        raise exception
     return ret

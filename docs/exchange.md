@@ -2,10 +2,10 @@
 
 Perhaps the best way to understand the workings of the library is to walk through the addition of a new exchange. For this example, we'll
 add support for the exchange [Huobi](https://huobi.readme.io/docs/ws-api-reference). The exchange supports websocket data, so we'll
-add support for these endopoints.
+add support for these endpoints.
 
 
-### Adding a new Feed class
+## Adding a new Feed class
 The first step is to define a new class, with the Feed class as the parent. By convention new feeds go into new modules, so the
 class definition will go in the `huobi` module within `cryptofeed`.
 
@@ -31,7 +31,6 @@ class Huobi(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-
 ```
 
 We've basically just extended Feed, populated the websocket address in the parent's constructor call, and defined the `__reset` and `subscribe` methods; we may or may not need `__reset` (more on this later). `subscribe` is called every time a connection is made to the exchange - typically just when the feedhandler starts, and again if the connection is interrupted and has to be reestablished. You might notice that `HUOBI` is being imported from `defines`, so we'll need to add that as well:
@@ -42,9 +41,8 @@ HUOBI = 'HUOBI'
 
 Again by convention the exchange names in `defines.py` are all uppercase.
 
-### Subscribing
-Cryptofeed accepts standarized names for data channels/feeds. The `Feed` parent class will convert these to the exchange specific versions for use when subscribing. Per the exchange docs, each subscription to the various data channels must be made with a new subscription message, so for this exchange we can subscribe like so:
-
+## Subscribing
+Cryptofeed accepts standardized names for data channels/feeds. The `Feed` parent class will convert these to the exchange specific versions for use when subscribing. Per the exchange docs, each subscription to the various data channels must be made with a new subscription message, so for this exchange we can subscribe like so:
 
 ```python
 async def subscribe(self, websocket):
@@ -56,7 +54,7 @@ async def subscribe(self, websocket):
                 client_id += 1
                 await websocket.send(json.dumps(
                     {
-                        "sub": "market.{}.{}".format(pair, chan),
+                        "sub": f"market.{pair}.{chan}",
                         "id": client_id
                     }
                 ))
@@ -93,7 +91,7 @@ This also mean we'll need to add support for the various channel mappings in `st
       from cryptofeed.huobi.huobi import Huobi
       ```
 
-### Message Handler
+## Message Handler
 Now that we can subscribe to trades, we can add the message handler (which is called by the feedhandler when messages are received on ther websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot intepret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and pair are sent in the update so we'll need to parse those out to properly handle the message.
 
 
@@ -138,7 +136,7 @@ async def _trade(self, msg):
 
 The actual trade handler, `_trade`, simply parses out the relevant data and invokes the callback to deliver the update to the client.
 
-### Order Book Support
+## Order Book Support
 
 Finally we'll add support for order books. There are other data feeds we could support (like `TICKER`) but for the purposes of this walk through, trades are order book are sufficient to illustrate the process for adding a new exchange.
 
