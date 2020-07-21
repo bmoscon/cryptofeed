@@ -1,3 +1,4 @@
+from cryptofeed.defines import BID, ASK
 from cryptofeed.rest import Rest
 
 import pytest
@@ -10,15 +11,15 @@ sandbox = Rest('config.yaml', sandbox=True).Gemini
 def test_ticker():
     ticker = public.ticker('BTC-USD')
 
-    assert 'bid' in ticker
-    assert 'ask' in ticker
+    assert BID in ticker
+    assert ASK in ticker
 
 
 def test_order_book():
     current_order_book = public.l2_book('BTC-USD')
 
-    assert 'bid'in current_order_book
-    assert len(current_order_book['bid']) > 0
+    assert BID in current_order_book
+    assert len(current_order_book[BID]) > 0
 
 
 def test_trade_history():
