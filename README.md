@@ -167,7 +167,7 @@ cd your/path/to/cryptofeed
 python3 -m pipenv update
 ```
 
-### Print the dependency graph:
+### Print the dependency graph
 
 ```commandline
 cd your/path/to/cryptofeed
@@ -211,14 +211,14 @@ python3 -m pipenv run python3 -m pytest tests
 Pytest is listed as a dependency in `Pipfile`.
 There is also a Pytest plugin, pytest-asyncio, allowing us to write unit-tests for `asyncio` functions.
 
-### To statically analyse the code:
+### Statically analyse the code
 
 ```commandline
 cd your/path/to/cryptofeed
 python3 -m pipenv run python3 -m pylint --output-format=colorized ./cryptofeed/exchange
 ```
 
-Pylint and some plugins are listed as a dependency in `Pipfile`.
+In `Pipfile`, Pylint and some plugins are listed as dependencies.
 
 Reduce the amount of issues by disabling the minor ones with option `--disable`:
 
@@ -251,5 +251,5 @@ The following `isort` options apply the same formatting as `black` but only on t
 
 ```commandline
 cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m isort --jobs=8 --atomic --multi-line 3 --force-grid-wrap 0 --trailing-comma --use-parentheses --apply --recursive ./cryptofeed/exchange
+python3 -m pipenv run python3 -m isort --jobs=8 --atomic --multi-line 3 --force-grid-wrap 0 --trailing-comma --use-parentheses --apply --recursive .
 ```
