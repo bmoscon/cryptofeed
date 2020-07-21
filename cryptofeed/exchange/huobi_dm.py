@@ -14,7 +14,7 @@ where
      }
 
 So for example, to get the quarterly BTC future, you subscribe to "BTC_CQ", and it is returned to channel "market.BTC_CQ. ..."
-However since the actual contract changes over time, we want to pubish the pair name using the actual expiry date, which
+However since the actual contract changes over time, we want to publish the pair name using the actual expiry date, which
 is contained in the exchanges "contract_code".
 
 Here's what you get for BTC querying https://www.hbdm.com/api/v1/contract_contract_info on 2019 Aug 16:
@@ -22,7 +22,7 @@ Here's what you get for BTC querying https://www.hbdm.com/api/v1/contract_contra
 ,{"symbol":"BTC","contract_code":"BTC190823","contract_type":"next_week","contract_size":100.000000000000000000,"price_tick":0.010000000000000000,"delivery_date":"20190823","create_date":"20190809","contract_status":1}
 ,{"symbol":"BTC","contract_code":"BTC190927","contract_type":"quarter","contract_size":100.000000000000000000,"price_tick":0.010000000000000000,"delivery_date":"20190927","create_date":"20190614","contract_status":1},
 ...]
-So we return BTC190927 as the pair name for the BTC quaterly future.
+So we return BTC190927 as the pair name for the BTC quarterly future.
 
 '''
 import logging

@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, OKCoin, OKEx, HuobiDM, Bittrex, FTX
+from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, OKCoin, OKEx, HuobiDM, HuobiSwap, Bittrex, FTX
 from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, OPEN_INTEREST, \
     GEMINI, VOLUME, BLOCKCHAIN
 
@@ -76,6 +76,8 @@ def main():
     f.add_feed(Huobi(config=config, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
     config = {L2_BOOK: ['BTC_CQ', 'BTC_NQ']}
     f.add_feed(HuobiDM(config=config, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
+    pairs = ['BTC-USD', 'ETH-USD', 'EOS-USD', 'BCH-USD', 'BSV-USD', 'LTC-USD']
+    f.add_feed(HuobiSwap(pairs=pairs, channels=[TRADES, L2_BOOK], callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
     f.add_feed(OKCoin(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.add_feed(OKEx(pairs=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bittrex(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD'], L2_BOOK: ['BTC-USDT']}, callbacks={L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))

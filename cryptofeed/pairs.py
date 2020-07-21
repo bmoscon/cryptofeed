@@ -9,7 +9,7 @@ Pair generation code for exchanges
 '''
 import requests
 
-from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN
+from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN, OKEX, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN
 
 
 PAIR_SEP = '-'
@@ -83,6 +83,7 @@ def ftx_pairs():
         pair = data['name']
         ret[normalized] = pair
     return ret
+
 
 def ftx_us_pairs():
     ret = {}
@@ -195,9 +196,17 @@ def exx_pairs():
     return {pair: exchange for pair, exchange in zip(pairs, exchange)}
 
 
-def huobi_pairs():
-    r = requests.get('https://api.huobi.pro/v1/common/symbols').json()
+def huobi_common_pairs(url: str):
+    r = requests.get(url).json()
     return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
+
+
+def huobi_pairs():
+    return huobi_common_pairs('https://api.huobi.pro/v1/common/symbols')
+
+
+def huobi_us_pairs():
+    return huobi_common_pairs('https://api.huobi.com/v1/common/symbols')
 
 
 def huobi_dm_pairs():
@@ -214,8 +223,13 @@ def huobi_dm_pairs():
     r = requests.get('https://www.hbdm.com/api/v1/contract_contract_info').json()
     pairs = {}
     for e in r['data']:
-        pairs["{}_{}".format(e['symbol'], mapping[e['contract_type']])] = e['contract_code']
+        pairs[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+    return pairs
+
+
+def huobi_swap_pairs():
     r = requests.get('https://api.hbdm.com/swap-api/v1/swap_contract_info').json()
+    pairs = {}
     for e in r['data']:
         pairs[e['contract_code']] = e['contract_code']
     return pairs
@@ -265,8 +279,9 @@ def upbit_pairs():
     r = requests.get('https://api.upbit.com/v1/market/all').json()
     return {f"{data['market'].split('-')[1]}{PAIR_SEP}{data['market'].split('-')[0]}": data['market'] for data in r}
 
+
 def blockchain_pairs():
-    r= requests.get("https://api.blockchain.com/mercury-gateway/v1/instruments").json()
+    r = requests.get("https://api.blockchain.com/mercury-gateway/v1/instruments").json()
     return {data["symbol"].replace("-", PAIR_SEP): data["symbol"] for data in r}
 
 
@@ -287,6 +302,7 @@ _exchange_function_map = {
     EXX: exx_pairs,
     HUOBI: huobi_pairs,
     HUOBI_DM: huobi_dm_pairs,
+    HUOBI_SWAP: huobi_swap_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
     COINBENE: coinbene_pairs,
