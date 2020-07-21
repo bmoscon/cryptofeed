@@ -1,0 +1,36 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[packages]
+aiohttp = ">=3.6.2"      # used by backends/http.py
+pandas = "*"
+requests = ">=2.18.4"
+sortedcontainers = ">=1.5.9"
+websockets = ">=7.0"
+yapic.json = ">=1.4.3"   # fast, drop-in replacement of the built-in python.json
+# Optional dependencies
+pyyaml = "*"       # only used by rest stuff (historical market data and
+aiofile = "*"      # only used by util/async_file.py
+aiokafka = "*"     # pip install cryptofeed[kafka]
+aioredis = "*"     # pip install cryptofeed[redis]
+arctic = "*"       # pip install cryptofeed[arctic]
+asyncpg = "*"      # pip install cryptofeed[postgre]
+motor = "*"        # pip install cryptofeed[mongo]
+aio_pika = "*"     # pip install cryptofeed[rabbit]
+pika = "*"         # only used by demo_rabbitmq.py
+pyzmq = "*"        # pip install cryptofeed[zmq]
+
+[dev-packages]
+isort = {extras = ["pipfile"], version = "*"}
+pylint = "*"
+pylint-import-modules = "*"
+pylint-string-spaces-checkers = "*"
+pylint-topology = "*"
+pylint_args = "*"
+pylint_google_style_guide_imports_enforcing = "*"
+pylint_requests = "*"
+pylint_unittest = "*"
+pytest = "*"
+pytest-asyncio = "*"
