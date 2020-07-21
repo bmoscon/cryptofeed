@@ -7,7 +7,7 @@ associated with this software.
 
 Pair generation code for exchanges
 '''
-import collections
+
 import logging
 
 import requests
@@ -19,7 +19,7 @@ LOG = logging.getLogger('feedhandler')
 PAIR_SEP = '-'
 
 
-_pairs_retrieval_cache = collections.defaultdict(dict)
+_pairs_retrieval_cache = dict()
 
 
 def set_pair_separator(symbol: str):
@@ -108,12 +108,6 @@ def ftx_us_pairs():
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
     return {data['id'].replace("-", PAIR_SEP): data['id'] for data in r}
-
-
-def dsx_pairs():
-    r = requests.get('https://dsxglobal.com/mapi/v2/info').json()
-    data = r['pairs']
-    return {f"{data[symbol]['base_currency']}{PAIR_SEP}{data[symbol]['quoted_currency']}": symbol for symbol in data}
 
 
 def gemini_pairs():
