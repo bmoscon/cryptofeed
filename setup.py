@@ -30,7 +30,7 @@ setup(
     version="1.5.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
-    description=("Cryptocurrency feed handler and synthetic NBBO feed"),
+    description="Cryptocurrency feed handler and synthetic NBBO feed",
     long_description=ld,
     long_description_content_type='text/x-rst',
     license="XFree86",
@@ -52,8 +52,6 @@ setup(
         "pandas",
         "pyyaml",
         "aiohttp==3.6.2",
-        "aiodns",
-        "cchardet",
         "aiofile",
         'yapic.json>=1.4.3'
     ],
