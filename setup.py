@@ -10,13 +10,11 @@ from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
 
-ld = None
-try:
-    import pypandoc
-    ld = pypandoc.convert_file('README.md', 'rst', format='markdown_github')
-except BaseException:
-    pass
-
+# Read the contents of README.md file
+from os import path
+current_directory = path.abspath(path.dirname(__file__))
+with open(path.join(current_directory, 'README.md'), encoding='utf-8') as readme_file:
+    ld = readme_file.read()
 
 class Test(TestCommand):
     def run_tests(self):
@@ -32,7 +30,7 @@ setup(
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency feed handler and synthetic NBBO feed",
     long_description=ld,
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
     url="https://github.com/bmoscon/cryptofeed",
