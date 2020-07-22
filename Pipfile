@@ -9,7 +9,10 @@ pandas = "*"
 requests = ">=2.18.4"
 sortedcontainers = ">=1.5.9"
 websockets = ">=7.0"
-yapic.json = ">=1.4.3"   # fast, drop-in replacement of the built-in python.json
+"yapic.json" = ">=1.4.3"   # fast, drop-in replacement of the built-in python.json
+# Optional packages to speed-up Cryptofeed
+aiodns = ">=1.1"
+cchardet = "*"
 # Optional dependencies
 pyyaml = "*"       # only used by rest stuff (historical market data and
 aiofile = "*"      # only used by util/async_file.py
