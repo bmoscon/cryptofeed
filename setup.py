@@ -64,5 +64,6 @@ setup(
         'rabbit': ['aio_pika', 'pika'],
         'postgres': ['asyncpg'],
         'speedups': ['aiodns>=1.1', 'cchardet'],
+        'all': ['aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg', 'aiodns>=1.1', 'cchardet'],
     },
 )

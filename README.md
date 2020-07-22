@@ -7,6 +7,58 @@
 
 Handles multiple cryptocurrency exchange data feeds and returns normalized and standardized results to client registered callbacks for events like trades, book updates, ticker updates, etc. Utilizes websockets when possible, but can also poll data via REST endpoints if a websocket is not provided.
 
+## Install
+
+You can install and upgrade Cryptofeed using Pip:
+
+    $ python3 -m pip install --user --upgrade aiohttp
+
+For speeding up DNS resolving also install aiodns:
+
+    $ python3 -m pip install --user --upgrade aiodns
+
+You may also be interested by cchardet as a faster replacement for chardet:
+
+    $ python3 -m pip install --user --upgrade cchardet
+
+To install Cryptofeed along with aiodns and cchardet in one bundle:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[speedups]
+
+To install Cryptofeed along with [Arctic](https://github.com/man-group/arctic/):
+
+    $ python3 -m pip install --user --upgrade cryptofeed[arctic]
+
+To install Cryptofeed and enable its Redis capabilities:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[redis]
+
+To install Cryptofeed and enable its ZeroMQ capabilities:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[zmq]
+
+To install Cryptofeed and enable its RabbitMQ capabilities:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[zmq]
+
+To install Cryptofeed along with its MongoDB dependencies:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[mongo]
+
+To install Cryptofeed along with its PostgreSQL dependencies:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[postgres]
+
+To install Cryptofeed along with its Kafka dependencies:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[kafka]
+
+To install Cryptofeed along with all optional dependencies and speedups:
+
+    $ python3 -m pip install --user --upgrade cryptofeed[all]
+
+## Example
+
 Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples, the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md)  or the [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) for some oddities and gotchas.
 
 
@@ -32,8 +84,8 @@ fh.run()
 
 To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
 
+## Supported exchanges
 
-Supports the following exchanges:
 * Binance
 * Binance US
 * Binance Jersey
@@ -62,8 +114,9 @@ Supports the following exchanges:
 * Poloniex
 * Upbit
 
+## National Best Bid/Offer (NBBO)
 
-Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
+Cryptofeed also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
 ```python
 from cryptofeed.feedhandler import FeedHandler
@@ -122,21 +175,21 @@ Supported Backends:
 Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [rest](https://github.com/bmoscon/cryptofeed/tree/master/cryptofeed/rest) package.
 
 
-# Planned Work
+## Planned Work
 
-## Future Feeds
+### Future Feeds
 * CEX
 * BTCC
 * Many more...
 
-## REST
+### REST
 Continue to build out rest endpoints and standardize exchange interfaces and data
 
-## Additional Callback Methods / Backends
+### Additional Callback Methods / Backends
 * Pulsar
 * More ZMQ improvements/options
 
-# Contributing
+## Contributing
 Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
 
 This wouldn't have been possible with the many [contributors](AUTHORS.md)! I owe them and all who have contributed in other ways my thanks!
