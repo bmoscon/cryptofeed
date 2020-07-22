@@ -10,11 +10,13 @@ from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
 
-# Read the contents of README.md file
+# Read the contents of README.md and CHANGES.md files
 from os import path
-current_directory = path.abspath(path.dirname(__file__))
-with open(path.join(current_directory, 'README.md'), encoding='utf-8') as readme_file:
-    ld = readme_file.read()
+root_repo_dir = path.abspath(path.dirname(__file__))
+with open(path.join(root_repo_dir, 'README.md'), encoding='utf-8') as readme_file:
+    readme = readme_file.read()
+with open(path.join(root_repo_dir, 'CHANGES.md'), encoding='utf-8') as changes_file:
+    changes = changes_file.read()
 
 class Test(TestCommand):
     def run_tests(self):
@@ -29,7 +31,7 @@ setup(
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency feed handler and synthetic NBBO feed",
-    long_description=ld,
+    long_description=readme + '\n\n' + changes,
     long_description_content_type='text/markdown',
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
