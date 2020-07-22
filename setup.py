@@ -62,6 +62,7 @@ setup(
         'mongo': ['motor'],
         'kafka': ['aiokafka'],
         'rabbit': ['aio_pika', 'pika'],
-        'postgres': ['asyncpg']
+        'postgres': ['asyncpg'],
+        'speedups': ['aiodns>=1.1', 'cchardet'],
     },
 )
