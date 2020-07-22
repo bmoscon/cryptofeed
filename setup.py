@@ -37,6 +37,7 @@ setup(
     packages=find_packages(exclude=['tests']),
     package_data={'': ['rest/config.yaml']},
     cmdclass={'test': Test},
+    python_requires='>=3.7',
     classifiers=[
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3.7",
