@@ -29,29 +29,33 @@ To install Cryptofeed along with [Arctic](https://github.com/man-group/arctic/):
 
     $ python3 -m pip install --user --upgrade cryptofeed[arctic]
 
-To install Cryptofeed and enable its Redis capabilities:
+To install Cryptofeed and enable its Redis backend:
 
     $ python3 -m pip install --user --upgrade cryptofeed[redis]
 
-To install Cryptofeed and enable its ZeroMQ capabilities:
+To install Cryptofeed and enable its ZeroMQ  backend:
 
     $ python3 -m pip install --user --upgrade cryptofeed[zmq]
 
-To install Cryptofeed and enable its RabbitMQ capabilities:
+To install Cryptofeed and enable its RabbitMQ backend:
 
     $ python3 -m pip install --user --upgrade cryptofeed[zmq]
 
-To install Cryptofeed along with its MongoDB dependencies:
+To install Cryptofeed and enable its MongoDB backend:
 
     $ python3 -m pip install --user --upgrade cryptofeed[mongo]
 
-To install Cryptofeed along with its PostgreSQL dependencies:
+To install Cryptofeed and enable its PostgreSQL backend:
 
     $ python3 -m pip install --user --upgrade cryptofeed[postgres]
 
-To install Cryptofeed along with its Kafka dependencies:
+To install Cryptofeed and enable its Kafka backend:
 
     $ python3 -m pip install --user --upgrade cryptofeed[kafka]
+
+To install Cryptofeed and enable more features: historical data retrieval and order placement (see [Rest API](#rest-api))
+
+    $ python3 -m pip install --user --upgrade cryptofeed[rest_api]
 
 To install Cryptofeed along with all optional dependencies and speedups:
 

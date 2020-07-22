@@ -52,12 +52,12 @@ setup(
         "websockets>=7.0",
         "sortedcontainers>=1.5.9",
         "pandas",
-        "pyyaml",
         "aiohttp==3.6.2",
         "aiofile",
         'yapic.json>=1.4.3'
     ],
     extras_require={
+        'rest_api': ['pyyaml'],
         'redis': ['aioredis'],
         'arctic': ['arctic'],
         'zmq': ['pyzmq'],
@@ -66,6 +66,6 @@ setup(
         'rabbit': ['aio_pika', 'pika'],
         'postgres': ['asyncpg'],
         'speedups': ['aiodns>=1.1', 'cchardet'],
-        'all': ['aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg', 'aiodns>=1.1', 'cchardet'],
+        'all': ['pyyaml', aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg', 'aiodns>=1.1', 'cchardet'],
     },
 )

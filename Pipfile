@@ -14,15 +14,15 @@ websockets = ">=7.0"
 aiodns = ">=1.1"
 cchardet = "*"
 # Optional dependencies
-pyyaml = "*"       # only used by rest stuff (historical market data and
-aiofile = "*"      # only used by util/async_file.py
+aiofile = "*"      # used by util/async_file.py
 aiokafka = "*"     # pip install cryptofeed[kafka]
 aioredis = "*"     # pip install cryptofeed[redis]
 arctic = "*"       # pip install cryptofeed[arctic]
-asyncpg = "*"      # pip install cryptofeed[postgre]
+asyncpg = "*"      # pip install cryptofeed[postgres]
 motor = "*"        # pip install cryptofeed[mongo]
 aio_pika = "*"     # pip install cryptofeed[rabbit]
-pika = "*"         # only used by demo_rabbitmq.py
+pika = "*"         # used by demo_rabbitmq.py
+pyyaml = "*"       # pip install cryptofeed[rest_api]
 pyzmq = "*"        # pip install cryptofeed[zmq]
 
 [dev-packages]
