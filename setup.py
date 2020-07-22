@@ -36,7 +36,7 @@ setup(
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
     url="https://github.com/bmoscon/cryptofeed",
-    packages=find_packages(exclude=['tests']),
+    packages=find_packages(exclude=['tests*']),
     package_data={'': ['rest/config.yaml']},
     cmdclass={'test': Test},
     python_requires='>=3.7',
