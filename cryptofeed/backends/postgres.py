@@ -43,7 +43,7 @@ class PostgresCallback:
         await self._connect()
         async with self.conn.transaction():
             time = dt.utcfromtimestamp(timestamp)
-            rtime = dt.utcfromtimestamp(timestamp)
+            rtime = dt.utcfromtimestamp(receipt_timestamp)
 
             await self.conn.execute(f"INSERT INTO {self.table} VALUES('{feed}','{pair}','{time}','{rtime}',{data})")
 
