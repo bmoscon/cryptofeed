@@ -7,12 +7,19 @@ associated with this software.
 
 Pair generation code for exchanges
 '''
+
+import logging
+
 import requests
 
 from cryptofeed.defines import BITSTAMP, BITFINEX, COINBASE, GEMINI, HITBTC, POLONIEX, KRAKEN, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, EXX, HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN, OKEX, COINBENE, BYBIT, FTX, FTX_US, BITTREX, BITCOINCOM, BITMAX, UPBIT, BLOCKCHAIN
 
+LOG = logging.getLogger('feedhandler')
 
 PAIR_SEP = '-'
+
+
+_pairs_retrieval_cache = dict()
 
 
 def set_pair_separator(symbol: str):
@@ -21,7 +28,12 @@ def set_pair_separator(symbol: str):
 
 
 def gen_pairs(exchange):
-    return _exchange_function_map[exchange]()
+    if exchange not in _pairs_retrieval_cache:
+        LOG.info("%s: Getting list of pairs", exchange)
+        pairs = _exchange_function_map[exchange]()
+        LOG.info("%s: %s pairs", exchange, len(pairs))
+        _pairs_retrieval_cache[exchange] = pairs
+    return _pairs_retrieval_cache[exchange]
 
 
 def _binance_pairs(endpoint: str):
@@ -57,11 +69,9 @@ def bitfinex_pairs():
         pair = data[0]
         if pair[0] == 'f':
             continue
-        else:
-            normalized = pair[1:-3] + PAIR_SEP + pair[-3:]
-            normalized = normalized.replace('UST', 'USDT')
-            ret[normalized] = pair
-
+        normalized = pair[1:-3] + PAIR_SEP + pair[-3:]
+        normalized = normalized.replace('UST', 'USDT')
+        ret[normalized] = pair
     return ret
 
 
@@ -100,12 +110,6 @@ def coinbase_pairs():
     return {data['id'].replace("-", PAIR_SEP): data['id'] for data in r}
 
 
-def dsx_pairs():
-    r = requests.get('https://dsxglobal.com/mapi/v2/info').json()
-    data = r['pairs']
-    return {f"{data[symbol]['base_currency']}{PAIR_SEP}{data[symbol]['quoted_currency']}": symbol for symbol in data}
-
-
 def gemini_pairs():
     ret = {}
     r = requests.get('https://api.gemini.com/v1/symbols').json()
@@ -113,7 +117,6 @@ def gemini_pairs():
     for pair in r:
         std = f"{pair[:-3]}{PAIR_SEP}{pair[-3:]}"
         std = std.upper()
-        ret[std] = pair
         ret[std] = pair.upper()
 
     return ret
@@ -193,7 +196,7 @@ def exx_pairs():
 
     exchange = [key.upper() for key in r.keys()]
     pairs = [key.replace("_", PAIR_SEP) for key in exchange]
-    return {pair: exchange for pair, exchange in zip(pairs, exchange)}
+    return dict(zip(pairs, exchange))
 
 
 def huobi_common_pairs(url: str):
