@@ -8,6 +8,7 @@
   * Feature: Support for HuobiDM next quarter contracts
   * Bugfix: Fix datetime fields in elasticsearch
   * Feature: BinanceFutures: support ticker, open interest and Liquidation, FTX: support open interest and liquidations, Deribit: liquidations support
+  * Bugfix: Fix receipt timestamps in Postgres backend
 
 ### 1.4.1 (2020-05-22)
   * Feature: Support for disabling timeouts on feeds
