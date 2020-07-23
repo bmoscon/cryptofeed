@@ -13,19 +13,7 @@ You can install and upgrade Cryptofeed using Pip:
 
     $ python3 -m pip install --user --upgrade aiohttp
 
-For speeding up DNS resolving also install aiodns:
-
-    $ python3 -m pip install --user --upgrade aiodns
-
-You may also be interested by cchardet as a faster replacement for chardet:
-
-    $ python3 -m pip install --user --upgrade cchardet
-
-To install Cryptofeed along with aiodns and cchardet in one bundle:
-
-    $ python3 -m pip install --user --upgrade cryptofeed[speedups]
-
-To install Cryptofeed along with [Arctic](https://github.com/man-group/arctic/):
+To install Cryptofeed along with [Arctic](https://github.com/man-group/arctic/) in one bundle:
 
     $ python3 -m pip install --user --upgrade cryptofeed[arctic]
 

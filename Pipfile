@@ -11,8 +11,8 @@ sortedcontainers = ">=1.5.9"
 websockets = ">=7.0"
 "yapic.json" = ">=1.4.3"   # fast, drop-in replacement of the built-in python.json
 # Optional packages to speed-up Cryptofeed
-aiodns = ">=1.1"
-cchardet = "*"
+aiodns = ">=1.1"   # aiodns speeds up DNS resolving
+cchardet = "*"     # cchardet is a faster replacement for chardet
 # Optional dependencies
 aiofile = "*"      # used by util/async_file.py
 aiokafka = "*"     # pip install cryptofeed[kafka]

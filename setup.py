@@ -56,8 +56,11 @@ setup(
         "pandas",
         "aiohttp==3.6.2",
         "aiofile",
-        'yapic.json>=1.4.3'
-    ],
+        'yapic.json>=1.4.3',
+        # Two (optional) dependencies that speed up Cryptofeed:
+        'aiodns>=1.1',   # aiodns speeds up DNS resolving
+        'cchardet',      # cchardet is a faster replacement for chardet
+],
     extras_require={
         'rest_api': ['pyyaml'],
         'redis': ['aioredis'],
@@ -67,7 +70,6 @@ setup(
         'kafka': ['aiokafka'],
         'rabbit': ['aio_pika', 'pika'],
         'postgres': ['asyncpg'],
-        'speedups': ['aiodns>=1.1', 'cchardet'],
-        'all': ['pyyaml', 'aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg', 'aiodns>=1.1', 'cchardet'],
+        'all': ['pyyaml', 'aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg'],
     },
 )
