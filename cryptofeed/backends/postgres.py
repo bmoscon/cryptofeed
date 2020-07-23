@@ -56,14 +56,14 @@ class TradePostgres(PostgresCallback, BackendTradeCallback):
             d = f"'{data['side']}',{data['amount']},{data['price']},'{data['id']}'"
         else:
             d = f"'{data['side']}',{data['amount']},{data['price']},NULL"
-        await super().write(feed, pair, timestamp, d)
+        await super().write(feed, pair, timestamp, receipt_timestamp, d)
 
 
 class FundingPostgres(PostgresCallback, BackendFundingCallback):
     default_table = FUNDING
 
     async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        await super().write(feed, pair, timestamp, f"'{json.dumps(data)}'")
+        await super().write(feed, pair, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
 class TickerPostgres(PostgresCallback, BackendTickerCallback):
