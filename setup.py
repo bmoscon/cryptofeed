@@ -41,10 +41,12 @@ setup(
     cmdclass={'test': Test},
     python_requires='>=3.7',
     classifiers=[
+        "Intended Audience :: Developers",
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8"
+        "Programming Language :: Python :: 3.8",
+        "Framework :: AsyncIO",
     ],
     tests_require=["pytest"],
     install_requires=[
@@ -66,6 +68,6 @@ setup(
         'rabbit': ['aio_pika', 'pika'],
         'postgres': ['asyncpg'],
         'speedups': ['aiodns>=1.1', 'cchardet'],
-        'all': ['pyyaml', aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg', 'aiodns>=1.1', 'cchardet'],
+        'all': ['pyyaml', 'aioredis', 'arctic', 'pyzmq', 'motor', 'aiokafka', 'aio_pika', 'pika', 'asyncpg', 'aiodns>=1.1', 'cchardet'],
     },
 )
