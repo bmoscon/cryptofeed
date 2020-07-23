@@ -60,5 +60,5 @@ def test_rest_ftx():
     try:
         assert ret[0] == expected
     except AssertionError as ex:
-        print('test_rest_ftx failed: AssertionError')
+        print(f'test_rest_ftx failed: {ex!r}')
         print('Please check the start_date, because FTX only saves 4 months worth of funding data')
