@@ -10,13 +10,15 @@ from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
 
-# Read the contents of README.md and CHANGES.md files
-from os import path
-root_repo_dir = path.abspath(path.dirname(__file__))
-with open(path.join(root_repo_dir, 'README.md'), encoding='utf-8') as readme_file:
-    readme = readme_file.read()
-with open(path.join(root_repo_dir, 'CHANGES.md'), encoding='utf-8') as changes_file:
-    changes = changes_file.read()
+def get_long_description():
+    """Read the contents of README.md, INSTALL.md and CHANGES.md files."""
+    from os import path
+    repo_dir = path.abspath(path.dirname(__file__))
+    markdown=[]
+    for filename in ['README.md', 'INSTALL.md', 'CHANGES.md']:
+        with open(path.join(repo_dir, filename), encoding='utf-8') as markdown_file:
+            markdown.append(markdown_file.read())
+    return "\n\n----\n\n".join(markdown)
 
 class Test(TestCommand):
     def run_tests(self):
@@ -31,8 +33,8 @@ setup(
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency feed handler and synthetic NBBO feed",
-    long_description=readme + '\n\n' + changes,
-    long_description_content_type='text/markdown',
+    long_description=get_long_description(),
+    long_description_content_type="text/markdown",
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
     url="https://github.com/bmoscon/cryptofeed",
