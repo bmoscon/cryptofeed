@@ -127,12 +127,12 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
-* [InfluxDB](https://github.com/influxdata/influxdb)
+* [InfluxDB](https://github.com/influxdata/influxdb) (v1 and v2)
 * MongoDB
 * Kafka
 * Elastic Search
 * RabbitMQ
-* Postgres
+* PostgreSQL
 
 
 ## Rest API
