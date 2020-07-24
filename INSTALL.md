@@ -17,7 +17,7 @@ about Pip and Pipenv usage, in a pedagogical way.
 
 The recommended way to install or upgrade the Cryptofeed library:
 
-    $ python3 -m pip install --user --upgrade cryptofeed
+    python3 -m pip install --user --upgrade cryptofeed
 
 In order to minimize the amount of dependencies to download,
 the dependencies required by the Rest API and
@@ -30,7 +30,7 @@ for the exhaustive list of the extra dependencies.
 
 To install Cryptofeed along with all optional dependencies in one bundle:
 
-    $ python3 -m pip install --user --upgrade cryptofeed[all]
+    python3 -m pip install --user --upgrade cryptofeed[all]
 
 ### Rest API
 
@@ -40,38 +40,38 @@ and to place order. See also the chaptper
 [Rest API](https://github.com/bmoscon/cryptofeed/blob/master/README.md#rest-api))
 in the main README.md for more details.
 
-    $ python3 -m pip install --user --upgrade cryptofeed[rest_api]
+    python3 -m pip install --user --upgrade cryptofeed[rest_api]
 
 ### Arctic backend
 
 To install Cryptofeed along with
 [Arctic](https://github.com/man-group/arctic/) in one bundle:
 
-    $ python3 -m pip install --user --upgrade cryptofeed[arctic]
+    python3 -m pip install --user --upgrade cryptofeed[arctic]
 
 ### Redis backend
 
-    $ python3 -m pip install --user --upgrade cryptofeed[redis]
+    python3 -m pip install --user --upgrade cryptofeed[redis]
 
 ### ZeroMQ backend
 
-    $ python3 -m pip install --user --upgrade cryptofeed[zmq]
+    python3 -m pip install --user --upgrade cryptofeed[zmq]
 
 ### RabbitMQ backend
 
-    $ python3 -m pip install --user --upgrade cryptofeed[zmq]
+    python3 -m pip install --user --upgrade cryptofeed[zmq]
 
 ### MongoDB backend
 
-    $ python3 -m pip install --user --upgrade cryptofeed[mongo]
+    python3 -m pip install --user --upgrade cryptofeed[mongo]
 
 ### PostgreSQL backend
 
-    $ python3 -m pip install --user --upgrade cryptofeed[postgres]
+    python3 -m pip install --user --upgrade cryptofeed[postgres]
 
 ### Kafka backend
 
-    $ python3 -m pip install --user --upgrade cryptofeed[kafka]
+    python3 -m pip install --user --upgrade cryptofeed[kafka]
 
 
 ## Pipenv
