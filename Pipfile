@@ -1,3 +1,10 @@
+# This Pipfile is licensed under the Creative Commons Zero licence
+# CC0 1.0 Universal - Public Domain Dedication - No Rights Reserved
+# To the extent possible under law, O. Libre <olibre@Lmap.org> has waived
+# all copyright and related or neighboring rights this Pipfile file.
+# Refer to CC0 Legal Code: https://creativecommons.org/publicdomain/zero/1.0/
+# You can copy the this file for any purpose, you can remove this notice and you can even add your own copyright
+
 [[source]]
 name = "pypi"
 url = "https://pypi.org/simple"
