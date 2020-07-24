@@ -9,45 +9,18 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 ## Install
 
-You can install and upgrade Cryptofeed using Pip:
+    pip install cryptofeed
 
-    $ python3 -m pip install --user --upgrade aiohttp
+or a safer installation:
 
-To install Cryptofeed along with [Arctic](https://github.com/man-group/arctic/) in one bundle:
+    python3 -m pip install --user --upgrade cryptofeed
 
-    $ python3 -m pip install --user --upgrade cryptofeed[arctic]
+To install Cryptofeed along with all its optional dependencies in one bundle:
 
-To install Cryptofeed and enable its Redis backend:
+    pip install cryptofeed[all]
 
-    $ python3 -m pip install --user --upgrade cryptofeed[redis]
+See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
-To install Cryptofeed and enable its ZeroMQ  backend:
-
-    $ python3 -m pip install --user --upgrade cryptofeed[zmq]
-
-To install Cryptofeed and enable its RabbitMQ backend:
-
-    $ python3 -m pip install --user --upgrade cryptofeed[zmq]
-
-To install Cryptofeed and enable its MongoDB backend:
-
-    $ python3 -m pip install --user --upgrade cryptofeed[mongo]
-
-To install Cryptofeed and enable its PostgreSQL backend:
-
-    $ python3 -m pip install --user --upgrade cryptofeed[postgres]
-
-To install Cryptofeed and enable its Kafka backend:
-
-    $ python3 -m pip install --user --upgrade cryptofeed[kafka]
-
-To install Cryptofeed and enable more features: historical data retrieval and order placement (see [Rest API](#rest-api))
-
-    $ python3 -m pip install --user --upgrade cryptofeed[rest_api]
-
-To install Cryptofeed along with all optional dependencies and speedups:
-
-    $ python3 -m pip install --user --upgrade cryptofeed[all]
 
 ## Example
 
@@ -185,116 +158,3 @@ Continue to build out rest endpoints and standardize exchange interfaces and dat
 Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
 
 This wouldn't have been possible with the many [contributors](AUTHORS.md)! I owe them and all who have contributed in other ways my thanks!
-
-## Pipenv
-
-The Pipenv tool allows to install the project dependencies without impacting your daily Python environment.
-Pipenv is based on `pip` and `virtualenv`.
-
-### Install Pipenv
-
-```commandline
-python3 -m pip install --user --upgrade pip
-python3 -m pip install --user --upgrade pipenv
-```
-
-### Install the runtime dependencies
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv install
-```
-
-### Once a week, you may update dependency versions
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv update
-```
-
-### Print the dependency graph
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv graph
-```
-
-### Uninstall the unused dependencies
-
-Edit the `Pipfile` and comment some or all dependencies above the line `# Optional dependencies`.
-After, run:
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv clean
-```
-
-### Run a script
- 
-In the following example, we run the `demo.py` script.
-
-```commandline
-cd your/path/to/cryptofeed
-export PYTONPATH=.
-python3 -m pipenv run python3 examples/demo.py 
-```
-
-### Install the dependencies required for the development
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv install --dev
-```
-
-### Unit-test the source code
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pytest tests
-```
-
-Pytest is listed as a dependency in `Pipfile`.
-There is also a Pytest plugin, pytest-asyncio, allowing us to write unit-tests for `asyncio` functions.
-
-### Statically analyse the code
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pylint --output-format=colorized ./cryptofeed/exchange
-```
-
-In `Pipfile`, Pylint and some plugins are listed as dependencies.
-
-Reduce the amount of issues by disabling the minor ones with option `--disable`:
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pylint --output-format=colorized --disable=C0111,C0301,C0103,R0903,R0913,R0912  ./cryptofeed/exchange
-```
-
-Analyse more folders:
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pylint --output-format=colorized ./cryptofeed ./examples ./tools
-```
-
-Enable Pylint plugins with option `--load-plugins`:
-
-```commandline
-cd your/path/to/cryptofeed
-export PYTONPATH=.
-python3 -m pipenv run python3 -m pylint --verbose --output-format=colorized --load-plugins=pylint_topology,pylint_import_modules,pylint_google_style_guide_imports_enforcing,pylint_unittest,pylint_requests,pylint_args,string_spaces_checkers ./cryptofeed
-```
-
-When almost all issues are fixed, speed up the Pylint using option `--jobs=8`.
-(this options mixes the Pylint output when there is many issues) 
-
-### Clean the `import` sections
-
-The following `isort` options apply the same formatting as `black` but only on the `import` sections.
-
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m isort --jobs=8 --atomic --multi-line 3 --force-grid-wrap 0 --trailing-comma --use-parentheses --apply --recursive .
-```
