@@ -24,7 +24,7 @@ See more options, explanations and Pipenv usage in [INSTALL.md](https://github.c
 
 ## Examples
 
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples, the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md)  or the [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) for some oddities and gotchas.
+Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library useage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
 
 
 ```python
