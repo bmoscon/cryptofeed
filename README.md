@@ -7,6 +7,23 @@
 
 Handles multiple cryptocurrency exchange data feeds and returns normalized and standardized results to client registered callbacks for events like trades, book updates, ticker updates, etc. Utilizes websockets when possible, but can also poll data via REST endpoints if a websocket is not provided.
 
+## Install
+
+    pip install cryptofeed
+
+or a safer installation:
+
+    python3 -m pip install --user --upgrade cryptofeed
+
+To install Cryptofeed along with all its optional dependencies in one bundle:
+
+    pip install cryptofeed[all]
+
+See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
+
+
+## Example
+
 Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples, the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md)  or the [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) for some oddities and gotchas.
 
 
@@ -22,18 +39,18 @@ trade_cb = {TRADES: TradeCallback(trade)}
 gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
 
 
-fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
-fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb)
+fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
 fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
-fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb)
+fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
 
 fh.run()
 ```
 
 To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
 
+## Supported exchanges
 
-Supports the following exchanges:
 * Binance
 * Binance US
 * Binance Jersey
@@ -62,8 +79,9 @@ Supports the following exchanges:
 * Poloniex
 * Upbit
 
+## National Best Bid/Offer (NBBO)
 
-Also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
+Cryptofeed also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
 ```python
 from cryptofeed.feedhandler import FeedHandler
@@ -100,7 +118,7 @@ Cryptofeed supports the following channels:
 
 ## Backends
 
-Cryptofeeds supports `backend` callbacks that will write directly to storage or other interfaces
+Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces
 
 Supported Backends:
 * Redis (Streams and Sorted Sets)
@@ -109,12 +127,12 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
-* [InfluxDB](https://github.com/influxdata/influxdb)
+* [InfluxDB](https://github.com/influxdata/influxdb) (v1 and v2)
 * MongoDB
 * Kafka
 * Elastic Search
 * RabbitMQ
-* Postgres
+* PostgreSQL
 
 
 ## Rest API
@@ -122,22 +140,21 @@ Supported Backends:
 Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [rest](https://github.com/bmoscon/cryptofeed/tree/master/cryptofeed/rest) package.
 
 
-# Planned Work
+## Planned Work
 
-## Future Feeds
+### Future Feeds
 * CEX
 * BTCC
 * Many more...
 
-## REST
+### REST
 Continue to build out rest endpoints and standardize exchange interfaces and data
 
-## Additional Callback Methods / Backends
+### Additional Callback Methods / Backends
 * Pulsar
 * More ZMQ improvements/options
 
-# Contributing
+## Contributing
 Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
 
 This wouldn't have been possible with the many [contributors](AUTHORS.md)! I owe them and all who have contributed in other ways my thanks!
-
