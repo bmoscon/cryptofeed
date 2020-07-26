@@ -6,10 +6,10 @@
 # If you use Pipenv to manage the Cryptofeed dependencies,
 # you may use the following command line with isort v5:
 #     python3 -m pipenv run python3 -m isort --jobs 8 ./cryptofeed
-# With isort v5, use instead:
+# With isort v4, add option --recursive:
 #     python3 -m pipenv run python3 -m isort --jobs 8 --recursive ./cryptofeed
-project = "cryptofeed"
-python-version = "py37"
+known_first_party = "cryptofeed"
+py_version = 37
 atomic = true
 multi_line_output = 3
 include_trailing_comma = true
