@@ -1,44 +1,43 @@
 # Cryptofeed installation
  
-The Cryptofeed library is intended to be used by Python developers.
+The Cryptofeed library is intended for use by Python developers.
 
-Multiple ways to get and use Cryptofeed:
+You have several ways to get/use Cryptofeed:
 
-* using Pip, such as `pip install cryptofeed`
-* using Git, such as `git clone https://github.com/bmoscon/cryptofeed`
-* source code in a ZIP archive: https://github.com/bmoscon/cryptofeed/archive/master.zip
-* using Pipenv
+* Pip - `pip install cryptofeed`
+* Git - `git clone https://github.com/bmoscon/cryptofeed`
+* Zipped source code - Download [github.com/bmoscon/cryptofeed/archive/master.zip](https://github.com/bmoscon/cryptofeed/archive/master.zip)
+* Pipenv
 
-The following chapters provide more details
-about Pip and Pipenv usage, in a pedagogical way.
+In the following chapters you will find further details
+on the use of Pip and Pipenv.
 
 
-## Installing using Pip
+## Installation with Pip
 
-The recommended way to install or upgrade the Cryptofeed library:
+The safe way to install or upgrade the Cryptofeed library:
 
     python3 -m pip install --user --upgrade cryptofeed
 
-In order to minimize the amount of dependencies to download,
-the dependencies required by the Rest API and
-the Cryptofeed backends are optional, but easy to install.
+To minimize the number of dependencies to download,
+the dependencies required by the Rest API, and
+the cryptofeed backends are optional, but easy to install.
 
 See the file [`setup.py`](https://github.com/bmoscon/cryptofeed/blob/master/setup.py#L60)
-for the exhaustive list of the extra dependencies.
+for the exhaustive list of these *extra* dependencies.
 
 ### Install all optional dependencies
 
-To install Cryptofeed along with all optional dependencies in one bundle:
+You can install Cryptofeed along with all optional dependencies in one bundle:
 
     python3 -m pip install --user --upgrade cryptofeed[all]
 
 ### Rest API
 
-The *Rest API* feature of Cryptofeed
-allows to retrieve historical market data
-and to place order. See also the chaptper
-[Rest API](https://github.com/bmoscon/cryptofeed/blob/master/README.md#rest-api))
-in the main README.md for more details.
+Cryptofeed can also be used to access the *Rest API*
+of some crypto-exchange to retrieve historical market data
+and to place orders. See also the dedicated chapter
+[Rest API](https://github.com/bmoscon/cryptofeed/blob/master/README.md#rest-api).
 
     python3 -m pip install --user --upgrade cryptofeed[rest_api]
 
@@ -76,185 +75,163 @@ To install Cryptofeed along with
 
 ## Pipenv
 
-The Pipenv tool allows to install Cryptofeed and its dependencies
-without impacting your daily Python environment.
+The tool Pipenv allows the installation of
+the Cryptofeed library and its dependencies
+without affecting your daily Python environment.
 Pipenv is based on `pip` and `virtualenv`.
 
 ### Install Pipenv
 
-The Cryptofeed team recommends to install the latest Pip and Pipenv versions
-on the user Python environment to limit conflicts with the Operating System:
+You may want to install the latest versions of Pip and Pipenv
+on your user Python environment to limit conflicts with the operating system:
 
-```commandline
-python3 -m pip install --user --upgrade pip
-python3 -m pip install --user --upgrade pipenv
-```
+    python3 -m pip install --user --upgrade pip
+    python3 -m pip install --user --upgrade pipenv
 
 ### Install the runtime dependencies
 
-Once you get the Cryptofeed source code,
+Once you have cloned/downloaded the Cryptofeed source code,
 you can install the dependencies
 within a dedicated Python virtual environment
 using the following command line:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv install
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv install
 
-Attention: the default `Pipfile` is configured to install
-all dependencies. You edit the `Pipfile` before installing
-all optional dependencies.
+Note: the default `Pipfile` is configured to install all optional dependencies.
+You may edit the `Pipfile` to comment the optional dependencies you do not need.
 
 ### Uninstall the unused dependencies
 
 Edit the `Pipfile` and comment some (or all)
 dependencies above the line `# Optional dependencies`.
 
-After, run:
+Then:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv clean
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv clean
 
-You may also copy and hack this `Pipfile` within you own project.
-The `Pipfile` content is in the public domain.
+You may also copy/hack that `Pipfile` within your own project.
+That `Pipfile` is in the public domain to give you more freedom.
 
-Attention: See the [LICENSE](https://github.com/bmoscon/cryptofeed/blob/master/LICENSE) for the rest of the Cryptofeed files.
+Note: See the [LICENSE](https://github.com/bmoscon/cryptofeed/blob/master/LICENSE)
+for the rest of the Cryptofeed files.
 
 ### Update dependencies
 
-Once a week, you may update the dependency versions.
+You can update the dependency versions once a week:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv update
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv update
 
 ### Dependency graph
 
-You can also check the whole dependency tree.
+You can also check the entire dependency tree:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv graph
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv graph
 
 ### Run a script
  
-In the following example, we run the `demo.py` script.
+In the following example we execute the script `demo.py`:
 
-```commandline
-cd your/path/to/cryptofeed
-PYTONPATH=. python3 -m pipenv run python3 examples/demo.py
-```
+    cd your/path/to/cryptofeed
+    PYTONPATH=. python3 -m pipenv run python3 examples/demo.py
 
 To use shorter command lines,
-you may prefer to enter in the
-Python virtual environment sub-shell:
+you may want to enter in the sub-shell of the
+Python virtual environment:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv shell
-export PYTONPATH=$PWD
-cd path/to/your/awesome/project
-python your-awesome-script.py
-[...]
-exit    # or [Ctrl] + [D]
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv shell
+    export PYTONPATH=$PWD
+    cd path/to/your/project
+    python your-awesome-script.py
+    [...]
+    exit      # or [Ctrl] + [D]
  
-Do not forget you are in a virtual environment sub-shell. <br>
-To exit this sub-shell: use the command `exit`
+Note: Remember that you are in a sub-shell of a virtual environment. <br>
+To leave this sub-shell, use the command `exit`
 or the keyboard shortcut **<kdb>Ctrl</kdb>** + **<kdb>D</kdb>**.
 
 
-### Install the development dependencies
+### Install the dev. dependencies
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv install --dev
-```
+The `[dev-packages]` section (of the `Pipfile`) lists
+the Python packages used for the Cryptofeed development.
 
-### Unit-test
+    cd your/path/to/cryptofeed
+    python3 -m pipenv install --dev
 
-Pytest is listed as a dependency in `Pipfile`.
-There is also a Pytest plugin, pytest-asyncio,
-allowing us to write unit-tests for `asyncio` functions.
+### Unit test
 
-Once the the development dependencies are installed,
-you run the unit-tests in two ways.
+Pytest is listed in the `[dev-packages]` section with
+`pytest-asyncio`, a Pytest plugin allowing
+to write unit tests for `asyncio` functions.
 
-One way is to use a long python command line:
+Once the development dependencies are installed,
+perform the unit tests in the way you prefer:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pytest tests
-```
+1. Using a long Python command line:
 
-The second way is to activate the Python virtual environment
-within a dedicated shell:
+        cd your/path/to/cryptofeed
+        python3 -m pipenv run python3 -m pytest tests
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv shell
-pytest
-[...]
-exit   # or [Ctrl] + [D]
-```
+2. Entering the sub-shell of the virtual environment:
 
+        cd your/path/to/cryptofeed
+        python3 -m pipenv shell
+        pytest
+        [...]
+        exit     # or [Ctrl] + [D]
 
-### Static-Analysis
+### Static code analysis
 
-The development dependencies in `Pipfile`
-include Pylint and many Pylint plugins for a relevant static-analysis.
+The `[dev-packages]` section of the `Pipfile` also lists
+Pylint with many plugins for relevant static code analysis.
 
-Therefore you can detect potential bugs and error-prone coding style.
+This allows you to detect potential bugs and error-prone coding style.
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pylint --output-format=colorized ./cryptofeed/exchange
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv run python3 -m pylint --output-format=colorized ./cryptofeed/exchange
 
-You may want to reduce the amount of issues by disabling the minor ones with option `--disable`:
+You may want to reduce the number of reported issues
+by disabling the minor/verbose ones with the `--disable` option:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pylint --output-format=colorized --disable=C0111,C0301,C0103,R0903,R0913,R0912  ./cryptofeed/exchange
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv run python3 -m pylint --output-format=colorized --disable=C0111,C0301,C0103,R0903,R0913,R0912 ./cryptofeed/exchange
 
-Analyze more folders:
+Parse two folders containing Python files:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m pylint --output-format=colorized ./cryptofeed ./examples ./tools
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv run python3 -m pylint --output-format=colorized ./cryptofeed ./examples
 
-Enable the Pylint plugins with option `--load-plugins`:
+Activate the Pylint plugins with the option `--load-plugins`:
 
-```commandline
-cd your/path/to/cryptofeed
-export PYTONPATH=.
-python3 -m pipenv run python3 -m pylint --verbose --output-format=colorized --load-plugins=pylint_topology,pylint_import_modules,pylint_google_style_guide_imports_enforcing,pylint_unittest,pylint_requests,pylint_args,string_spaces_checkers ./cryptofeed
-```
+    cd your/path/to/cryptofeed
+    export PYTONPATH=.
+    python3 -m pipenv run python3 -m pylint --verbose --output-format=colorized --load-plugins=pylint_topology,pylint_import_modules,pylint_google_style_guide_imports_enforcing,pylint_unittest,pylint_requests,pylint_args,string_spaces_checkers ./cryptofeed
 
-When almost all issues are fixed, speed up the Pylint using option `--jobs=8`.
-However, when there is many issues, this options mixes the Pylint output.
+When almost all reported issues are fixed,
+you can speed up the Pylint processing with the option `--jobs=8`.
+Using this option when there are still many issues
+may duplicate/mix the Pylint output.
 
 ### Optimize the `import` sections
 
-One more thing: the `Pipfile` also provides the [`isort`](https://timothycrosley.github.io/isort/) tool.
+One more thing: The `[dev-packages]` section also lists the tool
+[`isort`](https://timothycrosley.github.io/isort/).
 
-The following `isort` options apply the same formatting as `black` but only on the `import` sections:
+The following `isort` options apply the same formatting as `black`,
+but only to the `import` sections:
 
-```commandline
-cd your/path/to/cryptofeed
-python3 -m pipenv run python3 -m isort --jobs=8 --atomic --multi-line 3 --force-grid-wrap 0 --trailing-comma --use-parentheses --apply --recursive .
-```
+    cd your/path/to/cryptofeed
+    python3 -m pipenv run python3 -m isort --jobs=8 --atomic --multi-line 3 --force-grid-wrap 0 --trailing-comma --use-parentheses --apply --recursive .
 
-## Support / Contribute
+## Contribute
 
-If you have an issue installing / hacking Cryptofeed, please feel free to open a new issue: <br>
-https://github.com/bmoscon/cryptofeed/issues/
+If you have a problem with the installation/hacking of Cryptofeed,
+you are welcome to open a new issue: https://github.com/bmoscon/cryptofeed/issues/
+or join us on Slack: [cryptofeed-dev.slack.com](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
 
-Pull Requests are also welcome, even for minor changes.
+Your Pull Requests are also welcome, even for minor changes.
