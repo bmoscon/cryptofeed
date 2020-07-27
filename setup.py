@@ -27,6 +27,7 @@ class Test(TestCommand):
         sys.exit(errno)
 
 
+
 setup(
     name="cryptofeed",
     version="1.5.0",
@@ -36,7 +37,10 @@ setup(
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     license="XFree86",
-    keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data"],
+    keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data",
+              "Bitcoin.com", "Bitfinex", "BitMax", "Bitstamp", "Bittrex", "Blockchain.com", "Bybit",
+              "Binance", "BitMEX", "CoinBene", "Coinbase", "Deribit", "EXX", "FTX", "Gemini",
+              "HitBTC", "Huobi", "Kraken", "OKCoin", "OKEx", "Poloniex", "Upbit"],
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),
     package_data={'': ['rest/config.yaml']},
