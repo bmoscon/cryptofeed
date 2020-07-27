@@ -51,33 +51,34 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 ## Supported exchanges
 
-* Binance
-* Binance US
-* Binance Jersey
-* Binance Futures
 * Bitcoin.com
 * Bitfinex
-* BitMax
-* BitMEX
+* BitMax (BTMX)
 * Bitstamp
 * Bittrex
-* Blockchain
+* Blockchain.com
 * Bybit
-* Coinbase
+* Binance
+* Binance Futures
+* Binance Jersey
+* Binance US
+* BitMEX
+* CoinBene
+* Coinbase (GDAX)
 * Deribit
 * EXX
 * FTX
-* FTX US
+* FtxUs
 * Gemini
 * HitBTC
 * Huobi
-* HuobiDM
+* Huobi DM
+* Huobi Swap
 * Kraken
 * Kraken Futures
 * OKCoin
 * OKEx
 * Poloniex
-* Upbit
 
 ## National Best Bid/Offer (NBBO)
 
