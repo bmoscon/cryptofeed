@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.5.1
+  * Bugfix: #136 - Kraken Rate limiting
+
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
   * Feature: Add funding data to rest library
