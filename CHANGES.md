@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.5.0
+### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
   * Feature: Add funding data to rest library
   * Bugfix: DSX updated their api, websocket no longer supported. Removing DSX
@@ -9,6 +9,7 @@
   * Bugfix: Fix datetime fields in elasticsearch
   * Feature: BinanceFutures: support ticker, open interest and Liquidation, FTX: support open interest and liquidations, Deribit: liquidations support
   * Bugfix: Fix receipt timestamps in Postgres backend
+  * Bugfix: Huobi Swap Init
 
 ### 1.4.1 (2020-05-22)
   * Feature: Support for disabling timeouts on feeds
