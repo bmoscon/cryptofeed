@@ -2,6 +2,7 @@
 
 ### 1.5.1
   * Bugfix: #136 - Kraken Rate limiting
+  * Feature: Funding data on Binance Futures
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
