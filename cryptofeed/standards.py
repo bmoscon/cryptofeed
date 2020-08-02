@@ -200,6 +200,7 @@ _feed_to_exchange_map = {
     FUNDING: {
         BITMEX: 'funding',
         BITFINEX: 'trades',
+        BINANCE_FUTURES: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: 'swap/funding_rate',
