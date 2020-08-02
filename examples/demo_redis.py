@@ -5,12 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
-from cryptofeed.backends.redis import (
-    BookRedis,
-    FundingRedis,
-    OpenInterestRedis,
-    TradeRedis,
-)
+from cryptofeed.backends.redis import BookRedis, FundingRedis, OpenInterestRedis, TradeRedis
 from cryptofeed.defines import FUNDING, L2_BOOK, OPEN_INTEREST, TRADES
 from cryptofeed.exchanges import Bitfinex, Bitmex, Coinbase, Gemini
 

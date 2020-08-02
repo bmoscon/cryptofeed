@@ -7,12 +7,7 @@ associated with this software.
 from decimal import Decimal
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import (
-    BookCallback,
-    FundingCallback,
-    TickerCallback,
-    TradeCallback,
-)
+from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
 from cryptofeed.defines import (
     ASK,
     BID,

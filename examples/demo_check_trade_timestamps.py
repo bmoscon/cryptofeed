@@ -4,12 +4,7 @@ import time
 from datetime import datetime
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import (
-    BookCallback,
-    FundingCallback,
-    TickerCallback,
-    TradeCallback,
-)
+from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
 from cryptofeed.defines import (
     ASK,
     BID,

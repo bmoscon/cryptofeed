@@ -6,16 +6,7 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import (
-    ASK,
-    BID,
-    FUNDING,
-    L2_BOOK,
-    L2_BOOK_SWAP,
-    OPEN_INTEREST,
-    TRADES,
-    TRADES_SWAP,
-)
+from cryptofeed.defines import ASK, BID, FUNDING, L2_BOOK, L2_BOOK_SWAP, OPEN_INTEREST, TRADES, TRADES_SWAP
 from cryptofeed.exchanges import OKEx
 
 
