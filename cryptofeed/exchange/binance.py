@@ -16,7 +16,9 @@ from datetime import datetime as datetime
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE, LIQUIDATIONS, OPEN_INTEREST
+from cryptofeed.defines import (FUNDING, TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE,
+                                LIQUIDATIONS, OPEN_INTEREST)
+
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -265,6 +267,28 @@ class Binance(Feed):
                 wait_time = (17 - (datetime.now().minute % 15)) * 60
                 await asyncio.sleep(wait_time)
 
+    async def _funding(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "markPriceUpdate",  // Event type
+            "E": 1562305380000,      // Event time
+            "s": "BTCUSDT",          // Symbol
+            "p": "11185.87786614",   // Mark price
+            "r": "0.00030000",       // Funding rate
+            "T": 1562306400000       // Next funding time
+        }
+        """
+        await self.callback(FUNDING,
+                            feed=self.id,
+                            pair=pair_exchange_to_std(msg['s']),
+                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp,
+                            mark_price=msg['p'],
+                            rate=msg['r'],
+                            next_funding_time=timestamp_normalize(self.id, msg['T']),
+                            )
+
+
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -283,6 +307,8 @@ class Binance(Feed):
             await self._ticker(msg, timestamp)
         elif msg['e'] == 'forceOrder':
             await self._liquidations(msg, timestamp)
+        elif msg['e'] == 'markPriceUpdate':
+            await self._funding(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
