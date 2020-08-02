@@ -17,10 +17,10 @@ requests = ">=2.18.4"
 sortedcontainers = ">=1.5.9"
 websockets = ">=7.0"
 "yapic.json" = ">=1.4.3"   # fast, drop-in replacement of the built-in python.json
-# Optional packages to speed-up Cryptofeed
+# --- Optional packages to speed-up Cryptofeed -----------------------------------------------
 aiodns = ">=1.1"   # aiodns speeds up DNS resolving
 cchardet = "*"     # cchardet is a faster replacement for chardet
-# Optional dependencies
+# --- Optional dependencies ------------------------------------------------------------------
 aiofile = "*"      # used by util/async_file.py
 aiokafka = "*"     # pip install cryptofeed[kafka]
 aioredis = "*"     # pip install cryptofeed[redis]
@@ -34,13 +34,17 @@ pyzmq = "*"        # pip install cryptofeed[zmq]
 
 [dev-packages]
 isort = {extras = ["pipfile"], version = "*"}
-pylint = "*"
-pylint-import-modules = "*"
-pylint-string-spaces-checkers = "*"
-pylint-topology = "*"
-pylint-args = "*"
-pylint_google_style_guide_imports_enforcing = "*"
-pylint-requests = "*"
-pylint-unittest = "*"
 pytest = "*"
 pytest-asyncio = "*"
+#
+# --- Static-code analysis -------------------------------------------------------------------
+# You can enable following Pylint packages => Pylint-v2.5 requires old isort-v4
+# --------------------------------------------------------------------------------------------
+# pylint = "*"
+# pylint-import-modules = "*"
+# pylint-string-spaces-checkers = "*"
+# pylint-topology = "*"
+# pylint-args = "*"
+# pylint_google_style_guide_imports_enforcing = "*"
+# pylint-requests = "*"
+# pylint-unittest = "*"
