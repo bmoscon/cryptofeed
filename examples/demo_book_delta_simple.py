@@ -5,8 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
+from cryptofeed.defines import BOOK_DELTA, L2_BOOK
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.defines import L2_BOOK, BOOK_DELTA
 
 
 async def book(feed, pair, book, timestamp, receipt_timestamp):

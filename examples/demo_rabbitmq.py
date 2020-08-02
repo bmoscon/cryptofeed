@@ -2,8 +2,8 @@ from multiprocessing import Process
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.rabbitmq import BookRabbit
-from cryptofeed.exchanges import Kraken
 from cryptofeed.defines import L2_BOOK
+from cryptofeed.exchanges import Kraken
 
 
 def callback(ch, method, properties, body):

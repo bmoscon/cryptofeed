@@ -4,12 +4,10 @@ Copyright (C) 2018-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.backends.kafka import TradeKafka, BookKafka
 from cryptofeed import FeedHandler
+from cryptofeed.backends.kafka import BookKafka, TradeKafka
+from cryptofeed.defines import L2_BOOK, TRADES
 from cryptofeed.exchanges import Coinbase
-
-from cryptofeed.defines import TRADES, L2_BOOK
-
 
 """
 You can run a consumer in the console with the following command

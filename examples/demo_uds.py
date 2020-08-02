@@ -5,15 +5,16 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-from multiprocessing import Process
-from yapic import json
-from decimal import Decimal
 import os
+from decimal import Decimal
+from multiprocessing import Process
 
-from cryptofeed.backends.socket import TradeSocket, TickerSocket
+from yapic import json
+
 from cryptofeed import FeedHandler
+from cryptofeed.backends.socket import TickerSocket, TradeSocket
+from cryptofeed.defines import TICKER, TRADES
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.defines import TRADES, TICKER
 
 
 async def reader(reader, writer):

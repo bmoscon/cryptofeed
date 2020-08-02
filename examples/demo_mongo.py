@@ -4,11 +4,10 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.backends.mongo import TradeMongo, BookDeltaMongo, BookMongo
 from cryptofeed import FeedHandler
+from cryptofeed.backends.mongo import BookDeltaMongo, BookMongo, TradeMongo
+from cryptofeed.defines import BOOK_DELTA, L2_BOOK, TRADES
 from cryptofeed.exchanges import Coinbase
-
-from cryptofeed.defines import TRADES, L2_BOOK, BOOK_DELTA
 
 
 def main():

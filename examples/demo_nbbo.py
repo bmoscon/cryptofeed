@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Coinbase, Kraken, Gemini
+from cryptofeed.exchanges import Coinbase, Gemini, Kraken
 
 
 def nbbo_update(pair, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
