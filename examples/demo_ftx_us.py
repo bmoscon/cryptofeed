@@ -6,10 +6,10 @@ associated with this software.
 '''
 from decimal import Decimal
 
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
+from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
+from cryptofeed.defines import ASK, BID, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import FTXUS
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER
 
 
 # Examples of some handlers for different updates. These currently don't do much.

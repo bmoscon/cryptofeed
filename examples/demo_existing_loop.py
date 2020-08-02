@@ -6,10 +6,10 @@ associated with this software.
 '''
 import asyncio
 
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Coinbase, Binance
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, COINBASE
+from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
+from cryptofeed.defines import ASK, BID, COINBASE, L2_BOOK, TICKER, TRADES
+from cryptofeed.exchanges import Binance, Coinbase
 
 
 # Examples of some handlers for different updates. These currently don't do much.

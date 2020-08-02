@@ -4,14 +4,13 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.callback import Callback
-from cryptofeed.backends.aggregate import RenkoFixed
+from datetime import datetime
 
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex
+from cryptofeed.backends.aggregate import RenkoFixed
+from cryptofeed.callback import Callback
 from cryptofeed.defines import TRADES
-
-from datetime import datetime
+from cryptofeed.exchanges import Bitmex
 
 
 async def renko(data=None):

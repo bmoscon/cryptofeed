@@ -6,11 +6,16 @@ associated with this software.
 '''
 from decimal import Decimal
 
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Poloniex, Gemini, HitBTC, Bitstamp, Kraken, Binance, EXX, Huobi, OKCoin, OKEx, HuobiDM, HuobiSwap, Bittrex, FTX
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, COINBASE, OPEN_INTEREST, \
-    GEMINI, VOLUME, BLOCKCHAIN
+from cryptofeed.callback import (BookCallback, FundingCallback, TickerCallback,
+                                 TradeCallback)
+from cryptofeed.defines import (ASK, BID, BLOCKCHAIN, COINBASE, FUNDING,
+                                GEMINI, L2_BOOK, OPEN_INTEREST, TICKER, TRADES,
+                                VOLUME)
+from cryptofeed.exchanges import (EXX, FTX, Binance, Bitfinex, Bitmex,
+                                  Bitstamp, Bittrex, Coinbase, Gemini, HitBTC,
+                                  Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin,
+                                  OKEx, Poloniex)
 
 
 # Examples of some handlers for different updates. These currently don't do much.

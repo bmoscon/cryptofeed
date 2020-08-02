@@ -4,14 +4,15 @@ Copyright (C) 2018-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from multiprocessing import Process
 import socket
+from multiprocessing import Process
+
 from yapic import json
 
-from cryptofeed.backends.socket import TradeSocket, BookSocket, BookDeltaSocket
 from cryptofeed import FeedHandler
+from cryptofeed.backends.socket import BookDeltaSocket, BookSocket, TradeSocket
+from cryptofeed.defines import BOOK_DELTA, L2_BOOK, TRADES
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.defines import L2_BOOK, TRADES, BOOK_DELTA
 
 
 def receiver(port):

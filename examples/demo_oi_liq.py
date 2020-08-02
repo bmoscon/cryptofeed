@@ -6,11 +6,12 @@ associated with this software.
 '''
 from decimal import Decimal
 
-from cryptofeed.callback import OpenInterestCallback, LiquidationCallback
 from cryptofeed import FeedHandler
+from cryptofeed.callback import LiquidationCallback, OpenInterestCallback
+from cryptofeed.defines import ASK, BID, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.exchanges import FTX, BinanceFutures, Deribit
-from cryptofeed.defines import  BID, ASK, OPEN_INTEREST, LIQUIDATIONS
-from cryptofeed.pairs import ftx_pairs, binance_futures_pairs
+from cryptofeed.pairs import binance_futures_pairs, ftx_pairs
+
 
 # Examples of some handlers for different updates. These currently don't do much.
 # Handlers should conform to the patterns/signatures in callback.py

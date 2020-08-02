@@ -4,10 +4,11 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
+from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
+from cryptofeed.defines import (ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST,
+                                TICKER, TRADES)
 from cryptofeed.exchanges import KrakenFutures
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING, OPEN_INTEREST
 
 
 async def trade(feed, pair, order_id, timestamp, side, amount, price):
