@@ -51,34 +51,34 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 ## Supported exchanges
 
-* Bitcoin.com
-* Bitfinex
-* BitMax (BTMX)
-* Bitstamp
-* Bittrex
-* Blockchain.com
-* Bybit
-* Binance
-* Binance Futures
-* Binance Jersey
-* Binance US
-* BitMEX
-* CoinBene
-* Coinbase (GDAX)
-* Deribit
-* EXX
-* FTX
-* FtxUs
-* Gemini
-* HitBTC
-* Huobi
-* Huobi DM
+* [Bitcoin.com](https://www.bitcoin.com/)
+* [Bitfinex](https://bitfinex.com)
+* [BitMax](https://bitmax.io/) (BTMX)
+* [Bitstamp](https://www.bitstamp.net/)
+* [Bittrex](https://global.bittrex.com/)
+* [Blockchain.com](https://www.blockchain.com/)
+* [Bybit](https://www.bybit.com/)
+* [Binance]https://www.binance.com/en
+* [Binance Futures]https://www.binance.com/en/futures
+* [Binance Jersey](https://www.binance.je/en)
+* [Binance US](https://www.binance.us/en)
+* [BitMEX](https://www.bitmex.com/)
+* [CoinBene](https://www.coinbene.com/)
+* [Coinbase](https://www.coinbase.com/) (GDAX)
+* [Deribit](https://www.deribit.com/)
+* [EXX](https://www.exx.com/)
+* [FTX](https://ftx.com/)
+* [FTX US](https://ftx.us/)
+* [Gemini](https://gemini.com/)
+* [HitBTC](https://hitbtc.com/)
+* [Huobi](https://www.hbg.com/)
+* [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
 * Huobi Swap
-* Kraken
-* Kraken Futures
-* OKCoin
-* OKEx
-* Poloniex
+* [Kraken](https://www.kraken.com/)
+* [Kraken Futures](https://futures.kraken.com/)
+* [OKCoin](http://okcoin.com/)
+* [OKEx](https://www.okex.com/)
+* [Poloniex](https://www.poloniex.com/)
 
 ## National Best Bid/Offer (NBBO)
 
