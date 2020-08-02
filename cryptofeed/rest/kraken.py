@@ -175,7 +175,7 @@ class Kraken(API):
             data = r.json()
             if 'error' in data and data['error']:
                 if data['error'] == ['EAPI:Rate limit exceeded']:
-                    time.sleep(20)
+                    time.sleep(5)
                     continue
                 else:
                     raise Exception(f"Error processing URL {r.url}: {data['error']}")

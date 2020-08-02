@@ -24,7 +24,7 @@ See more options, explanations and Pipenv usage in [INSTALL.md](https://github.c
 
 ## Examples
 
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library useage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
+Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
 
 
 ```python
@@ -158,4 +158,4 @@ Continue to build out rest endpoints and standardize exchange interfaces and dat
 ## Contributing
 Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
 
-This wouldn't have been possible with the many [contributors](AUTHORS.md)! I owe them and all who have contributed in other ways my thanks!
+This wouldn't have been possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contribtors my thanks!
