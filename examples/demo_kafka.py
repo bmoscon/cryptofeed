@@ -9,6 +9,7 @@ from cryptofeed.backends.kafka import BookKafka, TradeKafka
 from cryptofeed.defines import L2_BOOK, TRADES
 from cryptofeed.exchanges import Coinbase
 
+
 """
 You can run a consumer in the console with the following command
 (assuminng the defaults for the consumer group and bootstrap server)

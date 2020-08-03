@@ -4,22 +4,22 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import time
-from yapic import json
+import base64
 import hashlib
 import hmac
-import requests
-import base64
-from time import sleep
 import logging
+import time
 from decimal import Decimal
+from time import sleep
 
 import pandas as pd
-from sortedcontainers.sorteddict import SortedDict as sd
+import requests
 from pytz import UTC
+from sortedcontainers.sorteddict import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, COINBASE, FILLED, LIMIT, MARKET, OPEN, PARTIAL, PENDING, SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import COINBASE, BUY, SELL, MARKET, LIMIT, FILLED, OPEN, PARTIAL, PENDING, CANCELLED, BID, ASK
 from cryptofeed.standards import normalize_trading_options, timestamp_normalize
 
 

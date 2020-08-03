@@ -6,6 +6,7 @@ associated with this software.
 '''
 import time
 from decimal import Decimal
+
 import numpy as np
 
 

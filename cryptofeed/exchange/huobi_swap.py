@@ -1,8 +1,8 @@
 import logging
 
 from cryptofeed.defines import HUOBI_SWAP
-from cryptofeed.feed import Feed
 from cryptofeed.exchange.huobi_dm import HuobiDM
+from cryptofeed.feed import Feed
 
 
 LOG = logging.getLogger('feedhandler')

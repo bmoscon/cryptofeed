@@ -1,12 +1,13 @@
-from time import sleep
 import logging
+from time import sleep
+
 import pandas as pd
 import requests
-
-from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import DERIBIT, SELL, BUY, BID, ASK
-from cryptofeed.standards import pair_std_to_exchange, timestamp_normalize
 from sortedcontainers import SortedDict as sd
+
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, SELL
+from cryptofeed.rest.api import API, request_retry
+from cryptofeed.standards import pair_std_to_exchange, timestamp_normalize
 
 
 REQUEST_LIMIT = 1000

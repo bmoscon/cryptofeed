@@ -11,9 +11,10 @@ from itertools import product
 
 from sortedcontainers import SortedDict as sd
 
-from cryptofeed.defines import L2_BOOK, BUY, SELL, BID, ASK, TRADES, TICKER, BLOCKCHAIN, L3_BOOK
+from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+
 
 LOG = logging.getLogger('feedhandler')
 

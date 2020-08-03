@@ -6,20 +6,20 @@ associated with this software.
 '''
 
 import asyncio
+import logging
+from datetime import datetime
+from decimal import Decimal
+from time import time
+
 import aiohttp
 import pandas as pd
-
-from yapic import json
-import logging
-from decimal import Decimal
-from time import time as time
-from datetime import datetime
-
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
-from cryptofeed.feed import Feed, RestFeed
+from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import FTX as FTX_id
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, FUNDING, LIQUIDATIONS, OPEN_INTEREST
+from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.feed import Feed, RestFeed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 

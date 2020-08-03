@@ -8,7 +8,7 @@ import asyncio
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import ASK, BID, COINBASE, L2_BOOK, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, COINBASE, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import Binance, Coinbase
 
 

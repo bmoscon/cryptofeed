@@ -4,15 +4,17 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import requests
 import logging
 from time import sleep
 
 import pandas as pd
+import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 
+from cryptofeed.defines import BID, ASK, BUY
+from cryptofeed.defines import FTX as FTX_ID
+from cryptofeed.defines import SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import FTX as FTX_ID, SELL, BUY, BID, ASK
 from cryptofeed.standards import pair_std_to_exchange
 
 

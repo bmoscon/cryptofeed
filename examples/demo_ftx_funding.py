@@ -10,6 +10,7 @@ from cryptofeed.callback import FundingCallback
 from cryptofeed.defines import FUNDING
 from cryptofeed.exchanges import FTX
 
+
 # Examples of some handlers for different updates. These currently don't do much.
 # Handlers should conform to the patterns/signatures in callback.py
 # Handlers can be normal methods/functions or async. The feedhandler is paused

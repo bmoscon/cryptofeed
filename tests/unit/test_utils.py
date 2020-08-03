@@ -1,5 +1,5 @@
-from cryptofeed.util.book import book_delta
 from cryptofeed.defines import BID, ASK
+from cryptofeed.util.book import book_delta
 
 
 def test_book_delta_simple():

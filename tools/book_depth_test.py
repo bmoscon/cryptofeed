@@ -6,10 +6,10 @@ associated with this software.
 '''
 from copy import deepcopy
 
-from cryptofeed.callback import BookCallback
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Coinbase
+from cryptofeed.callback import BookCallback
 from cryptofeed.defines import L2_BOOK
+from cryptofeed.exchanges import Coinbase
 
 
 PREV = {}

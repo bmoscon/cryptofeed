@@ -9,6 +9,7 @@ from cryptofeed.backends.postgres import BookDeltaPostgres, BookPostgres, Ticker
 from cryptofeed.defines import BOOK_DELTA, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import Coinbase
 
+
 postgres_cfg = {'host': '127.0.0.1', 'user': 'postgres', 'db': 'postgres', 'pw': 'password123'}
 
 

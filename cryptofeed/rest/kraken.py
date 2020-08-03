@@ -4,21 +4,21 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import time
+import base64
 import hashlib
 import hmac
-import requests
-import urllib
-import base64
 import logging
+import time
+import urllib
 from decimal import Decimal
 
 import pandas as pd
+import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, KRAKEN, LIMIT, MARKET, OPEN, SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import KRAKEN, SELL, BUY, BID, ASK, CANCELLED, OPEN, FILLED, MARKET, LIMIT
-from cryptofeed.standards import pair_std_to_exchange, normalize_trading_options, pair_exchange_to_std
+from cryptofeed.standards import normalize_trading_options, pair_exchange_to_std, pair_std_to_exchange
 
 
 LOG = logging.getLogger('rest')

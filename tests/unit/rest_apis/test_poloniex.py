@@ -1,7 +1,7 @@
 import pytest
 
-from cryptofeed.rest import Rest
 from cryptofeed.defines import BID, ASK
+from cryptofeed.rest import Rest
 
 
 poloniex = Rest('config.yaml').Poloniex

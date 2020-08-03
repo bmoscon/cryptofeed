@@ -5,12 +5,13 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from datetime import datetime as dt
-from yapic import json
 
 import asyncpg
+from yapic import json
 
-from cryptofeed.defines import TRADES, FUNDING, TICKER, OPEN_INTEREST
-from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback, BackendOpenInterestCallback, BackendBookCallback, BackendBookDeltaCallback
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback)
+from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES
 
 
 class PostgresCallback:

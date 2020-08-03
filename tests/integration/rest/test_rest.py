@@ -1,7 +1,7 @@
 import pandas as pd
 
-from cryptofeed.rest import Rest
 from cryptofeed.defines import BUY, SELL
+from cryptofeed.rest import Rest
 
 
 def test_rest_bitmex():

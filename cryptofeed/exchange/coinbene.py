@@ -7,13 +7,12 @@ associated with this software.
 import asyncio
 from decimal import Decimal
 
+import aiohttp
 from sortedcontainers import SortedDict as sd
 
+from cryptofeed.defines import BID, ASK, BUY, COINBENE, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import RestFeed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, COINBENE
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
-
-import aiohttp
 
 
 """

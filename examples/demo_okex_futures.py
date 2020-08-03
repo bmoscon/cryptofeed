@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import ASK, BID, L2_BOOK, L2_BOOK_FUTURES, TICKER, TICKER_FUTURES, TRADES, TRADES_FUTURES
+from cryptofeed.defines import BID, ASK, L2_BOOK, L2_BOOK_FUTURES, TICKER, TICKER_FUTURES, TRADES, TRADES_FUTURES
 from cryptofeed.exchanges import OKEx
 
 

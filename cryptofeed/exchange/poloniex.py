@@ -4,19 +4,19 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from yapic import json
-import logging
-from decimal import Decimal
-import time
 import calendar
+import logging
+import time
+from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES, VOLUME
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BUY, SELL, BID, ASK, TRADES, TICKER, L2_BOOK, VOLUME, POLONIEX
-from cryptofeed.standards import pair_exchange_to_std, feed_to_exchange
 from cryptofeed.pairs import poloniex_id_pair_mapping
+from cryptofeed.standards import feed_to_exchange, pair_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
