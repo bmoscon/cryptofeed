@@ -8,38 +8,10 @@ from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import (
-    ASK,
-    BID,
-    BLOCKCHAIN,
-    COINBASE,
-    FUNDING,
-    GEMINI,
-    L2_BOOK,
-    OPEN_INTEREST,
-    TICKER,
-    TRADES,
-    VOLUME,
-)
-from cryptofeed.exchanges import (
-    EXX,
-    FTX,
-    Binance,
-    Bitfinex,
-    Bitmex,
-    Bitstamp,
-    Bittrex,
-    Coinbase,
-    Gemini,
-    HitBTC,
-    Huobi,
-    HuobiDM,
-    HuobiSwap,
-    Kraken,
-    OKCoin,
-    OKEx,
-    Poloniex,
-)
+from cryptofeed.defines import (ASK, BID, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, OPEN_INTEREST, TICKER, TRADES,
+                                VOLUME,)
+from cryptofeed.exchanges import (EXX, FTX, Binance, Bitfinex, Bitmex, Bitstamp, Bittrex, Coinbase, Gemini, HitBTC,
+                                  Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex,)
 
 
 # Examples of some handlers for different updates. These currently don't do much.

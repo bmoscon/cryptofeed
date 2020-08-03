@@ -1,20 +1,19 @@
 [tool.isort]
 # These settings configure the tool isort to reformat the import sections
-# These settings are compatible with the tool black, see:
-# https://github.com/psf/black/blob/master/docs/compatible_configs.md#isort
 # isort requires the Cryptofeed dependencies to be installed
 # If you use Pipenv to manage the Cryptofeed dependencies,
-# you may use the following command line with isort v5:
+# You may use the following command line with isort v5:
+#     pipenv run isort --jobs 8 ./cryptofeed
+# or the safer alternative:
 #     python3 -m pipenv run python3 -m isort --jobs 8 ./cryptofeed
 # With isort v4, add option --recursive:
 #     python3 -m pipenv run python3 -m isort --jobs 8 --recursive ./cryptofeed
 known_first_party = "cryptofeed"
 py_version = 37
 atomic = true
-multi_line_output = 3
+# multi_line_output = 3
 include_trailing_comma = true
-force_grid_wrap = 0
+# force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
-line_length = 122
-profile = "black"
+line_length = 120
