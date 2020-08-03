@@ -1,11 +1,12 @@
+import collections
 import os
 import time
-import collections
 from datetime import datetime
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
+
 from cryptofeed import FeedHandler
-from cryptofeed.defines import L2_BOOK, BID, ASK, TRADES, TICKER, FUNDING
-from cryptofeed.defines import BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, DERIBIT, EXX, GEMINI, HITBTC, HUOBI, KRAKEN, OKCOIN, OKEX, POLONIEX
+from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
+from cryptofeed.defines import (ASK, BID, BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, DERIBIT, EXX, FUNDING,
+                                GEMINI, HITBTC, HUOBI, KRAKEN, L2_BOOK, OKCOIN, OKEX, POLONIEX, TICKER, TRADES)
 
 # Gathers the first trade of each exchange and prints out info on the timestamps.
 # To add an exchange, setup exch_sym_map with the most liquid pair.

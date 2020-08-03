@@ -4,11 +4,10 @@ Copyright (C) 2018-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.backends.influxdb import TradeInflux, FundingInflux, BookInflux, BookDeltaInflux, TickerInflux
 from cryptofeed import FeedHandler
+from cryptofeed.backends.influxdb import BookDeltaInflux, BookInflux, FundingInflux, TickerInflux, TradeInflux
+from cryptofeed.defines import BOOK_DELTA, FUNDING, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import Bitmex, Coinbase
-
-from cryptofeed.defines import TRADES, FUNDING, L2_BOOK, BOOK_DELTA, TICKER
 
 
 def main():

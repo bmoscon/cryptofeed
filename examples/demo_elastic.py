@@ -4,11 +4,10 @@ Copyright (C) 2018-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.backends.elastic import TradeElastic, FundingElastic, BookDeltaElastic, BookElastic
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Coinbase, Bitmex
-
-from cryptofeed.defines import TRADES, FUNDING, L2_BOOK, BOOK_DELTA
+from cryptofeed.backends.elastic import BookDeltaElastic, BookElastic, FundingElastic, TradeElastic
+from cryptofeed.defines import BOOK_DELTA, FUNDING, L2_BOOK, TRADES
+from cryptofeed.exchanges import Bitmex, Coinbase
 
 """
 after writing, you can query all the trades out with the following curl:

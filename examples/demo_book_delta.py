@@ -6,11 +6,12 @@ associated with this software.
 '''
 from copy import deepcopy
 
-from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed import FeedHandler
+from cryptofeed.callback import BookCallback, BookUpdateCallback
+from cryptofeed.defines import ASK, BID, BOOK_DELTA, L2_BOOK, L3_BOOK
 from cryptofeed.exchange.blockchain import Blockchain
-from cryptofeed.exchanges import Bitmex, Coinbase, Bitfinex, Gemini, HitBTC, Poloniex, Kraken, OKCoin, Bybit, Binance, Bitstamp, EXX, Bittrex, Upbit
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BID, ASK, BOOK_DELTA
+from cryptofeed.exchanges import (EXX, Binance, Bitfinex, Bitmex, Bitstamp, Bittrex, Bybit, Coinbase, Gemini, HitBTC,
+                                  Kraken, OKCoin, Poloniex, Upbit)
 
 
 class DeltaBook(object):

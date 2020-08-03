@@ -1,8 +1,7 @@
-from cryptofeed.callback import TradeCallback, BookCallback
 from cryptofeed import FeedHandler
-
+from cryptofeed.callback import BookCallback, TradeCallback
+from cryptofeed.defines import ASK, BID, L2_BOOK, TRADES
 from cryptofeed.exchanges import Upbit
-from cryptofeed.defines import TRADES, L2_BOOK, BID, ASK
 
 
 async def trade(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp):

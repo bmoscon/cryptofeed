@@ -4,10 +4,10 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback
 from cryptofeed import FeedHandler
+from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
+from cryptofeed.defines import ASK, BID, FUNDING, L2_BOOK, L2_BOOK_SWAP, OPEN_INTEREST, TRADES, TRADES_SWAP
 from cryptofeed.exchanges import OKEx
-from cryptofeed.defines import L2_BOOK_SWAP, L2_BOOK, BID, ASK, TRADES, TRADES_SWAP, OPEN_INTEREST, FUNDING
 
 
 async def trade(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp):

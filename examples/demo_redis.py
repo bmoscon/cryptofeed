@@ -4,11 +4,10 @@ Copyright (C) 2018-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.backends.redis import TradeRedis, FundingRedis, BookRedis, OpenInterestRedis
 from cryptofeed import FeedHandler
-from cryptofeed.exchanges import Bitmex, Bitfinex, Coinbase, Gemini
-
-from cryptofeed.defines import TRADES, FUNDING, L2_BOOK, OPEN_INTEREST
+from cryptofeed.backends.redis import BookRedis, FundingRedis, OpenInterestRedis, TradeRedis
+from cryptofeed.defines import FUNDING, L2_BOOK, OPEN_INTEREST, TRADES
+from cryptofeed.exchanges import Bitfinex, Bitmex, Coinbase, Gemini
 
 
 def main():
