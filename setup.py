@@ -74,7 +74,7 @@ setup(
         "redis": ["aioredis"],
         "arctic": ["arctic"],
         "zmq": ["pyzmq"],
-        "mongo": ["motor"],
+        "mongo": ["bson", "motor"],
         "kafka": ["aiokafka"],
         "rabbit": ["aio_pika", "pika"],
         "postgres": ["asyncpg"],
