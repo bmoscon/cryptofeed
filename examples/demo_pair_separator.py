@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import ASK, BID, COINBASE, L2_BOOK, L3_BOOK, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, COINBASE, L2_BOOK, L3_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import Coinbase, Gemini
 from cryptofeed.pairs import set_pair_separator
 

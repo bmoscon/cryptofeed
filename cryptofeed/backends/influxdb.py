@@ -4,14 +4,16 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from decimal import Decimal
 import logging
+from decimal import Decimal
+
 import requests
 
-from cryptofeed.defines import BID, ASK
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback)
 from cryptofeed.backends.http import HTTPCallback
+from cryptofeed.defines import BID, ASK
 from cryptofeed.exceptions import UnsupportedType
-from cryptofeed.backends.backend import BackendTradeCallback, BackendBookDeltaCallback, BackendBookCallback, BackendFundingCallback, BackendTickerCallback, BackendOpenInterestCallback
 
 
 LOG = logging.getLogger('feedhandler')

@@ -5,14 +5,14 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from yapic import json
-from decimal import Decimal
 import zlib
+from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import HUOBI, BUY, SELL, TRADES, BID, ASK, L2_BOOK
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 

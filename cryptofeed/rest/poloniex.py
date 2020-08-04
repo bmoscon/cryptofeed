@@ -4,20 +4,20 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from time import time
 import hashlib
 import hmac
-import requests
+import logging
 import urllib
 from decimal import Decimal
-import logging
+from time import time
 
 import pandas as pd
+import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, LIMIT, OPEN, PARTIAL, POLONIEX, SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import POLONIEX, BUY, SELL, BID, ASK, LIMIT, OPEN, PARTIAL, FILLED, CANCELLED
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, normalize_trading_options
+from cryptofeed.standards import normalize_trading_options, pair_exchange_to_std, pair_std_to_exchange
 
 
 LOG = logging.getLogger('rest')

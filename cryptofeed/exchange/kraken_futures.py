@@ -4,16 +4,17 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from yapic import json
 import logging
-import requests
 from decimal import Decimal
 
+import requests
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, FUNDING, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, FUNDING, L2_BOOK, KRAKEN_FUTURES, OPEN_INTEREST
 from cryptofeed.standards import timestamp_normalize
+
 
 LOG = logging.getLogger('feedhandler')
 

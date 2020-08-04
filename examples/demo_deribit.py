@@ -1,6 +1,6 @@
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES
 from cryptofeed.exchanges import Deribit
 
 

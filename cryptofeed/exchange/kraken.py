@@ -4,14 +4,14 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from yapic import json
 import logging
 from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, TICKER, L2_BOOK, KRAKEN
 from cryptofeed.standards import pair_exchange_to_std
 
 

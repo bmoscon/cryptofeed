@@ -1,7 +1,7 @@
+import pytest
+
 from cryptofeed.defines import BID, ASK
 from cryptofeed.rest import Rest
-
-import pytest
 
 
 public = Rest('config.yaml').Gemini

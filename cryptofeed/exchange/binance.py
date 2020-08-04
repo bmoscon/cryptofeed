@@ -4,21 +4,19 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from yapic import json
+import asyncio
 import logging
-from decimal import Decimal
 from collections import defaultdict
+from datetime import datetime
+from decimal import Decimal
+from time import time
 
 import aiohttp
-import asyncio
-from time import time as time
-from datetime import datetime as datetime
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import (FUNDING, TICKER, TRADES, BUY, SELL, BID, ASK, L2_BOOK, BINANCE,
-                                LIQUIDATIONS, OPEN_INTEREST)
-
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 

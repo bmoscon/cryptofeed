@@ -1,15 +1,15 @@
-import logging
-from yapic import json
-from decimal import Decimal
-import requests
-import zlib
 import base64
+import logging
+import zlib
+from decimal import Decimal
 
+import requests
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BITTREX, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BITTREX, BUY, SELL, TRADES, BID, ASK, L2_BOOK, TICKER
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')

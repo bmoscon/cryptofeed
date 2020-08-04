@@ -4,16 +4,15 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from yapic import json
 import logging
 from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BITMAX, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BITMAX
-from cryptofeed.defines import TRADES, BUY, SELL, BID, ASK, L2_BOOK
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize, pair_std_to_exchange
+from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')

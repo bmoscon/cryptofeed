@@ -26,15 +26,15 @@ So we return BTC190927 as the pair name for the BTC quarterly future.
 
 '''
 import logging
-from yapic import json
-from decimal import Decimal
 import zlib
+from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
-from cryptofeed.defines import HUOBI_DM, BUY, SELL, TRADES, BID, ASK, L2_BOOK
+from cryptofeed.defines import BID, ASK, BUY, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')

@@ -10,15 +10,17 @@ between exchanges. These include trading pairs, timestamps, and
 data channel names
 '''
 import logging
+
 import pandas as pd
 
-from cryptofeed.defines import (L2_BOOK, L3_BOOK, TRADES, TICKER, OPEN_INTEREST, VOLUME, FUNDING, LIQUIDATIONS, UNSUPPORTED, BITFINEX, GEMINI, BITMAX,
-                                POLONIEX, HITBTC, BITSTAMP, COINBASE, BITMEX, KRAKEN, KRAKEN_FUTURES, BINANCE, EXX, HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN,
-                                OKEX, COINBENE, BYBIT, FTX, FTX_US, TRADES_SWAP, TICKER_SWAP, L2_BOOK_SWAP, TRADES_FUTURES, TICKER_FUTURES, L2_BOOK_FUTURES,
-                                LIMIT, MARKET, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, DERIBIT, BITTREX, BITCOINCOM, BINANCE_US,
-                                BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, BLOCKCHAIN)
+from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
+                                FTX_US, FUNDING, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
+                                KRAKEN_FUTURES, L2_BOOK, L2_BOOK_FUTURES, L2_BOOK_SWAP, L3_BOOK, LIMIT, LIQUIDATIONS,
+                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, TICKER, TICKER_FUTURES,
+                                TICKER_SWAP, TRADES, TRADES_FUTURES, TRADES_SWAP, UNSUPPORTED, UPBIT, VOLUME)
+from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs
-from cryptofeed.exceptions import UnsupportedTradingPair, UnsupportedDataFeed, UnsupportedTradingOption
 
 
 LOG = logging.getLogger('feedhandler')

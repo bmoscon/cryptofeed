@@ -8,6 +8,7 @@ from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, T
 from cryptofeed.defines import (ASK, BID, BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, DERIBIT, EXX, FUNDING,
                                 GEMINI, HITBTC, HUOBI, KRAKEN, L2_BOOK, OKCOIN, OKEX, POLONIEX, TICKER, TRADES)
 
+
 # Gathers the first trade of each exchange and prints out info on the timestamps.
 # To add an exchange, setup exch_sym_map with the most liquid pair.
 # Sample output:

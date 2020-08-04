@@ -1,23 +1,26 @@
 [tool.isort]
-# isort formats the import sections and
-# requires the Cryptofeed dependencies to be installed
+# isort formats the import sections
 #
-# If you use Pipenv to manage the Cryptofeed dependencies,
-# you may use the following command line with isort v5:
-#     pipenv run isort --jobs 8 ./cryptofeed
-# or the safer alternative:
-#     python3 -m pipenv run python3 -m isort --jobs 8 ./cryptofeed
-# With isort v4, add option --recursive:
-#     python3 -m pipenv run python3 -m isort --jobs 8 --recursive ./cryptofeed
+# isort v4
+#
+#     isort --jobs 8 --recursive ./cryptofeed
+#
+# isort v5 does not required option --recursive
+#
+#     isort --jobs 8 ./cryptofeed
+#
+# After, you may inverse "ASK, BID" ->  "BID, ASK" using:
+#
+#     find * -name '*.py' -exec sed 's/import ASK, BID/import BID, ASK/' -i {} +
+#
 known_first_party = "cryptofeed"
+line_length = 130
 py_version = 37
 atomic = true
-force_grid_wrap = 0
 use_parentheses = true
-line_length = 120
+balanced_wrapping = true
+remove_redundant_aliases = true
+color_output = true
+skip_gitignore = true
+lines_after_imports = 2
 ensure_newline_before_comments = true
-#
-# Cryptofeed does not use black-compatible settings
-# multi_line_output = 3
-# include_trailing_comma = true
-# profile = "black"

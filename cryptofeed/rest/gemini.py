@@ -1,18 +1,18 @@
-from time import time, sleep
+import base64
 import hashlib
 import hmac
-import requests
-from yapic import json
-import base64
 import logging
 from decimal import Decimal
+from time import sleep, time
 
-from sortedcontainers.sorteddict import SortedDict as sd
 import pandas as pd
+import requests
+from sortedcontainers.sorteddict import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, GEMINI, LIMIT, OPEN, PARTIAL, SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import GEMINI, BID, ASK, CANCELLED, FILLED, OPEN, PARTIAL, BUY, SELL, LIMIT
-from cryptofeed.standards import pair_std_to_exchange, pair_exchange_to_std, normalize_trading_options
+from cryptofeed.standards import normalize_trading_options, pair_exchange_to_std, pair_std_to_exchange
 
 
 LOG = logging.getLogger('rest')

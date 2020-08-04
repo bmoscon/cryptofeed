@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import LiquidationCallback, OpenInterestCallback
-from cryptofeed.defines import ASK, BID, LIQUIDATIONS, OPEN_INTEREST
+from cryptofeed.defines import BID, ASK, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.exchanges import FTX, BinanceFutures, Deribit
 from cryptofeed.pairs import binance_futures_pairs, ftx_pairs
 

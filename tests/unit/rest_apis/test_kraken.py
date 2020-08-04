@@ -1,6 +1,7 @@
 import pytest
-from cryptofeed.rest import Rest
+
 from cryptofeed.defines import BID
+from cryptofeed.rest import Rest
 
 
 kraken = Rest('config.yaml').kraken

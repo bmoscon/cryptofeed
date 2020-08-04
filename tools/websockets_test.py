@@ -1,7 +1,9 @@
-import asyncio
-import websockets
-import zlib
 import argparse
+import asyncio
+import zlib
+
+import websockets
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--uri', default='wss://api.huobi.pro/ws', help='URI to connect to')

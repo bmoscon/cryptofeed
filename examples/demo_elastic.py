@@ -9,6 +9,7 @@ from cryptofeed.backends.elastic import BookDeltaElastic, BookElastic, FundingEl
 from cryptofeed.defines import BOOK_DELTA, FUNDING, L2_BOOK, TRADES
 from cryptofeed.exchanges import Bitmex, Coinbase
 
+
 """
 after writing, you can query all the trades out with the following curl:
 curl -X GET "localhost:9200/book/book/_search" -H 'Content-Type: application/json' -d'

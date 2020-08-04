@@ -4,17 +4,18 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import logging
 import os
+from decimal import Decimal
 from functools import wraps
 from time import sleep
-import logging
-from decimal import Decimal
 
 import pandas as pd
 import requests
 import yaml
 
 from cryptofeed.standards import load_exchange_pair_mapping
+
 
 LOG = logging.getLogger('rest')
 

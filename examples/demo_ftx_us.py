@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import ASK, BID, L2_BOOK, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import FTXUS
 
 

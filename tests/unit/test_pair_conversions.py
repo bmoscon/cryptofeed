@@ -4,9 +4,10 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, load_exchange_pair_mapping
-from cryptofeed.defines import COINBASE, POLONIEX, BITFINEX, HITBTC, GEMINI, BITSTAMP, BITCOINCOM, BLOCKCHAIN
-from cryptofeed.pairs import coinbase_pairs, poloniex_pairs, bitfinex_pairs, hitbtc_pairs, gemini_pairs, bitstamp_pairs, bitcoincom_pairs, blockchain_pairs
+from cryptofeed.defines import BITCOINCOM, BITFINEX, BITSTAMP, BLOCKCHAIN, COINBASE, GEMINI, HITBTC, POLONIEX
+from cryptofeed.pairs import (bitcoincom_pairs, bitfinex_pairs, bitstamp_pairs, blockchain_pairs,
+                              coinbase_pairs, gemini_pairs, hitbtc_pairs, poloniex_pairs)
+from cryptofeed.standards import load_exchange_pair_mapping, pair_exchange_to_std, pair_std_to_exchange
 
 
 def test_coinbase_pair_conversions():

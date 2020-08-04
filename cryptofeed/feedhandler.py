@@ -5,25 +5,27 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-from time import time as time
-from socket import error as socket_error
 import zlib
 from collections import defaultdict
 from copy import deepcopy
+from socket import error as socket_error
+from time import time
 
 import websockets
 from websockets import ConnectionClosed
 
-from cryptofeed.defines import L2_BOOK, BLOCKCHAIN
-from cryptofeed.exchange.blockchain import Blockchain
-from cryptofeed.log import get_logger
-from cryptofeed.defines import DERIBIT, BINANCE, GEMINI, HITBTC, BITFINEX, BITMEX, BITSTAMP, POLONIEX, COINBASE, KRAKEN, KRAKEN_FUTURES, HUOBI, HUOBI_DM, OKCOIN, OKEX, COINBENE, BYBIT, BITTREX, BITCOINCOM, BINANCE_US, BITMAX, BINANCE_JERSEY, BINANCE_FUTURES, UPBIT, HUOBI_SWAP, FTX_US
+from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX,
+                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT)
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
-from cryptofeed.exchanges import *
-from cryptofeed.nbbo import NBBO
-from cryptofeed.feed import RestFeed
+from cryptofeed.defines import (FTX_US, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
+                                KRAKEN_FUTURES, L2_BOOK, OKCOIN, OKEX, POLONIEX, UPBIT)
 from cryptofeed.exceptions import ExhaustedRetries
+from cryptofeed.exchange.blockchain import Blockchain
+from cryptofeed.exchanges import *
+from cryptofeed.feed import RestFeed
+from cryptofeed.log import get_logger
+from cryptofeed.nbbo import NBBO
 
 
 LOG = get_logger('feedhandler', 'feedhandler.log')

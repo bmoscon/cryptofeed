@@ -5,14 +5,15 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from yapic import json
 from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BYBIT, BUY, SELL, TRADES, BID, ASK, L2_BOOK
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std as normalize_pair
+from cryptofeed.standards import pair_exchange_to_std as normalize_pair
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')

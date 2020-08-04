@@ -7,8 +7,9 @@ associated with this software.
 import arctic
 import pandas as pd
 
-from cryptofeed.defines import TRADES, FUNDING, TICKER, OPEN_INTEREST
-from cryptofeed.backends.backend import BackendTradeCallback, BackendTickerCallback, BackendFundingCallback, BackendOpenInterestCallback
+from cryptofeed.backends.backend import (BackendFundingCallback, BackendOpenInterestCallback,
+                                         BackendTickerCallback, BackendTradeCallback)
+from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES
 
 
 class ArcticCallback:

@@ -5,17 +5,17 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-from yapic import json
 import logging
-from decimal import Decimal
 import time
+from decimal import Decimal
 
 import requests
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.defines import L2_BOOK, L3_BOOK, BUY, SELL, BID, ASK, TRADES, TICKER, COINBASE
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')

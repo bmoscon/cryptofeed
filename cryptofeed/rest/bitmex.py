@@ -4,22 +4,22 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from time import sleep
-import time
 import hashlib
 import hmac
-from urllib.parse import urlparse
 import logging
+import time
 import zlib
 from datetime import datetime as dt
 from datetime import timedelta
+from time import sleep
+from urllib.parse import urlparse
 
-from sortedcontainers import SortedDict as sd
-import requests
 import pandas as pd
+import requests
+from sortedcontainers import SortedDict as sd
 
+from cryptofeed.defines import BID, ASK, BITMEX, BUY, SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.defines import BITMEX, SELL, BUY, BID, ASK
 from cryptofeed.standards import timestamp_normalize
 
 

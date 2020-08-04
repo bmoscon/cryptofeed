@@ -8,10 +8,11 @@ import uuid
 from collections import defaultdict
 
 from cryptofeed.callback import Callback
-from cryptofeed.standards import pair_std_to_exchange, feed_to_exchange, load_exchange_pair_mapping
-from cryptofeed.defines import TRADES, TICKER, L2_BOOK, L3_BOOK, VOLUME, FUNDING, BOOK_DELTA, OPEN_INTEREST, BID, ASK, LIQUIDATIONS
-from cryptofeed.util.book import book_delta, depth
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, L2_BOOK, L3_BOOK,
+                                LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping
+from cryptofeed.standards import feed_to_exchange, load_exchange_pair_mapping, pair_std_to_exchange
+from cryptofeed.util.book import book_delta, depth
 
 
 class Feed:

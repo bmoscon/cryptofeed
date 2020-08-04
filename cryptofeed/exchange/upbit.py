@@ -1,13 +1,13 @@
 import logging
-from yapic import json
 from decimal import Decimal
 
 import requests
 from sortedcontainers import SortedDict as sd
+from yapic import json
 
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
-from cryptofeed.defines import UPBIT, BUY, SELL, TRADES, BID, ASK, L2_BOOK, TICKER
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std, load_exchange_pair_mapping
+from cryptofeed.standards import load_exchange_pair_mapping, pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')

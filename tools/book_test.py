@@ -6,10 +6,10 @@ associated with this software.
 '''
 import time
 
-from cryptofeed.callback import BookCallback
 from cryptofeed import FeedHandler
+from cryptofeed.callback import BookCallback
+from cryptofeed.defines import BID, ASK, L2_BOOK
 from cryptofeed.exchanges import Bitmex
-from cryptofeed.defines import L2_BOOK, BID, ASK
 
 
 counter = 0
