@@ -6,9 +6,9 @@ python:
 
 install:
   - pip install --upgrade pip
-  - pip install requests --upgrade
-  - pip install websockets --upgrade
-  - pip install pyyaml
+  - pip install --upgrade requests
+  - pip install --upgrade websockets
+  - pip install --upgrade pyyaml
 script:
   - pip freeze
   - python setup.py test
