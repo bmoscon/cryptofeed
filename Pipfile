@@ -27,7 +27,6 @@ aioredis = "*"     # pip install cryptofeed[redis]
 arctic = "*"       # pip install cryptofeed[arctic]
 asyncpg = "*"      # pip install cryptofeed[postgres]
 motor = "*"        # pip install cryptofeed[mongo]
-bson = "*"         # pip install cryptofeed[mongo]
 aio_pika = "*"     # pip install cryptofeed[rabbit]
 pika = "*"         # used by demo_rabbitmq.py
 pyyaml = "*"       # pip install cryptofeed[rest_api]
