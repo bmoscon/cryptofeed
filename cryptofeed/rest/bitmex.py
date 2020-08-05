@@ -4,6 +4,7 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -11,7 +12,6 @@ import time
 import zlib
 from datetime import datetime as dt
 from datetime import timedelta
-from time import sleep
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -60,7 +60,7 @@ class Bitmex(API):
             "api-signature": signature
         }
 
-    def _get(self, ep, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
+    async def _get(self, ep, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
         dates = [None]
         if start_date:
             if not end_date:
@@ -97,15 +97,15 @@ class Bitmex(API):
 
                 if r.status_code in {502, 504}:
                     LOG.warning("%s: %d for URL %s - %s", self.ID, r.status_code, r.url, r.text)
-                    sleep(retry_wait)
+                    await asyncio.sleep(retry_wait)
                     continue
                 elif r.status_code == 429:
-                    sleep(API_REFRESH)
+                    await asyncio.sleep(API_REFRESH)
                     continue
                 elif r.status_code != 200:
                     self._handle_error(r, LOG)
                 else:
-                    sleep(RATE_LIMIT_SLEEP)
+                    await asyncio.sleep(RATE_LIMIT_SLEEP)
 
                 limit = int(r.headers['X-RateLimit-Remaining'])
                 data = r.json()
@@ -116,7 +116,7 @@ class Bitmex(API):
                     break
 
                 if limit < 1:
-                    sleep(API_REFRESH)
+                    await asyncio.sleep(API_REFRESH)
 
                 start += len(data)
 
@@ -131,12 +131,12 @@ class Bitmex(API):
             'price': trade['price']
         }
 
-    def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    async def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         # return list(self._get('quote', symbol, start, end, retry, retry_wait))
-        for data in self._scrape_s3(symbol, 'quote', start, end):
+        async for data in self._scrape_s3(symbol, 'quote', start, end):
             yield data
 
-    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         """
         data format
 
@@ -170,11 +170,11 @@ class Bitmex(API):
             rest_end_date -= pd.Timedelta(microseconds=1)
             if API._timestamp(end) < rest_end_date:
                 rest_end_date = end
-            for data in self._scrape_s3(symbol, 'trade', start, rest_end_date):
+            async for data in self._scrape_s3(symbol, 'trade', start, rest_end_date):
                 yield list(map(self._s3_data_normalization, data))
 
         if end is None or end > rest_end_date:
-            for data in self._get('trade', symbol, rest_start, end, retry, retry_wait):
+            async for data in self._get('trade', symbol, rest_start, end, retry, retry_wait):
                 yield list(map(self._trade_normalization, data))
 
     def _funding_normalization(self, funding: dict) -> dict:
@@ -187,7 +187,7 @@ class Bitmex(API):
             'rate_daily': funding['fundingRateDaily']
         }
 
-    def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    async def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         """
         {
             'timestamp': '2017-01-05T12:00:00.000Z',
@@ -197,13 +197,12 @@ class Bitmex(API):
             'fundingRateDaily': 0.01125
         }
         """
-        for data in self._get('funding', symbol, start, end, retry, retry_wait, freq='2W'):
+        async for data in self._get('funding', symbol, start, end, retry, retry_wait, freq='2W'):
             yield list(map(self._funding_normalization, data))
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=10):
+    async def l2_book(self, symbol: str, retry=None, retry_wait=10):
         ret = {symbol: {BID: sd(), ASK: sd()}}
-        data = next(self._get('orderBook/L2', symbol, None, None, retry, retry_wait))
-        for update in data:
+        async for update in self._get('orderBook/L2', symbol, None, None, retry, retry_wait):
             side = ASK if update['side'] == 'Sell' else BID
             ret[symbol][side][update['price']] = update['size']
         return ret
@@ -220,7 +219,7 @@ class Bitmex(API):
             'price': vals[4]
         }
 
-    def _scrape_s3(self, symbol: str, dtype: str, start_date, end_date):
+    async def _scrape_s3(self, symbol: str, dtype: str, start_date, end_date):
         date = dt(end_date.year, end_date.month, end_date.day)
         end = dt(start_date.year, start_date.month, start_date.day)
 
@@ -236,7 +235,7 @@ class Bitmex(API):
                     if count == 10:
                         r.raise_for_status()
                     LOG.warning("%s: Error processing %s: %s - %s, trying again", self.ID, symbol, date, r.status_code)
-                    time.sleep(10)
+                    await asyncio.sleep(10)
 
             data = zlib.decompress(r.content, zlib.MAX_WBITS | 32)
             yield filter(lambda x: len(x) and x.split(",")[1] == symbol and end_date >= pd.Timestamp(x.split(",")[0].replace("D", "T")) >= start_date, data.decode().split("\n")[1:])

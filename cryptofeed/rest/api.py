@@ -88,19 +88,19 @@ class API:
             resp.raise_for_status()
 
     # public / non account specific
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    async def ticker(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         raise NotImplementedError
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def funding(self, symbol: str, retry=None, retry_wait=0):
+    async def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         raise NotImplementedError
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def l3_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l3_book(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
     # account specific

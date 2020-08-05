@@ -1,9 +1,10 @@
+import asyncio
 import base64
 import hashlib
 import hmac
 import logging
 from decimal import Decimal
-from time import sleep, time
+from time import time
 
 import pandas as pd
 import requests
@@ -89,7 +90,7 @@ class Gemini(API):
         return resp.json()
 
     # Public Routes
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    async def ticker(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
         data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
         return {'pair': symbol,
@@ -98,7 +99,7 @@ class Gemini(API):
                 'ask': Decimal(data['ask'])
                 }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
         data = self._get(f"/v1/book/{sym}", retry, retry_wait)
         return {
@@ -112,7 +113,7 @@ class Gemini(API):
             })
         }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         sym = pair_std_to_exchange(symbol, self.ID)
         params = {'limit_trades': 500}
         if start:
@@ -146,7 +147,7 @@ class Gemini(API):
             if not start and not end:
                 break
             # GEMINI rate limits to 120 requests a minute
-            sleep(RATE_LIMIT_SLEEP)
+            await asyncio.sleep(RATE_LIMIT_SLEEP)
 
     # Trading APIs
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):

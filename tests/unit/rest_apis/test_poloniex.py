@@ -7,21 +7,24 @@ from cryptofeed.rest import Rest
 poloniex = Rest('config.yaml').Poloniex
 
 
-def test_get_ticker():
-    ticker = poloniex.ticker('BTC-USDT')
+@pytest.mark.asyncio
+async def test_get_ticker():
+    ticker = await poloniex.ticker('BTC-USDT')
     assert ticker['bid'] > 0
 
 
-def test_order_book():
-    order_book = poloniex.l2_book('BTC-USDT')
+@pytest.mark.asyncio
+async def test_order_book():
+    order_book = await poloniex.l2_book('BTC-USDT')
 
     assert BID in order_book
     assert ASK in order_book
     assert len(order_book[BID]) > 0
 
 
-def test_trade_history():
-    trade_history = list(next(poloniex.trades('BTC-USDT', start='2020-01-01', end='2020-01-02')))
+@pytest.mark.asyncio
+async def test_trade_history():
+    trade_history = [next(trade) async for trade in poloniex.trades('BTC-USDT', start='2020-01-01', end='2020-01-02')]
     assert len(trade_history) > 0
     assert float(trade_history[0]['amount']) > 0
 

@@ -121,7 +121,7 @@ class Poloniex(API):
         return resp.json()
 
     # Public API Routes
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    async def ticker(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         sym = pair_std_to_exchange(symbol, self.ID)
         data = self._get("returnTicker", retry=retry, retry_wait=retry_wait)
         return {'pair': symbol,
@@ -130,7 +130,7 @@ class Poloniex(API):
                 'ask': Decimal(data[sym]['highestBid'])
                 }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
         data = self._get("returnOrderBook", {'currencyPair': sym}, retry=retry, retry_wait=retry_wait)
         return {
@@ -155,7 +155,7 @@ class Poloniex(API):
             'price': Decimal(trade['rate'])
         }
 
-    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         symbol = pair_std_to_exchange(symbol, self.ID)
 
         @request_retry(self.ID, retry, retry_wait)

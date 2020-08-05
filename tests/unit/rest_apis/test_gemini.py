@@ -8,22 +8,25 @@ public = Rest('config.yaml').Gemini
 sandbox = Rest('config.yaml', sandbox=True).Gemini
 
 
-def test_ticker():
-    ticker = public.ticker('BTC-USD')
+@pytest.mark.asyncio
+async def test_ticker():
+    ticker = await public.ticker('BTC-USD')
 
     assert BID in ticker
     assert ASK in ticker
 
 
-def test_order_book():
-    current_order_book = public.l2_book('BTC-USD')
+@pytest.mark.asyncio
+async def test_order_book():
+    current_order_book = await public.l2_book('BTC-USD')
 
     assert BID in current_order_book
     assert len(current_order_book[BID]) > 0
 
 
-def test_trade_history():
-    trade_history = list(public.trades('BTC-USD'))
+@pytest.mark.asyncio
+async def test_trade_history():
+    trade_history = [trade async for trade in public.trades('BTC-USD')]
 
     assert len(trade_history) > 0
 

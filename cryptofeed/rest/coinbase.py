@@ -4,13 +4,13 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import base64
 import hashlib
 import hmac
 import logging
 import time
 from decimal import Decimal
-from time import sleep
 
 import pandas as pd
 import requests
@@ -100,7 +100,7 @@ class Coinbase(API):
 
         return helper(method, api, endpoint, body, auth)
 
-    def _date_to_trade(self, symbol: str, date: pd.Timestamp) -> int:
+    async def _date_to_trade(self, symbol: str, date: pd.Timestamp) -> int:
         """
         Coinbase uses trade ids to query historical trades, so
         need to search for the start date
@@ -111,11 +111,11 @@ class Coinbase(API):
         while True:
             r = self._request('GET', f'/products/{symbol}/trades?after={bound}')
             if r.status_code == 429:
-                time.sleep(10)
+                await asyncio.sleep(10)
                 continue
             elif r.status_code != 200:
                 LOG.warning("Error %s: %s", r.status_code, r.text)
-                time.sleep(60)
+                await asyncio.sleep(60)
                 continue
             data = r.json()
             data = list(reversed(data))
@@ -133,7 +133,7 @@ class Coinbase(API):
                 else:
                     upper = bound
                     bound = (upper + lower) // 2
-            time.sleep(RATE_LIMIT_SLEEP)
+            await asyncio.sleep(RATE_LIMIT_SLEEP)
 
     def _trade_normalize(self, symbol: str, data: dict) -> dict:
         return {
@@ -146,14 +146,14 @@ class Coinbase(API):
             'price': data['price'],
         }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         if end and not start:
             start = '2014-12-01'
         if start:
             if not end:
                 end = pd.Timestamp.utcnow()
-            start_id = self._date_to_trade(symbol, pd.Timestamp(start, tzinfo=UTC))
-            end_id = self._date_to_trade(symbol, pd.Timestamp(end, tzinfo=UTC))
+            start_id = await self._date_to_trade(symbol, pd.Timestamp(start, tzinfo=UTC))
+            end_id = await self._date_to_trade(symbol, pd.Timestamp(end, tzinfo=UTC))
             while True:
                 limit = 100
                 start_id += 100
@@ -163,18 +163,18 @@ class Coinbase(API):
                 if limit > 0:
                     r = self._request('GET', f'/products/{symbol}/trades?after={start_id}&limit={limit}', retry=retry, retry_wait=retry_wait)
                     if r.status_code == 429:
-                        time.sleep(10)
+                        await asyncio.sleep(10)
                         continue
                     elif r.status_code != 200:
                         LOG.warning("Error %s: %s", r.status_code, r.text)
-                        time.sleep(60)
+                        await asyncio.sleep(60)
                         continue
                     data = r.json()
                     try:
                         data = list(reversed(data))
                     except Exception:
                         LOG.warning("Error %s: %s", r.status_code, r.text)
-                        sleep(60)
+                        await asyncio.sleep(60)
                         continue
                 else:
                     break
@@ -185,7 +185,7 @@ class Coinbase(API):
         else:
             yield [self._trade_normalize(symbol, d) for d in self._request('GET', f"/products/{symbol}/trades", retry=retry, retry_wait=retry_wait).json()]
 
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    async def ticker(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
         self._handle_error(data, LOG)
         data = data.json()
@@ -195,11 +195,11 @@ class Coinbase(API):
                 'ask': Decimal(data['ask'])
                 }
 
-    def _book(self, symbol: str, level: int, retry, retry_wait):
+    async def _book(self, symbol: str, level: int, retry, retry_wait):
         return self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait).json()
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=10):
-        data = self._book(symbol, 2, retry, retry_wait)
+    async def l2_book(self, symbol: str, retry=None, retry_wait=10):
+        data = await self._book(symbol, 2, retry, retry_wait)
         return {
             BID: sd({
                 Decimal(u[0]): Decimal(u[1])
@@ -211,8 +211,8 @@ class Coinbase(API):
             })
         }
 
-    def l3_book(self, symbol: str, retry=None, retry_wait=10):
-        orders = self._book(symbol, 3, retry, retry_wait)
+    async def l3_book(self, symbol: str, retry=None, retry_wait=10):
+        orders = await self._book(symbol, 3, retry, retry_wait)
         ret = {BID: sd({}), ASK: sd({})}
         for side in (BID, ASK):
             for price, size, order_id in orders[side + 's']:

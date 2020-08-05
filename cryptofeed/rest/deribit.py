@@ -1,5 +1,5 @@
+import asyncio
 import logging
-from time import sleep
 
 import pandas as pd
 import requests
@@ -19,12 +19,12 @@ class Deribit(API):
     ID = DERIBIT
     api = "https://www.deribit.com/api/v2/public/"
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = pair_std_to_exchange(symbol, self.ID)
-        for data in self._get_trades(symbol, start, end, retry, retry_wait):
+        async for data in self._get_trades(symbol, start, end, retry, retry_wait):
             yield data
 
-    def _get_trades(self, instrument, start_date, end_date, retry, retry_wait):
+    async def _get_trades(self, instrument, start_date, end_date, retry, retry_wait):
         start = None
         end = None
 
@@ -48,16 +48,16 @@ class Deribit(API):
             r = helper(start, end)
 
             if r.status_code == 429:
-                sleep(int(r.headers['Retry-After']))
+                await asyncio.sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
-                sleep(retry_wait)
+                await asyncio.sleep(retry_wait)
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                await asyncio.sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()["result"]["trades"]
             if data == []:
@@ -91,10 +91,10 @@ class Deribit(API):
         }
         return ret
 
-    def l2_book(self, symbol: str, retry=0, retry_wait=0):
-        return self._book(symbol, retry=retry, retry_wait=retry_wait)
+    async def l2_book(self, symbol: str, retry=0, retry_wait=0):
+        return await self._book(symbol, retry=retry, retry_wait=retry_wait)
 
-    def _book(self, symbol: str, retry=0, retry_wait=0):
+    async def _book(self, symbol: str, retry=0, retry_wait=0):
         ret = {}
         symbol = pair_std_to_exchange(symbol, self.ID)
         ret[symbol] = {BID: sd(), ASK: sd()}
@@ -107,11 +107,11 @@ class Deribit(API):
             r = helper()
 
             if r.status_code == 429:
-                sleep(int(r.headers['Retry-After']))
+                await asyncio.sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
-                sleep(retry_wait)
+                await asyncio.sleep(retry_wait)
                 if retry == 0:
                     break
                 continue

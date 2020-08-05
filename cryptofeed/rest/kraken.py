@@ -4,6 +4,7 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -109,7 +110,7 @@ class Kraken(API):
         return resp.json()
 
     # public API
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    async def ticker(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID + 'REST')
         data = self._post_public(f"/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
@@ -121,7 +122,7 @@ class Kraken(API):
                     'ask': Decimal(val['a'][0])
                     }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID + 'REST')
         data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
         for _, val in data['result'].items():
@@ -136,11 +137,11 @@ class Kraken(API):
                 })
             }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         if start:
             if not end:
                 end = pd.Timestamp.utcnow()
-            for data in self._historical_trades(symbol, start, end, retry, retry_wait):
+            async for data in self._historical_trades(symbol, start, end, retry, retry_wait):
                 yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
         else:
             sym = pair_std_to_exchange(symbol, self.ID + 'REST')
@@ -149,7 +150,7 @@ class Kraken(API):
             data = data[list(data.keys())[0]]
             yield [self._trade_normalization(d, symbol) for d in data]
 
-    def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
+    async def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
         symbol = pair_std_to_exchange(symbol, self.ID + 'REST')
 
         @request_retry(self.ID, retry, retry_wait)
@@ -165,17 +166,17 @@ class Kraken(API):
 
             if r.status_code == 504 or r.status_code == 520:
                 # cloudflare gateway timeout or other error
-                time.sleep(60)
+                await asyncio.sleep(60)
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
             else:
-                time.sleep(RATE_LIMIT_SLEEP)
+                await asyncio.sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()
             if 'error' in data and data['error']:
                 if data['error'] == ['EAPI:Rate limit exceeded']:
-                    time.sleep(5)
+                    await asyncio.sleep(5)
                     continue
                 else:
                     raise Exception(f"Error processing URL {r.url}: {data['error']}")

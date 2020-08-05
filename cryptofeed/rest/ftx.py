@@ -4,8 +4,8 @@ Copyright (C) 2017-2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import logging
-from time import sleep
 
 import pandas as pd
 import requests
@@ -37,7 +37,7 @@ class FTX(API):
             return resp.json()
         return helper()
 
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    async def ticker(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
         data = self._get(f"/markets/{sym}", retry=retry, retry_wait=retry_wait)
 
@@ -47,7 +47,7 @@ class FTX(API):
                 'ask': data['result']['ask']
                 }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
         data = self._get(f"/markets/{sym}/orderbook", {'depth': 100}, retry=retry, retry_wait=retry_wait)
         return {
@@ -61,49 +61,48 @@ class FTX(API):
             })
         }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = pair_std_to_exchange(symbol, self.ID)
-        for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
+        async for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def funding(self, symbol: str, start_date=None, end_date=None, retry=None, retry_wait=10):
-        last = []
+    async def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         start = None
         end = None
 
-        if end_date and not start_date:
-            start_date = '2019-01-01'
+        if end and not start:
+            start = '2019-01-01'
 
-        if start_date:
-            if not end_date:
-                end_date = pd.Timestamp.utcnow()
-            start = API._timestamp(start_date)
-            end = API._timestamp(end_date)
+        if start:
+            if not end:
+                end = pd.Timestamp.utcnow()
+            start = API._timestamp(start)
+            end = API._timestamp(end)
 
             start = int(start.timestamp())
             end = int(end.timestamp())
 
         @request_retry(self.ID, retry, retry_wait)
-        def helper(start, end):
+        def helper():
             if start and end:
                 return requests.get(f"{self.api}/funding_rates?future={symbol}&start_time={start}&end_time={end}")
             else:
                 return requests.get(f"{self.api}/funding_rates?symbol={symbol}")
 
         while True:
-            r = helper(start, end)
+            r = helper()
 
             if r.status_code == 429:
-                sleep(RATE_LIMIT_SLEEP)
+                await asyncio.sleep(RATE_LIMIT_SLEEP)
                 continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
-                sleep(retry_wait)
+                await asyncio.sleep(retry_wait)
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                await asyncio.sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()['result']
             if data == []:
@@ -134,7 +133,7 @@ class FTX(API):
 
         return ret
 
-    def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
+    async def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
         last = []
         start = None
         end = None
@@ -159,19 +158,19 @@ class FTX(API):
                 return requests.get(f"{self.api}/markets/{symbol}/trades")
 
         while True:
-            r = helper(start, end)
+            r = helper()
 
             if r.status_code == 429:
-                sleep(RATE_LIMIT_SLEEP)
+                await asyncio.sleep(RATE_LIMIT_SLEEP)
                 continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
-                sleep(retry_wait)
+                await asyncio.sleep(retry_wait)
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                await asyncio.sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()['result']
             if data == []:

@@ -4,12 +4,12 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import hashlib
 import hmac
 import logging
 import time
 from decimal import Decimal
-from time import sleep
 
 import pandas as pd
 import requests
@@ -95,7 +95,7 @@ class Bitfinex(API):
 
         return ret
 
-    def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
+    async def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
         last = []
         start = None
         end = None
@@ -120,16 +120,16 @@ class Bitfinex(API):
             r = helper(start, end)
 
             if r.status_code == 429:
-                sleep(int(r.headers['Retry-After']))
+                await asyncio.sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
-                sleep(retry_wait)
+                await asyncio.sleep(retry_wait)
                 continue
             elif r.status_code != 200:
                 self._handle_error(r, LOG)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                await asyncio.sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()
             if data == []:
@@ -151,12 +151,12 @@ class Bitfinex(API):
             if len(orig_data) < REQUEST_LIMIT:
                 break
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = pair_std_to_exchange(symbol, self.ID)
-        for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
+        async for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    async def ticker(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID)
         data = self._get(f"ticker/{sym}", retry, retry_wait)
         return {'pair': symbol,
@@ -165,18 +165,17 @@ class Bitfinex(API):
                 'ask': Decimal(data[2])
                 }
 
-    def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = f"f{symbol}"
-        for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
+    async def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        async for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
             yield data
 
-    def l2_book(self, symbol: str, retry=0, retry_wait=0):
-        return self._book(symbol, retry=retry, retry_wait=retry_wait)
+    async def l2_book(self, symbol: str, retry=0, retry_wait=0):
+        return await self._book(symbol, retry=retry, retry_wait=retry_wait)
 
-    def l3_book(self, symbol: str, retry=0, retry_wait=0):
-        return self._book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
+    async def l3_book(self, symbol: str, retry=0, retry_wait=0):
+        return await self._book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
 
-    def _book(self, symbol: str, l3=False, retry=0, retry_wait=0):
+    async def _book(self, symbol: str, l3=False, retry=0, retry_wait=0):
         ret = {}
         sym = symbol
         funding = False
@@ -199,11 +198,11 @@ class Bitfinex(API):
             r = helper()
 
             if r.status_code == 429:
-                sleep(int(r.headers['Retry-After']))
+                await asyncio.sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
                 LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
-                sleep(retry_wait)
+                await asyncio.sleep(retry_wait)
                 if retry == 0:
                     break
                 continue

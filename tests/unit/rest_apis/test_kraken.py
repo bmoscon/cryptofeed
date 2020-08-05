@@ -7,13 +7,15 @@ from cryptofeed.rest import Rest
 kraken = Rest('config.yaml').kraken
 
 
-def test_get_order_book():
-    book = kraken.l2_book('BTC-USD')
+@pytest.mark.asyncio
+async def test_get_order_book():
+    book = await kraken.l2_book('BTC-USD')
     assert len(book[BID]) > 0
 
 
-def test_get_recent_trades():
-    trades = list(kraken.trades('BTC-USD'))
+@pytest.mark.asyncio
+async def test_get_recent_trades():
+    trades = [trade async for trade in kraken.trades('BTC-USD')]
     assert len(trades) > 0
 
 
