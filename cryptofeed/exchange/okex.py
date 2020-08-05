@@ -32,3 +32,14 @@ class OKEx(OKCoin):
         for data in OKEx.get_active_symbols_info():
             symbols.append(data['instrument_id'])
         return symbols
+
+    @staticmethod
+    def get_active_option_contracts_info(underlying: str):
+        return requests.get(OKEx.api + f'option/v3/instruments/{underlying}').json()
+
+    @staticmethod
+    def get_active_option_contracts(underlying: str):
+        symbols = []
+        for data in OKEx.get_active_option_contracts_info(underlying):
+            symbols.append(data['instrument_id'])
+        return symbols
