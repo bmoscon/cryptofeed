@@ -51,7 +51,7 @@
   * Feature: New exchange: Binance Futures
   * Feature: New Exchange: Binance Jersey
   * Feature: Funding data on Kraken Futures
-  * Feature: User defined pair seperator (default still -)
+  * Feature: User defined pair separator (default still -)
   * Feature: Postgres backend
   * Feature: Deribit Funding
   * Bugfix: Deribit subscriptions using config subscribed to symbols incorrectly
@@ -210,10 +210,10 @@
   * Feature #40: NBBO now uses best bid/ask from L2 books
   * Feature #28: GDAX now renamed Coinbase and uses coinbase endpoints
   * Feature: ZeroMQ backend. Write updates directly to zmq connection
-  * Feature: UDP Socket backend. Write updates directy to UDP socket
+  * Feature: UDP Socket backend. Write updates directly to UDP socket
 
 ### 0.16.0 (2018-10-4)
-  * Feature: L2 books are now all price aggregted amounts, L3 books are price aggregated orders
+  * Feature: L2 books are now all price aggregated amounts, L3 books are price aggregated orders
   * Book deltas supported on all feeds
   * Bugfix: Fix NBBO feed
 

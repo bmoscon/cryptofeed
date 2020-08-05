@@ -11,7 +11,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
-aiohttp = ">=3.6.2"      # used by backends/http.py
+aiohttp = ">=3.6.2"
 pandas = "*"
 requests = ">=2.18.4"
 sortedcontainers = ">=1.5.9"
