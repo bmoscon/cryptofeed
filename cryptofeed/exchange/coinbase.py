@@ -261,6 +261,7 @@ class Coinbase(Feed):
         await self.book_callback(self.l3_book, L3_BOOK, pair, False, delta, ts, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
+        # PERF perf_start(self.id, 'msg')
         msg = json.loads(msg, parse_float=Decimal)
 
         if 'product_id' in msg and 'sequence' in msg and ('full' in self.channels or ('full' in self.config and msg['product_id'] in self.config['full'])):
@@ -298,6 +299,8 @@ class Coinbase(Feed):
                 pass
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
+            # PERF perf_end(self.id, 'msg')
+            # PERF perf_log(self.id, 'msg')
 
     async def subscribe(self, websocket):
         self.__reset()
