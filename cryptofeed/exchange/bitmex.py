@@ -93,6 +93,8 @@ class Bitmex(Feed):
         """
         the Full bitmex book
         """
+        # PERF perf_start(self.id, 'book_msg')
+
         delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
         forced = False
@@ -148,6 +150,8 @@ class Bitmex(Feed):
         else:
             LOG.warning("%s: Unexpected l2 Book message %s", self.id, msg)
             return
+        # PERF perf_end(self.id, 'book_msg')
+        # PERF perf_log(self.id, 'book_msg')
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
