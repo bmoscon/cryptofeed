@@ -60,7 +60,7 @@ class Blockchain(Feed):
 
     async def _handle_l2_msg(self, msg: str, timestamp: float):
         """
-        Subscribed messsage
+        Subscribed message
         {
           "seqnum": 1,
           "event": "subscribed",
