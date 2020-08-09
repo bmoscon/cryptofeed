@@ -92,7 +92,7 @@ This also mean we'll need to add support for the various channel mappings in `st
       ```
 
 ## Message Handler
-Now that we can subscribe to trades, we can add the message handler (which is called by the feedhandler when messages are received on ther websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot intepret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and pair are sent in the update so we'll need to parse those out to properly handle the message.
+Now that we can subscribe to trades, we can add the message handler (which is called by the feedhandler when messages are received on a websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot interpret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and pair are sent in the update so we'll need to parse those out to properly handle the message.
 
 
 ```python
