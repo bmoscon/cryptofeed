@@ -227,7 +227,7 @@ class Deribit(Feed):
             await self._trade(msg_dict, timestamp)
         elif "book" == msg_dict["params"]["channel"].split(".")[0]:
 
-            # cheking if we got full book or its update
+            # checking if we got full book or its update
             # if it's update there is 'prev_change_id' field
             if "prev_change_id" not in msg_dict["params"]["data"].keys():
                 await self._book_snapshot(msg_dict, timestamp)
