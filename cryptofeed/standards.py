@@ -294,13 +294,19 @@ def normalize_trading_options(exchange, option):
 
 
 def feed_to_exchange(exchange, feed):
+    def raise_error():
+        exception = UnsupportedDataFeed(f"{feed} is not currently supported on {exchange}")
+        LOG.error("Error: %r", exception)
+        raise exception
+
     if exchange == POLONIEX:
         if feed not in _feed_to_exchange_map:
             return pair_std_to_exchange(feed, POLONIEX)
+    try:
+        ret = _feed_to_exchange_map[feed][exchange]
+    except KeyError:
+        raise_error()
 
-    ret = _feed_to_exchange_map[feed][exchange]
     if ret == UNSUPPORTED:
-        exception = UnsupportedDataFeed(f"{feed} is not supported on {exchange}")
-        LOG.error("Raise %r", exception)
-        raise exception
+        raise_error()
     return ret
