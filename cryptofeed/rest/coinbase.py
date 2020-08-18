@@ -20,6 +20,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, COINBASE, FILLED, LIMIT, MARKET, OPEN, PARTIAL, PENDING, SELL
 from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest.exceptions import UnexpectedMessage
 from cryptofeed.standards import normalize_trading_options, timestamp_normalize
 
 
@@ -37,6 +38,8 @@ class Coinbase(API):
 
     @staticmethod
     def _order_status(data):
+        if 'status' not in data:
+            raise UnexpectedMessage(f"Message from exchange: {data}")
         status = data['status']
         if data['status'] == 'done' and data['done_reason'] == 'canceled':
             status = PARTIAL
