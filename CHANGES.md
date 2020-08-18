@@ -4,6 +4,7 @@
   * Bugfix: #136 - Kraken Rate limiting
   * Feature: Funding data on Binance Futures
   * Bugfix: Support new Huobi tradeId field, old id field deprecated
+  * Bugfix: Unclear errors when unsupported data feeds used
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
