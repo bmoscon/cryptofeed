@@ -162,15 +162,15 @@ def kraken_pairs():
     r = requests.get('https://api.kraken.com/0/public/AssetPairs')
     data = r.json()
     for pair in data['result']:
-        alt = data['result'][pair]['altname']
-
-        if ".d" in alt:
+        if 'wsname' not in data['result'][pair] or '.d' in pair:
             # https://blog.kraken.com/post/259/introducing-the-kraken-dark-pool/
             # .d is for dark pool pairs
             continue
 
-        normalized = alt[:-3] + PAIR_SEP + alt[-3:]
-        exch = normalized.replace(PAIR_SEP, "/")
+        base, quote = data['result'][pair]['wsname'].split("/")
+
+        normalized = f"{base}{PAIR_SEP}{quote}"
+        exch = data['result'][pair]['wsname']
         normalized = normalized.replace('XBT', 'BTC')
         normalized = normalized.replace('XDG', 'DOG')
         ret[normalized] = exch
@@ -178,20 +178,7 @@ def kraken_pairs():
 
 
 def kraken_rest_pairs():
-    ret = {}
-    r = requests.get('https://api.kraken.com/0/public/AssetPairs')
-    data = r.json()
-    for pair in data['result']:
-        alt = data['result'][pair]['altname']
-        modifier = -3
-        if ".d" in alt:
-            modifier = -5
-        normalized = alt[:modifier] + PAIR_SEP + alt[modifier:]
-        exch = normalized.replace(PAIR_SEP, "")
-        normalized = normalized.replace('XBT', 'BTC')
-        normalized = normalized.replace('XDG', 'DOG')
-        ret[normalized] = exch
-    return ret
+    return {normalized: exchange.replace("/", "") for normalized, exchange in kraken_pairs().items()}
 
 
 def exx_pairs():
