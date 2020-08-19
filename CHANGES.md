@@ -6,6 +6,7 @@
   * Bugfix: Support new Huobi tradeId field, old id field deprecated
   * Bugfix: Unclear errors when unsupported data feeds used
   * Bugfix: Handle order status messages more gracefully in Coinbase
+  * Bugfix: Fix Kraken pair mappings
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
