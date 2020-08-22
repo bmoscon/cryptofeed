@@ -69,6 +69,7 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 * [EXX](https://www.exx.com/)
 * [FTX](https://ftx.com/)
 * [FTX US](https://ftx.us/)
+* [Gate.io](https://www.gate.io/)
 * [Gemini](https://gemini.com/)
 * [HitBTC](https://hitbtc.com/)
 * [Huobi](https://www.hbg.com/)
