@@ -22,6 +22,7 @@ from cryptofeed.exchange.deribit import Deribit
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.ftx import FTX
 from cryptofeed.exchange.ftx_us import FTXUS
+from cryptofeed.exchange.gateio import Gateio
 from cryptofeed.exchange.gemini import Gemini
 from cryptofeed.exchange.hitbtc import HitBTC
 from cryptofeed.exchange.huobi import Huobi

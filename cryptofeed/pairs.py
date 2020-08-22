@@ -14,7 +14,7 @@ import requests
 
 from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, EXX, FTX, FTX_US, GEMINI,
-                                HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, OKCOIN, OKEX, POLONIEX, UPBIT)
+                                HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, OKCOIN, OKEX, POLONIEX, UPBIT, GATEIO)
 
 
 LOG = logging.getLogger('feedhandler')
@@ -278,6 +278,11 @@ def blockchain_pairs():
     return {data["symbol"].replace("-", PAIR_SEP): data["symbol"] for data in r}
 
 
+def gateio_pairs():
+    r = requests.get("https://api.gateio.ws/api/v4/spot/currency_pairs").json()
+    return {data['id'].replace("_", PAIR_SEP): data['id'] for data in r}
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -306,4 +311,5 @@ _exchange_function_map = {
     BITCOINCOM: bitcoincom_pairs,
     BITMAX: bitmax_pairs,
     UPBIT: upbit_pairs,
+    GATEIO: gateio_pairs
 }

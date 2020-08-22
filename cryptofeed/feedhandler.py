@@ -18,7 +18,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANC
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT)
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
-from cryptofeed.defines import (FTX_US, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
+from cryptofeed.defines import (FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
                                 KRAKEN_FUTURES, L2_BOOK, OKCOIN, OKEX, POLONIEX, UPBIT)
 from cryptofeed.exceptions import ExhaustedRetries
 from cryptofeed.exchange.blockchain import Blockchain
@@ -61,7 +61,8 @@ _EXCHANGES = {
     OKCOIN: OKCoin,
     OKEX: OKEx,
     POLONIEX: Poloniex,
-    UPBIT: Upbit
+    UPBIT: Upbit,
+    GATEIO: Gateio
 }
 
 

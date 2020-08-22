@@ -15,7 +15,7 @@ import pandas as pd
 
 from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
-                                FTX_US, FUNDING, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
+                                FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
                                 KRAKEN_FUTURES, L2_BOOK, L2_BOOK_FUTURES, L2_BOOK_SWAP, L3_BOOK, LIMIT, LIQUIDATIONS,
                                 MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, TICKER, TICKER_FUTURES,
                                 TICKER_SWAP, TRADES, TRADES_FUTURES, TRADES_SWAP, UNSUPPORTED, UPBIT, VOLUME)
@@ -165,7 +165,8 @@ _feed_to_exchange_map = {
         BITTREX: TRADES,
         BITCOINCOM: 'subscribeTrades',
         BITMAX: TRADES,
-        UPBIT: TRADES
+        UPBIT: TRADES,
+        GATEIO: 'trades.subscribe'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -194,7 +195,8 @@ _feed_to_exchange_map = {
         BITTREX: 'SubscribeToSummaryDeltas',
         BITCOINCOM: 'subscribeTicker',
         BITMAX: UNSUPPORTED,
-        UPBIT: UNSUPPORTED
+        UPBIT: UNSUPPORTED,
+        GATEIO: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003
