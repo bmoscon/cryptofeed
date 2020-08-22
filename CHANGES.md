@@ -7,6 +7,7 @@
   * Bugfix: Unclear errors when unsupported data feeds used
   * Bugfix: Handle order status messages more gracefully in Coinbase
   * Bugfix: Fix Kraken pair mappings
+  * Featire: New Exchange - Gate.io
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
