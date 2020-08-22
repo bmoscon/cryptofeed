@@ -107,7 +107,8 @@ _feed_to_exchange_map = {
         BITTREX: 'SubscribeToExchangeDeltas',
         BITCOINCOM: 'subscribeOrderbook',
         BITMAX: L2_BOOK,
-        UPBIT: L2_BOOK
+        UPBIT: L2_BOOK,
+        GATEIO: 'depth.subscribe'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
