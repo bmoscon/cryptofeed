@@ -7,7 +7,8 @@
   * Bugfix: Unclear errors when unsupported data feeds used
   * Bugfix: Handle order status messages more gracefully in Coinbase
   * Bugfix: Fix Kraken pair mappings
-  * Featire: New Exchange - Gate.io
+  * Feature: New Exchange - Gate.io
+  * Feature: Remove \_SWAP, \_FUTURE channel (and callback) types - determine correct type at subscribe time based on symbol
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
