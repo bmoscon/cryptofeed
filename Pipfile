@@ -21,7 +21,7 @@ websockets = ">=7.0"
 aiodns = ">=1.1"   # aiodns speeds up DNS resolving
 cchardet = "*"     # cchardet is a faster replacement for chardet
 # --- Optional dependencies ------------------------------------------------------------------
-aiofile = "*"      # used by util/async_file.py
+aiofile = ">=2.0.0"      # used by util/async_file.py
 aiokafka = "*"     # pip install cryptofeed[kafka]
 aioredis = "*"     # pip install cryptofeed[redis]
 arctic = "*"       # pip install cryptofeed[arctic]
