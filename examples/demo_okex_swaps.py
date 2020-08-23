@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, FUNDING, L2_BOOK, L2_BOOK_SWAP, OPEN_INTEREST, TRADES, TRADES_SWAP
+from cryptofeed.defines import BID, ASK, FUNDING, L2_BOOK, OPEN_INTEREST, TRADES, TICKER
 from cryptofeed.exchanges import OKEx
 
 
@@ -26,10 +26,14 @@ async def funding(**kwargs):
     print(f"Funding: {kwargs}")
 
 
+async def ticker(**kwargs):
+    print(kwargs)
+
+
 def main():
     fh = FeedHandler()
 
-    fh.add_feed(OKEx(pairs=['EOS-USD-SWAP'], channels=[TRADES_SWAP, L2_BOOK_SWAP, OPEN_INTEREST, FUNDING], callbacks={FUNDING: funding, OPEN_INTEREST: open_interest, TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
+    fh.add_feed(OKEx(pairs=['EOS-USD-SWAP', 'BTC-USDT'], channels=[TICKER], callbacks={TICKER: ticker}))
 
     fh.run()
 

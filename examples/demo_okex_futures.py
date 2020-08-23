@@ -5,7 +5,7 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, L2_BOOK, L2_BOOK_FUTURES, TICKER, TICKER_FUTURES, TRADES, TRADES_FUTURES
+from cryptofeed.defines import BID, ASK, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import OKEx
 
 
@@ -26,11 +26,9 @@ async def ticker(feed, pair, bid, ask, timestamp, receipt_timestamp):
 def main():
     fh = FeedHandler()
 
-    callbacks = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker),
-                 TICKER_FUTURES: TickerCallback(ticker), TRADES_FUTURES: TradeCallback(trade),
-                 L2_BOOK_FUTURES: BookCallback(book)}
+    callbacks = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker)}
     pairs = OKEx.get_active_symbols()
-    fh.add_feed(OKEx(pairs=pairs, channels=[TRADES_FUTURES, L2_BOOK_FUTURES, TICKER_FUTURES], callbacks=callbacks))
+    fh.add_feed(OKEx(pairs=pairs, channels=[TRADES, L2_BOOK, TICKER], callbacks=callbacks))
 
     fh.run()
 

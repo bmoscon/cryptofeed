@@ -16,9 +16,9 @@ import pandas as pd
 from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
                                 FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
-                                KRAKEN_FUTURES, L2_BOOK, L2_BOOK_FUTURES, L2_BOOK_SWAP, L3_BOOK, LIMIT, LIQUIDATIONS,
-                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, TICKER, TICKER_FUTURES,
-                                TICKER_SWAP, TRADES, TRADES_FUTURES, TRADES_SWAP, UNSUPPORTED, UPBIT, VOLUME)
+                                KRAKEN_FUTURES, L2_BOOK, L3_BOOK, LIMIT, LIQUIDATIONS,
+                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, TICKER,
+                                TRADES, UNSUPPORTED, UPBIT, VOLUME)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs
 
@@ -97,7 +97,7 @@ _feed_to_exchange_map = {
         HUOBI_DM: 'depth.step0',
         HUOBI_SWAP: 'depth.step0',
         OKCOIN: 'spot/depth_l2_tbt',
-        OKEX: 'spot/depth_l2_tbt',
+        OKEX: '{}/depth_l2_tbt',
         COINBENE: L2_BOOK,
         DERIBIT: 'book',
         BYBIT: 'orderBookL2_25',
@@ -156,7 +156,7 @@ _feed_to_exchange_map = {
         HUOBI_DM: 'trade.detail',
         HUOBI_SWAP: 'trade.detail',
         OKCOIN: 'spot/trade',
-        OKEX: 'spot/trade',
+        OKEX: '{}/trade',
         COINBENE: TRADES,
         DERIBIT: 'trades',
         BYBIT: 'trade',
@@ -185,8 +185,8 @@ _feed_to_exchange_map = {
         BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
-        OKCOIN: 'spot/ticker',
-        OKEX: 'spot/ticker',
+        OKCOIN: '{}/ticker',
+        OKEX: '{}/ticker',
         COINBENE: TICKER,
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
@@ -208,29 +208,11 @@ _feed_to_exchange_map = {
         BINANCE_FUTURES: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
-        OKEX: 'swap/funding_rate',
+        OKEX: '{}/funding_rate',
         FTX: 'funding'
     },
-    TRADES_SWAP: {
-        OKEX: 'swap/trade'
-    },
-    TICKER_SWAP: {
-        OKEX: 'swap/ticker'
-    },
-    L2_BOOK_SWAP: {
-        OKEX: 'swap/depth_l2_tbt'
-    },
-    TRADES_FUTURES: {
-        OKEX: 'futures/trade'
-    },
-    TICKER_FUTURES: {
-        OKEX: 'futures/ticker'
-    },
-    L2_BOOK_FUTURES: {
-        OKEX: 'futures/depth_l2_tbt'
-    },
     OPEN_INTEREST: {
-        OKEX: 'swap/ticker',
+        OKEX: '{}/ticker',
         BITMEX: 'instrument',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
