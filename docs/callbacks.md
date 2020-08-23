@@ -4,7 +4,7 @@ Cryptofeed is a library that uses asyncio to handle asyncronous events. When `fh
 
 ### Callback Types
 
-There are two types of callbacks supported in cryptofeed, *raw* and *backend*. The raw callbacks delieve the data directly to the specified function. Backend callbacks take the data and do something else with it (typically store or send). Some examples of the backend callbacks are Redis, Postgres and TCP. You might use the redis or postgres callbacks to store the data, and you could use the TCP callback to send data to another application for processing.
+There are two types of callbacks supported in cryptofeed, *raw* and *backend*. The raw callbacks deliever the data directly to the specified function. Backend callbacks take the data and do something else with it (typically store or send). Some examples of the backend callbacks are Redis, Postgres and TCP. You might use the redis or postgres callbacks to store the data, and you could use the TCP callback to send data to another application for processing.
 
 The raw callbacks are defined [here](../cryptofeed/callback.py), along with their required arguments/kwargs. They are:
 
