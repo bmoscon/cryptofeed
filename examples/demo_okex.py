@@ -5,7 +5,7 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, L2_BOOK, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, L2_BOOK, TICKER, TRADES, FUNDING, OPEN_INTEREST
 from cryptofeed.exchanges import OKEx
 
 
@@ -23,12 +23,30 @@ async def ticker(feed, pair, bid, ask, timestamp, receipt_timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
 
 
+async def funding(**kwargs):
+    print(f"Funding update: {kwargs}")
+
+
+async def open_int(**kwargs):
+    print(f"Open interest update: {kwargs}")
+
+
 def main():
     fh = FeedHandler()
 
-    callbacks = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker)}
-    pairs = OKEx.get_active_symbols()
+    # Add futures contracts
+    callbacks = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book), TRADES: trade, TICKER: TickerCallback(ticker)}
+    pairs = OKEx.get_active_symbols()[:5]
     fh.add_feed(OKEx(pairs=pairs, channels=[TRADES, L2_BOOK, TICKER], callbacks=callbacks))
+    # Add swaps. Futures and swaps could be added together in one feed, but its clearer to
+    # add them as separate feeds.
+    # EOS-USD-SWAP is from the swap exchange, BTC-USDT is from spot exchage.  
+    fh.add_feed(OKEx(pairs=['EOS-USD-SWAP', 'BTC-USDT'], channels=[L2_BOOK, TICKER, TRADES], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker}))
+
+    # Open Interest and Funding Rates
+    fh.add_feed(OKEx(pairs=['EOS-USD-SWAP'], channels=[FUNDING], callbacks={FUNDING: funding}))
+    fh.add_feed(OKEx(pairs=pairs, channels=[OPEN_INTEREST], callbacks={OPEN_INTEREST: open_int}))
+
 
     fh.run()
 
