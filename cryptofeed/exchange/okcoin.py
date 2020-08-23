@@ -33,7 +33,7 @@ class OKCoin(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        
+
         def chan_format(channel, pair):
             if "SWAP" in pair:
                 return channel.format('swap')
