@@ -9,6 +9,7 @@
   * Bugfix: Fix Kraken pair mappings
   * Feature: New Exchange - Gate.io
   * Feature: Remove \_SWAP, \_FUTURE channel (and callback) types - determine correct type at subscribe time based on symbol
+  * Docs: Add documentation about callbacks
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
