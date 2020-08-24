@@ -63,7 +63,6 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 * [Binance Jersey](https://www.binance.je/en)
 * [Binance US](https://www.binance.us/en)
 * [BitMEX](https://www.bitmex.com/)
-* [CoinBene](https://www.coinbene.com/)
 * [Coinbase](https://www.coinbase.com/) (GDAX)
 * [Deribit](https://www.deribit.com/)
 * [EXX](https://www.exx.com/)
