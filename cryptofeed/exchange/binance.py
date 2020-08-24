@@ -144,6 +144,7 @@ class Binance(Feed):
                             leaves_qty=Decimal(msg['o']['q']),
                             price=Decimal(msg['o']['p']),
                             order_id=None,
+                            timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
 
@@ -254,7 +255,7 @@ class Binance(Feed):
                         if oi != self.open_interest.get(pair, None):
                             await self.callback(OPEN_INTEREST,
                                                 feed=self.id,
-                                                pair=pair,
+                                                pair=pair_exchange_to_std(pair),
                                                 open_interest=oi,
                                                 timestamp=data['time'],
                                                 receipt_timestamp=time()

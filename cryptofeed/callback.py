@@ -59,7 +59,8 @@ class BookUpdateCallback(Callback):
 
 
 class LiquidationCallback(Callback):
-    pass
+    async def __call__(self, *, feed: str, pair: str, side: str, leaves_qty: Decimal, price: Decimal, order_id: str, timestamp: float, receipt_timestamp: float):
+        await super().__call__(feed, pair, side, leaves_qty, price, order_id, timestamp, receipt_timestamp)
 
 
 class OpenInterestCallback(Callback):

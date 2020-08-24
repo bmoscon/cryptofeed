@@ -7,6 +7,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -35,6 +36,7 @@ class Deribit(Feed):
     def __reset(self):
         self.open_interest = {}
         self.l2_book = {}
+        self.seq_no = {}
 
     @staticmethod
     def get_instruments_info():
@@ -175,6 +177,22 @@ class Deribit(Feed):
         ))
 
     async def _book_snapshot(self, msg: dict, timestamp: float):
+        """
+        {
+            'jsonrpc': '2.0',
+            'method': 'subscription',
+            'params': {
+                'channel': 'book.BTC-PERPETUAL.raw',
+                'data': {
+                    'timestamp': 1598232105378,
+                    'instrument_name': 'BTC-PERPETUAL',
+                    'change_id': 21486665526, '
+                    'bids': [['new', Decimal('11618.5'), Decimal('279310.0')], ..... ]
+                    'asks': [[ ....... ]]
+                }
+            }
+        }
+        """
         ts = msg["params"]["data"]["timestamp"]
         pair = msg["params"]["data"]["instrument_name"]
         self.l2_book[pair] = {
@@ -189,11 +207,21 @@ class Deribit(Feed):
             })
         }
 
+        self.seq_no[pair] = msg["params"]["data"]["change_id"]
+
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, ts), timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
         ts = msg["params"]["data"]["timestamp"]
         pair = msg["params"]["data"]["instrument_name"]
+
+        if msg['params']['data']['prev_change_id'] != self.seq_no[pair]:
+            LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
+            LOG.warning("%s: Requesting book snapshot", self.id)
+            raise MissingSequenceNumber
+
+        self.seq_no[pair] = msg['params']['data']['change_id']
+
         delta = {BID: [], ASK: []}
 
         for action, price, amount in msg["params"]["data"]["bids"]:

@@ -470,6 +470,7 @@ class Bitmex(Feed):
                                     leaves_qty=Decimal(data['leavesQty']),
                                     price=Decimal(data['price']),
                                     order_id=data['orderID'],
+                                    timestamp=timestamp,
                                     receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):

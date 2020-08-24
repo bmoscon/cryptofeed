@@ -158,6 +158,7 @@ class FTX(Feed):
                                     leaves_qty=Decimal(trade['size']),
                                     price=Decimal(trade['price']),
                                     order_id=None,
+                                    timestamp=float(timestamp_normalize(self.id, trade['time'])),
                                     receipt_timestamp=timestamp
                                     )
 
