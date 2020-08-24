@@ -29,7 +29,7 @@ class AsyncFileCallback:
         p = f"{self.path}/{uuid}.{self.count[uuid]}"
         async with AIOFile(p, mode='a') as fp:
             r = await fp.write("\n".join(self.data[uuid]) + "\n", offset=self.pointer[uuid])
-            self.pointer[uuid] += len(r)
+            self.pointer[uuid] += r
             self.data[uuid] = []
 
         if self.pointer[uuid] >= self.rotate:
