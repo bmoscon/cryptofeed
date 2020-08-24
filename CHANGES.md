@@ -10,6 +10,7 @@
   * Feature: New Exchange - Gate.io
   * Feature: Remove \_SWAP, \_FUTURE channel (and callback) types - determine correct type at subscribe time based on symbol
   * Docs: Add documentation about callbacks
+  * Feature: Deribit provides sequence number for book updates - check them to ensure no messages lost
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
