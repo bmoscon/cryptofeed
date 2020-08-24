@@ -94,6 +94,7 @@ class Deribit(Feed):
                                     leaves_qty=Decimal(trade['amount']),
                                     price=Decimal(trade['price']),
                                     order_id=trade['trade_id'],
+                                    timestamp=timestamp_normalize(self.id, trade['timestamp']),
                                     receipt_timestamp=timestamp
                                     )
 

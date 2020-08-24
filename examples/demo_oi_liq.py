@@ -49,13 +49,13 @@ async def liquidations(feed, pair, side, leaves_qty, price, order_id, timestamp,
 
 def main():
     f = FeedHandler()
-    #f.add_feed(FTX(pairs=ftx_pairs(), channels=[OPEN_INTEREST, LIQUIDATIONS],
-    #               callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
-    #                          LIQUIDATIONS: LiquidationCallback(liquidations)}))
+    f.add_feed(FTX(pairs=ftx_pairs(), channels=[OPEN_INTEREST, LIQUIDATIONS],
+                   callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
+                              LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
-    #f.add_feed(BinanceFutures(pairs=binance_futures_pairs(), channels=[LIQUIDATIONS], callbacks={LIQUIDATIONS: LiquidationCallback(liquidations)}))
+    f.add_feed(BinanceFutures(pairs=binance_futures_pairs(), channels=[OPEN_INTEREST, LIQUIDATIONS], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
-    f.add_feed(Deribit(pairs=['BTC-PERPETUAL', 'ETH-PERPETUAL'], channels=[LIQUIDATIONS],
+    f.add_feed(Deribit(pairs=['BTC-PERPETUAL', 'ETH-PERPETUAL'], channels=[LIQUIDATIONS, OPEN_INTEREST],
                        callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
                                   LIQUIDATIONS: LiquidationCallback(liquidations)}))
     f.run()

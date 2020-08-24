@@ -257,7 +257,7 @@ class Binance(Feed):
                                                 feed=self.id,
                                                 pair=pair_exchange_to_std(pair),
                                                 open_interest=oi,
-                                                timestamp=data['time'],
+                                                timestamp=timestamp_normalize(self.id, data['time']),
                                                 receipt_timestamp=time()
                                                 )
                             self.open_interest[pair] = oi
