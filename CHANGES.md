@@ -13,6 +13,7 @@
   * Feature: Deribit provides sequence number for book updates - check them to ensure no messages lost
   * Bugfix: Fix timestamp on Binance Futures Open Interest
   * Bugfix: Update/standardize liquidation callbacks
+  * Feature: Update Upbit subscription methods based on updated docs
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
