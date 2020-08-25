@@ -71,13 +71,13 @@ class BinanceFutures(Binance):
             # the ticker stream (<symbol>@bookTicker) is
             # the only payload without an "e" key describing the event type
             await self._ticker(msg, timestamp)
-        elif msg['e'] == 'depthUpdate':
+        elif msg_type == 'depthUpdate':
             await self._book(msg, pair, timestamp)
-        elif msg['e'] == 'aggTrade':
+        elif msg_type == 'aggTrade':
             await self._trade(msg, timestamp)
-        elif msg['e'] == 'forceOrder':
+        elif msg_type == 'forceOrder':
             await self._liquidations(msg, timestamp)
-        elif msg['e'] == 'markPriceUpdate':
+        elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
