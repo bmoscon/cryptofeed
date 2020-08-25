@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+import uuid
 
 import requests
 from sortedcontainers import SortedDict as sd
@@ -35,9 +36,6 @@ class Upbit(Feed):
         for data in Upbit.get_active_symbols_info():
             symbols.append(pair_exchange_to_std(data['market']))
         return symbols
-
-    async def _snapshot(self, pair: str):
-        self.l2_book[pair] = {BID: sd(), ASK: sd()}
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -104,12 +102,7 @@ class Upbit(Feed):
         """
         pair = pair_exchange_to_std(msg['cd'])
         orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
-
-        if pair not in self.l2_book:
-            await self._snapshot(pair)
-
-        # forced = True if the snapshot received, otherwise(realtime) forced set to be false
-        forced = True if msg['st'] == 'SNAPSHOT' else False
+        forced = pair not in self.l2_book
 
         update = {
             BID: sd({
@@ -215,17 +208,17 @@ class Upbit(Feed):
         """
 
         self.__reset()
-        chans = [{"ticket": "UNIQUE_TICKET"}, {"format": "SIMPLE"}]
+        chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
         for channel in self.channels if not self.config else self.config:
             codes = list()
             for pair in self.pairs if not self.config else self.config[channel]:
                 codes.append(pair)
 
             if channel == L2_BOOK:
-                chans.append({"type": "orderbook", "codes": codes})
+                chans.append({"type": "orderbook", "codes": codes, 'isOnlyRealtime': True})
             if channel == TRADES:
-                chans.append({"type": "trade", "codes": codes})
+                chans.append({"type": "trade", "codes": codes, 'isOnlyRealtime': True})
             if channel == TICKER:
-                chans.append({"type": "ticker", "codes": codes})
+                chans.append({"type": "ticker", "codes": codes, 'isOnlyRealtime': True})
 
         await websocket.send(json.dumps(chans))
