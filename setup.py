@@ -35,7 +35,7 @@ setup(
     version="1.6.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
-    description="Cryptocurrency feed handler and synthetic NBBO feed",
+    description="Cryptocurrency Exchange Websocket Data Feed Handler",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     license="XFree86",
