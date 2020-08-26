@@ -20,7 +20,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, db=None, key=None, create_db=True, numeric_type=str, org=None, bucket=None, token=None, precision='ns', **kwargs):
+    def __init__(self, addr: str, db=None, key=None, create_db=True, numeric_type=str, org=None, bucket=None, token=None, precision='ns', username=None, password=None, **kwargs):
         """
         Parent class for InfluxDB callbacks
 
@@ -63,6 +63,10 @@ class InfluxCallback(HTTPCallback):
           Token string for authentication
         precision: str (For InfluxDB 2.0 compatibility)
           Precision level among (s, ms, us, ns)
+        username: str
+          Influxdb username for authentication
+        password: str
+          Influxdb password for authentication          
         """
         super().__init__(addr, **kwargs)
         if org and bucket and token:
@@ -70,15 +74,15 @@ class InfluxCallback(HTTPCallback):
             self.headers = {"Authorization": f"Token {token}"}
         else:
             if create_db:
-                r = requests.post(f'{addr}/query', data={'q': f'CREATE DATABASE {db}'})
+                r = requests.post(f'{addr}/query?u={username}&p={password}', data={'q': f'CREATE DATABASE {db}'})
                 r.raise_for_status()
-            self.addr = f"{addr}/write?db={db}"
+            self.addr = f"{addr}/write?db={db}&u={username}&p={password}"
             self.headers = {}
-
+       
         self.session = None
         self.numeric_type = numeric_type
         self.key = key if key else self.default_key
-
+        
     async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         d = ''
 
