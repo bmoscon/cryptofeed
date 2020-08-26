@@ -11,7 +11,7 @@ from textwrap import wrap
 from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
 
 
 LOG = logging.getLogger('feedhandler')
@@ -119,3 +119,7 @@ class TickerSocket(SocketCallback, BackendTickerCallback):
 
 class OpenInterestSocket(SocketCallback, BackendOpenInterestCallback):
     default_key = 'open_interest'
+
+
+class LiquidationsSocket(SocketCallback, BackendLiquidationsCallback):
+    default_key = 'liquidations'

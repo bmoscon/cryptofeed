@@ -10,7 +10,7 @@ from decimal import Decimal
 import requests
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
 from cryptofeed.exceptions import UnsupportedType
@@ -149,3 +149,7 @@ class TickerInflux(InfluxCallback, BackendTickerCallback):
 
 class OpenInterestInflux(InfluxCallback, BackendOpenInterestCallback):
     default_key = 'open_interest'
+
+
+class LiquidationsInflux(InfluxCallback, BackendLiquidationsCallback):
+    default_key = 'liquidations'
