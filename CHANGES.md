@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.5.1
+### 1.5.1 (2020-08-26)
   * Bugfix: #136 - Kraken Rate limiting
   * Feature: Funding data on Binance Futures
   * Bugfix: Support new Huobi tradeId field, old id field deprecated
@@ -14,6 +14,8 @@
   * Bugfix: Fix timestamp on Binance Futures Open Interest
   * Bugfix: Update/standardize liquidation callbacks
   * Feature: Update Upbit subscription methods based on updated docs
+  * Bugfix: Ticker not working correctly on Binance Futures
+  * Feature: Liquidations callbacks for backends
 
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
