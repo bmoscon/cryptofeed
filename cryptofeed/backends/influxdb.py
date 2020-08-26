@@ -78,11 +78,11 @@ class InfluxCallback(HTTPCallback):
                 r.raise_for_status()
             self.addr = f"{addr}/write?db={db}&u={username}&p={password}"
             self.headers = {}
-       
+
         self.session = None
         self.numeric_type = numeric_type
         self.key = key if key else self.default_key
-        
+
     async def write(self, feed, pair, timestamp, receipt_timestamp, data):
         d = ''
 
