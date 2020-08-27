@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.6.0
+  * Feature: Validate FTX book checksums (optionally enabled)
+
 ### 1.5.1 (2020-08-26)
   * Bugfix: #136 - Kraken Rate limiting
   * Feature: Funding data on Binance Futures
