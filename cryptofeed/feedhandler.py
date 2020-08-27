@@ -203,7 +203,14 @@ class FeedHandler:
                 # Coinbase frequently will not respond to pings within the ping interval, so
                 # disable the interval in favor of the internal watcher, which will
                 # close the connection and reconnect in the event that no message from the exchange
-                # has been received (as opposed to a missing ping)
+                # has been received (as opposed to a missing ping).
+                #
+                # address can be None for binance futures when only open interest is configured
+                # because that data is collected over a periodic REST polling task
+                if feed.address is None:
+                    await feed.subscribe(None)
+                    return
+
                 async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None,
                         max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
                     asyncio.ensure_future(self._watch(feed.uuid, websocket))

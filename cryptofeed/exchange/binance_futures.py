@@ -36,6 +36,8 @@ class BinanceFutures(Binance):
                 else:
                     stream = f"{pair}@{chan}/"
                 address += stream
+        if address == f"{self.ws_endpoint}/stream?streams=":
+            return None
         return address[:-1]
 
     def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):

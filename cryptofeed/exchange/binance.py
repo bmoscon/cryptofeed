@@ -37,8 +37,6 @@ class Binance(Feed):
     def _address(self):
         address = self.ws_endpoint + '/stream?streams='
         for chan in self.channels if not self.config else self.config:
-            if chan == OPEN_INTEREST:
-                continue
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
