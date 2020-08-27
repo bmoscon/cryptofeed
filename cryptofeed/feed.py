@@ -19,7 +19,7 @@ class Feed:
     id = 'NotImplemented'
 
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, cross_check=False, origin=None):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, checksum_validation=False, cross_check=False, origin=None):
         self.hash = str(uuid.uuid4())
         self.uuid = self.id + self.hash
         self.config = defaultdict(set)
@@ -33,6 +33,7 @@ class Feed:
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
         self.origin = origin
+        self.checksum_validation = checksum_validation
         load_exchange_pair_mapping(self.id)
 
         if config is not None and (pairs is not None or channels is not None):
