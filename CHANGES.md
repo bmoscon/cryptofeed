@@ -3,6 +3,7 @@
 ### 1.6.0
   * Feature: Validate FTX book checksums (optionally enabled)
   * Bugfix: Subscribing only to open interest on binance futures gave connection errors
+  * Feature: Authentication for Influxdb 1.x
 
 ### 1.5.1 (2020-08-26)
   * Bugfix: #136 - Kraken Rate limiting

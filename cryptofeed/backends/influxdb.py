@@ -76,7 +76,10 @@ class InfluxCallback(HTTPCallback):
             if create_db:
                 r = requests.post(f'{addr}/query?u={username}&p={password}', data={'q': f'CREATE DATABASE {db}'})
                 r.raise_for_status()
-            self.addr = f"{addr}/write?db={db}&u={username}&p={password}"
+            if username and password:
+                self.addr = f"{addr}/write?db={db}&u={username}&p={password}"
+            else:
+                self.addr = f"{addr}/write?db={db}"
             self.headers = {}
 
         self.session = None
