@@ -4,6 +4,8 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import logging
+
 from cryptofeed.log import get_logger
 from cryptofeed.rest.bitfinex import Bitfinex
 from cryptofeed.rest.bitmex import Bitmex
@@ -16,7 +18,7 @@ from cryptofeed.rest.poloniex import Poloniex
 from cryptofeed.standards import load_exchange_pair_mapping
 
 
-LOG = get_logger('rest', 'rest.log')
+LOG = None
 
 
 class Rest:
@@ -26,11 +28,12 @@ class Rest:
     r = Rest()
     r.bitmex.trades('XBTUSD', '2018-01-01', '2018-01-01')
 
-    The Rest class optionally takes two parameters, config, and sandbox. In the config file
-    the api key and secrets can be specified. sandbox enables sandbox mode, if supported by the exchange.
+    The Rest class optionally takes two exchange-related parameters, config, and sandbox. 
+    In the config file the api key and secrets can be specified. Sandbox enables sandbox 
+    mode, if supported by the exchange. The Rest class also takes two logging parameters.
     """
 
-    def __init__(self, config=None, sandbox=False):
+    def __init__(self, config=None, sandbox=False, log_filename="rest.log", log_level=logging.WARNING):
         self.config = config
         self.lookup = {
             'bitmex': Bitmex(config),
@@ -42,6 +45,8 @@ class Rest:
             'deribit': Deribit(config),
             'ftx': FTX(config)
         }
+        global LOG
+        LOG = get_logger('rest', log_filename, log_level)
 
     def __getitem__(self, key):
         exch = self.lookup[key.lower()]
