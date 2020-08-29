@@ -5,6 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+import logging
+import os
 import zlib
 from collections import defaultdict
 from copy import deepcopy
@@ -28,8 +30,9 @@ from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
 
 
-LOG = get_logger('feedhandler', 'feedhandler.log')
-
+LOG = get_logger('feedhandler', 
+                 os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_FILENAME', "feedhandler.log"), 
+                 int(os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_LEVEL', logging.WARNING)))
 
 # Maps string name to class name for use with config
 _EXCHANGES = {
