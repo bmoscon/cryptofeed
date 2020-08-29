@@ -5,8 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-import zlib
 import logging
+import os
+import zlib
 from collections import defaultdict
 from copy import deepcopy
 from socket import error as socket_error
@@ -29,8 +30,9 @@ from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
 
 
-LOG = None
-
+LOG = get_logger('feedhandler', 
+                 os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_FILENAME', "feedhandler.log"), 
+                 int(os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_LEVEL', logging.WARNING)))
 
 # Maps string name to class name for use with config
 _EXCHANGES = {
@@ -68,8 +70,7 @@ _EXCHANGES = {
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True,
-                 log_filename="feedhandler.log", log_level=logging.WARNING):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -81,10 +82,6 @@ class FeedHandler:
             if defined, callback to save/process/handle raw message (primarily for debugging purposes)
         handler_enabled: boolean
             run message handlers (and any registered callbacks) when raw message capture is enabled
-        log_filename: str
-            filename to log feedhandler log messages to
-        log_level: int
-            minimum log level that log messages must have to be logged
         """
         self.feeds = []
         self.retries = retries
@@ -94,8 +91,6 @@ class FeedHandler:
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture
         self.handler_enabled = handler_enabled
-        global LOG
-        LOG = get_logger('feedhandler', log_filename, log_level)
 
     def add_feed(self, feed, timeout=120, **kwargs):
         """
