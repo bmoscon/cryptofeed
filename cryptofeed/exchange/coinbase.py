@@ -242,12 +242,24 @@ class Coinbase(Feed):
         await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
     async def _change(self, msg: dict, timestamp: float):
+        """
+        Like done, these updates can be sent for orders that are not in the book. Per the docs:
+
+        Not all done or change messages will result in changing the order book. These messages will
+        be sent for received orders which are not yet on the order book. Do not alter
+        the order book for such messages, otherwise your order book will be incorrect.
+        """
+
         delta = {BID: [], ASK: []}
 
         if 'price' not in msg or not msg['price']:
             return
-        ts = timestamp_normalize(self.id, msg['time'])
+
         order_id = msg['order_id']
+        if order_id not in self.order_map:
+            return
+
+        ts = timestamp_normalize(self.id, msg['time'])
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         new_size = Decimal(msg['new_size'])
