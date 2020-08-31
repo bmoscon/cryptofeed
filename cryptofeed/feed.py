@@ -21,7 +21,7 @@ class Feed:
 
     def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, checksum_validation=False, cross_check=False, origin=None):
         self.hash = str(uuid.uuid4())
-        self.uuid = self.id + self.hash
+        self.uuid = f"{self.id}-{self.hash}"
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
