@@ -5,6 +5,7 @@
   * Bugfix: Subscribing only to open interest on binance futures gave connection errors
   * Feature: Authentication for Influxdb 1.x
   * Feature: Override logging defaults with environment variables (filename and log level)
+  * Bugfix: For Coinbase L3 books need to ignore/drop some change updates (per docs)
 
 ### 1.5.1 (2020-08-26)
   * Bugfix: #136 - Kraken Rate limiting
