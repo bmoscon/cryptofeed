@@ -174,6 +174,8 @@ class Coinbase(Feed):
         for url in urls:
             ret = requests.get(url)
             results.append(ret)
+            # rate limit - 3 per second
+            await asyncio.sleep(0.3)
 
         timestamp = time.time()
         for res, pair in zip(results, pairs):
