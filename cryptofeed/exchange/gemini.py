@@ -81,6 +81,8 @@ class Gemini(Feed):
             await self._trade(msg, timestamp)
         elif msg['type'] == 'heartbeat':
             return
+        elif msg['type'] == 'auction_result' or msg['type'] == 'auction_indicative':
+            return
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
