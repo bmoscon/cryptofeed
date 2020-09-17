@@ -7,6 +7,7 @@
   * Feature: Override logging defaults with environment variables (filename and log level)
   * Bugfix: For Coinbase L3 books need to ignore/drop some change updates (per docs)
   * Bugfix: Obey rate limits when using Coinbase REST API to get L3 book snapshots
+  * Bugfix: Ignore auction updates from Gemini
 
 ### 1.5.1 (2020-08-26)
   * Bugfix: #136 - Kraken Rate limiting
