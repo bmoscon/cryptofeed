@@ -27,6 +27,10 @@ class Callback:
 class TradeCallback(Callback):
 
     def __init__(self, callback, include_order_type=False):
+        """
+        include_order_type is currently supported only on Kraken and enables
+        the order_type field in callbacks, which contains information about the order type (market/limit)
+        """
         self.include_order_type = include_order_type
         super().__init__(callback)
 
