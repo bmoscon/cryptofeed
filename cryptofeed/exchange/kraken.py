@@ -60,7 +60,8 @@ class Kraken(Feed):
         channel id, price, amount, timestamp, size, limit/market order, misc
         """
         for trade in msg[1]:
-            price, amount, server_timestamp, side, _, _ = trade
+            price, amount, server_timestamp, side, order_type, _ = trade
+            order_type = 'limit' if order_type == 'l' else 'market'
             await self.callback(TRADES, feed=self.id,
                                 pair=pair,
                                 side=BUY if side == 'b' else SELL,
@@ -68,7 +69,8 @@ class Kraken(Feed):
                                 price=Decimal(price),
                                 order_id=None,
                                 timestamp=float(server_timestamp),
-                                receipt_timestamp=timestamp)
+                                receipt_timestamp=timestamp,
+                                order_type=order_type)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """

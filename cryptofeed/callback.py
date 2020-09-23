@@ -25,8 +25,16 @@ class Callback:
 
 
 class TradeCallback(Callback):
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float):
-        await super().__call__(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp)
+
+    def __init__(self, callback, include_order_type=False):
+        self.include_order_type = include_order_type
+        super().__init__(callback)
+
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type: str=None):
+        kwargs = {}
+        if self.include_order_type:
+            kwargs['order_type'] = order_type
+        await super().__call__(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp, **kwargs)
 
 
 class TickerCallback(Callback):
