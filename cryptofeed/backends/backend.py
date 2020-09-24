@@ -25,8 +25,6 @@ class BackendBookDeltaCallback:
 
 
 class BackendTradeCallback:
-    include_order_type = True
-
     async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type: str=None):
         data = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp,
                 'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price)}
