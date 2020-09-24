@@ -13,7 +13,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BOOK_DELTA, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
@@ -26,11 +26,12 @@ class Coinbase(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://ws-feed.pro.coinbase.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
-        # we only keep track of the order book if we have at least one subscribed order-book callback
-        self.keep_order_book = False
-        for cb_type in callbacks:
-            if cb_type in (L3_BOOK, L2_BOOK, BOOK_DELTA):
-                self.keep_order_book = True
+        # we only keep track of the L3 order book if we have at least one subscribed order-book callback.
+        # use case: subscribing to the L3 book plus Trade type gives you order_type information (see _received below),
+        # and we don't need to do the rest of the book-keeping unless we have an active callback
+        self.keep_l3_book = False
+        if callbacks and L3_BOOK in callbacks:
+            self.keep_l3_book = True
         self.__reset()
 
     def __reset(self):
@@ -98,7 +99,7 @@ class Coinbase(Feed):
         '''
         pair = pair_exchange_to_std(msg['product_id'])
 
-        if self.keep_order_book and ('full' in self.channels or ('full' in self.config and pair in self.config['full'])):
+        if self.keep_l3_book and ('full' in self.channels or ('full' in self.config and pair in self.config['full'])):
             delta = {BID: [], ASK: []}
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
@@ -136,8 +137,6 @@ class Coinbase(Feed):
                             )
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
-        if not self.keep_order_book:
-            return
         pair = pair_exchange_to_std(msg['product_id'])
         self.l2_book[pair] = {
             BID: sd({
@@ -153,8 +152,6 @@ class Coinbase(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
-        if not self.keep_order_book:
-            return
         pair = pair_exchange_to_std(msg['product_id'])
         delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
@@ -208,7 +205,7 @@ class Coinbase(Feed):
             await self.book_callback(self.l3_book[npair], L3_BOOK, npair, True, None, timestamp, timestamp)
 
     async def _open(self, msg: dict, timestamp: float):
-        if not self.keep_order_book:
+        if not self.keep_l3_book:
             return
         delta = {BID: [], ASK: []}
         price = Decimal(msg['price'])
@@ -245,7 +242,7 @@ class Coinbase(Feed):
             return
 
         del self.order_map[order_id]
-        if self.keep_order_book:
+        if self.keep_l3_book:
             delta = {BID: [], ASK: []}
 
             price = Decimal(msg['price'])
@@ -282,7 +279,7 @@ class Coinbase(Feed):
         be sent for received orders which are not yet on the order book. Do not alter
         the order book for such messages, otherwise your order book will be incorrect.
         """
-        if not self.keep_order_book:
+        if not self.keep_l3_book:
             return
 
         delta = {BID: [], ASK: []}
@@ -315,7 +312,7 @@ class Coinbase(Feed):
             pair = pair_exchange_to_std(msg['product_id'])
             if msg['sequence'] <= self.seq_no[pair]:
                 return
-            elif (self.keep_order_book and ('full' in self.channels or 'full' in self.config)) and msg['sequence'] != self.seq_no[pair] + 1:
+            elif (self.keep_l3_book and ('full' in self.channels or 'full' in self.config)) and msg['sequence'] != self.seq_no[pair] + 1:
                 LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
                 LOG.warning("%s: Requesting book snapshot", self.id)
                 await self._book_snapshot(self.pairs or self.book_pairs)
