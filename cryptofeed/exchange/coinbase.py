@@ -13,7 +13,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BOOK_DELTA, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
@@ -26,10 +26,16 @@ class Coinbase(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://ws-feed.pro.coinbase.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        # we only keep track of the order book if we have at least one subscribed order-book callback
+        self.keep_order_book = False
+        for cb_type in callbacks:
+            if cb_type in (L3_BOOK, L2_BOOK, BOOK_DELTA):
+                self.keep_order_book = True
         self.__reset()
 
     def __reset(self):
         self.order_map = {}
+        self.order_type_map = {}
         self.seq_no = {}
         self.l3_book = {}
         self.l2_book = {}
@@ -92,7 +98,7 @@ class Coinbase(Feed):
         '''
         pair = pair_exchange_to_std(msg['product_id'])
 
-        if 'full' in self.channels or ('full' in self.config and pair in self.config['full']):
+        if self.keep_order_book and ('full' in self.channels or ('full' in self.config and pair in self.config['full'])):
             delta = {BID: [], ASK: []}
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
@@ -104,6 +110,7 @@ class Coinbase(Feed):
             new_size -= size
             if new_size <= 0:
                 del self.order_map[maker_order_id]
+                self.order_type_map.pop(maker_order_id, None)
                 delta[side].append((maker_order_id, price, 0))
                 del self.l3_book[pair][side][price][maker_order_id]
                 if len(self.l3_book[pair][side][price]) == 0:
@@ -115,6 +122,7 @@ class Coinbase(Feed):
 
             await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
+        order_type = self.order_type_map.get(msg['taker_order_id'])
         await self.callback(TRADES,
                             feed=self.id,
                             pair=pair_exchange_to_std(msg['product_id']),
@@ -123,10 +131,13 @@ class Coinbase(Feed):
                             amount=Decimal(msg['size']),
                             price=Decimal(msg['price']),
                             timestamp=timestamp_normalize(self.id, msg['time']),
-                            receipt_timestamp=timestamp
+                            receipt_timestamp=timestamp,
+                            order_type=order_type
                             )
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
+        if not self.keep_order_book:
+            return
         pair = pair_exchange_to_std(msg['product_id'])
         self.l2_book[pair] = {
             BID: sd({
@@ -142,6 +153,8 @@ class Coinbase(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
+        if not self.keep_order_book:
+            return
         pair = pair_exchange_to_std(msg['product_id'])
         delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
@@ -195,6 +208,8 @@ class Coinbase(Feed):
             await self.book_callback(self.l3_book[npair], L3_BOOK, npair, True, None, timestamp, timestamp)
 
     async def _open(self, msg: dict, timestamp: float):
+        if not self.keep_order_book:
+            return
         delta = {BID: [], ASK: []}
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
@@ -221,27 +236,43 @@ class Coinbase(Feed):
         to self-trade prevention. There will be no open message for such orders. Done messages
         for orders which are not on the book should be ignored when maintaining a real-time order book.
         """
-        delta = {BID: [], ASK: []}
-
         if 'price' not in msg:
             return
 
         order_id = msg['order_id']
+        self.order_type_map.pop(order_id, None)
         if order_id not in self.order_map:
             return
 
-        price = Decimal(msg['price'])
-        side = ASK if msg['side'] == 'sell' else BID
-        pair = pair_exchange_to_std(msg['product_id'])
-        ts = timestamp_normalize(self.id, msg['time'])
-
-        del self.l3_book[pair][side][price][order_id]
-        if len(self.l3_book[pair][side][price]) == 0:
-            del self.l3_book[pair][side][price]
-        delta[side].append((order_id, price, 0))
         del self.order_map[order_id]
+        if self.keep_order_book:
+            delta = {BID: [], ASK: []}
 
-        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
+            price = Decimal(msg['price'])
+            side = ASK if msg['side'] == 'sell' else BID
+            pair = pair_exchange_to_std(msg['product_id'])
+            ts = timestamp_normalize(self.id, msg['time'])
+
+            del self.l3_book[pair][side][price][order_id]
+            if len(self.l3_book[pair][side][price]) == 0:
+                del self.l3_book[pair][side][price]
+            delta[side].append((order_id, price, 0))
+
+            await self.book_callback(self.l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
+
+    async def _received(self, msg: dict, timestamp: float):
+        """
+        per Coinbase docs:
+        A valid order has been received and is now active. This message is emitted for every single
+        valid order as soon as the matching engine receives it whether it fills immediately or not.
+
+        This message is the only time we receive the order type (limit vs market) for a given order,
+        so we keep it in a map by order ID.
+        """
+        order_id = msg["order_id"]
+        order_type = msg["order_type"]
+        self.order_type_map[order_id] = order_type
+
 
     async def _change(self, msg: dict, timestamp: float):
         """
@@ -251,6 +282,8 @@ class Coinbase(Feed):
         be sent for received orders which are not yet on the order book. Do not alter
         the order book for such messages, otherwise your order book will be incorrect.
         """
+        if not self.keep_order_book:
+            return
 
         delta = {BID: [], ASK: []}
 
@@ -282,7 +315,7 @@ class Coinbase(Feed):
             pair = pair_exchange_to_std(msg['product_id'])
             if msg['sequence'] <= self.seq_no[pair]:
                 return
-            elif ('full' in self.channels or 'full' in self.config) and msg['sequence'] != self.seq_no[pair] + 1:
+            elif (self.keep_order_book and ('full' in self.channels or 'full' in self.config)) and msg['sequence'] != self.seq_no[pair] + 1:
                 LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
                 LOG.warning("%s: Requesting book snapshot", self.id)
                 await self._book_snapshot(self.pairs or self.book_pairs)
@@ -306,7 +339,7 @@ class Coinbase(Feed):
             elif msg['type'] == 'change':
                 await self._change(msg, timestamp)
             elif msg['type'] == 'received':
-                pass
+                await self._received(msg, timestamp)
             elif msg['type'] == 'activate':
                 pass
             elif msg['type'] == 'subscriptions':

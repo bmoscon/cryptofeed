@@ -28,8 +28,11 @@ class TradeCallback(Callback):
 
     def __init__(self, callback, include_order_type=False):
         """
-        include_order_type is currently supported only on Kraken and enables
-        the order_type field in callbacks, which contains information about the order type (market/limit)
+        include_order_type is currently supported only on Kraken and Coinbase and enables
+        the order_type field in callbacks, which contains information about the order type (market/limit).
+
+        Note that to receive order_type on Coinbase, you must also subscribe to the L3_BOOK channel (though
+        do not need to specify any L3_BOOK callbacks)
         """
         self.include_order_type = include_order_type
         super().__init__(callback)
