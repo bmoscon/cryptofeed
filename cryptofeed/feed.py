@@ -10,14 +10,13 @@ from collections import defaultdict
 from cryptofeed.callback import Callback
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, L2_BOOK, L3_BOOK,
                                 LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES, VOLUME)
-from cryptofeed.exceptions import BidAskOverlapping
-from cryptofeed.standards import feed_to_exchange, load_exchange_pair_mapping, pair_std_to_exchange
+from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
+from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
 
 
 class Feed:
     id = 'NotImplemented'
-
 
     def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, checksum_validation=False, cross_check=False, origin=None):
         self.hash = str(uuid.uuid4())
@@ -69,6 +68,24 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
+
+    @classmethod
+    def info(cls) -> dict:
+        """
+        Return information about the Exchange - what trading pairs are supported, what data channels, etc
+        """
+        pairs, info = get_exchange_info(cls.id)
+        data = {'pairs': list(pairs.keys()), 'channels': []}
+        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES):
+            try:
+                feed_to_exchange(cls.id, channel, silent=True)
+                data['channels'].append(channel)
+            except UnsupportedDataFeed:
+                pass
+
+        data.update(info)
+
+        return data
 
     async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """

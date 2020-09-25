@@ -28,7 +28,7 @@ class Bitmex(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         super().__init__('wss://www.bitmex.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
 
-        active_pairs = self.get_active_symbols()
+        active_pairs = Bitmex.info()['pairs']
         if self.config:
             pairs = list(self.config.values())
             self.pairs = [pair for inner in pairs for pair in inner]
@@ -53,13 +53,6 @@ class Bitmex(Feed):
     @staticmethod
     def get_active_symbols_info():
         return requests.get(Bitmex.api + 'instrument/active').json()
-
-    @staticmethod
-    def get_active_symbols():
-        symbols = []
-        for data in Bitmex.get_active_symbols_info():
-            symbols.append(data['symbol'])
-        return symbols
 
     async def _trade(self, msg: dict, timestamp: float):
         """

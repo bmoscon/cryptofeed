@@ -9,12 +9,11 @@ Pair generation code for exchanges
 '''
 
 import logging
+from collections import defaultdict
 
 import requests
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, EXX, FTX, FTX_US, GEMINI,
-                                HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, OKCOIN, OKEX, POLONIEX, UPBIT, GATEIO)
+from cryptofeed.defines import *
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,6 +22,7 @@ PAIR_SEP = '-'
 
 
 _pairs_retrieval_cache = dict()
+_exchange_info = defaultdict(lambda: defaultdict(dict))
 
 
 def set_pair_separator(symbol: str):
@@ -39,30 +39,31 @@ def gen_pairs(exchange):
     return _pairs_retrieval_cache[exchange]
 
 
-def _binance_pairs(endpoint: str):
+def _binance_pairs(endpoint: str, exchange: str):
     ret = {}
     pairs = requests.get(endpoint).json()
     for symbol in pairs['symbols']:
         split = len(symbol['baseAsset'])
         normalized = symbol['symbol'][:split] + PAIR_SEP + symbol['symbol'][split:]
         ret[normalized] = symbol['symbol']
+        _exchange_info[exchange]['tick_size'][normalized] = symbol['filters'][0]['tickSize']
     return ret
 
 
 def binance_pairs():
-    return _binance_pairs('https://api.binance.com/api/v1/exchangeInfo')
+    return _binance_pairs('https://api.binance.com/api/v1/exchangeInfo', BINANCE)
 
 
 def binance_us_pairs():
-    return _binance_pairs('https://api.binance.us/api/v1/exchangeInfo')
+    return _binance_pairs('https://api.binance.us/api/v1/exchangeInfo', BINANCE_US)
 
 
 def binance_jersey_pairs():
-    return _binance_pairs('https://api.binance.je/api/v1/exchangeInfo')
+    return _binance_pairs('https://api.binance.je/api/v1/exchangeInfo', BINANCE_JERSEY)
 
 
 def binance_futures_pairs():
-    return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo')
+    return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
 
 
 def bitfinex_pairs():
@@ -80,37 +81,42 @@ def bitfinex_pairs():
 
 def bybit_pairs():
     ret = {}
-    r = requests.get('https://api.bybit.com/v2/public/tickers').json()
+    r = requests.get('https://api.bybit.com/v2/public/symbols').json()
     for pair in r['result']:
-        symbol = pair['symbol']
-        normalized = symbol.replace("USD", f"{PAIR_SEP}USD")
-        ret[normalized] = symbol
+        normalized = f"{pair['base_currency']}{PAIR_SEP}{pair['quote_currency']}"
+        ret[normalized] = pair['name']
+        _exchange_info[BYBIT]['tick_size'][normalized] = pair['price_filter']['tick_size']
+
+    return ret
+
+
+def _ftx_helper(endpoint: str, exchange: str):
+    ret = {}
+    r = requests.get(endpoint).json()
+    for data in r['result']:
+        normalized = data['name'].replace("/", PAIR_SEP)
+        pair = data['name']
+        ret[normalized] = pair
+        _exchange_info[exchange]['tick_size'][normalized] = data['priceIncrement']
     return ret
 
 
 def ftx_pairs():
-    ret = {}
-    r = requests.get('https://ftx.com/api/markets').json()
-    for data in r['result']:
-        normalized = data['name'].replace("/", PAIR_SEP)
-        pair = data['name']
-        ret[normalized] = pair
-    return ret
+    return _ftx_helper('https://ftx.com/api/markets', FTX)
 
 
 def ftx_us_pairs():
-    ret = {}
-    r = requests.get('https://ftx.us/api/markets').json()
-    for data in r['result']:
-        normalized = data['name'].replace("/", PAIR_SEP)
-        pair = data['name']
-        ret[normalized] = pair
-    return ret
+    return _ftx_helper('https://ftx.us/api/markets', FTX_US)
 
 
 def coinbase_pairs():
     r = requests.get('https://api.pro.coinbase.com/products').json()
-    return {data['id'].replace("-", PAIR_SEP): data['id'] for data in r}
+    ret = {}
+    for data in r:
+        normalized = data['id'].replace("-", PAIR_SEP)
+        ret[normalized] = data['id']
+        _exchange_info[COINBASE]['tick_size'][normalized] = data['quote_increment']
+    return ret
 
 
 def gemini_pairs():
@@ -283,6 +289,26 @@ def gateio_pairs():
     return {data['id'].replace("_", PAIR_SEP): data['id'] for data in r}
 
 
+def bitmex_pairs():
+    r = requests.get("https://www.bitmex.com/api/v1/instrument/active").json()
+    return {entry['symbol']: entry['symbol'] for entry in r}
+
+
+def deribit_pairs():
+    currencies = ['BTC', 'ETH']
+    kind = ['future', 'option']
+    data = []
+    for c in currencies:
+        for k in kind:
+            data.extend(requests.get(f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}").json()['result'])
+    return {d['instrument_name']: d['instrument_name'] for d in data}
+
+
+def kraken_future_pairs():
+    data = requests.get("https://futures.kraken.com/derivatives/api/v3/instruments").json()['instruments']
+    return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -311,5 +337,8 @@ _exchange_function_map = {
     BITCOINCOM: bitcoincom_pairs,
     BITMAX: bitmax_pairs,
     UPBIT: upbit_pairs,
-    GATEIO: gateio_pairs
+    GATEIO: gateio_pairs,
+    BITMEX: bitmex_pairs,
+    DERIBIT: deribit_pairs,
+    KRAKEN_FUTURES: kraken_future_pairs
 }

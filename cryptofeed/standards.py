@@ -20,7 +20,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANC
                                 MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, TICKER,
                                 TRADES, UNSUPPORTED, UPBIT, VOLUME)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
-from cryptofeed.pairs import gen_pairs
+from cryptofeed.pairs import gen_pairs, _exchange_info
 
 
 LOG = logging.getLogger('feedhandler')
@@ -30,7 +30,7 @@ _std_trading_pairs = {}
 _exchange_to_std = {}
 
 
-def load_exchange_pair_mapping(exchange):
+def load_exchange_pair_mapping(exchange: str):
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
     mapping = gen_pairs(exchange)
@@ -42,7 +42,13 @@ def load_exchange_pair_mapping(exchange):
             _std_trading_pairs[std] = {exchange: exch}
 
 
-def pair_std_to_exchange(pair, exchange):
+def get_exchange_info(exchange: str):
+    mapping = gen_pairs(exchange)
+    info = dict(_exchange_info.get(exchange, {}))
+    return mapping, info
+
+
+def pair_std_to_exchange(pair: str, exchange: str):
     # bitmex does its own validation of trading pairs dynamically
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return pair
@@ -278,10 +284,11 @@ def normalize_trading_options(exchange, option):
     return ret
 
 
-def feed_to_exchange(exchange, feed):
+def feed_to_exchange(exchange, feed, silent=False):
     def raise_error():
         exception = UnsupportedDataFeed(f"{feed} is not currently supported on {exchange}")
-        LOG.error("Error: %r", exception)
+        if not silent:
+            LOG.error("Error: %r", exception)
         raise exception
 
     if exchange == POLONIEX:
