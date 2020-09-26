@@ -138,6 +138,8 @@ def hitbtc_pairs():
         split = len(symbol['baseCurrency'])
         normalized = symbol['id'][:split] + PAIR_SEP + symbol['id'][split:]
         ret[normalized] = symbol['id']
+        _exchange_info[HITBTC]['tick_size'][normalized] = symbol['tickSize']
+
     return ret
 
 
@@ -223,6 +225,9 @@ def huobi_dm_pairs():
     pairs = {}
     for e in r['data']:
         pairs[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+        _exchange_info[HUOBI_DM]['tick_size'][e['contract_code']] = e['price_tick']
+        _exchange_info[HUOBI_DM]['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+
     return pairs
 
 
@@ -231,12 +236,18 @@ def huobi_swap_pairs():
     pairs = {}
     for e in r['data']:
         pairs[e['contract_code']] = e['contract_code']
+        _exchange_info[HUOBI_SWAP]['tick_size'][e['contract_code']] = e['price_tick']
+
     return pairs
 
 
 def okcoin_pairs():
     r = requests.get('https://www.okcoin.com/api/spot/v3/instruments').json()
-    return {e['instrument_id']: e['instrument_id'] for e in r}
+    ret = {}
+    for e in r:
+        ret[e['instrument_id']] = e['instrument_id']
+        _exchange_info[OKCOIN]['tick_size'][e['instrument_id']] = e['tick_size']
+    return ret
 
 
 def okex_pairs():
