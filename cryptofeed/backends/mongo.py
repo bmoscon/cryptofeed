@@ -19,9 +19,11 @@ class MongoCallback:
         self.collection = key if key else self.default_key
 
     async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        d = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'receipt_timestamp': timestamp, 'delta': data['delta'], 'bid': bson.BSON.encode(data['bid']), 'ask': bson.BSON.encode(data['ask'])}
-        await self.db[self.collection].insert_one(d)
-
+        if 'delta' in data:
+            d = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'receipt_timestamp': timestamp, 'delta': data['delta'], 'bid': bson.BSON.encode(data['bid']), 'ask': bson.BSON.encode(data['ask'])}
+            await self.db[self.collection].insert_one(d)
+        else:
+            await self.db[self.collection].insert_one(data)
 
 class TradeMongo(MongoCallback, BackendTradeCallback):
     default_key = 'trades'
