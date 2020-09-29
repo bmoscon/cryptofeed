@@ -215,7 +215,8 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: '{}/funding_rate',
-        FTX: 'funding'
+        FTX: 'funding',
+        HUOBI_SWAP: 'funding'
     },
     OPEN_INTEREST: {
         OKEX: '{}/ticker',
