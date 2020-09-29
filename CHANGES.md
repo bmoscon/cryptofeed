@@ -11,6 +11,7 @@
   * Feature: Add order type (limit/market) for Kraken Trades
   * Feature: Exchange specific information available via info classmethod - contains pairs, data channels and tick size
   * Feature: Funding data supported on HuobiSwap
+  * Bugfix: Fix broken mongo callbacks in backends
 
 ### 1.5.1 (2020-08-26)
   * Bugfix: #136 - Kraken Rate limiting
