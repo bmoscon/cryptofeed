@@ -32,7 +32,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.6.0",
+    version="1.6.1",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
