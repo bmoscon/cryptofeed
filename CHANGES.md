@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.6.0
+### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
   * Bugfix: Subscribing only to open interest on binance futures gave connection errors
   * Feature: Authentication for Influxdb 1.x
