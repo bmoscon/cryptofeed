@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 1.6.1
+  * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
