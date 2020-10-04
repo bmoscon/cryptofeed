@@ -18,12 +18,30 @@ from cryptofeed.util.book import book_delta, depth
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, checksum_validation=False, cross_check=False, origin=None):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
+        """
+        max_depth: int
+            Maximum number of levels per side to return in book updates
+        book_interval: int
+            Number of updates between snapshots. Only applicable when book deltas are enabled.
+            Book deltas are enabled by subscribing to the book delta callback.
+        snapshot_interval: bool/int
+            Number of updates between snapshots. Only applicable when book delta is not enabled.
+            Updates between snapshots are not delivered to the client
+        checksum_validation: bool
+            Toggle checksum validation, when supported by an exchange.
+        cross_check: bool
+            Toggle a check for a crossed book. Should not be needed on exchanges that support
+            checksums or provide message sequence numbers.
+        origin: str
+            Passed into websocket connect. Sets the origin header.
+        """
         self.hash = str(uuid.uuid4())
         self.uuid = f"{self.id}-{self.hash}"
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
+        self.snapshot_interval = snapshot_interval
         self.cross_check = cross_check
         self.updates = defaultdict(int)
         self.do_deltas = False
@@ -95,6 +113,7 @@ class Feed:
         1a. Book deltas are enabled, max depth is not, and exchange does not support deltas. Rare
         2.  Book deltas not enabled, but max depth is enabled
         3.  Neither deltas nor max depth enabled
+        4.  Book deltas disabled and snapshot intervals enabled (with/without max depth)
 
         2 and 3 can be combined into a single block as long as application of depth modification
         happens first
@@ -124,9 +143,14 @@ class Feed:
                 # We want to send a full book update but need to apply max depth first
                 _, book = await self.apply_depth(book, False, pair)
         elif self.max_depth:
-            changed, book = await self.apply_depth(book, False, pair)
-            if not changed:
-                return
+            if not self.snapshot_interval or (self.snapshot_interval and self.updates[pair] >= self.snapshot_interval):
+                changed, book = await self.apply_depth(book, False, pair)
+                if not changed:
+                    return
+        # case 4 - incremement skiped update, and exit
+        if self.snapshot_interval and self.updates[pair] < self.snapshot_interval:
+            self.updates[pair] += 1
+            return
 
         if self.cross_check:
             self.check_bid_ask_overlapping(book, pair)
