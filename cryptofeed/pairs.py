@@ -320,6 +320,11 @@ def kraken_future_pairs():
     return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
 
 
+def coingecko_coins():
+    r = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
+    return {f"{e['symbol']}".upper(): e['id'] for e in r}
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -351,5 +356,6 @@ _exchange_function_map = {
     GATEIO: gateio_pairs,
     BITMEX: bitmex_pairs,
     DERIBIT: deribit_pairs,
-    KRAKEN_FUTURES: kraken_future_pairs
+    KRAKEN_FUTURES: kraken_future_pairs,
+    COINGECKO: coingecko_coins
 }
