@@ -8,12 +8,10 @@ import hashlib
 import hmac
 import logging
 import time
-from decimal import Decimal
 from time import sleep
 
 import pandas as pd
 import requests
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BINANCE_FUTURES, BUY, SELL
