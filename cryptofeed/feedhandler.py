@@ -12,6 +12,7 @@ from collections import defaultdict
 from copy import deepcopy
 from socket import error as socket_error
 from time import time
+import functools
 
 import websockets
 from websockets import ConnectionClosed
@@ -30,8 +31,8 @@ from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
 
 
-LOG = get_logger('feedhandler', 
-                 os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_FILENAME', "feedhandler.log"), 
+LOG = get_logger('feedhandler',
+                 os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_FILENAME', "feedhandler.log"),
                  int(os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_LEVEL', logging.WARNING)))
 
 # Maps string name to class name for use with config
@@ -92,6 +93,34 @@ class FeedHandler:
         self.raw_message_capture = raw_message_capture
         self.handler_enabled = handler_enabled
 
+    def playback(self, feed, filenames):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self._playback(feed, filenames))
+
+    async def _playback(self, feed, filenames):
+        counter = 0
+        callbacks = defaultdict(int)
+
+        class FakeWS:
+            async def send(self, *args, **kwargs):
+                pass
+
+        async def internal_cb(*args, **kwargs):
+            callbacks[kwargs['cb_type']] += 1
+
+        for cb_type, handler in feed.callbacks.items():
+            f = functools.partial(internal_cb, cb_type=cb_type)
+            handler.append(f)
+
+        await feed.subscribe(FakeWS())
+
+        for filename in filenames if isinstance(filenames, list) else [filenames]:
+            with open(filename, 'r') as fp:
+                for line in fp:
+                    timestamp, message = line.split(":", 1)
+                    counter += 1
+                    await feed.message_handler(message, timestamp)
+            return {'messages_processed': counter, 'callbacks': dict(callbacks)}
     def add_feed(self, feed, timeout=120, **kwargs):
         """
         feed: str or class

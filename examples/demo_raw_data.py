@@ -5,14 +5,14 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
-from cryptofeed.defines import L3_BOOK, TICKER, TRADES
+from cryptofeed.defines import L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import Coinbase
 from cryptofeed.util.async_file import AsyncFileCallback
 
 
 def main():
     f = FeedHandler(raw_message_capture=AsyncFileCallback('./'), handler_enabled=False)
-    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L3_BOOK, TICKER, TRADES]))
+    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK, TICKER, TRADES]))
 
     f.run()
 
