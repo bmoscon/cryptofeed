@@ -18,7 +18,8 @@ import websockets
 from websockets import ConnectionClosed
 
 from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX,
-                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT)
+                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT,
+                                COINGECKO)
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import (FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
@@ -26,6 +27,7 @@ from cryptofeed.defines import (FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM,
 from cryptofeed.exceptions import ExhaustedRetries
 from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.exchanges import *
+from cryptofeed.providers import *
 from cryptofeed.feed import RestFeed
 from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
@@ -51,6 +53,7 @@ _EXCHANGES = {
     BYBIT: Bybit,
     COINBASE: Coinbase,
     COINBENE: Coinbene,
+    COINGECKO: Coingecko,
     DERIBIT: Deribit,
     EXX_str: EXX,
     FTX_str: FTX,

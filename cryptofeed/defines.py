@@ -54,6 +54,7 @@ FUNDING = 'funding'
 OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 UNSUPPORTED = 'unsupported'
+PROFILE = 'profile'
 
 BUY = 'buy'
 SELL = 'sell'
