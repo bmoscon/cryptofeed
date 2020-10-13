@@ -62,7 +62,7 @@ setup(
         "websockets>=7.0",
         "sortedcontainers>=1.5.9",
         "pandas",
-        "aiohttp==3.6.2",
+        "aiohttp==3.6.3",
         "aiofile>=2.0.0",
         "yapic.json>=1.4.3",
         # Two (optional) dependencies that speed up Cryptofeed:
