@@ -8,7 +8,8 @@ import bson
 import motor.motor_asyncio
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendProfileCallback)
 
 
 class MongoCallback:
@@ -51,3 +52,7 @@ class OpenInterestMongo(MongoCallback, BackendOpenInterestCallback):
 
 class LiquidationsMongo(MongoCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
+
+
+class ProfileMongo(MongoCallback, BackendProfileCallback):
+    default_key = 'profile'
