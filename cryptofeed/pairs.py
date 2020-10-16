@@ -319,9 +319,13 @@ def probit_pairs():
     r = requests.get("https://api.probit.com/api/exchange/v1/market").json()
     return {entry['id']: entry['id'] for entry in r['data']}
 
-def coingecko_coins():
-    r = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
-    return {f"{e['symbol']}".upper(): e['id'] for e in r}
+def coingecko_pairs():
+    quote_c = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
+    # Base currencies are defined manually (USD + BTC + ETH).
+    # The full list from Coingecko is not used, as the generated dict of pairs would be tremendous.
+    # base_c =  requests.get('https://api.coingecko.com/api/v3/simple/supported_vs_currencies').json()
+    base_c = (('USD','usd'),('BTC','btc'),('ETH','eth'))
+    return {f"{q['symbol']}{PAIR_SEP}{bk}".upper(): f"{q['id']}_{bv}" for q in quote_c for bk,bv in base_c }
 
 
 _exchange_function_map = {
@@ -356,5 +360,5 @@ _exchange_function_map = {
     BITMEX: bitmex_pairs,
     DERIBIT: deribit_pairs,
     KRAKEN_FUTURES: kraken_future_pairs,
-    COINGECKO: coingecko_coins
+    COINGECKO: coingecko_pairs
 }
