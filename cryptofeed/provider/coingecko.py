@@ -14,10 +14,11 @@ from cryptofeed.feed import RestFeed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
-# Keys retained from 'PROFILE' data.
+# Keys retained from Coingecko for `PROFILE` channel.
+# 'status_updates' is not in the list, but if a not empty list, is added back in the data (see `_profile()`)
 profile_filter = ('name', 'asset_platform_id', 'contract_address', 'sentiment_votes_up_percentage',
                   'sentiment_votes_down_percentage', 'market_cap_rank', 'coingecko_rank', 'coingecko_score',
-                  'developer_score', 'community_score', 'liquidity_score', 'public_interest_score', 'status_updates')
+                  'developer_score', 'community_score', 'liquidity_score', 'public_interest_score')
 market_data_vs_currency = ('current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h')
 other_market_data_filter = ('price_change_percentage_24h', 'market_cap_change_percentage_24h', 'total_supply', 'max_supply',
                             'circulating_supply', 'last_updated')
@@ -73,14 +74,18 @@ class Coingecko(RestFeed):
         timestamp=timestamp_normalize(self.id, data['last_updated'])
         if (pair not in self.last_profile_update) or (self.last_profile_update[pair] < timestamp):
             self.last_profile_update[pair] = timestamp
-            market_data = {k:data['market_data'][k][base_c] for k in market_data_vs_currency if base_c in data['market_data'][k]}
-            other_market_data = {k:data['market_data'][k] for k in other_market_data_filter}
-            community_data = data['community_data']
-            public_interest_stats = data['public_interest_stats']
-            # `market_data`, `community_data` and `public_interest_stats` are removed from `data`
-            data = {k:v for k,v in data.items() if k in profile_filter}
-            # Merge everything in a flatten dict.
+            # `None` and null data is systematically removed for compatibility with Redis stream.
+            market_data = {k:data['market_data'][k][base_c] for k in market_data_vs_currency if (base_c in data['market_data'][k] and data['market_data'][k][base_c])}
+            other_market_data = {k:data['market_data'][k] for k in other_market_data_filter if data['market_data'][k]}
+            community_data = {k:v for k,v in data['community_data'].items() if v}
+            public_interest_stats = {k:v for k,v in data['public_interest_stats'].items() if v}
+            # Only retain selected data, and remove as well `market_data`, `community_data` and `public_interest_stats`.
+            # These latter are added back in `data` to have it in the shape of a flatten dict.
+            data = {k:v for k,v in data.items() if (k in profile_filter and v)}
             data = {**data, **market_data, **other_market_data, **community_data, **public_interest_stats}
+            # `list` data type is converted to string for compatibility with Redis stream.
+            if 'status_updates' in data:
+                data['status_updates'] = str(data['status_updates'])
             await self.callback(PROFILE, feed=self.id,
                                 pair=pair_exchange_to_std(pair),
                                 timestamp=timestamp,
