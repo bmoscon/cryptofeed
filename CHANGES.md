@@ -4,6 +4,7 @@
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
   * Feature: Support for rabbitmq message routing
   * Feature: Support for raw file playback. Will be useful for testing features and building out new test suites for cryptofeed. 
+  * Feature: Arctic library quota can be configured, new default is unlimited
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
