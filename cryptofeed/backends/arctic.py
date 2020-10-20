@@ -13,7 +13,7 @@ from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATI
 
 
 class ArcticCallback:
-    def __init__(self, library, host='127.0.0.1', key=None, numeric_type=float, **kwargs):
+    def __init__(self, library, host='127.0.0.1', key=None, numeric_type=float, quota=0, **kwargs):
         """
         library: str
             arctic library. Will be created if does not exist.
@@ -21,6 +21,9 @@ class ArcticCallback:
             setting key lets you override the symbol name.
             The defaults are related to the data
             being stored, i.e. trade, funding, etc
+        quota: int
+            absolute number of bytes that this library is limited to.
+            The default of 0 means that the storage size is unlimited.
         kwargs:
             if library needs to be created you can specify the
             lib_type in the kwargs. Default is VersionStore, but you can
@@ -30,6 +33,7 @@ class ArcticCallback:
         if library not in con.list_libraries():
             lib_type = kwargs.get('lib_type', arctic.VERSION_STORE)
             con.initialize_library(library, lib_type=lib_type)
+        con.set_quota(library, quota)
         self.lib = con[library]
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
