@@ -78,7 +78,7 @@ class Coingecko(RestFeed):
             if (pair not in self.last_profile_update) or (self.last_profile_update[pair] < timestamp):
                 self.last_profile_update[pair] = timestamp
                 # `None` and null data is systematically replaced with '-1' for digits and '' for string (empty string), for compatibility with Redis stream.
-                market_data = {k:(-1 if (not v or (isinstance(v,dict) and not v[base_c])) else v if k in other_market_data_filter else v[base_c]) for k,v in data['market_data'].items() if k in all_market_data}
+                market_data = {k:(-1 if (not v or (isinstance(v,dict) and not (base_c in v and v[base_c]))) else v if k in other_market_data_filter else v[base_c]) for k,v in data['market_data'].items() if k in all_market_data}
                 # 'last_updated' here is specifically for market data.
                 market_data['last_updated']=timestamp_normalize(self.id, data['market_data']['last_updated'])
                 community_data = {k:(v if v else -1) for k,v in data['community_data'].items()}
