@@ -23,6 +23,7 @@ profile_filter_d = ('sentiment_votes_up_percentage', 'sentiment_votes_down_perce
                     'coingecko_score', 'developer_score', 'community_score', 'liquidity_score', 'public_interest_score')
 market_data_vs_currency = ('current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h')
 other_market_data_filter = ('total_supply', 'max_supply', 'circulating_supply')
+all_market_data = (market_data_vs_currency + other_market_data_filter)
 
 class Coingecko(RestFeed):
     
@@ -47,6 +48,7 @@ class Coingecko(RestFeed):
             if chan == PROFILE:
                 await self._profile(session, pair)
             # Rate Limit: 100 requests/minute -> sleep 0.6s between each request 
+            # Data is refreshed on Coingecko approximately every 3 to 4 minutes.
             await asyncio.sleep(0.6)
 
         async with aiohttp.ClientSession() as session:
@@ -72,25 +74,25 @@ class Coingecko(RestFeed):
 &market_data=true&community_data=true&developer_data=false&sparkline=false") as response:
             data = await response.json()
 
-        timestamp=timestamp_normalize(self.id, data['last_updated'])
-        if (pair not in self.last_profile_update) or (self.last_profile_update[pair] < timestamp):
-            self.last_profile_update[pair] = timestamp
-            # `None` and null data is systematically replaced with '-1' for digits and '' for string (empty string), for compatibility with Redis stream.
-            market_data = {k:(data['market_data'][k][base_c] if data['market_data'][k][base_c] else -1) for k in market_data_vs_currency}
-            other_market_data = {k:(data['market_data'][k] if data['market_data'][k] else -1) for k in other_market_data_filter}
-            # 'last_updated' here is specifically for market data.
-            other_market_data['last_updated']=timestamp_normalize(self.id, data['market_data']['last_updated'])
-            community_data = {k:(v if v else -1) for k,v in data['community_data'].items()}
-            public_interest_stats = {k:(v if v else -1) for k,v in data['public_interest_stats'].items()}
-            # Only retain selected data, and remove as well `market_data`, `community_data` and `public_interest_stats`.
-            # These latter are added back in `data` to have it in the shape of a flatten dict.
-            data_s = {k:(v if v else '') for k,v in data.items() if k in profile_filter_s}
-            data_d = {k:(v if v else -1) for k,v in data.items() if k in profile_filter_d}
-            data = {**data_s, **data_d, **market_data, **other_market_data, **community_data, **public_interest_stats}
-            # `list` data type is converted to string for compatibility with Redis stream.
-            data['status_updates'] = str(data['status_updates'])
-            await self.callback(PROFILE, feed=self.id,
-                                pair=pair_exchange_to_std(pair),
-                                timestamp=timestamp,
-                                **data)
+            timestamp=timestamp_normalize(self.id, data['last_updated'])
+            if (pair not in self.last_profile_update) or (self.last_profile_update[pair] < timestamp):
+                self.last_profile_update[pair] = timestamp
+                # `None` and null data is systematically replaced with '-1' for digits and '' for string (empty string), for compatibility with Redis stream.
+                market_data = {k:(-1 if (not v or (isinstance(v,dict) and not v[base_c])) else v if k in other_market_data_filter else v[base_c]) for k,v in data['market_data'].items() if k in all_market_data}
+                # 'last_updated' here is specifically for market data.
+                market_data['last_updated']=timestamp_normalize(self.id, data['market_data']['last_updated'])
+                community_data = {k:(v if v else -1) for k,v in data['community_data'].items()}
+                public_interest_stats = {k:(v if v else -1) for k,v in data['public_interest_stats'].items()}
+                # Only retain selected data, and remove as well `market_data`, `community_data` and `public_interest_stats`.
+                # These latter are added back in `data` to have it in the shape of a flatten dict.
+                data_s = {k:(v if v else '') for k,v in data.items() if k in profile_filter_s}
+                data_d = {k:(v if v else -1) for k,v in data.items() if k in profile_filter_d}
+                status = str(data['status_updates'])
+                data = {**data_s, **data_d, **market_data, **community_data, **public_interest_stats}
+                # `list` data type is converted to string for compatibility with Redis stream.
+                data['status_updates'] = status
+                await self.callback(PROFILE, feed=self.id,
+                                    pair=pair_exchange_to_std(pair),
+                                    timestamp=timestamp,
+                                    **data)
         return
