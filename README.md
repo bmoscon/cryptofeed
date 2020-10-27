@@ -81,6 +81,10 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 * [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
 
+## Supported aggregated crypto data provider
+
+* [Coingecko](https://www.coingecko.com/en)
+
 ## National Best Bid/Offer (NBBO)
 
 Cryptofeed also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
@@ -103,9 +107,9 @@ fh.add_nbbo([Coinbase, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
 fh.run()
 ```
 
-## Supported Channels
+## Supported channels
 
-Cryptofeed supports the following channels:
+Cryptofeed supports the following channels from exchanges:
 
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
@@ -115,6 +119,11 @@ Cryptofeed supports the following channels:
 * FUNDING
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * OPEN_INTEREST - Open interest data
+
+Aggregated data from provider is available in channel:
+
+* PROFILE - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
+ as well as community data (twitter, reddit, facebook...) and scores (coingecko, developper, community...)
 
 ## Backends
 
