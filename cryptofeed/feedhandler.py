@@ -212,11 +212,13 @@ class FeedHandler:
         """
         retries = 0
         delay = 1
+        sem = asyncio.Semaphore(500)
         while retries <= self.retries or self.retries == -1:
             await feed.subscribe()
             try:
                 while True:
-                    await feed.message_handler()
+                    async with sem:
+                        await feed.message_handler()
             except Exception:
                 LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
                 await asyncio.sleep(delay)
@@ -232,6 +234,7 @@ class FeedHandler:
         """
         retries = 0
         delay = 1
+        sem = asyncio.Semaphore(500)
         while retries <= self.retries or self.retries == -1:
             self.last_msg[feed.uuid] = None
             try:
@@ -253,7 +256,8 @@ class FeedHandler:
                     retries = 0
                     delay = 1
                     await feed.subscribe(websocket)
-                    await self._handler(websocket, feed.message_handler, feed.uuid)
+                    async with sem:
+                        await self._handler(websocket, feed.message_handler, feed.uuid)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
                 LOG.warning("%s: encountered connection issue %s - reconnecting...", feed.id, str(e), exc_info=True)
                 await asyncio.sleep(delay)
