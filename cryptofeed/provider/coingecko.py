@@ -44,25 +44,28 @@ class Coingecko(RestFeed):
 
 
     async def message_handler(self):
-        async def handle(session, pair, chan):
-            # create instance of Semaphore
-#            sem = asyncio.Semaphore(10)
+        async def handle(session, sem, pair, chan):
             if chan == PROFILE:
-#                async with sem:
-                 await self._profile(session, pair)
-            # Rate Limit: 100 requests/minute -> sleep 0.6s between each request 
-            # Data is refreshed on Coingecko approximately every 3 to 4 minutes.
-            await asyncio.sleep(0.6)
+                await self._profile(session, pair)
+            # Rate Limit: 100 requests/minute -> sleep 0.6s after previous request.
+            # Using 1s for safety
+            await asyncio.sleep(1)
 
         async with aiohttp.ClientSession() as session:
+            # Create instance of Semaphore: limit to 100 concurrent requests
+            # to comply with 100 requests/minute.
+            # Using 90 for safety
+            sem = asyncio.Semaphore(90)
             if self.config:
                 for chan in self.config:
                     for pair in self.config[chan]:
-                        await handle(session, pair, chan)
+                        async with sem:
+                            await handle(session, sem, pair, chan)
             else:
                 for chan in self.channels:
                     for pair in self.pairs:
-                        await handle(session, pair, chan)
+                        async with sem:
+                            await handle(session, sem, pair, chan)
         return
 
 
