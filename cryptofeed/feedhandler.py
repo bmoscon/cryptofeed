@@ -124,6 +124,7 @@ class FeedHandler:
                     counter += 1
                     await feed.message_handler(message, timestamp)
             return {'messages_processed': counter, 'callbacks': dict(callbacks)}
+
     def add_feed(self, feed, timeout=120, **kwargs):
         """
         feed: str or class
