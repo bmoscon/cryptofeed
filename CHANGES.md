@@ -5,6 +5,7 @@
   * Feature: Support for rabbitmq message routing
   * Feature: Support for raw file playback. Will be useful for testing features and building out new test suites for cryptofeed. 
   * Feature: Arctic library quota can be configured, new default is unlimited
+  * Feature: Support for Coingecko aggreagted data per coin, to be used with a new data channel 'profile'
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
