@@ -10,6 +10,7 @@
   * Bugfix: FTX - set a funding rate requests limit constant (10 requests per second, 60 seconds pause between loops)
   * Bugfix: Open Interest data on FTX erroneously had timestamps set to None
   * Update: Binance Jersey shutdown - feed removed
+  * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
