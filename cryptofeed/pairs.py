@@ -319,6 +319,9 @@ def kraken_future_pairs():
     data = requests.get("https://futures.kraken.com/derivatives/api/v3/instruments").json()['instruments']
     return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
 
+def probit_pairs():
+    r = requests.get("https://api.probit.com/api/exchange/v1/market").json()
+    return {entry['id']: entry['id'] for entry in r['data']}
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -326,6 +329,7 @@ _exchange_function_map = {
     GEMINI: gemini_pairs,
     HITBTC: hitbtc_pairs,
     POLONIEX: poloniex_pairs,
+    PROBIT: probit_pairs,
     BITSTAMP: bitstamp_pairs,
     KRAKEN: kraken_pairs,
     KRAKEN + 'REST': kraken_rest_pairs,
