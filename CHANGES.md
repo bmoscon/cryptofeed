@@ -1,4 +1,5 @@
 ## Changelog
+  * Feature: New exchange: Probit
 
 ### 1.6.1
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
