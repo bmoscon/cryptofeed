@@ -159,18 +159,17 @@ class Probit(Feed):
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
-        # print('incoming msg {}'.format(msg))
         msg = json.loads(msg, parse_float=Decimal)
 
-        # Probit can send multiple type updates in one message
+        # Probit can send multiple type updates in one message so we avoid the use of elif
         if 'recent_trades' in msg:
             await self._trades(msg, timestamp)
         if 'order_books' in msg:
             await self._l2_update(msg, timestamp)
+        # Probit has a 'ticker' channel, but it provide OHLC-last data, not BBO px.
 
     async def subscribe(self, websocket):
         self.__reset()
-        self.book_pairs = []
 
         if self.config:
             for chan in self.config:
