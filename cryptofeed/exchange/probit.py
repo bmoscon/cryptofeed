@@ -188,4 +188,3 @@ class Probit(Feed):
                                                  "interval": 100,
                                                  "market_id": pair,
                                                  }))
-                await asyncio.sleep(0.3)

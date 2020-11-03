@@ -18,7 +18,8 @@ import websockets
 from websockets import ConnectionClosed
 
 from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX,
-                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT)
+                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE,
+                                PROBIT, DERIBIT)
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import (FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
@@ -66,7 +67,8 @@ _EXCHANGES = {
     OKEX: OKEx,
     POLONIEX: Poloniex,
     UPBIT: Upbit,
-    GATEIO: Gateio
+    GATEIO: Gateio,
+    PROBIT: Probit
 }
 
 
