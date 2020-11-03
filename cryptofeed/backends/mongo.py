@@ -20,7 +20,7 @@ class MongoCallback:
 
     async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         if 'delta' in data:
-            d = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'receipt_timestamp': timestamp, 'delta': data['delta'], 'bid': bson.BSON.encode(data['bid']), 'ask': bson.BSON.encode(data['ask'])}
+            d = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'delta': data['delta'], 'bid': bson.BSON.encode(data['bid']), 'ask': bson.BSON.encode(data['ask'])}
             await self.db[self.collection].insert_one(d)
         else:
             await self.db[self.collection].insert_one(data)
