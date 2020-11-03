@@ -6,6 +6,7 @@
   * Feature: Support for raw file playback. Will be useful for testing features and building out new test suites for cryptofeed. 
   * Feature: Arctic library quota can be configured, new default is unlimited
   * Feature: New exchange: Probit
+  * Bugfix: Correctly store receipt timestamp in mongo backend
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
