@@ -17,7 +17,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANC
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
                                 FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
                                 KRAKEN_FUTURES, L2_BOOK, L3_BOOK, LIMIT, LIQUIDATIONS,
-                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, TICKER,
+                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER,
                                 TRADES, UNSUPPORTED, UPBIT, VOLUME)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs, _exchange_info
@@ -74,7 +74,7 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN}:
+    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT}:
         return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
@@ -114,7 +114,8 @@ _feed_to_exchange_map = {
         BITCOINCOM: 'subscribeOrderbook',
         BITMAX: L2_BOOK,
         UPBIT: L2_BOOK,
-        GATEIO: 'depth.subscribe'
+        GATEIO: 'depth.subscribe',
+        PROBIT: 'order_books'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
@@ -141,7 +142,8 @@ _feed_to_exchange_map = {
         GEMINI: UNSUPPORTED,
         BITCOINCOM: UNSUPPORTED,
         BITMAX: UNSUPPORTED,
-        UPBIT: UNSUPPORTED
+        UPBIT: UNSUPPORTED,
+        PROBIT: UNSUPPORTED
     },
     TRADES: {
         POLONIEX: TRADES,
@@ -173,7 +175,8 @@ _feed_to_exchange_map = {
         BITCOINCOM: 'subscribeTrades',
         BITMAX: TRADES,
         UPBIT: TRADES,
-        GATEIO: 'trades.subscribe'
+        GATEIO: 'trades.subscribe',
+        PROBIT: 'recent_trades'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -203,7 +206,8 @@ _feed_to_exchange_map = {
         BITCOINCOM: 'subscribeTicker',
         BITMAX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
-        GATEIO: UNSUPPORTED
+        GATEIO: UNSUPPORTED,
+        PROBIT: UNSUPPORTED
     },
     VOLUME: {
         POLONIEX: 1003

@@ -33,4 +33,5 @@ from cryptofeed.exchange.kraken_futures import KrakenFutures
 from cryptofeed.exchange.okcoin import OKCoin
 from cryptofeed.exchange.okex import OKEx
 from cryptofeed.exchange.poloniex import Poloniex
+from cryptofeed.exchange.probit import Probit
 from cryptofeed.exchange.upbit import Upbit
