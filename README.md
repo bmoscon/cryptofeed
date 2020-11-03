@@ -79,6 +79,7 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 * [OKCoin](http://okcoin.com/)
 * [OKEx](https://www.okex.com/)
 * [Poloniex](https://www.poloniex.com/)
+* [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
 
 ## National Best Bid/Offer (NBBO)
