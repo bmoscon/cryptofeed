@@ -4,22 +4,27 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import os
+import yaml
 import uuid
 from collections import defaultdict
 
 from cryptofeed.callback import Callback
-from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, L2_BOOK, L3_BOOK,
-                                LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES, VOLUME,
-                                PROFILE)
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+                                OPEN_INTEREST, PROFILE, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
 
+path = os.path.dirname(os.path.abspath(__file__))
+keys = "feed_keys.yaml"
 
 class Feed:
     id = 'NotImplemented'
+    keys = yaml.safe_load(open(os.path.join(path, keys), 'r'))
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
+    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
+                 key_id=None):
         """
         max_depth: int
             Maximum number of levels per side to return in book updates
@@ -36,6 +41,8 @@ class Feed:
             checksums or provide message sequence numbers.
         origin: str
             Passed into websocket connect. Sets the origin header.
+        key_id: str
+            API key to query the feed, required when requesting supported coins/pairs.
         """
         self.hash = str(uuid.uuid4())
         self.uuid = f"{self.id}-{self.hash}"
@@ -52,7 +59,9 @@ class Feed:
         self.previous_book = defaultdict(dict)
         self.origin = origin
         self.checksum_validation = checksum_validation
-        load_exchange_pair_mapping(self.id)
+        if not key_id and self.id.lower() in self.keys:
+            key_id = self.config[self.id.lower()]
+        load_exchange_pair_mapping(self.id, key_id)
 
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")
@@ -69,15 +78,18 @@ class Feed:
 
         self.l3_book = {}
         self.l2_book = {}
-        self.callbacks = {TRADES: Callback(None),
-                          TICKER: Callback(None),
+        self.callbacks = {
+                          FUNDING: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),
-                          VOLUME: Callback(None),
-                          FUNDING: Callback(None),
-                          OPEN_INTEREST: Callback(None),
                           LIQUIDATIONS: Callback(None),
-                          PROFILE: Callback(None)}
+                          OPEN_INTEREST: Callback(None),
+                          PROFILE: Callback(None),
+                          TICKER: Callback(None),
+                          TRADES: Callback(None),
+                          TRANSACTIONS: Callback(None),
+                          VOLUME: Callback(None)
+                          }
 
         if callbacks:
             for cb_type, cb_func in callbacks.items():
@@ -94,11 +106,13 @@ class Feed:
         """
         Return information about the Exchange - what trading pairs are supported, what data channels, etc
         """
-        pairs, info = get_exchange_info(cls.id)
+        fid = cls.id
+        key_id = cls.keys[fid]['key_id'] if (fid in cls.keys) and ('key_id' in cls.keys[fid]) else None
+        pairs, info = get_exchange_info(fid, key_id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
-        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES, PROFILE):
+        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES, PROFILE, TRANSACTIONS):
             try:
-                feed_to_exchange(cls.id, channel, silent=True)
+                feed_to_exchange(fid, channel, silent=True)
                 data['channels'].append(channel)
             except UnsupportedDataFeed:
                 pass
@@ -106,6 +120,7 @@ class Feed:
         data.update(info)
 
         return data
+
 
     async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """
