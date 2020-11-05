@@ -17,7 +17,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
                                 FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
                                 KRAKEN_FUTURES, L2_BOOK, L3_BOOK, LIMIT, LIQUIDATIONS, PROFILE, COINGECKO,
-                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER
+                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER,
                                 TRADES, UNSUPPORTED, UPBIT, VOLUME)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs, _exchange_info
