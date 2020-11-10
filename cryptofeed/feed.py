@@ -59,8 +59,9 @@ class Feed:
         self.previous_book = defaultdict(dict)
         self.origin = origin
         self.checksum_validation = checksum_validation
-        if not key_id and self.id.lower() in self.keys:
-            key_id = self.config[self.id.lower()]
+        fid = self.id.lower()
+        if not key_id and fid in self.keys:
+            key_id = self.keys[fid]['key_id']
         load_exchange_pair_mapping(self.id, key_id)
 
         if config is not None and (pairs is not None or channels is not None):
@@ -106,21 +107,19 @@ class Feed:
         """
         Return information about the Exchange - what trading pairs are supported, what data channels, etc
         """
-        fid = cls.id
+        fid = cls.id.lower()
         key_id = cls.keys[fid]['key_id'] if (fid in cls.keys) and ('key_id' in cls.keys[fid]) else None
-        pairs, info = get_exchange_info(fid, key_id)
+        pairs, info = get_exchange_info(cls.id, key_id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
         for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES, PROFILE, TRANSACTIONS):
             try:
-                feed_to_exchange(fid, channel, silent=True)
+                feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
             except UnsupportedDataFeed:
                 pass
 
         data.update(info)
-
         return data
-
 
     async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """

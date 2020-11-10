@@ -45,7 +45,7 @@ setup(
               "HitBTC", "Huobi", "Kraken", "OKCoin", "OKEx", "Poloniex", "Upbit"],
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),
-    package_data={'': ['rest/config.yaml']},
+    package_data={'': ['rest/config.yaml', 'feed_keys.yaml']},
     cmdclass={'test': Test},
     python_requires='>=3.7',
     classifiers=[
