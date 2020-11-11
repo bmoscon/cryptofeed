@@ -14,7 +14,7 @@ from yapic import json
 from cryptofeed.backends._util import book_flatten
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendProfileCallback)
+                                         BackendLiquidationsCallback, BackendProfileCallback, BackendTansactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
 
 
@@ -104,3 +104,8 @@ class LiquidationsElastic(ElasticCallback, BackendLiquidationsCallback):
 
 class ProfileElastic(ElasticCallback, BackendProfileCallback):
     default_index = 'profile'
+
+
+class TransactionsElastic(ElasticCallback, BackendTransactionsCallback):
+    default_index = 'transactions'
+

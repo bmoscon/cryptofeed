@@ -9,7 +9,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendProfileCallback)
+                                         BackendLiquidationsCallback, BackendProfileCallback, BackendTransactionsCallback)
 
 
 class RedisCallback:
@@ -111,4 +111,11 @@ class ProfileRedis(RedisZSetCallback, BackendProfileCallback):
 class ProfileStream(RedisStreamCallback, BackendProfileCallback):
     default_key = 'profile'
 
+
+class TransactionsRedis(RedisZSetCallback, BackendTransactionsCallback):
+    default_key = 'transactions'
+
+
+class TransactionsStream(RedisStreamCallback, BackendTransactionsCallback):
+    default_key = 'transactions'
 

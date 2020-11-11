@@ -9,8 +9,8 @@ import pandas as pd
 
 from cryptofeed.backends.backend import (BackendFundingCallback, BackendOpenInterestCallback,
                                          BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback,
-                                         BackendProfileCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, PROFILE
+                                         BackendProfileCallback, BackendTransactionsCallback)
+from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, PROFILE, TRANSACTIONS
 
 
 class ArcticCallback:
@@ -71,3 +71,7 @@ class LiquidationsArctic(ArcticCallback, BackendLiquidationsCallback):
 class ProfileArctic(ArcticCallback, BackendProfileCallback):
     default_key = PROFILE
     
+
+class TransactionsArctic(ArcticCallback, BackendTransactionsCallback):
+    default_key = TRANSACTIONS
+

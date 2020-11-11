@@ -46,16 +46,14 @@ class WhaleAlert(RestFeed):
                 Maximal history can only be specific with hours or days. By default, is 1 hour, as per free plan.
 
         """
+        self.sleep_time = kwargs.pop('sleep_time') if 'sleep_time' in kwargs else 6                      # Free plan is one request every 6 seconds.
+        self.trans_min_value = kwargs.pop('trans_min_value') if 'trans_min_value' in kwargs else 500000  # Free plan is 500k$ transaction minimum value.
+        max_history = kwargs.pop('max_history') if 'max_history' in kwargs else 3600                     # Free plan is 1 hour transaction history.
         super().__init__('https://api.whale-alert.io/v1/', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
-        self.sleep_time = kwargs['sleep_time'] if 'sleep_time' in kwargs else 6                      # Free plan is one request every 6 seconds.
-        self.trans_min_value = kwargs['trans_min_value'] if 'trans_min_value' in kwargs else 500000  # Free plan is 500k$ transaction minimum value
-        try:
-            self.key_id = kwargs['key_id'] if 'key_id' in kwargs else self.keys[self.id.lower()]['key_id']
-        except KeyError as ke:
-            LOG.error("Missing key {!s} in feed_keys.yaml file. Impossible to connect.".format(ke))
+        if not self.key_id:
+            LOG.error("No API key provided. Impossible to connect.")
         # Shamlessly inspired from bmoscon/cryptostore/aggregator/aggregator.py
-        if 'max_history' in kwargs:
-            max_history = kwargs['max_history']
+        if isinstance(max_history, str):
             multiplier = 1
             if len(max_history) > 1:
                 multiplier = int(max_history[:-1])
@@ -66,10 +64,10 @@ class WhaleAlert(RestFeed):
                 else:
                     max_history = 86400 * multiplier
             else:
-                LOG.error("'max_history' {!s} not understood.", str(multiplier) + max_history)
+                LOG.error("Format of 'max_history' {!s} is not understood.", max_history)
             self.max_history = max_history
         else:
-            self.max_history = 3600  # Free plan is 1 hour transaction history.
+            self.max_history = max_history
 
         # /!\ Following variables would be defined in `__reset()` follwoing 'standard' implementation.
         # Check with Bryant if it is ok to have them here. This would avoid to store twice the same data after a reset.

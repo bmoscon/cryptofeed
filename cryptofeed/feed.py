@@ -60,9 +60,8 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         fid = self.id.lower()
-        if not key_id and fid in self.keys:
-            key_id = self.keys[fid]['key_id']
-        load_exchange_pair_mapping(self.id, key_id)
+        self.key_id = self.keys[fid]['key_id'] if (not key_id) and (fid in self.keys) and ('key_id' in self.keys[fid]) else key_id # self.key_id is `None` if no key_id provided.
+        load_exchange_pair_mapping(self.id, self.key_id)
 
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")

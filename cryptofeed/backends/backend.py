@@ -73,3 +73,11 @@ class BackendProfileCallback:
         kwargs['timestamp'] = timestamp
         await self.write(feed, pair, timestamp, timestamp, kwargs)
 
+
+class BackendTransactionsCallback:
+    async def __call__(self, *, feed: str, pair: str, timestamp: float, **kwargs):
+        kwargs['feed'] = feed
+        kwargs['pair'] = pair
+        kwargs['timestamp'] = timestamp
+        await self.write(feed, pair, timestamp, timestamp, kwargs)
+

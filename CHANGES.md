@@ -2,6 +2,7 @@
 
 ### 1.6.2
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
+  * Feature: Support for Whale Alert on-chain transaction data per coin, to be used with a new data channel 'transactions'
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
