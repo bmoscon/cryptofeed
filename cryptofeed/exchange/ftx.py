@@ -133,7 +133,10 @@ class FTX(Feed):
               ]
             }
         """
-        wait_time = len(pairs) / 30
+        # do not send more than 30 requests per second: doing so will result in HTTP 429 errors 
+        rate_limiter = 0.1
+        # funding rates do not change frequently
+        wait_time = 60
         async with aiohttp.ClientSession() as session:
             while True:
                 for pair in pairs:
@@ -154,7 +157,8 @@ class FTX(Feed):
                                             pair=pair_exchange_to_std(data['result'][0]['future']),
                                             rate=data['result'][0]['rate'],
                                             timestamp=timestamp_normalize(self.id, data['result'][0]['time']))
-                    await asyncio.sleep(wait_time)
+                    await asyncio.sleep(rate_limiter)
+                await asyncio.sleep(wait_time)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
