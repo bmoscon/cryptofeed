@@ -45,8 +45,6 @@ def load_exchange_pair_mapping(exchange: str, key_id: str):
 
 
 def get_exchange_info(exchange: str, key_id: str):
-    if exchange == WHALE_ALERT:
-        return None, None
     mapping = gen_pairs(exchange, key_id)
     info = dict(_exchange_info.get(exchange, {}))
     return mapping, info
