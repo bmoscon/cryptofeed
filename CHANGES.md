@@ -7,7 +7,7 @@
   * Feature: Arctic library quota can be configured, new default is unlimited
   * Feature: New exchange: Probit
   * Bugfix: Correctly store receipt timestamp in mongo backend
-  * Change: FTX - set a funding rate requests limit constant (10 requests per second, 60 seconds pause between loops)
+  * Bugfix: FTX - set a funding rate requests limit constant (10 requests per second, 60 seconds pause between loops)
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
