@@ -96,7 +96,7 @@ class Feed:
         """
         pairs, info = get_exchange_info(cls.id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
-        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES):
+        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES, PROFILE):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
