@@ -17,7 +17,7 @@ from cryptofeed.defines import WHALE_ALERT, TRANSACTIONS
 from cryptofeed.feed import RestFeed
 from cryptofeed.standards import pair_exchange_to_std
 
-LOG = get_logger('feedhandler')
+LOG = logging.get_logger('feedhandler')
 to_from_data = ('address', 'owner_type', 'owner')
 
 
