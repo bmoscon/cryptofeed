@@ -4,7 +4,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
-import os
 import asyncio
 import aiohttp
 import logging
@@ -18,10 +17,7 @@ from cryptofeed.defines import WHALE_ALERT, TRANSACTIONS
 from cryptofeed.feed import RestFeed
 from cryptofeed.standards import pair_exchange_to_std
 
-LOG = get_logger('feedhandler',
-                 os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_FILENAME', "feedhandler.log"),
-                 int(os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_LEVEL', logging.WARNING)))
-
+LOG = get_logger('feedhandler')
 to_from_data = ('address', 'owner_type', 'owner')
 
 
