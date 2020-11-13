@@ -17,7 +17,7 @@ import functools
 import websockets
 from websockets import ConnectionClosed
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX,
+from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE,
                                 PROBIT, DERIBIT)
 from cryptofeed.defines import EXX as EXX_str
@@ -40,7 +40,6 @@ LOG = get_logger('feedhandler',
 _EXCHANGES = {
     BINANCE: Binance,
     BINANCE_US: BinanceUS,
-    BINANCE_JERSEY: BinanceJersey,
     BINANCE_FUTURES: BinanceFutures,
     BITCOINCOM: BitcoinCom,
     BITFINEX: Bitfinex,

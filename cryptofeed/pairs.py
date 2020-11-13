@@ -58,10 +58,6 @@ def binance_us_pairs():
     return _binance_pairs('https://api.binance.us/api/v1/exchangeInfo', BINANCE_US)
 
 
-def binance_jersey_pairs():
-    return _binance_pairs('https://api.binance.je/api/v1/exchangeInfo', BINANCE_JERSEY)
-
-
 def binance_futures_pairs():
     return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
 
@@ -335,7 +331,6 @@ _exchange_function_map = {
     KRAKEN + 'REST': kraken_rest_pairs,
     BINANCE: binance_pairs,
     BINANCE_US: binance_us_pairs,
-    BINANCE_JERSEY: binance_jersey_pairs,
     BINANCE_FUTURES: binance_futures_pairs,
     BLOCKCHAIN: blockchain_pairs,
     EXX: exx_pairs,
