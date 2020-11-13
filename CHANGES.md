@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.6.1
+### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
   * Feature: Support for rabbitmq message routing
   * Feature: Support for raw file playback. Will be useful for testing features and building out new test suites for cryptofeed. 
