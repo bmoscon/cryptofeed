@@ -25,7 +25,6 @@ from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import (FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
                                 KRAKEN_FUTURES, L2_BOOK, OKCOIN, OKEX, POLONIEX, UPBIT)
 from cryptofeed.exceptions import ExhaustedRetries
-from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.exchanges import *
 from cryptofeed.feed import RestFeed
 from cryptofeed.log import get_logger
