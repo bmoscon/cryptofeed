@@ -322,14 +322,12 @@ def probit_pairs():
 def coingecko_pairs():
     quote_c = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
     # Normalization
-    for q in quote_c:
-        if q['symbol'] == 'miota':
-            q['symbol'] = 'iota'
+    normalized = dict({'miota': 'iota'})
     # Base currencies are defined manually (USD + BTC + ETH).
     # The full list from Coingecko is not used, as the generated dict of pairs would be tremendous.
     # base_c =  requests.get('https://api.coingecko.com/api/v3/simple/supported_vs_currencies').json()
     base_c = (('USD','usd'),('BTC','btc'),('ETH','eth'))
-    return {f"{q['symbol']}{PAIR_SEP}{bk}".upper(): f"{q['id']}_{bv}" for q in quote_c for bk,bv in base_c }
+    return {(f"{q['symbol']}{PAIR_SEP}{bk}".upper() if q['symbol'] not in normalized else f"{normalized[q['symbol']]}{PAIR_SEP}{bk}".upper()) : f"{q['id']}_{bv}" for q in quote_c for bk,bv in base_c }
 
 
 _exchange_function_map = {
