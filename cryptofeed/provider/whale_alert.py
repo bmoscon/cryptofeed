@@ -12,12 +12,11 @@ from functools import reduce
 from operator import iconcat
 from time import time
 
-from cryptofeed.log import get_logger
 from cryptofeed.defines import WHALE_ALERT, TRANSACTIONS
 from cryptofeed.feed import RestFeed
 from cryptofeed.standards import pair_exchange_to_std
 
-LOG = logging.get_logger('feedhandler')
+LOG = logging.getLogger('feedhandler')
 to_from_data = ('address', 'owner_type', 'owner')
 
 
