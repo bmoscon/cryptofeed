@@ -7,10 +7,13 @@ associated with this software.
 
 import asyncio
 import aiohttp
+import json
+from json import JSONDecodeError
 
 from cryptofeed.defines import COINGECKO, PROFILE
 from cryptofeed.feed import RestFeed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.exceptions import RestResponseError
 
 
 # Keys retained from Coingecko for `PROFILE` channel.
@@ -28,6 +31,7 @@ all_market_data = (market_data_vs_currency + other_market_data_filter)
 class Coingecko(RestFeed):
 
     id = COINGECKO
+    sleep_time = 1.8
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
         super().__init__('https://api.coingecko.com/api/v3/', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
@@ -49,7 +53,7 @@ class Coingecko(RestFeed):
             # "May I suggest (as provided by the engineers) that you try to make approximately 50 requests per minute instead?
             # We are currently experiencing very heavy loads from certain irresponsible individuals and have temporarily stepped up security measures."
             # From testing, safer to use 3x this limit.
-            await asyncio.sleep(1.8)
+            await asyncio.sleep(self.sleep_time)
 
         async with aiohttp.ClientSession() as session:
             if self.config:
@@ -71,7 +75,11 @@ class Coingecko(RestFeed):
 
         async with session.get(f"{self.address}coins/{quote_c}?localization=false&tickers=false\
 &market_data=true&community_data=true&developer_data=false&sparkline=false") as response:
-            data = await response.json()
+            data = await response.read()
+            try:
+                data = json.loads(data)
+            except JSONDecodeError as jde:
+                raise Exception('Rate limit possibly exceeded\nReturned error: {!s}\nReturned response content from HTTP request: {!s}'.format(jde, data))
 
             timestamp = timestamp_normalize(self.id, data['last_updated'])
             if (pair not in self.last_profile_update) or (self.last_profile_update[pair] < timestamp):

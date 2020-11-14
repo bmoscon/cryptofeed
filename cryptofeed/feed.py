@@ -202,5 +202,7 @@ class Feed:
 
 
 class RestFeed(Feed):
+    sleep_time = None
+
     async def message_handler(self):
         raise NotImplementedError

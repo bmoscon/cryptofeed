@@ -11,10 +11,12 @@ from sortedcontainers import SortedDict
 from functools import reduce
 from operator import iconcat
 from time import time
+import json
 
 from cryptofeed.defines import WHALE_ALERT, TRANSACTIONS
 from cryptofeed.feed import RestFeed
 from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.exceptions import RestResponseError
 
 LOG = logging.getLogger('feedhandler')
 to_from_data = ('address', 'owner_type', 'owner')
@@ -141,7 +143,10 @@ class WhaleAlert(RestFeed):
                 if query_cursor else f"{self.address}transactions?api_key={self.key_id}&min_value={self.trans_min_value}&start={query_start_ts}&currency={query_coin}"
 
         async with session.get(query) as response:
-            data = await response.json()
+            data = await response.read()
+            data = json.loads(data)
+            if data['result'] == 'error':
+                raise RestResponseError('Error message in response: {!s}'.format(json_data['message']))
 
             latest_cleared_ts = receipt_timestamp-4  # Using 4s margin for Whale Alert to insert a new entry in their database.
             if 'transactions' in data:

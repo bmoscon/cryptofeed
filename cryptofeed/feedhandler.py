@@ -213,7 +213,7 @@ class FeedHandler:
         Connect to REST feed
         """
         retries = 0
-        delay = 1
+        delay = 2*feed.sleep_time if feed.sleep_time else 1
         while retries <= self.retries or self.retries == -1:
             await feed.subscribe()
             try:
