@@ -31,6 +31,11 @@ all_market_data = (market_data_vs_currency + other_market_data_filter)
 class Coingecko(RestFeed):
 
     id = COINGECKO
+    # Rate Limit: 100 requests/minute -> sleep 0.6s after previous request.
+    # From support (mail exchange):
+    # "May I suggest (as provided by the engineers) that you try to make approximately 50 requests per minute instead?
+    # We are currently experiencing very heavy loads from certain irresponsible individuals and have temporarily stepped up security measures."
+    # From testing, safer to use 3x this limit.
     sleep_time = 1.8
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
@@ -48,11 +53,6 @@ class Coingecko(RestFeed):
         async def handle(session, pair, chan):
             if chan == PROFILE:
                 await self._profile(session, pair)
-            # Rate Limit: 100 requests/minute -> sleep 0.6s after previous request.
-            # From support (mail exchange):
-            # "May I suggest (as provided by the engineers) that you try to make approximately 50 requests per minute instead?
-            # We are currently experiencing very heavy loads from certain irresponsible individuals and have temporarily stepped up security measures."
-            # From testing, safer to use 3x this limit.
             await asyncio.sleep(self.sleep_time)
 
         async with aiohttp.ClientSession() as session:
