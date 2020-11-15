@@ -146,6 +146,9 @@ class WhaleAlert(RestFeed):
             data = await response.read()
             data = json.loads(data)
             if data['result'] == 'error':
+                # Content of `self.last_trans_up` & `self.chained_call` has been modified and previous coin is not listed in these dict any longer (`pop()`).
+                # When starting again to query this coin, `query_start_ts` will thus be `max_history_ts`.
+                # For this reason, when using later post-processing of stored data, it is important for the user to remove duplicate transactions (easily identified thanks to their `id`).
                 raise RestResponseError('Error message in response: {!s}'.format(json_data['message']))
 
             latest_cleared_ts = receipt_timestamp-4  # Using 4s margin for Whale Alert to insert a new entry in their database.
