@@ -12,6 +12,7 @@ from functools import reduce
 from operator import iconcat
 from time import time
 import json
+from json import JSONDecodeError
 
 from cryptofeed.defines import WHALE_ALERT, TRANSACTIONS
 from cryptofeed.feed import RestFeed
@@ -144,7 +145,11 @@ class WhaleAlert(RestFeed):
 
         async with session.get(query) as response:
             data = await response.read()
-            data = json.loads(data)
+            try:
+                data = json.loads(data)
+            except JSONDecodeError as jde:
+                raise Exception('Rate limit possibly exceeded\nReturned error: {!s}\nReturned response content from HTTP request: {!s}'.format(jde, data))
+            
             if data['result'] == 'error':
                 # Content of `self.last_trans_up` & `self.chained_call` has been modified and previous coin is not listed in these dict any longer (`pop()`).
                 # When starting again to query this coin, `query_start_ts` will thus be `max_history_ts`.
