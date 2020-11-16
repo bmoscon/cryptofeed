@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.6.1
+### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
   * Feature: Support for rabbitmq message routing
   * Feature: Support for raw file playback. Will be useful for testing features and building out new test suites for cryptofeed. 
@@ -8,6 +8,8 @@
   * Feature: New exchange: Probit
   * Bugfix: Correctly store receipt timestamp in mongo backend
   * Bugfix: FTX - set a funding rate requests limit constant (10 requests per second, 60 seconds pause between loops)
+  * Bugfix: Open Interest data on FTX erroneously had timestamps set to None
+  * Update: Binance Jersey shutdown - feed removed
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)

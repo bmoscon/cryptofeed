@@ -13,6 +13,9 @@ import logging
 
 import pandas as pd
 
+from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
+                                FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
 from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_DELIVERY, BINANCE_JERSEY, BINANCE_US, BITCOINCOM,
                                 BITFINEX, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL,
@@ -79,6 +82,7 @@ def timestamp_normalize(exchange, ts):
         return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_JERSEY,
                       BINANCE_FUTURES, BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
+    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -97,7 +101,6 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'book',
         BINANCE: 'depth@100ms',
         BINANCE_US: 'depth@100ms',
-        BINANCE_JERSEY: 'depth@100ms',
         BINANCE_FUTURES: 'depth@100ms',
         BINANCE_DELIVERY: 'depth@100ms',
         BLOCKCHAIN: 'l2',
@@ -131,7 +134,6 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
         BINANCE_US: UNSUPPORTED,
-        BINANCE_JERSEY: UNSUPPORTED,
         BINANCE_FUTURES: UNSUPPORTED,
         BINANCE_DELIVERY: UNSUPPORTED,
         BLOCKCHAIN: 'l3',
@@ -160,7 +162,6 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'trade',
         BINANCE: 'aggTrade',
         BINANCE_US: 'aggTrade',
-        BINANCE_JERSEY: 'aggTrade',
         BINANCE_FUTURES: 'aggTrade',
         BINANCE_DELIVERY: 'aggTrade',
         BLOCKCHAIN: 'trades',
@@ -194,7 +195,6 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
         BINANCE_US: 'ticker',
-        BINANCE_JERSEY: 'ticker',
         BINANCE_FUTURES: 'ticker',
         BINANCE_DELIVERY: 'ticker',
         BLOCKCHAIN: UNSUPPORTED,

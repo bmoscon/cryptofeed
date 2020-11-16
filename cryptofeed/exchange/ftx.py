@@ -112,7 +112,7 @@ class FTX(Feed):
                                                     feed=self.id,
                                                     pair=pair,
                                                     open_interest=oi,
-                                                    timestamp=None,
+                                                    timestamp=time(),
                                                     receipt_timestamp=time()
                                                     )
                                 self.open_interest[pair] = oi

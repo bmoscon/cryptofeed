@@ -17,6 +17,7 @@ import functools
 import websockets
 from websockets import ConnectionClosed
 
+from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
 from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_DELIVERY, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE,
                                 PROBIT, DERIBIT)
@@ -25,7 +26,6 @@ from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import (FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
                                 KRAKEN_FUTURES, L2_BOOK, OKCOIN, OKEX, POLONIEX, UPBIT)
 from cryptofeed.exceptions import ExhaustedRetries
-from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.exchanges import *
 from cryptofeed.feed import RestFeed
 from cryptofeed.log import get_logger
@@ -40,7 +40,6 @@ LOG = get_logger('feedhandler',
 _EXCHANGES = {
     BINANCE: Binance,
     BINANCE_US: BinanceUS,
-    BINANCE_JERSEY: BinanceJersey,
     BINANCE_FUTURES: BinanceFutures,
     BINANCE_DELIVERY: BinanceDelivery,
     BITCOINCOM: BitcoinCom,

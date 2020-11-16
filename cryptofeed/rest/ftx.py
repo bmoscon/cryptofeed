@@ -201,7 +201,6 @@ class FTX(API):
         }
 
     def _funding_normalization(self, funding: dict, symbol: str) -> dict:
-        ts = pd.to_datetime(funding['time'], format="%Y-%m-%dT%H:%M:%S%z")
         return {
             'timestamp': API._timestamp(funding['time']).timestamp(),
             'pair': funding['future'],
