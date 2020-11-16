@@ -6,6 +6,7 @@ associated with this software.
 '''
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.exchange.binance_futures import BinanceFutures
+from cryptofeed.exchange.binance_delivery import BinanceDelivery
 from cryptofeed.exchange.binance_jersey import BinanceJersey
 from cryptofeed.exchange.binance_us import BinanceUS
 from cryptofeed.exchange.bitcoincom import BitcoinCom

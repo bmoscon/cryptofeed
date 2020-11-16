@@ -15,11 +15,9 @@ import requests
 
 from cryptofeed.defines import *
 
-
 LOG = logging.getLogger('feedhandler')
 
 PAIR_SEP = '-'
-
 
 _pairs_retrieval_cache = dict()
 _exchange_info = defaultdict(lambda: defaultdict(dict))
@@ -64,6 +62,10 @@ def binance_jersey_pairs():
 
 def binance_futures_pairs():
     return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
+
+
+def binance_delivery_pairs():
+    return _binance_pairs('https://dapi.binance.com/dapi/v1/exchangeInfo', BINANCE_DELIVERY)
 
 
 def bitfinex_pairs():
@@ -152,7 +154,8 @@ def poloniex_id_pair_mapping():
 
 
 def poloniex_pairs():
-    return {value.split("_")[1] + PAIR_SEP + value.split("_")[0]: value for _, value in poloniex_id_pair_mapping().items()}
+    return {value.split("_")[1] + PAIR_SEP + value.split("_")[0]: value for _, value in
+            poloniex_id_pair_mapping().items()}
 
 
 def bitstamp_pairs():
@@ -199,7 +202,8 @@ def exx_pairs():
 
 def huobi_common_pairs(url: str):
     r = requests.get(url).json()
-    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
+    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(
+        e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
 def huobi_pairs():
@@ -226,7 +230,8 @@ def huobi_dm_pairs():
     for e in r['data']:
         pairs[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
         _exchange_info[HUOBI_DM]['tick_size'][e['contract_code']] = e['price_tick']
-        _exchange_info[HUOBI_DM]['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+        _exchange_info[HUOBI_DM]['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e[
+            'contract_code']
 
     return pairs
 
@@ -311,7 +316,9 @@ def deribit_pairs():
     data = []
     for c in currencies:
         for k in kind:
-            data.extend(requests.get(f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}").json()['result'])
+            data.extend(requests.get(
+                f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}").json()[
+                            'result'])
     return {d['instrument_name']: d['instrument_name'] for d in data}
 
 
@@ -319,9 +326,11 @@ def kraken_future_pairs():
     data = requests.get("https://futures.kraken.com/derivatives/api/v3/instruments").json()['instruments']
     return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
 
+
 def probit_pairs():
     r = requests.get("https://api.probit.com/api/exchange/v1/market").json()
     return {entry['id']: entry['id'] for entry in r['data']}
+
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -337,6 +346,7 @@ _exchange_function_map = {
     BINANCE_US: binance_us_pairs,
     BINANCE_JERSEY: binance_jersey_pairs,
     BINANCE_FUTURES: binance_futures_pairs,
+    BINANCE_DELIVERY: binance_delivery_pairs,
     BLOCKCHAIN: blockchain_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,

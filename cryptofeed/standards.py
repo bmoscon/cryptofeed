@@ -13,18 +13,19 @@ import logging
 
 import pandas as pd
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
-                                FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
+from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_DELIVERY, BINANCE_JERSEY, BINANCE_US, BITCOINCOM,
+                                BITFINEX, BITMAX, BITMEX,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL,
+                                FTX,
+                                FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                IMMEDIATE_OR_CANCEL, KRAKEN,
                                 KRAKEN_FUTURES, L2_BOOK, L3_BOOK, LIMIT, LIQUIDATIONS,
                                 MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER,
                                 TRADES, UNSUPPORTED, UPBIT, VOLUME)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs, _exchange_info
 
-
 LOG = logging.getLogger('feedhandler')
-
 
 _std_trading_pairs = {}
 _exchange_to_std = {}
@@ -76,7 +77,8 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_JERSEY, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
+    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_JERSEY,
+                      BINANCE_FUTURES, BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -97,6 +99,7 @@ _feed_to_exchange_map = {
         BINANCE_US: 'depth@100ms',
         BINANCE_JERSEY: 'depth@100ms',
         BINANCE_FUTURES: 'depth@100ms',
+        BINANCE_DELIVERY: 'depth@100ms',
         BLOCKCHAIN: 'l2',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
@@ -130,6 +133,7 @@ _feed_to_exchange_map = {
         BINANCE_US: UNSUPPORTED,
         BINANCE_JERSEY: UNSUPPORTED,
         BINANCE_FUTURES: UNSUPPORTED,
+        BINANCE_DELIVERY: UNSUPPORTED,
         BLOCKCHAIN: 'l3',
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
@@ -158,6 +162,7 @@ _feed_to_exchange_map = {
         BINANCE_US: 'aggTrade',
         BINANCE_JERSEY: 'aggTrade',
         BINANCE_FUTURES: 'aggTrade',
+        BINANCE_DELIVERY: 'aggTrade',
         BLOCKCHAIN: 'trades',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
@@ -191,6 +196,7 @@ _feed_to_exchange_map = {
         BINANCE_US: 'ticker',
         BINANCE_JERSEY: 'ticker',
         BINANCE_FUTURES: 'ticker',
+        BINANCE_DELIVERY: 'ticker',
         BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
@@ -216,6 +222,7 @@ _feed_to_exchange_map = {
         BITMEX: 'funding',
         BITFINEX: 'trades',
         BINANCE_FUTURES: 'markPrice',
+        BINANCE_DELIVERY: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: '{}/funding_rate',
@@ -228,16 +235,17 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         FTX: 'open_interest',
-        BINANCE_FUTURES: 'open_interest'
+        BINANCE_FUTURES: 'open_interest',
+        BINANCE_DELIVERY: 'open_interest',
     },
     LIQUIDATIONS: {
         BITMEX: 'liquidation',
         BINANCE_FUTURES: 'forceOrder',
+        BINANCE_DELIVERY: 'forceOrder',
         FTX: 'trades',
         DERIBIT: 'trades'
     }
 }
-
 
 _exchange_options = {
     LIMIT: {
