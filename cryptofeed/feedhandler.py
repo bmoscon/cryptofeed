@@ -17,8 +17,7 @@ import functools
 import websockets
 from websockets import ConnectionClosed
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_DELIVERY, BINANCE_JERSEY, BINANCE_US, BITCOINCOM, BITFINEX,
+from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_DELIVERY, BINANCE_US, BITCOINCOM, BITFINEX,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE,
                                 PROBIT, DERIBIT)
 from cryptofeed.defines import EXX as EXX_str
