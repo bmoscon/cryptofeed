@@ -246,7 +246,8 @@ class Binance(Feed):
                     self.l2_book[pair][side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta,
+                                 timestamp_normalize(self.id, ts), timestamp)
 
     async def _open_interest(self, pairs: list):
         """

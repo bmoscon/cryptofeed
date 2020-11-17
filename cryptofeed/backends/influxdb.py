@@ -10,17 +10,18 @@ from decimal import Decimal
 import requests
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback)
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
 from cryptofeed.exceptions import UnsupportedType
-
 
 LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, db=None, key=None, create_db=True, numeric_type=str, org=None, bucket=None, token=None, precision='ns', username=None, password=None, **kwargs):
+    def __init__(self, addr: str, db=None, key=None, create_db=True, numeric_type=str, org=None, bucket=None,
+                 token=None, precision='ns', username=None, password=None, **kwargs):
         """
         Parent class for InfluxDB callbacks
 
@@ -110,32 +111,45 @@ class FundingInflux(InfluxCallback, BackendFundingCallback):
     default_key = 'funding'
 
 
+def book2msg(dict_book):
+    N_BID = len(dict_book[BID])
+    l_bid = ["bid{i}={v1},bsize{i}={v2}".format(i=N_BID - i - 1, v1=k[0], v2=k[1]) for i, k in
+             enumerate(dict_book[BID].items())]
+    N_ASK = len(dict_book[ASK])
+    l_ask = ["ask{i}={v1},asize{i}={v2}".format(i=N_ASK - i - 1, v1=k[0], v2=k[1]) for i, k in
+             enumerate(dict_book[ASK].items())]
+    return ','.join(l_bid + l_ask)
+
+
 class InfluxBookCallback(InfluxCallback):
     default_key = 'book'
 
     async def _write_rows(self, start, data, timestamp, receipt_timestamp):
-        msg = []
+        # msg = []
         ts = int(timestamp * 1000000000)
-        for side in (BID, ASK):
-            for price, val in data[side].items():
-                if isinstance(val, dict):
-                    for order_id, amount in val.items():
-                        if self.numeric_type is str:
-                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
-                        elif self.numeric_type is float:
-                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
-                        else:
-                            raise UnsupportedType(f"Type {self.numeric_type} not supported")
-                        ts += 1
-                else:
-                    if self.numeric_type is str:
-                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
-                    elif self.numeric_type is float:
-                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
-                    else:
-                        raise UnsupportedType(f"Type {self.numeric_type} not supported")
-                    ts += 1
-        await self.http_write('POST', '\n'.join(msg), self.headers)
+        book_msg = book2msg(data)
+        msg = f"""{start} {book_msg},receipt_timestamp={receipt_timestamp},timestamp={timestamp} {ts}"""
+        # for side in (BID, ASK):
+        #     for price, val in data[side].items():
+        #         if isinstance(val, dict):
+        #             for order_id, amount in val.items():
+        #                 if self.numeric_type is str:
+        #                     msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
+        #                 elif self.numeric_type is float:
+        #                     msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
+        #                 else:
+        #                     raise UnsupportedType(f"Type {self.numeric_type} not supported")
+        #                 ts += 1
+        #         else:
+        #             if self.numeric_type is str:
+        #                 msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
+        #             elif self.numeric_type is float:
+        #                 msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
+        #             else:
+        #                 raise UnsupportedType(f"Type {self.numeric_type} not supported")
+        #             ts += 1
+        logging.info(msg)
+        await self.http_write('POST', msg, self.headers)
 
 
 class BookInflux(InfluxBookCallback, BackendBookCallback):
