@@ -73,7 +73,7 @@ class Binance(Feed):
                             side=SELL if msg['m'] else BUY,
                             amount=amount,
                             price=price,
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=timestamp_normalize(self.id, msg['T']),
                             receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
@@ -111,7 +111,7 @@ class Binance(Feed):
                             pair=pair,
                             bid=bid,
                             ask=ask,
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=timestamp_normalize(self.id, msg['T']),
                             receipt_timestamp=timestamp)
 
     async def _liquidations(self, msg: dict, timestamp: float):
@@ -147,13 +147,30 @@ class Binance(Feed):
 
 
     async def _snapshot(self, pair: str) -> None:
+        """
+        {'lastUpdateId': 8456130016,
+         'E': 1605611752061, //message time in ms
+         'T': 1605611752057, //transaction time in ms
+         'symbol': 'BTCUSD_201225', //dapi symbol
+         'pair': 'BTCUSD',
+         'bids': [['16996.9', '361'], //limit=5
+          ['16995.6', '64'],
+          ['16995.5', '64'],
+          ['16995.4', '103'],
+          ['16995.0', '10']],
+         'asks': [['16997.0', '250'],
+          ['16997.6', '20'],
+          ['16997.9', '149'],
+          ['16998.0', '64'],
+          ['16998.1', '64']]}
+        """
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 response.raise_for_status()
                 resp = await response.json()
-
+                logging.debug(resp)
                 std_pair = pair_exchange_to_std(pair)
                 self.last_update_id[std_pair] = resp['lastUpdateId']
                 self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
