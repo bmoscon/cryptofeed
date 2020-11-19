@@ -50,6 +50,7 @@ VOLUME = 'volume'
 FUNDING = 'funding'
 OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
+FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 
 BUY = 'buy'
