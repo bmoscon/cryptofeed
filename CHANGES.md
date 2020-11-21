@@ -1,9 +1,9 @@
 ## Changelog
-  * Feature: New data channel - `futures_index` - demonstrated in ByBit
 
 ### 1.6.2
   * Bugfix: Fix aggregated callbacks (Renko and OHLCV) when used with exchanges that support order types
   * Bugfix: Fix broken example/demo code
+  * Feature: New data channel - `futures_index` - demonstrated in ByBit
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
