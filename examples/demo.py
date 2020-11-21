@@ -7,10 +7,10 @@ associated with this software.
 from decimal import Decimal
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, VOLUME
+from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback, FuturesIndexCallback, OpenInterestCallback
+from cryptofeed.defines import BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, VOLUME, FUTURES_INDEX
 from cryptofeed.exchanges import (EXX, FTX, Binance, Bitfinex, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio, Gemini,
-                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex)
+                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit)
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -45,6 +45,10 @@ async def oi(feed, pair, open_interest, timestamp, receipt_timestamp):
 
 async def volume(**kwargs):
     print(f"Volume: {kwargs}")
+
+
+async def futures_index(**kwargs):
+    print(f"FuturesIndex: {kwargs}")
 
 
 def main():
@@ -82,6 +86,7 @@ def main():
     f.add_feed(OKEx(pairs=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bittrex(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD'], L2_BOOK: ['BTC-USDT']}, callbacks={L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
     f.add_feed(FTX(pairs=['ADA-PERP', 'ALGO-PERP', 'ALT-PERP', 'ATOM-PERP', 'BCH-PERP', 'BNB-PERP', 'BSV-PERP', 'BTC-PERP', 'BTMX-PERP', 'DOGE-PERP', 'DRGN-PERP', 'EOS-PERP', 'ETC-PERP'], channels=[TICKER], callbacks={TICKER: ticker, TRADES: TradeCallback(trade)}))
+    f.add_feed(Bybit(pairs=['BTC-USD'], channels=[FUTURES_INDEX], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), FUTURES_INDEX: FuturesIndexCallback(futures_index)}))
 
     f.add_feed(BLOCKCHAIN, pairs=['BTC-USD', 'ETH-USD'], channels=[L2_BOOK, TRADES], callbacks={
                   L2_BOOK: BookCallback(book),
