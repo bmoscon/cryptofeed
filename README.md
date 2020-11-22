@@ -108,7 +108,7 @@ fh.add_nbbo([Coinbase, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
 fh.run()
 ```
 
-## Supported channels
+## Supported Channels
 
 Cryptofeed supports the following channels from exchanges:
 
