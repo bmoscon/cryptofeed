@@ -3,6 +3,9 @@
 ### 1.6.2
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
   * Feature: Support for Whale Alert on-chain transaction data per coin, to be used with a new data channel 'transactions'
+  * Bugfix: Fix aggregated callbacks (Renko and OHLCV) when used with exchanges that support order types
+  * Bugfix: Fix broken example/demo code
+  * Feature: New data channel - `futures_index` - demonstrated in ByBit
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client

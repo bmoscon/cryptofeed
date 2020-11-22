@@ -10,18 +10,18 @@ from cryptofeed.defines import BID, ASK, L3_BOOK, TRADES
 from cryptofeed.exchanges import Coinbase
 
 
-async def trade(feed, pair, order_id, timestamp, side, amount, price):
-    print("Timestamp: {} Feed: {} Pair: {} ID: {} Side: {} Amount: {} Price: {}".format(timestamp, feed, pair, order_id, side, amount, price))
+async def trade(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp, order_type):
+    print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price} Order Type {order_type}")
 
 
-async def book(feed, pair, book, timestamp):
-    print('Timestamp: {} Feed: {} Pair: {} Book Bid Size is {} Ask Size is {}'.format(timestamp, feed, pair, len(book[BID]), len(book[ASK])))
+async def book(feed, pair, book, timestamp, receipt_timestamp):
+    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
 
 def main():
     f = FeedHandler()
 
-    f.add_feed(Coinbase(config={TRADES: ['BTC-USD'], L3_BOOK: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade), L3_BOOK: BookCallback(book)}))
+    f.add_feed(Coinbase(config={TRADES: ['BTC-USD'], L3_BOOK: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade, include_order_type=True), L3_BOOK: BookCallback(book)}))
 
     f.run()
 

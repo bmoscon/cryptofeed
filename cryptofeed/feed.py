@@ -10,7 +10,7 @@ import uuid
 from collections import defaultdict
 
 from cryptofeed.callback import Callback
-from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, PROFILE, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
@@ -80,6 +80,7 @@ class Feed:
         self.l2_book = {}
         self.callbacks = {
                           FUNDING: Callback(None),
+                          FUTURES_INDEX: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),
                           LIQUIDATIONS: Callback(None),
@@ -110,7 +111,7 @@ class Feed:
         key_id = cls.keys[fid]['key_id'] if (fid in cls.keys) and ('key_id' in cls.keys[fid]) else None
         pairs, info = get_exchange_info(cls.id, key_id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
-        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES, PROFILE, TRANSACTIONS):
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, PROFILE, TICKER, TRADES, TRANSACTIONS, VOLUME):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)

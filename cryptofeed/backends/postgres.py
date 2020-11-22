@@ -10,8 +10,9 @@ import asyncpg
 from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendFuturesIndexCallback)
+from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX
 
 
 class PostgresCallback:
@@ -77,6 +78,10 @@ class TickerPostgres(PostgresCallback, BackendTickerCallback):
 
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
     default_table = OPEN_INTEREST
+
+
+class FuturesIndexPostgres(PostgresCallback, BackendFuturesIndexCallback):
+    default_table = FUTURES_INDEX
 
 
 class LiquidationsPostgres(PostgresCallback, BackendLiquidationsCallback):
