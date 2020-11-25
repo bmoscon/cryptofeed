@@ -198,8 +198,7 @@ def exx_pairs():
 
 def huobi_common_pairs(url: str):
     r = requests.get(url).json()
-    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(
-        e['base-currency'], e['quote-currency']) for e in r['data']}
+    return {'{}{}{}'.format(e['base-currency'].upper(), PAIR_SEP, e['quote-currency'].upper()): '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
 def huobi_pairs():
@@ -226,8 +225,7 @@ def huobi_dm_pairs():
     for e in r['data']:
         pairs[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
         _exchange_info[HUOBI_DM]['tick_size'][e['contract_code']] = e['price_tick']
-        _exchange_info[HUOBI_DM]['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e[
-            'contract_code']
+        _exchange_info[HUOBI_DM]['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
 
     return pairs
 
@@ -312,9 +310,7 @@ def deribit_pairs():
     data = []
     for c in currencies:
         for k in kind:
-            data.extend(requests.get(
-                f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}").json()[
-                            'result'])
+            data.extend(requests.get(f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}").json()['result'])
     return {d['instrument_name']: d['instrument_name'] for d in data}
 
 
