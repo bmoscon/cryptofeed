@@ -9,7 +9,7 @@ import logging
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_FUTURES, BINANCE_DELIVERY, OPEN_INTEREST, TICKER
+from cryptofeed.defines import BINANCE_DELIVERY, OPEN_INTEREST, TICKER
 from cryptofeed.exchange.binance import Binance
 
 LOG = logging.getLogger('feedhandler')
