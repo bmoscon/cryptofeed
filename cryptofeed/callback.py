@@ -23,6 +23,9 @@ class Callback:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self.callback, *args, **kwargs)
 
+    async def stop(self):
+        pass
+
 
 class TradeCallback(Callback):
 
