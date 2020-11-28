@@ -186,6 +186,12 @@ class Feed:
     async def message_handler(self, msg: str, timestamp: float):
         raise NotImplementedError
 
+    async def stop(self):
+        for callbacks in self.callbacks.values():
+            for callback in callbacks:
+                if hasattr(callback, 'stop'):
+                    await callback.stop()
+
 
 class RestFeed(Feed):
     async def message_handler(self):
