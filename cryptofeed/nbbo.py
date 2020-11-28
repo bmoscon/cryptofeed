@@ -20,7 +20,7 @@ class NBBO(Callback):
 
         super(NBBO, self).__init__(callback)
 
-    def _update(self, feed, pair, book, timestamp):
+    def _update(self, feed, pair, book):
         bid = Decimal(list(book[BID].keys())[-1])
         size = book[BID][bid]
         self.bids[pair][feed] = {'price': bid, 'size': size}
@@ -33,8 +33,8 @@ class NBBO(Callback):
 
         return self.bids[pair][max_bid], self.asks[pair][min_ask], max_bid, min_ask
 
-    async def __call__(self, *, feed: str, pair: str, book: dict, timestamp):
-        update = self._update(feed, pair, book, timestamp)
+    async def __call__(self, *, feed: str, pair: str, book: dict, timestamp: float, receipt_timestamp: float):
+        update = self._update(feed, pair, book)
 
         # only write updates when a best bid / best aks changes
         if self.last_update == update:
