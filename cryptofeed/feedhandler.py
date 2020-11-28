@@ -7,6 +7,7 @@ associated with this software.
 import asyncio
 import logging
 import os
+from signal import SIGTERM
 import zlib
 from collections import defaultdict
 from copy import deepcopy
@@ -179,6 +180,12 @@ class FeedHandler:
             # Good to enable when debugging
             # loop.set_debug(True)
 
+            def handle_stop_signals():
+                raise SystemExit
+
+            for signal in [SIGTERM]:
+                loop.add_signal_handler(signal, handle_stop_signals)
+
             for feed in self.feeds:
                 if isinstance(feed, RestFeed):
                     loop.create_task(self._rest_connect(feed))
@@ -188,8 +195,13 @@ class FeedHandler:
                 loop.run_forever()
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
+        except SystemExit:
+            LOG.info("System Exit received - shutting down")
         except Exception:
             LOG.error("Unhandled exception", exc_info=True)
+        finally:
+            for feed in self.feeds:
+                loop.run_until_complete(feed.stop())
 
     async def _watch(self, feed_id, websocket):
         if self.timeout[feed_id] == -1:
