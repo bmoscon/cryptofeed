@@ -6,11 +6,13 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
+import zlib
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std
 
@@ -28,6 +30,18 @@ class Kraken(Feed):
     def __reset(self):
         self.l2_book = {}
         self.channel_map = {}
+
+    def __calc_checksum(self, pair):
+        bid_prices = list(reversed(self.l2_book[pair][BID].keys()))[:10]
+        ask_prices = list(self.l2_book[pair][ASK].keys())[:10]
+
+        combined = ""
+        for data, side in ((ask_prices, ASK), (bid_prices, BID)):
+            sizes = [str(self.l2_book[pair][side][price]).replace('.', '').lstrip('0') for price in data]
+            prices = [str(price).replace('.', '').lstrip('0') for price in data]
+            combined += ''.join([b for a in zip(prices, sizes) for b in a])
+
+        return str(zlib.crc32(combined.encode()))
 
     async def subscribe(self, websocket):
         self.__reset()
@@ -124,6 +138,9 @@ class Kraken(Feed):
                     del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
                     del self.l2_book[pair][side][del_price]
                     delta[side].append((del_price, 0))
+
+            if self.checksum_validation and 'c' in msg[0] and self.__calc_checksum(pair) != msg[0]['c']:
+                raise BadChecksum("Checksum validation on orderbook failed")
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):

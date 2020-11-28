@@ -75,7 +75,7 @@ def main():
 
     f.add_feed(Bitfinex(pairs=['BTC'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
-    f.add_feed(Kraken(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
+    f.add_feed(Kraken(checksum_validation=True, config={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
     config = {TRADES: ['BTC-USDT', 'ETH-USDT'], L2_BOOK: ['BTC-USDT']}
     f.add_feed(Huobi(config=config, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
     config = {L2_BOOK: ['BTC_CQ', 'BTC_NQ']}
