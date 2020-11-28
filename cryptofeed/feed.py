@@ -189,7 +189,8 @@ class Feed:
     async def stop(self):
         for callbacks in self.callbacks.values():
             for callback in callbacks:
-                await callback.stop()
+                if hasattr(callback, 'stop'):
+                    await callback.stop()
 
 
 class RestFeed(Feed):
