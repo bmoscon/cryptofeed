@@ -8,6 +8,7 @@
   * Bugfix: Fix NBBO callback
   * Feature: Orderbook sequence number validation for HitBTC
   * Feature: Kraken orderbook checksum support in Kraken
+  * Feature: KrakenFutures sequence number check added
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
