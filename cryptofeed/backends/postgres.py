@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from datetime import datetime as dt
-import asyncio
 
 import asyncpg
 from yapic import json
@@ -43,7 +42,6 @@ class PostgresCallback:
         self._cache_size = cache_size
         self._cache = []
         self._cache_counter = 0
-        self._cache_lock = asyncio.Lock()
 
     async def _connect(self):
         if self.conn is None:
@@ -53,9 +51,8 @@ class PostgresCallback:
         time = dt.utcfromtimestamp(timestamp)
         rtime = dt.utcfromtimestamp(receipt_timestamp)
 
-        async with self._cache_lock:
-            self._cache.append(f"('{feed}','{pair}','{time}','{rtime}',{data})")
-            self._cache_counter += 1
+        self._cache.append(f"('{feed}','{pair}','{time}','{rtime}',{data})")
+        self._cache_counter += 1
 
         if self._cache_counter > self._cache_size:
             await self.write_cache()
@@ -63,7 +60,7 @@ class PostgresCallback:
     async def write_cache(self):
         await self._connect()
 
-        async with self._cache_lock, self.conn.transaction():
+        async with self.conn.transaction():
             args_str = ','.join(line for line in self._cache)
 
             self._cache_counter = 0
