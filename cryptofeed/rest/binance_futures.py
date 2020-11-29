@@ -81,8 +81,7 @@ class BinanceDelivery(API):
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, end):
             if start and end:
-                return requests.get(
-                    f"{self.api}aggTrades?symbol={symbol}&limit={REQUEST_LIMIT}&startTime={start}&endTime={end}")
+                return requests.get(f"{self.api}aggTrades?symbol={symbol}&limit={REQUEST_LIMIT}&startTime={start}&endTime={end}")
             else:
                 return requests.get(f"{self.api}aggTrades?symbol={symbol}")
 
@@ -106,9 +105,7 @@ class BinanceDelivery(API):
                 LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
                 if data[-1]['T'] == start:
-                    LOG.warning(
-                        "%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d",
-                        self.ID, start)
+                    LOG.warning("%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.ID, start)
                     start += 1
                 else:
                     start = data[-1]['T']

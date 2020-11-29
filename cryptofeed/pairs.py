@@ -150,8 +150,7 @@ def poloniex_id_pair_mapping():
 
 
 def poloniex_pairs():
-    return {value.split("_")[1] + PAIR_SEP + value.split("_")[0]: value for _, value in
-            poloniex_id_pair_mapping().items()}
+    return {value.split("_")[1] + PAIR_SEP + value.split("_")[0]: value for _, value in poloniex_id_pair_mapping().items()}
 
 
 def bitstamp_pairs():
