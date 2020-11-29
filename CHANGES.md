@@ -11,6 +11,8 @@
   * Feature: KrakenFutures sequence number check added
   * Feature: Add optional caching to postgres backend
   * Feature: New Exchange - Binance Delivery
+  * Feature: Liquidation for OKEX
+  * Bugfix: Adjust ping interval on websocket connection, some exchanges require pings more frequently
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
