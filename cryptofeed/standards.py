@@ -237,7 +237,8 @@ _feed_to_exchange_map = {
         BINANCE_FUTURES: 'forceOrder',
         BINANCE_DELIVERY: 'forceOrder',
         FTX: 'trades',
-        DERIBIT: 'trades'
+        DERIBIT: 'trades',
+        OKEX: LIQUIDATIONS,
     },
     FUTURES_INDEX: {
         BYBIT: 'instrument_info.100ms'

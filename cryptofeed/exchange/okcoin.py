@@ -11,7 +11,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
@@ -44,13 +44,15 @@ class OKCoin(Feed):
 
         if self.config:
             for chan in self.config:
+                if chan == LIQUIDATIONS:
+                    continue
                 args = [f"{chan_format(chan, pair)}:{pair}" for pair in self.config[chan]]
                 await websocket.send(json.dumps({
                     "op": "subscribe",
                     "args": args
                 }))
         else:
-            chans = [f"{chan_format(chan, pair)}:{pair}" for chan in self.channels for pair in self.pairs]
+            chans = [f"{chan_format(chan, pair)}:{pair}" for chan in self.channels for pair in self.pairs if chan != LIQUIDATIONS]
             await websocket.send(json.dumps({
                 "op": "subscribe",
                 "args": chans

@@ -256,7 +256,7 @@ class FeedHandler:
                     await feed.subscribe(None)
                     return
 
-                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None,
+                async with websockets.connect(feed.address, ping_interval=10, ping_timeout=None,
                         max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
                     asyncio.ensure_future(self._watch(feed.uuid, websocket))
                     # connection was successful, reset retry count and delay
