@@ -34,3 +34,5 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 
 
 For even more assurances that books are in the expected state (or for use in debugging), you can enabled a cross check on book updates as well with the `cross_check` kwarg set to `True`.  
+
+If an exchange does not provide snapshots only, sequence numbers, or checksums, there is no guarantee that all messages have been received or that an orderbook is in the correct state. 
