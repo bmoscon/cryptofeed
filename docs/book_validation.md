@@ -15,7 +15,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | BinanceUS     |               | x                |                |
 | BitMEX        |               |                  |                |
 | Coinbase      |               |  x               |                |
-| Deribit       |               |                  |                |
+| Deribit       |               | x                |                |
 | EXX           |               |                  |                |
 | FTX           | x             |                  |                |
 | FTX US        | x             |                  |                |
