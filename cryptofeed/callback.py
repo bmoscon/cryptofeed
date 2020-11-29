@@ -88,3 +88,7 @@ class VolumeCallback(Callback):
 
 class FundingCallback(Callback):
     pass
+
+
+class FuturesIndexCallback(Callback):
+    pass

@@ -58,7 +58,7 @@ class OHLCV(AggregateCallback):
             self.data[pair]['low'] = price
         self.data[pair]['vwap'] += price * amount
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
@@ -128,7 +128,7 @@ class RenkoFixed(AggregateCallback):
         else:
             self.new_brick = False
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
         if self.new_brick:
             await self.handler(data=self.data)
         self._agg(pair, price)

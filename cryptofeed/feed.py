@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from cryptofeed.callback import Callback
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, L2_BOOK, L3_BOOK,
-                                LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES, VOLUME)
+                                LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES, VOLUME, FUTURES_INDEX)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
@@ -75,7 +75,8 @@ class Feed:
                           VOLUME: Callback(None),
                           FUNDING: Callback(None),
                           OPEN_INTEREST: Callback(None),
-                          LIQUIDATIONS: Callback(None)}
+                          LIQUIDATIONS: Callback(None),
+                          FUTURES_INDEX: Callback(None)}
 
         if callbacks:
             for cb_type, cb_func in callbacks.items():
@@ -94,7 +95,7 @@ class Feed:
         """
         pairs, info = get_exchange_info(cls.id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
-        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES):
+        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES, FUTURES_INDEX):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
@@ -184,6 +185,12 @@ class Feed:
 
     async def message_handler(self, msg: str, timestamp: float):
         raise NotImplementedError
+
+    async def stop(self):
+        for callbacks in self.callbacks.values():
+            for callback in callbacks:
+                if hasattr(callback, 'stop'):
+                    await callback.stop()
 
 
 class RestFeed(Feed):

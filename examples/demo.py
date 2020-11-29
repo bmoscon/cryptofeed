@@ -7,10 +7,10 @@ associated with this software.
 from decimal import Decimal
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, VOLUME
+from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback, FuturesIndexCallback, OpenInterestCallback
+from cryptofeed.defines import BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, VOLUME, FUTURES_INDEX
 from cryptofeed.exchanges import (EXX, FTX, Binance, Bitfinex, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio, Gemini,
-                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex)
+                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit)
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -47,6 +47,10 @@ async def volume(**kwargs):
     print(f"Volume: {kwargs}")
 
 
+async def futures_index(**kwargs):
+    print(f"FuturesIndex: {kwargs}")
+
+
 def main():
     f = FeedHandler()
     # Note: EXX is extremely unreliable - sometimes a connection can take many many retries
@@ -71,7 +75,7 @@ def main():
 
     f.add_feed(Bitfinex(pairs=['BTC'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
     f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
-    f.add_feed(Kraken(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
+    f.add_feed(Kraken(checksum_validation=True, config={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
     config = {TRADES: ['BTC-USDT', 'ETH-USDT'], L2_BOOK: ['BTC-USDT']}
     f.add_feed(Huobi(config=config, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
     config = {L2_BOOK: ['BTC_CQ', 'BTC_NQ']}
@@ -82,6 +86,7 @@ def main():
     f.add_feed(OKEx(pairs=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(Bittrex(config={TRADES: ['BTC-USD'], TICKER: ['ETH-USD'], L2_BOOK: ['BTC-USDT']}, callbacks={L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
     f.add_feed(FTX(pairs=['ADA-PERP', 'ALGO-PERP', 'ALT-PERP', 'ATOM-PERP', 'BCH-PERP', 'BNB-PERP', 'BSV-PERP', 'BTC-PERP', 'BTMX-PERP', 'DOGE-PERP', 'DRGN-PERP', 'EOS-PERP', 'ETC-PERP'], channels=[TICKER], callbacks={TICKER: ticker, TRADES: TradeCallback(trade)}))
+    f.add_feed(Bybit(pairs=['BTC-USD'], channels=[FUTURES_INDEX], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), FUTURES_INDEX: FuturesIndexCallback(futures_index)}))
 
     f.add_feed(BLOCKCHAIN, pairs=['BTC-USD', 'ETH-USD'], channels=[L2_BOOK, TRADES], callbacks={
                   L2_BOOK: BookCallback(book),

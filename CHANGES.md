@@ -1,5 +1,16 @@
 ## Changelog
 
+### 1.6.2
+  * Bugfix: Fix aggregated callbacks (Renko and OHLCV) when used with exchanges that support order types
+  * Bugfix: Fix broken example/demo code
+  * Feature: New data channel - `futures_index` - demonstrated in ByBit
+  * Feature: Add stop callback when exiting loop, add stop method placeholder for base callbacks
+  * Bugfix: Fix NBBO callback
+  * Feature: Orderbook sequence number validation for HitBTC
+  * Feature: Kraken orderbook checksum support in Kraken
+  * Feature: KrakenFutures sequence number check added
+  * Feature: Add optional caching to postgres backend
+
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
   * Feature: Support for rabbitmq message routing
