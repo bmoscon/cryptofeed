@@ -6,6 +6,9 @@
   * Feature: New data channel - `futures_index` - demonstrated in ByBit
   * Feature: Add stop callback when exiting loop, add stop method placeholder for base callbacks
   * Bugfix: Fix NBBO callback
+  * Feature: Orderbook sequence number validation for HitBTC
+  * Feature: Kraken orderbook checksum support in Kraken
+  * Feature: KrakenFutures sequence number check added
   * Feature: Add optional caching to postgres backend
 
 ### 1.6.1 (2020-11-12)
