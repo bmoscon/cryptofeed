@@ -23,3 +23,9 @@ deribit:
 ftx:
     key_id: null
     key_secret: null
+binance_futures:
+    key_id: null
+    key_secret: null
+binance_delivery:
+    key_id: null
+    key_secret: null

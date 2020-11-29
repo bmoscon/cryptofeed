@@ -15,11 +15,9 @@ import requests
 
 from cryptofeed.defines import *
 
-
 LOG = logging.getLogger('feedhandler')
 
 PAIR_SEP = '-'
-
 
 _pairs_retrieval_cache = dict()
 _exchange_info = defaultdict(lambda: defaultdict(dict))
@@ -60,6 +58,10 @@ def binance_us_pairs():
 
 def binance_futures_pairs():
     return _binance_pairs('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
+
+
+def binance_delivery_pairs():
+    return _binance_pairs('https://dapi.binance.com/dapi/v1/exchangeInfo', BINANCE_DELIVERY)
 
 
 def bitfinex_pairs():
@@ -148,7 +150,8 @@ def poloniex_id_pair_mapping():
 
 
 def poloniex_pairs():
-    return {value.split("_")[1] + PAIR_SEP + value.split("_")[0]: value for _, value in poloniex_id_pair_mapping().items()}
+    return {value.split("_")[1] + PAIR_SEP + value.split("_")[0]: value for _, value in
+            poloniex_id_pair_mapping().items()}
 
 
 def bitstamp_pairs():
@@ -315,9 +318,11 @@ def kraken_future_pairs():
     data = requests.get("https://futures.kraken.com/derivatives/api/v3/instruments").json()['instruments']
     return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
 
+
 def probit_pairs():
     r = requests.get("https://api.probit.com/api/exchange/v1/market").json()
     return {entry['id']: entry['id'] for entry in r['data']}
+
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
@@ -332,6 +337,7 @@ _exchange_function_map = {
     BINANCE: binance_pairs,
     BINANCE_US: binance_us_pairs,
     BINANCE_FUTURES: binance_futures_pairs,
+    BINANCE_DELIVERY: binance_delivery_pairs,
     BLOCKCHAIN: blockchain_pairs,
     EXX: exx_pairs,
     HUOBI: huobi_pairs,

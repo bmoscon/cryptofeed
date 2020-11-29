@@ -9,6 +9,7 @@ import os
 
 from cryptofeed.log import get_logger
 from cryptofeed.rest.binance_futures import BinanceFutures
+from cryptofeed.rest.binance_futures import BinanceDelivery
 from cryptofeed.rest.bitfinex import Bitfinex
 from cryptofeed.rest.bitmex import Bitmex
 from cryptofeed.rest.coinbase import Coinbase
@@ -48,6 +49,7 @@ class Rest:
             'kraken': Kraken(config),
             'deribit': Deribit(config),
             'binance_futures': BinanceFutures(config),
+            'binance_delivery': BinanceDelivery(config),
             'ftx': FTX(config)
         }
 
