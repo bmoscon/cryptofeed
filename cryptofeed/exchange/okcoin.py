@@ -4,14 +4,16 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from decimal import Decimal
+from itertools import islice
 import logging
 import zlib
-from decimal import Decimal
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS
+from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
@@ -30,6 +32,28 @@ class OKCoin(Feed):
     def __reset(self):
         self.l2_book = {}
         self.open_interest = {}
+
+    def __calc_checksum(self, pair):
+        bid_it = reversed(self.l2_book[pair][BID])
+        ask_it = iter(self.l2_book[pair][ASK])
+
+        bids = (f"{bid}:{self.l2_book[pair][BID][bid]}" for bid in bid_it)
+        bids = list(islice(bids, 25))
+        asks = (f"{ask}:{self.l2_book[pair][ASK][ask]}" for ask in ask_it)
+        asks = list(islice(asks, 25))
+
+
+        if len(bids) == len(asks):
+            combined = [val for pair in zip(bids, asks) for val in pair]
+        elif len(bids) > len(asks):
+            combined = [val for pair in zip(bids[:len(asks)], asks) for val in pair]
+            combined += bids[len(asks):]
+        else:
+            combined = [val for pair in zip(bids, asks[:len(bids)]) for val in pair]
+            combined += asks[len(bids):]
+
+        computed = ":".join(combined).encode()
+        return zlib.crc32(computed)
 
     async def subscribe(self, websocket):
         self.__reset()
@@ -122,6 +146,9 @@ class OKCoin(Feed):
                         Decimal(price): Decimal(amount) for price, amount, *_ in update['asks']
                     })
                 }
+
+                if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
+                    raise BadChecksum
                 await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']), timestamp)
         else:
             # update
@@ -140,6 +167,8 @@ class OKCoin(Feed):
                         else:
                             delta[s].append((price, amount))
                             self.l2_book[pair][s][price] = amount
+                if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
+                    raise BadChecksum
                 await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
 
     async def message_handler(self, msg: str, timestamp: float):
