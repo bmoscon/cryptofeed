@@ -22,6 +22,7 @@ from cryptofeed.exceptions import RestResponseError
 # R+
 import csv
 import os.path
+from datetime import datetime
 # R-
 
 LOG = logging.getLogger('feedhandler')
@@ -131,37 +132,47 @@ class WhaleAlert(RestFeed):
 
 # R+
         filename = 'whale_alert.csv'
-        header = ['request_time', 'request_coin', 'before_b_ltu_1', 'before_b_last_trans_update', 'before_b_chained_call','before_b_transactions_for_coin',
-                  'query_coin', 'query_start_ts', 'command', 'after_b_last_trans_update', 'after_b_chained_call',
-                  'query_status', 'nber_queried_trans', 'ts_1st_queried_trans', 'ts_last_queried_trans', 'queried_to', 'queried_from', 'queried_amount',
-                  'latest_cleared_ts', 'CF_coin', 'nber_flushed_trans',
-                  'ts_1st_flushed_trans', 'ts_last_flushed_trans', 'flushed_to', 'flushed_from', 'flushed_amount', 'after_b_transactions_for_coin']
+        header = ['request_time', 'request_time_h', 'request_coin',
+                  'before_b_ltu_1', 'before_b_last_trans_update', 'before_b_chained_call',
+                  'before_b_transactions_for_queried_coin', 'before_b_transactions_for_flushed_coin',
+                  'query_coin', 'query_start_ts', 'command',
+                  'after_b_last_trans_update', 'after_b_chained_call', 'after_b_transactions_for_queried_coin',
+                  'query_status', 'nber_queried_trans', 'ts_1st_queried_trans', 'ts_last_queried_trans', 'ts_1st_queried_trans_h',
+                  'queried_to', 'queried_from', 'queried_amount',
+                  'latest_cleared_ts', 'latest_cleared_ts_h,',
+                  'flushed_coin', 'nber_flushed_trans', 'ts_1st_flushed_trans', 'ts_last_flushed_trans', 'ts_1st_flushed_trans_h',
+                  'flushed_to', 'flushed_from', 'flushed_amount', 'after_b_transactions_for_flushed_coin']
         request_time = receipt_timestamp
+        request_time_h = str(datetime.fromtimestamp(receipt_timestamp))
         request_coin = coin
-        before_b_last_trans_update = str(self.last_transaction_update.copy())
         before_b_ltu_1 = str(next(iter(self.last_transaction_update.values()))) if self.last_transaction_update else ''
-        latest_cleared_ts_tmp = next(iter(self.last_transaction_update.keys())) if self.last_transaction_update else ''
+        before_b_last_trans_update = str(self.last_transaction_update)
+#        latest_cleared_ts_tmp = str(next(iter(self.last_transaction_update.keys()))) if self.last_transaction_update else ''
 #        LOG.warning("Latest cleared ts tmp: %s", str(latest_cleared_ts_tmp))
 #        LOG.warning("Before b last transactions update: %s", str(before_b_ltu_1))
-        before_b_chained_call = self.chained_call.copy()
-        before_b_transactions_for_coin = self.buffer_transactions[coin].copy() if coin in self.buffer_transactions else ''
+        before_b_chained_call = str(self.chained_call)
+        before_b_transactions_for_flushed_coin = str(self.buffer_transactions[coin]) if coin in self.buffer_transactions else ''
         nber_queried_trans = ''
         after_b_last_trans_update = ''
         after_b_chained_call = ''
+        after_b_transactions_for_queried_coin = ''
         ts_1st_queried_trans = ''
         ts_last_queried_trans = ''
+        ts_1st_queried_trans_h = ''
         queried_to = ''
         queried_from = ''
         queried_amount = ''
         latest_cleared_ts = ''
-        CF_coin = ''
+        latest_cleared_ts_h = ''
+        flushed_coin = ''
         nber_flushed_trans = ''
         ts_1st_flushed_trans = ''
         ts_last_flushed_trans = ''
+        ts_1st_flushed_trans_h = ''
         flushed_to = ''
         flushed_from = ''
         flushed_amount = ''
-        after_b_transactions_for_coin = ''
+        after_b_transactions_for_flushed_coin = ''
 # R-
 
         if coin in reduce(iconcat, last_trans_up.values(), []):
@@ -172,7 +183,7 @@ class WhaleAlert(RestFeed):
             # `query_start_ts` is overwritten in case a chained call is to be made.
             query_cursor, query_start_ts = self.chained_call.pop(query_coin, ('', latest_cleared_ts))
             if not query_cursor and latest_cleared_ts < max_history_ts:
-                LOG.warning("%s - Possible hole in transaction data for coins %s due to impossibility to query often enough.".format(self.id, query_coin))
+                LOG.warning("%s - Possible hole in transaction data for coins %s due to impossibility to query far enough, back in time.".format(self.id, query_coin))
                 query_start_ts = max_history_ts
         else:
             query_coin = coin
@@ -187,13 +198,8 @@ class WhaleAlert(RestFeed):
 #       query_coin
 #       query_start_ts
         command = query
-        after_b_last_trans_update = self.last_transaction_update
-        after_b_chained_call = self.chained_call
+        before_b_transactions_for_queried_coin = str(self.buffer_transactions[query_coin]) if query_coin in self.buffer_transactions else ''
         query_status = 'error'
-        row = [request_time, request_coin, before_b_ltu_1, before_b_last_trans_update, before_b_chained_call, before_b_transactions_for_coin,
-               query_coin, query_start_ts, command, after_b_last_trans_update, after_b_chained_call,
-               query_status, nber_queried_trans, ts_1st_queried_trans, ts_last_queried_trans, queried_to, queried_from, queried_amount,
-               latest_cleared_ts, CF_coin, nber_flushed_trans, ts_1st_flushed_trans, ts_last_flushed_trans, flushed_to, flushed_from, flushed_amount, after_b_transactions_for_coin]
 # R-
 
         async with session.get(query) as response:
@@ -201,7 +207,26 @@ class WhaleAlert(RestFeed):
             try:
                 data = json.loads(data)
             except JSONDecodeError as jde:
+                # Re-insert entries in self.last_transaction_update & self.chained_call before exiting
+                if latest_cleared_ts in last_trans_up:
+                    last_trans_up[latest_cleared_ts].append(query_coin)
+                else:
+                    last_trans_up[latest_cleared_ts] = [query_coin]
+                if query_cursor:
+                    self.chained_call[query_coin] = (query_cursor, query_start_ts)
 # R+
+                after_b_last_trans_update = str(self.last_transaction_update)
+                after_b_chained_call = str(self.chained_call)
+                row = [request_time, request_time_h, request_coin,
+                       before_b_ltu_1, before_b_last_trans_update, before_b_chained_call,
+                       before_b_transactions_for_queried_coin, before_b_transactions_for_flushed_coin,
+                       query_coin, query_start_ts, command,
+                       after_b_last_trans_update, after_b_chained_call, after_b_transactions_for_queried_coin,
+                       query_status, nber_queried_trans, ts_1st_queried_trans, ts_last_queried_trans, ts_1st_queried_trans_h,
+                       queried_to, queried_from, queried_amount,
+                       latest_cleared_ts, latest_cleared_ts_h,
+                       flushed_coin, nber_flushed_trans, ts_1st_flushed_trans, ts_last_flushed_trans, ts_1st_flushed_trans_h,
+                       flushed_to, flushed_from, flushed_amount, after_b_transactions_for_flushed_coin]
                 if os.path.isfile(filename):
                     with open(filename,'a') as f:
                         writer = csv.writer(f)
@@ -211,14 +236,35 @@ class WhaleAlert(RestFeed):
                         writer = csv.writer(f)
                         writer.writerows([header, row])
 # R-                    
-                raise Exception('Rate limit possibly exceeded\nReturned error: {!s}\nReturned response content from HTTP request: {!s}'.format(jde, data))
+                raise Exception('Returned error: {!s}\nReturned response content from HTTP request: {!s}'.format(jde, data))
             
             if data['result'] == 'error':
+# R+
                 # Content of `self.last_trans_up` & `self.chained_call` has been modified and previous coin is not listed in these dict any longer (`pop()`).
                 # When starting again to query this coin, `query_start_ts` will thus be `max_history_ts`.
                 # For this reason, when using later post-processing of stored data, it is important for the user to remove duplicate transactions (easily identified thanks to their `id`).
+# R-
+                # Re-insert entries in self.last_transaction_update & self.chained_call before exiting
+                if latest_cleared_ts in last_trans_up:
+                    last_trans_up[latest_cleared_ts].append(query_coin)
+                else:
+                    last_trans_up[latest_cleared_ts] = [query_coin]
+                if query_cursor:
+                    self.chained_call[query_coin] = (query_cursor, query_start_ts)
 
 # R+
+                after_b_last_trans_update = str(self.last_transaction_update)
+                after_b_chained_call = str(self.chained_call)
+                row = [request_time, request_time_h, request_coin,
+                       before_b_ltu_1, before_b_last_trans_update, before_b_chained_call,
+                       before_b_transactions_for_queried_coin, before_b_transactions_for_flushed_coin,
+                       query_coin, query_start_ts, command,
+                       after_b_last_trans_update, after_b_chained_call, after_b_transactions_for_queried_coin,
+                       query_status, nber_queried_trans, ts_1st_queried_trans, ts_last_queried_trans, ts_1st_queried_trans_h,
+                       queried_to, queried_from, queried_amount,
+                       latest_cleared_ts, latest_cleared_ts_h,
+                       flushed_coin, nber_flushed_trans, ts_1st_flushed_trans, ts_last_flushed_trans, ts_1st_flushed_trans_h,
+                       flushed_to, flushed_from, flushed_amount, after_b_transactions_for_flushed_coin]
                 if os.path.isfile(filename):
                     with open(filename,'a') as f:
                         writer = csv.writer(f)
@@ -252,6 +298,7 @@ class WhaleAlert(RestFeed):
                     queried_amount = transaction['amount']
                     if max_trans_ts == 0:
                         ts_1st_queried_trans = transaction['timestamp']
+                        ts_1st_queried_trans_h = str(datetime.fromtimestamp(ts_1st_queried_trans))
                     else:
                         ts_last_queried_trans = transaction['timestamp']
 # R-
@@ -295,6 +342,7 @@ class WhaleAlert(RestFeed):
                 flushed_amount = trans['amount']
                 if nber_flushed_trans == 0:
                     ts_1st_flushed_trans = trans['timestamp']
+                    ts_1st_flushed_trans_h = str(datetime.fromtimestamp(ts_1st_flushed_trans))
                 else:
                     ts_last_flushed_trans = trans['timestamp']   
                 nber_flushed_trans += 1
@@ -311,15 +359,23 @@ class WhaleAlert(RestFeed):
 #                  'query_status', 'nber_trans', 'ts_1st_queried_trans', 'ts_last_queried_trans', 'ts_1st_flushed_trans', 'ts_last_flushed_trans', 'after_b_transactions_for_coin']
         query_status = 'ok'
         nber_queried_trans = data['count']
-        CF_coin = pair=pair_exchange_to_std(coin)
-        after_b_last_trans_update = self.last_transaction_update
-        after_b_chained_call = self.chained_call
-        after_b_transactions_for_coin = self.buffer_transactions[coin] if coin in self.buffer_transactions else ''
+        flushed_coin = pair=pair_exchange_to_std(coin)
+        after_b_last_trans_update = str(self.last_transaction_update)
+        after_b_chained_call = str(self.chained_call)
+        after_b_transactions_for_flushed_coin = str(self.buffer_transactions[coin]) if coin in self.buffer_transactions else ''
+        after_b_transactions_for_queried_coin = str(self.buffer_transactions[query_coin]) if query_coin in self.buffer_transactions else ''
+        latest_cleared_ts_h = str(datetime.fromtimestamp(latest_cleared_ts))
 
-        row = [request_time, request_coin, before_b_ltu_1, before_b_last_trans_update, before_b_chained_call, before_b_transactions_for_coin,
-               query_coin, query_start_ts, command, after_b_last_trans_update, after_b_chained_call,
-               query_status, nber_queried_trans, ts_1st_queried_trans, ts_last_queried_trans, queried_to, queried_from, queried_amount,
-               latest_cleared_ts, CF_coin, nber_flushed_trans, ts_1st_flushed_trans, ts_last_flushed_trans, flushed_to, flushed_from, flushed_amount, after_b_transactions_for_coin]
+        row = [request_time, request_time_h, request_coin,
+               before_b_ltu_1, before_b_last_trans_update, before_b_chained_call,
+               before_b_transactions_for_queried_coin, before_b_transactions_for_flushed_coin,
+               query_coin, query_start_ts, command,
+               after_b_last_trans_update, after_b_chained_call, after_b_transactions_for_queried_coin,
+               query_status, nber_queried_trans, ts_1st_queried_trans, ts_last_queried_trans, ts_1st_queried_trans_h,
+               queried_to, queried_from, queried_amount,
+               latest_cleared_ts, latest_cleared_ts_h,
+               flushed_coin, nber_flushed_trans, ts_1st_flushed_trans, ts_last_flushed_trans, ts_1st_flushed_trans_h,
+               flushed_to, flushed_from, flushed_amount, after_b_transactions_for_flushed_coin]
 
         if os.path.isfile(filename):
             with open(filename,'a') as f:
