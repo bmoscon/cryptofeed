@@ -1,1 +1,33 @@
 
+Some exchanges support methods for ensuring orderbooks are upto date/correct. The two most prevalent methods are checksums and orderbook checksums. With sequence numbers, you can detect a missing message and reset the book/connection. With checksums you must manually calculate a checksum on the orderbook (or some subset of  the book) and compare that to the exchange provided checksum. Sequence number checking takes a negligible amount of time, whereas checksum validation can take a noticeable amount of time (0.4 to 0.8 ms). Sequence number validation is enabled on all supporting exchanges. Checksum validation must be enabled by the end user. Other exchanges do not supply orderbook deltas (snapshots only), so a missing message will not result in an incorret orderbook. This list indicates what exchanges support what features. 
+
+
+| Exchange      | Checksum      | Sequence Numbers | Snapshots only |
+| ------------- |:-------------:| :---------------:|:--------------:|
+| Bitcoin.com   |               | x                |                |
+| Bitfinex      |               | x                |                |
+| Bitmax        |               |                  |                |
+| Bitstamp      |               |                  |x               |
+| Bittrex       |               | x (coming)       |                |
+| Blockchain.com|               | x                |                |
+| Bybit         |               |                  |   x            |
+| Binance       |               |   x              |                |
+| BinanceUS     |               | x                |                |
+| BitMEX        |               |                  |                |
+| Coinbase      |               |  x               |                |
+| Deribit       |               |                  |                |
+| EXX           |               |                  |                |
+| FTX           | x             |                  |                |
+| FTX US        | x             |                  |                |
+| Gate.io       |               |                  |                |
+| Gemini        |               |                  |                |
+| HitBTC        |               |  x               |                |
+| Huobi         |               |                  | x              |
+| Huobi DM      |               |                  |  x             |
+| Huobi Swap    |               |                  |  x             |
+| Kraken        |    x          |                  |                |
+| Kraken Futures|               | x                |                |
+| OKCoin        |  x            |                  |                |
+| OKEX          |  x            |                  |                |
+| Poloniex      |               | x                |                |
+| Upbit         |               |                  |     x          |
