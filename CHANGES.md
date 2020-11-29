@@ -13,6 +13,7 @@
   * Feature: New Exchange - Binance Delivery
   * Feature: Liquidation for OKEX
   * Bugfix: Adjust ping interval on websocket connection, some exchanges require pings more frequently
+  * Feature: Checksum validation for orderbooks on OKEX and OKCoin
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
