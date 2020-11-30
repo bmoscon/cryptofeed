@@ -68,7 +68,7 @@ class WhaleAlert(RestFeed):
                 else:
                     max_history = 86400 * multiplier
             else:
-                LOG.error("Format of 'max_history' %s is not understood.", max_history)
+                LOG.error("Format of 'max_history' {!s} is not understood.".format(max_history))
             self.max_history = max_history
         else:
             self.max_history = max_history
@@ -183,12 +183,13 @@ class WhaleAlert(RestFeed):
             # `query_start_ts` is overwritten in case a chained call is to be made.
             query_cursor, query_start_ts = self.chained_call.pop(query_coin, ('', latest_cleared_ts))
             if not query_cursor and latest_cleared_ts < max_history_ts:
-                LOG.warning("%s - Possible hole in transaction data for coins %s due to impossibility to query far enough, back in time.".format(self.id, query_coin))
+                LOG.warning("{!s} - Possible hole in transaction data for coins {!s} due to impossibility to query far enough, back in time.".format(self.id, query_coin))
                 query_start_ts = max_history_ts
         else:
             query_coin = coin
             query_start_ts = max_history_ts
             query_cursor = ''
+            latest_cleared_ts = max_history_ts
 
         # Step 2 / API query.
         query = f"{self.address}transactions?api_key={self.key_id}&min_value={self.trans_min_value}&start={query_start_ts}&currency={query_coin}&cursor={query_cursor}" \
@@ -211,6 +212,9 @@ class WhaleAlert(RestFeed):
                 if latest_cleared_ts in last_trans_up:
                     last_trans_up[latest_cleared_ts].append(query_coin)
                 else:
+# R+
+#                    LOG.warning("Latest cleared ts {!s}.".format(latest_cleared_ts))
+# R-
                     last_trans_up[latest_cleared_ts] = [query_coin]
                 if query_cursor:
                     self.chained_call[query_coin] = (query_cursor, query_start_ts)
@@ -327,6 +331,9 @@ class WhaleAlert(RestFeed):
             if latest_cleared_ts in last_trans_up:
                 last_trans_up[latest_cleared_ts].append(query_coin)
             else:
+# R+
+#                LOG.warning("Latest cleared ts {!s}.".format(latest_cleared_ts))
+# R-
                 last_trans_up[latest_cleared_ts] = [query_coin]
 
         # Step 3 / feed the callback with transactions for `coin` initially requested.
