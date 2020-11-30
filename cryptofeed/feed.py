@@ -4,8 +4,6 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import os
-import yaml
 import uuid
 from collections import defaultdict
 
@@ -16,12 +14,9 @@ from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
 
-path = os.path.dirname(os.path.abspath(__file__))
-keys = "feed_keys.yaml"
 
 class Feed:
     id = 'NotImplemented'
-    keys = yaml.safe_load(open(os.path.join(path, keys), 'r'))
 
     def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
                  key_id=None):
@@ -59,9 +54,7 @@ class Feed:
         self.previous_book = defaultdict(dict)
         self.origin = origin
         self.checksum_validation = checksum_validation
-        fid = self.id.lower()
-        self.key_id = self.keys[fid]['key_id'] if (not key_id) and (fid in self.keys) and ('key_id' in self.keys[fid]) else key_id # self.key_id is `None` if no key_id provided.
-        load_exchange_pair_mapping(self.id, self.key_id)
+        load_exchange_pair_mapping(self.id, key_id)
 
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")
@@ -103,12 +96,13 @@ class Feed:
                 self.callbacks[key] = [callback]
 
     @classmethod
-    def info(cls) -> dict:
+    def info(cls, key_id: str = None) -> dict:
         """
         Return information about the Exchange - what trading pairs are supported, what data channels, etc
+
+        key_id: str
+            API key to query the feed, required when requesting supported coins/pairs.
         """
-        fid = cls.id.lower()
-        key_id = cls.keys[fid]['key_id'] if (fid in cls.keys) and ('key_id' in cls.keys[fid]) else None
         pairs, info = get_exchange_info(cls.id, key_id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
         for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, PROFILE, TICKER, TRADES, TRANSACTIONS, VOLUME):
