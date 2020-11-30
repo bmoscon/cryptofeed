@@ -189,7 +189,7 @@ class WhaleAlert(RestFeed):
             query_coin = coin
             query_start_ts = max_history_ts
             query_cursor = ''
-            latest_cleared_ts = max_history_ts
+            latest_cleared_ts = 0
 
         # Step 2 / API query.
         query = f"{self.address}transactions?api_key={self.key_id}&min_value={self.trans_min_value}&start={query_start_ts}&currency={query_coin}&cursor={query_cursor}" \
@@ -209,13 +209,14 @@ class WhaleAlert(RestFeed):
                 data = json.loads(data)
             except JSONDecodeError as jde:
                 # Re-insert entries in self.last_transaction_update & self.chained_call before exiting
-                if latest_cleared_ts in last_trans_up:
-                    last_trans_up[latest_cleared_ts].append(query_coin)
-                else:
+                if latest_cleared_ts:
+                    if latest_cleared_ts in last_trans_up:
+                        last_trans_up[latest_cleared_ts].append(query_coin)
+                    else:
 # R+
 #                    LOG.warning("Latest cleared ts {!s}.".format(latest_cleared_ts))
 # R-
-                    last_trans_up[latest_cleared_ts] = [query_coin]
+                        last_trans_up[latest_cleared_ts] = [query_coin]
                 if query_cursor:
                     self.chained_call[query_coin] = (query_cursor, query_start_ts)
 # R+
@@ -249,10 +250,11 @@ class WhaleAlert(RestFeed):
                 # For this reason, when using later post-processing of stored data, it is important for the user to remove duplicate transactions (easily identified thanks to their `id`).
 # R-
                 # Re-insert entries in self.last_transaction_update & self.chained_call before exiting
-                if latest_cleared_ts in last_trans_up:
-                    last_trans_up[latest_cleared_ts].append(query_coin)
-                else:
-                    last_trans_up[latest_cleared_ts] = [query_coin]
+                if latest_cleared_ts:
+                    if latest_cleared_ts in last_trans_up:
+                        last_trans_up[latest_cleared_ts].append(query_coin)
+                    else:
+                        last_trans_up[latest_cleared_ts] = [query_coin]
                 if query_cursor:
                     self.chained_call[query_coin] = (query_cursor, query_start_ts)
 
