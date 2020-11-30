@@ -183,7 +183,7 @@ class WhaleAlert(RestFeed):
             # `query_start_ts` is overwritten in case a chained call is to be made.
             query_cursor, query_start_ts = self.chained_call.pop(query_coin, ('', latest_cleared_ts))
             if not query_cursor and latest_cleared_ts < max_history_ts:
-                LOG.warning("{!s} - Possible hole in transaction data for coins {!s} due to impossibility to query far enough, back in time.".format(self.id, query_coin))
+                LOG.warning("{!s} - Possible hole in transaction data for coin {!s} due to impossibility to query far enough, back in time.".format(self.id, query_coin))
                 query_start_ts = max_history_ts
         else:
             query_coin = coin
