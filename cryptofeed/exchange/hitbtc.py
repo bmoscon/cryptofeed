@@ -11,6 +11,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, HITBTC, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
@@ -27,6 +28,7 @@ class HitBTC(Feed):
                          channels=channels,
                          callbacks=callbacks,
                          **kwargs)
+        self.seq_no = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         await self.callback(TICKER, feed=self.id,
@@ -81,6 +83,14 @@ class HitBTC(Feed):
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
+        if 'params' in msg and 'sequence' in msg['params']:
+            pair = msg['params']['symbol']
+            if pair in self.seq_no:
+                if self.seq_no[pair]+1 != msg['params']['sequence']:
+                    LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
+                    raise MissingSequenceNumber("Missing sequence number, restarting")
+            self.seq_no[pair] = msg['params']['sequence']
+
         if 'method' in msg:
             if msg['method'] == 'ticker':
                 await self._ticker(msg['params'], timestamp)
@@ -110,5 +120,5 @@ class HitBTC(Feed):
                         "params": {
                             "symbol": pair
                         },
-                        "id": 123
+                        "id": self.uuid
                     }))

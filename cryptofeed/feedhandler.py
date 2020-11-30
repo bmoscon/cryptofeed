@@ -7,6 +7,7 @@ associated with this software.
 import asyncio
 import logging
 import os
+from signal import SIGTERM
 import zlib
 from collections import defaultdict
 from copy import deepcopy
@@ -17,7 +18,7 @@ import functools
 import websockets
 from websockets import ConnectionClosed
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT,
                                 COINBASE, COINBENE, COINGECKO, DERIBIT,
                                 FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
@@ -42,6 +43,7 @@ _EXCHANGES = {
     BINANCE: Binance,
     BINANCE_US: BinanceUS,
     BINANCE_FUTURES: BinanceFutures,
+    BINANCE_DELIVERY: BinanceDelivery,
     BITCOINCOM: BitcoinCom,
     BITFINEX: Bitfinex,
     BITMAX: Bitmax,
@@ -184,6 +186,12 @@ class FeedHandler:
             # Good to enable when debugging
             # loop.set_debug(True)
 
+            def handle_stop_signals():
+                raise SystemExit
+
+            for signal in [SIGTERM]:
+                loop.add_signal_handler(signal, handle_stop_signals)
+
             for feed in self.feeds:
                 if isinstance(feed, RestFeed):
                     loop.create_task(self._rest_connect(feed))
@@ -193,8 +201,13 @@ class FeedHandler:
                 loop.run_forever()
         except KeyboardInterrupt:
             LOG.info("Keyboard Interrupt received - shutting down")
+        except SystemExit:
+            LOG.info("System Exit received - shutting down")
         except Exception:
             LOG.error("Unhandled exception", exc_info=True)
+        finally:
+            for feed in self.feeds:
+                loop.run_until_complete(feed.stop())
 
     async def _watch(self, feed_id, websocket):
         if self.timeout[feed_id] == -1:
@@ -248,7 +261,7 @@ class FeedHandler:
                     await feed.subscribe(None)
                     return
 
-                async with websockets.connect(feed.address, ping_interval=30, ping_timeout=None,
+                async with websockets.connect(feed.address, ping_interval=10, ping_timeout=None,
                         max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
                     asyncio.ensure_future(self._watch(feed.uuid, websocket))
                     # connection was successful, reset retry count and delay

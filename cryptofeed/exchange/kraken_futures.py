@@ -12,6 +12,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 
@@ -40,6 +41,7 @@ class KrakenFutures(Feed):
     def __reset(self):
         self.open_interest = {}
         self.l2_book = {}
+        self.seq_no = {}
 
     @staticmethod
     def get_instruments():
@@ -141,6 +143,10 @@ class KrakenFutures(Feed):
             "timestamp": 1565342713929
         }
         """
+        if pair in self.seq_no and self.seq_no[pair] + 1 != msg['seq']:
+            raise MissingSequenceNumber
+        self.seq_no[pair] = msg['seq']
+
         delta = {BID: [], ASK: []}
         s = BID if msg['side'] == 'buy' else ASK
         price = Decimal(msg['price'])

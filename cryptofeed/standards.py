@@ -13,7 +13,7 @@ import logging
 
 import pandas as pd
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, COINGECKO,
                                 DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX,  POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
@@ -23,9 +23,7 @@ from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK,  LIQUI
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs, _exchange_info
 
-
 LOG = logging.getLogger('feedhandler')
-
 
 _std_trading_pairs = {}
 _exchange_to_std = {}
@@ -77,7 +75,8 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT, COINGECKO}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
+    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
+                      BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -98,6 +97,7 @@ _feed_to_exchange_map = {
         BINANCE: 'depth@100ms',
         BINANCE_US: 'depth@100ms',
         BINANCE_FUTURES: 'depth@100ms',
+        BINANCE_DELIVERY: 'depth@100ms',
         BLOCKCHAIN: 'l2',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
@@ -130,6 +130,7 @@ _feed_to_exchange_map = {
         BINANCE: UNSUPPORTED,
         BINANCE_US: UNSUPPORTED,
         BINANCE_FUTURES: UNSUPPORTED,
+        BINANCE_DELIVERY: UNSUPPORTED,
         BLOCKCHAIN: 'l3',
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
@@ -157,6 +158,7 @@ _feed_to_exchange_map = {
         BINANCE: 'aggTrade',
         BINANCE_US: 'aggTrade',
         BINANCE_FUTURES: 'aggTrade',
+        BINANCE_DELIVERY: 'aggTrade',
         BLOCKCHAIN: 'trades',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
@@ -189,6 +191,7 @@ _feed_to_exchange_map = {
         BINANCE: 'ticker',
         BINANCE_US: 'ticker',
         BINANCE_FUTURES: 'ticker',
+        BINANCE_DELIVERY: 'ticker',
         BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
@@ -214,6 +217,7 @@ _feed_to_exchange_map = {
         BITMEX: 'funding',
         BITFINEX: 'trades',
         BINANCE_FUTURES: 'markPrice',
+        BINANCE_DELIVERY: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: '{}/funding_rate',
@@ -227,13 +231,16 @@ _feed_to_exchange_map = {
         DERIBIT: 'ticker',
         FTX: 'open_interest',
         BINANCE_FUTURES: 'open_interest',
+        BINANCE_DELIVERY: 'open_interest',
         BYBIT: 'instrument_info.100ms'
     },
     LIQUIDATIONS: {
         BITMEX: 'liquidation',
         BINANCE_FUTURES: 'forceOrder',
+        BINANCE_DELIVERY: 'forceOrder',
         FTX: 'trades',
-        DERIBIT: 'trades'
+        DERIBIT: 'trades',
+        OKEX: LIQUIDATIONS,
     },
     PROFILE: {
         COINGECKO: PROFILE
@@ -245,7 +252,6 @@ _feed_to_exchange_map = {
         BYBIT: 'instrument_info.100ms'
     }
 }
-
 
 _exchange_options = {
     LIMIT: {
