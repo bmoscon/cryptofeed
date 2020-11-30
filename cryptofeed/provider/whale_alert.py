@@ -277,7 +277,7 @@ class WhaleAlert(RestFeed):
 
                 raise RestResponseError('Error message in response: {!s}'.format(json_data['message']))
 
-            latest_cleared_ts = receipt_timestamp-120  # Using 2mn margin for Whale Alert to insert a new entry in their database.
+            latest_cleared_ts = receipt_timestamp-1800  # Using 30mn margin for Whale Alert to insert a new entry in their database.
             if 'transactions' in data:
                 if query_coin not in self.buffer_transactions:
                     self.buffer_transactions[query_coin] = []
@@ -323,7 +323,7 @@ class WhaleAlert(RestFeed):
                         # This `latest_cleared_ts` will not be used as start ts for the next query, but only for knowing when to do the next query.
                         latest_cleared_ts = max_trans_ts
 
-            # If there has not been any transactions, latest cleared timestamp is receipt timestamp - 2mn.
+            # If there has not been any transactions, latest cleared timestamp is receipt timestamp - 30mn margin.
             if latest_cleared_ts in last_trans_up:
                 last_trans_up[latest_cleared_ts].append(query_coin)
             else:
