@@ -14,6 +14,7 @@
   * Feature: Liquidation for OKEX
   * Bugfix: Adjust ping interval on websocket connection, some exchanges require pings more frequently
   * Feature: Checksum validation for orderbooks on OKEX and OKCoin
+  * Feature: Use rotating log handler
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
