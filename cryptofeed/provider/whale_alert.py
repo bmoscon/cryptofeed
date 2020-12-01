@@ -173,7 +173,7 @@ class WhaleAlert(RestFeed):
 
                 raise RestResponseError('Error message in response: {!s}'.format(json_data['message']))
 
-            latest_cleared_ts = receipt_timestamp-1800  # Using 30mn margin for Whale Alert to insert a new entry in their database.
+            latest_cleared_ts = receipt_timestamp-1200  # Using 20mn margin for Whale Alert to insert a new entry in their database.
             if 'transactions' in data:
                 if query_coin not in self.buffer_transactions:
                     self.buffer_transactions[query_coin] = []
@@ -190,28 +190,25 @@ class WhaleAlert(RestFeed):
                     self.buffer_transactions[query_coin].append({**transaction, **to, **fro})
                     max_trans_ts = transaction['timestamp'] if transaction['timestamp'] > max_trans_ts else max_trans_ts
 
-                # Comments regarding `latest_cleared_ts`:
+                ## Comments regarding `latest_cleared_ts`:
                 # From doc. : "Some transactions might be reported with a small delay."
                 # From mail exchange with support: "That line is there as a disclaimer in case anything goes wrong.
                 # In general (99.99% of the time) transactions are added instantly."
-                # In practise, a delay of 30s can be observed.
-                # For margin, 30 minutes are used at it does not impact negatively the way the algo behaves anyway.
-                #
+                # Hence the 20mn substracted from `receipt_time` before the `for` loop.
                 # Conditions to make a chained call next time (to make sure not to miss any transactions):
-                #  - latest transaction is no older than 30mn (margin),
+                #  - latest transaction is no older than 20mn,
                 #  - data['count'] is 100.
                 # Otherwise `latest_cleared_ts` will be used for next call (not a chained call).
+                ## Comments regarding `data['count']`:
+                # Number of results per query is limited to 100.
+                # If we have 100 results in the query, we are not certain the last result is the last transaction up to the receipt time or not.
+                # If it is lower than 100, we know there is no more transactions till the receipt time.
+                # This `latest_cleared_ts` will not be used as start ts for the next query (use of chained call), but only for knowing when to do the next query.
                 if max_trans_ts > latest_cleared_ts or data['count'] == 100:
                     self.chained_call[query_coin] = (data['cursor'], query_start_ts)
-                    # Comments regarding `data['count']`:
-                    # Number of results per query is limited to 100.
-                    # If we have 100 results in the query, we are not certain the last result is the last transaction up to the receipt time or not.
-                    # If it is lower than 100, we know there is no more transactions till the receipt time.
-                    if data['count'] == 100:
-                        # This `latest_cleared_ts` will not be used as start ts for the next query, but only for knowing when to do the next query.
-                        latest_cleared_ts = max_trans_ts
+                    latest_cleared_ts = max_trans_ts
 
-            # If there has not been any transactions, latest cleared timestamp is receipt timestamp - 30mn margin.
+            # If there has not been any transactions, latest cleared timestamp is receipt timestamp - 20mn margin.
             if latest_cleared_ts in last_trans_up:
                 last_trans_up[latest_cleared_ts].append(query_coin)
             else:
