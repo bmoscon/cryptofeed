@@ -75,7 +75,7 @@ setup(
         "arctic": ["arctic"],
         "zmq": ["pyzmq"],
         "mongo": ["motor"],
-        "kafka": ["aiokafka"],
+        "kafka": ["aiokafka>=0.7.0"],
         "rabbit": ["aio_pika", "pika"],
         "postgres": ["asyncpg"],
         "all": [
@@ -84,7 +84,7 @@ setup(
             "arctic",
             "pyzmq",
             "motor",
-            "aiokafka",
+            "aiokafka>=0.7.0",
             "aio_pika",
             "pika",
             "asyncpg",
