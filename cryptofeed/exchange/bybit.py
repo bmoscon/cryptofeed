@@ -170,7 +170,7 @@ class Bybit(Feed):
                                 side=BUY if trade['side'] == 'Buy' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                timestamp=timestamp_normalize(self.id, trade['trade_time_ms']),
                                 receipt_timestamp=timestamp
                                 )
 
