@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 1.6.2
+  * Feature: Add GCP Pub/Sub backend
   * Bugfix: Fix aggregated callbacks (Renko and OHLCV) when used with exchanges that support order types
   * Bugfix: Fix broken example/demo code
   * Feature: New data channel - `futures_index` - demonstrated in ByBit
