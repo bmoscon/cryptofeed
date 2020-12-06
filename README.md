@@ -134,6 +134,7 @@ Supported Backends:
 * Elastic Search
 * RabbitMQ
 * PostgreSQL
+* GCP Pub/Sub
 
 
 ## Rest API

@@ -31,6 +31,8 @@ aio_pika = "*"              # pip install cryptofeed[rabbit]
 pika = "*"                  # used by demo_rabbitmq.py
 pyyaml = "*"                # pip install cryptofeed[rest_api]
 pyzmq = "*"                 # pip install cryptofeed[zmq]
+google_cloud_pubsub = "*"   # pip install cryptofeed[gcp_pubsub]
+gcloud_aio_pubsub = "*"     # pip install cryptofeed[gcp_pubsub]
 
 [dev-packages]
 isort = {extras = ["pipfile"], version = "*"}

@@ -78,6 +78,7 @@ setup(
         "kafka": ["aiokafka>=0.7.0"],
         "rabbit": ["aio_pika", "pika"],
         "postgres": ["asyncpg"],
+        "gcp_pubsub": ["google_cloud_pubsub", "gcloud_aio_pubsub"],
         "all": [
             "pyyaml",
             "aioredis",
@@ -88,6 +89,7 @@ setup(
             "aio_pika",
             "pika",
             "asyncpg",
+            "gcp_pubsub"
         ],
     },
 )
