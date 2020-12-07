@@ -232,6 +232,9 @@ class FeedHandler:
             try:
                 while True:
                     await feed.message_handler()
+                    # connection was successful, reset retry count and delay
+                    retries = 0
+                    delay = 2*feed.sleep_time if feed.sleep_time else 1
             except Exception:
                 LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
                 await asyncio.sleep(delay)
