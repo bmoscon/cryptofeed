@@ -147,14 +147,21 @@ class Kraken(Feed):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
-            if self.channel_map[msg[0]][0] == 'trade':
-                await self._trade(msg, self.channel_map[msg[0]][1], timestamp)
-            elif self.channel_map[msg[0]][0] == 'ticker':
-                await self._ticker(msg, self.channel_map[msg[0]][1], timestamp)
-            elif self.channel_map[msg[0]][0] == 'book':
-                await self._book(msg, self.channel_map[msg[0]][1], timestamp)
+            channel_id = msg[0]
+            if channel_id not in self.channel_map:
+                LOG.warning("%s: Invalid channel id recevied %d", self.id, channel_id)
+                LOG.warning("%s: channel map: %s", self.id, self.channel_map)
             else:
-                LOG.warning("%s: No mapping for message %s", self.id, msg)
+                channel, pair = self.channel_map[channel_id]
+                if channel == 'trade':
+                    await self._trade(msg, pair, timestamp)
+                elif channel == 'ticker':
+                    await self._ticker(msg, pair, timestamp)
+                elif channel == 'book':
+                    await self._book(msg, pair, timestamp)
+                else:
+                    LOG.warning("%s: No mapping for message %s", self.id, msg)
+                    LOG.warning("%s: channel map: %s", self.id, self.channel_map)
         else:
             if msg['event'] == 'heartbeat':
                 return

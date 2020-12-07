@@ -137,14 +137,14 @@ class Bybit(Feed):
                 await self.callback(OPEN_INTEREST, feed=self.id,
                                     pair=normalize_pair(info['symbol']),
                                     open_interest=info['open_interest'],
-                                    timestamp=timestamp_normalize(self.id, info['updated_at']),
+                                    timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
                                     receipt_timestamp=timestamp)
 
             if 'index_price_e4' in info:
                 await self.callback(FUTURES_INDEX, feed=self.id,
                                     pair=normalize_pair(info['symbol']),
                                     futures_index=info['index_price_e4'] * 1e-4,
-                                    timestamp=timestamp_normalize(self.id, info['updated_at']),
+                                    timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
                                     receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -170,7 +170,7 @@ class Bybit(Feed):
                                 side=BUY if trade['side'] == 'Buy' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                timestamp=timestamp_normalize(self.id, trade['trade_time_ms']),
                                 receipt_timestamp=timestamp
                                 )
 
