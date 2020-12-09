@@ -54,7 +54,7 @@ class LiquidationsMongo(MongoCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoMongo(MongoCallback, BackendProfileCallback):
+class MarketInfoMongo(MongoCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
 
 

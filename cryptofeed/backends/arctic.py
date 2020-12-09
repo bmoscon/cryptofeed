@@ -68,7 +68,7 @@ class LiquidationsArctic(ArcticCallback, BackendLiquidationsCallback):
     default_key = LIQUIDATIONS
 
 
-class MarketInfoArctic(ArcticCallback, BackendProfileCallback):
+class MarketInfoArctic(ArcticCallback, BackendMarketInfoCallback):
     default_key = MARKET_INFO
     
 

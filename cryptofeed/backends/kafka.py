@@ -65,7 +65,7 @@ class LiquidationsKafka(KafkaCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoKafka(KafkaCallback, BackendProfileCallback):
+class MarketInfoKafka(KafkaCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
 
 

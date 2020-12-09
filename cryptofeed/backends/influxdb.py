@@ -163,7 +163,7 @@ class LiquidationsInflux(InfluxCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoInflux(InfluxCallback, BackendProfileCallback):
+class MarketInfoInflux(InfluxCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
 
 
