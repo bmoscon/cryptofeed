@@ -125,7 +125,7 @@ Cryptofeed supports the following channels from exchanges:
 Aggregated data from provider is available in channel:
 
 * TRANSACTIONS - On-chain transactions.
-* PROFILE - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
+* MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
  as well as community data (twitter, reddit, facebook...) and scores (coingecko, developper, community...)
 
 ## Backends

@@ -72,7 +72,7 @@ class BackendLiquidationsCallback:
         await self.write(feed, pair, timestamp, receipt_timestamp, data)
 
 
-class BackendProfileCallback:
+class BackendMarketInfoCallback:
     async def __call__(self, *, feed: str, pair: str, timestamp: float, **kwargs):
         kwargs['feed'] = feed
         kwargs['pair'] = pair

@@ -92,3 +92,11 @@ class FundingCallback(Callback):
 
 class FuturesIndexCallback(Callback):
     pass
+
+
+class MarketInfoCallback(Callback):
+    pass
+
+
+class TransactionsCallback(Callback):
+    pass

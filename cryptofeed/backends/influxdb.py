@@ -11,7 +11,7 @@ import requests
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendProfileCallback, BackendTransactionsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
 from cryptofeed.exceptions import UnsupportedType
@@ -163,8 +163,8 @@ class LiquidationsInflux(InfluxCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
 
 
-class ProfileInflux(InfluxCallback, BackendProfileCallback):
-    default_key = 'profile'
+class MarketInfoInflux(InfluxCallback, BackendProfileCallback):
+    default_key = 'market_info'
 
 
 class TransactionsInflux(InfluxCallback, BackendTransactionsCallback):

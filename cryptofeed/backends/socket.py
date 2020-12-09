@@ -12,7 +12,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendProfileCallback, BackendTransactionsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
 LOG = logging.getLogger('feedhandler')
@@ -126,8 +126,8 @@ class LiquidationsSocket(SocketCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
 
 
-class ProfileSocket(SocketCallback, BackendProfileCallback):
-    default_key = 'profile'
+class MarketInfoSocket(SocketCallback, BackendMarketInfoCallback):
+    default_key = 'market_info'
     
 
 class TransactionsSocket(SocketCallback, BackendTransactionsCallback):

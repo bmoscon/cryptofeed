@@ -18,8 +18,7 @@ from cryptofeed.exceptions import RestResponseError
 
 
 LOG = logging.getLogger('feedhandler')
-to_from_data = ('address', 'owner_type', 'owner')
-
+TO_FROM_DATA = ('address', 'owner_type', 'owner')
 
 class WhaleAlert(RestFeed):
 
@@ -148,9 +147,9 @@ class WhaleAlert(RestFeed):
                     # Flattening the nested dicts.
                     # 'Owner' is not provided if not known. Forcing it as '' into the dict so that DataFrame remains consistent in Cryptostore.
                     to = transaction.pop('to')
-                    to = {('to_' + k): (to[k] if k in to else '') for k in to_from_data}
+                    to = {('to_' + k): (to[k] if k in to else '') for k in TO_FROM_DATA}
                     fro = transaction.pop('from')
-                    fro = {('from_' + k): (fro[k] if k in fro else '') for k in to_from_data}
+                    fro = {('from_' + k): (fro[k] if k in fro else '') for k in TO_FROM_DATA}
                     del transaction['symbol']  # removing duplicate data with `pair` that is added
                     await self.callback(TRANSACTIONS,
                                         feed=self.id,

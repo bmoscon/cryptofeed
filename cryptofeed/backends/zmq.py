@@ -10,7 +10,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendProfileCallback, BackendTransactionsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
 class ZMQCallback:
@@ -58,8 +58,8 @@ class LiquidationsZMQ(ZMQCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
 
 
-class ProfileZMQ(ZMQCallback, BackendProfileCallback):
-    default_key = 'profile'
+class MarketInfoZMQ(ZMQCallback, BackendMarketInfoCallback):
+    default_key = 'market_info'
 
 
 class TransactionsZMQ(ZMQCallback, BackendTransactionsCallback):

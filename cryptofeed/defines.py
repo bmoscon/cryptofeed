@@ -56,7 +56,7 @@ OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
-PROFILE = 'profile'
+MARKET_INFO = 'market_info'
 TRANSACTIONS = 'transactions'
 
 BUY = 'buy'
