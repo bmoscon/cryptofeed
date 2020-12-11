@@ -28,10 +28,10 @@ def set_pair_separator(symbol: str):
     PAIR_SEP = symbol
 
 
-def gen_pairs(exchange):
+def gen_pairs(exchange: str, key_id: str):
     if exchange not in _pairs_retrieval_cache:
         LOG.info("%s: Getting list of pairs", exchange)
-        pairs = _exchange_function_map[exchange]()
+        pairs = _exchange_function_map[exchange](key_id) if key_id else _exchange_function_map[exchange]()
         LOG.info("%s: %s pairs", exchange, len(pairs))
         _pairs_retrieval_cache[exchange] = pairs
     return _pairs_retrieval_cache[exchange]
@@ -323,6 +323,23 @@ def probit_pairs():
     return {entry['id']: entry['id'] for entry in r['data']}
 
 
+def coingecko_pairs():
+    quote_c = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
+    # Normalization
+    normalized = dict({'miota': 'iota'})
+    # Base currencies are defined manually (USD + BTC + ETH).
+    # The full list from Coingecko is not used, as the generated dict of pairs would be tremendous.
+    # base_c =  requests.get('https://api.coingecko.com/api/v3/simple/supported_vs_currencies').json()
+    base_c = (('USD','usd'),('BTC','btc'),('ETH','eth'))
+    return {(f"{q['symbol']}{PAIR_SEP}{bk}".upper() if q['symbol'] not in normalized else f"{normalized[q['symbol']]}{PAIR_SEP}{bk}".upper()) : f"{q['id']}_{bv}" for q in quote_c for bk,bv in base_c }
+
+
+def whale_alert_coins(key_id: str):
+    data = requests.get('https://api.whale-alert.io/v1/status?api_key={!s}'.format(key_id)).json()
+    # Same symbols, but on different blockchains (for instance USDT), are naturally overwritten.
+    return {s.upper(): s for b in data['blockchains'] for s in b['symbols'] if s}
+
+
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
     COINBASE: coinbase_pairs,
@@ -355,5 +372,8 @@ _exchange_function_map = {
     GATEIO: gateio_pairs,
     BITMEX: bitmex_pairs,
     DERIBIT: deribit_pairs,
-    KRAKEN_FUTURES: kraken_future_pairs
+    KRAKEN_FUTURES: kraken_future_pairs,
+    COINGECKO: coingecko_pairs,
+    WHALE_ALERT: whale_alert_coins
 }
+

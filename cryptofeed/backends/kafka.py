@@ -10,7 +10,8 @@ from aiokafka import AIOKafkaProducer
 from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
 class KafkaCallback:
@@ -62,3 +63,12 @@ class OpenInterestKafka(KafkaCallback, BackendOpenInterestCallback):
 
 class LiquidationsKafka(KafkaCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
+
+
+class MarketInfoKafka(KafkaCallback, BackendMarketInfoCallback):
+    default_key = 'market_info'
+
+
+class TransactionsKafka(KafkaCallback, BackendTransactionsCallback):
+    default_key = 'transactions'
+

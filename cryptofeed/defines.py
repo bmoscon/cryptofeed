@@ -41,6 +41,9 @@ BITCOINCOM = 'BITCOINCOM'
 BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
 
+COINGECKO = 'COINGECKO'
+WHALE_ALERT = 'WHALE_ALERT'
+
 
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
@@ -53,6 +56,8 @@ OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
+MARKET_INFO = 'market_info'
+TRANSACTIONS = 'transactions'
 
 BUY = 'buy'
 SELL = 'sell'

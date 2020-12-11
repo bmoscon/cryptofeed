@@ -40,3 +40,8 @@ class BidAskOverlapping(Exception):
 
 class BadChecksum(Exception):
     pass
+
+
+class RestResponseError(Exception):
+    pass
+

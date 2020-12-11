@@ -10,7 +10,8 @@ import aio_pika
 from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
 class RabbitCallback:
@@ -98,3 +99,12 @@ class OpenInterestRabbit(RabbitCallback, BackendOpenInterestCallback):
 
 class LiquidationsRabbit(RabbitCallback, BackendLiquidationsCallback):
     pass
+
+
+class MarketInfoRabbit(RabbitCallback, BackendMarketInfoCallback):
+    pass
+
+
+class TransactionsRabbit(RabbitCallback, BackendTransactionsCallback):
+    pass
+

@@ -13,12 +13,13 @@ import logging
 
 import pandas as pd
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_DELIVERY, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
-                                FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
-                                KRAKEN_FUTURES, L2_BOOK, L3_BOOK, LIMIT, LIQUIDATIONS,
-                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER,
-                                TRADES, UNSUPPORTED, UPBIT, VOLUME, FUTURES_INDEX)
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, COINGECKO,
+                                DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX,  POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
+from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
+from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK,  LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
+                                TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs, _exchange_info
 
@@ -28,10 +29,10 @@ _std_trading_pairs = {}
 _exchange_to_std = {}
 
 
-def load_exchange_pair_mapping(exchange: str):
+def load_exchange_pair_mapping(exchange: str, key_id: str):
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
-    mapping = gen_pairs(exchange)
+    mapping = gen_pairs(exchange, key_id)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
         if std in _std_trading_pairs:
@@ -40,8 +41,8 @@ def load_exchange_pair_mapping(exchange: str):
             _std_trading_pairs[std] = {exchange: exch}
 
 
-def get_exchange_info(exchange: str):
-    mapping = gen_pairs(exchange)
+def get_exchange_info(exchange: str, key_id: str):
+    mapping = gen_pairs(exchange, key_id)
     info = dict(_exchange_info.get(exchange, {}))
     return mapping, info
 
@@ -72,13 +73,14 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT}:
+    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT, COINGECKO}:
         return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
+    # WHALE_ALERT
     return ts
 
 
@@ -240,6 +242,12 @@ _feed_to_exchange_map = {
         DERIBIT: 'trades',
         OKEX: LIQUIDATIONS,
     },
+    MARKET_INFO: {
+        COINGECKO: MARKET_INFO
+    },
+    TRANSACTIONS: {
+        WHALE_ALERT: TRANSACTIONS
+    },
     FUTURES_INDEX: {
         BYBIT: 'instrument_info.100ms'
     }
@@ -313,3 +321,4 @@ def feed_to_exchange(exchange, feed, silent=False):
     if ret == UNSUPPORTED:
         raise_error()
     return ret
+

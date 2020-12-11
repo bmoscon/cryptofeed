@@ -18,15 +18,17 @@ import functools
 import websockets
 from websockets import ConnectionClosed
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_DELIVERY, BINANCE_US, BITCOINCOM, BITFINEX,
-                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE,
-                                PROBIT, DERIBIT)
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
+                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT,
+                                COINBASE, COINBENE, COINGECKO, DERIBIT,
+                                FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
-from cryptofeed.defines import (FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN,
-                                KRAKEN_FUTURES, L2_BOOK, OKCOIN, OKEX, POLONIEX, UPBIT)
+from cryptofeed.defines import L2_BOOK
 from cryptofeed.exceptions import ExhaustedRetries
 from cryptofeed.exchanges import *
+from cryptofeed.providers import *
 from cryptofeed.feed import RestFeed
 from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
@@ -52,6 +54,7 @@ _EXCHANGES = {
     BYBIT: Bybit,
     COINBASE: Coinbase,
     COINBENE: Coinbene,
+    COINGECKO: Coingecko,
     DERIBIT: Deribit,
     EXX_str: EXX,
     FTX_str: FTX,
@@ -68,7 +71,8 @@ _EXCHANGES = {
     POLONIEX: Poloniex,
     UPBIT: Upbit,
     GATEIO: Gateio,
-    PROBIT: Probit
+    PROBIT: Probit,
+    WHALE_ALERT: WhaleAlert
 }
 
 
@@ -123,6 +127,7 @@ class FeedHandler:
                     counter += 1
                     await feed.message_handler(message, timestamp)
             return {'messages_processed': counter, 'callbacks': dict(callbacks)}
+
     def add_feed(self, feed, timeout=120, **kwargs):
         """
         feed: str or class
@@ -221,12 +226,15 @@ class FeedHandler:
         Connect to REST feed
         """
         retries = 0
-        delay = 1
+        delay = 2*feed.sleep_time if feed.sleep_time else 1
         while retries <= self.retries or self.retries == -1:
             await feed.subscribe()
             try:
                 while True:
                     await feed.message_handler()
+                    # connection was successful, reset retry count and delay
+                    retries = 0
+                    delay = 2*feed.sleep_time if feed.sleep_time else 1
             except Exception:
                 LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
                 await asyncio.sleep(delay)

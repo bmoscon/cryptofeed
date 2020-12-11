@@ -1,6 +1,9 @@
 ## Changelog
 
 ### 1.6.2
+  * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
+  * Feature: Support for Whale Alert on-chain transaction data per coin, to be used with a new data channel 'transactions'
+  * Bugfix: Reset delay and retry for rest feed
   * Feature: Add GCP Pub/Sub backend
   * Bugfix: Fix aggregated callbacks (Renko and OHLCV) when used with exchanges that support order types
   * Bugfix: Fix broken example/demo code
