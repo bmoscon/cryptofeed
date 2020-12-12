@@ -22,6 +22,8 @@
   * Bugfix: Later versions of aiokafka break kafka backend
   * Bugfix: Huobi sends empty book updates for delisted pairs
   * Bugfix: Harden channel map usage in Kraken
+  * Feature: Config file support
+  * Bugfix: Subscribing to all BitMEX symbols gives 400 error - message too long
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
