@@ -32,7 +32,7 @@ _exchange_to_std = {}
 def load_exchange_pair_mapping(exchange: str, key_id=None):
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
-    mapping = gen_pairs(exchange, key_id)
+    mapping = gen_pairs(exchange, key_id=key_id)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
         if std in _std_trading_pairs:
@@ -41,8 +41,8 @@ def load_exchange_pair_mapping(exchange: str, key_id=None):
             _std_trading_pairs[std] = {exchange: exch}
 
 
-def get_exchange_info(exchange: str, key_id: str):
-    mapping = gen_pairs(exchange, key_id)
+def get_exchange_info(exchange: str, key_id=None):
+    mapping = gen_pairs(exchange, key_id=key_id)
     info = dict(_exchange_info.get(exchange, {}))
     return mapping, info
 

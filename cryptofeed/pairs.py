@@ -28,7 +28,7 @@ def set_pair_separator(symbol: str):
     PAIR_SEP = symbol
 
 
-def gen_pairs(exchange: str, key_id: str):
+def gen_pairs(exchange: str, key_id=None):
     if exchange not in _pairs_retrieval_cache:
         LOG.info("%s: Getting list of pairs", exchange)
         pairs = _exchange_function_map[exchange](key_id) if key_id else _exchange_function_map[exchange]()

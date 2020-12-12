@@ -103,7 +103,7 @@ class Feed:
         key_id: str
             API key to query the feed, required when requesting supported coins/pairs.
         """
-        pairs, info = get_exchange_info(cls.id, key_id)
+        pairs, info = get_exchange_info(cls.id, key_id=key_id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
         for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME):
             try:
