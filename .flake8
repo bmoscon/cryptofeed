@@ -1,0 +1,3 @@
+[flake8]
+ignore = E501
+exclude = tests/*,docs/*,*.md,__init__.py
