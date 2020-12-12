@@ -29,7 +29,7 @@ _std_trading_pairs = {}
 _exchange_to_std = {}
 
 
-def load_exchange_pair_mapping(exchange: str, key_id: str):
+def load_exchange_pair_mapping(exchange: str, key_id=None):
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
     mapping = gen_pairs(exchange, key_id)

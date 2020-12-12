@@ -54,7 +54,7 @@ class Feed:
         self.previous_book = defaultdict(dict)
         self.origin = origin
         self.checksum_validation = checksum_validation
-        load_exchange_pair_mapping(self.id, key_id)
+        load_exchange_pair_mapping(self.id, key_id=key_id)
 
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")
