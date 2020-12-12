@@ -20,8 +20,7 @@ The safe way to install or upgrade the Cryptofeed library:
     python3 -m pip install --user --upgrade cryptofeed
 
 To minimize the number of dependencies to download,
-the dependencies required by the Rest API, and
-the cryptofeed backends are optional, but easy to install.
+the dependencies required by the cryptofeed backends are optional, but easy to install.
 
 See the file [`setup.py`](https://github.com/bmoscon/cryptofeed/blob/master/setup.py#L60)
 for the exhaustive list of these *extra* dependencies.
@@ -32,14 +31,6 @@ You can install Cryptofeed along with all optional dependencies in one bundle:
 
     python3 -m pip install --user --upgrade cryptofeed[all]
 
-### Rest API
-
-Cryptofeed can also be used to access the *Rest API*
-of some crypto-exchange to retrieve historical market data
-and to place orders. See also the dedicated chapter
-[Rest API](https://github.com/bmoscon/cryptofeed/blob/master/README.md#rest-api).
-
-    python3 -m pip install --user --upgrade cryptofeed[rest_api]
 
 ### Arctic backend
 
