@@ -4,7 +4,7 @@ from cryptofeed.defines import BID, ASK
 from cryptofeed.rest import Rest
 
 
-poloniex = Rest('config.yaml').Poloniex
+poloniex = Rest().Poloniex
 
 
 def test_get_ticker():
@@ -60,7 +60,7 @@ def test_deposit_withdrawals():
 
 @pytest.mark.skipif(poloniex.key_id is None or poloniex.key_secret is None, reason="No api key provided")
 def test_open_orders():
-    poloniex = Rest('config.yaml').Poloniex
+    poloniex = Rest().Poloniex
     open_orders = poloniex.open_orders()
 
     assert 'BTC_BCN' in open_orders

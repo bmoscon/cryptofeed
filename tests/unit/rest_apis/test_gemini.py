@@ -4,8 +4,8 @@ from cryptofeed.defines import BID, ASK
 from cryptofeed.rest import Rest
 
 
-public = Rest('config.yaml').Gemini
-sandbox = Rest('config.yaml', sandbox=True).Gemini
+public = Rest().Gemini
+sandbox = Rest(sandbox=True).Gemini
 
 
 def test_ticker():

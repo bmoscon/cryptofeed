@@ -7,6 +7,7 @@ associated with this software.
 import logging
 import os
 
+from cryptofeed.config import Config
 from cryptofeed.log import get_logger
 from cryptofeed.rest.binance_futures import BinanceFutures, BinanceDelivery
 from cryptofeed.rest.bitfinex import Bitfinex
@@ -20,10 +21,7 @@ from cryptofeed.rest.poloniex import Poloniex
 from cryptofeed.standards import load_exchange_pair_mapping
 
 
-LOG = get_logger('rest', 
-                 os.environ.get('CRYPTOFEED_REST_LOG_FILENAME', "rest.log"), 
-                 int(os.environ.get('CRYPTOFEED_REST_LOG_LEVEL', logging.WARNING)))
-
+LOG = logging.getLogger('rest')
 
 class Rest:
     """
@@ -32,13 +30,18 @@ class Rest:
     r = Rest()
     r.bitmex.trades('XBTUSD', '2018-01-01', '2018-01-01')
 
-    The Rest class optionally takes two exchange-related parameters, config, and sandbox. 
-    In the config file the api key and secrets can be specified. Sandbox enables sandbox 
+    The Rest class optionally takes two exchange-related parameters, config, and sandbox.
+    In the config file the api key and secrets can be specified. Sandbox enables sandbox
     mode, if supported by the exchange.
     """
 
     def __init__(self, config=None, sandbox=False):
-        self.config = config
+        self.config = Config(file_name=config)
+
+        lfile = 'rest.log' if not self.config or not self.config.restlog.filename else self.config.restlog.filename
+        level = logging.WARNING if not self.config or not self.config.restlog.level else self.config.restlog.level
+        get_logger('rest', lfile, level)
+
         self.lookup = {
             'bitmex': Bitmex(config),
             'bitfinex': Bitfinex(config),

@@ -4,7 +4,7 @@ from cryptofeed.defines import BID
 from cryptofeed.rest import Rest
 
 
-kraken = Rest('config.yaml').kraken
+kraken = Rest().kraken
 
 
 def test_get_order_book():

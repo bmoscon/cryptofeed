@@ -45,7 +45,7 @@ setup(
               "HitBTC", "Huobi", "Kraken", "OKCoin", "OKEx", "Poloniex", "Upbit"],
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),
-    package_data={'': ['rest/config.yaml']},
+    package_data={'': ['cryptofeed/config.yaml']},
     cmdclass={'test': Test},
     python_requires='>=3.7',
     classifiers=[
@@ -62,6 +62,7 @@ setup(
         "websockets>=7.0",
         "sortedcontainers>=1.5.9",
         "pandas",
+        "pyyaml",
         "aiohttp>=3.7.1",
         "aiofile>=2.0.0",
         "yapic.json>=1.4.3",
@@ -70,7 +71,6 @@ setup(
         "cchardet",     # cchardet is a faster replacement for chardet
     ],
     extras_require={
-        "rest_api": ["pyyaml"],
         "redis": ["aioredis"],
         "arctic": ["arctic"],
         "zmq": ["pyzmq"],
@@ -80,7 +80,6 @@ setup(
         "postgres": ["asyncpg"],
         "gcp_pubsub": ["google_cloud_pubsub", "gcloud_aio_pubsub"],
         "all": [
-            "pyyaml",
             "aioredis",
             "arctic",
             "pyzmq",

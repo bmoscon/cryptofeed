@@ -498,5 +498,6 @@ class Bitmex(Feed):
             for pair in self.pairs if not self.config else self.config[channel]:
                 chans.append("{}:{}".format(channel, pair))
 
-        await websocket.send(json.dumps({"op": "subscribe",
-                                         "args": chans}))
+        for i in range(0, len(chans), 10):
+            await websocket.send(json.dumps({"op": "subscribe",
+                                             "args": chans[i:i+10]}))

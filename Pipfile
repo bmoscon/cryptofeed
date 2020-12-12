@@ -11,6 +11,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
+pyyaml = "*"
 aiohttp = ">=3.6.2"
 pandas = "*"
 requests = ">=2.18.4"
@@ -29,7 +30,6 @@ asyncpg = "*"               # pip install cryptofeed[postgres]
 motor = "*"                 # pip install cryptofeed[mongo]
 aio_pika = "*"              # pip install cryptofeed[rabbit]
 pika = "*"                  # used by demo_rabbitmq.py
-pyyaml = "*"                # pip install cryptofeed[rest_api]
 pyzmq = "*"                 # pip install cryptofeed[zmq]
 google_cloud_pubsub = "*"   # pip install cryptofeed[gcp_pubsub]
 gcloud_aio_pubsub = "*"     # pip install cryptofeed[gcp_pubsub]

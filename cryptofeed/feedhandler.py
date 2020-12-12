@@ -18,6 +18,7 @@ import functools
 import websockets
 from websockets import ConnectionClosed
 
+from cryptofeed.config import Config
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT,
                                 COINBASE, COINBENE, COINGECKO, DERIBIT,
@@ -34,9 +35,8 @@ from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
 
 
-LOG = get_logger('feedhandler',
-                 os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_FILENAME', "feedhandler.log"),
-                 int(os.environ.get('CRYPTOFEED_FEEDHANDLER_LOG_LEVEL', logging.WARNING)))
+LOG = logging.getLogger('feedhandler')
+
 
 # Maps string name to class name for use with config
 _EXCHANGES = {
@@ -77,7 +77,7 @@ _EXCHANGES = {
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True, config=None):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -89,6 +89,8 @@ class FeedHandler:
             if defined, callback to save/process/handle raw message (primarily for debugging purposes)
         handler_enabled: boolean
             run message handlers (and any registered callbacks) when raw message capture is enabled
+        config: str
+            absolute path (including file name) of the config file. If not provided env var checked first, then local config.yaml
         """
         self.feeds = []
         self.retries = retries
@@ -98,6 +100,11 @@ class FeedHandler:
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture
         self.handler_enabled = handler_enabled
+        self.config = Config(file_name=config)
+
+        lfile = 'feedhandler.log' if not self.config or not self.config.log.filename else self.config.log.filename
+        level = logging.WARNING if not self.config or not self.config.log.level else self.config.log.level
+        get_logger('feedhandler', lfile, level)
 
     def playback(self, feed, filenames):
         loop = asyncio.get_event_loop()
