@@ -7,13 +7,11 @@ associated with this software.
 
 import asyncio
 import logging
-from datetime import datetime
 from decimal import Decimal
 from time import time
 import zlib
 
 import aiohttp
-import pandas as pd
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -21,7 +19,7 @@ from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
-from cryptofeed.feed import Feed, RestFeed
+from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
@@ -73,7 +71,6 @@ class FTX(Feed):
         else:
             combined = [val for pair in zip(bids, asks[:len(bids)]) for val in pair]
             combined += asks[len(bids):]
-
 
         computed = ":".join(combined).encode()
         return zlib.crc32(computed)
@@ -133,7 +130,7 @@ class FTX(Feed):
               ]
             }
         """
-        # do not send more than 30 requests per second: doing so will result in HTTP 429 errors 
+        # do not send more than 30 requests per second: doing so will result in HTTP 429 errors
         rate_limiter = 0.1
         # funding rates do not change frequently
         wait_time = 60

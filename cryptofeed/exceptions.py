@@ -44,4 +44,3 @@ class BadChecksum(Exception):
 
 class RestResponseError(Exception):
     pass
-

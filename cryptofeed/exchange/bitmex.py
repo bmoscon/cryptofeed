@@ -500,4 +500,4 @@ class Bitmex(Feed):
 
         for i in range(0, len(chans), 10):
             await websocket.send(json.dumps({"op": "subscribe",
-                                             "args": chans[i:i+10]}))
+                                             "args": chans[i:i + 10]}))

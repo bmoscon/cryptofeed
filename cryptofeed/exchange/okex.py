@@ -74,16 +74,16 @@ class OKEx(OKCoin):
                                     break
 
                                 await self.callback(LIQUIDATIONS,
-                                        feed=self.id,
-                                        pair=entry['instrument_id'],
-                                        side=BUY if entry['type'] == '3' else SELL,
-                                        leaves_qty=Decimal(entry['size']),
-                                        price=Decimal(entry['price']),
-                                        order_id=None,
-                                        status='filled' if status == 1 else 'unfilled',
-                                        timestamp=timestamp,
-                                        receipt_timestamp=timestamp
-                                        )
+                                                    feed=self.id,
+                                                    pair=entry['instrument_id'],
+                                                    side=BUY if entry['type'] == '3' else SELL,
+                                                    leaves_qty=Decimal(entry['size']),
+                                                    price=Decimal(entry['price']),
+                                                    order_id=None,
+                                                    status='filled' if status == 1 else 'unfilled',
+                                                    timestamp=timestamp,
+                                                    receipt_timestamp=timestamp
+                                                    )
                             last_update[pair] = data[0]
 
                     await asyncio.sleep(0.1)

@@ -71,8 +71,7 @@ class Feed:
 
         self.l3_book = {}
         self.l2_book = {}
-        self.callbacks = {
-                          FUNDING: Callback(None),
+        self.callbacks = {FUNDING: Callback(None),
                           FUTURES_INDEX: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),

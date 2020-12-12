@@ -6,7 +6,6 @@ associated with this software.
 '''
 import asyncio
 import logging
-import os
 from signal import SIGTERM
 import zlib
 from collections import defaultdict
@@ -233,7 +232,7 @@ class FeedHandler:
         Connect to REST feed
         """
         retries = 0
-        delay = 2*feed.sleep_time if feed.sleep_time else 1
+        delay = 2 * feed.sleep_time if feed.sleep_time else 1
         while retries <= self.retries or self.retries == -1:
             await feed.subscribe()
             try:
@@ -241,7 +240,7 @@ class FeedHandler:
                     await feed.message_handler()
                     # connection was successful, reset retry count and delay
                     retries = 0
-                    delay = 2*feed.sleep_time if feed.sleep_time else 1
+                    delay = 2 * feed.sleep_time if feed.sleep_time else 1
             except Exception:
                 LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
                 await asyncio.sleep(delay)
@@ -272,7 +271,7 @@ class FeedHandler:
                     return
 
                 async with websockets.connect(feed.address, ping_interval=10, ping_timeout=None,
-                        max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
+                                              max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
                     asyncio.ensure_future(self._watch(feed.uuid, websocket))
                     # connection was successful, reset retry count and delay
                     retries = 0

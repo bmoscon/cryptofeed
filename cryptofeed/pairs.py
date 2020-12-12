@@ -330,8 +330,8 @@ def coingecko_pairs():
     # Base currencies are defined manually (USD + BTC + ETH).
     # The full list from Coingecko is not used, as the generated dict of pairs would be tremendous.
     # base_c =  requests.get('https://api.coingecko.com/api/v3/simple/supported_vs_currencies').json()
-    base_c = (('USD','usd'),('BTC','btc'),('ETH','eth'))
-    return {(f"{q['symbol']}{PAIR_SEP}{bk}".upper() if q['symbol'] not in normalized else f"{normalized[q['symbol']]}{PAIR_SEP}{bk}".upper()) : f"{q['id']}_{bv}" for q in quote_c for bk,bv in base_c }
+    base_c = (('USD', 'usd'), ('BTC', 'btc'), ('ETH', 'eth'))
+    return {(f"{q['symbol']}{PAIR_SEP}{bk}".upper() if q['symbol'] not in normalized else f"{normalized[q['symbol']]}{PAIR_SEP}{bk}".upper()): f"{q['id']}_{bv}" for q in quote_c for bk, bv in base_c}
 
 
 def whale_alert_coins(key_id: str):
@@ -376,4 +376,3 @@ _exchange_function_map = {
     COINGECKO: coingecko_pairs,
     WHALE_ALERT: whale_alert_coins
 }
-

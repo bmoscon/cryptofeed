@@ -42,7 +42,6 @@ class OKCoin(Feed):
         asks = (f"{ask}:{self.l2_book[pair][ASK][ask]}" for ask in ask_it)
         asks = list(islice(asks, 25))
 
-
         if len(bids) == len(asks):
             combined = [val for pair in zip(bids, asks) for val in pair]
         elif len(bids) > len(asks):

@@ -270,7 +270,6 @@ class Coinbase(Feed):
         order_type = msg["order_type"]
         self.order_type_map[order_id] = order_type
 
-
     async def _change(self, msg: dict, timestamp: float):
         """
         Like done, these updates can be sent for orders that are not in the book. Per the docs:

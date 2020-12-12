@@ -6,4 +6,3 @@ associated with this software.
 '''
 from cryptofeed.provider.coingecko import Coingecko
 from cryptofeed.provider.whale_alert import WhaleAlert
-

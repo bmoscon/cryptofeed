@@ -86,7 +86,7 @@ class HitBTC(Feed):
         if 'params' in msg and 'sequence' in msg['params']:
             pair = msg['params']['symbol']
             if pair in self.seq_no:
-                if self.seq_no[pair]+1 != msg['params']['sequence']:
+                if self.seq_no[pair] + 1 != msg['params']['sequence']:
                     LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
                     raise MissingSequenceNumber("Missing sequence number, restarting")
             self.seq_no[pair] = msg['params']['sequence']
