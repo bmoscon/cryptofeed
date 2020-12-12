@@ -20,6 +20,7 @@ from cryptofeed.exceptions import RestResponseError
 LOG = logging.getLogger('feedhandler')
 TO_FROM_DATA = ('address', 'owner_type', 'owner')
 
+
 class WhaleAlert(RestFeed):
 
     id = WHALE_ALERT
@@ -73,7 +74,6 @@ class WhaleAlert(RestFeed):
         # and `cursor` given in previous response.
         self.last_transaction_update = dict()
 
-
     async def subscribe(self):
         self.__reset()
         return
@@ -119,13 +119,11 @@ class WhaleAlert(RestFeed):
                     query_start_ts = max_history_ts
                 else:
                     query_start_ts = latest_cleared_ts
-        except:
+        except Exception:
             cursor = ''
             query_start_ts = max_history_ts
             latest_cleared_ts = max_history_ts
 
-
-        # Query.
         query = f"{self.address}transactions?api_key={self.key_id}&min_value={self.trans_min_value}&start={query_start_ts}&currency={coin}&cursor={cursor}" \
                 if cursor else f"{self.address}transactions?api_key={self.key_id}&min_value={self.trans_min_value}&start={query_start_ts}&currency={coin}"
 
@@ -137,11 +135,11 @@ class WhaleAlert(RestFeed):
                 raise Exception('Returned error: {!s}\nReturned response content from HTTP request: {!s}'.format(jde, data))
 
             if data['result'] == 'error':
-                raise RestResponseError('Error message in response: {!s}'.format(json_data['message']))
+                raise RestResponseError('Error message in response: {!s}'.format(data['message']))
 
             # Keeping previous `latest_cleared_ts` in `max_trans_ts` in case there is no new transactions.
             max_trans_ts = latest_cleared_ts
-            latest_cleared_ts = receipt_timestamp-1200  # Leaving 20mn margin for Whale Alert to insert a new entry in their database.
+            latest_cleared_ts = receipt_timestamp - 1200  # Leaving 20mn margin for Whale Alert to insert a new entry in their database.
             if 'transactions' in data:
                 for transaction in data['transactions']:
                     # Flattening the nested dicts.
@@ -158,7 +156,7 @@ class WhaleAlert(RestFeed):
                                         **transaction, **to, **fro)
                     max_trans_ts = transaction['timestamp'] if transaction['timestamp'] > max_trans_ts else max_trans_ts
 
-            ## Comments regarding `latest_cleared_ts`:
+            # Comments regarding `latest_cleared_ts`:
             # From doc. : "Some transactions might be reported with a small delay."
             # From mail exchange with support: "That line is there as a disclaimer in case anything goes wrong.
             # In general (99.99% of the time) transactions are added instantly."
@@ -168,7 +166,7 @@ class WhaleAlert(RestFeed):
             #  - latest transaction is no older than 20mn,
             #  - data['count'] is 100.
             # Otherwise `latest_cleared_ts` will be used for next call (not a chained call).
-            ## Comments regarding `data['count']`:
+            # Comments regarding `data['count']`:
             # Number of results per query is limited to 100.
             # If we have 100 results in the query, we are not certain the last result is the last transaction up to the receipt time or not.
             # If it is lower than 100, we know there is no more transactions till the receipt time.

@@ -118,4 +118,3 @@ class TransactionsRedis(RedisZSetCallback, BackendTransactionsCallback):
 
 class TransactionsStream(RedisStreamCallback, BackendTransactionsCallback):
     default_key = 'transactions'
-

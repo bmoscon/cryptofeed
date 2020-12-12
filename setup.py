@@ -56,7 +56,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Framework :: AsyncIO",
     ],
-    tests_require=["pytest", "pyyaml"],
+    tests_require=["pytest"],
     install_requires=[
         "requests>=2.18.4",
         "websockets>=7.0",

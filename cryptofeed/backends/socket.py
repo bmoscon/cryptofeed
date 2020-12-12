@@ -128,8 +128,7 @@ class LiquidationsSocket(SocketCallback, BackendLiquidationsCallback):
 
 class MarketInfoSocket(SocketCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
-    
+
 
 class TransactionsSocket(SocketCallback, BackendTransactionsCallback):
     default_key = 'transactions'
-

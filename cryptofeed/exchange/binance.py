@@ -145,7 +145,6 @@ class Binance(Feed):
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
-
     async def _snapshot(self, pair: str) -> None:
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
 
@@ -249,7 +248,6 @@ class Binance(Feed):
                         data = await response.text()
                         data = json.loads(data, parse_float=Decimal)
                         oi = data['openInterest']
-                        saved_oi = self.open_interest.get(pair, None)
                         if oi != self.open_interest.get(pair, None):
                             await self.callback(OPEN_INTEREST,
                                                 feed=self.id,
@@ -284,7 +282,6 @@ class Binance(Feed):
                             rate=msg['r'],
                             next_funding_time=timestamp_normalize(self.id, msg['T']),
                             )
-
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

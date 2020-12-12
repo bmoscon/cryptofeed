@@ -107,4 +107,3 @@ class MarketInfoRabbit(RabbitCallback, BackendMarketInfoCallback):
 
 class TransactionsRabbit(RabbitCallback, BackendTransactionsCallback):
     pass
-

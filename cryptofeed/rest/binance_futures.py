@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
+from cryptofeed.defines import BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
 
@@ -65,7 +65,6 @@ class BinanceDelivery(API):
         return ret
 
     def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
-        last = []
         start = None
         end = None
 
@@ -110,13 +109,10 @@ class BinanceDelivery(API):
                 else:
                     start = data[-1]['T']
 
-            orig_data = list(data)
-            last = list(orig_data)
-
             data = list(map(lambda x: self._trade_normalization(symbol, x), data))
             yield data
 
-            if len(orig_data) < REQUEST_LIMIT:
+            if len(data) < REQUEST_LIMIT:
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
@@ -159,7 +155,7 @@ class BinanceFutures(API):
             'pair': pair_exchange_to_std(symbol),
             'id': trade['a'],
             'feed': self.ID,
-            'side': BUY if trade['m'] == True else SELL,
+            'side': BUY if trade['m'] else SELL,
             'amount': abs(float(trade['q'])),
             'price': float(trade['p']),
         }
@@ -167,7 +163,6 @@ class BinanceFutures(API):
         return ret
 
     def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
-        last = []
         start = None
         end = None
 
@@ -215,13 +210,10 @@ class BinanceFutures(API):
                 else:
                     start = data[-1]['T']
 
-            orig_data = list(data)
-            last = list(orig_data)
-
             data = list(map(lambda x: self._trade_normalization(symbol, x), data))
             yield data
 
-            if len(orig_data) < REQUEST_LIMIT:
+            if len(data) < REQUEST_LIMIT:
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):

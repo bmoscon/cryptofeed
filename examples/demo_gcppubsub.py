@@ -8,13 +8,12 @@ import os
 import asyncio
 import google.api_core.exceptions
 
-from google.cloud import pubsub_v1
 from gcloud.aio.pubsub import PublisherClient, SubscriberClient, SubscriberMessage
 from yapic import json
 
 from cryptofeed import FeedHandler
-from cryptofeed.backends.gcppubsub import BookGCPPubSub, TradeGCPPubSub
-from cryptofeed.defines import L2_BOOK, TRADES
+from cryptofeed.backends.gcppubsub import TradeGCPPubSub
+from cryptofeed.defines import TRADES
 from cryptofeed.exchanges import Coinbase
 
 

@@ -64,4 +64,3 @@ class MarketInfoZMQ(ZMQCallback, BackendMarketInfoCallback):
 
 class TransactionsZMQ(ZMQCallback, BackendTransactionsCallback):
     default_key = 'transactions'
-

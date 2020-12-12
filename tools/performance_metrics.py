@@ -7,7 +7,6 @@ associated with this software.
 import sys
 import glob
 import os
-import re
 
 
 def on(exchange_filter):
@@ -38,13 +37,13 @@ def off(exchange_filter):
                 fp.write(data)
 
 
-
 def main():
     exchange_filter = sys.argv[2] if len(sys.argv) > 1 else None
     if sys.argv[1] == 'on':
         on(exchange_filter)
     else:
         off(exchange_filter)
+
 
 if __name__ == '__main__':
     main()

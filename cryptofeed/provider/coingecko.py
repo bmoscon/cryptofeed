@@ -13,7 +13,6 @@ from json import JSONDecodeError
 from cryptofeed.defines import COINGECKO, MARKET_INFO
 from cryptofeed.feed import RestFeed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
-from cryptofeed.exceptions import RestResponseError
 
 
 # Keys retained from Coingecko for `MARKET_INFO` channel.
@@ -22,7 +21,7 @@ from cryptofeed.exceptions import RestResponseError
 # in which case they are then converted to -1 value, for compatibility reason with Redis stream.
 MARKET_INFO_FILTER_S = ('name', 'asset_platform_id', 'contract_address')
 MARKET_INFO_FILTER_D = ('sentiment_votes_up_percentage', 'sentiment_votes_down_percentage', 'market_cap_rank', 'coingecko_rank',
-                    'coingecko_score', 'developer_score', 'community_score', 'liquidity_score', 'public_interest_score')
+                        'coingecko_score', 'developer_score', 'community_score', 'liquidity_score', 'public_interest_score')
 MARKET_DATA_VS_CURRENCY = ('current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h')
 OTHER_MARKET_DATA_FILTER = ('total_supply', 'max_supply', 'circulating_supply')
 ALL_MARKET_DATA = (MARKET_DATA_VS_CURRENCY + OTHER_MARKET_DATA_FILTER)

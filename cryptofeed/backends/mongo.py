@@ -26,6 +26,7 @@ class MongoCallback:
         else:
             await self.db[self.collection].insert_one(data)
 
+
 class TradeMongo(MongoCallback, BackendTradeCallback):
     default_key = 'trades'
 
@@ -60,4 +61,3 @@ class MarketInfoMongo(MongoCallback, BackendMarketInfoCallback):
 
 class TransactionsMongo(MongoCallback, BackendTransactionsCallback):
     default_key = 'transactions'
-

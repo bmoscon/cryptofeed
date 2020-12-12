@@ -127,8 +127,7 @@ class LiquidationsGCPPubSub(GCPPubSubCallback, BackendLiquidationsCallback):
 
 class MarketInfoGCPPubSub(GCPPubSubCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
-    
-    
+
+
 class TransactionsGCPPubSub(GCPPubSubCallback, BackendTransactionsCallback):
     default_key = 'transactions'
-

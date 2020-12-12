@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-import os
 
 from cryptofeed.config import Config
 from cryptofeed.log import get_logger
@@ -22,6 +21,7 @@ from cryptofeed.standards import load_exchange_pair_mapping
 
 
 LOG = logging.getLogger('rest')
+
 
 class Rest:
     """

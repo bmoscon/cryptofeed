@@ -26,9 +26,9 @@ class KafkaCallback:
         if not self.producer:
             loop = asyncio.get_event_loop()
             self.producer = AIOKafkaProducer(acks=0,
-                                            loop=loop,
-                                            bootstrap_servers=f'{self.bootstrap}:{self.port}',
-                                            client_id='cryptofeed')
+                                             loop=loop,
+                                             bootstrap_servers=f'{self.bootstrap}:{self.port}',
+                                             client_id='cryptofeed')
             await self.producer.start()
 
     async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
@@ -71,4 +71,3 @@ class MarketInfoKafka(KafkaCallback, BackendMarketInfoCallback):
 
 class TransactionsKafka(KafkaCallback, BackendTransactionsCallback):
     default_key = 'transactions'
-

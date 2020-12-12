@@ -67,7 +67,7 @@ class InfluxCallback(HTTPCallback):
         username: str
           Influxdb username for authentication
         password: str
-          Influxdb password for authentication          
+          Influxdb password for authentication
         """
         super().__init__(addr, **kwargs)
         if org and bucket and token:
@@ -169,4 +169,3 @@ class MarketInfoInflux(InfluxCallback, BackendMarketInfoCallback):
 
 class TransactionsInflux(InfluxCallback, BackendTransactionsCallback):
     default_key = 'transactions'
-

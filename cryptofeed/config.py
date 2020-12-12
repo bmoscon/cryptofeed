@@ -40,7 +40,7 @@ class Config:
 
         if os.path.exists(config_file):
             with open(config_file) as fp:
-                self.config = AttrDict(yaml.load(fp, Loader=yaml.FullLoader))
+                self.config = AttrDict(yaml.safe_load(fp))
         else:
             self.config = AttrDict()
 

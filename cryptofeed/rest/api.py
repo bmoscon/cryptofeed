@@ -11,7 +11,6 @@ from time import sleep
 
 import pandas as pd
 import requests
-import yaml
 
 from cryptofeed.config import Config
 from cryptofeed.standards import load_exchange_pair_mapping

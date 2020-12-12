@@ -14,6 +14,7 @@ from collections import defaultdict
 _perf_data = defaultdict(lambda: defaultdict(dict))
 _perf_stats = defaultdict(list)
 
+
 def perf_start(exchange: str, key: str):
     _perf_data[exchange][key]['start'] = time.time()
 
