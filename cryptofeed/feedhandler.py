@@ -94,7 +94,7 @@ class FeedHandler:
         self.feeds = []
         self.retries = retries
         self.timeout = {}
-        self.last_msg = {}
+        self.last_msg = defaultdict(lambda: None)
         self.timeout_interval = timeout_interval
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture
@@ -154,7 +154,6 @@ class FeedHandler:
                 else:
                     self.feeds.append(_EXCHANGES[feed](**kwargs))
                     feed = self.feeds[-1]
-                    self.last_msg[feed.uuid] = None
                     self.timeout[feed.uuid] = timeout
             else:
                 raise ValueError("Invalid feed specified")
@@ -200,7 +199,9 @@ class FeedHandler:
 
             for feed in self.feeds:
                 for conn, sub, handler, uuid in feed.connect():
+                    self.timeout[uuid] = self.timeout[feed.uuid]
                     loop.create_task(self._connect(conn, sub, handler, uuid))
+                del self.timeout[feed.uuid]
 
             if start_loop:
                 loop.run_forever()
