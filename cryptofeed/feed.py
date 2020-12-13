@@ -8,6 +8,7 @@ import uuid
 from collections import defaultdict
 
 from cryptofeed.callback import Callback
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
@@ -18,7 +19,7 @@ from cryptofeed.util.book import book_delta, depth
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
+    def __init__(self, address: list, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
                  key_id=None):
         """
         max_depth: int
@@ -93,6 +94,12 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
+    
+    def connect(self):
+        ret = []
+        for n, addr in enumerate(self.address):
+            ret.append((AsyncConnection(addr, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler, f"{self.uuid}-{n}"))
+        return ret
 
     @classmethod
     def info(cls, key_id: str = None) -> dict:
@@ -192,6 +199,9 @@ class Feed:
         return delta, ret
 
     async def message_handler(self, msg: str, timestamp: float):
+        raise NotImplementedError
+
+    async def subscribe(self):
         raise NotImplementedError
 
     async def stop(self):

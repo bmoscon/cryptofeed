@@ -199,10 +199,9 @@ class FeedHandler:
                 loop.add_signal_handler(signal, handle_stop_signals)
 
             for feed in self.feeds:
-                if isinstance(feed, RestFeed):
-                    loop.create_task(self._rest_connect(feed))
-                else:
-                    loop.create_task(self._connect(feed))
+                for conn, sub, handler, uuid in feed.connect():
+                    loop.create_task(self._connect(conn, sub, handler, uuid))
+
             if start_loop:
                 loop.run_forever()
         except KeyboardInterrupt:
@@ -215,15 +214,15 @@ class FeedHandler:
             for feed in self.feeds:
                 loop.run_until_complete(feed.stop())
 
-    async def _watch(self, feed_id, websocket):
-        if self.timeout[feed_id] == -1:
+    async def _watch(self, uuid, connection):
+        if self.timeout[uuid] == -1:
             return
 
-        while websocket.open:
-            if self.last_msg[feed_id]:
-                if time() - self.last_msg[feed_id] > self.timeout[feed_id]:
+        while connection.open:
+            if self.last_msg[uuid]:
+                if time() - self.last_msg[uuid] > self.timeout[uuid]:
                     LOG.warning("%s: received no messages within timeout, restarting connection", feed_id)
-                    await websocket.close()
+                    await connection.close()
                     break
             await asyncio.sleep(self.timeout_interval)
 
@@ -250,61 +249,49 @@ class FeedHandler:
         LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
         raise ExhaustedRetries()
 
-    async def _connect(self, feed):
+    async def _connect(self, conn, subscribe, handler, uuid):
         """
-        Connect to websocket feeds
+        Connect to exchange and subscribe
         """
         retries = 0
         delay = 1
         while retries <= self.retries or self.retries == -1:
-            self.last_msg[feed.uuid] = None
+            self.last_msg[uuid] = None
             try:
-                # Coinbase frequently will not respond to pings within the ping interval, so
-                # disable the interval in favor of the internal watcher, which will
-                # close the connection and reconnect in the event that no message from the exchange
-                # has been received (as opposed to a missing ping).
-                #
-                # address can be None for binance futures when only open interest is configured
-                # because that data is collected over a periodic REST polling task
-                if feed.address is None:
-                    await feed.subscribe(None)
-                    return
-
-                async with websockets.connect(feed.address, ping_interval=10, ping_timeout=None,
-                                              max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
-                    asyncio.ensure_future(self._watch(feed.uuid, websocket))
+                async with conn.connect() as connection:
+                    asyncio.ensure_future(self._watch(uuid, connection))
                     # connection was successful, reset retry count and delay
                     retries = 0
                     delay = 1
-                    await feed.subscribe(websocket)
-                    await self._handler(websocket, feed.message_handler, feed.uuid)
+                    await subscribe(connection)
+                    await self._handler(connection, handler, uuid)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                LOG.warning("%s: encountered connection issue %s - reconnecting...", feed.id, str(e), exc_info=True)
+                LOG.warning("%s: encountered connection issue %s - reconnecting...", uuid, str(e), exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
             except Exception:
-                LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
+                LOG.error("%s: encountered an exception, reconnecting", uuid, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
 
-        LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+        LOG.error("%s: failed to reconnect after %d retries - exiting", uuid, retries)
         raise ExhaustedRetries()
 
-    async def _handler(self, websocket, handler, feed_id):
+    async def _handler(self, connection, handler, feed_id):
         try:
             if self.raw_message_capture and self.handler_enabled:
-                async for message in websocket:
+                async for message in connection.read():
                     self.last_msg[feed_id] = time()
                     await self.raw_message_capture(message, self.last_msg[feed_id], feed_id)
                     await handler(message, self.last_msg[feed_id])
             elif self.raw_message_capture:
-                async for message in websocket:
+                async for message in connection.read():
                     self.last_msg[feed_id] = time()
                     await self.raw_message_capture(message, self.last_msg[feed_id], feed_id)
             else:
-                async for message in websocket:
+                async for message in connection.read():
                     self.last_msg[feed_id] = time()
                     await handler(message, self.last_msg[feed_id])
         except Exception:
