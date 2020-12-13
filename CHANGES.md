@@ -24,6 +24,7 @@
   * Bugfix: Harden channel map usage in Kraken
   * Feature: Config file support
   * Bugfix: Subscribing to all BitMEX symbols gives 400 error - message too long
+  * Bugfix: Cleanup of code - fixed a few examples and resolved all outstanding flake8 issues
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
