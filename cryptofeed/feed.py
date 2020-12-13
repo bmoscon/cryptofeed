@@ -4,8 +4,9 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import uuid
 from collections import defaultdict
+from typing import Tuple, Callable
+import uuid
 
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection
@@ -94,9 +95,24 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
-    
-    def connect(self):
+
+    def connect(self) -> Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None], str]:
+        """
+        Generic connection method for exchanges. Exchanges that require/support
+        multiple addresses will need to override this method in their specific class
+        unless they use the same subscribe method and message handler for all
+        connections.
+
+        Connect returns a list of tuples. Each tuple contains
+        1. an AsyncConnection object
+        2. the subscribe function pointer associated with this connection
+        3. a unique id for this connection
+        """
         ret = []
+
+        if isinstance(self.address, str):
+            return [(AsyncConnection(self.address, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler, self.uuid)]
+
         for n, addr in enumerate(self.address):
             ret.append((AsyncConnection(addr, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler, f"{self.uuid}-{n}"))
         return ret

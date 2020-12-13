@@ -6,7 +6,6 @@ associated with this software.
 '''
 from contextlib import asynccontextmanager
 
-
 import websockets
 
 
@@ -15,7 +14,7 @@ class AsyncConnection:
         self.address = address
         self.kwargs = kwargs
         self.conn = None
-        print(self.address)
+
         if self.address[:2] == 'ws':
             self.conn_type = "ws"
         else:

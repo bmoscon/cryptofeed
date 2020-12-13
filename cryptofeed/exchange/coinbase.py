@@ -25,7 +25,7 @@ class Coinbase(Feed):
     id = COINBASE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__(['wss://ws-feed.pro.coinbase.com'], pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__('wss://ws-feed.pro.coinbase.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         # we only keep track of the L3 order book if we have at least one subscribed order-book callback.
         # use case: subscribing to the L3 book plus Trade type gives you order_type information (see _received below),
         # and we don't need to do the rest of the book-keeping unless we have an active callback

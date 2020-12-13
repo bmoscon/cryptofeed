@@ -201,7 +201,6 @@ class FeedHandler:
                 for conn, sub, handler, uuid in feed.connect():
                     self.timeout[uuid] = self.timeout[feed.uuid]
                     loop.create_task(self._connect(conn, sub, handler, uuid))
-                del self.timeout[feed.uuid]
 
             if start_loop:
                 loop.run_forever()
