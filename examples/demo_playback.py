@@ -33,5 +33,6 @@ def main():
     print("\nPlayback complete!")
     print(stats)
 
+
 if __name__ == '__main__':
     main()

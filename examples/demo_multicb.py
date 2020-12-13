@@ -5,8 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, L3_BOOK, TRADES
+from cryptofeed.callback import TradeCallback
+from cryptofeed.defines import TRADES
 from cryptofeed.exchanges import Coinbase
 
 
