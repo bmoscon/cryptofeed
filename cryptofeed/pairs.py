@@ -45,6 +45,8 @@ def _binance_pairs(endpoint: str, exchange: str):
         normalized = symbol['symbol'][:split] + PAIR_SEP + symbol['symbol'][split:]
         ret[normalized] = symbol['symbol']
         _exchange_info[exchange]['tick_size'][normalized] = symbol['filters'][0]['tickSize']
+        if "contractType" in symbol:
+            _exchange_info[exchange]['contract_type'] = symbol['contractType']
     return ret
 
 
