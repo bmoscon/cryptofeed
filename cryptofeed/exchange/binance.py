@@ -243,10 +243,11 @@ class Binance(Feed):
         async with aiohttp.ClientSession() as session:
             while True:
                 for pair in pairs:
-                    end_point = f"https://fapi.binance.com/fapi/v1/openInterest?symbol={pair}"
+                    end_point = f"{self.rest_endpoint}/openInterest?symbol={pair}"
                     async with session.get(end_point) as response:
                         data = await response.text()
                         data = json.loads(data, parse_float=Decimal)
+
                         oi = data['openInterest']
                         if oi != self.open_interest.get(pair, None):
                             await self.callback(OPEN_INTEREST,
