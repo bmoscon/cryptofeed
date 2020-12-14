@@ -14,7 +14,6 @@ from socket import error as socket_error
 from time import time
 import functools
 
-import websockets
 from websockets import ConnectionClosed
 
 from cryptofeed.config import Config

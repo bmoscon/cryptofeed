@@ -44,7 +44,7 @@ class AsyncConnection:
         async for data in self.conn:
             yield data
 
-    @property    
+    @property
     def open(self):
         if self.conn:
             return self.conn.open
