@@ -90,6 +90,10 @@ def bitfinex_pairs() -> Dict[str, str]:
                 base, quote = pair[1:].split(':')
                 assert ':' in pair
             normalized = norm.get(base, base) + PAIR_SEP + norm.get(quote, quote)
+            # Bitfinex uses BCHN, other exchanges use BCH
+            if "BCHN" in normalized:
+                normalized = normalized.replace("BCHN", "BCH")
+
             ret[normalized.upper()] = pair
     return ret
 
