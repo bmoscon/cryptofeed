@@ -90,7 +90,7 @@ def bitfinex_pairs() -> Dict[str, str]:
                 base, quote = pair[1:].split(':')
                 assert ':' in pair
             normalized = norm.get(base, base) + PAIR_SEP + norm.get(quote, quote)
-            ret[normalized] = pair
+            ret[normalized.upper()] = pair
     return ret
 
 
