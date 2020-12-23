@@ -255,18 +255,24 @@ def okcoin_pairs() -> Dict[str, str]:
     return ret
 
 
-def okex_pairs():
-    r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
-    data = {e['instrument_id']: e['instrument_id'] for e in r}
-    # swaps
-    r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
-    for update in r:
-        data[update['instrument_id']] = update['instrument_id']
-    # futures
-    r = requests.get('https://www.okex.com/api/futures/v3/instruments/ticker').json()
-    for update in r:
-        data[update['instrument_id']] = update['instrument_id']
-    return data
+def okex_pairs() -> Dict[str, str]:
+    r = None
+    try:
+        # spot
+        r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
+        data = {e['instrument_id']: e['instrument_id'] for e in r}
+        # swaps
+        r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
+        for update in r:
+            data[update['instrument_id']] = update['instrument_id']
+        # futures
+        r = requests.get('https://www.okex.com/api/futures/v3/instruments/ticker').json()
+        for update in r:
+            data[update['instrument_id']] = update['instrument_id']
+        return data
+    except Exception as why:
+        LOG.exception("OKEX unexpected response: %r %r", r, why)
+        raise
 
 
 def coinbene_pairs():
