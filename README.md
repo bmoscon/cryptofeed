@@ -53,7 +53,7 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 * [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
-* [BitMax](https://bitmax.io/) (BTMX)
+* [BitMax](https://bitmax.io/)
 * [Bitstamp](https://www.bitstamp.net/)
 * [Bittrex](https://global.bittrex.com/)
 * [Blockchain.com](https://www.blockchain.com/)
@@ -63,7 +63,7 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 * [Binance Futures](https://www.binance.com/en/futures)
 * [Binance US](https://www.binance.us/en)
 * [BitMEX](https://www.bitmex.com/)
-* [Coinbase](https://www.coinbase.com/) (GDAX)
+* [Coinbase](https://www.coinbase.com/)
 * [Deribit](https://www.deribit.com/)
 * [EXX](https://www.exx.com/)
 * [FTX](https://ftx.com/)
