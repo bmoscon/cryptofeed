@@ -71,16 +71,26 @@ def binance_delivery_pairs() -> Dict[str, str]:
     return _binance_pairs('https://dapi.binance.com/dapi/v1/exchangeInfo', BINANCE_DELIVERY)
 
 
-def bitfinex_pairs():
+def bitfinex_pairs() -> Dict[str, str]:
+    # doc: https://docs.bitfinex.com/docs/ws-general#supported-pairs
+    tickers: List[List[str]] = requests.get("https://api.bitfinex.com/v2/tickers?symbols=ALL").json()
+    norm: List[List[str]] = requests.get("https://api-pub.bitfinex.com/v2/conf/pub:map:currency:sym").json()[0]
+    norm: Dict[str, str] = dict(norm)
+    for k, v in dict(norm).items():
+        if k[-2:] == "F0" or '-' in v:  # Do not convert BTCF0 -> BTC or PBTCETH -> PBTC-ETH
+            del norm[k]
     ret = {}
-    r = requests.get('https://api.bitfinex.com/v2/tickers?symbols=ALL').json()
-    for data in r:
-        pair = data[0]
+    for pair in [t[0] for t in tickers]:
         if pair[0] == 'f':
-            continue
-        normalized = pair[1:-3] + PAIR_SEP + pair[-3:]
-        normalized = normalized.replace('UST', 'USDT')
-        ret[normalized] = pair
+            pass  # normalized = norm.get(pair[1:], pair[1:])
+        else:
+            if len(pair) == 7:
+                base, quote = pair[1:4], pair[4:]
+            else:
+                base, quote = pair[1:].split(':')
+                assert ':' in pair
+            normalized = norm.get(base, base) + PAIR_SEP + norm.get(quote, quote)
+            ret[normalized] = pair
     return ret
 
 
