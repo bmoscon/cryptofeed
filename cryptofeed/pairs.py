@@ -41,13 +41,17 @@ def gen_pairs(exchange: str, key_id=None) -> Dict[str, str]:
 def _binance_pairs(endpoint: str, exchange: str):
     ret = {}
     pairs = requests.get(endpoint).json()
-    for symbol in pairs['symbols']:
-        split = len(symbol['baseAsset'])
-        normalized = symbol['symbol'][:split] + PAIR_SEP + symbol['symbol'][split:]
-        ret[normalized] = symbol['symbol']
-        _exchange_info[exchange]['tick_size'][normalized] = symbol['filters'][0]['tickSize']
-        if "contractType" in symbol:
-            _exchange_info[exchange]['contract_type'] = symbol['contractType']
+    try:
+        for symbol in pairs['symbols']:
+            split = len(symbol['baseAsset'])
+            normalized = symbol['symbol'][:split] + PAIR_SEP + symbol['symbol'][split:]
+            ret[normalized] = symbol['symbol']
+            _exchange_info[exchange]['tick_size'][normalized] = symbol['filters'][0]['tickSize']
+            if "contractType" in symbol:
+                _exchange_info[exchange]['contract_type'] = symbol['contractType']
+    except KeyError:
+        LOG.critical("GET BINANCE pairs %s: Unexpected response: %r", exchange, pairs)
+        raise
     return ret
 
 
