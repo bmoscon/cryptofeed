@@ -296,9 +296,14 @@ def bitcoincom_pairs() -> Dict[str, str]:
     return {f"{data['baseCurrency']}{PAIR_SEP}{data['quoteCurrency'].replace('USD', 'USDT')}": data['id'] for data in r}
 
 
-def bitmax_pairs():
-    r = requests.get('https://bitmax.io/api/v1/products').json()
-    return {f"{data['baseAsset']}{PAIR_SEP}{data['quoteAsset']}": data['symbol'] for data in r}
+def bitmax_pairs() -> Dict[str, str]:
+    r = None
+    try:
+        r = requests.get('https://bitmax.io/api/v1/products')
+        return {f"{data['baseAsset']}{PAIR_SEP}{data['quoteAsset']}": data['symbol'] for data in r.json()}
+    except Exception as why:
+        LOG.error("BITMAX Unexpected message: %r %r", r.text, why)
+        raise
 
 
 def upbit_pairs() -> Dict[str, str]:
