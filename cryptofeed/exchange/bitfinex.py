@@ -8,9 +8,11 @@ import logging
 from collections import defaultdict
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -36,7 +38,7 @@ SEQ_ALL = 65536
 CHECKSUM = 131072
 
 
-class Bitfinex(Feed):
+class Bitfinex(feed.WebsocketFeed):
     id = BITFINEX
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -298,7 +300,7 @@ class Bitfinex(Feed):
                                                'channel': msg['channel'],
                                                'handler': handler}
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         await websocket.send(json.dumps({
             'event': "conf",
@@ -323,3 +325,5 @@ class Bitfinex(Feed):
                             # any non specified params will be defaulted
                             pass
                 await websocket.send(json.dumps(message))
+
+        return True

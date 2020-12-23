@@ -7,9 +7,11 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, HITBTC, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -19,7 +21,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class HitBTC(Feed):
+class HitBTC(feed.WebsocketFeed):
     id = HITBTC
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -111,7 +113,7 @@ class HitBTC(Feed):
             if 'error' in msg or not msg['result']:
                 LOG.error("%s: Received error from server: %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         for channel in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[channel]:
                 await websocket.send(
@@ -122,3 +124,4 @@ class HitBTC(Feed):
                         },
                         "id": self.uuid
                     }))
+        return True

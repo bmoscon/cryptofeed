@@ -7,9 +7,11 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
@@ -18,7 +20,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Gemini(Feed):
+class Gemini(feed.WebsocketFeed):
     id = GEMINI
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -86,9 +88,10 @@ class Gemini(Feed):
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         pairs = self.pairs if not self.config else list(set.union(*list(self.config.values())))
         self.__reset(pairs)
 
         await websocket.send(json.dumps({"type": "subscribe",
                                          "subscriptions": [{"name": "l2", "symbols": pairs}]}))
+        return True

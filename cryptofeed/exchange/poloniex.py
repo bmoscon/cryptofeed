@@ -9,9 +9,11 @@ import logging
 import time
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES, VOLUME
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -22,7 +24,7 @@ from cryptofeed.standards import feed_to_exchange, pair_exchange_to_std
 LOG = logging.getLogger('feedhandler')
 
 
-class Poloniex(Feed):
+class Poloniex(feed.WebsocketFeed):
     id = POLONIEX
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
@@ -54,6 +56,8 @@ class Poloniex(Feed):
                     self.channels.extend(v)
             check = config
             self.callback_map = {key: set(value) for key, value in config.items()}
+        else:
+            raise ValueError("channels and config are both empty")
 
         if TICKER in check:
             self.channels.append(p_ticker)
@@ -196,9 +200,10 @@ class Poloniex(Feed):
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         for channel in self.channels:
             await websocket.send(json.dumps({"command": "subscribe",
                                              "channel": channel
                                              }))
+        return True

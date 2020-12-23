@@ -2,9 +2,11 @@ import logging
 from decimal import Decimal
 
 import requests
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -14,7 +16,7 @@ from cryptofeed.standards import timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Deribit(Feed):
+class Deribit(feed.WebsocketFeed):
     id = DERIBIT
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
@@ -158,8 +160,7 @@ class Deribit(Feed):
                             receipt_timestamp=timestamp
                             )
 
-    async def subscribe(self, websocket):
-        self.websocket = websocket
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         client_id = 0
         channels = []
@@ -176,6 +177,7 @@ class Deribit(Feed):
                 }
             }
         ))
+        return True
 
     async def _book_snapshot(self, msg: dict, timestamp: float):
         """

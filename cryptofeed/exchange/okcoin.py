@@ -9,9 +9,11 @@ from itertools import islice
 import logging
 import zlib
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -21,7 +23,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class OKCoin(Feed):
+class OKCoin(feed.WebsocketFeed):
     id = OKCOIN
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -54,32 +56,60 @@ class OKCoin(Feed):
         computed = ":".join(combined).encode()
         return zlib.crc32(computed)
 
-    async def subscribe(self, websocket):
-        self.__reset()
+    @staticmethod
+    def instrument_type(pair):
+        dash_count = pair.count("-")
+        if dash_count == 1: # BTC-USDT
+            return 'spot'
+        if dash_count == 4:  # BTC-USD-201225-35000-P
+            return 'option'
+        if pair[-4:] == "SWAP":  # BTC-USDT-SWAP
+            return 'swap'
+        return 'futures'  # BTC-USDT-201225
 
-        def chan_format(channel, pair):
-            if "SWAP" in pair:
-                return channel.format('swap')
-            elif len(pair.split("-")) == 3:
-                return channel.format('futures')
-            else:
-                return channel.format('spot')
-
+    def get_channel_pairs(self):
         if self.config:
             for chan in self.config:
                 if chan == LIQUIDATIONS:
                     continue
-                args = [f"{chan_format(chan, pair)}:{pair}" for pair in self.config[chan]]
-                await websocket.send(json.dumps({
-                    "op": "subscribe",
-                    "args": args
-                }))
+                for pair in self.config[chan]:
+                    yield chan, pair
         else:
-            chans = [f"{chan_format(chan, pair)}:{pair}" for chan in self.channels for pair in self.pairs if chan != LIQUIDATIONS]
-            await websocket.send(json.dumps({
-                "op": "subscribe",
-                "args": chans
-            }))
+            for chan in self.channels:
+                if chan == LIQUIDATIONS:
+                    continue
+                for pair in self.pairs:
+                    yield chan, pair
+
+    def get_channel_pair_combinations(self):
+        for chan, pair in self.get_channel_pairs():
+            instrument_type = self.instrument_type(pair)
+            if instrument_type != 'swap' and 'funding' in chan:
+                continue  # No funding for spot, futures and options
+            yield f"{chan.format(instrument_type)}:{pair}"
+
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
+        self.__reset()
+
+        args_list = list(self.get_channel_pair_combinations())
+        LOG.info("%s: Got %r combinations of pairs and channels", self.id, len(args_list))
+
+        if len(args_list) == 0:
+            LOG.info("%s: No websocket subscription", self.id)
+            return False
+
+        # Avoid error "Max frame length of 65536 has been exceeded" by limiting requests to some args
+        smaller_lists = split.limit_list_size(args_list, 33)
+
+        for args in smaller_lists:
+            LOG.info("%s: Subscribe to %s args from %r to %r", self.id, len(args), args[0], args[-1])
+            request = {"op": "subscribe", "args": args}
+            await websocket.send(json.dumps(request))
+            # wait for response (max 1 second) before next subscription batch
+            msg = await asyncio.wait_for(websocket.recv(), timeout=1)
+            if msg:
+                await self.message_handler(msg, time.time_ns())
+        return True
 
     async def _ticker(self, msg: dict, timestamp: float):
         """

@@ -4,8 +4,11 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import logging
 import uuid
 from collections import defaultdict
+
+import websockets
 
 from cryptofeed.callback import Callback
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
@@ -14,6 +17,7 @@ from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
 
+LOG = logging.getLogger("feedhandler")
 
 class Feed:
     id = 'NotImplemented'
@@ -39,8 +43,7 @@ class Feed:
         key_id: str
             API key to query the feed, required when requesting supported coins/pairs.
         """
-        self.hash = str(uuid.uuid4())
-        self.uuid = f"{self.id}-{self.hash}"
+        self.uuid = str(uuid.uuid4())[:6]  # First six characters is enough
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
@@ -191,18 +194,28 @@ class Feed:
         self.previous_book[pair] = ret
         return delta, ret
 
-    async def message_handler(self, msg: str, timestamp: float):
-        raise NotImplementedError
-
     async def stop(self):
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'stop'):
+                    LOG.info("%s: Flushing callback %s", self.id, callback.__class__)
                     await callback.stop()
+
+
+class WebsocketFeed(Feed):
+    async def message_handler(self, msg: bytes, receipt_ns: int):
+        raise NotImplementedError
+
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
+        """Returns False to indicate the websocket is not used to collect the specified channel(s)."""
+        raise NotImplementedError
 
 
 class RestFeed(Feed):
     sleep_time = None
 
-    async def message_handler(self):
+    async def rest_handler(self):
+        raise NotImplementedError
+
+    async def subscribe(self):
         raise NotImplementedError

@@ -9,18 +9,19 @@ import logging
 from decimal import Decimal
 from itertools import product
 
+import websockets
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.feed import Feed
+from cryptofeed import feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Blockchain(Feed):
+class Blockchain(feed.WebsocketFeed):
     id = BLOCKCHAIN
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -169,7 +170,7 @@ class Blockchain(Feed):
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         if self.config:
             for channel in self.config:
@@ -185,3 +186,4 @@ class Blockchain(Feed):
                                                  "symbol": pair,
                                                  "channel": channel
                                                  }))
+        return True

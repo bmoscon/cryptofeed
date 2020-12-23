@@ -7,9 +7,11 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import EXX as EXX_id
 from cryptofeed.defines import L2_BOOK, SELL, TRADES
@@ -20,7 +22,7 @@ from cryptofeed.standards import pair_exchange_to_std
 LOG = logging.getLogger('feedhandler')
 
 
-class EXX(Feed):
+class EXX(feed.WebsocketFeed):
     id = EXX_id
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -156,7 +158,7 @@ class EXX(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         for channel in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[channel]:
@@ -164,3 +166,4 @@ class EXX(Feed):
                                                  "dataSize": 50,
                                                  "action": "ADD"
                                                  }))
+        return True

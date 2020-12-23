@@ -10,9 +10,11 @@ from datetime import datetime as dt
 from decimal import Decimal
 
 import requests
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -21,7 +23,7 @@ from cryptofeed.standards import timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Bitmex(Feed):
+class Bitmex(feed.WebsocketFeed):
     id = BITMEX
     api = 'https://www.bitmex.com/api/v1/'
 
@@ -491,7 +493,7 @@ class Bitmex(Feed):
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self._reset()
         chans = []
         for channel in self.channels if not self.config else self.config:
@@ -501,3 +503,4 @@ class Bitmex(Feed):
         for i in range(0, len(chans), 10):
             await websocket.send(json.dumps({"op": "subscribe",
                                              "args": chans[i:i + 10]}))
+        return True

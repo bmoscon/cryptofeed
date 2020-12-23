@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import aiohttp
 from yapic import json
+import websockets
 
 from cryptofeed.defines import HUOBI_SWAP, FUNDING
 from cryptofeed.exchange.huobi_dm import HuobiDM
@@ -47,7 +48,7 @@ class HuobiSwap(HuobiDM):
 
                         await asyncio.sleep(0.1)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         chans = list(self.channels)
         cfg = dict(self.config)
         if FUNDING in self.channels or FUNDING in self.config:
@@ -55,6 +56,7 @@ class HuobiSwap(HuobiDM):
             loop.create_task(self._funding(self.pairs if FUNDING in self.channels else self.config[FUNDING]))
             self.channels.remove(FUNDING) if FUNDING in self.channels else self.config.pop(FUNDING)
 
-        await super().subscribe(websocket)
+        ws_subscribed = await super().subscribe(websocket)
         self.channels = chans
         self.config = cfg
+        return ws_subscribed

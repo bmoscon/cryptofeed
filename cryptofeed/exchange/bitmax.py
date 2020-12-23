@@ -7,9 +7,11 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BITMAX, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
@@ -18,7 +20,7 @@ from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, tim
 LOG = logging.getLogger('feedhandler')
 
 
-class Bitmax(Feed):
+class Bitmax(feed.WebsocketFeed):
     id = BITMAX
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -36,8 +38,7 @@ class Bitmax(Feed):
     def __reset(self):
         self.l2_book = {self.pair: {BID: sd(), ASK: sd()}}
 
-    async def subscribe(self, websocket):
-        self.websocket = websocket
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         await websocket.send(json.dumps(
             {
@@ -48,6 +49,7 @@ class Bitmax(Feed):
                 "skipBars": True
             }
         ))
+        return True
 
     async def _trade(self, msg: dict, timestamp: float):
         for trade in msg['trades']:

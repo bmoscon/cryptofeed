@@ -13,8 +13,9 @@ import zlib
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
-from yapic import json
+import websockets
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
@@ -26,7 +27,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class FTX(Feed):
+class FTX(feed.WebsocketFeed):
     id = FTX_id
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -37,9 +38,9 @@ class FTX(Feed):
         self.funding = {}
         self.open_interest = {}
 
-    async def subscribe(self, websocket):
-        self.websocket = websocket
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
+        ws_subscribe = False
         for chan in self.channels if self.channels else self.config:
             if chan == FUNDING:
                 asyncio.create_task(self._funding(self.pairs if self.pairs else self.config[chan]))
@@ -48,6 +49,7 @@ class FTX(Feed):
                 asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.config[chan]))
                 continue
             for pair in self.pairs if self.pairs else self.config[chan]:
+                ws_subscribe = True
                 await websocket.send(json.dumps(
                     {
                         "channel": chan,
@@ -55,6 +57,7 @@ class FTX(Feed):
                         "op": "subscribe"
                     }
                 ))
+        return ws_subscribe
 
     def __calc_checksum(self, pair):
         bid_it = reversed(self.l2_book[pair][BID])

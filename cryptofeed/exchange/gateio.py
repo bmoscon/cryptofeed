@@ -7,18 +7,19 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TRADES, BUY, SELL
-from cryptofeed.feed import Feed
+from cryptofeed import feed
 from cryptofeed.standards import pair_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Gateio(Feed):
+class Gateio(feed.WebsocketFeed):
     id = GATEIO
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -151,7 +152,7 @@ class Gateio(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self._reset()
         client_id = 0
         for chan in self.channels if self.channels else self.config:
@@ -167,3 +168,4 @@ class Gateio(Feed):
                     "id": client_id
                 }
             ))
+        return True

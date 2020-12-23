@@ -8,9 +8,11 @@ import logging
 import zlib
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
@@ -19,7 +21,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Huobi(Feed):
+class Huobi(feed.WebsocketFeed):
     id = HUOBI
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
@@ -103,7 +105,7 @@ class Huobi(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.websocket = websocket
         self.__reset()
         client_id = 0
@@ -116,3 +118,4 @@ class Huobi(Feed):
                         "id": client_id
                     }
                 ))
+        return True

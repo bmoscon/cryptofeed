@@ -10,9 +10,11 @@ import time
 from decimal import Decimal
 
 import requests
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
@@ -21,7 +23,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Coinbase(Feed):
+class Coinbase(feed.WebsocketFeed):
     id = COINBASE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -345,7 +347,7 @@ class Coinbase(Feed):
             # PERF perf_end(self.id, 'msg')
             # PERF perf_log(self.id, 'msg')
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         snapshot = False
         self.book_pairs = []
@@ -366,3 +368,4 @@ class Coinbase(Feed):
                                              }))
         if 'full' in self.channels or snapshot:
             await self._book_snapshot(self.pairs or self.book_pairs)
+        return True

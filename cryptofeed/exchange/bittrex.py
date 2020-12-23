@@ -4,9 +4,11 @@ import zlib
 from decimal import Decimal
 
 import requests
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
@@ -15,7 +17,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Bittrex(Feed):
+class Bittrex(feed.WebsocketFeed):
     id = BITTREX
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -98,7 +100,7 @@ class Bittrex(Feed):
         elif 'E' in msg:
             LOG.error("%s: Error from exchange %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         # H: Hub, M: Message, A: Args, I: Internal ID
         # For more signalR info see:
@@ -118,3 +120,4 @@ class Bittrex(Feed):
                 msg = {'A': [symbol] if channel != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': channel}
                 i += 1
                 await websocket.send(json.dumps(msg))
+        return True

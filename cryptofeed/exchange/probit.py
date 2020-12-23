@@ -7,18 +7,19 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
-from cryptofeed.feed import Feed
+from cryptofeed import feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Probit(Feed):
+class Probit(feed.WebsocketFeed):
     id = PROBIT
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -165,7 +166,7 @@ class Probit(Feed):
             await self._l2_update(msg, timestamp)
         # Probit has a 'ticker' channel, but it provide OHLC-last data, not BBO px.
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
 
         if self.config:
@@ -185,3 +186,4 @@ class Probit(Feed):
                                                  "interval": 100,
                                                  "market_id": pair,
                                                  }))
+        return True

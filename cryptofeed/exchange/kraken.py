@@ -8,9 +8,11 @@ import logging
 from decimal import Decimal
 import zlib
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -20,7 +22,7 @@ from cryptofeed.standards import pair_exchange_to_std
 LOG = logging.getLogger('feedhandler')
 
 
-class Kraken(Feed):
+class Kraken(feed.WebsocketFeed):
     id = KRAKEN
 
     def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
@@ -43,7 +45,7 @@ class Kraken(Feed):
 
         return str(zlib.crc32(combined.encode()))
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         if self.config:
             for chan in self.config:
@@ -65,6 +67,7 @@ class Kraken(Feed):
                     "pair": self.pairs,
                     "subscription": sub
                 }))
+        return True
 
     async def _trade(self, msg: dict, pair: str, timestamp: float):
         """

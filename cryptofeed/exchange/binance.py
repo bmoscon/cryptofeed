@@ -12,9 +12,11 @@ from decimal import Decimal
 from time import time
 
 import aiohttp
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
@@ -23,7 +25,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Binance(Feed):
+class Binance(feed.WebsocketFeed):
     id = BINANCE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
@@ -307,12 +309,13 @@ class Binance(Feed):
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         # Binance does not have a separate subscribe message, the
-        # subsription information is included in the
+        # subscription information is included in the
         # connection endpoint
         for chan in self.channels if self.channels else self.config:
             if chan == 'open_interest':
                 asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.config[chan]))
                 break
         self._reset()
+        return True

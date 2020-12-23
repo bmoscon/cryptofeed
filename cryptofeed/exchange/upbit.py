@@ -3,9 +3,11 @@ from decimal import Decimal
 import uuid
 
 import requests
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.standards import load_exchange_pair_mapping, pair_exchange_to_std, timestamp_normalize
@@ -14,7 +16,7 @@ from cryptofeed.standards import load_exchange_pair_mapping, pair_exchange_to_st
 LOG = logging.getLogger('feedhandler')
 
 
-class Upbit(Feed):
+class Upbit(feed.WebsocketFeed):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
 
@@ -181,7 +183,7 @@ class Upbit(Feed):
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         """
         Doc : https://docs.upbit.com/docs/upbit-quotation-websocket
 
@@ -222,3 +224,4 @@ class Upbit(Feed):
                 chans.append({"type": "ticker", "codes": codes, 'isOnlyRealtime': True})
 
         await websocket.send(json.dumps(chans))
+        return True

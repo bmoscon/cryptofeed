@@ -7,9 +7,11 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BITCOINCOM, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -19,7 +21,7 @@ from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class BitcoinCom(Feed):
+class BitcoinCom(feed.WebsocketFeed):
     id = BITCOINCOM
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -30,8 +32,7 @@ class BitcoinCom(Feed):
         self.l2_book = {}
         self.seq_no = {}
 
-    async def subscribe(self, websocket):
-        self.websocket = websocket
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         for chan in self.channels if self.channels else self.config:
             for pair in self.pairs if self.pairs else self.config[chan]:
@@ -44,6 +45,7 @@ class BitcoinCom(Feed):
                         "id": chan + pair
                     }
                 ))
+        return True
 
     async def _trade(self, msg: dict, timestamp: float):
         for trade in msg['data']:

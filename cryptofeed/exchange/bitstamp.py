@@ -9,9 +9,11 @@ import logging
 from decimal import Decimal
 
 import aiohttp
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import feed_to_exchange, pair_exchange_to_std, timestamp_normalize
@@ -20,7 +22,7 @@ from cryptofeed.standards import feed_to_exchange, pair_exchange_to_std, timesta
 LOG = logging.getLogger('feedhandler')
 
 
-class Bitstamp(Feed):
+class Bitstamp(feed.WebsocketFeed):
     id = BITSTAMP
     # API documentation: https://www.bitstamp.net/websocket/v2/
 
@@ -156,7 +158,7 @@ class Bitstamp(Feed):
                     amount = Decimal(update[1])
                     self.l2_book[std_pair][side][price] = amount
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         snaps = []
         self.last_update_id = {}
         for channel in self.channels if not self.config else self.config:
@@ -171,3 +173,4 @@ class Bitstamp(Feed):
                 if 'diff_order_book' in channel:
                     snaps.append(pair)
         await self._snapshot(snaps)
+        return True

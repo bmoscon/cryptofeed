@@ -11,6 +11,7 @@ import time
 import aiohttp
 import requests
 from yapic import json
+import websockets
 
 from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL
 from cryptofeed.exchange.okcoin import OKCoin
@@ -89,8 +90,8 @@ class OKEx(OKCoin):
                     await asyncio.sleep(0.1)
                 await asyncio.sleep(60)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         if LIQUIDATIONS in self.config or LIQUIDATIONS in self.channels:
             pairs = self.config[LIQUIDATIONS] if LIQUIDATIONS in self.config else self.pairs
             asyncio.create_task(self._liquidations(pairs))
-        await super().subscribe(websocket)
+        return await super().subscribe(websocket)

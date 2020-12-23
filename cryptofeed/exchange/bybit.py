@@ -7,9 +7,11 @@ associated with this software.
 import logging
 from decimal import Decimal
 
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std as normalize_pair
@@ -19,7 +21,7 @@ from cryptofeed.standards import timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Bybit(Feed):
+class Bybit(feed.WebsocketFeed):
     id = BYBIT
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -45,7 +47,7 @@ class Bybit(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
 
         for chan in self.channels if self.channels else self.config:
@@ -56,6 +58,7 @@ class Bybit(Feed):
                         "args": [f"{chan}.{pair}"]
                     }
                 ))
+        return True
 
     async def _instrument_info(self, msg: dict, timestamp: float):
         """

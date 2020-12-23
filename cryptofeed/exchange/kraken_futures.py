@@ -8,9 +8,11 @@ import logging
 from decimal import Decimal
 
 import requests
+import websockets
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed import feed
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -20,7 +22,7 @@ from cryptofeed.standards import timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class KrakenFutures(Feed):
+class KrakenFutures(feed.WebsocketFeed):
     id = KRAKEN_FUTURES
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
@@ -48,7 +50,7 @@ class KrakenFutures(Feed):
         r = requests.get('https://futures.kraken.com/derivatives/api/v3/instruments').json()
         return {e['symbol'].upper(): e['symbol'].upper() for e in r['instruments']}
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, websocket: websockets.WebSocketClientProtocol) -> bool:
         self.__reset()
         for chan in self.channels if self.channels else self.config:
             await websocket.send(json.dumps(
@@ -58,6 +60,7 @@ class KrakenFutures(Feed):
                     "product_ids": self.pairs if not self.config else list(self.config[chan])
                 }
             ))
+        return True
 
     async def _trade(self, msg: dict, pair: str, timestamp: float):
         """
