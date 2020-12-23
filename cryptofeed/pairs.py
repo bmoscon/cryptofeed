@@ -275,9 +275,14 @@ def okex_pairs() -> Dict[str, str]:
         raise
 
 
-def coinbene_pairs():
-    r = requests.get('http://api.coinbene.com/v1/market/symbol').json()
-    return {f"{e['baseAsset']}{PAIR_SEP}{e['quoteAsset']}": e['ticker'] for e in r['symbol']}
+def coinbene_pairs() -> Dict[str, str]:
+    response = requests.get('http://api.coinbene.com/v1/market/symbol')
+    try:
+        r = response.json()
+        return {f"{e['baseAsset']}{PAIR_SEP}{e['quoteAsset']}": e['ticker'] for e in r['symbol']}
+    except Exception as why:
+        LOG.critical("COINBENE: Skip because %r (status=%r) in unexpected JSON: %.500r", why, response.status_code, response.text)
+        raise
 
 
 def bittrex_pairs() -> Dict[str, str]:
