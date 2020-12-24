@@ -16,7 +16,6 @@ import websockets
 class AsyncConnection:
     def __init__(self, address: Union[str, List], identifier: str, sleep: float = 0.0, **kwargs):
         self.address = address
-        self.id = identifier
         self.kwargs = kwargs
         self.conn = None
         self.sleep = sleep
