@@ -5,8 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
-from typing import Tuple, Callable
-import uuid
+from typing import Tuple, Callable, Union, List
 
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection
@@ -20,7 +19,7 @@ from cryptofeed.util.book import book_delta, depth
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address: list, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
+    def __init__(self, address: Union[list, str], pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
                  key_id=None):
         """
         max_depth: int
@@ -41,8 +40,6 @@ class Feed:
         key_id: str
             API key to query the feed, required when requesting supported coins/pairs.
         """
-        self.hash = str(uuid.uuid4())
-        self.uuid = f"{self.id}-{self.hash}"
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
@@ -96,7 +93,7 @@ class Feed:
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
-    def connect(self) -> Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None], str]:
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         """
         Generic connection method for exchanges. Exchanges that require/support
         multiple addresses will need to override this method in their specific class
@@ -106,15 +103,15 @@ class Feed:
         Connect returns a list of tuples. Each tuple contains
         1. an AsyncConnection object
         2. the subscribe function pointer associated with this connection
-        3. a unique id for this connection
+        3. the message handler for this connection 
         """
         ret = []
 
         if isinstance(self.address, str):
-            return [(AsyncConnection(self.address, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler, self.uuid)]
+            return [(AsyncConnection(self.address, self.id, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler)]
 
         for n, addr in enumerate(self.address):
-            ret.append((AsyncConnection(addr, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler, f"{self.uuid}-{n}"))
+            ret.append((AsyncConnection(addr, self.id, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler))
         return ret
 
     @classmethod
@@ -225,10 +222,3 @@ class Feed:
             for callback in callbacks:
                 if hasattr(callback, 'stop'):
                     await callback.stop()
-
-
-class RestFeed(Feed):
-    sleep_time = None
-
-    async def message_handler(self):
-        raise NotImplementedError

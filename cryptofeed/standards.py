@@ -14,7 +14,7 @@ import logging
 import pandas as pd
 
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, COINGECKO,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
                                 DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
@@ -75,7 +75,7 @@ def pair_exchange_to_std(pair):
 def timestamp_normalize(exchange, ts):
     if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT, COINGECKO}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
+    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
@@ -105,7 +105,6 @@ _feed_to_exchange_map = {
         HUOBI_SWAP: 'depth.step0',
         OKCOIN: 'spot/depth_l2_tbt',
         OKEX: '{}/depth_l2_tbt',
-        COINBENE: L2_BOOK,
         DERIBIT: 'book',
         BYBIT: 'orderBookL2_25',
         FTX: 'orderbook',
@@ -113,7 +112,7 @@ _feed_to_exchange_map = {
         GEMINI: L2_BOOK,
         BITTREX: 'SubscribeToExchangeDeltas',
         BITCOINCOM: 'subscribeOrderbook',
-        BITMAX: L2_BOOK,
+        BITMAX: "depth:",
         UPBIT: L2_BOOK,
         GATEIO: 'depth.subscribe',
         PROBIT: 'order_books'
@@ -166,7 +165,6 @@ _feed_to_exchange_map = {
         HUOBI_SWAP: 'trade.detail',
         OKCOIN: 'spot/trade',
         OKEX: '{}/trade',
-        COINBENE: TRADES,
         DERIBIT: 'trades',
         BYBIT: 'trade',
         FTX: 'trades',
@@ -174,7 +172,7 @@ _feed_to_exchange_map = {
         GEMINI: TRADES,
         BITTREX: TRADES,
         BITCOINCOM: 'subscribeTrades',
-        BITMAX: TRADES,
+        BITMAX: "trades:",
         UPBIT: TRADES,
         GATEIO: 'trades.subscribe',
         PROBIT: 'recent_trades'
@@ -197,7 +195,6 @@ _feed_to_exchange_map = {
         HUOBI_DM: UNSUPPORTED,
         OKCOIN: '{}/ticker',
         OKEX: '{}/ticker',
-        COINBENE: TICKER,
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
         FTX: "ticker",

@@ -17,7 +17,6 @@ from cryptofeed.exchange.bittrex import Bittrex
 from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.exchange.bybit import Bybit
 from cryptofeed.exchange.coinbase import Coinbase
-from cryptofeed.exchange.coinbene import Coinbene
 from cryptofeed.exchange.deribit import Deribit
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.ftx import FTX
