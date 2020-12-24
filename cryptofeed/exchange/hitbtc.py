@@ -120,5 +120,5 @@ class HitBTC(Feed):
                         "params": {
                             "symbol": pair
                         },
-                        "id": self.id
+                        "id": websocket.uuid
                     }))
