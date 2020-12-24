@@ -289,16 +289,6 @@ def okex_pairs() -> Dict[str, str]:
         raise
 
 
-def coinbene_pairs() -> Dict[str, str]:
-    response = requests.get('http://api.coinbene.com/v1/market/symbol')
-    try:
-        r = response.json()
-        return {f"{e['baseAsset']}{PAIR_SEP}{e['quoteAsset']}": e['ticker'] for e in r['symbol']}
-    except Exception as why:
-        LOG.critical("COINBENE: Skip because %r (status=%r) in unexpected JSON: %.500r", why, response.status_code, response.text)
-        raise
-
-
 def bittrex_pairs() -> Dict[str, str]:
     r = requests.get('https://api.bittrex.com/api/v1.1/public/getmarkets').json()
     r = r['result']
@@ -312,9 +302,16 @@ def bitcoincom_pairs() -> Dict[str, str]:
 
 def bitmax_pairs() -> Dict[str, str]:
     r = None
+    ret = {}
     try:
-        r = requests.get('https://bitmax.io/api/v1/products')
-        return {f"{data['baseAsset']}{PAIR_SEP}{data['quoteAsset']}": data['symbol'] for data in r.json()}
+        r = requests.get('https://bitmax.io/api/pro/v1/products')
+        for entry in r.json()['data']:
+            # Only "Normal" status symbols are tradeable
+            if entry['status'] == 'Normal':
+                normalized = f"{entry['baseAsset']}{PAIR_SEP}{entry['quoteAsset']}"
+                ret[normalized] = entry['symbol']
+                _exchange_info[BITMAX]['tick_size'][normalized] = entry['tickSize']
+        return ret
     except Exception as why:
         LOG.error("BITMAX Unexpected message: %r %r", r.text, why)
         raise
@@ -360,15 +357,9 @@ def probit_pairs() -> Dict[str, str]:
     return {entry['id']: entry['id'] for entry in r['data']}
 
 
-def coingecko_pairs():
-    quote_c = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
-    # Normalization
-    normalized = dict({'miota': 'iota'})
-    # Base currencies are defined manually (USD + BTC + ETH).
-    # The full list from Coingecko is not used, as the generated dict of pairs would be tremendous.
-    # base_c =  requests.get('https://api.coingecko.com/api/v3/simple/supported_vs_currencies').json()
-    base_c = (('USD', 'usd'), ('BTC', 'btc'), ('ETH', 'eth'))
-    return {(f"{q['symbol']}{PAIR_SEP}{bk}".upper() if q['symbol'] not in normalized else f"{normalized[q['symbol']]}{PAIR_SEP}{bk}".upper()): f"{q['id']}_{bv}" for q in quote_c for bk, bv in base_c}
+def coingecko_pairs() -> Dict[str, str]:
+    data = requests.get('https://api.coingecko.com/api/v3/coins/list').json()
+    return {entry['symbol'].upper(): entry['id'] for entry in data}
 
 
 def whale_alert_coins(key_id: str):
@@ -398,7 +389,6 @@ _exchange_function_map = {
     HUOBI_SWAP: huobi_swap_pairs,
     OKCOIN: okcoin_pairs,
     OKEX: okex_pairs,
-    COINBENE: coinbene_pairs,
     BYBIT: bybit_pairs,
     FTX: ftx_pairs,
     FTX_US: ftx_us_pairs,

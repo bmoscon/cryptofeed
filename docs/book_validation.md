@@ -8,8 +8,8 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | ------------- |:-------------:| :---------------:|:--------------:|
 | Bitcoin.com   |               | x                |                |
 | Bitfinex      |               | x                |                |
-| Bitmax        |               |                  |                |
-| Bitstamp      |               |                  |x               |
+| Bitmax        |               | x                |                |
+| Bitstamp      |               |                  | x              |
 | Bittrex       |               | x (coming)       |                |
 | Blockchain.com|               | x                |                |
 | Bybit         |               |                  |   x            |

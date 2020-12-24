@@ -41,7 +41,7 @@ setup(
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data",
               "Bitcoin.com", "Bitfinex", "BitMax", "Bitstamp", "Bittrex", "Blockchain.com", "Bybit",
-              "Binance", "BitMEX", "CoinBene", "Coinbase", "Deribit", "EXX", "FTX", "Gemini",
+              "Binance", "BitMEX", "Coinbase", "Deribit", "EXX", "FTX", "Gemini",
               "HitBTC", "Huobi", "Kraken", "OKCoin", "OKEx", "Poloniex", "Upbit"],
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),

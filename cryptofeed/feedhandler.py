@@ -9,19 +9,16 @@ import logging
 from signal import SIGTERM
 import zlib
 from collections import defaultdict
-from copy import deepcopy
 from socket import error as socket_error
 from time import time
 import functools
 
-import websockets
 from websockets import ConnectionClosed
 
 from cryptofeed.config import Config
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
-                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT,
-                                COINBASE, COINBENE, COINGECKO, DERIBIT,
-                                FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
+                                DERIBIT, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
@@ -29,7 +26,6 @@ from cryptofeed.defines import L2_BOOK
 from cryptofeed.exceptions import ExhaustedRetries
 from cryptofeed.exchanges import *
 from cryptofeed.providers import *
-from cryptofeed.feed import RestFeed
 from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
 
@@ -52,7 +48,6 @@ _EXCHANGES = {
     BLOCKCHAIN: Blockchain,
     BYBIT: Bybit,
     COINBASE: Coinbase,
-    COINBENE: Coinbene,
     COINGECKO: Coingecko,
     DERIBIT: Deribit,
     EXX_str: EXX,
@@ -94,7 +89,7 @@ class FeedHandler:
         self.feeds = []
         self.retries = retries
         self.timeout = {}
-        self.last_msg = {}
+        self.last_msg = defaultdict(lambda: None)
         self.timeout_interval = timeout_interval
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture
@@ -149,22 +144,11 @@ class FeedHandler:
         """
         if isinstance(feed, str):
             if feed in _EXCHANGES:
-                if feed == BITMAX:
-                    self._do_bitmax_subscribe(feed, timeout, **kwargs)
-                else:
-                    self.feeds.append(_EXCHANGES[feed](**kwargs))
-                    feed = self.feeds[-1]
-                    self.last_msg[feed.uuid] = None
-                    self.timeout[feed.uuid] = timeout
+                self.feeds.append((_EXCHANGES[feed](**kwargs), timeout))
             else:
                 raise ValueError("Invalid feed specified")
         else:
-            if isinstance(feed, Bitmax):
-                self._do_bitmax_subscribe(feed, timeout)
-            else:
-                self.feeds.append(feed)
-                self.last_msg[feed.uuid] = None
-                self.timeout[feed.uuid] = timeout
+            self.feeds.append((feed, timeout))
 
     def add_nbbo(self, feeds, pairs, callback, timeout=120):
         """
@@ -198,11 +182,11 @@ class FeedHandler:
             for signal in [SIGTERM]:
                 loop.add_signal_handler(signal, handle_stop_signals)
 
-            for feed in self.feeds:
-                if isinstance(feed, RestFeed):
-                    loop.create_task(self._rest_connect(feed))
-                else:
-                    loop.create_task(self._connect(feed))
+            for feed, timeout in self.feeds:
+                for conn, sub, handler in feed.connect():
+                    loop.create_task(self._connect(conn, sub, handler))
+                    self.timeout[conn.uuid] = timeout
+
             if start_loop:
                 loop.run_forever()
         except KeyboardInterrupt:
@@ -212,153 +196,73 @@ class FeedHandler:
         except Exception:
             LOG.error("Unhandled exception", exc_info=True)
         finally:
-            for feed in self.feeds:
+            for feed, _ in self.feeds:
                 loop.run_until_complete(feed.stop())
 
-    async def _watch(self, feed_id, websocket):
-        if self.timeout[feed_id] == -1:
+    async def _watch(self, connection):
+        if self.timeout[connection.uuid] == -1:
             return
 
-        while websocket.open:
-            if self.last_msg[feed_id]:
-                if time() - self.last_msg[feed_id] > self.timeout[feed_id]:
-                    LOG.warning("%s: received no messages within timeout, restarting connection", feed_id)
-                    await websocket.close()
+        while connection.open:
+            if self.last_msg[connection.uuid]:
+                if time() - self.last_msg[connection.uuid] > self.timeout[connection.uuid]:
+                    LOG.warning("%s: received no messages within timeout, restarting connection", connection.uuid)
+                    await connection.close()
                     break
             await asyncio.sleep(self.timeout_interval)
 
-    async def _rest_connect(self, feed):
+    async def _connect(self, conn, subscribe, handler):
         """
-        Connect to REST feed
-        """
-        retries = 0
-        delay = 2 * feed.sleep_time if feed.sleep_time else 1
-        while retries <= self.retries or self.retries == -1:
-            await feed.subscribe()
-            try:
-                while True:
-                    await feed.message_handler()
-                    # connection was successful, reset retry count and delay
-                    retries = 0
-                    delay = 2 * feed.sleep_time if feed.sleep_time else 1
-            except Exception:
-                LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
-                await asyncio.sleep(delay)
-                retries += 1
-                delay *= 2
-
-        LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
-        raise ExhaustedRetries()
-
-    async def _connect(self, feed):
-        """
-        Connect to websocket feeds
+        Connect to exchange and subscribe
         """
         retries = 0
         delay = 1
         while retries <= self.retries or self.retries == -1:
-            self.last_msg[feed.uuid] = None
+            self.last_msg[conn.uuid] = None
             try:
-                # Coinbase frequently will not respond to pings within the ping interval, so
-                # disable the interval in favor of the internal watcher, which will
-                # close the connection and reconnect in the event that no message from the exchange
-                # has been received (as opposed to a missing ping).
-                #
-                # address can be None for binance futures when only open interest is configured
-                # because that data is collected over a periodic REST polling task
-                if feed.address is None:
-                    await feed.subscribe(None)
-                    return
-
-                async with websockets.connect(feed.address, ping_interval=10, ping_timeout=None,
-                                              max_size=2**23, max_queue=None, origin=feed.origin) as websocket:
-                    asyncio.ensure_future(self._watch(feed.uuid, websocket))
+                async with conn.connect() as connection:
+                    asyncio.ensure_future(self._watch(connection))
                     # connection was successful, reset retry count and delay
                     retries = 0
                     delay = 1
-                    await feed.subscribe(websocket)
-                    await self._handler(websocket, feed.message_handler, feed.uuid)
+                    await subscribe(connection)
+                    await self._handler(connection, handler)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                LOG.warning("%s: encountered connection issue %s - reconnecting...", feed.id, str(e), exc_info=True)
+                LOG.warning("%s: encountered connection issue %s - reconnecting...", conn.uuid, str(e), exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
             except Exception:
-                LOG.error("%s: encountered an exception, reconnecting", feed.id, exc_info=True)
+                LOG.error("%s: encountered an exception, reconnecting", conn.uuid, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
 
-        LOG.error("%s: failed to reconnect after %d retries - exiting", feed.id, retries)
+        LOG.error("%s: failed to reconnect after %d retries - exiting", conn.uuid, retries)
         raise ExhaustedRetries()
 
-    async def _handler(self, websocket, handler, feed_id):
+    async def _handler(self, connection, handler):
         try:
             if self.raw_message_capture and self.handler_enabled:
-                async for message in websocket:
-                    self.last_msg[feed_id] = time()
-                    await self.raw_message_capture(message, self.last_msg[feed_id], feed_id)
-                    await handler(message, self.last_msg[feed_id])
+                async for message in connection.read():
+                    self.last_msg[connection.uuid] = time()
+                    await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
+                    await handler(message, self.last_msg[connection.uuid])
             elif self.raw_message_capture:
-                async for message in websocket:
-                    self.last_msg[feed_id] = time()
-                    await self.raw_message_capture(message, self.last_msg[feed_id], feed_id)
+                async for message in connection.read():
+                    self.last_msg[connection.uuid] = time()
+                    await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
             else:
-                async for message in websocket:
-                    self.last_msg[feed_id] = time()
-                    await handler(message, self.last_msg[feed_id])
+                async for message in connection.read():
+                    self.last_msg[connection.uuid] = time()
+                    await handler(message, self.last_msg[connection.uuid])
         except Exception:
             if self.log_messages_on_error:
-                if feed_id in {HUOBI, HUOBI_DM}:
+                if connection.uuid in {HUOBI, HUOBI_DM}:
                     message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
-                elif feed_id in {OKCOIN, OKEX}:
+                elif connection.uuid in {OKCOIN, OKEX}:
                     message = zlib.decompress(message, -15)
-                LOG.error("%s: error handling message %s", feed_id, message)
+                LOG.error("%s: error handling message %s", connection.uuid, message)
             # exception will be logged with traceback when connection handler
             # retries the connection
             raise
-
-    def _do_bitmax_subscribe(self, feed, timeout: int, **kwargs):
-        """
-        Bitmax is a special case, a separate websocket is needed for each symbol,
-        and each connection receives all data for that symbol. We allow the user
-        to configure Bitmax like they would any other exchange and parse out the
-        relevant information to create a separate feed object per symbol.
-        """
-        config = {}
-        pairs = []
-
-        # Need to handle the two configuration cases - Feed object and Feed Name with config dict
-        if 'config' in kwargs:
-            config = kwargs.pop('config')
-        elif hasattr(feed, 'config'):
-            config = feed.config
-
-        if isinstance(feed, str):
-            callbacks = kwargs.pop('callbacks')
-        else:
-            callbacks = feed.callbacks
-
-        if config:
-            new_config = defaultdict(list)
-            for cb, symbols in config.items():
-                for symbol in symbols:
-                    new_config[symbol].append(cb)
-
-            for symbol, cbs in new_config.items():
-                cb = {cb: deepcopy(callbacks[cb]) for cb in cbs}
-                feed = Bitmax(pairs=[symbol], callbacks=cb, **kwargs)
-                self.feeds.append(feed)
-                self.last_msg[feed.uuid] = None
-                self.timeout[feed.uuid] = timeout
-        else:
-            if 'pairs' in kwargs:
-                pairs = kwargs.pop('pairs')
-            elif hasattr(feed, 'pairs'):
-                pairs = feed.pairs
-
-            for pair in pairs:
-                feed = Bitmax(pairs=[pair], callbacks=callbacks, **kwargs)
-                self.feeds.append(feed)
-                self.last_msg[feed.uuid] = None
-                self.timeout[feed.uuid] = timeout

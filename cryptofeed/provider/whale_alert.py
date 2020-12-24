@@ -12,7 +12,7 @@ import json
 from json import JSONDecodeError
 
 from cryptofeed.defines import WHALE_ALERT, TRANSACTIONS
-from cryptofeed.feed import RestFeed
+from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std
 from cryptofeed.exceptions import RestResponseError
 
@@ -21,7 +21,7 @@ LOG = logging.getLogger('feedhandler')
 TO_FROM_DATA = ('address', 'owner_type', 'owner')
 
 
-class WhaleAlert(RestFeed):
+class WhaleAlert(Feed):
 
     id = WHALE_ALERT
 
