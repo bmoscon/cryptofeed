@@ -151,7 +151,8 @@ class Blockchain(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
         if self.seq_no is not None and msg['seqnum'] != self.seq_no + 1:
             LOG.warning("%s: Missing sequence number detected!", self.id)

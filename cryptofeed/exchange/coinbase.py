@@ -303,7 +303,8 @@ class Coinbase(Feed):
 
         await self.book_callback(self.l3_book, L3_BOOK, pair, False, delta, ts, timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         # PERF perf_start(self.id, 'msg')
         msg = json.loads(msg, parse_float=Decimal)
 

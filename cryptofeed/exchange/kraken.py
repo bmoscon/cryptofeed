@@ -143,7 +143,8 @@ class Kraken(Feed):
                 raise BadChecksum("Checksum validation on orderbook failed")
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):

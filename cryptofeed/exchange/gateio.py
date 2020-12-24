@@ -133,7 +133,8 @@ class Gateio(Feed):
                     delta[side].append((price, amount))
         await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
 
         if "error" in msg:

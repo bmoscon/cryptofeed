@@ -81,7 +81,8 @@ class HitBTC(Feed):
                                 timestamp=timestamp,
                                 receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
         if 'params' in msg and 'sequence' in msg['params']:
             pair = msg['params']['symbol']

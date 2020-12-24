@@ -28,7 +28,6 @@ class Bitmax(Feed):
         self.__reset()
 
     def __reset(self):
-        self.websocket = None
         self.l2_book = {}
         self.seq_no = defaultdict(lambda: None)
 
@@ -89,7 +88,8 @@ class Bitmax(Feed):
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, msg['data']['ts']), timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
 
         if 'm' in msg:
@@ -98,7 +98,7 @@ class Bitmax(Feed):
             elif msg['m'] == 'trades':
                 await self._trade(msg, timestamp)
             elif msg['m'] == 'ping':
-                await self.websocket.send('{"op":"pong"}')
+                await conn.send('{"op":"pong"}')
             elif msg['m'] == 'connected':
                 return
             elif msg['m'] == 'sub':
@@ -110,7 +110,6 @@ class Bitmax(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        self.websocket = websocket
         l2_pairs = []
 
         for channel in self.channels if not self.config else self.config:

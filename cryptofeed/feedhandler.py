@@ -247,7 +247,7 @@ class FeedHandler:
                 async for message in connection.read():
                     self.last_msg[connection.uuid] = time()
                     await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
-                    await handler(message, self.last_msg[connection.uuid])
+                    await handler(message, connection, self.last_msg[connection.uuid])
             elif self.raw_message_capture:
                 async for message in connection.read():
                     self.last_msg[connection.uuid] = time()
@@ -255,7 +255,7 @@ class FeedHandler:
             else:
                 async for message in connection.read():
                     self.last_msg[connection.uuid] = time()
-                    await handler(message, self.last_msg[connection.uuid])
+                    await handler(message, connection, self.last_msg[connection.uuid])
         except Exception:
             if self.log_messages_on_error:
                 if connection.uuid in {HUOBI, HUOBI_DM}:

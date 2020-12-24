@@ -115,7 +115,8 @@ class Bitstamp(Feed):
                             receipt_timestamp=timestamp,
                             order_id=order_id)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
         if 'bts' in msg['event']:
             if msg['event'] == 'bts:connection_established':

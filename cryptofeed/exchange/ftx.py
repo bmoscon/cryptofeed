@@ -38,7 +38,6 @@ class FTX(Feed):
         self.open_interest = {}
 
     async def subscribe(self, websocket):
-        self.websocket = websocket
         self.__reset()
         for chan in self.channels if self.channels else self.config:
             if chan == FUNDING:
@@ -245,7 +244,8 @@ class FTX(Feed):
                 raise BadChecksum
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
         if 'type' in msg and msg['type'] == 'subscribed':
             return

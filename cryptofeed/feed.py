@@ -214,7 +214,7 @@ class Feed:
         self.previous_book[pair] = ret
         return delta, ret
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         raise NotImplementedError
 
     async def subscribe(self, connection: AsyncConnection, **kwargs):

@@ -83,14 +83,15 @@ class Huobi(Feed):
                                 timestamp=timestamp_normalize(self.id, trade['ts']),
                                 receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         # unzip message
         msg = zlib.decompress(msg, 16 + zlib.MAX_WBITS)
         msg = json.loads(msg, parse_float=Decimal)
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await self.websocket.send(json.dumps({'pong': msg['ping']}))
+            await conn.send(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
@@ -104,7 +105,6 @@ class Huobi(Feed):
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
-        self.websocket = websocket
         self.__reset()
         client_id = 0
         for chan in self.channels if self.channels else self.config:

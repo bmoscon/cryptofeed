@@ -70,7 +70,8 @@ class Coingecko(Feed):
                     addrs.append(f"{self.address}coins/{pair}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false")
         return [(AsyncConnection(addrs, self.id, sleep=self.sleep_time), self.subscribe, self.message_handler)]
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
         await self._market_info(msg, timestamp)
 

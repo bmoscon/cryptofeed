@@ -170,7 +170,8 @@ class OKCoin(Feed):
                     raise BadChecksum
                 await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         # DEFLATE compression, no header
         msg = zlib.decompress(msg, -15)
         msg = json.loads(msg, parse_float=Decimal)
