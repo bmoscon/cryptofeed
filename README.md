@@ -153,21 +153,12 @@ Supported Backends:
 Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [rest](https://github.com/bmoscon/cryptofeed/tree/master/cryptofeed/rest) package.
 
 
-## Planned Work
+## Future Work
 
-### Future Feeds
-* CEX
-* BTCC
-* Many more...
-
-### REST
-Continue to build out rest endpoints and standardize exchange interfaces and data
-
-### Additional Callback Methods / Backends
-* Pulsar
-* More ZMQ improvements/options
+There are a lot of planned features, new exchanges, etc planned! If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
 
 ## Contributing
-Issues and PRs are welcomed. If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
 
-This wouldn't have been possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contribtors my thanks!
+Issues and PRs are welcomed!
+
+Cryptofeed wouldn't be possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contribtors my thanks!
