@@ -214,7 +214,7 @@ class Feed:
     async def message_handler(self, msg: str, timestamp: float):
         raise NotImplementedError
 
-    async def subscribe(self):
+    async def subscribe(self, connection: AsyncConnection):
         raise NotImplementedError
 
     async def stop(self):
