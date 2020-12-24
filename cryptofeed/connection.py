@@ -36,7 +36,7 @@ class AsyncConnection:
         if self.conn_type == "ws":
             self.conn = await websockets.connect(self.address, **self.kwargs)
         else:
-            self.conn = aiohttp.ClientSession() 
+            self.conn = aiohttp.ClientSession()
         try:
             yield self
         finally:
@@ -73,7 +73,7 @@ class AsyncConnection:
             elif self.conn_type == 'https':
                 return not self.conn.closed
         return False
-    
+
     @property
     def uuid(self):
         return self.identifier

@@ -4,19 +4,16 @@ Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-
-import asyncio
 from collections import defaultdict
 from decimal import Decimal
 from typing import Tuple, Callable, List
 
-import aiohttp
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import COINGECKO, MARKET_INFO
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 # Keys retained from Coingecko for `MARKET_INFO` channel.

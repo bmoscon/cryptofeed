@@ -103,7 +103,7 @@ class Feed:
         Connect returns a list of tuples. Each tuple contains
         1. an AsyncConnection object
         2. the subscribe function pointer associated with this connection
-        3. the message handler for this connection 
+        3. the message handler for this connection
         """
         ret = []
 

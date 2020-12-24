@@ -9,7 +9,6 @@ import logging
 from signal import SIGTERM
 import zlib
 from collections import defaultdict
-from copy import deepcopy
 from socket import error as socket_error
 from time import time
 import functools
