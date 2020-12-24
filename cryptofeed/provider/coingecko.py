@@ -26,7 +26,6 @@ MARKET_INFO_FILTER_D = {'sentiment_votes_up_percentage', 'sentiment_votes_down_p
 MARKET_DATA_VS_CURRENCY = {'current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h'}
 OTHER_MARKET_DATA_FILTER = {'total_supply', 'max_supply', 'circulating_supply'}
 ALL_MARKET_DATA = set(list(MARKET_DATA_VS_CURRENCY) + list(OTHER_MARKET_DATA_FILTER))
-QUOTE = {'usd', 'eur', 'eth', 'ltc'}
 
 
 class Coingecko(Feed):
@@ -40,6 +39,20 @@ class Coingecko(Feed):
     sleep_time = 1.8
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
+        self.currencies = defaultdict(list)
+
+        if pairs:
+            for pair in pairs:
+                base, quote = pair.split("-")
+                self.currencies[base].append(quote.lower())
+            pairs = list(self.currencies.keys())
+
+        if config and MARKET_INFO in config:
+            for pair in config[MARKET_INFO]:
+                base, quote = pair.split("-")
+                self.currencies[base].append(quote.lower())
+            config[MARKET_INFO] = list(self.currencies.keys())
+
         super().__init__('https://api.coingecko.com/api/v3/', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
         self.__reset()
 
@@ -65,11 +78,11 @@ class Coingecko(Feed):
         """
         Data from /coins/{id}.
         """
-        pair = msg['symbol'].upper()
+        symbol = msg['symbol'].upper()
         timestamp = timestamp_normalize(self.id, msg['last_updated'])
 
-        if self.last_market_info_update[pair] < timestamp:
-            self.last_market_info_update[pair] = timestamp
+        if self.last_market_info_update[symbol] < timestamp:
+            self.last_market_info_update[symbol] = timestamp
             # `None` and null data is systematically replaced with '-1' for digits and '' for string (empty string), for compatibility with Redis stream.
             market_data = {}
             for key, value in msg['market_data'].items():
@@ -77,7 +90,7 @@ class Coingecko(Feed):
                     continue
                 if key in MARKET_DATA_VS_CURRENCY:
                     for cur, price in value.items():
-                        if cur not in QUOTE:
+                        if cur not in self.currencies[symbol]:
                             continue
                         market_data[f"{key}_{cur}"] = price
                 else:
@@ -95,6 +108,6 @@ class Coingecko(Feed):
             # `list` data type is converted to string for compatibility with Redis stream.
             data['status_updates'] = status
             await self.callback(MARKET_INFO, feed=self.id,
-                                symbol=pair,
+                                symbol=symbol,
                                 timestamp=timestamp,
                                 **data)
