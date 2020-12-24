@@ -28,6 +28,7 @@
   * Bugfix: Fix Bitfinex pair normalization
   * Feature: Refactor connection handling. New connection design allows feeds to open multiple connections
   * Feature: Update BitMax to use the new BitMax Pro API - includes sequence number verification on books
+  * Feature: Bybit - support for USDT perpetual data channels
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
