@@ -6,10 +6,13 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
+from functools import partial
+from typing import List, Callable, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std as normalize_pair
@@ -23,7 +26,7 @@ class Bybit(Feed):
     id = BYBIT
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://stream.bybit.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
 
     def __reset(self):
         self.l2_book = {}
@@ -45,12 +48,30 @@ class Bybit(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
+        ret = []
+
+        if any(pair[-4:] == 'USDT' for pair in self.normalized_pairs):
+            subscribe = partial(self.subscribe, quote='USDT')
+            ret.append((AsyncConnection(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+        if any(pair[-3:] == 'USD' for pair in self.normalized_pairs):
+            subscribe = partial(self.subscribe, quote='USD')
+            ret.append((AsyncConnection(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+
+        return ret
+
+    async def subscribe(self, connection: AsyncConnection, quote: str = None):
         self.__reset()
 
         for chan in self.channels if self.channels else self.config:
             for pair in self.pairs if self.pairs else self.config[chan]:
-                await websocket.send(json.dumps(
+                # Bybit uses separate addresses for difference quote currencies
+                if pair[-4:] == 'USDT' and quote != 'USDT':
+                    continue
+                if pair[-3:] == 'USD' and quote != 'USD':
+                    continue
+
+                await connection.send(json.dumps(
                     {
                         "op": "subscribe",
                         "args": [f"{chan}.{pair}"]
@@ -136,14 +157,14 @@ class Bybit(Feed):
             if 'open_interest' in info:
                 await self.callback(OPEN_INTEREST, feed=self.id,
                                     pair=normalize_pair(info['symbol']),
-                                    open_interest=info['open_interest'],
+                                    open_interest=Decimal(info['open_interest']),
                                     timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
                                     receipt_timestamp=timestamp)
 
             if 'index_price_e4' in info:
                 await self.callback(FUTURES_INDEX, feed=self.id,
                                     pair=normalize_pair(info['symbol']),
-                                    futures_index=info['index_price_e4'] * 1e-4,
+                                    futures_index=Decimal(info['index_price_e4']) * Decimal(1e-4),
                                     timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
                                     receipt_timestamp=timestamp)
 
@@ -163,6 +184,11 @@ class Bybit(Feed):
         """
         data = msg['data']
         for trade in data:
+            if isinstance(trade['trade_time_ms'], str):
+                ts = int(trade['trade_time_ms'])
+            else:
+                ts = trade['trade_time_ms']
+
             await self.callback(TRADES,
                                 feed=self.id,
                                 pair=normalize_pair(trade['symbol']),
@@ -170,7 +196,7 @@ class Bybit(Feed):
                                 side=BUY if trade['side'] == 'Buy' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['trade_time_ms']),
+                                timestamp=timestamp_normalize(self.id, ts),
                                 receipt_timestamp=timestamp
                                 )
 
@@ -183,6 +209,10 @@ class Bybit(Feed):
 
         if update_type == 'snapshot':
             self.l2_book[pair] = {BID: sd({}), ASK: sd({})}
+            # the USDT perpetual data is under the order_book key
+            if 'order_book' in data:
+                data = data['order_book']
+
             for update in data:
                 side = BID if update['side'] == 'Buy' else ASK
                 self.l2_book[pair][side][Decimal(update['price'])] = Decimal(update['size'])
@@ -203,4 +233,7 @@ class Bybit(Feed):
                     self.l2_book[pair][side][price] = amount
 
         # timestamp is in microseconds
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, msg['timestamp_e6'] / 1000000, timestamp)
+        ts = msg['timestamp_e6']
+        if isinstance(ts, str):
+            ts = int(ts)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, ts / 1000000, timestamp)

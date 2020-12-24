@@ -19,8 +19,7 @@ from cryptofeed.util.book import book_delta, depth
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address: Union[list, str], pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None,
-                 key_id=None):
+    def __init__(self, address: Union[dict, str], pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, key_id=None):
         """
         max_depth: int
             Maximum number of levels per side to return in book updates
@@ -48,11 +47,13 @@ class Feed:
         self.updates = defaultdict(int)
         self.do_deltas = False
         self.pairs = []
+        self.normalized_pairs = []
         self.channels = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
         self.origin = origin
         self.checksum_validation = checksum_validation
+        self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
         load_exchange_pair_mapping(self.id, key_id=key_id)
 
         if config is not None and (pairs is not None or channels is not None):
@@ -62,8 +63,10 @@ class Feed:
             for channel in config:
                 chan = feed_to_exchange(self.id, channel)
                 self.config[chan].update([pair_std_to_exchange(pair, self.id) for pair in config[channel]])
+                self.normalized_pairs.extend(self.config[chan])
 
         if pairs:
+            self.normalized_pairs = pairs
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
         if channels:
             self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
@@ -108,10 +111,10 @@ class Feed:
         ret = []
 
         if isinstance(self.address, str):
-            return [(AsyncConnection(self.address, self.id, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler)]
+            return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
 
-        for n, addr in enumerate(self.address):
-            ret.append((AsyncConnection(addr, self.id, ping_interval=10, ping_timeout=None, max_size=2**23, max_queue=None, origin=self.origin), self.subscribe, self.message_handler))
+        for key, addr in self.address.items():
+            ret.append((AsyncConnection(addr, self.id, metadata=key, **self.ws_defaults), self.subscribe, self.message_handler))
         return ret
 
     @classmethod
@@ -214,7 +217,11 @@ class Feed:
     async def message_handler(self, msg: str, timestamp: float):
         raise NotImplementedError
 
-    async def subscribe(self, connection: AsyncConnection):
+    async def subscribe(self, connection: AsyncConnection, **kwargs):
+        """
+        kwargs will not be passed from anywhere, if you need to supply extra data to
+        your subscribe, bind the data to the method with a partial
+        """
         raise NotImplementedError
 
     async def stop(self):
