@@ -40,9 +40,13 @@ class Coingecko(Feed):
 
     def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
         super().__init__('https://api.coingecko.com/api/v3/', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
+        self.__reset()
+
+    def __reset(self):
+        self.last_market_info_update = defaultdict(float)
 
     async def subscribe(self, connection: AsyncConnection):
-        self.__reset()
+        pass
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         addrs = []
@@ -51,9 +55,6 @@ class Coingecko(Feed):
                 if chan == MARKET_INFO:
                     addrs.append(f"{self.address}coins/{pair}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false")
         return [(AsyncConnection(addrs, self.id, sleep=self.sleep_time), self.subscribe, self.message_handler)]
-
-    def __reset(self):
-        self.last_market_info_update = defaultdict(float)
 
     async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
