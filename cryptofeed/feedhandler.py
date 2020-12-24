@@ -144,17 +144,11 @@ class FeedHandler:
         """
         if isinstance(feed, str):
             if feed in _EXCHANGES:
-                self.feeds.append(_EXCHANGES[feed](**kwargs))
-                feed = self.feeds[-1]
+                self.feeds.append((_EXCHANGES[feed](**kwargs), timeout))
             else:
                 raise ValueError("Invalid feed specified")
         else:
-            self.feeds.append(feed)
-
-        loop = asyncio.get_event_loop()
-        for conn, sub, handler in feed.connect():
-            loop.create_task(self._connect(conn, sub, handler))
-            self.timeout[conn.uuid] = timeout
+            self.feeds.append((feed, timeout))
 
     def add_nbbo(self, feeds, pairs, callback, timeout=120):
         """
@@ -188,6 +182,11 @@ class FeedHandler:
             for signal in [SIGTERM]:
                 loop.add_signal_handler(signal, handle_stop_signals)
 
+            for feed, timeout in self.feeds:
+                for conn, sub, handler in feed.connect():
+                    loop.create_task(self._connect(conn, sub, handler))
+                    self.timeout[conn.uuid] = timeout
+
             if start_loop:
                 loop.run_forever()
         except KeyboardInterrupt:
@@ -197,7 +196,7 @@ class FeedHandler:
         except Exception:
             LOG.error("Unhandled exception", exc_info=True)
         finally:
-            for feed in self.feeds:
+            for feed, _ in self.feeds:
                 loop.run_until_complete(feed.stop())
 
     async def _watch(self, connection):
