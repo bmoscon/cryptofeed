@@ -20,12 +20,13 @@ from cryptofeed.standards import timestamp_normalize
 # 'status_updates' is not in the list, but is added back in the data (see `_market_info()`)
 # It is worthwhile to notice that all digit data is positive. Sometimes, Coingecko sends also null or None value,
 # in which case they are then converted to -1 value, for compatibility reason with Redis stream.
-MARKET_INFO_FILTER_S = ('name', 'asset_platform_id', 'contract_address')
-MARKET_INFO_FILTER_D = ('sentiment_votes_up_percentage', 'sentiment_votes_down_percentage', 'market_cap_rank', 'coingecko_rank',
-                        'coingecko_score', 'developer_score', 'community_score', 'liquidity_score', 'public_interest_score')
-MARKET_DATA_VS_CURRENCY = ('current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h')
-OTHER_MARKET_DATA_FILTER = ('total_supply', 'max_supply', 'circulating_supply')
-ALL_MARKET_DATA = (MARKET_DATA_VS_CURRENCY + OTHER_MARKET_DATA_FILTER)
+MARKET_INFO_FILTER_S = {'name', 'asset_platform_id', 'contract_address'}
+MARKET_INFO_FILTER_D = {'sentiment_votes_up_percentage', 'sentiment_votes_down_percentage', 'market_cap_rank', 'coingecko_rank',
+                        'coingecko_score', 'developer_score', 'community_score', 'liquidity_score', 'public_interest_score'}
+MARKET_DATA_VS_CURRENCY = {'current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h'}
+OTHER_MARKET_DATA_FILTER = {'total_supply', 'max_supply', 'circulating_supply'}
+ALL_MARKET_DATA = set(list(MARKET_DATA_VS_CURRENCY) + list(OTHER_MARKET_DATA_FILTER))
+QUOTE = {'usd', 'eur', 'eth', 'ltc'}
 
 
 class Coingecko(Feed):
@@ -70,7 +71,17 @@ class Coingecko(Feed):
         if self.last_market_info_update[pair] < timestamp:
             self.last_market_info_update[pair] = timestamp
             # `None` and null data is systematically replaced with '-1' for digits and '' for string (empty string), for compatibility with Redis stream.
-            market_data = {k: (-1 if (not v or (isinstance(v, dict) and not (pair in v and v[pair]))) else v if k in OTHER_MARKET_DATA_FILTER else v[pair]) for k, v in msg['market_data'].items() if k in ALL_MARKET_DATA}
+            market_data = {}
+            for key, value in msg['market_data'].items():
+                if key not in ALL_MARKET_DATA:
+                    continue
+                if key in MARKET_DATA_VS_CURRENCY:
+                    for cur, price in value.items():
+                        if cur not in QUOTE:
+                            continue
+                        market_data[f"{key}_{cur}"] = price
+                else:
+                    market_data[key] = value
             # 'last_updated' here is assumed to be specific for market data, so it is kept as well.
             market_data['last_updated'] = timestamp_normalize(self.id, msg['market_data']['last_updated'])
             community_data = {k: (v if v else -1) for k, v in msg['community_data'].items()}
