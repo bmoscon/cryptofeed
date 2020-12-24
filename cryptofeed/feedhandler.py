@@ -200,14 +200,14 @@ class FeedHandler:
             for feed in self.feeds:
                 loop.run_until_complete(feed.stop())
 
-    async def _watch(self, uuid, connection):
-        if self.timeout[uuid] == -1:
+    async def _watch(self, connection):
+        if self.timeout[connection.uuid] == -1:
             return
 
         while connection.open:
-            if self.last_msg[uuid]:
-                if time() - self.last_msg[uuid] > self.timeout[uuid]:
-                    LOG.warning("%s: received no messages within timeout, restarting connection", uuid)
+            if self.last_msg[connection.uuid]:
+                if time() - self.last_msg[connection.uuid] > self.timeout[connection.uuid]:
+                    LOG.warning("%s: received no messages within timeout, restarting connection", connection.uuid)
                     await connection.close()
                     break
             await asyncio.sleep(self.timeout_interval)
@@ -222,7 +222,7 @@ class FeedHandler:
             self.last_msg[conn.uuid] = None
             try:
                 async with conn.connect() as connection:
-                    asyncio.ensure_future(self._watch(conn.uuid, connection))
+                    asyncio.ensure_future(self._watch(connection))
                     # connection was successful, reset retry count and delay
                     retries = 0
                     delay = 1
