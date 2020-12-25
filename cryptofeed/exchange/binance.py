@@ -10,6 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 from time import time
+from typing import Union, Dict
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
@@ -34,14 +35,36 @@ class Binance(Feed):
         self.address = self._address()
         self._reset()
 
-    def _address(self):
+    def _address(self) -> Union[str, Dict]:
+        """
+        Binance has a 200 pair/stream limit per connection, so we need to break the address
+        down into multiple connections if necessary. Because the key is currently not used
+        for the address dict, we can just set it to the last used stream, since this will be
+        unique.
+
+        The generic connect method supplied by Feed will take care of creating the
+        correct connection objects from the addresses.
+        """
+        ret = {}
+        counter = 0
         address = self.ws_endpoint + '/stream?streams='
         for chan in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
                 address += stream
-        return address[:-1]
+                counter += 1
+                if counter == 200:
+                    ret[stream] = address[:-1]
+                    counter = 0
+                    address = self.ws_endpoint + '/stream?streams='
+
+        if len(ret) == 0:
+            return address[:-1]
+        if counter > 0:
+            ret[stream] = address[:-1]
+        return ret
+
 
     def _reset(self):
         self.forced = defaultdict(bool)

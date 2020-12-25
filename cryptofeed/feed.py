@@ -114,7 +114,7 @@ class Feed:
             return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
 
         for key, addr in self.address.items():
-            ret.append((AsyncConnection(addr, self.id, metadata=key, **self.ws_defaults), self.subscribe, self.message_handler))
+            ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
         return ret
 
     @classmethod
