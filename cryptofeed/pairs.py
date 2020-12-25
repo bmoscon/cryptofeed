@@ -98,6 +98,17 @@ def bitfinex_pairs() -> Dict[str, str]:
     return ret
 
 
+def bitflyer_pairs() -> Dict[str, str]:
+    ret = {}
+    endpoints = ['https://api.bitflyer.com/v1/getmarkets/eu', 'https://api.bitflyer.com/v1/getmarkets/usa', 'https://api.bitflyer.com/v1/getmarkets']
+    for endpoint in endpoints:
+        r = requests.get(endpoint).json()
+        for entry in r:
+            normalized = entry['product_code'].replace("_", PAIR_SEP)
+            ret[normalized] = entry['product_code']
+    return ret
+
+
 def bybit_pairs() -> Dict[str, str]:
     ret = {}
     r = requests.get('https://api.bybit.com/v2/public/symbols').json()
@@ -370,6 +381,7 @@ def whale_alert_coins(key_id: str):
 
 _exchange_function_map = {
     BITFINEX: bitfinex_pairs,
+    BITFLYER: bitflyer_pairs,
     COINBASE: coinbase_pairs,
     GEMINI: gemini_pairs,
     HITBTC: hitbtc_pairs,

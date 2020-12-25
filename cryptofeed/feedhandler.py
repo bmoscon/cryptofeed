@@ -16,7 +16,7 @@ import functools
 from websockets import ConnectionClosed
 
 from cryptofeed.config import Config
-from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX,
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITFLYER,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
                                 DERIBIT, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
@@ -41,6 +41,7 @@ _EXCHANGES = {
     BINANCE_DELIVERY: BinanceDelivery,
     BITCOINCOM: BitcoinCom,
     BITFINEX: Bitfinex,
+    BITFLYER: Bitflyer,
     BITMAX: Bitmax,
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,

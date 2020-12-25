@@ -10,6 +10,7 @@ from cryptofeed.exchange.binance_delivery import BinanceDelivery
 from cryptofeed.exchange.binance_us import BinanceUS
 from cryptofeed.exchange.bitcoincom import BitcoinCom
 from cryptofeed.exchange.bitfinex import Bitfinex
+from cryptofeed.exchange.bitflyer import Bitflyer
 from cryptofeed.exchange.bitmax import Bitmax
 from cryptofeed.exchange.bitmex import Bitmex
 from cryptofeed.exchange.bitstamp import Bitstamp

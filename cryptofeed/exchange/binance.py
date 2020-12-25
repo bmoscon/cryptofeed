@@ -65,7 +65,6 @@ class Binance(Feed):
             ret[stream] = address[:-1]
         return ret
 
-
     def _reset(self):
         self.forced = defaultdict(bool)
         self.l2_book = {}

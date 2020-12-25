@@ -10,7 +10,7 @@ from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed.defines import BID, ASK, BOOK_DELTA, L2_BOOK, L3_BOOK
 from cryptofeed.exchange.blockchain import Blockchain
-from cryptofeed.exchanges import (EXX, Binance, Bitfinex, Bitmex, Bitstamp, Bittrex, Bybit,
+from cryptofeed.exchanges import (EXX, Binance, Bitfinex, Bitmex, Bitstamp, Bittrex, Bybit, Bitflyer,
                                   Coinbase, Gemini, HitBTC, Kraken, OKCoin, Poloniex, Upbit)
 
 
@@ -91,6 +91,7 @@ def main():
     f.add_feed(Bittrex(book_interval=100, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Bittrex").L2))
     f.add_feed(Upbit(book_interval=2, pairs=['BTC-KRW'], channels=[L2_BOOK], callbacks=DeltaBook("Upbit").L2))
     f.add_feed(Blockchain(pairs=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Blockchain-L2").L2))
+    f.add_feed(Bitflyer(pairs=['BTC-JPY'], book_interval=100, channels=[L2_BOOK], callbacks=DeltaBook("Bitflyer-L2").L2))
 
     f.run()
 

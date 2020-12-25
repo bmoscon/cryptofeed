@@ -13,7 +13,7 @@ import logging
 
 import pandas as pd
 
-from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
                                 DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
@@ -73,7 +73,9 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT, COINGECKO}:
+    if exchange in {BITFLYER}:
+        return ts.timestamp()
+    elif exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT, COINGECKO}:
         return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
@@ -87,6 +89,7 @@ def timestamp_normalize(exchange, ts):
 _feed_to_exchange_map = {
     L2_BOOK: {
         BITFINEX: 'book-P0-F0-100',
+        BITFLYER: 'lightning_board_{}',
         POLONIEX: L2_BOOK,
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
@@ -150,6 +153,7 @@ _feed_to_exchange_map = {
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
+        BITFLYER: 'lightning_executions_{}',
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN: 'trade',
@@ -184,6 +188,7 @@ _feed_to_exchange_map = {
         BITSTAMP: UNSUPPORTED,
         COINBASE: 'ticker',
         BITMEX: 'quote',
+        BITFLYER: 'lightning_ticker_{}',
         KRAKEN: TICKER,
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
