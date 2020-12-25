@@ -53,6 +53,7 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 * [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
+* [bitFlyer](https://bitflyer.com/)
 * [BitMax](https://bitmax.io/)
 * [Bitstamp](https://www.bitstamp.net/)
 * [Bittrex](https://global.bittrex.com/)
