@@ -30,6 +30,7 @@
   * Feature: Update BitMax to use the new BitMax Pro API - includes sequence number verification on books
   * Feature: Bybit - support for USDT perpetual data channels
   * Feature: Can now configure more than 25 Bitfinex pair/channel combinations
+  * Feature: Support more than 200 pair/stream combinations on Binance from a single Feed
 
 ### 1.6.1 (2020-11-12)
   * Feature: New kwarg for exchange feed - `snapshot_interval` - used to control number of snapshot updates sent to client
