@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.6.2
+### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
   * Feature: Support for Whale Alert on-chain transaction data per coin, to be used with a new data channel 'transactions'
   * Bugfix: Reset delay and retry for rest feed
