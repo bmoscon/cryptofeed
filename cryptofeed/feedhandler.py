@@ -217,7 +217,7 @@ class FeedHandler:
         Connect to exchange and subscribe
         """
         retries = 0
-        delay = 1
+        delay = conn.delay
         while retries <= self.retries or self.retries == -1:
             self.last_msg[conn.uuid] = None
             try:
@@ -225,7 +225,7 @@ class FeedHandler:
                     asyncio.ensure_future(self._watch(connection))
                     # connection was successful, reset retry count and delay
                     retries = 0
-                    delay = 1
+                    delay = conn.delay
                     await subscribe(connection)
                     await self._handler(connection, handler)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:

@@ -14,12 +14,30 @@ import websockets
 
 
 class AsyncConnection:
-    def __init__(self, address: Union[str, List], identifier: str, sleep: float = 0.0, **kwargs):
+    def __init__(self, address: Union[str, List[str]], identifier: str, delay: float = 1.0, sleep: float = 0.0, **kwargs):
+        """
+        address: str, or list of str
+            address to be used to create the connection. A list of addresses is only valid for HTTPS connections.
+            The address protocol (wss or https) will be used to determine the connection type.
+
+        identifier: str
+            unique string used to identify the connection.
+
+        delay: float
+            time in seconds to delay between reconnects (due to errors).
+
+        sleep: float
+            time in seconds to delay between requests.
+
+        kwargs:
+            passed into the websocket connection.
+        """
         self.address = address
         self.kwargs = kwargs
         self.conn = None
-        self.sleep = sleep
-        self.identifier = f"{identifier}-{str(uuid.uuid4())[:6]}"
+        self.__sleep = sleep
+        self.__delay = delay
+        self.__identifier = f"{identifier}-{str(uuid.uuid4())[:6]}"
 
         if isinstance(address, str) and self.address[:2] == 'ws':
             self.conn_type = "ws"
@@ -62,7 +80,7 @@ class AsyncConnection:
                         response.raise_for_status()
                         data = await response.text()
                         yield data
-                    await asyncio.sleep(self.sleep)
+                    await asyncio.sleep(self.__sleep)
 
     @property
     def open(self):
@@ -75,4 +93,8 @@ class AsyncConnection:
 
     @property
     def uuid(self):
-        return self.identifier
+        return self.__identifier
+
+    @property
+    def delay(self):
+        return self.__delay
