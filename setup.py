@@ -54,6 +54,7 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Framework :: AsyncIO",
     ],
     tests_require=["pytest"],
@@ -66,6 +67,7 @@ setup(
         "aiohttp>=3.7.1",
         "aiofile>=2.0.0",
         "yapic.json>=1.4.3",
+        'uvloop ; platform_system!="Windows"',
         # Two (optional) dependencies that speed up Cryptofeed:
         "aiodns>=1.1",  # aiodns speeds up DNS resolving
         "cchardet",     # cchardet is a faster replacement for chardet

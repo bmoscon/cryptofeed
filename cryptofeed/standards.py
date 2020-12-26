@@ -73,9 +73,9 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange in {BITFLYER}:
+    if exchange in {BITFLYER, COINBASE}:
         return ts.timestamp()
-    elif exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT, COINGECKO}:
+    elif exchange in {BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT, COINGECKO}:
         return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
