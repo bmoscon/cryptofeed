@@ -6,7 +6,7 @@ associated with this software.
 '''
 import asyncio
 import logging
-from signal import SIGTERM
+from signal import SIGTERM, SIGINT, SIGHUP, SIGABRT
 import zlib
 from collections import defaultdict
 from socket import error as socket_error
@@ -180,7 +180,7 @@ class FeedHandler:
             def handle_stop_signals():
                 raise SystemExit
 
-            for signal in [SIGTERM]:
+            for signal in (SIGTERM, SIGINT, SIGHUP, SIGABRT):
                 loop.add_signal_handler(signal, handle_stop_signals)
 
             for feed, timeout in self.feeds:
@@ -190,8 +190,7 @@ class FeedHandler:
 
             if start_loop:
                 loop.run_forever()
-        except KeyboardInterrupt:
-            LOG.info("Keyboard Interrupt received - shutting down")
+
         except SystemExit:
             LOG.info("System Exit received - shutting down")
         except Exception:
