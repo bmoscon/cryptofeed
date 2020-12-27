@@ -9,7 +9,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 ## Installation
 
-**Note** cryptofeed requires Python 3.7+
+**Note:** cryptofeed requires Python 3.7+
 
     pip install cryptofeed
 
