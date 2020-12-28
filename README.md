@@ -92,7 +92,7 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 
 ## National Best Bid/Offer (NBBO)
 
-Cryptofeed also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
+Cryptofeed also provides a synthetic [NBBO](examples/demo_nbbo.py) (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
 ```python
 from cryptofeed import FeedHandler
