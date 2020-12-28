@@ -75,14 +75,14 @@ setup(
         "cchardet",     # cchardet is a faster replacement for chardet
     ],
     extras_require={
-        "redis": ["aioredis"],
         "arctic": ["arctic"],
-        "zmq": ["pyzmq"],
-        "mongo": ["motor"],
-        "kafka": ["aiokafka>=0.7.0"],
-        "rabbit": ["aio_pika", "pika"],
-        "postgres": ["asyncpg"],
         "gcp_pubsub": ["google_cloud_pubsub", "gcloud_aio_pubsub"],
+        "kafka": ["aiokafka>=0.7.0"],
+        "mongo": ["motor"],
+        "postgres": ["asyncpg"],
+        "rabbit": ["aio_pika", "pika"],
+        "redis": ["aioredis"],
+        "zmq": ["pyzmq"],
         "all": [
             "aioredis",
             "arctic",
