@@ -84,16 +84,16 @@ setup(
         "redis": ["aioredis"],
         "zmq": ["pyzmq"],
         "all": [
-            "aioredis",
             "arctic",
-            "pyzmq",
-            "motor",
-            "aiokafka>=0.7.0",
-            "aio_pika",
-            "pika",
-            "asyncpg",
             "google_cloud_pubsub",
             "gcloud_aio_pubsub"
+            "aiokafka>=0.7.0",
+            "motor",
+            "asyncpg",
+            "aio_pika",
+            "pika",
+            "aioredis",
+            "pyzmq",
         ],
     },
 )
