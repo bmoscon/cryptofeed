@@ -95,21 +95,18 @@ To see an example of an application using cryptofeed to aggregate and store cryp
 Cryptofeed also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
 ```python
-from cryptofeed.feedhandler import FeedHandler
-from cryptofeed.exchanges import Coinbase, Bitfinex, HitBTC
+from cryptofeed import FeedHandler
+from cryptofeed.exchanges import Coinbase, Gemini, Kraken
 
 
-def nbbo_ticker(pair, bid, ask, bid_feed, ask_feed):
-    print('Pair: {} Bid: {} Bid Feed: {} Ask: {} Ask Feed: {}'.format(pair,
-                                                                      bid,
-                                                                      bid_feed,
-                                                                      ask,
-                                                                      ask_feed))
+def nbbo_update(pair, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
+    print(f'Pair: {pair} Bid Price: {bid:.2f} Bid Size: {bid_size:.6f} Bid Feed: {bid_feed} Ask Price: {ask:.2f} Ask Size: {ask_size:.6f} Ask Feed: {ask_feed}')
 
 
-fh = FeedHandler()
-fh.add_nbbo([Coinbase, Bitfinex, HitBTC], ['BTC-USD'], nbbo_ticker)
-fh.run()
+def main():
+    f = FeedHandler()
+    f.add_nbbo([Coinbase, Kraken, Gemini], ['BTC-USD'], nbbo_update)
+    f.run()
 ```
 
 ## Supported Channels
