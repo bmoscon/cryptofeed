@@ -11,15 +11,21 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 **Note:** cryptofeed requires Python 3.7+
 
+Cryptofeed can be installed from PyPi
+
     pip install cryptofeed
 
-or a safer installation:
-
-    python3 -m pip install --user --upgrade cryptofeed
-
-To install Cryptofeed along with all its optional dependencies in one bundle:
+Cryptofeed has optional dependencies, depending on the backends used. You can install them individually, or all at once. To install Cryptofeed along with all its optional dependencies in one bundle:
 
     pip install cryptofeed[all]
+    
+If you wish to clone the repository and install from source, run this command from the root of the cloned repository
+
+    python setup.py install
+    
+Alternatively, you can install in 'edit' mode (also called development mode):
+
+    python setup.py develop
 
 See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
