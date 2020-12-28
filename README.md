@@ -7,56 +7,6 @@
 
 Handles multiple cryptocurrency exchange data feeds and returns normalized and standardized results to client registered callbacks for events like trades, book updates, ticker updates, etc. Utilizes websockets when possible, but can also poll data via REST endpoints if a websocket is not provided.
 
-## Installation
-
-**Note:** cryptofeed requires Python 3.7+
-
-Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
-
-    pip install cryptofeed
-
-Cryptofeed has optional dependencies, depending on the backends used. You can install them individually, or all at once. To install Cryptofeed along with all its optional dependencies in one bundle:
-
-    pip install cryptofeed[all]
-    
-If you wish to clone the repository and install from source, run this command from the root of the cloned repository
-
-    python setup.py install
-    
-Alternatively, you can install in 'edit' mode (also called development mode):
-
-    python setup.py develop
-
-See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
-
-
-## Examples
-
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
-
-
-```python
-from cryptofeed import FeedHandler
-
-fh = FeedHandler()
-
-# ticker, trade, and book are user defined functions that
-# will be called when ticker, trade and book updates are received
-ticker_cb = {TICKER: TickerCallback(ticker)}
-trade_cb = {TRADES: TradeCallback(trade)}
-gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
-
-
-fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
-fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
-
-fh.run()
-```
-
-To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
-
 ## Supported exchanges
 
 * [Bitcoin.com](https://www.bitcoin.com/)
@@ -152,6 +102,58 @@ Supported Backends:
 * RabbitMQ
 * PostgreSQL
 * GCP Pub/Sub
+
+
+## Examples
+
+Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
+
+
+```python
+from cryptofeed import FeedHandler
+
+fh = FeedHandler()
+
+# ticker, trade, and book are user defined functions that
+# will be called when ticker, trade and book updates are received
+ticker_cb = {TICKER: TickerCallback(ticker)}
+trade_cb = {TRADES: TradeCallback(trade)}
+gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
+
+
+fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
+fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
+
+fh.run()
+```
+
+To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
+
+
+## Installation
+
+**Note:** cryptofeed requires Python 3.7+
+
+Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
+
+    pip install cryptofeed
+
+Cryptofeed has optional dependencies, depending on the backends used. You can install them individually, or all at once. To install Cryptofeed along with all its optional dependencies in one bundle:
+
+    pip install cryptofeed[all]
+    
+If you wish to clone the repository and install from source, run this command from the root of the cloned repository
+
+    python setup.py install
+    
+Alternatively, you can install in 'edit' mode (also called development mode):
+
+    python setup.py develop
+
+See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
+
 
 
 ## Rest API
