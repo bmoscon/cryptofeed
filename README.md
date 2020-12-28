@@ -11,7 +11,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 **Note:** cryptofeed requires Python 3.7+
 
-Cryptofeed can be installed from PyPi
+Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
 
     pip install cryptofeed
 
