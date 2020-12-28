@@ -92,7 +92,8 @@ setup(
             "aio_pika",
             "pika",
             "asyncpg",
-            "gcp_pubsub"
+            "google_cloud_pubsub",
+            "gcloud_aio_pubsub"
         ],
     },
 )
