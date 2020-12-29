@@ -5,6 +5,7 @@
   * Bugfix: Allow exchanges to customize their retry delays on error
   * Feature: New demo code showing user loop mangagement
   * Feature: Handle more signals for graceful shutdown
+  * Bugfix: BinanceFutures message format change
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
