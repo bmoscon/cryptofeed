@@ -46,6 +46,38 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Coingecko](https://www.coingecko.com/en)
 * [Whale Alert](https://whale-alert.io/)
 
+
+## Basic Usage
+
+Create a FeedHandler object and add subscriptions. For the various data channels that an exchange supports, you can supply callbacks for data events, or use provided backends (described below) to handle the data for you. Start the feed handler and you're done!
+
+```python
+from cryptofeed import FeedHandler
+# not all imports shown for clarity
+
+fh = FeedHandler()
+
+# ticker, trade, and book are user defined functions that
+# will be called when ticker, trade and book updates are received
+ticker_cb = {TICKER: TickerCallback(ticker)}
+trade_cb = {TRADES: TradeCallback(trade)}
+gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
+
+
+fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
+fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
+
+fh.run()
+```
+
+Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage.
+
+
+To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
+
+
 ## National Best Bid/Offer (NBBO)
 
 Cryptofeed also provides a synthetic [NBBO](examples/demo_nbbo.py) (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
@@ -102,34 +134,6 @@ Supported Backends:
 * RabbitMQ
 * PostgreSQL
 * GCP Pub/Sub
-
-
-## Examples
-
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage. The [FAQ](https://github.com/bmoscon/cryptofeed/tree/master/FAQ.md) contains a few oddities/gotchas as well as answers to common questions.
-
-
-```python
-from cryptofeed import FeedHandler
-
-fh = FeedHandler()
-
-# ticker, trade, and book are user defined functions that
-# will be called when ticker, trade and book updates are received
-ticker_cb = {TICKER: TickerCallback(ticker)}
-trade_cb = {TRADES: TradeCallback(trade)}
-gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
-
-
-fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
-fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
-
-fh.run()
-```
-
-To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
 
 
 ## Installation
