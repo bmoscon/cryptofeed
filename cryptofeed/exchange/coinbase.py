@@ -13,9 +13,10 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize, feed_to_exchange
 
 
 LOG = logging.getLogger('feedhandler')
@@ -34,12 +35,24 @@ class Coinbase(Feed):
             self.keep_l3_book = True
         self.__reset()
 
-    def __reset(self):
-        self.order_map = {}
-        self.order_type_map = {}
-        self.seq_no = {}
-        self.l3_book = {}
-        self.l2_book = {}
+    def __reset(self, pair=None):
+        if pair:
+            self.seq_no[pair] = None
+            self.order_map.pop(pair, None)
+            self.order_type_map.pop(pair, None)
+            self.l3_book.pop(pair, None)
+            self.l2_book.pop(pair, None)
+        else:
+            self.order_map = {}
+            self.order_type_map = {}
+            self.seq_no = None
+            # sequence number validation only works when the FULL data stream is enabled
+            chan = feed_to_exchange(self.id, L3_BOOK)
+            if chan in self.channels or chan in self.config:
+                pairs = self.pairs if self.pairs else self.config[chan]
+                self.seq_no = {pair: None for pair in pairs}
+            self.l3_book = {}
+            self.l2_book = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''
@@ -170,7 +183,6 @@ class Coinbase(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def _book_snapshot(self, pairs: list):
-        self.__reset()
         # Coinbase needs some time to send messages to us
         # before we request the snapshot. If we don't sleep
         # the snapshot seq no could be much earlier than
@@ -303,22 +315,24 @@ class Coinbase(Feed):
 
         await self.book_callback(self.l3_book, L3_BOOK, pair, False, delta, ts, timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
-
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         # PERF perf_start(self.id, 'msg')
         msg = json.loads(msg, parse_float=Decimal)
+        if self.seq_no:
+            if 'product_id' in msg and 'sequence' in msg:
+                pair = pair_exchange_to_std(msg['product_id'])
+                if not self.seq_no.get(pair, None):
+                    return
+                if msg['sequence'] <= self.seq_no[pair]:
+                    return
+                if msg['sequence'] != self.seq_no[pair] + 1:
+                    LOG.warning("%s: Missing sequence number detected for %s. Received %d, expected %d", self.id, pair, msg['sequence'], self.seq_no[pair] + 1)
+                    LOG.warning("%s: Resetting data for %s", self.id, pair)
+                    self.__reset(pair=pair)
+                    await self._book_snapshot([pair])
+                    return
 
-        if 'product_id' in msg and 'sequence' in msg and ('full' in self.channels or ('full' in self.config and msg['product_id'] in self.config['full'])):
-            pair = pair_exchange_to_std(msg['product_id'])
-            if msg['sequence'] <= self.seq_no[pair]:
-                return
-            elif (self.keep_l3_book and ('full' in self.channels or 'full' in self.config)) and msg['sequence'] != self.seq_no[pair] + 1:
-                LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
-                LOG.warning("%s: Requesting book snapshot", self.id)
-                await self._book_snapshot(self.pairs or self.book_pairs)
-                return
-
-            self.seq_no[pair] = msg['sequence']
+                self.seq_no[pair] = msg['sequence']
 
         if 'type' in msg:
             if msg['type'] == 'ticker':
@@ -346,24 +360,15 @@ class Coinbase(Feed):
             # PERF perf_end(self.id, 'msg')
             # PERF perf_log(self.id, 'msg')
 
-    async def subscribe(self, websocket):
-        self.__reset()
-        snapshot = False
-        self.book_pairs = []
+    async def subscribe(self, conn: AsyncConnection, pair=None):
+        self.__reset(pair)
 
-        if self.config:
-            for chan in self.config:
-                await websocket.send(json.dumps({"type": "subscribe",
-                                                 "product_ids": list(self.config[chan]),
-                                                 "channels": [chan]
-                                                 }))
-                if 'full' in chan:
-                    snapshot = True
-                    self.book_pairs.extend(list(self.config[chan]))
-        else:
-            await websocket.send(json.dumps({"type": "subscribe",
-                                             "product_ids": self.pairs,
-                                             "channels": self.channels
-                                             }))
-        if 'full' in self.channels or snapshot:
-            await self._book_snapshot(self.pairs or self.book_pairs)
+        for chan in self.channels if self.channels else self.config:
+            await conn.send(json.dumps({"type": "subscribe",
+                                        "product_ids": list(self.config[chan]) if self.config else self.pairs,
+                                        "channels": [chan]
+                                        }))
+
+        chan = feed_to_exchange(self.id, L3_BOOK)
+        if chan in self.config or chan in self.channels:
+            await self._book_snapshot(self.pairs if self.pairs else list(self.config[chan]))
