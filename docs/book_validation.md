@@ -16,7 +16,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Binance       |               |   x              |                |
 | BinanceUS     |               | x                |                |
 | BitMEX        |               |                  |                |
-| Coinbase      |               |  x               |                |
+| Coinbase      |               |  x <sup>1</sup>  |                |
 | Deribit       |               | x                |                |
 | EXX           |               |                  |                |
 | FTX           | x             |                  |                |
@@ -37,6 +37,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 
 <br/>
 <br/>
+<sup>1</sup> Coinbase sequence number validation only works when L3 books are enabled for a trading pair
 
 For even more assurances that books are in the expected state (or for use in debugging), you can enabled a cross check on book updates as well with the `cross_check` kwarg set to `True`.  
 
