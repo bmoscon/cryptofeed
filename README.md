@@ -114,7 +114,7 @@ Aggregated data from provider is available in channel:
 
 * TRANSACTIONS - On-chain transactions.
 * MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
- as well as community data (twitter, reddit, facebook...) and scores (coingecko, developper, community...)
+ as well as community data (twitter, reddit, facebook...) and scores (coingecko, developer, community...)
 
 ## Backends
 
@@ -173,4 +173,4 @@ There are a lot of planned features, new exchanges, etc planned! If you'd like t
 
 Issues and PRs are welcomed!
 
-Cryptofeed wouldn't be possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contribtors my thanks!
+Cryptofeed wouldn't be possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contributors my thanks!

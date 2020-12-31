@@ -150,7 +150,7 @@ class Kraken(Feed):
         if isinstance(msg, list):
             channel_id = msg[0]
             if channel_id not in self.channel_map:
-                LOG.warning("%s: Invalid channel id recevied %d", self.id, channel_id)
+                LOG.warning("%s: Invalid channel id received %d", self.id, channel_id)
                 LOG.warning("%s: channel map: %s", self.id, self.channel_map)
             else:
                 channel, pair = self.channel_map[channel_id]

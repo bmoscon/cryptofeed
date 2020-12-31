@@ -3,7 +3,7 @@
 ### 1.7.0
   * Feature: Use UVLoop if installed (not available on windows)
   * Bugfix: Allow exchanges to customize their retry delays on error
-  * Feature: New demo code showing user loop mangagement
+  * Feature: New demo code showing user loop management
   * Feature: Handle more signals for graceful shutdown
   * Bugfix: BinanceFutures message format change
   * Feature: missing sequence number on Coinbase will not reset all data streams, just the affected pair
@@ -55,7 +55,7 @@
   
 ### 1.6.0 (2020-09-28)
   * Feature: Validate FTX book checksums (optionally enabled)
-  * Bugfix: Subscribing only to open interest on binance futures gave connection errors
+  * Bugfix: Subscribing only to open interest on Binance futures gave connection errors
   * Feature: Authentication for Influxdb 1.x
   * Feature: Override logging defaults with environment variables (filename and log level)
   * Bugfix: For Coinbase L3 books need to ignore/drop some change updates (per docs)
@@ -86,7 +86,7 @@
 ### 1.5.0 (2020-07-31)
   * Feature: New Exchange - FTX US
   * Feature: Add funding data to rest library
-  * Bugfix: DSX updated their api, websocket no longer supported. Removing DSX
+  * Bugfix: DSX updated their API, websocket no longer supported. Removing DSX
   * Feature: Websocket client now uses unbounded message queue
   * Feature: Support for HuobiDM next quarter contracts
   * Bugfix: Fix datetime fields in elasticsearch
@@ -118,8 +118,8 @@
   * Feature: Open Interest callbacks added to all backends
   * Change: Instrument removed in favor of open interest
   * Bugfix: Huobi feedhandlers not properly setting forced indicator for book updates, breaking deltas
-  * Bugfix: Some kraken futures funding fields not always populated
-  * Feature: Open interest updates for kraken futures
+  * Bugfix: Some Kraken futures funding fields not always populated
+  * Feature: Open interest updates for Kraken futures
   * Feature: Open interest updates for Deribit
   * Bugfix: FTX ticker can have Nones for bid/ask
   * Feature: InfluxDB 2.0 support
@@ -151,7 +151,7 @@
   * Feature: Backfill Bitmex historical trade data from S3 Bucket
   * Feature: RabbitMQ backend
   * Feature: Custom Depth and deltas for all L2 book updates
-  * Feature: Support new 100ms book diff channel on binance
+  * Feature: Support new 100ms book diff channel on Binance
   * Feature: Bittrex exchange support
   * Feature: Ticker support in Redis and Kafka Backends
   * Feature: Ticker callbacks require/contain timestamp
@@ -184,7 +184,7 @@
 
 ### 0.24.0 (2019-06-19)
   * Bugfix: Book Delta Conversion issue in backends
-  * Bugfix: Tweak BitMEX rest api to handle more errors more gracefully
+  * Bugfix: Tweak BitMEX rest API to handle more errors more gracefully
   * Feature: Deribit Exchange support
   * Feature: Instrument channel
   * Bugfix: support Kraken websocket API changes
@@ -229,7 +229,7 @@
   * Feature: Support Huobi Global and Huobi USA
 
 ### 0.20.2 (2019-03-19)
-  * Bugfix: Kraken REST api using wrong symbol for trades
+  * Bugfix: Kraken REST API using wrong symbol for trades
   * Feature: Complete work on standardizing Bitfinex rest API
   * Bugfix: Allow index symbols on Bitmex
 
@@ -244,7 +244,7 @@
   * Feature #56: Experimental support for fine grained configuration per exchange
   * Feature #58: Support Kraken websocket API
   * Feature: Only generate trading pair conversions for configured exchanges
-  * Feature: Historical trade data on REST api for Kraken
+  * Feature: Historical trade data on REST API for Kraken
 
 ### 0.19.2 (2019-01-21)
   * Feature #55: OHLCV aggregation method in backends plus support for user defined aggregators
@@ -265,7 +265,7 @@
   * Bugfix: Bitfinex REST now properly handles cases when there are more than 1000 updates for a single tick
 
 ### 0.17.4 (2018-11-17)
-  * Readme change for long description rendering issue
+  * README change for long description rendering issue
 
 ### 0.17.3 (2018-11-17)
   * Feature #41: Rework trading pairs to generate them dynamically (as opposed to hard coded)
@@ -282,13 +282,13 @@
   * Bugfix #43: Coinbase L2 book used "0" rather than 0 for comparisons against decimal.Decimal
   * Feature: REST feed market data supported via normal subscription methods
   * Feature: Kraken support
-  * Bugfix: Bitfinex book timestamps match expected bitfinex timestamps (in ms)
+  * Bugfix: Bitfinex book timestamps match expected Bitfinex timestamps (in ms)
 
 ### 0.17.0 (2018-10-13)
   * Feature: Timestamps for orderbooks and book deltas
   * Feature #40: NBBO now uses best bid/ask from L2 books
-  * Feature #28: GDAX now renamed Coinbase and uses coinbase endpoints
-  * Feature: ZeroMQ backend. Write updates directly to zmq connection
+  * Feature #28: GDAX now renamed Coinbase and uses Coinbase endpoints
+  * Feature: ZeroMQ backend. Write updates directly to ZMQ connection
   * Feature: UDP Socket backend. Write updates directly to UDP socket
 
 ### 0.16.0 (2018-10-4)
@@ -311,18 +311,18 @@
   * Redis backend uses a connection pool
 
 ### 0.14.0 (2018-09-04)
-  * Feature: support for writing order books directly to redis
-  * Feature: ability to specify book depth for redis updates
+  * Feature: support for writing order books directly to Redis
+  * Feature: ability to specify book depth for Redis updates
 
 ### 0.13.3 (2018-08-31)
-  * Feature: normalize bitfinex funding symbols
+  * Feature: normalize Bitfinex funding symbols
 
 ### 0.13.2 (2018-08-31)
-  * Bugfix: fix symbol in bitfinex rest
+  * Bugfix: fix symbol in Bitfinex rest
 
 ### 0.13.1 (2018-08-31)
   * Feature: access rest endpoints via getitem / []
-  * Bugfix: #31 - funding channel broke gemini
+  * Bugfix: #31 - funding channel broke Gemini
   * Feature: Book deltas for GDAX
   * Bugfix: Fix intervals on Bitmex (rest)
 
@@ -331,11 +331,11 @@
   * Feature: Funding historical data via rest
   * Bugfix: Python 3.7 compatibility
   * Feature: Rest trade APIs are now generators
-  * Feature: funding data on bitfinex - ws and rest
+  * Feature: funding data on Bitfinex - ws and rest
 
 ### 0.12.0 (2018-08-20)
   * Bugfix: Handle 429s in Bitmex (REST)
-  * Feature: Redis backend for trades to write updates directly to redis
+  * Feature: Redis backend for trades to write updates directly to Redis
   * Bugfix: issue #27 - Bitmex trades missing timestamps
 
 ### 0.11.1 (2018-08-18)
@@ -345,7 +345,7 @@
 
 ### 0.11.0 (2018-08-05)
   * Feature: Support for delta updates for order books
-  * REST api work started
+  * REST API work started
 
 ### 0.10.2
   * Bugfix: Clear data structures on reconnect in bitmex
@@ -357,7 +357,7 @@
   * Feature: Reconnect when a connection is lost
   * Bugfix #22: Check for additional connection failures
   * Feature #4: Trade ID support
-  * Feature: Account for new gemini message type
+  * Feature: Account for new Gemini message type
 
 ### 0.10.0 (2018-03-18)
   * Feature: Bitmex
