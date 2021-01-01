@@ -111,6 +111,7 @@ class Coinbase(Feed):
         }
         '''
         pair = pair_exchange_to_std(msg['product_id'])
+        ts = timestamp_normalize(self.id, msg['time'])
 
         if self.keep_l3_book and ('full' in self.channels or ('full' in self.config and pair in self.config['full'])):
             delta = {BID: [], ASK: []}
@@ -118,7 +119,6 @@ class Coinbase(Feed):
             side = ASK if msg['side'] == 'sell' else BID
             size = Decimal(msg['size'])
             maker_order_id = msg['maker_order_id']
-            ts = timestamp_normalize(self.id, msg['time'])
 
             _, new_size = self.order_map[maker_order_id]
             new_size -= size
@@ -144,7 +144,7 @@ class Coinbase(Feed):
                             side=SELL if msg['side'] == 'buy' else BUY,
                             amount=Decimal(msg['size']),
                             price=Decimal(msg['price']),
-                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            timestamp=ts,
                             receipt_timestamp=timestamp,
                             order_type=order_type
                             )
@@ -166,6 +166,7 @@ class Coinbase(Feed):
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
         pair = pair_exchange_to_std(msg['product_id'])
+        ts = timestamp_normalize(self.id, msg['time'])
         delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
             side = BID if side == 'buy' else ASK
@@ -180,7 +181,7 @@ class Coinbase(Feed):
                 bidask[price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
+        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, ts, timestamp)
 
     async def _book_snapshot(self, pairs: list):
         # Coinbase needs some time to send messages to us
