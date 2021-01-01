@@ -36,7 +36,7 @@ async def trade(feed, pair, order_id, timestamp, side, amount, price, receipt_ti
 
 
 async def book(feed, pair, book, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
+    print(f'Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {pair} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
 
 async def funding(**kwargs):
