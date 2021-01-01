@@ -7,6 +7,8 @@
   * Feature: Handle more signals for graceful shutdown
   * Bugfix: BinanceFutures message format change
   * Feature: missing sequence number on Coinbase will not reset all data streams, just the affected pair
+  * Feature: Use timestamp from exchange for L2 book data from Coinbase
+  * Bugfix: Blockchain exchange had incorrect timestamps, and incorrect log lines
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
