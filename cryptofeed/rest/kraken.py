@@ -111,7 +111,7 @@ class Kraken(API):
     # public API
     def ticker(self, symbol: str, retry=None, retry_wait=0):
         sym = pair_std_to_exchange(symbol, self.ID + 'REST')
-        data = self._post_public(f"/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
+        data = self._post_public("/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
         data = data['result']
         for _, val in data.items():

@@ -71,6 +71,17 @@ _EXCHANGES = {
 }
 
 
+def setup_signal_handlers(loop):
+    """
+    This must be run from the loop in the main thread
+    """
+    def handle_stop_signals():
+        raise SystemExit
+
+    for signal in (SIGTERM, SIGINT, SIGHUP, SIGABRT):
+        loop.add_signal_handler(signal, handle_stop_signals)
+
+
 class FeedHandler:
     def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True, config=None):
         """
@@ -167,12 +178,17 @@ class FeedHandler:
         for feed in feeds:
             self.add_feed(feed(channels=[L2_BOOK], pairs=pairs, callbacks={L2_BOOK: cb}), timeout=timeout)
 
-    def run(self, start_loop: bool = True):
+    def run(self, start_loop: bool = True, install_signal_handlers: bool = True):
         """
         start_loop: bool, default True
             if false, will not start the event loop. Also, will not
             use uvlib/uvloop if false, the caller will
             need to init uvloop if desired.
+        install_signal_handlers: bool, default True
+            if True, will install the signal handlers on the event loop. This
+            can only be done from the main thread's loop, so if running cryptofeed on
+            a child thread, this must be set to false, and setup_signal_handlers must
+            be called from the main/parent thread's event loop
         """
         if len(self.feeds) == 0:
             LOG.error('No feeds specified')
@@ -190,11 +206,8 @@ class FeedHandler:
             # Good to enable when debugging
             # loop.set_debug(True)
 
-            def handle_stop_signals():
-                raise SystemExit
-
-            for signal in (SIGTERM, SIGINT, SIGHUP, SIGABRT):
-                loop.add_signal_handler(signal, handle_stop_signals)
+            if install_signal_handlers:
+                setup_signal_handlers(loop)
 
             for feed, timeout in self.feeds:
                 for conn, sub, handler in feed.connect():
