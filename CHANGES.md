@@ -10,7 +10,8 @@
   * Feature: Use timestamp from exchange for L2 book data from Coinbase
   * Bugfix: Blockchain exchange had incorrect timestamps, and incorrect log lines
   * Bugfix: wrong datatype in BackendFuturesIndexCallback
-  * Bugfix: fix bad postgres callback for open_interest and futures_index 
+  * Bugfix: fix bad postgres callback for open_interest and futures_index
+  * Feature: Signal handler installation now optional, can be done separately. This will allow the feedhandler to be run from child threads/loops
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
