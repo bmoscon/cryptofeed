@@ -1,10 +1,9 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 import logging
 from decimal import Decimal
 
@@ -96,6 +95,7 @@ class Gateio(Feed):
                                 timestamp=ts,
                                 receipt_timestamp=timestamp,
                                 order_id=order_id)
+
     async def _l2_book(self, msg: dict, timestamp: float):
         """
         {
@@ -133,7 +133,8 @@ class Gateio(Feed):
                     delta[side].append((price, amount))
         await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
 
         if "error" in msg:

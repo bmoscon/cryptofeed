@@ -76,7 +76,8 @@ class Bittrex(Feed):
                                     timestamp=timestamp_normalize(self.id, trade['T']),
                                     receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg)
         if 'M' in msg and len(msg['M']) > 0:
             for update in msg['M']:

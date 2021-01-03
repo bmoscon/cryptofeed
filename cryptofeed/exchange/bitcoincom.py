@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -31,7 +31,6 @@ class BitcoinCom(Feed):
         self.seq_no = {}
 
     async def subscribe(self, websocket):
-        self.websocket = websocket
         self.__reset()
         for chan in self.channels if self.channels else self.config:
             for pair in self.pairs if self.pairs else self.config[chan]:
@@ -92,7 +91,8 @@ class BitcoinCom(Feed):
                     self.l2_book[pair][s][price] = amount
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, msg['timestamp']), timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
         if 'result' in msg and msg['result'] is True:
             return

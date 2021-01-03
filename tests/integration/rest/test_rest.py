@@ -48,15 +48,16 @@ def test_rest_deribit():
 
 
 def test_rest_ftx():
-    expected = {'timestamp': 1591992000.0,
+    expected = {'timestamp': 1607691600.0,
                 'pair': 'BTC-PERP',
                 'feed': 'FTX',
-                'rate': -9e-06}
+                'rate': 1.9e-05}
 
     r = Rest()
     ret = []
-    data = r.ftx.funding('BTC-PERP', start_date='2020-06-10 12:59:10', end_date='2020-06-13 13:01:33')
+    data = r.ftx.funding('BTC-PERP', start_date='2020-12-10 12:59:10', end_date='2020-12-11 13:01:33')
     ret.extend(data)
+
     try:
         assert ret[0] == expected
     except AssertionError as ex:

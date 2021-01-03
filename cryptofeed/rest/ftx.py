@@ -67,7 +67,6 @@ class FTX(API):
             yield data
 
     def funding(self, symbol: str, start_date=None, end_date=None, retry=None, retry_wait=10):
-        last = []
         start = None
         end = None
 
@@ -110,10 +109,6 @@ class FTX(API):
                 LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
                 end = int(API._timestamp(data[-1]["time"]).timestamp()) + 1
-
-            orig_data = list(data)
-            # data = self._dedupe(data, last)
-            # last = list(orig_data)
 
             data = [self._funding_normalization(x, symbol) for x in data]
             return data

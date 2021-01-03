@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -10,7 +10,8 @@ from decimal import Decimal
 import requests
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
 from cryptofeed.exceptions import UnsupportedType
@@ -66,7 +67,7 @@ class InfluxCallback(HTTPCallback):
         username: str
           Influxdb username for authentication
         password: str
-          Influxdb password for authentication          
+          Influxdb password for authentication
         """
         super().__init__(addr, **kwargs)
         if org and bucket and token:
@@ -160,3 +161,11 @@ class OpenInterestInflux(InfluxCallback, BackendOpenInterestCallback):
 
 class LiquidationsInflux(InfluxCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
+
+
+class MarketInfoInflux(InfluxCallback, BackendMarketInfoCallback):
+    default_key = 'market_info'
+
+
+class TransactionsInflux(InfluxCallback, BackendTransactionsCallback):
+    default_key = 'transactions'

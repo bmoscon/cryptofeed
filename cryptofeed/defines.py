@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -14,12 +14,13 @@ BITMEX = 'BITMEX'
 BINANCE = 'BINANCE'
 BINANCE_US = 'BINANCE_US'
 BINANCE_FUTURES = 'BINANCE_FUTURES'
+BINANCE_DELIVERY = 'BINANCE_DELIVERY'
+BITFLYER = 'BITFLYER'
 BITSTAMP = 'BITSTAMP'
 BITTREX = 'BITTREX'
 BLOCKCHAIN = 'BLOCKCHAIN'
 BYBIT = 'BYBIT'
 COINBASE = 'COINBASE'
-COINBENE = 'COINBENE'
 DERIBIT = 'DERIBIT'
 EXX = 'EXX'
 FTX = 'FTX'
@@ -40,6 +41,9 @@ BITCOINCOM = 'BITCOINCOM'
 BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
 
+COINGECKO = 'COINGECKO'
+WHALE_ALERT = 'WHALE_ALERT'
+
 
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
@@ -52,6 +56,8 @@ OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
+MARKET_INFO = 'market_info'
+TRANSACTIONS = 'transactions'
 
 BUY = 'buy'
 SELL = 'sell'

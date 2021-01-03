@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -25,7 +25,7 @@ class BackendBookDeltaCallback:
 
 
 class BackendTradeCallback:
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type: str=None):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type: str = None):
         data = {'feed': feed, 'pair': pair, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp,
                 'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price)}
         if order_id:
@@ -70,3 +70,19 @@ class BackendLiquidationsCallback:
     async def __call__(self, *, feed: str, pair: str, side: str, leaves_qty: Decimal, price: Decimal, order_id: str, timestamp: float, receipt_timestamp: float):
         data = {'feed': feed, 'pair': pair, 'side': side, 'leaves_qty': self.numeric_type(leaves_qty), 'price': self.numeric_type(price), 'order_id': order_id if order_id else "None", 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
         await self.write(feed, pair, timestamp, receipt_timestamp, data)
+
+
+class BackendMarketInfoCallback:
+    async def __call__(self, *, feed: str, pair: str, timestamp: float, **kwargs):
+        kwargs['feed'] = feed
+        kwargs['pair'] = pair
+        kwargs['timestamp'] = timestamp
+        await self.write(feed, pair, timestamp, timestamp, kwargs)
+
+
+class BackendTransactionsCallback:
+    async def __call__(self, *, feed: str, pair: str, timestamp: float, **kwargs):
+        kwargs['feed'] = feed
+        kwargs['pair'] = pair
+        kwargs['timestamp'] = timestamp
+        await self.write(feed, pair, timestamp, timestamp, kwargs)

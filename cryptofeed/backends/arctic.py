@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -8,8 +8,9 @@ import arctic
 import pandas as pd
 
 from cryptofeed.backends.backend import (BackendFundingCallback, BackendOpenInterestCallback,
-                                         BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS
+                                         BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback,
+                                         BackendMarketInfoCallback, BackendTransactionsCallback)
+from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS
 
 
 class ArcticCallback:
@@ -65,3 +66,11 @@ class OpenInterestArctic(ArcticCallback, BackendOpenInterestCallback):
 
 class LiquidationsArctic(ArcticCallback, BackendLiquidationsCallback):
     default_key = LIQUIDATIONS
+
+
+class MarketInfoArctic(ArcticCallback, BackendMarketInfoCallback):
+    default_key = MARKET_INFO
+
+
+class TransactionsArctic(ArcticCallback, BackendTransactionsCallback):
+    default_key = TRANSACTIONS

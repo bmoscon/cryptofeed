@@ -4,7 +4,7 @@ from cryptofeed.defines import BID, ASK
 from cryptofeed.rest import Rest
 
 
-poloniex = Rest('config.yaml').Poloniex
+poloniex = Rest().Poloniex
 
 
 def test_get_ticker():
@@ -21,7 +21,7 @@ def test_order_book():
 
 
 def test_trade_history():
-    trade_history = list(next(poloniex.trades('BTC-USDT', start='2020-01-01', end='2020-01-02')))
+    trade_history = list(next(poloniex.trades('BTC-USDT', start='2020-12-30', end='2020-12-31')))
     assert len(trade_history) > 0
     assert float(trade_history[0]['amount']) > 0
 
@@ -60,7 +60,7 @@ def test_deposit_withdrawals():
 
 @pytest.mark.skipif(poloniex.key_id is None or poloniex.key_secret is None, reason="No api key provided")
 def test_open_orders():
-    poloniex = Rest('config.yaml').Poloniex
+    poloniex = Rest().Poloniex
     open_orders = poloniex.open_orders()
 
     assert 'BTC_BCN' in open_orders

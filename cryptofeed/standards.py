@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -13,27 +13,26 @@ import logging
 
 import pandas as pd
 
-from cryptofeed.defines import (BINANCE, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITMAX, BITMEX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINBENE, DERIBIT, EXX, FILL_OR_KILL, FTX,
-                                FTX_US, FUNDING, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, IMMEDIATE_OR_CANCEL, KRAKEN,
-                                KRAKEN_FUTURES, L2_BOOK, L3_BOOK, LIMIT, LIQUIDATIONS,
-                                MAKER_OR_CANCEL, MARKET, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER,
-                                TRADES, UNSUPPORTED, UPBIT, VOLUME, FUTURES_INDEX)
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX, BITMAX, BITMEX,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
+                                DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
+from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
+from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
+                                TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
 from cryptofeed.pairs import gen_pairs, _exchange_info
 
-
 LOG = logging.getLogger('feedhandler')
-
 
 _std_trading_pairs = {}
 _exchange_to_std = {}
 
 
-def load_exchange_pair_mapping(exchange: str):
+def load_exchange_pair_mapping(exchange: str, key_id=None):
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
-    mapping = gen_pairs(exchange)
+    mapping = gen_pairs(exchange, key_id=key_id)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
         if std in _std_trading_pairs:
@@ -42,8 +41,8 @@ def load_exchange_pair_mapping(exchange: str):
             _std_trading_pairs[std] = {exchange: exch}
 
 
-def get_exchange_info(exchange: str):
-    mapping = gen_pairs(exchange)
+def get_exchange_info(exchange: str, key_id=None):
+    mapping = gen_pairs(exchange, key_id=key_id)
     info = dict(_exchange_info.get(exchange, {}))
     return mapping, info
 
@@ -74,18 +73,23 @@ def pair_exchange_to_std(pair):
 
 
 def timestamp_normalize(exchange, ts):
-    if exchange in {BITMEX, COINBASE, HITBTC, OKCOIN, OKEX, BYBIT, FTX, FTX_US, BITCOINCOM, BLOCKCHAIN, PROBIT}:
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN}:
+        return ts.timestamp()
+    elif exchange in {BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, COINBENE, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
+    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
+                      BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
+    # WHALE_ALERT
     return ts
 
 
 _feed_to_exchange_map = {
     L2_BOOK: {
         BITFINEX: 'book-P0-F0-100',
+        BITFLYER: 'lightning_board_{}',
         POLONIEX: L2_BOOK,
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
@@ -96,6 +100,7 @@ _feed_to_exchange_map = {
         BINANCE: 'depth@100ms',
         BINANCE_US: 'depth@100ms',
         BINANCE_FUTURES: 'depth@100ms',
+        BINANCE_DELIVERY: 'depth@100ms',
         BLOCKCHAIN: 'l2',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
@@ -103,7 +108,6 @@ _feed_to_exchange_map = {
         HUOBI_SWAP: 'depth.step0',
         OKCOIN: 'spot/depth_l2_tbt',
         OKEX: '{}/depth_l2_tbt',
-        COINBENE: L2_BOOK,
         DERIBIT: 'book',
         BYBIT: 'orderBookL2_25',
         FTX: 'orderbook',
@@ -111,7 +115,7 @@ _feed_to_exchange_map = {
         GEMINI: L2_BOOK,
         BITTREX: 'SubscribeToExchangeDeltas',
         BITCOINCOM: 'subscribeOrderbook',
-        BITMAX: L2_BOOK,
+        BITMAX: "depth:",
         UPBIT: L2_BOOK,
         GATEIO: 'depth.subscribe',
         PROBIT: 'order_books'
@@ -128,6 +132,7 @@ _feed_to_exchange_map = {
         BINANCE: UNSUPPORTED,
         BINANCE_US: UNSUPPORTED,
         BINANCE_FUTURES: UNSUPPORTED,
+        BINANCE_DELIVERY: UNSUPPORTED,
         BLOCKCHAIN: 'l3',
         EXX: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
@@ -148,6 +153,7 @@ _feed_to_exchange_map = {
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
+        BITFLYER: 'lightning_executions_{}',
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN: 'trade',
@@ -155,6 +161,7 @@ _feed_to_exchange_map = {
         BINANCE: 'aggTrade',
         BINANCE_US: 'aggTrade',
         BINANCE_FUTURES: 'aggTrade',
+        BINANCE_DELIVERY: 'aggTrade',
         BLOCKCHAIN: 'trades',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
@@ -162,7 +169,6 @@ _feed_to_exchange_map = {
         HUOBI_SWAP: 'trade.detail',
         OKCOIN: 'spot/trade',
         OKEX: '{}/trade',
-        COINBENE: TRADES,
         DERIBIT: 'trades',
         BYBIT: 'trade',
         FTX: 'trades',
@@ -170,7 +176,7 @@ _feed_to_exchange_map = {
         GEMINI: TRADES,
         BITTREX: TRADES,
         BITCOINCOM: 'subscribeTrades',
-        BITMAX: TRADES,
+        BITMAX: "trades:",
         UPBIT: TRADES,
         GATEIO: 'trades.subscribe',
         PROBIT: 'recent_trades'
@@ -182,17 +188,18 @@ _feed_to_exchange_map = {
         BITSTAMP: UNSUPPORTED,
         COINBASE: 'ticker',
         BITMEX: 'quote',
+        BITFLYER: 'lightning_ticker_{}',
         KRAKEN: TICKER,
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'ticker',
         BINANCE_US: 'ticker',
         BINANCE_FUTURES: 'ticker',
+        BINANCE_DELIVERY: 'ticker',
         BLOCKCHAIN: UNSUPPORTED,
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
         OKCOIN: '{}/ticker',
         OKEX: '{}/ticker',
-        COINBENE: TICKER,
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
         FTX: "ticker",
@@ -212,6 +219,7 @@ _feed_to_exchange_map = {
         BITMEX: 'funding',
         BITFINEX: 'trades',
         BINANCE_FUTURES: 'markPrice',
+        BINANCE_DELIVERY: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: '{}/funding_rate',
@@ -225,19 +233,27 @@ _feed_to_exchange_map = {
         DERIBIT: 'ticker',
         FTX: 'open_interest',
         BINANCE_FUTURES: 'open_interest',
+        BINANCE_DELIVERY: 'open_interest',
         BYBIT: 'instrument_info.100ms'
     },
     LIQUIDATIONS: {
         BITMEX: 'liquidation',
         BINANCE_FUTURES: 'forceOrder',
+        BINANCE_DELIVERY: 'forceOrder',
         FTX: 'trades',
-        DERIBIT: 'trades'
+        DERIBIT: 'trades',
+        OKEX: LIQUIDATIONS,
+    },
+    MARKET_INFO: {
+        COINGECKO: MARKET_INFO
+    },
+    TRANSACTIONS: {
+        WHALE_ALERT: TRANSACTIONS
     },
     FUTURES_INDEX: {
         BYBIT: 'instrument_info.100ms'
     }
 }
-
 
 _exchange_options = {
     LIMIT: {

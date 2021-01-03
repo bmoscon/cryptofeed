@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -8,7 +8,8 @@ import bson
 import motor.motor_asyncio
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
 class MongoCallback:
@@ -24,6 +25,7 @@ class MongoCallback:
             await self.db[self.collection].insert_one(d)
         else:
             await self.db[self.collection].insert_one(data)
+
 
 class TradeMongo(MongoCallback, BackendTradeCallback):
     default_key = 'trades'
@@ -51,3 +53,11 @@ class OpenInterestMongo(MongoCallback, BackendOpenInterestCallback):
 
 class LiquidationsMongo(MongoCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
+
+
+class MarketInfoMongo(MongoCallback, BackendMarketInfoCallback):
+    default_key = 'market_info'
+
+
+class TransactionsMongo(MongoCallback, BackendTransactionsCallback):
+    default_key = 'transactions'

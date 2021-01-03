@@ -2,4 +2,6 @@
 
 - [ ] - Tested
 - [ ] - Changelog updated
+- [ ] - Tests run and pass
+- [ ] - Flake8 run and all errors/warnings resolved
 - [ ] - Contributors file updated (optional)

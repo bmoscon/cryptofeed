@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -11,7 +11,8 @@ from textwrap import wrap
 from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
 LOG = logging.getLogger('feedhandler')
@@ -123,3 +124,11 @@ class OpenInterestSocket(SocketCallback, BackendOpenInterestCallback):
 
 class LiquidationsSocket(SocketCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
+
+
+class MarketInfoSocket(SocketCallback, BackendMarketInfoCallback):
+    default_key = 'market_info'
+
+
+class TransactionsSocket(SocketCallback, BackendTransactionsCallback):
+    default_key = 'transactions'

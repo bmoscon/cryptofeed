@@ -20,7 +20,7 @@ async def funding(**kwargs):
     print(f'Funding {kwargs}')
 
 
-async def oi(feed, pair, open_interest, timestamp):
+async def oi(feed, pair, open_interest, timestamp, receipt_timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} open interest: {open_interest}')
 
 
@@ -30,11 +30,9 @@ def main():
     # Deribit can't handle 400+ simultaneous requests, so if all
     # instruments are needed they should be fed in the different calls
 
-    #config = {TRADES: ["BTC-PERPETUAL"], TICKER: ['ETH-PERPETUAL'], FUNDING: ['ETH-PERPETUAL'], OPEN_INTEREST: ['ETH-PERPETUAL']}
-    #f.add_feed(Deribit(config=config, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
+    config = {TRADES: ["BTC-PERPETUAL"], TICKER: ['ETH-PERPETUAL'], FUNDING: ['ETH-PERPETUAL'], OPEN_INTEREST: ['ETH-PERPETUAL']}
+    f.add_feed(Deribit(config=config, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
     f.add_feed(Deribit(pairs=['BTC-PERPETUAL'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
-
-    #f.add_feed(Deribit(pairs=['BTC-26JUN20', 'BTC-25SEP20-11000-P'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)}))
 
     f.run()
 

@@ -1,4 +1,4 @@
-# This Pipfile is licensed under the Creative Commons Zero licence
+# This Pipfile is licensed under the Creative Commons Zero license
 # CC0 1.0 Universal - Public Domain Dedication - No Rights Reserved
 # To the extent possible under law, O. Libre <olibre@Lmap.org> has waived
 # all copyright and related or neighboring rights this Pipfile file.
@@ -11,11 +11,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
+pyyaml = "*"
 aiohttp = ">=3.6.2"
 pandas = "*"
 requests = ">=2.18.4"
 sortedcontainers = ">=1.5.9"
 websockets = ">=7.0"
+uvloop = {version = "*", sys_platform = "!= 'windows'"}
 "yapic.json" = ">=1.4.3"    # fast, drop-in replacement of the built-in python.json
 # --- Optional packages to speed-up Cryptofeed -----------------------------------------------
 aiodns = ">=1.1"            # aiodns speeds up DNS resolving
@@ -29,8 +31,9 @@ asyncpg = "*"               # pip install cryptofeed[postgres]
 motor = "*"                 # pip install cryptofeed[mongo]
 aio_pika = "*"              # pip install cryptofeed[rabbit]
 pika = "*"                  # used by demo_rabbitmq.py
-pyyaml = "*"                # pip install cryptofeed[rest_api]
 pyzmq = "*"                 # pip install cryptofeed[zmq]
+google_cloud_pubsub = "*"   # pip install cryptofeed[gcp_pubsub]
+gcloud_aio_pubsub = "*"     # pip install cryptofeed[gcp_pubsub]
 
 [dev-packages]
 isort = {extras = ["pipfile"], version = "*"}

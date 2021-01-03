@@ -1,14 +1,16 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.exchange.binance_futures import BinanceFutures
+from cryptofeed.exchange.binance_delivery import BinanceDelivery
 from cryptofeed.exchange.binance_us import BinanceUS
 from cryptofeed.exchange.bitcoincom import BitcoinCom
 from cryptofeed.exchange.bitfinex import Bitfinex
+from cryptofeed.exchange.bitflyer import Bitflyer
 from cryptofeed.exchange.bitmax import Bitmax
 from cryptofeed.exchange.bitmex import Bitmex
 from cryptofeed.exchange.bitstamp import Bitstamp
@@ -16,7 +18,6 @@ from cryptofeed.exchange.bittrex import Bittrex
 from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.exchange.bybit import Bybit
 from cryptofeed.exchange.coinbase import Coinbase
-from cryptofeed.exchange.coinbene import Coinbene
 from cryptofeed.exchange.deribit import Deribit
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.ftx import FTX

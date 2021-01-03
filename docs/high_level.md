@@ -77,18 +77,18 @@ from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import TRADES, TICKER
 
 
-async def ticker(feed, pair, bid, ask):
-    print(f'Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
+async def ticker(feed, pair, bid, ask, timestamp, receipt_timestamp):
+    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {pair} Bid: {bid} Ask: {ask}')
 
 
-async def trade(feed, pair, order_id, timestamp, side, amount, price):
+async def trade(feed, pair, order_id, timestamp, side, amount, price, receipt_timestamp):
     print(f"Timestamp: {timestamp} Feed: {feed} Pair: {pair} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
 
 def main():
     f = FeedHandler()
     f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TRADES, TICKER], callbacks={TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
-  
+
     f.run()
 
 

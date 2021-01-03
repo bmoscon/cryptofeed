@@ -159,7 +159,6 @@ class Deribit(Feed):
                             )
 
     async def subscribe(self, websocket):
-        self.websocket = websocket
         self.__reset()
         client_id = 0
         channels = []
@@ -244,7 +243,8 @@ class Deribit(Feed):
                 delta[ASK].append((Decimal(price), Decimal(amount)))
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg_dict = json.loads(msg, parse_float=Decimal)
 
         # As a first update after subscription, Deribit sends a notification with no data

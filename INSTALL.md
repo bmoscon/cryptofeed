@@ -2,7 +2,7 @@
  
 The Cryptofeed library is intended for use by Python developers.
 
-You have several ways to get/use Cryptofeed:
+Several ways to get/use Cryptofeed:
 
 * Pip - `pip install cryptofeed`
 * Git - `git clone https://github.com/bmoscon/cryptofeed`
@@ -15,65 +15,57 @@ on the use of Pip and Pipenv.
 
 ## Installation with Pip
 
-The safe way to install or upgrade the Cryptofeed library:
+The safe way to install and upgrade the Cryptofeed library:
 
     python3 -m pip install --user --upgrade cryptofeed
 
-To minimize the number of dependencies to download,
-the dependencies required by the Rest API, and
-the cryptofeed backends are optional, but easy to install.
+Cryptofeed supports many backends as Redis, ZeroMQ, RabbitMQ, MongoDB, PostgreSQL, Google Cloud and much more...
+Cryptofeed is usually used with few backends (one or two) and installing the dependencies of all backends is not required. 
+Thus, to minimize the number of dependencies, the backend dependencies are optional, but easy to install.
 
 See the file [`setup.py`](https://github.com/bmoscon/cryptofeed/blob/master/setup.py#L60)
 for the exhaustive list of these *extra* dependencies.
 
-### Install all optional dependencies
+* Install all optional dependencies  
+  To install Cryptofeed along with all optional dependencies in one bundle:
 
-You can install Cryptofeed along with all optional dependencies in one bundle:
+         python3 -m pip install --user --upgrade cryptofeed[all]
 
-    python3 -m pip install --user --upgrade cryptofeed[all]
+* Arctic backend  
+  To install Cryptofeed along with [Arctic](https://github.com/man-group/arctic/) in one bundle:
 
-### Rest API
+         python3 -m pip install --user --upgrade cryptofeed[arctic]
 
-Cryptofeed can also be used to access the *Rest API*
-of some crypto-exchange to retrieve historical market data
-and to place orders. See also the dedicated chapter
-[Rest API](https://github.com/bmoscon/cryptofeed/blob/master/README.md#rest-api).
+* Google Cloud Pub / Sub backend
 
-    python3 -m pip install --user --upgrade cryptofeed[rest_api]
+         python3 -m pip install --user --upgrade cryptofeed[gcp_pubsub]
 
-### Arctic backend
+* Kafka backend
 
-To install Cryptofeed along with
-[Arctic](https://github.com/man-group/arctic/) in one bundle:
+         python3 -m pip install --user --upgrade cryptofeed[kafka]
 
-    python3 -m pip install --user --upgrade cryptofeed[arctic]
+* MongoDB backend
 
-### Redis backend
+         python3 -m pip install --user --upgrade cryptofeed[mongo]
 
-    python3 -m pip install --user --upgrade cryptofeed[redis]
+* PostgreSQL backend
 
-### ZeroMQ backend
+         python3 -m pip install --user --upgrade cryptofeed[postgres]
 
-    python3 -m pip install --user --upgrade cryptofeed[zmq]
+* RabbitMQ backend
 
-### RabbitMQ backend
+         python3 -m pip install --user --upgrade cryptofeed[rabbit]
 
-    python3 -m pip install --user --upgrade cryptofeed[zmq]
+* Redis backend
 
-### MongoDB backend
+          python3 -m pip install --user --upgrade cryptofeed[redis]
 
-    python3 -m pip install --user --upgrade cryptofeed[mongo]
+* ZeroMQ backend
 
-### PostgreSQL backend
-
-    python3 -m pip install --user --upgrade cryptofeed[postgres]
-
-### Kafka backend
-
-    python3 -m pip install --user --upgrade cryptofeed[kafka]
+         python3 -m pip install --user --upgrade cryptofeed[zmq]
 
 
-## Pipenv
+## Installation with Pipenv
 
 The tool Pipenv allows the installation of
 the Cryptofeed library and its dependencies
@@ -82,8 +74,11 @@ Pipenv is based on `pip` and `virtualenv`.
 
 ### Install Pipenv
 
-You may want to install the latest versions of Pip and Pipenv
-on your user Python environment to limit conflicts with the operating system:
+On an Operating System (OS) released more than 2 years ago,
+installing the latest versions of Pip and Pipenv is recommended to fix issues and to enable new features.
+However, Python packages installed by the system should not be altered.
+Thus, we recommend installing Python packages in the user Python environment
+to limit conflicts with the operating system:
 
     python3 -m pip install --user --upgrade pip
     python3 -m pip install --user --upgrade pipenv
@@ -91,69 +86,65 @@ on your user Python environment to limit conflicts with the operating system:
 ### Install the runtime dependencies
 
 Once you have cloned/downloaded the Cryptofeed source code,
-you can install the dependencies
-within a dedicated Python virtual environment
-using the following command line:
+you can install the dependencies within a Python virtual environment:
 
     cd your/path/to/cryptofeed
     python3 -m pipenv install
 
-Note: the default `Pipfile` is configured to install all optional dependencies.
-You may edit the `Pipfile` to comment the optional dependencies you do not need.
+### Test Cryptofeed installation
+
+The environment variable `PYTHONPATH` is required
+because the `Pipefile` does locate the Cryptofeed library:
+
+    cd your/path/to/cryptofeed
+    PYTHONPATH=. python3 -m pipenv run python3 examples/demo.py
+
+or you can enter the sub-shell of the Python virtual environment:
+
+    export PYTHONPATH=your/path/to/cryptofeed
+    ...
+    cd your/path/to/cryptofeed
+    python3 -m pipenv shell
+    python examples/demo.py
+    ...
+    exit      # or [Ctrl] + [D]
+ 
+Note: Remember that you are in the sub-shell of the virtual environment. <br>
+To leave this sub-shell, use the command `exit`
+or the keyboard shortcut **<kdb>Ctrl</kdb>** + **<kdb>D</kdb>**.
+
 
 ### Uninstall the unused dependencies
 
-Edit the `Pipfile` and comment some (or all)
-dependencies above the line `# Optional dependencies`.
+The default `Pipfile` is configured to install all optional dependencies.
+Please, edit the `Pipfile` to comment the optional dependencies you do not need.
+See the dependencies listed above the line `# Optional dependencies`.
 
-Then:
+To uninstall a dependency, comment it (insert "`#`" in the beginning of the line)
+and run the following command lines:
 
     cd your/path/to/cryptofeed
     python3 -m pipenv clean
 
-You may also copy/hack that `Pipfile` within your own project.
-That `Pipfile` is in the public domain to give you more freedom.
-
-Note: See the [LICENSE](https://github.com/bmoscon/cryptofeed/blob/master/LICENSE)
-for the rest of the Cryptofeed files.
-
 ### Update dependencies
 
-You can update the dependency versions once a week:
+Check for security vulnerabilities and new dependency versions once a week:
+
+    cd your/path/to/cryptofeed
+    python3 -m pipenv check
+
+Upgrade the dependency versions:
 
     cd your/path/to/cryptofeed
     python3 -m pipenv update
 
-### Dependency graph
+Follow the version change:
 
-You can also check the entire dependency tree:
+    git diff Pipfile.lock
 
-    cd your/path/to/cryptofeed
+Print the entire dependency tree:
+
     python3 -m pipenv graph
-
-### Run a script
- 
-In the following example we execute the script `demo.py`:
-
-    cd your/path/to/cryptofeed
-    PYTONPATH=. python3 -m pipenv run python3 examples/demo.py
-
-To use shorter command lines,
-you may want to enter in the sub-shell of the
-Python virtual environment:
-
-    cd your/path/to/cryptofeed
-    python3 -m pipenv shell
-    export PYTONPATH=$PWD
-    cd path/to/your/project
-    python your-awesome-script.py
-    [...]
-    exit      # or [Ctrl] + [D]
- 
-Note: Remember that you are in a sub-shell of a virtual environment. <br>
-To leave this sub-shell, use the command `exit`
-or the keyboard shortcut **<kdb>Ctrl</kdb>** + **<kdb>D</kdb>**.
-
 
 ### Install the dev. dependencies
 
@@ -167,7 +158,7 @@ the Python packages used for the Cryptofeed development.
 
 Pytest is listed in the `[dev-packages]` section with
 `pytest-asyncio`, a Pytest plugin allowing
-to write unit tests for `asyncio` functions.
+writing unit tests for `asyncio` functions.
 
 Once the development dependencies are installed,
 perform the unit tests in the way you prefer:
@@ -228,10 +219,33 @@ but only to the `import` sections:
     cd your/path/to/cryptofeed
     python3 -m pipenv run python3 -m isort --jobs=8 --atomic --multi-line 3 --force-grid-wrap 0 --trailing-comma --use-parentheses --apply --recursive .
 
+
+### Alternative Pipfile
+
+To avoid setting the `PYTHONPATH` environment variable, use a different `Pipfile`:
+
+    cd your/path/to/cryptofeed
+    rm Pipfile Pipfile.lock
+    python3 -m pip install -e cryptofeed
+
+The resulted `Pipfile` is similar to:
+
+```toml
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+cryptofeed = {editable = true, path = "."}
+```
+
 ## Contribute
 
 If you have a problem with the installation/hacking of Cryptofeed,
-you are welcome to open a new issue: https://github.com/bmoscon/cryptofeed/issues/
-or join us on Slack: [cryptofeed-dev.slack.com](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
+you are welcome to:
+* open a new issue: https://github.com/bmoscon/cryptofeed/issues/
+* join us on Slack: [cryptofeed-dev.slack.com](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
+* or on GitHub Discussion: https://github.com/bmoscon/cryptofeed/discussions
 
 Your Pull Requests are also welcome, even for minor changes.

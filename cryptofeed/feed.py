@@ -1,15 +1,16 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import uuid
 from collections import defaultdict
+from typing import Tuple, Callable, Union, List
 
 from cryptofeed.callback import Callback
-from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, L2_BOOK, L3_BOOK,
-                                LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES, VOLUME, FUTURES_INDEX)
+from cryptofeed.connection import AsyncConnection
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+                                OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
@@ -18,7 +19,7 @@ from cryptofeed.util.book import book_delta, depth
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address, pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
+    def __init__(self, address: Union[dict, str], pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, key_id=None):
         """
         max_depth: int
             Maximum number of levels per side to return in book updates
@@ -35,9 +36,9 @@ class Feed:
             checksums or provide message sequence numbers.
         origin: str
             Passed into websocket connect. Sets the origin header.
+        key_id: str
+            API key to query the feed, required when requesting supported coins/pairs.
         """
-        self.hash = str(uuid.uuid4())
-        self.uuid = f"{self.id}-{self.hash}"
         self.config = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
@@ -46,12 +47,14 @@ class Feed:
         self.updates = defaultdict(int)
         self.do_deltas = False
         self.pairs = []
+        self.normalized_pairs = []
         self.channels = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
         self.origin = origin
         self.checksum_validation = checksum_validation
-        load_exchange_pair_mapping(self.id)
+        self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
+        load_exchange_pair_mapping(self.id, key_id=key_id)
 
         if config is not None and (pairs is not None or channels is not None):
             raise ValueError("Use config, or channels and pairs, not both")
@@ -60,23 +63,28 @@ class Feed:
             for channel in config:
                 chan = feed_to_exchange(self.id, channel)
                 self.config[chan].update([pair_std_to_exchange(pair, self.id) for pair in config[channel]])
+                self.normalized_pairs.extend(self.config[chan])
 
         if pairs:
+            self.normalized_pairs = pairs
             self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
         if channels:
             self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
 
         self.l3_book = {}
         self.l2_book = {}
-        self.callbacks = {TRADES: Callback(None),
-                          TICKER: Callback(None),
+        self.callbacks = {FUNDING: Callback(None),
+                          FUTURES_INDEX: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),
-                          VOLUME: Callback(None),
-                          FUNDING: Callback(None),
-                          OPEN_INTEREST: Callback(None),
                           LIQUIDATIONS: Callback(None),
-                          FUTURES_INDEX: Callback(None)}
+                          OPEN_INTEREST: Callback(None),
+                          MARKET_INFO: Callback(None),
+                          TICKER: Callback(None),
+                          TRADES: Callback(None),
+                          TRANSACTIONS: Callback(None),
+                          VOLUME: Callback(None)
+                          }
 
         if callbacks:
             for cb_type, cb_func in callbacks.items():
@@ -88,14 +96,38 @@ class Feed:
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
+        """
+        Generic connection method for exchanges. Exchanges that require/support
+        multiple addresses will need to override this method in their specific class
+        unless they use the same subscribe method and message handler for all
+        connections.
+
+        Connect returns a list of tuples. Each tuple contains
+        1. an AsyncConnection object
+        2. the subscribe function pointer associated with this connection
+        3. the message handler for this connection
+        """
+        ret = []
+
+        if isinstance(self.address, str):
+            return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
+
+        for key, addr in self.address.items():
+            ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
+        return ret
+
     @classmethod
-    def info(cls) -> dict:
+    def info(cls, key_id: str = None) -> dict:
         """
         Return information about the Exchange - what trading pairs are supported, what data channels, etc
+
+        key_id: str
+            API key to query the feed, required when requesting supported coins/pairs.
         """
-        pairs, info = get_exchange_info(cls.id)
+        pairs, info = get_exchange_info(cls.id, key_id=key_id)
         data = {'pairs': list(pairs.keys()), 'channels': []}
-        for channel in (LIQUIDATIONS, OPEN_INTEREST, FUNDING, VOLUME, TICKER, L2_BOOK, L3_BOOK, TRADES, FUTURES_INDEX):
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
@@ -103,7 +135,6 @@ class Feed:
                 pass
 
         data.update(info)
-
         return data
 
     async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
@@ -183,7 +214,14 @@ class Feed:
         self.previous_book[pair] = ret
         return delta, ret
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
+        raise NotImplementedError
+
+    async def subscribe(self, connection: AsyncConnection, **kwargs):
+        """
+        kwargs will not be passed from anywhere, if you need to supply extra data to
+        your subscribe, bind the data to the method with a partial
+        """
         raise NotImplementedError
 
     async def stop(self):
@@ -191,8 +229,3 @@ class Feed:
             for callback in callbacks:
                 if hasattr(callback, 'stop'):
                     await callback.stop()
-
-
-class RestFeed(Feed):
-    async def message_handler(self):
-        raise NotImplementedError

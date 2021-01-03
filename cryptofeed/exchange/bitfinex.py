@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -7,10 +7,13 @@ associated with this software.
 import logging
 from collections import defaultdict
 from decimal import Decimal
+from functools import partial
+from typing import Callable, List, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -57,7 +60,7 @@ class Bitfinex(Feed):
         '''
         self.channel_map = {}
         self.order_map = defaultdict(dict)
-        self.seq_no = 0
+        self.seq_no = defaultdict(int)
 
     async def _ticker(self, msg: dict, timestamp: float):
         chan_id = msg[0]
@@ -262,17 +265,17 @@ class Bitfinex(Feed):
 
         await self.book_callback(self.l3_book[pair], L3_BOOK, pair, forced, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
             chan_id = msg[0]
             if chan_id in self.channel_map:
                 seq_no = msg[-1]
-                if self.seq_no + 1 != seq_no:
-                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no + 1)
+                if self.seq_no[conn.uuid] + 1 != seq_no:
+                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[conn.uuid] + 1)
                     raise MissingSequenceNumber
-                self.seq_no = seq_no
+                self.seq_no[conn.uuid] = seq_no
 
                 await self.channel_map[chan_id]['handler'](msg, timestamp)
             else:
@@ -298,28 +301,57 @@ class Bitfinex(Feed):
                                                'channel': msg['channel'],
                                                'handler': handler}
 
-    async def subscribe(self, websocket):
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
+        """
+        Bitfinex only supports 25 pair/channel combinations per websocket, so
+        if we require more we need to create more connections
+
+        Furthermore, the sequence numbers bitinex provides are per-connection
+        so we need to bind our connection id to the message handler
+        so we know to which connextion the sequence number belongs.
+        """
+        pair_channel = []
+        ret = []
+
+        def build(options: list):
+            subscribe = partial(self.subscribe, options=pair_channel)
+            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
+            return conn, subscribe, self.message_handler
+
+        for channel in self.channels if not self.config else self.config:
+            for pair in self.pairs if not self.config else self.config[channel]:
+                pair_channel.append((pair, channel))
+                # Bitfinex max is 25 per connection
+                if len(pair_channel) == 25:
+                    ret.append(build(pair_channel))
+                    pair_channel = []
+
+        if len(pair_channel) > 0:
+            ret.append(build(pair_channel))
+
+        return ret
+
+    async def subscribe(self, connection: AsyncConnection, options: List[Tuple[str, str]] = None):
         self.__reset()
-        await websocket.send(json.dumps({
+        await connection.send(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL
         }))
 
-        for channel in self.channels if not self.config else self.config:
-            for pair in self.pairs if not self.config else self.config[channel]:
-                message = {'event': 'subscribe',
-                           'channel': channel,
-                           'symbol': pair
-                           }
-                if 'book' in channel:
-                    parts = channel.split('-')
-                    if len(parts) != 1:
-                        message['channel'] = 'book'
-                        try:
-                            message['prec'] = parts[1]
-                            message['freq'] = parts[2]
-                            message['len'] = parts[3]
-                        except IndexError:
-                            # any non specified params will be defaulted
-                            pass
-                await websocket.send(json.dumps(message))
+        for pair, chan in options:
+            message = {'event': 'subscribe',
+                       'channel': chan,
+                       'symbol': pair
+                       }
+            if 'book' in chan:
+                parts = chan.split('-')
+                if len(parts) != 1:
+                    message['channel'] = 'book'
+                    try:
+                        message['prec'] = parts[1]
+                        message['freq'] = parts[2]
+                        message['len'] = parts[3]
+                    except IndexError:
+                        # any non specified params will be defaulted
+                        pass
+            await connection.send(json.dumps(message))

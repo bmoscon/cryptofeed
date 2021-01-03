@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -10,6 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 from time import time
+from typing import Union, Dict
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
@@ -34,14 +35,35 @@ class Binance(Feed):
         self.address = self._address()
         self._reset()
 
-    def _address(self):
+    def _address(self) -> Union[str, Dict]:
+        """
+        Binance has a 200 pair/stream limit per connection, so we need to break the address
+        down into multiple connections if necessary. Because the key is currently not used
+        for the address dict, we can just set it to the last used stream, since this will be
+        unique.
+
+        The generic connect method supplied by Feed will take care of creating the
+        correct connection objects from the addresses.
+        """
+        ret = {}
+        counter = 0
         address = self.ws_endpoint + '/stream?streams='
         for chan in self.channels if not self.config else self.config:
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
                 address += stream
-        return address[:-1]
+                counter += 1
+                if counter == 200:
+                    ret[stream] = address[:-1]
+                    counter = 0
+                    address = self.ws_endpoint + '/stream?streams='
+
+        if len(ret) == 0:
+            return address[:-1]
+        if counter > 0:
+            ret[stream] = address[:-1]
+        return ret
 
     def _reset(self):
         self.forced = defaultdict(bool)
@@ -145,7 +167,6 @@ class Binance(Feed):
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
-
     async def _snapshot(self, pair: str) -> None:
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
 
@@ -244,12 +265,12 @@ class Binance(Feed):
         async with aiohttp.ClientSession() as session:
             while True:
                 for pair in pairs:
-                    end_point = f"https://fapi.binance.com/fapi/v1/openInterest?symbol={pair}"
+                    end_point = f"{self.rest_endpoint}/openInterest?symbol={pair}"
                     async with session.get(end_point) as response:
                         data = await response.text()
                         data = json.loads(data, parse_float=Decimal)
+
                         oi = data['openInterest']
-                        saved_oi = self.open_interest.get(pair, None)
                         if oi != self.open_interest.get(pair, None):
                             await self.callback(OPEN_INTEREST,
                                                 feed=self.id,
@@ -285,8 +306,8 @@ class Binance(Feed):
                             next_funding_time=timestamp_normalize(self.id, msg['T']),
                             )
 
+    async def message_handler(self, msg: str, conn, timestamp: float):
 
-    async def message_handler(self, msg: str, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}

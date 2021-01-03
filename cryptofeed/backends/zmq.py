@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,8 @@ import zmq.asyncio
 from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
 class ZMQCallback:
@@ -55,3 +56,11 @@ class OpenInterestZMQ(ZMQCallback, BackendOpenInterestCallback):
 
 class LiquidationsZMQ(ZMQCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
+
+
+class MarketInfoZMQ(ZMQCallback, BackendMarketInfoCallback):
+    default_key = 'market_info'
+
+
+class TransactionsZMQ(ZMQCallback, BackendTransactionsCallback):
+    default_key = 'transactions'

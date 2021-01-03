@@ -1,19 +1,16 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 import logging
-import time
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
@@ -158,7 +155,8 @@ class Probit(Feed):
 
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
 
         # Probit can send multiple type updates in one message so we avoid the use of elif

@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -37,7 +37,7 @@ class TradeCallback(Callback):
         self.include_order_type = include_order_type
         super().__init__(callback)
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type: str=None):
+    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type: str = None):
         kwargs = {}
         if self.include_order_type:
             kwargs['order_type'] = order_type
@@ -91,4 +91,12 @@ class FundingCallback(Callback):
 
 
 class FuturesIndexCallback(Callback):
+    pass
+
+
+class MarketInfoCallback(Callback):
+    pass
+
+
+class TransactionsCallback(Callback):
     pass

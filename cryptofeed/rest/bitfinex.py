@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -221,7 +221,7 @@ class Bitfinex(API):
                 else:
                     order_id, price, amount = entry
                     update = abs(amount)
-                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True) else ASK
+                side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
                 if price not in ret[sym][side]:
                     ret[sym][side][price] = {order_id: update}
                 else:
@@ -234,6 +234,6 @@ class Bitfinex(API):
                 else:
                     price, _, amount = entry
                     update = abs(amount)
-                side = BID if (amount > 0 and funding == False) or (amount < 0 and funding == True) else ASK
+                side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
                 ret[sym][side][price] = update
         return ret

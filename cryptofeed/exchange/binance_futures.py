@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -57,7 +57,7 @@ class BinanceFutures(Binance):
             skip_update = True
         return skip_update, forced
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
@@ -68,10 +68,7 @@ class BinanceFutures(Binance):
         pair = pair.upper()
 
         msg_type = msg.get('e')
-        if msg_type is None:
-            # For the BinanceFutures API it appears
-            # the ticker stream (<symbol>@bookTicker) is
-            # the only payload without an "e" key describing the event type
+        if msg_type == 'bookTicker':
             await self._ticker(msg, timestamp)
         elif msg_type == 'depthUpdate':
             await self._book(msg, pair, timestamp)

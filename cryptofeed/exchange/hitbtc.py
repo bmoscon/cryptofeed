@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -81,12 +81,13 @@ class HitBTC(Feed):
                                 timestamp=timestamp,
                                 receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
         if 'params' in msg and 'sequence' in msg['params']:
             pair = msg['params']['symbol']
             if pair in self.seq_no:
-                if self.seq_no[pair]+1 != msg['params']['sequence']:
+                if self.seq_no[pair] + 1 != msg['params']['sequence']:
                     LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
                     raise MissingSequenceNumber("Missing sequence number, restarting")
             self.seq_no[pair] = msg['params']['sequence']
@@ -120,5 +121,5 @@ class HitBTC(Feed):
                         "params": {
                             "symbol": pair
                         },
-                        "id": self.uuid
+                        "id": websocket.uuid
                     }))

@@ -46,7 +46,6 @@ Cryptofeed accepts standardized names for data channels/feeds. The `Feed` parent
 
 ```python
 async def subscribe(self, websocket):
-        self.websocket = websocket
         self.__reset()
         client_id = 0
         for chan in self.channels:
@@ -117,14 +116,14 @@ async def _trade(self, msg):
                 timestamp=trade['ts']
             )
 
-    async def message_handler(self, msg, timestamp):
+    async def message_handler(self, msg, conn, timestamp):
         # unzip message
         msg = zlib.decompress(msg, 16+zlib.MAX_WBITS)
         msg = json.loads(msg, parse_float=Decimal)
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await self.websocket.send(json.dumps({'pong': msg['ping']}))
+            await conn.send(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:

@@ -73,22 +73,26 @@ class HuobiDM(Feed):
         data = msg['tick']
         forced = pair not in self.l2_book
 
-        update = {
-            BID: sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in data['bids']
-            }),
-            ASK: sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in data['asks']
-            })
-        }
+        # When Huobi Delists pairs, empty updates still sent:
+        # {'ch': 'market.AKRO-USD.depth.step0', 'ts': 1606951241196, 'tick': {'mrid': 50651100044, 'id': 1606951241, 'ts': 1606951241195, 'version': 1606951241, 'ch': 'market.AKRO-USD.depth.step0'}}
+        # {'ch': 'market.AKRO-USD.depth.step0', 'ts': 1606951242297, 'tick': {'mrid': 50651100044, 'id': 1606951242, 'ts': 1606951242295, 'version': 1606951242, 'ch': 'market.AKRO-USD.depth.step0'}}
+        if 'bids' in data and 'asks' in data:
+            update = {
+                BID: sd({
+                    Decimal(price): Decimal(amount)
+                    for price, amount in data['bids']
+                }),
+                ASK: sd({
+                    Decimal(price): Decimal(amount)
+                    for price, amount in data['asks']
+                })
+            }
 
-        if not forced:
-            self.previous_book[pair] = self.l2_book[pair]
-        self.l2_book[pair] = update
+            if not forced:
+                self.previous_book[pair] = self.l2_book[pair]
+            self.l2_book[pair] = update
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
+            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -113,14 +117,15 @@ class HuobiDM(Feed):
                                 receipt_timestamp=timestamp
                                 )
 
-    async def message_handler(self, msg: str, timestamp: float):
+    async def message_handler(self, msg: str, conn, timestamp: float):
+
         # unzip message
         msg = zlib.decompress(msg, 16 + zlib.MAX_WBITS)
         msg = json.loads(msg, parse_float=Decimal)
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await self.websocket.send(json.dumps({'pong': msg['ping']}))
+            await conn.send(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
@@ -134,7 +139,6 @@ class HuobiDM(Feed):
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, websocket):
-        self.websocket = websocket
         self.__reset()
         client_id = 0
         for chan in self.channels if self.channels else self.config:

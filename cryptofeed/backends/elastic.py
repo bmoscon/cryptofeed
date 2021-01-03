@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2020  Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -14,7 +14,7 @@ from yapic import json
 from cryptofeed.backends._util import book_flatten
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
 
 
@@ -100,3 +100,11 @@ class OpenInterestElastic(ElasticCallback, BackendOpenInterestCallback):
 
 class LiquidationsElastic(ElasticCallback, BackendLiquidationsCallback):
     default_index = 'liquidations'
+
+
+class MarketInfoElastic(ElasticCallback, BackendMarketInfoCallback):
+    default_index = 'market_info'
+
+
+class TransactionsElastic(ElasticCallback, BackendTransactionsCallback):
+    default_index = 'transactions'

@@ -4,16 +4,15 @@ import time
 from datetime import datetime
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import (ASK, BID, BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, DERIBIT, EXX, FUNDING,
-                                GEMINI, HITBTC, HUOBI, KRAKEN, L2_BOOK, OKCOIN, OKEX, POLONIEX, TICKER, TRADES)
+from cryptofeed.callback import TradeCallback
+from cryptofeed.defines import TRADES
 
 
 # Gathers the first trade of each exchange and prints out info on the timestamps.
 # To add an exchange, setup exch_sym_map with the most liquid pair.
 # Sample output:
 '''
-$ python demo_checki_trade_timestamps.py 
+$ python demo_checki_trade_timestamps.py
 Starting: 1562808668.105481
 [0]: Subscribing to Binance
 [1]: Subscribing to Bitfinex
@@ -64,10 +63,10 @@ Ending: 1562808727.693259
 '''
 
 
-async def trade(feed, pair, order_id, timestamp, side, amount, price):
+async def trade(feed, pair, order_id, timestamp, receipt_timestamp, side, amount, price):
     if feed not in trades:
         print(f'Added {feed}.')
-        #exch_count += 1
+        # exch_count += 1
         trades[feed]['timestamp'] = timestamp
         trades[feed]['order_id'] = order_id
         if exchanges == set(trades.keys()):
