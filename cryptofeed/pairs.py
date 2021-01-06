@@ -506,7 +506,8 @@ def coingecko_pairs() -> Dict[str, str]:
     r = None
     try:
         r = requests.get('https://api.coingecko.com/api/v3/coins/list')
-        return {entry['symbol'].upper(): entry['id'] for entry in r.json()}
+        normalized = {'miota': 'IOTA'}
+        return {normalized.get(asset['symbol'], asset['symbol'].upper()): asset['id'] for asset in r.json()}
     except Exception as why:
         raise_failure_explanation('COINGECKO', why, {"": r})
 
