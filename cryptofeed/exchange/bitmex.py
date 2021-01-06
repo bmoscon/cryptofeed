@@ -482,7 +482,12 @@ class Bitmex(Feed):
                 LOG.error("%s: subscribe failed: %s", self.id, msg)
         elif 'error' in msg:
             LOG.error("%s: Error message from exchange: %s", self.id, msg)
-        else:
+        elif 'request' in msg:
+            if msg['success']:
+                LOG.info("%s: Success %s", self.id, msg['request'].get('op'))
+            else:
+                LOG.warning("%s: Failure %s", self.id, msg['request'])
+        elif 'table' in msg:
             if msg['table'] == 'trade':
                 await self._trade(msg, timestamp)
             elif msg['table'] == 'orderBookL2':
@@ -497,6 +502,8 @@ class Bitmex(Feed):
                 await self._liquidation(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
+        else:
+            LOG.warning("%s: Unhandled message %s", self.id, msg)
 
     async def subscribe(self, websocket):
         self._reset()
