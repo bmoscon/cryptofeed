@@ -68,10 +68,7 @@ class BinanceDelivery(Binance):
         pair = pair.upper()
 
         msg_type = msg.get('e')
-        if msg_type is None:
-            # For the BinanceDelivery API it appears
-            # the ticker stream (<symbol>@bookTicker) is
-            # the only payload without an "e" key describing the event type
+        if msg_type == 'bookTicker':
             await self._ticker(msg, timestamp)
         elif msg_type == 'depthUpdate':
             await self._book(msg, pair, timestamp)
