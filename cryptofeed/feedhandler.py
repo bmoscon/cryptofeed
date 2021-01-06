@@ -11,8 +11,9 @@ from signal import SIGTERM, SIGINT, SIGABRT
 try:
     # unix / macos only
     from signal import SIGHUP
+    SIGNALS = (SIGTERM, SIGINT, SIGABRT, SIGHUP)
 except ImportError:
-    pass
+    SIGNALS = (SIGTERM, SIGINT, SIGABRT)
 
 import zlib
 from collections import defaultdict
@@ -85,7 +86,7 @@ def setup_signal_handlers(loop):
     def handle_stop_signals():
         raise SystemExit
 
-    for signal in (SIGTERM, SIGINT, SIGHUP, SIGABRT):
+    for signal in SIGNALS:
         loop.add_signal_handler(signal, handle_stop_signals)
 
 
