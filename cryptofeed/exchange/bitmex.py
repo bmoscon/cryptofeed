@@ -4,10 +4,15 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import logging
 from collections import defaultdict
 from datetime import datetime as dt
 from decimal import Decimal
+import hashlib
+import hmac
+import logging
+import os
+import time
+import urllib.parse
 
 import requests
 from sortedcontainers import SortedDict as sd
