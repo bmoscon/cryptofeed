@@ -30,8 +30,10 @@ class Bitmex(Feed):
     id = BITMEX
     api = 'https://www.bitmex.com/api/v1/'
 
-    def __init__(self, **kwargs):
+    def __init__(self, api_key: str = None, api_secret: str = None, **kwargs):
         super().__init__('wss://www.bitmex.com/realtime', **kwargs)
+        self.api_key = api_key or os.environ.get("BITMEX_API_KEY") or self.config.api_key
+        self.api_secret = api_secret or os.environ.get("BITMEX_API_SECRET") or self.config.api_secret
 
         active_pairs = Bitmex.info()['symbols']
         if self.subscription:
