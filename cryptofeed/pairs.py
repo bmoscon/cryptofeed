@@ -9,10 +9,12 @@ Pair generation code for exchanges
 '''
 
 import logging
+import time
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import requests
+from requests import Response
 
 from cryptofeed.defines import *
 
@@ -21,8 +23,20 @@ LOG = logging.getLogger('feedhandler')
 
 PAIR_SEP = '-'
 
-_pairs_retrieval_cache = dict()
+_pairs_retrieval_cache: Dict[str, Dict[str, str]] = {}
 _exchange_info = defaultdict(lambda: defaultdict(dict))
+
+
+def raise_failure_explanation(feed_id: str, exception: BaseException, responses: Dict[str, Optional[Response]]):
+    LOG.critical('%s: encountered %r while processing response from exchange API', feed_id, exception)
+    if len(responses) > 1:
+        LOG.critical('%s: content of one of the %s responses was unexpected', feed_id, len(responses))
+    for url, r in responses.items():
+        if url:
+            LOG.critical('%s: requested URL: %s', feed_id, url)
+        if r:
+            LOG.critical('%s: unexpected response: %s', feed_id, r.text)
+    raise ValueError(f'Cryptofeed stopped because of an unexpected response from {feed_id}') from exception
 
 
 def set_pair_separator(symbol: str):
@@ -53,9 +67,7 @@ def _binance_pairs(endpoint: str, exchange: str):
                 _exchange_info[exchange]['contract_type'] = symbol['contractType']
         return ret
     except Exception as why:
-        LOG.critical('%s: encountered %r while processing exchangeInfo response from exchange API', exchange, why)
-        LOG.critical('%s: unexpected response: %r', exchange, r.text if r else r)
-        raise ValueError(f'Cryptofeed stopped because of an unexpected response from {exchange}') from why
+        raise_failure_explanation(exchange, why, {endpoint: r})
 
 
 def binance_pairs() -> Dict[str, str]:
@@ -91,7 +103,8 @@ def bitfinex_pairs() -> Dict[str, str]:
         ret = {}
         for pair in [t[0] for t in tickers]:
             if pair[0] == 'f':
-                pass  # normalized = norm.get(pair[1:], pair[1:])
+                # We will repair FUNDING soon on Binance, and enable the following line
+                continue # normalized = norm.get(pair[1:], pair[1:])
             else:
                 if len(pair) == 7:
                     base, quote = pair[1:4], pair[4:]
@@ -99,14 +112,10 @@ def bitfinex_pairs() -> Dict[str, str]:
                     base, quote = pair[1:].split(':')
                     assert ':' in pair
                 normalized = norm.get(base, base) + PAIR_SEP + norm.get(quote, quote)
-                ret[normalized.upper()] = pair
+            ret[normalized.upper()] = pair
         return ret
     except ValueError as why:
-        LOG.critical('BITFINEX: encountered %r while processing response from exchange API', why)
-        LOG.critical('BITFINEX: content of one of the two exchange responses was unexpected')
-        LOG.critical('BITFINEX: 1. response from tickers?symbols=ALL: %r', r1.text if r1 else r1)
-        LOG.critical('BITFINEX: 2. response from pub:map:currency:sym: %r', r2.text if r2 else r2)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BITFINEX') from why
+        raise_failure_explanation('BITFINEX', why, {"tickers?symbols=ALL": r1, "pub:map:currency:sym": r2})
 
 
 def bitflyer_pairs() -> Dict[str, str]:
@@ -121,9 +130,7 @@ def bitflyer_pairs() -> Dict[str, str]:
                 ret[normalized] = entry['product_code']
         return ret
     except Exception as why:
-        LOG.critical('BITFLYER: encountered %r while processing response from exchange API', why)
-        LOG.critical('BITFLYER: unexpected response %r from URL %s', r.text if r else r, endpoint)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BITFLYER') from why
+        raise_failure_explanation('BITFLYER', why, {endpoint: r})
 
 
 def bybit_pairs() -> Dict[str, str]:
@@ -137,9 +144,7 @@ def bybit_pairs() -> Dict[str, str]:
             _exchange_info[BYBIT]['tick_size'][normalized] = pair['price_filter']['tick_size']
         return ret
     except Exception as why:
-        LOG.critical('BYBIT: encountered %r while processing response from exchange API', why)
-        LOG.critical('BYBIT: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BYBIT') from why
+        raise_failure_explanation('BYBIT', why, {"": r})
 
 
 def _ftx_helper(endpoint: str, exchange: str):
@@ -154,9 +159,7 @@ def _ftx_helper(endpoint: str, exchange: str):
             _exchange_info[exchange]['tick_size'][normalized] = data['priceIncrement']
         return ret
     except Exception as why:
-        LOG.critical('%s: encountered %r while processing response from exchange API', exchange, why)
-        LOG.critical('%s: unexpected response: %r', exchange, r.text if r else r)
-        raise ValueError(f'Cryptofeed stopped because of an unexpected response from {exchange}') from why
+        raise_failure_explanation(exchange, why, {endpoint: r})
 
 
 def ftx_pairs() -> Dict[str, str]:
@@ -178,9 +181,7 @@ def coinbase_pairs() -> Dict[str, str]:
             _exchange_info[COINBASE]['tick_size'][normalized] = data['quote_increment']
         return ret
     except Exception as why:
-        LOG.critical('COINBASE: encountered %r while processing response from exchange API', why)
-        LOG.critical('COINBASE: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from COINBASE') from why
+        raise_failure_explanation('COINBASE', why, {"": r})
 
 
 def gemini_pairs() -> Dict[str, str]:
@@ -194,9 +195,7 @@ def gemini_pairs() -> Dict[str, str]:
             ret[std] = pair.upper()
         return ret
     except Exception as why:
-        LOG.critical('GEMINI: encountered %r while processing response from exchange API', why)
-        LOG.critical('GEMINI: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from GEMINI') from why
+        raise_failure_explanation('GEMINI', why, {"": r})
 
 
 def hitbtc_pairs() -> Dict[str, str]:
@@ -211,9 +210,7 @@ def hitbtc_pairs() -> Dict[str, str]:
             _exchange_info[HITBTC]['tick_size'][normalized] = symbol['tickSize']
         return ret
     except Exception as why:
-        LOG.critical('HITBTC: encountered %r while processing response from exchange API', why)
-        LOG.critical('HITBTC: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from HITBTC') from why
+        raise_failure_explanation('HITBTC', why, {"": r})
 
 
 def poloniex_id_pair_mapping():
@@ -226,9 +223,7 @@ def poloniex_id_pair_mapping():
             ret[pairs[pair]['id']] = pair
         return ret
     except Exception as why:
-        LOG.critical('POLONIEX: encountered %r while processing response from exchange API', why)
-        LOG.critical('POLONIEX: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from POLONIEX') from why
+        raise_failure_explanation('POLONIEX', why, {"": r})
 
 
 def poloniex_pairs() -> Dict[str, str]:
@@ -246,9 +241,7 @@ def bitstamp_pairs() -> Dict[str, str]:
             ret[normalized] = pair
         return ret
     except Exception as why:
-        LOG.critical('BITSTAMP: encountered %r while processing response from exchange API', why)
-        LOG.critical('BITSTAMP: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BITSTAMP') from why
+        raise_failure_explanation('BITSTAMP', why, {"": r})
 
 
 def kraken_pairs() -> Dict[str, str]:
@@ -272,9 +265,7 @@ def kraken_pairs() -> Dict[str, str]:
             ret[normalized] = exch
         return ret
     except Exception as why:
-        LOG.critical('KRAKEN: encountered %r while processing response from exchange API', why)
-        LOG.critical('KRAKEN: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from KRAKEN') from why
+        raise_failure_explanation('KRAKEN', why, {"": r})
 
 
 def kraken_rest_pairs() -> Dict[str, str]:
@@ -289,9 +280,7 @@ def exx_pairs() -> Dict[str, str]:
         pairs = [key.replace("_", PAIR_SEP) for key in exchange]
         return dict(zip(pairs, exchange))
     except Exception as why:
-        LOG.critical('EXX: encountered %r while processing response from exchange API', why)
-        LOG.critical('EXX: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from EXX') from why
+        raise_failure_explanation('EXX', why, {"": r})
 
 
 def huobi_common_pairs(url: str):
@@ -305,9 +294,7 @@ def huobi_common_pairs(url: str):
             ret[normalized] = pair
         return ret
     except Exception as why:
-        LOG.critical('HUOBI: encountered %r while processing response URL: %r', why, url)
-        LOG.critical('HUOBI: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from HUOBI') from why
+        raise_failure_explanation('HUOBI', why, {url: r})
 
 
 def huobi_pairs() -> Dict[str, str]:
@@ -339,9 +326,7 @@ def huobi_dm_pairs() -> Dict[str, str]:
             _exchange_info[HUOBI_DM]['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
         return pairs
     except Exception as why:
-        LOG.critical('HUOBI_DM: encountered %r while processing response from exchange API', why)
-        LOG.critical('HUOBI_DM: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from HUOBI_DM') from why
+        raise_failure_explanation('HUOBI_DM', why, {"": r})
 
 
 def huobi_swap_pairs() -> Dict[str, str]:
@@ -354,9 +339,7 @@ def huobi_swap_pairs() -> Dict[str, str]:
             _exchange_info[HUOBI_SWAP]['tick_size'][e['contract_code']] = e['price_tick']
         return pairs
     except Exception as why:
-        LOG.critical('HUOBI_SWAP: encountered %r while processing response from exchange API', why)
-        LOG.critical('HUOBI_SWAP: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from HUOBI_SWAP') from why
+        raise_failure_explanation('HUOBI_SWAP', why, {"": r})
 
 
 def okcoin_pairs() -> Dict[str, str]:
@@ -369,30 +352,47 @@ def okcoin_pairs() -> Dict[str, str]:
             _exchange_info[OKCOIN]['tick_size'][e['instrument_id']] = e['tick_size']
         return ret
     except Exception as why:
-        LOG.critical('OKCOIN: encountered %r while processing response from exchange API', why)
-        LOG.critical('OKCOIN: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from OKCOIN') from why
+        raise_failure_explanation('OKCOIN', why, {"": r})
 
 
 def okex_pairs() -> Dict[str, str]:
+    # We will support soon OKEx options, and enable this following line
+    option_urls = []  # okex_compute_option_urls_from_underlyings()
+    other_urls = ['https://www.okex.com/api/spot/v3/instruments',
+                  'https://www.okex.com/api/swap/v3/instruments/ticker',
+                  'https://www.okex.com/api/futures/v3/instruments/ticker']
+    # To respect rate limit constraints per endpoint, we alternate options and other instrument types
+    urls: List[str] = []
+    for i in range(max(len(option_urls), len(other_urls))):
+        if i < len(option_urls):
+            urls.append(option_urls[i])
+        if i < len(other_urls):
+            urls.append(other_urls[i])
+    # Collect together the pairs of each endpoint
+    pairs: Dict[str, str] = {}
+    for u in urls:
+        time.sleep(0.2)
+        pairs.update(okex_pairs_from_one_url(u))
+    return pairs
+
+
+def okex_compute_option_urls_from_underlyings() -> List[str]:
+    url = 'https://www.okex.com/api/option/v3/underlying'
     r = None
     try:
-        # spot
-        r = requests.get('https://www.okex.com/api/spot/v3/instruments').json()
-        data = {e['instrument_id']: e['instrument_id'] for e in r}
-        # swaps
-        r = requests.get('https://www.okex.com/api/swap/v3/instruments/ticker').json()
-        for update in r:
-            data[update['instrument_id']] = update['instrument_id']
-        # futures
-        r = requests.get('https://www.okex.com/api/futures/v3/instruments/ticker').json()
-        for update in r:
-            data[update['instrument_id']] = update['instrument_id']
-        return data
+        r = requests.get(url)
+        return [f'https://www.okex.com/api/option/v3/instruments/{underlying}' for underlying in r.json()]
     except Exception as why:
-        LOG.critical('OKEX: encountered %r while processing response from exchange API', why)
-        LOG.critical('OKEX: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from OKEX') from why
+        raise_failure_explanation('OKEX', why, {url: r})
+
+
+def okex_pairs_from_one_url(url: str) -> Dict[str, str]:
+    r = None
+    try:
+        r = requests.get(url)
+        return {e['instrument_id']: e['instrument_id'] for e in r.json()}
+    except Exception as why:
+        raise_failure_explanation('OKEX', why, {url: r})
 
 
 def bittrex_pairs() -> Dict[str, str]:
@@ -402,9 +402,7 @@ def bittrex_pairs() -> Dict[str, str]:
         r = r.json()['result']
         return {f"{e['MarketCurrency']}{PAIR_SEP}{e['BaseCurrency']}": e['MarketName'] for e in r if e['IsActive']}
     except Exception as why:
-        LOG.critical('BITTREX: encountered %r while processing response from exchange API', why)
-        LOG.critical('BITTREX: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BITTREX') from why
+        raise_failure_explanation('BITTREX', why, {"": r})
 
 
 def bitcoincom_pairs() -> Dict[str, str]:
@@ -413,9 +411,7 @@ def bitcoincom_pairs() -> Dict[str, str]:
         r = requests.get('https://api.exchange.bitcoin.com/api/2/public/symbol')
         return {f"{data['baseCurrency']}{PAIR_SEP}{data['quoteCurrency'].replace('USD', 'USDT')}": data['id'] for data in r.json()}
     except Exception as why:
-        LOG.critical('BITCOINCOM: encountered %r while processing response from exchange API', why)
-        LOG.critical('BITCOINCOM: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BITCOINCOM') from why
+        raise_failure_explanation('BITCOINCOM', why, {"": r})
 
 
 def bitmax_pairs() -> Dict[str, str]:
@@ -431,9 +427,7 @@ def bitmax_pairs() -> Dict[str, str]:
                 _exchange_info[BITMAX]['tick_size'][normalized] = entry['tickSize']
         return ret
     except Exception as why:
-        LOG.critical('BITMAX: encountered %r while processing response from exchange API', why)
-        LOG.critical('BITMAX: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BITMAX') from why
+        raise_failure_explanation('BITMAX', why, {"": r})
 
 
 def upbit_pairs() -> Dict[str, str]:
@@ -442,9 +436,7 @@ def upbit_pairs() -> Dict[str, str]:
         r = requests.get('https://api.upbit.com/v1/market/all')
         return {f"{data['market'].split('-')[1]}{PAIR_SEP}{data['market'].split('-')[0]}": data['market'] for data in r.json()}
     except Exception as why:
-        LOG.critical('UPBIT: encountered %r while processing response from exchange API', why)
-        LOG.critical('UPBIT: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from UPBIT') from why
+        raise_failure_explanation('UPBIT', why, {"": r})
 
 
 def blockchain_pairs() -> Dict[str, str]:
@@ -453,9 +445,7 @@ def blockchain_pairs() -> Dict[str, str]:
         r = requests.get("https://api.blockchain.com/mercury-gateway/v1/instruments")
         return {data["symbol"].replace("-", PAIR_SEP): data["symbol"] for data in r.json()}
     except Exception as why:
-        LOG.critical('BLOCKCHAIN: encountered %r while processing response from exchange API', why)
-        LOG.critical('BLOCKCHAIN: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BLOCKCHAIN') from why
+        raise_failure_explanation('BLOCKCHAIN', why, {"": r})
 
 
 def gateio_pairs() -> Dict[str, str]:
@@ -464,9 +454,7 @@ def gateio_pairs() -> Dict[str, str]:
         r = requests.get("https://api.gateio.ws/api/v4/spot/currency_pairs")
         return {data["id"].replace("_", PAIR_SEP): data['id'] for data in r.json()}
     except Exception as why:
-        LOG.critical('GATEIO: encountered %r while processing response from exchange API', why)
-        LOG.critical('GATEIO: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from GATEIO') from why
+        raise_failure_explanation('GATEIO', why, {"": r})
 
 
 def bitmex_pairs() -> Dict[str, str]:
@@ -475,26 +463,23 @@ def bitmex_pairs() -> Dict[str, str]:
         r = requests.get("https://www.bitmex.com/api/v1/instrument/active")
         return {entry['symbol']: entry['symbol'] for entry in r.json()}
     except Exception as why:
-        LOG.critical('BITMEX: encountered %r while processing response from exchange API', why)
-        LOG.critical('BITMEX: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from BITMEX') from why
+        raise_failure_explanation('BITMEX', why, {"": r})
 
 
 def deribit_pairs() -> Dict[str, str]:
-    r = None
+    url = r = None
     try:
         currencies = ['BTC', 'ETH']
         kind = ['future', 'option']
         data = []
         for c in currencies:
             for k in kind:
-                r = requests.get(f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}")
+                url = f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}"
+                r = requests.get(url)
                 data.extend(r.json()['result'])
         return {d['instrument_name']: d['instrument_name'] for d in data}
     except Exception as why:
-        LOG.critical('DERIBIT: encountered %r while processing response from exchange API', why)
-        LOG.critical('DERIBIT: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from DERIBIT') from why
+        raise_failure_explanation('DERIBIT', why, {url: r})
 
 
 def kraken_future_pairs() -> Dict[str, str]:
@@ -504,9 +489,7 @@ def kraken_future_pairs() -> Dict[str, str]:
         data = r.json()['instruments']
         return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
     except Exception as why:
-        LOG.critical('KRAKEN_FUTURES: encountered %r while processing response from exchange API', why)
-        LOG.critical('KRAKEN_FUTURES: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from KRAKEN_FUTURES') from why
+        raise_failure_explanation('KRAKEN_FUTURES', why, {"": r})
 
 
 def probit_pairs() -> Dict[str, str]:
@@ -516,9 +499,7 @@ def probit_pairs() -> Dict[str, str]:
         r = requests.get('https://api.probit.com/api/exchange/v1/market')
         return {entry['id']: entry['id'] for entry in r.json()['data']}
     except Exception as why:
-        LOG.critical('PROBIT: encountered %r while processing response from exchange API', why)
-        LOG.critical('PROBIT: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from PROBIT') from why
+        raise_failure_explanation('PROBIT', why, {"": r})
 
 
 def coingecko_pairs() -> Dict[str, str]:
@@ -527,9 +508,7 @@ def coingecko_pairs() -> Dict[str, str]:
         r = requests.get('https://api.coingecko.com/api/v3/coins/list')
         return {entry['symbol'].upper(): entry['id'] for entry in r.json()}
     except Exception as why:
-        LOG.critical('COINGECKO: encountered %r while processing response from exchange API', why)
-        LOG.critical('COINGECKO: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from COINGECKO') from why
+        raise_failure_explanation('COINGECKO', why, {"": r})
 
 
 def whale_alert_coins(key_id: str) -> Dict[str, str]:
@@ -539,9 +518,7 @@ def whale_alert_coins(key_id: str) -> Dict[str, str]:
         # Same symbols, but on different blockchains (for instance USDT), are naturally overwritten.
         return {s.upper(): s for b in r.json()['blockchains'] for s in b['symbols'] if s}
     except Exception as why:
-        LOG.critical('WHALES_ALERT: encountered %r while processing response from exchange API', why)
-        LOG.critical('WHALES_ALERT: unexpected response: %r', r.text if r else r)
-        raise ValueError('Cryptofeed stopped because of an unexpected response from WHALES_ALERT') from why
+        raise_failure_explanation('WHALES_ALERT', why, {"": r})
 
 
 _exchange_function_map = {
