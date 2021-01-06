@@ -6,7 +6,14 @@ associated with this software.
 '''
 import asyncio
 import logging
-from signal import SIGTERM, SIGINT, SIGHUP, SIGABRT
+from signal import SIGTERM, SIGINT, SIGABRT
+
+try:
+    # unix / macos only
+    from signal import SIGHUP
+except ImportError:
+    pass
+
 import zlib
 from collections import defaultdict
 from socket import error as socket_error
