@@ -12,7 +12,6 @@ import hmac
 import logging
 import os
 import time
-import urllib.parse
 
 import requests
 from sortedcontainers import SortedDict as sd
@@ -511,35 +510,16 @@ class Bitmex(Feed):
             await websocket.send(json.dumps({"op": "subscribe",
                                              "args": chans[i:i + 10]}))
 
-    @staticmethod
-    async def _authenticate(conn):
-        """Send API Key with signed message.
-
-        https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py"""
-        BITMEX_API_KEY = os.environ.get("BITMEX_API_KEY")
-        BITMEX_API_SECRET = os.environ.get("BITMEX_API_SECRET")
-
-        if not BITMEX_API_KEY or not BITMEX_API_SECRET:
-            LOG.warning("BITMEX: no authentication - missing environment variables: BITMEX_API_KEY and BITMEX_API_SECRET")
+    async def _authenticate(self, conn):
+        """Send API Key with signed message."""
+        if self.api_key and self.api_secret:
+            LOG.info('%s: Authenticate with signature', self.id)
+        else:
+            LOG.info('%s: No authentication. To enable it use config or env. vars: BITMEX_API_KEY and BITMEX_API_SECRET', self.id)
             return
-
-        LOG.info("BITMEX: Authenticate with signature using BITMEX_API_KEY and BITMEX_API_SECRET")
-
+        # Docs: https://www.bitmex.com/app/apiKeys
+        # https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py
         expires = int(time.time()) + 365*24*3600  # One year
-        signature = Bitmex._signature(BITMEX_API_SECRET, verb="GET", url="/realtime", nonce=expires)
-        request = {"op": "authKeyExpires", "args": [BITMEX_API_KEY, expires, signature]}
-        LOG.info("BITMEX: Authentication request: %r", request)
-        await conn.send(json.dumps(request))
-
-    @staticmethod
-    def _signature(api_secret, verb, url, nonce):
-        """Given an API Secret key and data, create a BitMEX-compatible signature.
-
-        Documentation: https://www.bitmex.com/app/apiKeys"""
-        parsed_url = urllib.parse.urlparse(url)
-        path = parsed_url.path
-        if parsed_url.query:
-            path = path + '?' + parsed_url.query
-        message = (verb + path + str(nonce)).encode('utf-8')
-        signature = hmac.new(api_secret.encode('utf-8'), message, digestmod=hashlib.sha256).hexdigest()
-        return signature
+        msg = f'GET/realtime{expires}'.encode('utf-8')
+        signature = hmac.new(self.api_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
+        await conn.send(json.dumps({"op": "authKeyExpires", "args": [self.api_key, expires, signature]}))
