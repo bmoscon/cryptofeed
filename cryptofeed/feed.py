@@ -57,7 +57,8 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
-        load_exchange_pair_mapping(self.id, key_id=None)
+        key_id = self.config[self.id.lower()].key_id
+        load_exchange_pair_mapping(self.id, key_id=key_id)
 
         if subscription is not None and (pairs is not None or channels is not None):
             raise ValueError("Use subscription, or channels and pairs, not both")

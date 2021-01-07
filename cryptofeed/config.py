@@ -25,10 +25,10 @@ class AttrDict(dict):
         super().__setitem__(key, value)
 
     def __getattr__(self, item):
-        try:
-            return self.__getitem__(item)
-        except KeyError:
-            raise AttributeError(item)
+        return self.__getitem__(item)
+
+    def __missing__(self, key):
+        return AttrDict()
 
     __setattr__ = __setitem__
 
@@ -55,6 +55,9 @@ class Config:
 
     def __getattr__(self, attr):
         return self.config[attr]
+
+    def __getitem__(self, key):
+        return self.config[key]
 
     def __contains__(self, item):
         return item in self.config
