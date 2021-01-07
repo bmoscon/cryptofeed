@@ -59,7 +59,7 @@ class API:
         self.mapped = False
         self.key_id, self.key_secret, self.key_passphrase = None, None, None
         self.sandbox = sandbox
-        self.config = Config(file_name=config)
+        self.config = Config(config=config)
 
     @staticmethod
     def _timestamp(ts):

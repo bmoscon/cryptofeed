@@ -36,7 +36,7 @@ class Rest:
     """
 
     def __init__(self, config=None, sandbox=False):
-        self.config = Config(file_name=config)
+        self.config = Config(config=config)
 
         lfile = 'rest.log' if not self.config or not self.config.restlog.filename else self.config.restlog.filename
         level = logging.WARNING if not self.config or not self.config.restlog.level else self.config.restlog.level
