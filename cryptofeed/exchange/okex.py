@@ -90,7 +90,7 @@ class OKEx(OKCoin):
                 await asyncio.sleep(60)
 
     async def subscribe(self, websocket):
-        if LIQUIDATIONS in self.config or LIQUIDATIONS in self.channels:
-            pairs = self.config[LIQUIDATIONS] if LIQUIDATIONS in self.config else self.pairs
+        if LIQUIDATIONS in self.subscription or LIQUIDATIONS in self.channels:
+            pairs = self.subscription[LIQUIDATIONS] if LIQUIDATIONS in self.subscription else self.pairs
             asyncio.create_task(self._liquidations(pairs))
         await super().subscribe(websocket)

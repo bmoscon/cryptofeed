@@ -22,8 +22,8 @@ LOG = logging.getLogger('feedhandler')
 class Huobi(Feed):
     id = HUOBI
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        super().__init__('wss://api.huobi.pro/ws', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.huobi.pro/ws', **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -107,8 +107,8 @@ class Huobi(Feed):
     async def subscribe(self, websocket):
         self.__reset()
         client_id = 0
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if self.pairs else self.config[chan]:
+        for chan in self.channels if self.channels else self.subscription:
+            for pair in self.pairs if self.pairs else self.subscription[chan]:
                 client_id += 1
                 await websocket.send(json.dumps(
                     {

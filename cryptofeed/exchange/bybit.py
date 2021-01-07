@@ -64,8 +64,8 @@ class Bybit(Feed):
     async def subscribe(self, connection: AsyncConnection, quote: str = None):
         self.__reset()
 
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if self.pairs else self.config[chan]:
+        for chan in self.channels if self.channels else self.subscription:
+            for pair in self.pairs if self.pairs else self.subscription[chan]:
                 # Bybit uses separate addresses for difference quote currencies
                 if pair[-4:] == 'USDT' and quote != 'USDT':
                     continue

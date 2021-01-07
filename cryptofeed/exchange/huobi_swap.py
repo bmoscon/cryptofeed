@@ -18,8 +18,8 @@ LOG = logging.getLogger('feedhandler')
 class HuobiSwap(HuobiDM):
     id = HUOBI_SWAP
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        Feed.__init__(self, 'wss://api.hbdm.com/swap-ws', pairs=pairs, channels=channels, callbacks=callbacks, config=config, **kwargs)
+    def __init__(self, **kwargs):
+        Feed.__init__(self, 'wss://api.hbdm.com/swap-ws', **kwargs)
         self.funding_updates = {}
 
     async def _funding(self, pairs):
@@ -49,12 +49,12 @@ class HuobiSwap(HuobiDM):
 
     async def subscribe(self, websocket):
         chans = list(self.channels)
-        cfg = dict(self.config)
-        if FUNDING in self.channels or FUNDING in self.config:
+        cfg = dict(self.subscription)
+        if FUNDING in self.channels or FUNDING in self.subscription:
             loop = asyncio.get_event_loop()
-            loop.create_task(self._funding(self.pairs if FUNDING in self.channels else self.config[FUNDING]))
-            self.channels.remove(FUNDING) if FUNDING in self.channels else self.config.pop(FUNDING)
+            loop.create_task(self._funding(self.pairs if FUNDING in self.channels else self.subscription[FUNDING]))
+            self.channels.remove(FUNDING) if FUNDING in self.channels else self.subscription.pop(FUNDING)
 
         await super().subscribe(websocket)
         self.channels = chans
-        self.config = cfg
+        self.subscription = cfg

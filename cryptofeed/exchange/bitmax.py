@@ -112,13 +112,13 @@ class Bitmax(Feed):
         self.__reset()
         l2_pairs = []
 
-        for channel in self.channels if not self.config else self.config:
-            pairs = self.pairs if not self.config else self.config[channel]
+        for channel in self.channels if not self.subscription else self.subscription:
+            pairs = self.pairs if not self.subscription else self.subscription[channel]
 
             if channel == "depth:":
                 l2_pairs.extend(pairs)
 
-            pairs = self.pairs if not self.config else self.config[channel]
+            pairs = self.pairs if not self.subscription else self.subscription[channel]
             message = {'op': 'sub', 'ch': channel + ','.join(pairs)}
             await websocket.send(json.dumps(message))
 

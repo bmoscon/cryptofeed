@@ -32,8 +32,8 @@ class BitcoinCom(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if self.pairs else self.config[chan]:
+        for chan in self.channels if self.channels else self.subscription:
+            for pair in self.pairs if self.pairs else self.subscription[chan]:
                 await websocket.send(json.dumps(
                     {
                         "method": chan,

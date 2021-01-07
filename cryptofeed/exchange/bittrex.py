@@ -31,7 +31,7 @@ class Bittrex(Feed):
 
     async def ticker(self, msg: dict, timestamp: float):
         for t in msg['D']:
-            if (not self.config and t['M'] in self.pairs) or ('SubscribeToSummaryDeltas' in self.config and t['M'] in self.config['SubscribeToSummaryDeltas']):
+            if (not self.subscription and t['M'] in self.pairs) or ('SubscribeToSummaryDeltas' in self.subscription and t['M'] in self.subscription['SubscribeToSummaryDeltas']):
                 await self.callback(TICKER, feed=self.id, pair=pair_exchange_to_std(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']), timestamp=timestamp_normalize(self.id, t['T']), receipt_timestamp=timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
@@ -63,8 +63,8 @@ class Bittrex(Feed):
 
     async def trades(self, pair: str, msg: dict, timestamp: float):
         # adding because of error
-        trade_q = self.config.get(TRADES, [])
-        if self.config and pair in trade_q or not self.config:
+        trade_q = self.subscription.get(TRADES, [])
+        if self.subscription and pair in trade_q or not self.subscription:
             pair = pair_exchange_to_std(pair)
             for trade in msg:
                 await self.callback(TRADES, feed=self.id,
@@ -105,8 +105,8 @@ class Bittrex(Feed):
         # For more signalR info see:
         # https://blog.3d-logic.com/2015/03/29/signalr-on-the-wire-an-informal-description-of-the-signalr-protocol/
         # http://blogs.microsoft.co.il/applisec/2014/03/12/signalr-message-format/
-        for channel in set(self.channels) if not self.config else set(self.config):
-            symbols = self.pairs if not self.config else list(self.config[channel])
+        for channel in set(self.channels) if not self.subscription else set(self.subscription):
+            symbols = self.pairs if not self.subscription else list(self.subscription[channel])
             i = 0
             if channel == 'SubscribeToExchangeDeltas':
                 for symbol in symbols:

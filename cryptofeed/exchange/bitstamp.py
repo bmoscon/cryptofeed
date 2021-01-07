@@ -160,8 +160,8 @@ class Bitstamp(Feed):
     async def subscribe(self, websocket):
         snaps = []
         self.last_update_id = {}
-        for channel in self.channels if not self.config else self.config:
-            for pair in self.pairs if not self.config else self.config[channel]:
+        for channel in self.channels if not self.subscription else self.subscription:
+            for pair in self.pairs if not self.subscription else self.subscription[channel]:
                 await websocket.send(
                     json.dumps({
                         "event": "bts:subscribe",

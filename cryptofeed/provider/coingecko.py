@@ -38,7 +38,7 @@ class Coingecko(Feed):
     # From testing, safer to use 3x this limit.
     sleep_time = 1.8
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
+    def __init__(self, pairs=None, subscription=None, **kwargs):
         self.currencies = defaultdict(list)
 
         if pairs:
@@ -47,13 +47,13 @@ class Coingecko(Feed):
                 self.currencies[base].append(quote.lower())
             pairs = list(self.currencies.keys())
 
-        if config and MARKET_INFO in config:
-            for pair in config[MARKET_INFO]:
+        if subscription and MARKET_INFO in subscription:
+            for pair in subscription[MARKET_INFO]:
                 base, quote = pair.split("-")
                 self.currencies[base].append(quote.lower())
-            config[MARKET_INFO] = list(self.currencies.keys())
+            subscription[MARKET_INFO] = list(self.currencies.keys())
 
-        super().__init__('https://api.coingecko.com/api/v3/', pairs=pairs, channels=channels, config=config, callbacks=callbacks, **kwargs)
+        super().__init__('https://api.coingecko.com/api/v3/', pairs=pairs, subscription=subscription, **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -64,8 +64,8 @@ class Coingecko(Feed):
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         addrs = []
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if not self.config else self.config[chan]:
+        for chan in self.channels if self.channels else self.subscription:
+            for pair in self.pairs if not self.subscription else self.subscription[chan]:
                 if chan == MARKET_INFO:
                     addrs.append(f"{self.address}coins/{pair}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false")
         return [(AsyncConnection(addrs, self.id, delay=self.sleep_time * 2, sleep=self.sleep_time), self.subscribe, self.message_handler)]

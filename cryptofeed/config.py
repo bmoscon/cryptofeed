@@ -9,6 +9,9 @@ import os
 import yaml
 
 
+_default_config = {'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}}
+
+
 class AttrDict(dict):
     def __init__(self, d=None):
         super().__init__()
@@ -31,18 +34,21 @@ class AttrDict(dict):
 
 
 class Config:
-    def __init__(self, file_name=None):
-        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
-        if file_name and os.path.exists(file_name):
-            config_file = file_name
-        elif os.environ.get('CRYPTOFEED_CONFIG'):
-            config_file = os.environ.get('CRYPTOFEED_CONFIG')
+    def __init__(self, config=None):
+        if isinstance(config, str):
+            config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+            if config and os.path.exists(config):
+                config_file = config
+            elif os.environ.get('CRYPTOFEED_CONFIG'):
+                config_file = os.environ.get('CRYPTOFEED_CONFIG')
 
-        if os.path.exists(config_file):
-            with open(config_file) as fp:
-                self.config = AttrDict(yaml.safe_load(fp))
+            if os.path.exists(config_file):
+                with open(config_file) as fp:
+                    self.config = AttrDict(yaml.safe_load(fp))
+        elif isinstance(config, dict):
+            self.config = AttrDict(config)
         else:
-            self.config = AttrDict()
+            self.config = AttrDict(_default_config)
 
     def __bool__(self):
         return self.config != {}

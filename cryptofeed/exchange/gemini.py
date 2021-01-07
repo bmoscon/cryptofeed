@@ -38,7 +38,7 @@ class Gemini(Feed):
         # the book data, bail before parsing
         if self.channels and L2_BOOK not in self.channels:
             return
-        if self.config and ((L2_BOOK in self.config and msg['symbol'] not in self.config[L2_BOOK]) or L2_BOOK not in self.config):
+        if self.subscription and ((L2_BOOK in self.subscription and msg['symbol'] not in self.subscription[L2_BOOK]) or L2_BOOK not in self.subscription):
             return
 
         data = msg['changes']
@@ -88,7 +88,7 @@ class Gemini(Feed):
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
     async def subscribe(self, websocket):
-        pairs = self.pairs if not self.config else list(set.union(*list(self.config.values())))
+        pairs = self.pairs if not self.subscription else list(set.union(*list(self.subscription.values())))
         self.__reset(pairs)
 
         await websocket.send(json.dumps({"type": "subscribe",

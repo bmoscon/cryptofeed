@@ -1,0 +1,42 @@
+# Example Config File
+rest:
+    log:
+        filename: rest.log
+        level: WARNING
+
+log:
+    filename: feedhandler.log
+    level: WARNING
+
+# Secrets for exchanges
+bitmex:
+    key_id: null
+    key_secret: null
+bitfinex:
+    key_id: null
+    key_secret: null
+coinbase:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+poloniex:
+    key_id: null
+    key_secret: null
+gemini:
+    key_id: null
+    key_secret: null
+kraken:
+    key_id: null
+    key_secret: null
+deribit:
+    key_id: null
+    key_secret: null
+ftx:
+    key_id: null
+    key_secret: null
+binance_futures:
+    key_id: null
+    key_secret: null
+binance_delivery:
+    key_id: null
+    key_secret: null

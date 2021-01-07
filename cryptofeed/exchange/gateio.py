@@ -155,8 +155,8 @@ class Gateio(Feed):
     async def subscribe(self, websocket):
         self._reset()
         client_id = 0
-        for chan in self.channels if self.channels else self.config:
-            pairs = self.pairs if self.pairs else self.config[chan]
+        for chan in self.channels if self.channels else self.subscription:
+            pairs = self.pairs if self.pairs else self.subscription[chan]
             client_id += 1
             if 'depth' in chan:
                 pairs = [[pair, 30, "0.00000001"] for pair in pairs]

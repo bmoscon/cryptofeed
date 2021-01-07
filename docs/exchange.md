@@ -1,5 +1,10 @@
 # Adding a new exchange
 
+
+***Note*** This is slightly outdated - please look at the [file](../cryptofeed/exchange/huobi.py) in question to see how some of this code has changed slightly.
+
+<br><br>
+
 Perhaps the best way to understand the workings of the library is to walk through the addition of a new exchange. For this example, we'll
 add support for the exchange [Huobi](https://huobi.readme.io/docs/ws-api-reference). The exchange supports websocket data, so we'll
 add support for these endpoints.
@@ -22,8 +27,8 @@ LOG = logging.getLogger('feedhandler')
 class Huobi(Feed):
     id = HUOBI
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.huobi.pro/hbus/ws', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.huobi.pro/hbus/ws', **kwargs)
         self.__reset()
 
     def __reset(self):

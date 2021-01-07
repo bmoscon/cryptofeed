@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Tuple, Callable, Union, List
 
 from cryptofeed.callback import Callback
+from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
@@ -19,7 +20,7 @@ from cryptofeed.util.book import book_delta, depth
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address: Union[dict, str], pairs=None, channels=None, config=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, key_id=None):
+    def __init__(self, address: Union[dict, str], pairs=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
         """
         max_depth: int
             Maximum number of levels per side to return in book updates
@@ -36,10 +37,12 @@ class Feed:
             checksums or provide message sequence numbers.
         origin: str
             Passed into websocket connect. Sets the origin header.
-        key_id: str
-            API key to query the feed, required when requesting supported coins/pairs.
         """
-        self.config = defaultdict(set)
+        if isinstance(config, Config):
+            self.config = config
+        else:
+            self.config = Config(config)
+        self.subscription = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
         self.snapshot_interval = snapshot_interval
@@ -54,16 +57,16 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
-        load_exchange_pair_mapping(self.id, key_id=key_id)
+        load_exchange_pair_mapping(self.id, key_id=None)
 
-        if config is not None and (pairs is not None or channels is not None):
-            raise ValueError("Use config, or channels and pairs, not both")
+        if subscription is not None and (pairs is not None or channels is not None):
+            raise ValueError("Use subscription, or channels and pairs, not both")
 
-        if config is not None:
-            for channel in config:
+        if subscription is not None:
+            for channel in subscription:
                 chan = feed_to_exchange(self.id, channel)
-                self.config[chan].update([pair_std_to_exchange(pair, self.id) for pair in config[channel]])
-                self.normalized_pairs.extend(self.config[chan])
+                self.subscription[chan].update([pair_std_to_exchange(pair, self.id) for pair in subscription[channel]])
+                self.normalized_pairs.extend(self.subscription[chan])
 
         if pairs:
             self.normalized_pairs = pairs
@@ -113,7 +116,7 @@ class Feed:
         if isinstance(self.address, str):
             return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
 
-        for key, addr in self.address.items():
+        for _, addr in self.address.items():
             ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
         return ret
 

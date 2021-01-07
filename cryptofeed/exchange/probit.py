@@ -169,9 +169,9 @@ class Probit(Feed):
     async def subscribe(self, websocket):
         self.__reset()
 
-        if self.config:
-            for chan in self.config:
-                for pair in self.config[chan]:
+        if self.subscription:
+            for chan in self.subscription:
+                for pair in self.subscription[chan]:
                     await websocket.send(json.dumps({"type": "subscribe",
                                                      "channel": "marketdata",
                                                      "filter": [chan],

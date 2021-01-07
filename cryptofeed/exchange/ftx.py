@@ -39,14 +39,14 @@ class FTX(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        for chan in self.channels if self.channels else self.config:
+        for chan in self.channels if self.channels else self.subscription:
             if chan == FUNDING:
-                asyncio.create_task(self._funding(self.pairs if self.pairs else self.config[chan]))
+                asyncio.create_task(self._funding(self.pairs if self.pairs else self.subscription[chan]))
                 continue
             if chan == OPEN_INTEREST:
-                asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.config[chan]))
+                asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.subscription[chan]))
                 continue
-            for pair in self.pairs if self.pairs else self.config[chan]:
+            for pair in self.pairs if self.pairs else self.subscription[chan]:
                 await websocket.send(json.dumps(
                     {
                         "channel": chan,

@@ -21,7 +21,7 @@ async def book(feed, pair, book, timestamp, receipt_timestamp):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Coinbase(config={TRADES: ['BTC-USD'], L3_BOOK: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade, include_order_type=True), L3_BOOK: BookCallback(book)}))
+    f.add_feed(Coinbase(subscription={TRADES: ['BTC-USD'], L3_BOOK: ['ETH-USD']}, callbacks={TRADES: TradeCallback(trade, include_order_type=True), L3_BOOK: BookCallback(book)}))
 
     f.run()
 

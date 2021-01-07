@@ -21,7 +21,7 @@ async def trade2(feed, pair, order_id, timestamp, side, amount, price):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Coinbase(config={TRADES: ['BTC-USD']}, callbacks={TRADES: [TradeCallback(trade), TradeCallback(trade2)]}))
+    f.add_feed(Coinbase(subscription={TRADES: ['BTC-USD']}, callbacks={TRADES: [TradeCallback(trade), TradeCallback(trade2)]}))
 
     f.run()
 

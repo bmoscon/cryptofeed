@@ -104,7 +104,7 @@ def bitfinex_pairs() -> Dict[str, str]:
         for pair in [t[0] for t in tickers]:
             if pair[0] == 'f':
                 # We will repair FUNDING soon on Binance, and enable the following line
-                continue # normalized = norm.get(pair[1:], pair[1:])
+                continue  # normalized = norm.get(pair[1:], pair[1:])
             else:
                 if len(pair) == 7:
                     base, quote = pair[1:4], pair[4:]

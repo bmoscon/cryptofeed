@@ -45,7 +45,7 @@ class Bitfinex(Feed):
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
         if channels is not None and FUNDING in channels:
             if len(channels) > 1:
-                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex or you must use config")
+                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex or you must use subscrption dictionary")
         super().__init__('wss://api.bitfinex.com/ws/2', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
         self.__reset()
 
@@ -318,8 +318,8 @@ class Bitfinex(Feed):
             conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 
-        for channel in self.channels if not self.config else self.config:
-            for pair in self.pairs if not self.config else self.config[channel]:
+        for channel in self.channels if not self.subscription else self.subscription:
+            for pair in self.pairs if not self.subscription else self.subscription[channel]:
                 pair_channel.append((pair, channel))
                 # Bitfinex max is 25 per connection
                 if len(pair_channel) == 25:

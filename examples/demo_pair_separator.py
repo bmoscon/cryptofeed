@@ -28,7 +28,7 @@ def main():
     f = FeedHandler()
     f.add_feed(COINBASE, pairs=['BTC/USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)})
     f.add_feed(Gemini(pairs=['BTC/USD'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Coinbase(config={L2_BOOK: ['ETH/USD'], L3_BOOK: ['BTC/USD']}, callbacks={L3_BOOK: BookCallback(book), L2_BOOK: BookCallback(book)}))
+    f.add_feed(Coinbase(subscription={L2_BOOK: ['ETH/USD'], L3_BOOK: ['BTC/USD']}, callbacks={L3_BOOK: BookCallback(book), L2_BOOK: BookCallback(book)}))
 
     f.run()
 

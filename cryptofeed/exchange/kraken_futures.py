@@ -27,8 +27,8 @@ class KrakenFutures(Feed):
         super().__init__('wss://futures.kraken.com/ws/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
 
         instruments = self.get_instruments()
-        if self.config:
-            config_instruments = list(self.config.values())
+        if self.subscription:
+            config_instruments = list(self.subscription.values())
             self.pairs = [
                 pair for inner in config_instruments for pair in inner]
 
@@ -50,12 +50,12 @@ class KrakenFutures(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        for chan in self.channels if self.channels else self.config:
+        for chan in self.channels if self.channels else self.subscription:
             await websocket.send(json.dumps(
                 {
                     "event": "subscribe",
                     "feed": chan,
-                    "product_ids": self.pairs if not self.config else list(self.config[chan])
+                    "product_ids": self.pairs if not self.subscription else list(self.subscription[chan])
                 }
             ))
 

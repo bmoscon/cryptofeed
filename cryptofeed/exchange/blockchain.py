@@ -169,9 +169,9 @@ class Blockchain(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        if self.config:
-            for channel in self.config:
-                for pair in self.config[channel]:
+        if self.subscription:
+            for channel in self.subscription:
+                for pair in self.subscription[channel]:
                     await websocket.send(json.dumps({"action": "subscribe",
                                                      "symbol": pair,
                                                      "channel": channel

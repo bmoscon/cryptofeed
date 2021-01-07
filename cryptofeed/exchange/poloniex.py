@@ -25,18 +25,18 @@ LOG = logging.getLogger('feedhandler')
 class Poloniex(Feed):
     id = POLONIEX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
+    def __init__(self, pairs=None, channels=None, callbacks=None, subscription=None, **kwargs):
         self.pair_mapping = poloniex_id_pair_mapping()
         super().__init__('wss://api2.poloniex.com',
                          pairs=pairs,
                          channels=channels,
                          callbacks=callbacks,
-                         config=config,
+                         subscription=subscription,
                          **kwargs)
         """
-        Due to the way poloniex subcriptions work, need to do some
-        ugly manipulation of the config/channels,pairs to create a list
-        of channels to subscribe to for poloniex as well as a callback map
+        Due to the way Poloniex subscriptions work, need to do some
+        ugly manipulation of the subscription/channels,pairs to create a list
+        of channels to subscribe to for Poloniex as well as a callback map
         that we can use to determine if an update should be delivered to the
         end client or not
         """
@@ -47,13 +47,13 @@ class Poloniex(Feed):
             self.channels = self.pairs
             check = channels
             self.callback_map = {channel: set(pairs) for channel in channels if channel not in {p_ticker, p_volume}}
-        elif config:
+        elif subscription:
             self.channels = []
-            for c, v in self.config.items():
+            for c, v in self.subscription.items():
                 if c not in {p_ticker, p_volume}:
                     self.channels.extend(v)
-            check = config
-            self.callback_map = {key: set(value) for key, value in config.items()}
+            check = subscription
+            self.callback_map = {key: set(value) for key, value in subscription.items()}
 
         if TICKER in check:
             self.channels.append(p_ticker)

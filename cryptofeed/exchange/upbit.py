@@ -210,9 +210,9 @@ class Upbit(Feed):
 
         self.__reset()
         chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
-        for channel in self.channels if not self.config else self.config:
+        for channel in self.channels if not self.subscription else self.subscription:
             codes = list()
-            for pair in self.pairs if not self.config else self.config[channel]:
+            for pair in self.pairs if not self.subscription else self.subscription[channel]:
                 codes.append(pair)
 
             if channel == L2_BOOK:

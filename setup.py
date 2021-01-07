@@ -47,7 +47,6 @@ setup(
               "Kraken Futures", "OKCoin", "OKEx", "Poloniex", "ProBit", "Upbit"],
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),
-    package_data={'': ['cryptofeed/config.yaml']},
     cmdclass={'test': Test},
     python_requires='>=3.7',
     classifiers=[

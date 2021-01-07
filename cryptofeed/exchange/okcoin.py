@@ -65,11 +65,11 @@ class OKCoin(Feed):
             else:
                 return channel.format('spot')
 
-        if self.config:
-            for chan in self.config:
+        if self.subscription:
+            for chan in self.subscription:
                 if chan == LIQUIDATIONS:
                     continue
-                args = [f"{chan_format(chan, pair)}:{pair}" for pair in self.config[chan]]
+                args = [f"{chan_format(chan, pair)}:{pair}" for pair in self.subscription[chan]]
                 await websocket.send(json.dumps({
                     "op": "subscribe",
                     "args": args

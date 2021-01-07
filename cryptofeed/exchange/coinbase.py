@@ -48,8 +48,8 @@ class Coinbase(Feed):
             self.seq_no = None
             # sequence number validation only works when the FULL data stream is enabled
             chan = feed_to_exchange(self.id, L3_BOOK)
-            if chan in self.channels or chan in self.config:
-                pairs = self.pairs if self.pairs else self.config[chan]
+            if chan in self.channels or chan in self.subscription:
+                pairs = self.pairs if self.pairs else self.subscription[chan]
                 self.seq_no = {pair: None for pair in pairs}
             self.l3_book = {}
             self.l2_book = {}
@@ -113,7 +113,7 @@ class Coinbase(Feed):
         pair = pair_exchange_to_std(msg['product_id'])
         ts = timestamp_normalize(self.id, msg['time'])
 
-        if self.keep_l3_book and ('full' in self.channels or ('full' in self.config and pair in self.config['full'])):
+        if self.keep_l3_book and ('full' in self.channels or ('full' in self.subscription and pair in self.subscription['full'])):
             delta = {BID: [], ASK: []}
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
@@ -364,12 +364,12 @@ class Coinbase(Feed):
     async def subscribe(self, conn: AsyncConnection, pair=None):
         self.__reset(pair)
 
-        for chan in self.channels if self.channels else self.config:
+        for chan in self.channels if self.channels else self.subscription:
             await conn.send(json.dumps({"type": "subscribe",
-                                        "product_ids": list(self.config[chan]) if self.config else self.pairs,
+                                        "product_ids": list(self.subscription[chan]) if self.subscription else self.pairs,
                                         "channels": [chan]
                                         }))
 
         chan = feed_to_exchange(self.id, L3_BOOK)
-        if chan in self.config or chan in self.channels:
-            await self._book_snapshot(self.pairs if self.pairs else list(self.config[chan]))
+        if chan in self.subscription or chan in self.channels:
+            await self._book_snapshot(self.pairs if self.pairs else list(self.subscription[chan]))

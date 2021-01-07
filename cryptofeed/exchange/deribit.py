@@ -17,14 +17,13 @@ LOG = logging.getLogger('feedhandler')
 class Deribit(Feed):
     id = DERIBIT
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        super().__init__('wss://www.deribit.com/ws/api/v2', pairs=pairs,
-                         channels=channels, config=config, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
 
         instruments = self.get_instruments()
         pairs = None
-        if self.config:
-            config_instruments = list(self.config.values())
+        if self.subscription:
+            config_instruments = list(self.subscription.values())
             pairs = [
                 pair for inner in config_instruments for pair in inner]
 
@@ -162,8 +161,8 @@ class Deribit(Feed):
         self.__reset()
         client_id = 0
         channels = []
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if self.pairs else self.config[chan]:
+        for chan in self.channels if self.channels else self.subscription:
+            for pair in self.pairs if self.pairs else self.subscription[chan]:
                 channels.append(f"{chan}.{pair}.raw")
         await websocket.send(json.dumps(
             {

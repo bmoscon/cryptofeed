@@ -33,8 +33,8 @@ async def oi(feed, pair, open_interest, timestamp, receipt_timestamp):
 def main():
     fh = FeedHandler()
 
-    config = {OPEN_INTEREST: ['PI_XBTUSD', 'PI_ETHUSD'], TRADES: ['PI_XBTUSD'], TICKER: ['PI_XBTUSD', 'PI_ETHUSD'], L2_BOOK: ['PI_ETHUSD', 'PI_XBTUSD'], FUNDING: ['PI_XBTUSD']}
-    fh.add_feed(KrakenFutures(config=config, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
+    sub = {OPEN_INTEREST: ['PI_XBTUSD', 'PI_ETHUSD'], TRADES: ['PI_XBTUSD'], TICKER: ['PI_XBTUSD', 'PI_ETHUSD'], L2_BOOK: ['PI_ETHUSD', 'PI_XBTUSD'], FUNDING: ['PI_XBTUSD']}
+    fh.add_feed(KrakenFutures(subscription=sub, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
 
     fh.run()
 

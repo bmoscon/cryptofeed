@@ -26,10 +26,10 @@ class BinanceDelivery(Binance):
 
     def _address(self):
         address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.config else self.config:
+        for chan in self.channels if not self.subscription else self.subscription:
             if chan == OPEN_INTEREST:
                 continue
-            for pair in self.pairs if not self.config else self.config[chan]:
+            for pair in self.pairs if not self.subscription else self.subscription[chan]:
                 pair = pair.lower()
                 if chan == TICKER:
                     stream = f"{pair}@bookTicker/"

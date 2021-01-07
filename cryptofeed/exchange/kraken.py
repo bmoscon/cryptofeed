@@ -45,14 +45,14 @@ class Kraken(Feed):
 
     async def subscribe(self, websocket):
         self.__reset()
-        if self.config:
-            for chan in self.config:
+        if self.subscription:
+            for chan in self.subscription:
                 sub = {"name": chan}
                 if 'book' in chan:
                     sub['depth'] = self.book_depth
                 await websocket.send(json.dumps({
                     "event": "subscribe",
-                    "pair": list(self.config[chan]),
+                    "pair": list(self.subscription[chan]),
                     "subscription": sub
                 }))
         else:

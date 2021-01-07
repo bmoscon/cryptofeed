@@ -29,8 +29,8 @@ class Bitmex(Feed):
         super().__init__('wss://www.bitmex.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
 
         active_pairs = Bitmex.info()['pairs']
-        if self.config:
-            pairs = list(self.config.values())
+        if self.subscription:
+            pairs = list(self.subscription.values())
             self.pairs = [pair for inner in pairs for pair in inner]
 
         for pair in self.pairs:
@@ -495,8 +495,8 @@ class Bitmex(Feed):
     async def subscribe(self, websocket):
         self._reset()
         chans = []
-        for channel in self.channels if not self.config else self.config:
-            for pair in self.pairs if not self.config else self.config[channel]:
+        for channel in self.channels if not self.subscription else self.subscription:
+            for pair in self.pairs if not self.subscription else self.subscription[channel]:
                 chans.append("{}:{}".format(channel, pair))
 
         for i in range(0, len(chans), 10):

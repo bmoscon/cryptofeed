@@ -48,8 +48,8 @@ class Binance(Feed):
         ret = {}
         counter = 0
         address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.config else self.config:
-            for pair in self.pairs if not self.config else self.config[chan]:
+        for chan in self.channels if not self.subscription else self.subscription:
+            for pair in self.pairs if not self.subscription else self.subscription[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
                 address += stream
@@ -334,8 +334,8 @@ class Binance(Feed):
         # Binance does not have a separate subscribe message, the
         # subsription information is included in the
         # connection endpoint
-        for chan in self.channels if self.channels else self.config:
+        for chan in self.channels if self.channels else self.subscription:
             if chan == 'open_interest':
-                asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.config[chan]))
+                asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.subscription[chan]))
                 break
         self._reset()
