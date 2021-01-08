@@ -228,8 +228,13 @@ class FeedHandler:
             except Exception:
                 LOG.error("Unhandled exception", exc_info=True)
             finally:
-                for feed, _ in self.feeds:
-                    loop.run_until_complete(feed.stop())
+                self.stop(loop=loop)
+
+    def stop(self, loop=None):
+        if not loop:
+            loop = asyncio.get_event_loop()
+        for feed, _ in self.feeds:
+            loop.run_until_complete(feed.stop())
 
     async def _watch(self, connection):
         if self.timeout[connection.uuid] == -1:
