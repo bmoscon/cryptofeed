@@ -15,6 +15,7 @@
   * Bugfix: fix binance delivery book ticker (message format change)
   * Breaking change: Feed object `config` renamed `subscription`
   * Feature: Configuration passed from feedhandler to exchanges
+  * Breaking change: most use of `pair` and `pairs` changed to `symbol` and `symbols` to be more consistent with actual usage. pairs.py renamed to symbols.py
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
