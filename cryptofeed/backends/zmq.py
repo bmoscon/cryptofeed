@@ -23,9 +23,9 @@ class ZMQCallback:
         self.numeric_type = numeric_type
         self.dynamic_key = dynamic_key
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         if self.dynamic_key:
-            await self.con.send_string(f'{feed}-{self.key}-{pair} {json.dumps(data)}')
+            await self.con.send_string(f'{feed}-{self.key}-{symbol} {json.dumps(data)}')
         else:
             await self.con.send_string(f'{self.key} {json.dumps(data)}')
 

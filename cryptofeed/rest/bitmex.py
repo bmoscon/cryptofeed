@@ -123,7 +123,7 @@ class Bitmex(API):
     def _trade_normalization(self, trade: dict) -> dict:
         return {
             'timestamp': timestamp_normalize(self.ID, trade['timestamp']),
-            'pair': trade['symbol'],
+            'symbol': trade['symbol'],
             'id': trade['trdMatchID'],
             'feed': self.ID,
             'side': BUY if trade['side'] == 'Buy' else SELL,
@@ -180,7 +180,7 @@ class Bitmex(API):
     def _funding_normalization(self, funding: dict) -> dict:
         return {
             'timestamp': funding['timestamp'],
-            'pair': funding['symbol'],
+            'symbol': funding['symbol'],
             'feed': self.ID,
             'interval': funding['fundingInterval'],
             'rate': funding['fundingRate'],
@@ -212,7 +212,7 @@ class Bitmex(API):
         vals = data.split(",")
         return {
             'timestamp': pd.Timestamp(vals[0].replace("D", "T")).timestamp(),
-            'pair': vals[1],
+            'symbol': vals[1],
             'id': vals[6],
             'feed': self.ID,
             'side': BUY if vals[2] == 'Buy' else SELL,

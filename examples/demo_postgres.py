@@ -15,7 +15,7 @@ postgres_cfg = {'host': '127.0.0.1', 'user': 'postgres', 'db': 'postgres', 'pw':
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(channels=[L2_BOOK, TRADES, TICKER], pairs=['BTC-USD'], callbacks={L2_BOOK: BookPostgres(**postgres_cfg), BOOK_DELTA: BookDeltaPostgres(**postgres_cfg), TICKER: TickerPostgres(**postgres_cfg), TRADES: TradePostgres(**postgres_cfg)}))
+    f.add_feed(Coinbase(channels=[L2_BOOK, TRADES, TICKER], symbols=['BTC-USD'], callbacks={L2_BOOK: BookPostgres(**postgres_cfg), BOOK_DELTA: BookDeltaPostgres(**postgres_cfg), TICKER: TickerPostgres(**postgres_cfg), TRADES: TradePostgres(**postgres_cfg)}))
     f.run()
 
 

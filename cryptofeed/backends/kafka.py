@@ -31,9 +31,9 @@ class KafkaCallback:
                                              client_id='cryptofeed')
             await self.producer.start()
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self.__connect()
-        topic = f"{self.key}-{feed}-{pair}"
+        topic = f"{self.key}-{feed}-{symbol}"
         await self.producer.send_and_wait(topic, json.dumps(data).encode('utf-8'))
 
 

@@ -13,10 +13,10 @@ from cryptofeed.exchanges import Bitmex, Coinbase
 def main():
 
     f = FeedHandler()
-    f.add_feed(Bitmex(channels=[FUNDING, L2_BOOK], pairs=['XBTUSD'], callbacks={FUNDING: FundingInflux('http://localhost:8086', 'example'), L2_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
-    f.add_feed(Coinbase(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: TradeInflux('http://localhost:8086', 'example')}))
-    f.add_feed(Coinbase(channels=[L2_BOOK], pairs=['BTC-USD'], callbacks={L2_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
-    f.add_feed(Coinbase(channels=[TICKER], pairs=['BTC-USD'], callbacks={TICKER: TickerInflux('http://localhost:8086', 'example', numeric_type=float)}))
+    f.add_feed(Bitmex(channels=[FUNDING, L2_BOOK], symbols=['XBTUSD'], callbacks={FUNDING: FundingInflux('http://localhost:8086', 'example'), L2_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
+    f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: TradeInflux('http://localhost:8086', 'example')}))
+    f.add_feed(Coinbase(channels=[L2_BOOK], symbols=['BTC-USD'], callbacks={L2_BOOK: BookInflux('http://localhost:8086', 'example', numeric_type=float), BOOK_DELTA: BookDeltaInflux('http://localhost:8086', 'example', numeric_type=float)}))
+    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: TickerInflux('http://localhost:8086', 'example', numeric_type=float)}))
 
     """
     # Uncomment Here When Using InfluxDB 2.0
@@ -35,10 +35,10 @@ def main():
     bookdelta_influx = BookDeltaInflux(ADDR, org=ORG, bucket=BUCKET, token=TOKEN, numeric_type=float)
     ticker_influx = TickerInflux(ADDR, org=ORG, bucket=BUCKET, token=TOKEN, numeric_type=float)
 
-    f.add_feed(Bitmex(channels=[FUNDING, L2_BOOK],pairs=['XBTUSD'], callbacks={FUNDING: funding_influx, L2_BOOK: book_influx, BOOK_DELTA: bookdelta_influx}))
-    f.add_feed(Coinbase(channels=[TRADES], pairs=['BTC-USD'], callbacks={TRADES: trade_influx}))
-    f.add_feed(Coinbase(channels=[L2_BOOK], pairs=['BTC-USD'], callbacks={L2_BOOK: book_influx, BOOK_DELTA: bookdelta_influx}))
-    f.add_feed(Coinbase(channels=[TICKER], pairs=['BTC-USD'], callbacks={TICKER: ticker_influx}))
+    f.add_feed(Bitmex(channels=[FUNDING, L2_BOOK],symbols=['XBTUSD'], callbacks={FUNDING: funding_influx, L2_BOOK: book_influx, BOOK_DELTA: bookdelta_influx}))
+    f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: trade_influx}))
+    f.add_feed(Coinbase(channels=[L2_BOOK], symbols=['BTC-USD'], callbacks={L2_BOOK: book_influx, BOOK_DELTA: bookdelta_influx}))
+    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: ticker_influx}))
     """
 
     f.run()

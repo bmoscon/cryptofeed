@@ -47,7 +47,7 @@ def book_convert(book: dict, data: dict, convert=str):
             data[BID][_level] = convert(book[BID][level])
 
 
-def book_flatten(feed: str, pair: str, book: dict, timestamp: float, delta: str) -> dict:
+def book_flatten(feed: str, symbol: str, book: dict, timestamp: float, delta: str) -> dict:
     """
     takes book and returns a list of dict, where each element in the list
     is a dictionary with a single row of book data.
@@ -65,7 +65,7 @@ def book_flatten(feed: str, pair: str, book: dict, timestamp: float, delta: str)
             if isinstance(data, dict):
                 # L3 book
                 for order_id, size in data.items():
-                    ret.append({'feed': feed, 'pair': pair, 'side': side, 'price': price, 'size': size, 'order_id': order_id, 'timestamp': timestamp, 'delta': delta})
+                    ret.append({'feed': feed, 'symbol': symbol, 'side': side, 'price': price, 'size': size, 'order_id': order_id, 'timestamp': timestamp, 'delta': delta})
             else:
-                ret.append({'feed': feed, 'pair': pair, 'side': side, 'price': price, 'size': data, 'timestamp': timestamp, 'delta': delta})
+                ret.append({'feed': feed, 'symbol': symbol, 'side': side, 'price': price, 'size': data, 'timestamp': timestamp, 'delta': delta})
     return ret

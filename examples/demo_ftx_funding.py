@@ -24,7 +24,7 @@ async def funding(**kwargs):
 
 def main():
     f = FeedHandler()
-    f.add_feed(FTX(pairs=['BTC-PERP', 'THETA-PERP'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
+    f.add_feed(FTX(symbols=['BTC-PERP', 'THETA-PERP'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
     f.run()
 
 

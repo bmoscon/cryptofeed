@@ -16,8 +16,8 @@ LOG = logging.getLogger('feedhandler')
 class BinanceUS(Binance):
     id = BINANCE_US
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
-        super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, depth=depth, **kwargs)
+    def __init__(self, depth=1000, **kwargs):
+        super().__init__(depth=depth, **kwargs)
         self.ws_endpoint = 'wss://stream.binance.us:9443'
         self.rest_endpoint = 'https://api.binance.us/api/v1'
         self.address = self._address()

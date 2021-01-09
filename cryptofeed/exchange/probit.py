@@ -12,7 +12,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,8 +21,8 @@ LOG = logging.getLogger('feedhandler')
 class Probit(Feed):
     id = PROBIT
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.probit.com/api/exchange/v1/ws', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.probit.com/api/exchange/v1/ws', **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -68,7 +68,7 @@ class Probit(Feed):
             ]
         }
         '''
-        pair = pair_exchange_to_std(msg['market_id'])
+        pair = symbol_exchange_to_std(msg['market_id'])
         for update in msg['recent_trades']:
             price = Decimal(update['price'])
             quantity = Decimal(update['quantity'])
@@ -76,7 +76,7 @@ class Probit(Feed):
             order_id = update['id']
             timestamp = timestamp_normalize(self.id, update['time'])
             await self.callback(TRADES, feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 side=side,
                                 amount=quantity,
                                 price=price,
@@ -124,7 +124,7 @@ class Probit(Feed):
             }]
         }
         '''
-        pair = pair_exchange_to_std(msg['market_id'])
+        pair = symbol_exchange_to_std(msg['market_id'])
 
         is_snapshot = msg.get('reset', False)
 
@@ -179,7 +179,7 @@ class Probit(Feed):
                                                      "market_id": pair,
                                                      }))
         else:
-            for pair in self.pairs:
+            for pair in self.symbols:
                 await websocket.send(json.dumps({"type": "subscribe",
                                                  "channel": "marketdata",
                                                  "filter": list(self.channels),

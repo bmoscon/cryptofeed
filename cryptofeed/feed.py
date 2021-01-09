@@ -13,14 +13,14 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
-from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_pair_mapping, pair_std_to_exchange
+from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
 
 
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address: Union[dict, str], pairs=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
+    def __init__(self, address: Union[dict, str], symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
         """
         max_depth: int
             Maximum number of levels per side to return in book updates
@@ -49,8 +49,8 @@ class Feed:
         self.cross_check = cross_check
         self.updates = defaultdict(int)
         self.do_deltas = False
-        self.pairs = []
-        self.normalized_pairs = []
+        self.symbols = []
+        self.normalized_symbols = []
         self.channels = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
@@ -58,20 +58,20 @@ class Feed:
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
         key_id = self.config[self.id.lower()].key_id
-        load_exchange_pair_mapping(self.id, key_id=key_id)
+        load_exchange_symbol_mapping(self.id, key_id=key_id)
 
-        if subscription is not None and (pairs is not None or channels is not None):
-            raise ValueError("Use subscription, or channels and pairs, not both")
+        if subscription is not None and (symbols is not None or channels is not None):
+            raise ValueError("Use subscription, or channels and symbols, not both")
 
         if subscription is not None:
             for channel in subscription:
                 chan = feed_to_exchange(self.id, channel)
-                self.subscription[chan].update([pair_std_to_exchange(pair, self.id) for pair in subscription[channel]])
-                self.normalized_pairs.extend(self.subscription[chan])
+                self.subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
+                self.normalized_symbols.extend(self.subscription[chan])
 
-        if pairs:
-            self.normalized_pairs = pairs
-            self.pairs = [pair_std_to_exchange(pair, self.id) for pair in pairs]
+        if symbols:
+            self.normalized_symbols = symbols
+            self.symbols = [symbol_std_to_exchange(symbol, self.id) for symbol in symbols]
         if channels:
             self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
 
@@ -124,13 +124,13 @@ class Feed:
     @classmethod
     def info(cls, key_id: str = None) -> dict:
         """
-        Return information about the Exchange - what trading pairs are supported, what data channels, etc
+        Return information about the Exchange - what trading symbols are supported, what data channels, etc
 
         key_id: str
-            API key to query the feed, required when requesting supported coins/pairs.
+            API key to query the feed, required when requesting supported coins/symbols.
         """
-        pairs, info = get_exchange_info(cls.id, key_id=key_id)
-        data = {'pairs': list(pairs.keys()), 'channels': []}
+        symbols, info = get_exchange_info(cls.id, key_id=key_id)
+        data = {'symbols': list(symbols.keys()), 'channels': []}
         for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
@@ -141,7 +141,7 @@ class Feed:
         data.update(info)
         return data
 
-    async def book_callback(self, book: dict, book_type: str, pair: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
+    async def book_callback(self, book: dict, book_type: str, symbol: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """
         Three cases we need to handle here
 
@@ -157,65 +157,65 @@ class Feed:
         For 1, need to handle separate cases where a full book is returned vs a delta
         """
         if self.do_deltas:
-            if not forced and self.updates[pair] < self.book_update_interval:
+            if not forced and self.updates[symbol] < self.book_update_interval:
                 if self.max_depth:
-                    delta, book = await self.apply_depth(book, True, pair)
+                    delta, book = await self.apply_depth(book, True, symbol)
                     if not (delta[BID] or delta[ASK]):
                         return
                 elif not delta:
                     # this will only happen in cases where an exchange does not support deltas and max depth is not enabled.
                     # this is an uncommon situation. Exchanges that do not support deltas will need
                     # to populate self.previous internally to avoid the unncesessary book copy on all other exchanges
-                    delta = book_delta(self.previous_book[pair], book, book_type=book_type)
+                    delta = book_delta(self.previous_book[symbol], book, book_type=book_type)
                     if not (delta[BID] or delta[ASK]):
                         return
-                self.updates[pair] += 1
+                self.updates[symbol] += 1
                 if self.cross_check:
-                    self.check_bid_ask_overlapping(book, pair)
-                await self.callback(BOOK_DELTA, feed=self.id, pair=pair, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
-                if self.updates[pair] != self.book_update_interval:
+                    self.check_bid_ask_overlapping(book, symbol)
+                await self.callback(BOOK_DELTA, feed=self.id, symbol=symbol, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
+                if self.updates[symbol] != self.book_update_interval:
                     return
             elif forced and self.max_depth:
                 # We want to send a full book update but need to apply max depth first
-                _, book = await self.apply_depth(book, False, pair)
+                _, book = await self.apply_depth(book, False, symbol)
         elif self.max_depth:
-            if not self.snapshot_interval or (self.snapshot_interval and self.updates[pair] >= self.snapshot_interval):
-                changed, book = await self.apply_depth(book, False, pair)
+            if not self.snapshot_interval or (self.snapshot_interval and self.updates[symbol] >= self.snapshot_interval):
+                changed, book = await self.apply_depth(book, False, symbol)
                 if not changed:
                     return
-        # case 4 - incremement skiped update, and exit
-        if self.snapshot_interval and self.updates[pair] < self.snapshot_interval:
-            self.updates[pair] += 1
+        # case 4 - increment skiped update, and exit
+        if self.snapshot_interval and self.updates[symbol] < self.snapshot_interval:
+            self.updates[symbol] += 1
             return
 
         if self.cross_check:
-            self.check_bid_ask_overlapping(book, pair)
+            self.check_bid_ask_overlapping(book, symbol)
         if book_type == L2_BOOK:
-            await self.callback(L2_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
+            await self.callback(L2_BOOK, feed=self.id, symbol=symbol, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
         else:
-            await self.callback(L3_BOOK, feed=self.id, pair=pair, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
-        self.updates[pair] = 0
+            await self.callback(L3_BOOK, feed=self.id, symbol=symbol, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
+        self.updates[symbol] = 0
 
-    def check_bid_ask_overlapping(self, book, pair):
+    def check_bid_ask_overlapping(self, book, symbol):
         bid, ask = book[BID], book[ASK]
         if len(bid) > 0 and len(ask) > 0:
             best_bid, best_ask = bid.keys()[-1], ask.keys()[0]
             if best_bid >= best_ask:
-                raise BidAskOverlapping(f"{self.id} {pair} best bid {best_bid} >= best ask {best_ask}")
+                raise BidAskOverlapping(f"{self.id} {symbol} best bid {best_bid} >= best ask {best_ask}")
 
     async def callback(self, data_type, **kwargs):
         for cb in self.callbacks[data_type]:
             await cb(**kwargs)
 
-    async def apply_depth(self, book: dict, do_delta: bool, pair: str):
+    async def apply_depth(self, book: dict, do_delta: bool, symbol: str):
         ret = depth(book, self.max_depth)
         if not do_delta:
-            delta = self.previous_book[pair] != ret
-            self.previous_book[pair] = ret
+            delta = self.previous_book[symbol] != ret
+            self.previous_book[symbol] = ret
             return delta, ret
 
-        delta = book_delta(self.previous_book[pair], ret)
-        self.previous_book[pair] = ret
+        delta = book_delta(self.previous_book[symbol], ret)
+        self.previous_book[symbol] = ret
         return delta, ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):

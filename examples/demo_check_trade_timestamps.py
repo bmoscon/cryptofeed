@@ -9,7 +9,7 @@ from cryptofeed.defines import TRADES
 
 
 # Gathers the first trade of each exchange and prints out info on the timestamps.
-# To add an exchange, setup exch_sym_map with the most liquid pair.
+# To add an exchange, setup exch_sym_map with the most liquid symbol.
 # Sample output:
 '''
 $ python demo_checki_trade_timestamps.py
@@ -63,7 +63,7 @@ Ending: 1562808727.693259
 '''
 
 
-async def trade(feed, pair, order_id, timestamp, receipt_timestamp, side, amount, price):
+async def trade(feed, symbol, order_id, timestamp, receipt_timestamp, side, amount, price):
     if feed not in trades:
         print(f'Added {feed}.')
         # exch_count += 1
@@ -108,9 +108,9 @@ def main():
     for i, e in enumerate(exch_sym_map):
         print(f'{[i]}: Subscribing to {e}')
         if e == 'Gemini':
-            f.add_feed(e.upper(), pairs=exch_sym_map[e], callbacks={TRADES: TradeCallback(trade)})
+            f.add_feed(e.upper(), symbols=exch_sym_map[e], callbacks={TRADES: TradeCallback(trade)})
         else:
-            f.add_feed(e.upper(), pairs=exch_sym_map[e], channels=channels, callbacks={TRADES: TradeCallback(trade)})
+            f.add_feed(e.upper(), symbols=exch_sym_map[e], channels=channels, callbacks={TRADES: TradeCallback(trade)})
     f.run()
 
 

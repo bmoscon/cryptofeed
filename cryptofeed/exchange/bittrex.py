@@ -9,7 +9,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -18,8 +18,8 @@ LOG = logging.getLogger('feedhandler')
 class Bittrex(Feed):
     id = BITTREX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://socket.bittrex.com/signalr', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://socket.bittrex.com/signalr', **kwargs)
         r = requests.get('https://socket.bittrex.com/signalr/negotiate', params={'connectionData': json.dumps([{'name': 'c2'}]), 'clientProtocol': 1.5})
         token = r.json()['ConnectionToken']
         url = requests.Request('GET', 'https://socket.bittrex.com/signalr/connect', params={'transport': 'webSockets', 'connectionToken': token, 'connectionData': json.dumps([{"name": "c2"}]), 'clientProtocol': 1.5}).prepare().url
@@ -31,11 +31,11 @@ class Bittrex(Feed):
 
     async def ticker(self, msg: dict, timestamp: float):
         for t in msg['D']:
-            if (not self.subscription and t['M'] in self.pairs) or ('SubscribeToSummaryDeltas' in self.subscription and t['M'] in self.subscription['SubscribeToSummaryDeltas']):
-                await self.callback(TICKER, feed=self.id, pair=pair_exchange_to_std(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']), timestamp=timestamp_normalize(self.id, t['T']), receipt_timestamp=timestamp)
+            if (not self.subscription and t['M'] in self.symbols) or ('SubscribeToSummaryDeltas' in self.subscription and t['M'] in self.subscription['SubscribeToSummaryDeltas']):
+                await self.callback(TICKER, feed=self.id, symbol=symbol_exchange_to_std(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']), timestamp=timestamp_normalize(self.id, t['T']), receipt_timestamp=timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['M'])
+        pair = symbol_exchange_to_std(msg['M'])
         self.l2_book[pair] = {
             BID: sd({entry['R']: entry['Q'] for entry in msg['Z']}),
             ASK: sd({entry['R']: entry['Q'] for entry in msg['S']})
@@ -43,7 +43,7 @@ class Bittrex(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, False, timestamp, timestamp)
 
     async def book(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['M'])
+        pair = symbol_exchange_to_std(msg['M'])
         if pair in self.l2_book:
             delta = {BID: [], ASK: []}
             for side, key in ((BID, 'Z'), (ASK, 'S')):
@@ -65,11 +65,11 @@ class Bittrex(Feed):
         # adding because of error
         trade_q = self.subscription.get(TRADES, [])
         if self.subscription and pair in trade_q or not self.subscription:
-            pair = pair_exchange_to_std(pair)
+            pair = symbol_exchange_to_std(pair)
             for trade in msg:
                 await self.callback(TRADES, feed=self.id,
                                     order_id=trade['FI'],
-                                    pair=pair,
+                                    symbol=pair,
                                     side=BUY if trade['OT'] == 'BUY' else SELL,
                                     amount=trade['Q'],
                                     price=trade['R'],
@@ -106,7 +106,7 @@ class Bittrex(Feed):
         # https://blog.3d-logic.com/2015/03/29/signalr-on-the-wire-an-informal-description-of-the-signalr-protocol/
         # http://blogs.microsoft.co.il/applisec/2014/03/12/signalr-message-format/
         for channel in set(self.channels) if not self.subscription else set(self.subscription):
-            symbols = self.pairs if not self.subscription else list(self.subscription[channel])
+            symbols = self.symbols if not self.subscription else list(self.subscription[channel])
             i = 0
             if channel == 'SubscribeToExchangeDeltas':
                 for symbol in symbols:

@@ -15,7 +15,7 @@ from yapic import json
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -24,8 +24,8 @@ LOG = logging.getLogger('feedhandler')
 class OKCoin(Feed):
     id = OKCOIN
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://real.okcoin.com:8443/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
         self.book_depth = 200
         self.open_interest = {}
 
@@ -75,7 +75,7 @@ class OKCoin(Feed):
                     "args": args
                 }))
         else:
-            chans = [f"{chan_format(chan, pair)}:{pair}" for chan in self.channels for pair in self.pairs if chan != LIQUIDATIONS]
+            chans = [f"{chan_format(chan, pair)}:{pair}" for chan in self.channels for pair in self.symbols if chan != LIQUIDATIONS]
             await websocket.send(json.dumps({
                 "op": "subscribe",
                 "args": chans
@@ -89,7 +89,7 @@ class OKCoin(Feed):
             pair = update['instrument_id']
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 bid=Decimal(update['best_bid']),
                                 ask=Decimal(update['best_ask']),
                                 timestamp=update_timestamp,
@@ -99,7 +99,7 @@ class OKCoin(Feed):
                 if pair in self.open_interest and oi == self.open_interest[pair]:
                     continue
                 self.open_interest[pair] = oi
-                await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
+                await self.callback(OPEN_INTEREST, feed=self.id, symbol=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -112,7 +112,7 @@ class OKCoin(Feed):
                 amount_sym = 'size'
             await self.callback(TRADES,
                                 feed=self.id,
-                                pair=pair_exchange_to_std(trade['instrument_id']),
+                                symbol=symbol_exchange_to_std(trade['instrument_id']),
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade[amount_sym]),
@@ -125,7 +125,7 @@ class OKCoin(Feed):
         for update in msg['data']:
             await self.callback(FUNDING,
                                 feed=self.id,
-                                pair=pair_exchange_to_std(update['instrument_id']),
+                                symbol=symbol_exchange_to_std(update['instrument_id']),
                                 timestamp=timestamp_normalize(self.id, update['funding_time']),
                                 receipt_timestamp=timestamp,
                                 rate=update['funding_rate'],
@@ -136,7 +136,7 @@ class OKCoin(Feed):
         if msg['action'] == 'partial':
             # snapshot
             for update in msg['data']:
-                pair = pair_exchange_to_std(update['instrument_id'])
+                pair = symbol_exchange_to_std(update['instrument_id'])
                 self.l2_book[pair] = {
                     BID: sd({
                         Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']
@@ -153,7 +153,7 @@ class OKCoin(Feed):
             # update
             for update in msg['data']:
                 delta = {BID: [], ASK: []}
-                pair = pair_exchange_to_std(update['instrument_id'])
+                pair = symbol_exchange_to_std(update['instrument_id'])
                 for side in ('bids', 'asks'):
                     s = BID if side == 'bids' else ASK
                     for price, amount, *_ in update[side]:

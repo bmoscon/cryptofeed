@@ -52,10 +52,10 @@ class RabbitCallback:
                 self.conn = await connection.channel()
                 await self.conn.declare_queue(self.queue_name, auto_delete=False)
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self.connect()
         data['feed'] = feed
-        data['pair'] = pair
+        data['symbol'] = symbol
 
         if self.exchange_mode:
             await self.conn.publish(

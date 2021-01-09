@@ -5,60 +5,60 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.defines import BITCOINCOM, BITFINEX, BITSTAMP, BLOCKCHAIN, COINBASE, GEMINI, HITBTC, POLONIEX
-from cryptofeed.pairs import (bitcoincom_pairs, bitfinex_pairs, bitstamp_pairs, blockchain_pairs,
-                              coinbase_pairs, gemini_pairs, hitbtc_pairs, poloniex_pairs)
-from cryptofeed.standards import load_exchange_pair_mapping, pair_exchange_to_std, pair_std_to_exchange
+from cryptofeed.symbols import (bitcoincom_symbols, bitfinex_symbols, bitstamp_symbols, blockchain_symbols,
+                              coinbase_symbols, gemini_symbols, hitbtc_symbols, poloniex_symbols)
+from cryptofeed.standards import load_exchange_symbol_mapping, symbol_exchange_to_std, symbol_std_to_exchange
 
 
-def test_coinbase_pair_conversions():
-    load_exchange_pair_mapping(COINBASE)
-    for _, pair in coinbase_pairs().items():
-        assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, COINBASE))
+def test_coinbase_symbol_conversions():
+    load_exchange_symbol_mapping(COINBASE)
+    for _, symbol in coinbase_symbols().items():
+        assert(symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, COINBASE))
 
 
-def test_poloniex_pair_conversions():
-    load_exchange_pair_mapping(POLONIEX)
-    for _, pair in poloniex_pairs().items():
-        std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, POLONIEX))
+def test_poloniex_symbol_conversions():
+    load_exchange_symbol_mapping(POLONIEX)
+    for _, symbol in poloniex_symbols().items():
+        std = symbol_exchange_to_std(symbol)
+        assert(symbol == symbol_std_to_exchange(std, POLONIEX))
 
 
-def test_bitfinex_pair_conversions():
-    load_exchange_pair_mapping(BITFINEX)
-    for _, pair in bitfinex_pairs().items():
-        std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, BITFINEX))
+def test_bitfinex_symbol_conversions():
+    load_exchange_symbol_mapping(BITFINEX)
+    for _, symbol in bitfinex_symbols().items():
+        std = symbol_exchange_to_std(symbol)
+        assert(symbol == symbol_std_to_exchange(std, BITFINEX))
 
 
-def test_hitbtc_pair_conversions():
-    load_exchange_pair_mapping(HITBTC)
-    for _, pair in hitbtc_pairs().items():
-        std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, HITBTC))
+def test_hitbtc_symbol_conversions():
+    load_exchange_symbol_mapping(HITBTC)
+    for _, symbol in hitbtc_symbols().items():
+        std = symbol_exchange_to_std(symbol)
+        assert(symbol == symbol_std_to_exchange(std, HITBTC))
 
 
-def test_gemini_pair_conversions():
-    load_exchange_pair_mapping(GEMINI)
-    for _, pair in gemini_pairs().items():
-        std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, GEMINI))
+def test_gemini_symbol_conversions():
+    load_exchange_symbol_mapping(GEMINI)
+    for _, symbol in gemini_symbols().items():
+        std = symbol_exchange_to_std(symbol)
+        assert(symbol == symbol_std_to_exchange(std, GEMINI))
 
 
-def test_bitstamp_pair_conversions():
-    load_exchange_pair_mapping(BITSTAMP)
-    for _, pair in bitstamp_pairs().items():
-        std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, BITSTAMP))
+def test_bitstamp_symbol_conversions():
+    load_exchange_symbol_mapping(BITSTAMP)
+    for _, symbol in bitstamp_symbols().items():
+        std = symbol_exchange_to_std(symbol)
+        assert(symbol == symbol_std_to_exchange(std, BITSTAMP))
 
 
-def test_bitcoincom_pair_conversions():
-    load_exchange_pair_mapping(BITCOINCOM)
-    for _, pair in bitcoincom_pairs().items():
-        std = pair_exchange_to_std(pair)
-        assert(pair == pair_std_to_exchange(std, BITCOINCOM))
+def test_bitcoincom_symbol_conversions():
+    load_exchange_symbol_mapping(BITCOINCOM)
+    for _, symbol in bitcoincom_symbols().items():
+        std = symbol_exchange_to_std(symbol)
+        assert(symbol == symbol_std_to_exchange(std, BITCOINCOM))
 
 
-def test_blockchain_pair_conversions():
-    load_exchange_pair_mapping(BLOCKCHAIN)
-    for _, pair in blockchain_pairs().items():
-        assert(pair_exchange_to_std(pair) == pair_std_to_exchange(pair, BLOCKCHAIN))
+def test_blockchain_symbol_conversions():
+    load_exchange_symbol_mapping(BLOCKCHAIN)
+    for _, symbol in blockchain_symbols().items():
+        assert(symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, BLOCKCHAIN))

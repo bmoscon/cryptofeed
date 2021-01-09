@@ -14,7 +14,7 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BITMAX, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,8 +23,8 @@ LOG = logging.getLogger('feedhandler')
 class Bitmax(Feed):
     id = BITMAX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://bitmax.io/0/api/pro/v1/stream', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://bitmax.io/0/api/pro/v1/stream', **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -47,7 +47,7 @@ class Bitmax(Feed):
         """
         for trade in msg['data']:
             await self.callback(TRADES, feed=self.id,
-                                pair=pair_exchange_to_std(msg['symbol']),
+                                symbol=symbol_exchange_to_std(msg['symbol']),
                                 side=SELL if trade['bm'] else BUY,
                                 amount=Decimal(trade['q']),
                                 price=Decimal(trade['p']),
@@ -57,7 +57,7 @@ class Bitmax(Feed):
 
     async def _book(self, msg: dict, timestamp: float):
         sequence_number = msg['data']['seqnum']
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = symbol_exchange_to_std(msg['symbol'])
         delta = {BID: [], ASK: []}
         forced = False
 
@@ -113,12 +113,12 @@ class Bitmax(Feed):
         l2_pairs = []
 
         for channel in self.channels if not self.subscription else self.subscription:
-            pairs = self.pairs if not self.subscription else self.subscription[channel]
+            pairs = self.symbols if not self.subscription else self.subscription[channel]
 
             if channel == "depth:":
                 l2_pairs.extend(pairs)
 
-            pairs = self.pairs if not self.subscription else self.subscription[channel]
+            pairs = self.symbols if not self.subscription else self.subscription[channel]
             message = {'op': 'sub', 'ch': channel + ','.join(pairs)}
             await websocket.send(json.dumps(message))
 

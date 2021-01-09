@@ -13,7 +13,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, TICKER, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std
+from cryptofeed.standards import timestamp_normalize, symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -22,8 +22,8 @@ LOG = logging.getLogger('feedhandler')
 class Bitflyer(Feed):
     id = BITFLYER
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://ws.lightstream.bitflyer.com/json-rpc', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://ws.lightstream.bitflyer.com/json-rpc', **kwargs)
 
     def __reset(self):
         self.l2_book = {}
@@ -55,11 +55,11 @@ class Bitflyer(Feed):
             }
         }
         """
-        pair = pair_exchange_to_std(msg['params']['message']['product_code'])
+        pair = symbol_exchange_to_std(msg['params']['message']['product_code'])
         bid = msg['params']['message']['best_bid']
         ask = msg['params']['message']['best_ask']
         await self.callback(TICKER, feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             bid=bid,
                             ask=ask,
                             timestamp=timestamp_normalize(self.id, msg['params']['message']['timestamp']),
@@ -87,11 +87,11 @@ class Bitflyer(Feed):
         }
         """
         pair = msg['params']['channel'][21:]
-        pair = pair_exchange_to_std(pair)
+        pair = symbol_exchange_to_std(pair)
         for update in msg['params']['message']:
             await self.callback(TRADES, feed=self.id,
                                 order_id=update['id'],
-                                pair=pair,
+                                symbol=pair,
                                 side=BUY if update['side'] == 'BUY' else SELL,
                                 amount=update['size'],
                                 price=update['price'],
@@ -125,7 +125,7 @@ class Bitflyer(Feed):
         }
         """
         _, base, quote = msg['params']['channel'].rsplit('_', 2)
-        pair = pair_exchange_to_std(f'{base}_{quote}')
+        pair = symbol_exchange_to_std(f'{base}_{quote}')
         snapshot = msg['params']['channel'].startswith('lightning_board_snapshot')
         forced = pair not in self.l2_book
 
@@ -173,7 +173,7 @@ class Bitflyer(Feed):
         self.__reset()
 
         for chan in self.channels if self.channels else self.subscription:
-            for pair in self.pairs if self.pairs else self.subscription[chan]:
+            for pair in self.symbols if self.symbols else self.subscription[chan]:
                 if chan.startswith('lightning_board'):
                     # need to subscribe to snapshots too if subscribed to L2_BOOKS
                     await conn.send(json.dumps({"method": "subscribe", "params": {"channel": f'lightning_board_snapshot_{pair}'}}))

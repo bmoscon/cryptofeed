@@ -34,7 +34,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, symbol_std_to_exchange, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -69,7 +69,7 @@ class HuobiDM(Feed):
             'ch':'market.BTC_CW.depth.step0'
         }
         """
-        pair = pair_std_to_exchange(msg['ch'].split('.')[1], self.id)
+        pair = symbol_std_to_exchange(msg['ch'].split('.')[1], self.id)
         data = msg['tick']
         forced = pair not in self.l2_book
 
@@ -108,7 +108,7 @@ class HuobiDM(Feed):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                                 feed=self.id,
-                                pair=pair_std_to_exchange(msg['ch'].split('.')[1], self.id),
+                                symbol=symbol_std_to_exchange(msg['ch'].split('.')[1], self.id),
                                 order_id=trade['id'],
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
@@ -142,9 +142,9 @@ class HuobiDM(Feed):
         self.__reset()
         client_id = 0
         for chan in self.channels if self.channels else self.subscription:
-            for pair in self.pairs if self.pairs else self.subscription[chan]:
+            for pair in self.symbols if self.symbols else self.subscription[chan]:
                 client_id += 1
-                pair = pair_exchange_to_std(pair)
+                pair = symbol_exchange_to_std(pair)
                 await websocket.send(json.dumps(
                     {
                         "sub": f"market.{pair}.{chan}",

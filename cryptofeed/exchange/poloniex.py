@@ -15,8 +15,8 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES, VOLUME
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.pairs import poloniex_id_pair_mapping
-from cryptofeed.standards import feed_to_exchange, pair_exchange_to_std
+from cryptofeed.symbols import poloniex_id_symbol_mapping
+from cryptofeed.standards import feed_to_exchange, symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,12 +25,11 @@ LOG = logging.getLogger('feedhandler')
 class Poloniex(Feed):
     id = POLONIEX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, subscription=None, **kwargs):
-        self.pair_mapping = poloniex_id_pair_mapping()
+    def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):
+        self.pair_mapping = poloniex_id_symbol_mapping()
         super().__init__('wss://api2.poloniex.com',
-                         pairs=pairs,
+                         symbols=symbols,
                          channels=channels,
-                         callbacks=callbacks,
                          subscription=subscription,
                          **kwargs)
         """
@@ -44,9 +43,9 @@ class Poloniex(Feed):
         p_volume = feed_to_exchange(self.id, VOLUME)
 
         if channels:
-            self.channels = self.pairs
+            self.channels = self.symbols
             check = channels
-            self.callback_map = {channel: set(pairs) for channel in channels if channel not in {p_ticker, p_volume}}
+            self.callback_map = {channel: set(symbols) for channel in channels if channel not in {p_ticker, p_volume}}
         elif subscription:
             self.channels = []
             for c, v in self.subscription.items():
@@ -78,10 +77,10 @@ class Poloniex(Feed):
         if pair_id not in self.pair_mapping:
             # Ignore new trading pairs that are added during long running sessions
             return
-        pair = pair_exchange_to_std(self.pair_mapping[pair_id])
+        pair = symbol_exchange_to_std(self.pair_mapping[pair_id])
         if self.__do_callback(TICKER, pair):
             await self.callback(TICKER, feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 bid=Decimal(bid),
                                 ask=Decimal(ask),
                                 timestamp=timestamp,
@@ -106,7 +105,7 @@ class Poloniex(Feed):
         if msg_type == 'i':
             forced = True
             pair = msg[0][1]['currencyPair']
-            pair = pair_exchange_to_std(pair)
+            pair = symbol_exchange_to_std(pair)
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             # 0 is asks, 1 is bids
             order_book = msg[0][1]['orderBook']
@@ -121,7 +120,7 @@ class Poloniex(Feed):
                 self.l2_book[pair][BID][price] = amount
         else:
             pair = self.pair_mapping[chan_id]
-            pair = pair_exchange_to_std(pair)
+            pair = symbol_exchange_to_std(pair)
             for update in msg:
                 msg_type = update[0]
                 # order book update
@@ -143,7 +142,7 @@ class Poloniex(Feed):
                     side = BUY if update[2] == 1 else SELL
                     if self.__do_callback(TRADES, pair):
                         await self.callback(TRADES, feed=self.id,
-                                            pair=pair,
+                                            symbol=pair,
                                             side=side,
                                             amount=amount,
                                             price=price,

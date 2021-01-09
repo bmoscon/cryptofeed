@@ -64,10 +64,10 @@ trade_cb = {TRADES: TradeCallback(trade)}
 gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
 
 
-fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
-fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
+fh.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Bitfinex(symbols=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Poloniex(symbols=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
+fh.add_feed(Gemini(symbols=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
 
 fh.run()
 ```
@@ -87,8 +87,8 @@ from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase, Gemini, Kraken
 
 
-def nbbo_update(pair, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
-    print(f'Pair: {pair} Bid Price: {bid:.2f} Bid Size: {bid_size:.6f} Bid Feed: {bid_feed} Ask Price: {ask:.2f} Ask Size: {ask_size:.6f} Ask Feed: {ask_feed}')
+def nbbo_update(symbol, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
+    print(f'Pair: {symbol} Bid Price: {bid:.2f} Bid Size: {bid_size:.6f} Bid Feed: {bid_feed} Ask Price: {ask:.2f} Ask Size: {ask_size:.6f} Ask Feed: {ask_feed}')
 
 
 def main():

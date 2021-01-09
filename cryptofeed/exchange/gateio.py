@@ -12,7 +12,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,8 +21,8 @@ LOG = logging.getLogger('feedhandler')
 class Gateio(Feed):
     id = GATEIO
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://ws.gate.io/v3/', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://ws.gate.io/v3/', **kwargs)
 
     def _reset(self):
         self.l2_book = {}
@@ -79,7 +79,7 @@ class Gateio(Feed):
         }
         """
         symbol, trades = msg['params']
-        symbol = pair_exchange_to_std(symbol)
+        symbol = symbol_exchange_to_std(symbol)
         # list of trades appears to be in most recent to oldest, to reverse to deliver them in chronological order
         for trade in reversed(trades):
             side = BUY if trade['type'] == 'buy' else SELL
@@ -88,7 +88,7 @@ class Gateio(Feed):
             ts = float(trade['time'])
             order_id = trade['id']
             await self.callback(TRADES, feed=self.id,
-                                pair=symbol,
+                                symbol=symbol,
                                 side=side,
                                 amount=amount,
                                 price=price,
@@ -111,7 +111,7 @@ class Gateio(Feed):
                 'id': None
             }
         """
-        symbol = pair_exchange_to_std(msg['params'][-1])
+        symbol = symbol_exchange_to_std(msg['params'][-1])
         forced = msg['params'][0]
         delta = {BID: [], ASK: []}
 
@@ -156,7 +156,7 @@ class Gateio(Feed):
         self._reset()
         client_id = 0
         for chan in self.channels if self.channels else self.subscription:
-            pairs = self.pairs if self.pairs else self.subscription[chan]
+            pairs = self.symbols if self.symbols else self.subscription[chan]
             client_id += 1
             if 'depth' in chan:
                 pairs = [[pair, 30, "0.00000001"] for pair in pairs]

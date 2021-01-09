@@ -16,7 +16,7 @@ PREV = {}
 counter = 0
 
 
-async def book(feed, pair, book, timestamp):
+async def book(feed, symbol, book, timestamp):
     global PREV
     global counter
     if book == PREV:
@@ -35,7 +35,7 @@ async def book(feed, pair, book, timestamp):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Coinbase(max_depth=5, pairs=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Coinbase(max_depth=5, symbols=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.run()
 
 

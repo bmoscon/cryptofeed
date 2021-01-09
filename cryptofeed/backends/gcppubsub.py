@@ -87,13 +87,13 @@ class GCPPubSubCallback:
         finally:
             return topic_path
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         '''
-        Publish message. For filtering, "feed" and "pair" are added as attributes.
+        Publish message. For filtering, "feed" and "symbol" are added as attributes.
         https://cloud.google.com/pubsub/docs/filtering
         '''
         payload = json.dumps(data).encode()
-        message = PubsubMessage(payload, feed=feed, pair=pair)
+        message = PubsubMessage(payload, feed=feed, symbol=symbol)
         await self.client.publish(self.topic_path, [message])
 
 

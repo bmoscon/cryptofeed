@@ -14,7 +14,7 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,11 +23,8 @@ LOG = logging.getLogger('feedhandler')
 class Blockchain(Feed):
     id = BLOCKCHAIN
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__("wss://ws.prod.blockchain.info/mercury-gateway/v1/ws",
-                         pairs=pairs, channels=channels, callbacks=callbacks,
-                         origin="https://exchange.blockchain.com",
-                         **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__("wss://ws.prod.blockchain.info/mercury-gateway/v1/ws", origin="https://exchange.blockchain.com", **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -37,7 +34,7 @@ class Blockchain(Feed):
 
     async def _pair_l2_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = symbol_exchange_to_std(msg['symbol'])
         forced = False
         if msg['event'] == 'snapshot':
             # Reset the book
@@ -79,7 +76,7 @@ class Blockchain(Feed):
 
     async def _pair_l3_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = symbol_exchange_to_std(msg['symbol'])
 
         if msg['event'] == 'snapshot':
             # Reset the book
@@ -133,7 +130,7 @@ class Blockchain(Feed):
         }
         """
         await self.callback(TRADES, feed=self.id,
-                            pair=msg['symbol'],
+                            symbol=msg['symbol'],
                             side=BUY if msg['side'] == 'buy' else SELL,
                             amount=msg['qty'],
                             price=msg['price'],
@@ -178,7 +175,7 @@ class Blockchain(Feed):
                                                      }))
 
         else:
-            for pair, channel in product(self.pairs, self.channels):
+            for pair, channel in product(self.symbols, self.channels):
                 await websocket.send(json.dumps({"action": "subscribe",
                                                  "symbol": pair,
                                                  "channel": channel

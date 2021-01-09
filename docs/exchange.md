@@ -54,17 +54,17 @@ async def subscribe(self, websocket):
         self.__reset()
         client_id = 0
         for chan in self.channels:
-            for pair in self.pairs:
+            for symbol in self.symbols:
                 client_id += 1
                 await websocket.send(json.dumps(
                     {
-                        "sub": f"market.{pair}.{chan}",
+                        "sub": f"market.{symbol}.{chan}",
                         "id": client_id
                     }
                 ))
 ```
 We also save the websocket connection to a private data member of the class so we can use it in the message handler to respond to pings (more on this later, this is specific to this exchange).
-This also mean we'll need to add support for the various channel mappings in `standards.py`, add support for the pair mappings in `pairs.py` and add the exchange import to `exchanges.py`.
+This also mean we'll need to add support for the various channel mappings in `standards.py`, add support for the symbol mappings in `symbols.py` and add the exchange import to `exchanges.py`.
 
 
 * `standards.py`
@@ -77,17 +77,17 @@ This also mean we'll need to add support for the various channel mappings in `st
             },
         ```
 
-* `pairs.py`
+* `symbols.py`
     - Per the documentation we can get a list of symbols from their REST api via `GET /v1/common/symbols`
     - ```python
-      def huobi_pairs():
+      def huobi_symbols():
             r = requests.get('https://api.huobi.com/v1/common/symbols').json()
             return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
 
 
       _exchange_function_map = {
            ...
-           HUOBI: huobi_pairs
+           HUOBI: huobi_symbols
         }
       ```
 * `exchanges.py`
@@ -96,7 +96,7 @@ This also mean we'll need to add support for the various channel mappings in `st
       ```
 
 ## Message Handler
-Now that we can subscribe to trades, we can add the message handler (which is called by the feedhandler when messages are received on a websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot interpret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and pair are sent in the update so we'll need to parse those out to properly handle the message.
+Now that we can subscribe to trades, we can add the message handler (which is called by the feedhandler when messages are received on a websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot interpret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and symbol are sent in the update so we'll need to parse those out to properly handle the message.
 
 
 ```python
@@ -113,7 +113,7 @@ async def _trade(self, msg):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                 feed=self.id,
-                pair=pair_exchange_to_std(msg['ch'].split('.')[1]),
+                symbol=symbol_exchange_to_std(msg['ch'].split('.')[1]),
                 order_id=trade['id'],
                 side=BUY if trade['direction'] == 'buy' else SELL,
                 amount=Decimal(trade['amount']),
@@ -165,9 +165,9 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
   - `_book`
   - ```python
       async def _book(self, msg):
-          pair = pair_exchange_to_std(msg['ch'].split('.')[1])
+          symbol = symbol_exchange_to_std(msg['ch'].split('.')[1])
           data = msg['tick']
-          self.l2_book[pair] = {
+          self.l2_book[symbol] = {
               BID: sd({
                   Decimal(price): Decimal(amount)
                   for price, amount in data['bids']
@@ -178,7 +178,7 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
               })
           }
 
-          await self.book_callback(pair, L2_BOOK, False, False, msg['ts'])
+          await self.book_callback(symbol, L2_BOOK, False, False, msg['ts'])
     ```
 
 According to the docs, for the book updates, the entire book is sent each time, so we just need to process the message in its entirety and call the `book_callback` method, defined in the parent `Feed` class. Its designed to handle the myriad of ways an update might take place, many of which Huobi does not support. Some exchanges supply only incremental updates (also called deltas), meaning a client can subscribe to a book delta, instead of getting the entire book each time. Huobi does not support this, so there is no delta processing to handle, but by convention the same method is used to process the book update.

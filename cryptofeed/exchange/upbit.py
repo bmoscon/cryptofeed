@@ -8,7 +8,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import load_exchange_pair_mapping, pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import load_exchange_symbol_mapping, symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -18,24 +18,8 @@ class Upbit(Feed):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.upbit.com/websocket/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
-        self.__reset()
-
-    def __reset(self):
-        pass
-
-    @staticmethod
-    def get_active_symbols_info():
-        return requests.get(Upbit.api + 'market/all').json()
-
-    @staticmethod
-    def get_active_symbols():
-        load_exchange_pair_mapping(Upbit.id)
-        symbols = []
-        for data in Upbit.get_active_symbols_info():
-            symbols.append(pair_exchange_to_std(data['market']))
-        return symbols
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.upbit.com/websocket/v1', **kwargs)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -63,7 +47,7 @@ class Upbit(Feed):
         amount = Decimal(msg['tv'])
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['sid'],
-                            pair=pair_exchange_to_std(msg['cd']),
+                            symbol=symbol_exchange_to_std(msg['cd']),
                             side=BUY if msg['ab'] == 'BID' else SELL,
                             amount=amount,
                             price=price,
@@ -100,7 +84,7 @@ class Upbit(Feed):
             'tms': 1584263923870,  // Timestamp
         }
         """
-        pair = pair_exchange_to_std(msg['cd'])
+        pair = symbol_exchange_to_std(msg['cd'])
         orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
         forced = pair not in self.l2_book
 
@@ -208,11 +192,10 @@ class Upbit(Feed):
         > [{"ticket":"UNIQUE_TICKET"},{"format":"SIMPLE"},{"type":"trade","codes":["KRW-BTC"]},{"type":"orderbook","codes":["KRW-ETH"]},{"type":"ticker", "codes":["KRW-EOS"]}]
         """
 
-        self.__reset()
         chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
         for channel in self.channels if not self.subscription else self.subscription:
             codes = list()
-            for pair in self.pairs if not self.subscription else self.subscription[channel]:
+            for pair in self.symbols if not self.subscription else self.subscription[channel]:
                 codes.append(pair)
 
             if channel == L2_BOOK:

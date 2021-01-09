@@ -29,7 +29,7 @@ class ElasticCallback(HTTPCallback):
         self.session = None
         self.numeric_type = numeric_type
 
-    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
         if 'timestamp' in data:
             data['timestamp'] = f"{dt.fromtimestamp(data['timestamp'], tz=tz.utc).isoformat()}Z"
         if 'receipt_timestamp' in data:
@@ -59,7 +59,7 @@ class BookElastic(ElasticCallback, BackendBookCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
         if 'timestamp' in data:
             data['timestamp'] = f"{dt.fromtimestamp(data['timestamp'], tz=tz.utc).isoformat()}Z"
         if 'receipt_timestamp' in data:
@@ -67,7 +67,7 @@ class BookElastic(ElasticCallback, BackendBookCallback):
         timestamp = f"{dt.fromtimestamp(timestamp, tz=tz.utc).isoformat()}Z"
         receipt_timestamp = F"{dt.fromtimestamp(receipt_timestamp, tz=tz.utc).isoformat()}Z"
 
-        data = book_flatten(feed, pair, data, timestamp, False)
+        data = book_flatten(feed, symbol, data, timestamp, False)
         await self.write_bulk(data)
 
 
@@ -78,7 +78,7 @@ class BookDeltaElastic(ElasticCallback, BackendBookDeltaCallback):
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 
-    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
         if 'timestamp' in data:
             data['timestamp'] = f"{dt.fromtimestamp(data['timestamp'], tz=tz.utc).isoformat()}Z"
         if 'receipt_timestamp' in data:
@@ -86,7 +86,7 @@ class BookDeltaElastic(ElasticCallback, BackendBookDeltaCallback):
         timestamp = f"{dt.fromtimestamp(timestamp, tz=tz.utc).isoformat()}Z"
         receipt_timestamp = F"{dt.fromtimestamp(receipt_timestamp, tz=tz.utc).isoformat()}Z"
 
-        data = book_flatten(feed, pair, data, timestamp, True)
+        data = book_flatten(feed, symbol, data, timestamp, True)
         await self.write_bulk(data)
 
 

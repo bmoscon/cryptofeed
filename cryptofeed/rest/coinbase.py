@@ -141,7 +141,7 @@ class Coinbase(API):
     def _trade_normalize(self, symbol: str, data: dict) -> dict:
         return {
             'timestamp': timestamp_normalize(self.ID, data['time']),
-            'pair': symbol,
+            'symbol': symbol,
             'id': data['trade_id'],
             'feed': self.ID,
             'side': SELL if data['side'] == 'buy' else BUY,
@@ -192,7 +192,7 @@ class Coinbase(API):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
         self._handle_error(data, LOG)
         data = data.json()
-        return {'pair': symbol,
+        return {'symbol': symbol,
                 'feed': self.ID,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])

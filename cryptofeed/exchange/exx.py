@@ -14,7 +14,7 @@ from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import EXX as EXX_id
 from cryptofeed.defines import L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,8 +23,8 @@ LOG = logging.getLogger('feedhandler')
 class EXX(Feed):
     id = EXX_id
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://ws.exx.com/websocket', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://ws.exx.com/websocket', **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -87,7 +87,7 @@ class EXX(Feed):
         if msg[0] == 'AE':
             # snapshot
             forced = True
-            pair = pair_exchange_to_std(msg[2])
+            pair = symbol_exchange_to_std(msg[2])
             ts = msg[3]
             asks = msg[4]['asks'] if 'asks' in msg[4] else msg[5]['asks']
             bids = msg[5]['bids'] if 'bids' in msg[5] else msg[4]['bids']
@@ -104,7 +104,7 @@ class EXX(Feed):
         else:
             # Update
             ts = msg[2]
-            pair = pair_exchange_to_std(msg[3])
+            pair = symbol_exchange_to_std(msg[3])
             side = ASK if msg[4] == 'ASK' else BID
             price = Decimal(msg[5])
             amount = Decimal(msg[6])
@@ -126,7 +126,7 @@ class EXX(Feed):
         ['T', '1', '1547947390', 'BTC_USDT', 'bid', '3683.74440000', '0.082', '33732290']
         """
         ts = float(msg[2])
-        pair = pair_exchange_to_std(msg[3])
+        pair = symbol_exchange_to_std(msg[3])
         side = BUY if msg[4] == 'bid' else SELL
         price = Decimal(msg[5])
         amount = Decimal(msg[6])
@@ -134,7 +134,7 @@ class EXX(Feed):
 
         await self.callback(TRADES,
                             feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             order_id=trade_id,
                             side=side,
                             amount=amount,
@@ -160,7 +160,7 @@ class EXX(Feed):
     async def subscribe(self, websocket):
         self.__reset()
         for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.pairs if not self.subscription else self.subscription[channel]:
+            for pair in self.symbols if not self.subscription else self.subscription[channel]:
                 await websocket.send(json.dumps({"dataType": f"1_{channel}_{pair}",
                                                  "dataSize": 50,
                                                  "action": "ADD"

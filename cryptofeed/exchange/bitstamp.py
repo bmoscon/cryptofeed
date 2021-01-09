@@ -14,7 +14,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import feed_to_exchange, pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import feed_to_exchange, symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -24,20 +24,14 @@ class Bitstamp(Feed):
     id = BITSTAMP
     # API documentation: https://www.bitstamp.net/websocket/v2/
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__(
-            'wss://ws.bitstamp.net/',
-            pairs=pairs,
-            channels=channels,
-            callbacks=callbacks,
-            **kwargs
-        )
+    def __init__(self, **kwargs):
+        super().__init__('wss://ws.bitstamp.net/', **kwargs)
 
     async def _l2_book(self, msg: dict, timestamp: float):
         data = msg['data']
         chan = msg['channel']
         ts = int(data['microtimestamp'])
-        pair = pair_exchange_to_std(chan.split('_')[-1])
+        pair = symbol_exchange_to_std(chan.split('_')[-1])
         forced = False
         delta = {BID: [], ASK: []}
 
@@ -67,7 +61,7 @@ class Bitstamp(Feed):
         data = msg['data']
         chan = msg['channel']
         ts = int(data['microtimestamp'])
-        pair = pair_exchange_to_std(chan.split('_')[-1])
+        pair = symbol_exchange_to_std(chan.split('_')[-1])
 
         book = {BID: sd(), ASK: sd()}
         for side in (BID, ASK):
@@ -99,7 +93,7 @@ class Bitstamp(Feed):
         """
         data = msg['data']
         chan = msg['channel']
-        pair = pair_exchange_to_std(chan.split('_')[-1])
+        pair = symbol_exchange_to_std(chan.split('_')[-1])
 
         side = BUY if data['type'] == 0 else SELL
         amount = Decimal(data['amount'])
@@ -107,7 +101,7 @@ class Bitstamp(Feed):
         ts = int(data['microtimestamp'])
         order_id = data['id']
         await self.callback(TRADES, feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             side=side,
                             amount=amount,
                             price=price,
@@ -148,7 +142,7 @@ class Bitstamp(Feed):
             results = await asyncio.gather(*[fetch(session, url) for url in urls])
 
         for r, pair in zip(results, pairs):
-            std_pair = pair_exchange_to_std(pair) if pair else 'BTC-USD'
+            std_pair = symbol_exchange_to_std(pair) if pair else 'BTC-USD'
             self.last_update_id[std_pair] = r['timestamp']
             self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
             for s, side in (('bids', BID), ('asks', ASK)):
@@ -161,7 +155,7 @@ class Bitstamp(Feed):
         snaps = []
         self.last_update_id = {}
         for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.pairs if not self.subscription else self.subscription[channel]:
+            for pair in self.symbols if not self.subscription else self.subscription[channel]:
                 await websocket.send(
                     json.dumps({
                         "event": "bts:subscribe",

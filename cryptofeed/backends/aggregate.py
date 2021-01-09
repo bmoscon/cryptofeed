@@ -45,20 +45,20 @@ class OHLCV(AggregateCallback):
         self.last_update = time.time()
         self.data = {}
 
-    def _agg(self, pair, amount, price):
-        if pair not in self.data:
-            self.data[pair] = {'open': price, 'high': price, 'low': price,
-                               'close': price, 'volume': Decimal(0), 'vwap': Decimal(0)}
+    def _agg(self, symbol, amount, price):
+        if symbol not in self.data:
+            self.data[symbol] = {'open': price, 'high': price, 'low': price,
+                                 'close': price, 'volume': Decimal(0), 'vwap': Decimal(0)}
 
-        self.data[pair]['close'] = price
-        self.data[pair]['volume'] += amount
-        if price > self.data[pair]['high']:
-            self.data[pair]['high'] = price
-        if price < self.data[pair]['low']:
-            self.data[pair]['low'] = price
-        self.data[pair]['vwap'] += price * amount
+        self.data[symbol]['close'] = price
+        self.data[symbol]['volume'] += amount
+        if price > self.data[symbol]['high']:
+            self.data[symbol]['high'] = price
+        if price < self.data[symbol]['low']:
+            self.data[symbol]['low'] = price
+        self.data[symbol]['vwap'] += price * amount
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
+    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
@@ -67,7 +67,7 @@ class OHLCV(AggregateCallback):
             await self.handler(data=self.data)
             self.data = {}
 
-        self._agg(pair, amount, price)
+        self._agg(symbol, amount, price)
 
 
 class RenkoFixed(AggregateCallback):
@@ -91,12 +91,12 @@ class RenkoFixed(AggregateCallback):
     def greater_abs(minus, plus):
         return minus if -minus > plus else plus
 
-    def _agg(self, pair, price):
-        if pair not in self.data:
+    def _agg(self, symbol, price):
+        if symbol not in self.data:
             self.brick_open = price
             self.brick_high = price
             self.brick_low = price
-            self.data[pair] = {'brick_open': price, 'brick_close': price}
+            self.data[symbol] = {'brick_open': price, 'brick_close': price}
 
         self.brick_low = np.min([self.brick_low, price])
         self.brick_high = np.max([self.brick_high, price])
@@ -119,19 +119,19 @@ class RenkoFixed(AggregateCallback):
             same = self.new_direction == self.prev_direction
             if same:
                 self.brick_open = self.brick_close
-            self.data[pair]['brick_open'] = self.brick_open
+            self.data[symbol]['brick_open'] = self.brick_open
             self.brick_close = price
-            self.data[pair]['brick_close'] = self.brick_close
+            self.data[symbol]['brick_close'] = self.brick_close
             self.brick_high = self.brick_low = self.brick_close
             self.prev_direction = self.new_direction
 
         else:
             self.new_brick = False
 
-    async def __call__(self, *, feed: str, pair: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
+    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
         if self.new_brick:
             await self.handler(data=self.data)
-        self._agg(pair, price)
+        self._agg(symbol, price)
 
 
 class CustomAggregate(AggregateCallback):

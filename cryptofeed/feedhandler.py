@@ -169,21 +169,21 @@ class FeedHandler:
         else:
             self.feeds.append((feed, timeout))
 
-    def add_nbbo(self, feeds, pairs, callback, timeout=120):
+    def add_nbbo(self, feeds, symbols, callback, timeout=120):
         """
         feeds: list of feed classes
             list of feeds (exchanges) that comprises the NBBO
-        pairs: list str
-            the trading pairs
+        symbols: list str
+            the trading symbols
         callback: function pointer
             the callback to be invoked when a new tick is calculated for the NBBO
         timeout: int
             seconds without a message before a connection will be considered dead and reestablished.
             See `add_feed`
         """
-        cb = NBBO(callback, pairs)
+        cb = NBBO(callback, symbols)
         for feed in feeds:
-            self.add_feed(feed(channels=[L2_BOOK], pairs=pairs, callbacks={L2_BOOK: cb}), timeout=timeout)
+            self.add_feed(feed(channels=[L2_BOOK], symbols=symbols, callbacks={L2_BOOK: cb}), timeout=timeout)
 
     def run(self, start_loop: bool = True, install_signal_handlers: bool = True):
         """

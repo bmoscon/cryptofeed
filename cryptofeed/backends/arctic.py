@@ -39,7 +39,7 @@ class ArcticCallback:
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
 
-    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
         df = pd.DataFrame({key: [value] for key, value in data.items()})
         df['date'] = pd.to_datetime(df.timestamp, unit='s')
         df['receipt_timestamp'] = pd.to_datetime(df.receipt_timestamp, unit='s')

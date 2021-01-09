@@ -83,11 +83,10 @@ CANCELLED = 'cancelled'
 """
 L2 Orderbook Layout
     * BID and ASK are SortedDictionaries
-    * Currency Pairs are defined in standards.py
     * PRICE and SIZE are of type decimal.Decimal
 
 {
-    currency pair: {
+    symbol: {
         BID: {
             PRICE: SIZE,
             PRICE: SIZE,
@@ -99,7 +98,7 @@ L2 Orderbook Layout
             ...
         }
     },
-    currency pair: {
+    symbol: {
         ...
     },
     ...
@@ -110,7 +109,7 @@ L3 Orderbook Layout
     * Similar to L2, except orders are not aggregated by price,
       each price level contains the individual orders for that price level
 {
-    currency pair: {
+    Symbol: {
         BID: {
             PRICE: {
                 order-id: amount,
@@ -138,7 +137,7 @@ L3 Orderbook Layout
             ...
         }
     },
-    currency pair: {
+    Symbol: {
         ...
     },
     ...

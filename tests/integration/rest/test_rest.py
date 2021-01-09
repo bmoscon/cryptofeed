@@ -17,7 +17,7 @@ def test_rest_bitmex():
 
 def test_rest_bitfinex():
     expected = {'timestamp': 1483228812.0,
-                'pair': 'BTC-USD',
+                'symbol': 'BTC-USD',
                 'id': 25291508,
                 'feed': 'BITFINEX',
                 'side': SELL,
@@ -34,7 +34,7 @@ def test_rest_bitfinex():
 
 def test_rest_deribit():
     expected = {'timestamp': 1550062892.378,
-                'pair': 'BTC-PERPETUAL',
+                'symbol': 'BTC-PERPETUAL',
                 'id': 15340745,
                 'feed': 'DERIBIT',
                 'side': BUY,
@@ -49,7 +49,7 @@ def test_rest_deribit():
 
 def test_rest_ftx():
     expected = {'timestamp': 1607691600.0,
-                'pair': 'BTC-PERP',
+                'symbol': 'BTC-PERP',
                 'feed': 'FTX',
                 'rate': 1.9e-05}
 

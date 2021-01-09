@@ -12,7 +12,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,19 +21,15 @@ LOG = logging.getLogger('feedhandler')
 class Gemini(Feed):
     id = GEMINI
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.gemini.com/v2/marketdata/',
-                         pairs=pairs,
-                         channels=channels,
-                         callbacks=callbacks,
-                         **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.gemini.com/v2/marketdata/', **kwargs)
 
     def __reset(self, pairs):
         for pair in pairs:
-            self.l2_book[pair_exchange_to_std(pair)] = {BID: sd(), ASK: sd()}
+            self.l2_book[symbol_exchange_to_std(pair)] = {BID: sd(), ASK: sd()}
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = symbol_exchange_to_std(msg['symbol'])
         # Gemini sends ALL data for the symbol, so if we don't actually want
         # the book data, bail before parsing
         if self.channels and L2_BOOK not in self.channels:
@@ -59,13 +55,13 @@ class Gemini(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = symbol_exchange_to_std(msg['symbol'])
         price = Decimal(msg['price'])
         side = SELL if msg['side'] == 'sell' else BUY
         amount = Decimal(msg['quantity'])
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['event_id'],
-                            pair=pair,
+                            symbol=pair,
                             side=side,
                             amount=amount,
                             price=price,
@@ -88,7 +84,7 @@ class Gemini(Feed):
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
     async def subscribe(self, websocket):
-        pairs = self.pairs if not self.subscription else list(set.union(*list(self.subscription.values())))
+        pairs = self.symbols if not self.subscription else list(set.union(*list(self.subscription.values())))
         self.__reset(pairs)
 
         await websocket.send(json.dumps({"type": "subscribe",

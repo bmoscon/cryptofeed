@@ -17,7 +17,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -42,11 +42,11 @@ CHECKSUM = 131072
 class Bitfinex(Feed):
     id = BITFINEX
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
+    def __init__(self, channels=None, **kwargs):
         if channels is not None and FUNDING in channels:
             if len(channels) > 1:
                 raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex or you must use subscrption dictionary")
-        super().__init__('wss://api.bitfinex.com/ws/2', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__('wss://api.bitfinex.com/ws/2', channels=channels, **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -72,9 +72,9 @@ class Bitfinex(Feed):
             # last_price, volume, high, low
             bid, _, ask, _, _, _, _, _, _, _ = msg[1]
             pair = self.channel_map[chan_id]['symbol']
-            pair = pair_exchange_to_std(pair)
+            pair = symbol_exchange_to_std(pair)
             await self.callback(TICKER, feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 bid=bid,
                                 ask=ask,
                                 timestamp=timestamp,
@@ -84,7 +84,7 @@ class Bitfinex(Feed):
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
         funding = pair[0] == 'f'
-        pair = pair_exchange_to_std(pair)
+        pair = symbol_exchange_to_std(pair)
 
         async def _trade_update(trade: list, timestamp: float):
             if funding:
@@ -97,7 +97,7 @@ class Bitfinex(Feed):
             amount = abs(amount)
             if period:
                 await self.callback(FUNDING, feed=self.id,
-                                    pair=pair,
+                                    symbol=pair,
                                     side=side,
                                     amount=Decimal(amount),
                                     price=Decimal(price),
@@ -107,7 +107,7 @@ class Bitfinex(Feed):
                                     period=period)
             else:
                 await self.callback(TRADES, feed=self.id,
-                                    pair=pair,
+                                    symbol=pair,
                                     side=side,
                                     amount=Decimal(amount),
                                     price=Decimal(price),
@@ -138,7 +138,7 @@ class Bitfinex(Feed):
         """
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
-        pair = pair_exchange_to_std(pair)
+        pair = symbol_exchange_to_std(pair)
         delta = {BID: [], ASK: []}
         forced = False
 
@@ -206,7 +206,7 @@ class Bitfinex(Feed):
         forced = False
         chan_id = msg[0]
         pair = self.channel_map[chan_id]['symbol']
-        pair = pair_exchange_to_std(pair)
+        pair = symbol_exchange_to_std(pair)
 
         if isinstance(msg[1], list):
             if isinstance(msg[1][0], list):
@@ -319,7 +319,7 @@ class Bitfinex(Feed):
             return conn, subscribe, self.message_handler
 
         for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.pairs if not self.subscription else self.subscription[channel]:
+            for pair in self.symbols if not self.subscription else self.subscription[channel]:
                 pair_channel.append((pair, channel))
                 # Bitfinex max is 25 per connection
                 if len(pair_channel) == 25:

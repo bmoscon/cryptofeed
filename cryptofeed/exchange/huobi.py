@@ -13,7 +13,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -30,7 +30,7 @@ class Huobi(Feed):
         self.l2_book = {}
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['ch'].split('.')[1])
+        pair = symbol_exchange_to_std(msg['ch'].split('.')[1])
         data = msg['tick']
         forced = pair not in self.l2_book
 
@@ -75,7 +75,7 @@ class Huobi(Feed):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                                 feed=self.id,
-                                pair=pair_exchange_to_std(msg['ch'].split('.')[1]),
+                                symbol=symbol_exchange_to_std(msg['ch'].split('.')[1]),
                                 order_id=trade['tradeId'],
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
@@ -108,7 +108,7 @@ class Huobi(Feed):
         self.__reset()
         client_id = 0
         for chan in self.channels if self.channels else self.subscription:
-            for pair in self.pairs if self.pairs else self.subscription[chan]:
+            for pair in self.symbols if self.symbols else self.subscription[chan]:
                 client_id += 1
                 await websocket.send(json.dumps(
                     {

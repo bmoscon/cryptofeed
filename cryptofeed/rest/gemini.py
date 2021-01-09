@@ -12,7 +12,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, GEMINI, LIMIT, OPEN, PARTIAL, SELL
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import normalize_trading_options, pair_exchange_to_std, pair_std_to_exchange
+from cryptofeed.standards import normalize_trading_options, symbol_exchange_to_std, symbol_std_to_exchange
 
 
 LOG = logging.getLogger('rest')
@@ -41,7 +41,7 @@ class Gemini(API):
         price = Decimal(data['price']) if Decimal(data['avg_execution_price']) == 0 else Decimal(data['avg_execution_price'])
         return {
             'order_id': data['order_id'],
-            'symbol': pair_exchange_to_std(data['symbol']),
+            'symbol': symbol_exchange_to_std(data['symbol']),
             'side': BUY if data['side'] == 'buy' else SELL,
             'order_type': LIMIT,
             'price': price,
@@ -90,16 +90,16 @@ class Gemini(API):
 
     # Public Routes
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = pair_std_to_exchange(symbol, self.ID)
+        sym = symbol_std_to_exchange(symbol, self.ID)
         data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
-        return {'pair': symbol,
+        return {'symbol': symbol,
                 'feed': self.ID,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
                 }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = pair_std_to_exchange(symbol, self.ID)
+        sym = symbol_std_to_exchange(symbol, self.ID)
         data = self._get(f"/v1/book/{sym}", retry, retry_wait)
         return {
             BID: sd({
@@ -113,7 +113,7 @@ class Gemini(API):
         }
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        sym = pair_std_to_exchange(symbol, self.ID)
+        sym = symbol_std_to_exchange(symbol, self.ID)
         params = {'limit_trades': 500}
         if start:
             params['since'] = int(pd.Timestamp(start).timestamp() * 1000)
@@ -124,7 +124,7 @@ class Gemini(API):
             return {
                 'feed': self.ID,
                 'order_id': trade['tid'],
-                'pair': sym,
+                'symbol': sym,
                 'side': trade['type'],
                 'amount': Decimal(trade['amount']),
                 'price': Decimal(trade['price']),
@@ -153,7 +153,7 @@ class Gemini(API):
         if not price:
             raise ValueError('Gemini only supports limit orders, must specify price')
         ot = normalize_trading_options(self.ID, order_type)
-        sym = pair_std_to_exchange(symbol, self.ID)
+        sym = symbol_std_to_exchange(symbol, self.ID)
 
         parameters = {
             'type': ot,
@@ -183,7 +183,7 @@ class Gemini(API):
         return [Gemini._order_status(d) for d in data]
 
     def trade_history(self, symbol: str, start=None, end=None):
-        sym = pair_std_to_exchange(symbol, self.ID)
+        sym = symbol_std_to_exchange(symbol, self.ID)
 
         params = {
             'symbol': sym,

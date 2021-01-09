@@ -29,7 +29,7 @@ def main():
 
         f = FeedHandler()
         rabbitargs = {'exchange_mode': True, 'exchange_name': 'amq.topic', 'exchange_type': 'topic', 'routing_key': 'cryptofeed', 'passive': False}
-        f.add_feed(Kraken(max_depth=2, channels=[L2_BOOK], pairs=['BTC-USD', 'ETH-USD'], callbacks={L2_BOOK: BookRabbit(**rabbitargs)}))
+        f.add_feed(Kraken(max_depth=2, channels=[L2_BOOK], symbols=['BTC-USD', 'ETH-USD'], callbacks={L2_BOOK: BookRabbit(**rabbitargs)}))
 
         f.run()
 

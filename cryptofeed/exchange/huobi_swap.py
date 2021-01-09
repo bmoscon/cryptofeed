@@ -38,7 +38,7 @@ class HuobiSwap(HuobiDM):
                         self.funding_updates[pair] = update
                         await self.callback(FUNDING,
                                             feed=self.id,
-                                            pair=pair,
+                                            symbol=pair,
                                             timestamp=timestamp_normalize(self.id, data['ts']),
                                             receipt_timestamp=received,
                                             rate=Decimal(update[0]),
@@ -52,7 +52,7 @@ class HuobiSwap(HuobiDM):
         cfg = dict(self.subscription)
         if FUNDING in self.channels or FUNDING in self.subscription:
             loop = asyncio.get_event_loop()
-            loop.create_task(self._funding(self.pairs if FUNDING in self.channels else self.subscription[FUNDING]))
+            loop.create_task(self._funding(self.symbols if FUNDING in self.channels else self.subscription[FUNDING]))
             self.channels.remove(FUNDING) if FUNDING in self.channels else self.subscription.pop(FUNDING)
 
         await super().subscribe(websocket)
