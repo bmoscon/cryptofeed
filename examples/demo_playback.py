@@ -28,7 +28,7 @@ def main():
     f = FeedHandler()
     feed = Coinbase(symbols=['BTC-USD'], callbacks={L3_BOOK: book, TICKER: ticker, TRADES: trade})
 
-    stats = f.playback(feed, os.path.join(demo_dir, 'COINBASE-7e24b862-b42c-4fd8-a99e-4791a3ff84a5.0'))
+    stats = f.playback(feed, os.path.join(demo_dir + "/../sample_data", 'COINBASE-7e24b862-b42c-4fd8-a99e-4791a3ff84a5.0'))
 
     print("\nPlayback complete!")
     print(stats)

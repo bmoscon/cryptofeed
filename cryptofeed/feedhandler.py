@@ -145,7 +145,7 @@ class FeedHandler:
                 for line in fp:
                     timestamp, message = line.split(":", 1)
                     counter += 1
-                    await feed.message_handler(message, timestamp)
+                    await feed.message_handler(message, FakeWS(), timestamp)
             return {'messages_processed': counter, 'callbacks': dict(callbacks)}
 
     def add_feed(self, feed, timeout=120, **kwargs):
