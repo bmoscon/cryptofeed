@@ -13,7 +13,7 @@ from json import JSONDecodeError
 
 from cryptofeed.defines import WHALE_ALERT, TRANSACTIONS
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import symbol_exchange_to_std
 from cryptofeed.exceptions import RestResponseError
 
 
@@ -91,7 +91,7 @@ class WhaleAlert(Feed):
                         await handle(session, coin, chan)
             else:
                 for chan in self.channels:
-                    for coin in self.pairs:
+                    for coin in self.symbols:
                         await handle(session, coin, chan)
         return
 
@@ -148,7 +148,7 @@ class WhaleAlert(Feed):
                     del transaction['symbol']  # removing duplicate data with `pair` that is added
                     await self.callback(TRANSACTIONS,
                                         feed=self.id,
-                                        pair=pair_exchange_to_std(coin),
+                                        symbol=symbol_exchange_to_std(coin),
                                         # `timestamp` is already with the correct format in `transaction` dict (in unit second).
                                         **transaction, **to, **fro)
                     max_trans_ts = transaction['timestamp'] if transaction['timestamp'] > max_trans_ts else max_trans_ts

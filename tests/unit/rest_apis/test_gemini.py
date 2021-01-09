@@ -37,7 +37,7 @@ def test_heartbeat():
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 def test_place_order_and_cancel():
     order_resp = sandbox.place_order(
-        pair='btcusd',
+        symbol='btcusd',
         side='buy',
         type='LIMIT',
         amount='1.0',
@@ -64,7 +64,7 @@ def test_cancel_all_active_orders():
 @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 def test_order_status():
     order_resp = sandbox.place_order(
-        pair='btcusd',
+        symbol='btcusd',
         side='buy',
         type='LIMIT',
         amount='1.0',

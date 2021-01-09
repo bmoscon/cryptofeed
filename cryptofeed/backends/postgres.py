@@ -48,11 +48,11 @@ class PostgresCallback:
         if self.conn is None:
             self.conn = await asyncpg.connect(user=self.user, password=self.pw, database=self.db, host=self.host)
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         time = dt.utcfromtimestamp(timestamp)
         rtime = dt.utcfromtimestamp(receipt_timestamp)
 
-        self._cache.append(f"('{feed}','{pair}','{time}','{rtime}',{data})")
+        self._cache.append(f"('{feed}','{symbol}','{time}','{rtime}',{data})")
         self._cache_counter += 1
 
         if self._cache_counter > self._cache_size:
@@ -81,43 +81,43 @@ class PostgresCallback:
 class TradePostgres(PostgresCallback, BackendTradeCallback):
     default_table = TRADES
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         if 'id' in data:
             d = f"'{data['side']}',{data['amount']},{data['price']},'{data['id']}'"
         else:
             d = f"'{data['side']}',{data['amount']},{data['price']},NULL"
-        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+        await super().write(feed, symbol, timestamp, receipt_timestamp, d)
 
 
 class FundingPostgres(PostgresCallback, BackendFundingCallback):
     default_table = FUNDING
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        await super().write(feed, pair, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
 class TickerPostgres(PostgresCallback, BackendTickerCallback):
     default_table = TICKER
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         d = f"{data['bid']},{data['ask']}"
-        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+        await super().write(feed, symbol, timestamp, receipt_timestamp, d)
 
 
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
     default_table = OPEN_INTEREST
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         d = f"{data['open_interest']}"
-        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+        await super().write(feed, symbol, timestamp, receipt_timestamp, d)
 
 
 class FuturesIndexPostgres(PostgresCallback, BackendFuturesIndexCallback):
     default_table = FUTURES_INDEX
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         d = f"{data['futures_index']}"
-        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+        await super().write(feed, symbol, timestamp, receipt_timestamp, d)
 
 
 class LiquidationsPostgres(PostgresCallback, BackendLiquidationsCallback):
@@ -127,15 +127,15 @@ class LiquidationsPostgres(PostgresCallback, BackendLiquidationsCallback):
 class BookPostgres(PostgresCallback, BackendBookCallback):
     default_table = 'book'
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        await super().write(feed, pair, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
 class BookDeltaPostgres(PostgresCallback, BackendBookDeltaCallback):
     default_table = 'book'
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        await super().write(feed, pair, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
 class MarquetInfoPostgres(PostgresCallback, BackendMarketInfoCallback):

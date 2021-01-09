@@ -83,7 +83,7 @@ def main():
 
     cbs = {TRADES: trades}
 
-    f.add_feed(Coinbase(channels=[TRADES], pairs=['BTC-USD'], callbacks=cbs))
+    f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks=cbs))
 
     f.run(start_loop=False)
 

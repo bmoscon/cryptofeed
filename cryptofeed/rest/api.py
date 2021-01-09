@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 
 from cryptofeed.config import Config
-from cryptofeed.standards import load_exchange_pair_mapping
+from cryptofeed.standards import load_exchange_symbol_mapping
 
 
 LOG = logging.getLogger('rest')
@@ -121,9 +121,9 @@ class API:
     def __getitem__(self, key):
         if not self.mapped:
             try:
-                load_exchange_pair_mapping(self.ID + 'REST')
+                load_exchange_symbol_mapping(self.ID + 'REST')
             except KeyError:
-                load_exchange_pair_mapping(self.ID)
+                load_exchange_symbol_mapping(self.ID)
             self.mapped = True
         if key == 'trades':
             return self.trades

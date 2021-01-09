@@ -14,7 +14,7 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std
+from cryptofeed.standards import symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,8 +23,8 @@ LOG = logging.getLogger('feedhandler')
 class Kraken(Feed):
     id = KRAKEN
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
-        super().__init__('wss://ws.kraken.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, depth=1000, **kwargs):
+        super().__init__('wss://ws.kraken.com', **kwargs)
         self.book_depth = depth
 
     def __reset(self):
@@ -62,7 +62,7 @@ class Kraken(Feed):
                     sub['depth'] = self.book_depth
                 await websocket.send(json.dumps({
                     "event": "subscribe",
-                    "pair": self.pairs,
+                    "pair": self.symbols,
                     "subscription": sub
                 }))
 
@@ -77,7 +77,7 @@ class Kraken(Feed):
             price, amount, server_timestamp, side, order_type, _ = trade
             order_type = 'limit' if order_type == 'l' else 'market'
             await self.callback(TRADES, feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 side=BUY if side == 'b' else SELL,
                                 amount=Decimal(amount),
                                 price=Decimal(price),
@@ -92,7 +92,7 @@ class Kraken(Feed):
         channel id, asks: price, wholeLotVol, vol, bids: price, wholeLotVol, close: ...,, vol: ..., VWAP: ..., trades: ..., low: ...., high: ..., open: ...
         """
         await self.callback(TICKER, feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             bid=Decimal(msg[1]['b'][0]),
                             ask=Decimal(msg[1]['a'][0]),
                             timestamp=timestamp,
@@ -169,6 +169,6 @@ class Kraken(Feed):
             elif msg['event'] == 'systemStatus':
                 return
             elif msg['event'] == 'subscriptionStatus' and msg['status'] == 'subscribed':
-                self.channel_map[msg['channelID']] = (msg['subscription']['name'], pair_exchange_to_std(msg['pair']))
+                self.channel_map[msg['channelID']] = (msg['subscription']['name'], symbol_exchange_to_std(msg['pair']))
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)

@@ -15,7 +15,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std as normalize_pair
+from cryptofeed.standards import symbol_exchange_to_std as normalize_pair
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -25,8 +25,8 @@ LOG = logging.getLogger('feedhandler')
 class Bybit(Feed):
     id = BYBIT
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, **kwargs)
 
     def __reset(self):
         self.l2_book = {}
@@ -52,10 +52,10 @@ class Bybit(Feed):
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
 
-        if any(pair[-4:] == 'USDT' for pair in self.normalized_pairs):
+        if any(pair[-4:] == 'USDT' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USDT')
             ret.append((AsyncConnection(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
-        if any(pair[-3:] == 'USD' for pair in self.normalized_pairs):
+        if any(pair[-3:] == 'USD' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USD')
             ret.append((AsyncConnection(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
 
@@ -65,7 +65,7 @@ class Bybit(Feed):
         self.__reset()
 
         for chan in self.channels if self.channels else self.subscription:
-            for pair in self.pairs if self.pairs else self.subscription[chan]:
+            for pair in self.symbols if self.symbols else self.subscription[chan]:
                 # Bybit uses separate addresses for difference quote currencies
                 if pair[-4:] == 'USDT' and quote != 'USDT':
                     continue
@@ -157,14 +157,14 @@ class Bybit(Feed):
         for info in updates:
             if 'open_interest' in info:
                 await self.callback(OPEN_INTEREST, feed=self.id,
-                                    pair=normalize_pair(info['symbol']),
+                                    symbol=normalize_pair(info['symbol']),
                                     open_interest=Decimal(info['open_interest']),
                                     timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
                                     receipt_timestamp=timestamp)
 
             if 'index_price_e4' in info:
                 await self.callback(FUTURES_INDEX, feed=self.id,
-                                    pair=normalize_pair(info['symbol']),
+                                    symbol=normalize_pair(info['symbol']),
                                     futures_index=Decimal(info['index_price_e4']) * Decimal(1e-4),
                                     timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
                                     receipt_timestamp=timestamp)
@@ -192,7 +192,7 @@ class Bybit(Feed):
 
             await self.callback(TRADES,
                                 feed=self.id,
-                                pair=normalize_pair(trade['symbol']),
+                                symbol=normalize_pair(trade['symbol']),
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['side'] == 'Buy' else SELL,
                                 amount=Decimal(trade['size']),

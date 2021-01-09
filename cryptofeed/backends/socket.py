@@ -81,7 +81,7 @@ class SocketCallback:
             elif self.conn_type == 'uds://':
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self.connect()
         data = {'type': self.key, 'data': data}
         data = json.dumps(data)

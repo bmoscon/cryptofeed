@@ -13,7 +13,7 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BITCOINCOM, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -22,8 +22,8 @@ LOG = logging.getLogger('feedhandler')
 class BitcoinCom(Feed):
     id = BITCOINCOM
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.exchange.bitcoin.com/api/2/ws', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.exchange.bitcoin.com/api/2/ws', **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -33,7 +33,7 @@ class BitcoinCom(Feed):
     async def subscribe(self, websocket):
         self.__reset()
         for chan in self.channels if self.channels else self.subscription:
-            for pair in self.pairs if self.pairs else self.subscription[chan]:
+            for pair in self.symbols if self.symbols else self.subscription[chan]:
                 await websocket.send(json.dumps(
                     {
                         "method": chan,
@@ -47,7 +47,7 @@ class BitcoinCom(Feed):
     async def _trade(self, msg: dict, timestamp: float):
         for trade in msg['data']:
             await self.callback(TRADES, feed=self.id,
-                                pair=pair_exchange_to_std(msg['symbol']),
+                                symbol=symbol_exchange_to_std(msg['symbol']),
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade['quantity']),
                                 price=Decimal(trade['price']),
@@ -57,14 +57,14 @@ class BitcoinCom(Feed):
 
     async def _ticker(self, msg: dict, timestamp: float):
         await self.callback(TICKER, feed=self.id,
-                            pair=pair_exchange_to_std(msg['symbol']),
+                            symbol=symbol_exchange_to_std(msg['symbol']),
                             bid=Decimal(msg['bid']),
                             ask=Decimal(msg['ask']),
                             timestamp=timestamp_normalize(self.id, msg['timestamp']),
                             receipt_timestamp=timestamp)
 
     async def _book_snapshot(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = symbol_exchange_to_std(msg['symbol'])
         self.l2_book[pair] = {
             BID: sd({
                 Decimal(bid['price']): Decimal(bid['size']) for bid in msg['bid']
@@ -77,7 +77,7 @@ class BitcoinCom(Feed):
 
     async def _book_update(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = symbol_exchange_to_std(msg['symbol'])
         for side in ('bid', 'ask'):
             s = BID if side == 'bid' else ASK
             for entry in msg[side]:

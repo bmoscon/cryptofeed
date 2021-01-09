@@ -40,7 +40,7 @@ async def main():
 
 def writer(addr, port):
     f = FeedHandler()
-    f.add_feed(Coinbase(channels=[TRADES, L2_BOOK], pairs=['BTC-USD'],
+    f.add_feed(Coinbase(channels=[TRADES, L2_BOOK], symbols=['BTC-USD'],
                         callbacks={TRADES: TradeSocket(addr, port=port),
                                    L2_BOOK: BookSocket(addr, port=port),
                                    BOOK_DELTA: BookDeltaSocket(addr, port=port)}))

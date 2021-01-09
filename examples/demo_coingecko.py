@@ -15,7 +15,7 @@ async def minfo(**kwargs):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coingecko(pairs=['BTC-USD', 'ETH-EUR'], channels=[MARKET_INFO], callbacks={MARKET_INFO: minfo}))
+    f.add_feed(Coingecko(symbols=['BTC-USD', 'ETH-EUR'], channels=[MARKET_INFO], callbacks={MARKET_INFO: minfo}))
     f.run()
 
 

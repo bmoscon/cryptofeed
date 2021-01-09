@@ -12,7 +12,7 @@ from cryptofeed.util.async_file import AsyncFileCallback
 
 def main():
     f = FeedHandler(raw_message_capture=AsyncFileCallback('./'), handler_enabled=False)
-    f.add_feed(Coinbase(pairs=['BTC-USD'], channels=[L2_BOOK, TICKER, TRADES]))
+    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[L2_BOOK, TICKER, TRADES]))
 
     f.run()
 

@@ -36,7 +36,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 
 
 <br/>
-<sup>1</sup> Coinbase sequence number validation only works when L3 books are enabled for a trading pair
+<sup>1</sup> Coinbase sequence number validation only works when L3 books are enabled for a symbol
 <br/>
 <br/>
 

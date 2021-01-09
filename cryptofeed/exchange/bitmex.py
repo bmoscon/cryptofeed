@@ -25,15 +25,15 @@ class Bitmex(Feed):
     id = BITMEX
     api = 'https://www.bitmex.com/api/v1/'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://www.bitmex.com/realtime', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__('wss://www.bitmex.com/realtime', **kwargs)
 
-        active_pairs = Bitmex.info()['pairs']
+        active_pairs = Bitmex.info()['symbols']
         if self.subscription:
             pairs = list(self.subscription.values())
-            self.pairs = [pair for inner in pairs for pair in inner]
+            self.symbols = [pair for inner in pairs for pair in inner]
 
-        for pair in self.pairs:
+        for pair in self.symbols:
             if not pair.startswith('.'):
                 if pair not in active_pairs:
                     raise ValueError("{} is not active on BitMEX".format(pair))
@@ -42,7 +42,7 @@ class Bitmex(Feed):
     def _reset(self):
         self.partial_received = defaultdict(bool)
         self.order_id = {}
-        for pair in self.pairs:
+        for pair in self.symbols:
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             self.order_id[pair] = defaultdict(dict)
 
@@ -74,7 +74,7 @@ class Bitmex(Feed):
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
             await self.callback(TRADES, feed=self.id,
-                                pair=data['symbol'],
+                                symbol=data['symbol'],
                                 side=BUY if data['side'] == 'Buy' else SELL,
                                 amount=Decimal(data['size']),
                                 price=Decimal(data['price']),
@@ -151,7 +151,7 @@ class Bitmex(Feed):
     async def _ticker(self, msg: dict, timestamp: float):
         for data in msg['data']:
             await self.callback(TICKER, feed=self.id,
-                                pair=data['symbol'],
+                                symbol=data['symbol'],
                                 bid=Decimal(data['bidPrice']),
                                 ask=Decimal(data['askPrice']),
                                 timestamp=timestamp_normalize(self.id, data['timestamp']),
@@ -191,7 +191,7 @@ class Bitmex(Feed):
             interval = data['fundingInterval']
             interval = int((interval - dt(interval.year, interval.month, interval.day, tzinfo=interval.tzinfo)).total_seconds())
             await self.callback(FUNDING, feed=self.id,
-                                pair=data['symbol'],
+                                symbol=data['symbol'],
                                 timestamp=ts,
                                 receipt_timestamp=timestamp,
                                 interval=interval,
@@ -438,7 +438,7 @@ class Bitmex(Feed):
             if 'openInterest' in data:
                 ts = timestamp_normalize(self.id, data['timestamp'])
                 await self.callback(OPEN_INTEREST, feed=self.id,
-                                    pair=data['symbol'],
+                                    symbol=data['symbol'],
                                     open_interest=data['openInterest'],
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
@@ -458,7 +458,7 @@ class Bitmex(Feed):
         if msg['action'] == 'insert':
             for data in msg['data']:
                 await self.callback(LIQUIDATIONS, feed=self.id,
-                                    pair=data['symbol'],
+                                    symbol=data['symbol'],
                                     side=BUY if data['side'] == 'Buy' else SELL,
                                     leaves_qty=Decimal(data['leavesQty']),
                                     price=Decimal(data['price']),
@@ -496,7 +496,7 @@ class Bitmex(Feed):
         self._reset()
         chans = []
         for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.pairs if not self.subscription else self.subscription[channel]:
+            for pair in self.symbols if not self.subscription else self.subscription[channel]:
                 chans.append("{}:{}".format(channel, pair))
 
         for i in range(0, len(chans), 10):

@@ -30,14 +30,14 @@ class InfluxCallback(HTTPCallback):
         MEASUREMENT | TAGS | FIELDS
 
         Measurement: Data Feed-Exchange (configurable)
-        TAGS: pair
+        TAGS: symbol
         FIELDS: timestamp, amount, price, other funding specific fields
 
         Example data in InfluxDB
         ------------------------
         > select * from "book-COINBASE";
         name: COINBASE
-        time                amount    pair    price   side timestamp
+        time                amount    symbol    price   side timestamp
         ----                ------    ----    -----   ---- ---------
         1542577584985404000 0.0018    BTC-USD 5536.17 bid  2018-11-18T21:46:24.963762Z
         1542577584985404000 0.0015    BTC-USD 5542    ask  2018-11-18T21:46:24.963762Z
@@ -87,11 +87,11 @@ class InfluxCallback(HTTPCallback):
         self.numeric_type = numeric_type
         self.key = key if key else self.default_key
 
-    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
         d = ''
 
         for key, value in data.items():
-            if key in {'timestamp', 'feed', 'pair', 'receipt_timestamp'}:
+            if key in {'timestamp', 'feed', 'symbol', 'receipt_timestamp'}:
                 continue
             if isinstance(value, str) or (self.numeric_type is str and isinstance(value, (Decimal, float))):
                 d += f'{key}="{value}",'
@@ -99,7 +99,7 @@ class InfluxCallback(HTTPCallback):
                 d += f'{key}={value},'
         d = d[:-1]
 
-        update = f'{self.key}-{feed},pair={pair} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp}'
+        update = f'{self.key}-{feed},symbol={symbol} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp}'
         await self.http_write('POST', update, self.headers)
 
 
@@ -140,14 +140,14 @@ class InfluxBookCallback(InfluxCallback):
 
 
 class BookInflux(InfluxBookCallback, BackendBookCallback):
-    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
-        start = f"{self.key}-{feed},pair={pair},delta=False"
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+        start = f"{self.key}-{feed},symbol={symbol},delta=False"
         await self._write_rows(start, data, timestamp, receipt_timestamp)
 
 
 class BookDeltaInflux(InfluxBookCallback, BackendBookDeltaCallback):
-    async def write(self, feed, pair, timestamp, receipt_timestamp, data):
-        start = f"{self.key}-{feed},pair={pair},delta=True"
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+        start = f"{self.key}-{feed},symbol={symbol},delta=True"
         await self._write_rows(start, data, timestamp, receipt_timestamp)
 
 

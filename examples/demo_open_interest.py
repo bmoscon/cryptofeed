@@ -11,7 +11,7 @@ from cryptofeed.exchanges import Bitmex
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[TRADES, OPEN_INTEREST], callbacks={
+    f.add_feed(Bitmex(symbols=['XBTUSD'], channels=[TRADES, OPEN_INTEREST], callbacks={
                OPEN_INTEREST: OpenInterestArctic('cryptofeed-test2'), TRADES: TradeArctic('cryptofeed-test2')}))
 
     f.run()

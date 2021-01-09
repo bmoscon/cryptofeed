@@ -16,7 +16,7 @@ from yapic import json
 
 from cryptofeed.defines import BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, symbol_std_to_exchange, timestamp_normalize
 
 REQUEST_LIMIT = 1000
 RATE_LIMIT_SLEEP = 3
@@ -54,7 +54,7 @@ class BinanceDelivery(API):
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
             'timestamp': timestamp_normalize(self.ID, trade['T']),
-            'pair': pair_exchange_to_std(symbol),
+            'symbol': symbol_exchange_to_std(symbol),
             'id': trade['a'],
             'feed': self.ID,
             'side': BUY if trade['m'] is True else SELL,
@@ -116,7 +116,7 @@ class BinanceDelivery(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = symbol_std_to_exchange(symbol, self.ID)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
@@ -152,7 +152,7 @@ class BinanceFutures(API):
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
             'timestamp': timestamp_normalize(self.ID, trade['T']),
-            'pair': pair_exchange_to_std(symbol),
+            'symbol': symbol_exchange_to_std(symbol),
             'id': trade['a'],
             'feed': self.ID,
             'side': BUY if trade['m'] else SELL,
@@ -217,6 +217,6 @@ class BinanceFutures(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = symbol_std_to_exchange(symbol, self.ID)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data

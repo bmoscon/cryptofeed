@@ -6,7 +6,7 @@ associated with this software.
 
 
 Contains all code to normalize and standardize the differences
-between exchanges. These include trading pairs, timestamps, and
+between exchanges. These include trading symbols, timestamps, and
 data channel names
 '''
 import logging
@@ -20,55 +20,55 @@ from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINA
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
                                 TICKER, TRADES, TRANSACTIONS, VOLUME)
-from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedTradingPair
-from cryptofeed.pairs import gen_pairs, _exchange_info
+from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedSymbol
+from cryptofeed.symbols import gen_symbols, _exchange_info
 
 LOG = logging.getLogger('feedhandler')
 
-_std_trading_pairs = {}
+_std_trading_symbols = {}
 _exchange_to_std = {}
 
 
-def load_exchange_pair_mapping(exchange: str, key_id=None):
+def load_exchange_symbol_mapping(exchange: str, key_id=None):
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
         return
-    mapping = gen_pairs(exchange, key_id=key_id)
+    mapping = gen_symbols(exchange, key_id=key_id)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
-        if std in _std_trading_pairs:
-            _std_trading_pairs[std][exchange] = exch
+        if std in _std_trading_symbols:
+            _std_trading_symbols[std][exchange] = exch
         else:
-            _std_trading_pairs[std] = {exchange: exch}
+            _std_trading_symbols[std] = {exchange: exch}
 
 
 def get_exchange_info(exchange: str, key_id=None):
-    mapping = gen_pairs(exchange, key_id=key_id)
+    mapping = gen_symbols(exchange, key_id=key_id)
     info = dict(_exchange_info.get(exchange, {}))
     return mapping, info
 
 
-def pair_std_to_exchange(pair: str, exchange: str):
-    # bitmex does its own validation of trading pairs dynamically
+def symbol_std_to_exchange(symbol: str, exchange: str):
+    # bitmex does its own validation of trading symbols dynamically
     if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
-        return pair
-    if pair in _std_trading_pairs:
+        return symbol
+    if symbol in _std_trading_symbols:
         try:
-            return _std_trading_pairs[pair][exchange]
+            return _std_trading_symbols[symbol][exchange]
         except KeyError:
-            raise UnsupportedTradingPair(f'{pair} is not supported on {exchange}')
+            raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
     else:
-        # Bitfinex supports funding pairs that are single currencies, prefixed with f
-        if exchange == BITFINEX and '-' not in pair:
-            return f"f{pair}"
-        raise UnsupportedTradingPair(f'{pair} is not supported on {exchange}')
+        # Bitfinex supports funding symbols that are single currencies, prefixed with f
+        if exchange == BITFINEX and '-' not in symbol:
+            return f"f{symbol}"
+        raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
 
 
-def pair_exchange_to_std(pair):
-    if pair in _exchange_to_std:
-        return _exchange_to_std[pair]
+def symbol_exchange_to_std(symbol):
+    if symbol in _exchange_to_std:
+        return _exchange_to_std[symbol]
     # Bitfinex funding currency
-    if pair[0] == 'f':
-        return pair[1:]
+    if symbol[0] == 'f':
+        return symbol[1:]
     return None
 
 
@@ -126,7 +126,7 @@ _feed_to_exchange_map = {
         HITBTC: UNSUPPORTED,
         COINBASE: 'full',
         BITMEX: UNSUPPORTED,
-        POLONIEX: UNSUPPORTED,  # supported by specifying a trading pair as the channel,
+        POLONIEX: UNSUPPORTED,  # supported by specifying a trading symbol as the channel,
         KRAKEN: UNSUPPORTED,
         KRAKEN_FUTURES: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
@@ -314,7 +314,7 @@ def feed_to_exchange(exchange, feed, silent=False):
 
     if exchange == POLONIEX:
         if feed not in _feed_to_exchange_map:
-            return pair_std_to_exchange(feed, POLONIEX)
+            return symbol_std_to_exchange(feed, POLONIEX)
     try:
         ret = _feed_to_exchange_map[feed][exchange]
     except KeyError:

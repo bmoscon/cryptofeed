@@ -18,7 +18,7 @@ START = time.time()
 STATS = 1000
 
 
-async def book(feed, pair, book, timestamp):
+async def book(feed, symbol, book, timestamp):
     global counter
     global avg
 
@@ -49,7 +49,7 @@ async def book(feed, pair, book, timestamp):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Bitmex(pairs=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Bitmex(symbols=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.run()
 
 

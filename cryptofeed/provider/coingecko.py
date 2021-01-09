@@ -38,22 +38,22 @@ class Coingecko(Feed):
     # From testing, safer to use 3x this limit.
     sleep_time = 1.8
 
-    def __init__(self, pairs=None, subscription=None, **kwargs):
+    def __init__(self, symbols=None, subscription=None, **kwargs):
         self.currencies = defaultdict(list)
 
-        if pairs:
-            for pair in pairs:
-                base, quote = pair.split("-")
+        if symbols:
+            for symbol in symbols:
+                base, quote = symbol.split("-")
                 self.currencies[base].append(quote.lower())
-            pairs = list(self.currencies.keys())
+            symbols = list(self.currencies.keys())
 
         if subscription and MARKET_INFO in subscription:
-            for pair in subscription[MARKET_INFO]:
-                base, quote = pair.split("-")
+            for symbol in subscription[MARKET_INFO]:
+                base, quote = symbol.split("-")
                 self.currencies[base].append(quote.lower())
             subscription[MARKET_INFO] = list(self.currencies.keys())
 
-        super().__init__('https://api.coingecko.com/api/v3/', pairs=pairs, subscription=subscription, **kwargs)
+        super().__init__('https://api.coingecko.com/api/v3/', symbols=symbols, subscription=subscription, **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -65,7 +65,7 @@ class Coingecko(Feed):
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         addrs = []
         for chan in self.channels if self.channels else self.subscription:
-            for pair in self.pairs if not self.subscription else self.subscription[chan]:
+            for pair in self.symbols if not self.subscription else self.subscription[chan]:
                 if chan == MARKET_INFO:
                     addrs.append(f"{self.address}coins/{pair}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false")
         return [(AsyncConnection(addrs, self.id, delay=self.sleep_time * 2, sleep=self.sleep_time), self.subscribe, self.message_handler)]

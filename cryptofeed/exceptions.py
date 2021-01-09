@@ -14,7 +14,7 @@ class MissingMessage(Exception):
     pass
 
 
-class UnsupportedTradingPair(Exception):
+class UnsupportedSymbol(Exception):
     pass
 
 

@@ -23,8 +23,8 @@ class OKEx(OKCoin):
     id = OKEX
     api = 'https://www.okex.com/api/'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.address = 'wss://real.okex.com:8443/ws/v3'
         self.book_depth = 200
 
@@ -75,7 +75,7 @@ class OKEx(OKCoin):
 
                                 await self.callback(LIQUIDATIONS,
                                                     feed=self.id,
-                                                    pair=entry['instrument_id'],
+                                                    symbol=entry['instrument_id'],
                                                     side=BUY if entry['type'] == '3' else SELL,
                                                     leaves_qty=Decimal(entry['size']),
                                                     price=Decimal(entry['price']),
@@ -91,6 +91,6 @@ class OKEx(OKCoin):
 
     async def subscribe(self, websocket):
         if LIQUIDATIONS in self.subscription or LIQUIDATIONS in self.channels:
-            pairs = self.subscription[LIQUIDATIONS] if LIQUIDATIONS in self.subscription else self.pairs
+            pairs = self.subscription[LIQUIDATIONS] if LIQUIDATIONS in self.subscription else self.symbols
             asyncio.create_task(self._liquidations(pairs))
         await super().subscribe(websocket)

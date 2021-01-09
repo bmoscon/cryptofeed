@@ -39,7 +39,7 @@ async def main():
 
 def writer(path):
     f = FeedHandler()
-    f.add_feed(Coinbase(channels=[TRADES, TICKER], pairs=['BTC-USD'], callbacks={TRADES: TradeSocket(path), TICKER: TickerSocket(path)}))
+    f.add_feed(Coinbase(channels=[TRADES, TICKER], symbols=['BTC-USD'], callbacks={TRADES: TradeSocket(path), TICKER: TickerSocket(path)}))
 
     f.run()
 

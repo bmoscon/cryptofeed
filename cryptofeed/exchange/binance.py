@@ -18,7 +18,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -27,8 +27,8 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed):
     id = BINANCE
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
-        super().__init__(None, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    def __init__(self, depth=1000, **kwargs):
+        super().__init__(None, **kwargs)
         self.book_depth = depth
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
@@ -49,7 +49,7 @@ class Binance(Feed):
         counter = 0
         address = self.ws_endpoint + '/stream?streams='
         for chan in self.channels if not self.subscription else self.subscription:
-            for pair in self.pairs if not self.subscription else self.subscription[chan]:
+            for pair in self.symbols if not self.subscription else self.subscription[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
                 address += stream
@@ -91,7 +91,7 @@ class Binance(Feed):
         amount = Decimal(msg['q'])
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['a'],
-                            pair=pair_exchange_to_std(msg['s']),
+                            symbol=symbol_exchange_to_std(msg['s']),
                             side=SELL if msg['m'] else BUY,
                             amount=amount,
                             price=price,
@@ -126,11 +126,11 @@ class Binance(Feed):
         "n": 18151          // Total number of trades
         }
         """
-        pair = pair_exchange_to_std(msg['s'])
+        pair = symbol_exchange_to_std(msg['s'])
         bid = Decimal(msg['b'])
         ask = Decimal(msg['a'])
         await self.callback(TICKER, feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             bid=bid,
                             ask=ask,
                             timestamp=timestamp_normalize(self.id, msg['E']),
@@ -156,10 +156,10 @@ class Binance(Feed):
             }
         }
         """
-        pair = pair_exchange_to_std(msg['o']['s'])
+        pair = symbol_exchange_to_std(msg['o']['s'])
         await self.callback(LIQUIDATIONS,
                             feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             side=msg['o']['S'],
                             leaves_qty=Decimal(msg['o']['q']),
                             price=Decimal(msg['o']['p']),
@@ -175,7 +175,7 @@ class Binance(Feed):
                 response.raise_for_status()
                 resp = await response.json()
 
-                std_pair = pair_exchange_to_std(pair)
+                std_pair = symbol_exchange_to_std(pair)
                 self.last_update_id[std_pair] = resp['lastUpdateId']
                 self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
                 for s, side in (('bids', BID), ('asks', ASK)):
@@ -225,7 +225,7 @@ class Binance(Feed):
         }
         """
         exchange_pair = pair
-        pair = pair_exchange_to_std(pair)
+        pair = symbol_exchange_to_std(pair)
 
         if pair not in self.l2_book:
             await self._snapshot(exchange_pair)
@@ -274,7 +274,7 @@ class Binance(Feed):
                         if oi != self.open_interest.get(pair, None):
                             await self.callback(OPEN_INTEREST,
                                                 feed=self.id,
-                                                pair=pair_exchange_to_std(pair),
+                                                symbol=symbol_exchange_to_std(pair),
                                                 open_interest=oi,
                                                 timestamp=timestamp_normalize(self.id, data['time']),
                                                 receipt_timestamp=time()
@@ -298,7 +298,7 @@ class Binance(Feed):
         """
         await self.callback(FUNDING,
                             feed=self.id,
-                            pair=pair_exchange_to_std(msg['s']),
+                            symbol=symbol_exchange_to_std(msg['s']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp,
                             mark_price=msg['p'],
@@ -336,6 +336,6 @@ class Binance(Feed):
         # connection endpoint
         for chan in self.channels if self.channels else self.subscription:
             if chan == 'open_interest':
-                asyncio.create_task(self._open_interest(self.pairs if self.pairs else self.subscription[chan]))
+                asyncio.create_task(self._open_interest(self.symbols if self.symbols else self.subscription[chan]))
                 break
         self._reset()
