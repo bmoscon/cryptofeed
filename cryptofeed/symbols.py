@@ -508,10 +508,10 @@ def probit_symbols() -> Dict[str, str]:
         raise_failure_explanation('PROBIT', why, {"": r})
 
 
-def coingecko_normalize_symbol(sym: str) -> str:
+def coingecko_normalize_symbol(symbol: str) -> str:
     # keep digits, letters and dots, replace others by space
-    sym = ''.join(c if c.isalnum() or c in ('.', '+') else ' ' for c in sym)
-    return coingecko_normalize(sym)
+    symbol = ''.join(c if c.isalnum() or c in ('.', '+') else ' ' for c in symbol)
+    return coingecko_normalize(symbol.upper())
 
 
 def coingecko_normalize_name(name: str) -> str:
@@ -551,18 +551,29 @@ def has_many_caps(name: str) -> bool:
 
 
 def coingecko_normalize_all(coin: dict):
-    name = coin['name']
-    symbol = coin['symbol']
-    NORMALIZE = {'miota': 'IOTA'}
-    normalized = NORMALIZE.get(symbol)
+    SYMBOL_TO_NORMALIZED = {'miota': 'IOTA'}
+    normalized = SYMBOL_TO_NORMALIZED.get(coin['symbol'])
     if normalized:
-        symbol = normalized
+        coin['ns'] = coin['nn'] = normalized
+        return normalized
+
+    # ns = normalized symbol, nn = normalized name
+    coin['ns'] = coingecko_normalize_symbol(coin['symbol'])
+
+    ID_SUFFIX = '-bitcoin-token'
+    if coin['id'][-len(ID_SUFFIX):] == ID_SUFFIX:
+        coin['nn'] = 'BTC' + coin['ns']
+        return coin['nn']
+
+    name = coin['name']
+
     prefixes = ('The ', 'the ')
     for p in prefixes:
         if name[:len(p)] == p:
             coin['reduced-name'] = True
             name = name[len(p):]
             break
+
     suffixes = ('coin', 'coins', 'money', 'finance', 'protocol', 'reward', 'rewards', 'token')
     for s in suffixes:
         if len(name) > len(s) and name[-len(s):].lower() == s:
@@ -575,8 +586,9 @@ def coingecko_normalize_all(coin: dict):
             coin['reduced-name'] = True
             name = name[:-len(s)]
             break
-    coin['ns'] = coingecko_normalize_symbol(symbol.upper())
+
     coin['nn'] = coingecko_normalize_name(name)
+
     if len(coin['nn']) < len(coin['ns']):
         if 'reduced-name' in coin:
             coin['reduced-name'] = False
@@ -584,22 +596,26 @@ def coingecko_normalize_all(coin: dict):
             coin['nn'] = coingecko_normalize_name(name)
         elif not has_many_caps(name):
             return coin['ns']
+
     if not coin['ns']:  # coin['symbol'] may be an emoji that is striped when normalized
         return coin['nn']
+
     if coin.get('reduced-name') and coin['ns'].upper() != coin['nn'].upper():
         return coin['ns']
-    # if there is a dot in normalized name => prefer the normalized symbol
-    i = coin['nn'].find('.')
+
+    i = coin['nn'].find('.')  # if there is a dot in normalized name => prefer the normalized symbol
     if i >= 0:
-        # except when the dot separates digits
         if i > 1 and coin['nn'][i-1].isdigit() and coin['nn'][i+1].isdigit():
-            pass
+            pass  # except when the dot separates digits
         else:
             return coin['ns']
+
     if is_name_short(coin) and has_many_caps(name):
         return coin['nn']
-    if 2*len(coin['ns']) > len(coin['nn']) and any(c.islower() for c in coin['ns']):
+
+    if 1.5*len(coin['ns']) > len(coin['nn']) and any(c.islower() for c in coin['ns']):
         return coin['nn']
+
     return coin['ns']
 
 
@@ -619,11 +635,15 @@ def coingecko_symbols() -> Dict[str, str]:
     except Exception as why:
         raise_failure_explanation('COINGECKO', why, {"": r})
 
+    final = coingecko_second_pass(intermediate)
+    return coingecko_third_pass(final)
+
+
+def coingecko_second_pass(intermediate: Dict[str, List[dict]]) -> Dict[str, List[dict]]:
     # Second pass: fixes most of the symbol collisions
     final = defaultdict(list)
     for normalized, coins in intermediate.items():
         if len(coins) == 1:
-            LOG.debug('COINGECKO I: 1 coin  %-40s%-20s %s', coins[0]['d'], normalized, '\t'.join(str(v) for k, v in coins[0].items() if k != 'd'))
             final[normalized].append(coins[0])
             continue
         set_normalized = False
@@ -657,7 +677,10 @@ def coingecko_symbols() -> Dict[str, str]:
             else:
                 n = coingecko_normalize_name(coin['id'])
             final[n].append(coin)
+        return final
 
+
+def coingecko_third_pass(final: Dict[str, List[dict]]) -> Dict[str, str]:
     # Third pass: fixes some remaining collisions and fills the result
     symbols = {}
     for normalized, coins in final.items():
@@ -695,7 +718,6 @@ def coingecko_symbols() -> Dict[str, str]:
             else:
                 n = coingecko_normalize_name(coin['id'])
             symbols[n] = coin['id']
-
     return symbols
 
 
