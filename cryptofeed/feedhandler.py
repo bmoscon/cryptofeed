@@ -7,7 +7,7 @@ associated with this software.
 import asyncio
 import logging
 from signal import SIGTERM, SIGINT, SIGABRT
-
+import sys
 try:
     # unix / macos only
     from signal import SIGHUP
@@ -83,6 +83,8 @@ def setup_signal_handlers(loop):
     """
     This must be run from the loop in the main thread
     """
+    if sys.platform.startswith('win'):
+        return # Signal Handlers supported on Win platforms
     def handle_stop_signals():
         raise SystemExit
 
