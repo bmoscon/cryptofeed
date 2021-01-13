@@ -16,7 +16,8 @@
   * Breaking change: Feed object `config` renamed `subscription`
   * Feature: Configuration passed from feedhandler to exchanges
   * Breaking change: most use of `pair` and `pairs` changed to `symbol` and `symbols` to be more consistent with actual usage. pairs.py renamed to symbols.py
-
+  * Bugfix: Add guard against non-supported asyncio add_signal_handler() on windows platforms
+    
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
   * Feature: Support for Whale Alert on-chain transaction data per coin, to be used with a new data channel 'transactions'
