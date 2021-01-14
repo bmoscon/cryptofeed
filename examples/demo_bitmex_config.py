@@ -10,6 +10,19 @@ from cryptofeed.callback import BookCallback, FundingCallback, TradeCallback
 from cryptofeed.defines import FUNDING, L2_BOOK, OPEN_INTEREST, TRADES
 from cryptofeed.exchanges import Bitmex
 
+# ------------------------------------------------------------------------
+#
+# WARNING: This demo script intentionally fails
+#          because the provided API key & secret are wrong (fake)
+#          Please create and set your own API key & secret.
+#
+# ------------------------------------------------------------------------
+#
+# DO NOT COMMIT YOUR API key & secret IN SOURCE CODE REPOSITORY (GITHUB).
+# YOUR CREDENTIALS MAY BE USED BY MALEVOLENT/MALICIOUS/ILL-INTENDED PEOPLE.
+#
+# ------------------------------------------------------------------------
+
 
 async def print_all(a=None, b=None, c=None, d=None, e=None, f=None, g=None, h=None, **kwargs):
     print_all_kwargs(a=a, b=b, c=c, d=d, e=e, f=f, g=g, h=h, **kwargs)
