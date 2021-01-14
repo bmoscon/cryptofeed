@@ -472,19 +472,7 @@ class Bitmex(Feed):
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg = json.loads(msg, parse_float=Decimal)
-        if 'info' in msg:
-            LOG.info("%s - info message: %s", conn.uuid, msg)
-        elif 'subscribe' in msg:
-            if not msg['success']:
-                LOG.error("%s: subscribe failed: %s", conn.uuid, msg)
-        elif 'error' in msg:
-            LOG.error("%s: Error message from exchange: %s", conn.uuid, msg)
-        elif 'request' in msg:
-            if msg['success']:
-                LOG.info("%s: Success %s", conn.uuid, msg['request'].get('op'))
-            else:
-                LOG.warning("%s: Failure %s", conn.uuid, msg['request'])
-        elif 'table' in msg:
+        if 'table' in msg:
             if msg['table'] == 'trade':
                 await self._trade(msg, timestamp)
             elif msg['table'] == 'orderBookL2':
@@ -499,6 +487,18 @@ class Bitmex(Feed):
                 await self._liquidation(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", conn.uuid, msg)
+        elif 'info' in msg:
+            LOG.info("%s - info message: %s", conn.uuid, msg)
+        elif 'subscribe' in msg:
+            if not msg['success']:
+                LOG.error("%s: subscribe failed: %s", conn.uuid, msg)
+        elif 'error' in msg:
+            LOG.error("%s: Error message from exchange: %s", conn.uuid, msg)
+        elif 'request' in msg:
+            if msg['success']:
+                LOG.info("%s: Success %s", conn.uuid, msg['request'].get('op'))
+            else:
+                LOG.warning("%s: Failure %s", conn.uuid, msg['request'])
         else:
             LOG.warning("%s: Unhandled message %s", conn.uuid, msg)
 
