@@ -677,7 +677,7 @@ def coingecko_second_pass(intermediate: Dict[str, List[dict]]) -> Dict[str, List
             else:
                 n = coingecko_normalize_name(coin['id'])
             final[n].append(coin)
-        return final
+    return final
 
 
 def coingecko_third_pass(final: Dict[str, List[dict]]) -> Dict[str, str]:
