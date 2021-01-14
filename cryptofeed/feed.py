@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+import os
 from typing import Tuple, Callable, Union, List
 
 from cryptofeed.callback import Callback
@@ -57,7 +58,7 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
-        key_id = self.config[self.id.lower()].key_id
+        key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
         load_exchange_symbol_mapping(self.id, key_id=key_id)
 
         if subscription is not None and (symbols is not None or channels is not None):
