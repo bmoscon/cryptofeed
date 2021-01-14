@@ -29,11 +29,8 @@ class Bitmex(Feed):
     id = BITMEX
     api = 'https://www.bitmex.com/api/v1/'
 
-    def __init__(self, api_key: str = None, api_secret: str = None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__('wss://www.bitmex.com/realtime', **kwargs)
-        self.api_key = api_key or os.environ.get("BITMEX_API_KEY") or self.config.api_key
-        self.api_secret = api_secret or os.environ.get("BITMEX_API_SECRET") or self.config.api_secret
-
         active_pairs = Bitmex.info()['symbols']
         if self.subscription:
             pairs = list(self.subscription.values())
@@ -519,14 +516,16 @@ class Bitmex(Feed):
 
     async def _authenticate(self, conn):
         """Send API Key with signed message."""
-        if self.api_key and self.api_secret:
-            LOG.info('%s: Authenticate with signature', self.id)
-        else:
-            LOG.info('%s: No authentication. To enable it use config or env. vars: BITMEX_API_KEY and BITMEX_API_SECRET', self.id)
-            return
         # Docs: https://www.bitmex.com/app/apiKeys
         # https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py
-        expires = int(time.time()) + 365*24*3600  # One year
-        msg = f'GET/realtime{expires}'.encode('utf-8')
-        signature = hmac.new(self.api_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
-        await conn.send(json.dumps({"op": "authKeyExpires", "args": [self.api_key, expires, signature]}))
+        config = self.config[self.id.lower()]
+        key_id = os.environ.get("CF_BITMEX_KEY_ID") or config.key_id
+        key_secret = os.environ.get("CF_BITMEX_KEY_SECRET") or config.key_secret
+        if key_id and key_secret:
+            LOG.info('%s: Authenticate with signature', conn.uuid)
+            expires = int(time.time()) + 365 * 24 * 3600  # One year
+            msg = f'GET/realtime{expires}'.encode('utf-8')
+            signature = hmac.new(key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
+            await conn.send(json.dumps({"op": "authKeyExpires", "args": [key_id, expires, signature]}))
+        else:
+            LOG.info('%s: No authentication. Enable it using config or env. vars: CF_BITMEX_KEY_ID and CF_BITMEX_KEY_SECRET', conn.uuid)
