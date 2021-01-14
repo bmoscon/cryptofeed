@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import os
+import sys
 
 import yaml
 
@@ -45,10 +46,16 @@ class Config:
             if os.path.exists(config_file):
                 with open(config_file) as fp:
                     self.config = AttrDict(yaml.safe_load(fp))
+                    print(f'Config: use file={config_file!r} containing the following main keys: {", ".join(self.config.keys())}', file=sys.stderr, flush=True)
+            else:
+                self.config = AttrDict(_default_config)
+                print(f'Config: no file={config_file!r} => default config.', file=sys.stderr, flush=True)
         elif isinstance(config, dict):
             self.config = AttrDict(config)
+            print(f'Config: use dict containing the following main keys: {", ".join(self.config.keys())}', file=sys.stderr, flush=True)
         else:
             self.config = AttrDict(_default_config)
+            print(f'Config: Only accept str and dict but got {type(config)!r} => default config.', file=sys.stderr, flush=True)
 
     def __bool__(self):
         return self.config != {}
