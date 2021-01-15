@@ -22,6 +22,8 @@
   * Feature: Explain when Cryptofeed crashes during pairs retrieval
   * Bugfix: BINANCE_DELIVERY Ticker use msg_type='bookTicker' as for the other BINANCE markets
   * Feature: Support Bitmex authentication using personal API key and secret
+  * Feature: Print the origin of the configuration (filename, dict) for better developer experience
+  * Bugfix: Add guard against non-supported asyncio add_signal_handler() on windows platforms
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'

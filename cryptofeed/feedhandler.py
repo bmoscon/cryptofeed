@@ -6,8 +6,9 @@ associated with this software.
 '''
 import asyncio
 import logging
+import signal
 from signal import SIGTERM, SIGINT, SIGABRT
-
+import sys
 try:
     # unix / macos only
     from signal import SIGHUP
@@ -83,11 +84,15 @@ def setup_signal_handlers(loop):
     """
     This must be run from the loop in the main thread
     """
-    def handle_stop_signals():
+    def handle_stop_signals(*args):
         raise SystemExit
-
-    for signal in SIGNALS:
-        loop.add_signal_handler(signal, handle_stop_signals)
+    if sys.platform.startswith('win'):
+        # NOTE: asyncio loop.add_signal_handler() not supported on windows
+        for sig in SIGNALS:
+            signal.signal(sig, handle_stop_signals)
+    else:
+        for sig in SIGNALS:
+            loop.add_signal_handler(sig, handle_stop_signals)
 
 
 class FeedHandler:
@@ -118,6 +123,8 @@ class FeedHandler:
         self.config = Config(config=config)
 
         get_logger('feedhandler', self.config.log.filename, self.config.log.level)
+        if self.config.log_msg:
+            LOG.info(self.config.log_msg)
 
     def playback(self, feed, filenames):
         loop = asyncio.get_event_loop()

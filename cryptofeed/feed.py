@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+import logging
 import os
 from typing import Tuple, Callable, Union, List
 
@@ -16,6 +17,9 @@ from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange
 from cryptofeed.util.book import book_delta, depth
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 class Feed:
@@ -40,9 +44,12 @@ class Feed:
             Passed into websocket connect. Sets the origin header.
         """
         if isinstance(config, Config):
+            LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
             self.config = config
         else:
+            LOG.info('%s: create Config from type: %r', self.id, type(config))
             self.config = Config(config)
+
         self.subscription = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
