@@ -519,13 +519,13 @@ class Bitmex(Feed):
         # Docs: https://www.bitmex.com/app/apiKeys
         # https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py
         config = self.config[self.id.lower()]
-        key_id = os.environ.get("CF_BITMEX_KEY_ID") or config.key_id
-        key_secret = os.environ.get("CF_BITMEX_KEY_SECRET") or config.key_secret
+        key_id = os.environ.get('CF_BITMEX_KEY_ID') or config.key_id
+        key_secret = os.environ.get('CF_BITMEX_KEY_SECRET') or config.key_secret
         if key_id and key_secret:
             LOG.info('%s: Authenticate with signature', conn.uuid)
             expires = int(time.time()) + 365 * 24 * 3600  # One year
             msg = f'GET/realtime{expires}'.encode('utf-8')
             signature = hmac.new(key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
-            await conn.send(json.dumps({"op": "authKeyExpires", "args": [key_id, expires, signature]}))
+            await conn.send(json.dumps({'op': 'authKeyExpires', 'args': [key_id, expires, signature]}))
         else:
             LOG.info('%s: No authentication. Enable it using config or env. vars: CF_BITMEX_KEY_ID and CF_BITMEX_KEY_SECRET', conn.uuid)
