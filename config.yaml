@@ -10,8 +10,8 @@ log:
 
 # Secrets for exchanges
 bitmex:
-    key_id: XPIRzadE7dQoGoAiIUsRrbJk
-    key_secret: EJ3sgj1HKM_UfLn0YzQJI9fM2Z2TFwoIyO1v_47dMfiwJoB2
+    key_id: null
+    key_secret: null
 bitfinex:
     key_id: null
     key_secret: null
