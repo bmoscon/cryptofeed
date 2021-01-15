@@ -487,12 +487,12 @@ class Bitmex(Feed):
             elif msg['table'] == 'liquidation':
                 await self._liquidation(msg, timestamp)
             else:
-                LOG.warning("%s: Unhandled message %s", conn.uuid, msg)
+                LOG.warning("%s: Unhandled table=%r in %r", conn.uuid, msg['table'], msg)
         elif 'info' in msg:
-            LOG.info("%s - info message: %s", conn.uuid, msg)
+            LOG.info("%s: Info message from exchange: %s", conn.uuid, msg)
         elif 'subscribe' in msg:
             if not msg['success']:
-                LOG.error("%s: subscribe failed: %s", conn.uuid, msg)
+                LOG.error("%s: Subscribe failure: %s", conn.uuid, msg)
         elif 'error' in msg:
             LOG.error("%s: Error message from exchange: %s", conn.uuid, msg)
         elif 'request' in msg:
@@ -501,7 +501,7 @@ class Bitmex(Feed):
             else:
                 LOG.warning("%s: Failure %s", conn.uuid, msg['request'])
         else:
-            LOG.warning("%s: Unhandled message %s", conn.uuid, msg)
+            LOG.warning("%s: Unexpected message from exchange: %s", conn.uuid, msg)
 
     async def subscribe(self, websocket):
         self._reset()
