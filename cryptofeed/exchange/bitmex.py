@@ -4,7 +4,11 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import hashlib
+import hmac
 import logging
+import os
+import time
 from collections import defaultdict
 from datetime import datetime as dt
 from decimal import Decimal
@@ -469,14 +473,7 @@ class Bitmex(Feed):
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg = json.loads(msg, parse_float=Decimal)
-        if 'info' in msg:
-            LOG.info("%s - info message: %s", self.id, msg)
-        elif 'subscribe' in msg:
-            if not msg['success']:
-                LOG.error("%s: subscribe failed: %s", self.id, msg)
-        elif 'error' in msg:
-            LOG.error("%s: Error message from exchange: %s", self.id, msg)
-        else:
+        if 'table' in msg:
             if msg['table'] == 'trade':
                 await self._trade(msg, timestamp)
             elif msg['table'] == 'orderBookL2':
@@ -490,10 +487,25 @@ class Bitmex(Feed):
             elif msg['table'] == 'liquidation':
                 await self._liquidation(msg, timestamp)
             else:
-                LOG.warning("%s: Unhandled message %s", self.id, msg)
+                LOG.warning("%s: Unhandled table=%r in %r", conn.uuid, msg['table'], msg)
+        elif 'info' in msg:
+            LOG.info("%s: Info message from exchange: %s", conn.uuid, msg)
+        elif 'subscribe' in msg:
+            if not msg['success']:
+                LOG.error("%s: Subscribe failure: %s", conn.uuid, msg)
+        elif 'error' in msg:
+            LOG.error("%s: Error message from exchange: %s", conn.uuid, msg)
+        elif 'request' in msg:
+            if msg['success']:
+                LOG.info("%s: Success %s", conn.uuid, msg['request'].get('op'))
+            else:
+                LOG.warning("%s: Failure %s", conn.uuid, msg['request'])
+        else:
+            LOG.warning("%s: Unexpected message from exchange: %s", conn.uuid, msg)
 
     async def subscribe(self, websocket):
         self._reset()
+        await self._authenticate(websocket)
         chans = []
         for channel in self.channels if not self.subscription else self.subscription:
             for pair in self.symbols if not self.subscription else self.subscription[channel]:
@@ -502,3 +514,19 @@ class Bitmex(Feed):
         for i in range(0, len(chans), 10):
             await websocket.send(json.dumps({"op": "subscribe",
                                              "args": chans[i:i + 10]}))
+
+    async def _authenticate(self, conn):
+        """Send API Key with signed message."""
+        # Docs: https://www.bitmex.com/app/apiKeys
+        # https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py
+        config = self.config[self.id.lower()]
+        key_id = os.environ.get('CF_BITMEX_KEY_ID') or config.key_id
+        key_secret = os.environ.get('CF_BITMEX_KEY_SECRET') or config.key_secret
+        if key_id and key_secret:
+            LOG.info('%s: Authenticate with signature', conn.uuid)
+            expires = int(time.time()) + 365 * 24 * 3600  # One year
+            msg = f'GET/realtime{expires}'.encode('utf-8')
+            signature = hmac.new(key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
+            await conn.send(json.dumps({'op': 'authKeyExpires', 'args': [key_id, expires, signature]}))
+        else:
+            LOG.info('%s: No authentication. Enable it using config or env. vars: CF_BITMEX_KEY_ID and CF_BITMEX_KEY_SECRET', conn.uuid)

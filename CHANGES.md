@@ -6,21 +6,22 @@
   * Feature: New demo code showing user loop management
   * Feature: Handle more signals for graceful shutdown
   * Bugfix: BinanceFutures message format change
-  * Feature: missing sequence number on Coinbase will not reset all data streams, just the affected pair
+  * Feature: Missing sequence number on Coinbase will not reset all data streams, just the affected pair
   * Feature: Use timestamp from exchange for L2 book data from Coinbase
   * Bugfix: Blockchain exchange had incorrect timestamps, and incorrect log lines
-  * Bugfix: wrong datatype in BackendFuturesIndexCallback
-  * Bugfix: fix bad postgres callback for open_interest and futures_index
+  * Bugfix: Wrong datatype in BackendFuturesIndexCallback
+  * Bugfix: Fix bad postgres callback for open_interest and futures_index
   * Feature: Signal handler installation now optional, can be done separately. This will allow the feedhandler to be run from child threads/loops
-  * Bugfix: fix binance delivery book ticker (message format change)
+  * Bugfix: Fix binance delivery book ticker (message format change)
   * Breaking change: Feed object `config` renamed `subscription`
   * Feature: Configuration passed from feedhandler to exchanges
-  * Breaking change: most use of `pair` and `pairs` changed to `symbol` and `symbols` to be more consistent with actual usage. pairs.py renamed to symbols.py
+  * Breaking change: Most use of `pair` and `pairs` changed to `symbol` and `symbols` to be more consistent with actual usage. pairs.py renamed to symbols.py
   * Feature: Allow configuring the API KEY ID from Config or from environment variable
   * Bugfix: Collisions in normalized CoinGecko symbols (this adds about 700 new symbols)
   * Feature: Add candles function to coinbase
   * Feature: Explain when Cryptofeed crashes during pairs retrieval
   * Bugfix: BINANCE_DELIVERY Ticker use msg_type='bookTicker' as for the other BINANCE markets
+  * Feature: Support Bitmex authentication using personal API key and secret
   * Feature: Print the origin of the configuration (filename, dict) for better developer experience
   * Bugfix: Add guard against non-supported asyncio add_signal_handler() on windows platforms
 
