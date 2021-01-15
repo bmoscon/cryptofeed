@@ -15,14 +15,14 @@ from time import sleep
 
 import pandas as pd
 import requests
-from pytz import UTC, timezone
+from pytz import UTC
 from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, COINBASE, FILLED, LIMIT, MARKET, OPEN, PARTIAL, PENDING, SELL
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.rest.exceptions import UnexpectedMessage
-from cryptofeed.standards import normalize_trading_options, timestamp_normalize
+from cryptofeed.standards import normalize_trading_options
 
 
 REQUEST_LIMIT = 10
@@ -68,7 +68,7 @@ class Coinbase(API):
             'total': Decimal(data['size']),
             'executed': Decimal(data['filled_size']),
             'pending': Decimal(data['size']) - Decimal(data['filled_size']),
-            'timestamp': pd.Timestamp(data['done_at']).timestamp() if 'done_at' in data else pd.Timestamp(data['created_at']).timestamp(),
+            'timestamp': data['done_at'].timestamp() if 'done_at' in data else data['created_at'].timestamp(),
             'order_status': status
         }
 
@@ -87,7 +87,7 @@ class Coinbase(API):
             'Content-Type': 'Application/JSON',
         }
 
-    def _request(self, method: str, endpoint: str, auth: bool=False, body=None, retry=None, retry_wait=0):
+    def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry=None, retry_wait=0):
         api = self.sandbox_api if self.sandbox else self.api
 
         @request_retry(self.ID, retry, retry_wait)
@@ -110,7 +110,8 @@ class Coinbase(API):
         Coinbase uses trade ids to query historical trades, so
         need to search for the start date
         """
-        upper = self._request('GET', f'/products/{symbol}/trades').json()[0]['trade_id']
+        upper = self._request('GET', f'/products/{symbol}/trades')
+        upper = json.loads(upper.text, parse_float=Decimal)[0]['trade_id']
         lower = 0
         bound = (upper - lower) // 2
         while True:
@@ -122,11 +123,11 @@ class Coinbase(API):
                 LOG.warning("Error %s: %s", r.status_code, r.text)
                 time.sleep(60)
                 continue
-            data = r.json()
+            data = json.loads(r.text, parse_float=Decimal)
             data = list(reversed(data))
             if len(data) == 0:
                 return bound
-            if pd.Timestamp(data[0]['time']) <= date <= pd.Timestamp(data[-1]['time']):
+            if data[0]['time'] <= date <= data[-1]['time']:
                 for idx in range(len(data)):
                     d = pd.Timestamp(data[idx]['time'])
                     if d >= date:
@@ -142,7 +143,7 @@ class Coinbase(API):
 
     def _trade_normalize(self, symbol: str, data: dict) -> dict:
         return {
-            'timestamp': pd.Timestamp(data['time']).timestamp(),
+            'timestamp': data['time'].timestamp(),
             'symbol': symbol,
             'id': data['trade_id'],
             'feed': self.ID,
@@ -174,7 +175,7 @@ class Coinbase(API):
                         LOG.warning("Error %s: %s", r.status_code, r.text)
                         time.sleep(60)
                         continue
-                    data = r.json()
+                    data = json.loads(r.text, parse_float=Decimal)
                     try:
                         data = list(reversed(data))
                     except Exception:
@@ -188,12 +189,14 @@ class Coinbase(API):
                 if start_id >= end_id:
                     break
         else:
-            yield [self._trade_normalize(symbol, d) for d in self._request('GET', f"/products/{symbol}/trades", retry=retry, retry_wait=retry_wait).json()]
+            data = self._request('GET', f"/products/{symbol}/trades", retry=retry, retry_wait=retry_wait)
+            data = json.loads(data.text, parse_float=Decimal)
+            yield [self._trade_normalize(symbol, d) for d in data]
 
     def ticker(self, symbol: str, retry=None, retry_wait=10):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
         self._handle_error(data, LOG)
-        data = data.json()
+        data = json.loads(data.text, parse_float=Decimal)
         return {'symbol': symbol,
                 'feed': self.ID,
                 'bid': Decimal(data['bid']),
@@ -201,7 +204,8 @@ class Coinbase(API):
                 }
 
     def _book(self, symbol: str, level: int, retry, retry_wait):
-        return self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait).json()
+        data = self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait)
+        return json.loads(data.text, parse_float=Decimal)
 
     def l2_book(self, symbol: str, retry=None, retry_wait=10):
         data = self._book(symbol, 2, retry, retry_wait)
@@ -237,17 +241,19 @@ class Coinbase(API):
                 'total': Decimal(entry['balance']),
                 'available': Decimal(entry['available'])
             }
-            for entry in resp.json()
+            for entry in json.loads(resp.text, parse_float=Decimal)
         }
 
     def orders(self):
         endpoint = "/orders"
-        data = self._request("GET", endpoint, auth=True).json()
+        data = self._request("GET", endpoint, auth=True)
+        data = json.loads(data.text, parse_float=Decimal)
         return [Coinbase._order_status(order) for order in data]
 
     def order_status(self, order_id: str):
         endpoint = f"/orders/{order_id}"
-        order = self._request("GET", endpoint, auth=True).json()
+        order = self._request("GET", endpoint, auth=True)
+        order = json.loads(order.text, parse_float=Decimal)
         return Coinbase._order_status(order)
 
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
@@ -271,12 +277,13 @@ class Coinbase(API):
         if options:
             _ = [body.update(normalize_trading_options(self.ID, o)) for o in options]
         resp = self._request('POST', '/orders', auth=True, body=body)
-        return Coinbase._order_status(resp.json())
+        return Coinbase._order_status(json.loads(resp.text, parse_float=Decimal))
 
     def cancel_order(self, order_id: str):
         endpoint = f"/orders/{order_id}"
         order = self.order_status(order_id)
-        data = self._request("DELETE", endpoint, auth=True).json()
+        data = self._request("DELETE", endpoint, auth=True)
+        data = json.loads(data.text, parse_float=Decimal)
         if data[0] == order['order_id']:
             order['status'] = CANCELLED
             return order
@@ -284,7 +291,8 @@ class Coinbase(API):
 
     def trade_history(self, symbol: str, start=None, end=None):
         endpoint = f"/orders?product_id={symbol}&status=done"
-        data = self._request("GET", endpoint, auth=True).json()
+        data = self._request("GET", endpoint, auth=True)
+        data = json.loads(data.text, parse_float=Decimal)
         return [
             {
                 'order_id': order['id'],
@@ -292,32 +300,21 @@ class Coinbase(API):
                 'side': BUY if order['side'] == 'buy' else SELL,
                 'price': Decimal(order['executed_value']) / Decimal(order['filled_size']),
                 'amount': Decimal(order['filled_size']),
-                'timestamp': pd.Timestamp(order['done_at']).timestamp(),
+                'timestamp': order['done_at'].timestamp(),
                 'fee_amount': Decimal(order['fill_fees']),
                 'fee_currency': symbol.split('-')[1]
             }
             for order in data
         ]
 
-    @staticmethod
-    def _timestamp(ts, tz: Optional[Union[str, timezone]] = None):
-        if isinstance(ts, (float, int)):
-            # ts = pd.Timestamp.fromtimestamp(ts)
-            ts = pd.Timestamp.utcfromtimestamp(ts)
-        d = pd.to_datetime(ts, utc=True)
-        if tz:
-            d = d.tz_convert(tz)
-        return d
-
-    def _candle_normalize(self, symbol: str, data: list, tz: Optional[Union[str, timezone]] = None) -> dict:
+    def _candle_normalize(self, symbol: str, data: list) -> dict:
         res = {'symbol': symbol, 'feed': self.ID}
         for i, name in enumerate(CANDLES_POSITION_NAMES):
             if name == 'time':
-                res['timestamp'] = self._timestamp(data[i], tz=tz)
+                res['timestamp'] = data[i]
             else:
                 res[name] = Decimal(data[i])
         return res
-
 
     def _to_isoformat(self, dt: pd.Timestamp):
         """Required as cryptostore doesnt allow +00:00 for UTC requires Z explicitly.
@@ -338,16 +335,16 @@ class Coinbase(API):
         :param start: the start time (optional)
         :param end: the end time (optional)
         :param granularity: in seconds (int) or a specified pandas timedelta. This field must be one of the following values: {60, 300, 900, 3600, 21600, 86400}
-        If data points are readily available, your response may contain as many as 300 
+        If data points are readily available, your response may contain as many as 300
         candles and some of those candles may precede your declared start value.
-        
-        The maximum number of data points for a single request is 300 candles. 
-        If your selection of start/end time and granularity will result in more than 
-        300 data points, your request will be rejected. If you wish to retrieve fine 
+
+        The maximum number of data points for a single request is 300 candles.
+        If your selection of start/end time and granularity will result in more than
+        300 data points, your request will be rejected. If you wish to retrieve fine
         granularity data over a larger time range, you will need to make multiple
         requests with new start/end ranges
         """
-        limit = 300 # return max of 300 rows per request
+        limit = 300  # return max of 300 rows per request
 
         # Check granularity
         if isinstance(granularity, pd.Timedelta):
@@ -358,12 +355,7 @@ class Coinbase(API):
 
         if end and not start:
             start = '2014-12-01'
-        if start:        
-            tz = None
-            if isinstance(end, pd.Timestamp):
-                tz = end.tz    
-            if isinstance(start, pd.Timestamp):
-                tz = start.tz  # Prefer start tz if present
+        if start:
             if not end:
                 end = pd.Timestamp.utcnow().tz_localize(None)
 
@@ -372,7 +364,7 @@ class Coinbase(API):
             LOG.info(f"candles - stepping through {symbol} ({start}, {end}) where step = {td}")
             while True:
 
-                end_id = start_id + (limit-1) * td
+                end_id = start_id + (limit - 1) * td
                 if end_id > end_id_max:
                     end_id = end_id_max
                 if start_id > end_id_max:
@@ -388,15 +380,19 @@ class Coinbase(API):
                     LOG.warning("Error %s: %s", r.status_code, r.text)
                     time.sleep(60)
                     continue
-                data = r.json()
+
+                data = json.loads(r.text, parse_float=Decimal)
+
                 try:
                     data = list(reversed(data))
                 except Exception:
                     LOG.warning("Error %s: %s", r.status_code, r.text)
                     sleep(60)
                     continue
-                yield list(map(lambda x: self._candle_normalize(symbol, x, tz=tz), data))
-                time.sleep(RATE_LIMIT_SLEEP*4)
+                yield list(map(lambda x: self._candle_normalize(symbol, x), data))
+                time.sleep(RATE_LIMIT_SLEEP * 4)
                 start_id = end_id + td
         else:
-            yield [self._candle_normalize(symbol, d) for d in self._request('GET', f"/products/{symbol}/candles", retry=retry, retry_wait=retry_wait).json()]
+            data = self._request('GET', f"/products/{symbol}/candles", retry=retry, retry_wait=retry_wait)
+            data = json.loads(data.text, parse_float=Decimal)
+            yield [self._candle_normalize(symbol, d) for d in data]

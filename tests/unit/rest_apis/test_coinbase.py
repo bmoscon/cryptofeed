@@ -30,7 +30,7 @@ def test_trade_history():
 
 
 def test_trade_history_specific_time():
-    expected = {'timestamp': 1550062756.744, 
+    expected = {'timestamp': 1550062756.000744, 
                 'symbol': 'BTC-USD', 
                 'id': 59158401, 
                 'feed': 'COINBASE', 
@@ -53,20 +53,20 @@ def test_candle_history_specific_time():
     expected = [
         {
             'symbol': 'BTC-USD', 'feed': 'COINBASE', 
-            'timestamp': pd.Timestamp('2020-01-11 04:00:00-0500', tz='US/Eastern'),
-            'low': Decimal('8054.6400000000003274180926382541656494140625'), 
+            'timestamp': 1578733200,
+            'low': Decimal('8054.64'), 
             'high': Decimal('8122'), 
-            'open': Decimal('8054.65999999999985448084771633148193359375'),
-            'close': Decimal('8109.5299999999997453414835035800933837890625'), 
-            'volume': Decimal('78.9111136300000026722045731730759143829345703125')}, 
+            'open': Decimal('8054.66'),
+            'close': Decimal('8109.53'), 
+            'volume': Decimal('78.91111363')}, 
         {
             'symbol': 'BTC-USD', 'feed': 'COINBASE', 
-            'timestamp': pd.Timestamp('2020-01-11 05:00:00-0500', tz='US/Eastern'), 
-            'low': Decimal('8045.670000000000072759576141834259033203125'), 
-            'high': Decimal('8110.9499999999998181010596454143524169921875'), 
-            'open': Decimal('8110.9499999999998181010596454143524169921875'), 
-            'close': Decimal('8050.9399999999995998223312199115753173828125'), 
-            'volume': Decimal('71.115168280000006006957846693694591522216796875')
+            'timestamp': 1578736800, 
+            'low': Decimal('8045.67'), 
+            'high': Decimal('8110.95'), 
+            'open': Decimal('8110.95'), 
+            'close': Decimal('8050.94'), 
+            'volume': Decimal('71.11516828')
         }
     ]
     s = pd.Timestamp('2020-01-11 04:00:00-0500', tz='US/Eastern')

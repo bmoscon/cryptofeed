@@ -605,7 +605,7 @@ def coingecko_normalize_all(coin: dict):
 
     i = coin['nn'].find('.')  # if there is a dot in normalized name => prefer the normalized symbol
     if i >= 0:
-        if i > 1 and coin['nn'][i-1].isdigit() and coin['nn'][i+1].isdigit():
+        if i > 1 and coin['nn'][i - 1].isdigit() and coin['nn'][i + 1].isdigit():
             pass  # except when the dot separates digits
         else:
             return coin['ns']
@@ -613,7 +613,7 @@ def coingecko_normalize_all(coin: dict):
     if is_name_short(coin) and has_many_caps(name):
         return coin['nn']
 
-    if 1.5*len(coin['ns']) > len(coin['nn']) and any(c.islower() for c in coin['ns']):
+    if 1.5 * len(coin['ns']) > len(coin['nn']) and any(c.islower() for c in coin['ns']):
         return coin['nn']
 
     return coin['ns']
