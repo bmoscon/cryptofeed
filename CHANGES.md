@@ -21,6 +21,7 @@
   * Feature: Add candles function to coinbase
   * Feature: Explain when Cryptofeed crashes during pairs retrieval
   * Bugfix: BINANCE_DELIVERY Ticker use msg_type='bookTicker' as for the other BINANCE markets
+  * Feature: Print the origin of the configuration (filename, dict) for better developer experience
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
