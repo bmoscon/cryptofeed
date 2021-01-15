@@ -16,8 +16,14 @@
   * Breaking change: Feed object `config` renamed `subscription`
   * Feature: Configuration passed from feedhandler to exchanges
   * Breaking change: most use of `pair` and `pairs` changed to `symbol` and `symbols` to be more consistent with actual usage. pairs.py renamed to symbols.py
+  * Feature: Allow configuring the API KEY ID from Config or from environment variable
+  * Bugfix: Collisions in normalized CoinGecko symbols (this adds about 700 new symbols)
+  * Feature: Add candles function to coinbase
+  * Feature: Explain when Cryptofeed crashes during pairs retrieval
+  * Bugfix: BINANCE_DELIVERY Ticker use msg_type='bookTicker' as for the other BINANCE markets
+  * Feature: Print the origin of the configuration (filename, dict) for better developer experience
   * Bugfix: Add guard against non-supported asyncio add_signal_handler() on windows platforms
-    
+
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
   * Feature: Support for Whale Alert on-chain transaction data per coin, to be used with a new data channel 'transactions'

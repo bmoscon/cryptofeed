@@ -123,6 +123,8 @@ class FeedHandler:
         self.config = Config(config=config)
 
         get_logger('feedhandler', self.config.log.filename, self.config.log.level)
+        if self.config.log_msg:
+            LOG.info(self.config.log_msg)
 
     def playback(self, feed, filenames):
         loop = asyncio.get_event_loop()
