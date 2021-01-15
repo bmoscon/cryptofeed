@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import os
-import sys
 
 import yaml
 
@@ -36,6 +35,8 @@ class AttrDict(dict):
 
 class Config:
     def __init__(self, config=None):
+        self.config = AttrDict(_default_config)
+        self.log_msg = ""
         if isinstance(config, str):
             config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
             if config and os.path.exists(config):
@@ -46,16 +47,14 @@ class Config:
             if os.path.exists(config_file):
                 with open(config_file) as fp:
                     self.config = AttrDict(yaml.safe_load(fp))
-                    print(f'Config: use file={config_file!r} containing the following main keys: {", ".join(self.config.keys())}', file=sys.stderr, flush=True)
+                    self.log_msg = f'Config: use file={config_file!r} containing the following main keys: {", ".join(self.config.keys())}'
             else:
-                self.config = AttrDict(_default_config)
-                print(f'Config: no file={config_file!r} => default config.', file=sys.stderr, flush=True)
+                self.log_msg = f'Config: no file={config_file!r} => default config.'
         elif isinstance(config, dict):
             self.config = AttrDict(config)
-            print(f'Config: use dict containing the following main keys: {", ".join(self.config.keys())}', file=sys.stderr, flush=True)
+            self.log_msg = f'Config: use dict containing the following main keys: {", ".join(self.config.keys())}'
         else:
-            self.config = AttrDict(_default_config)
-            print(f'Config: Only accept str and dict but got {type(config)!r} => default config.', file=sys.stderr, flush=True)
+            self.log_msg = f'Config: Only accept str and dict but got {type(config)!r} => default config.'
 
     def __bool__(self):
         return self.config != {}
