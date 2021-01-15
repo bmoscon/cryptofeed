@@ -31,6 +31,7 @@ class Bitmex(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.bitmex.com/realtime', **kwargs)
+
         active_pairs = Bitmex.info()['symbols']
         if self.subscription:
             pairs = list(self.subscription.values())
