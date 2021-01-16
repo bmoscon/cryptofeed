@@ -169,11 +169,11 @@ class Bitflyer(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, conn: AsyncConnection, **kwargs):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        for chan in self.channels if self.channels else self.subscription:
-            for pair in self.symbols if self.symbols else self.subscription[chan]:
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
                 if chan.startswith('lightning_board'):
                     # need to subscribe to snapshots too if subscribed to L2_BOOKS
                     await conn.send(json.dumps({"method": "subscribe", "params": {"channel": f'lightning_board_snapshot_{pair}'}}))

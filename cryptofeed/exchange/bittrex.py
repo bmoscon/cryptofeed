@@ -7,6 +7,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
@@ -99,23 +100,23 @@ class Bittrex(Feed):
         elif 'E' in msg:
             LOG.error("%s: Error from exchange %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         # H: Hub, M: Message, A: Args, I: Internal ID
         # For more signalR info see:
         # https://blog.3d-logic.com/2015/03/29/signalr-on-the-wire-an-informal-description-of-the-signalr-protocol/
         # http://blogs.microsoft.co.il/applisec/2014/03/12/signalr-message-format/
-        for channel in set(self.channels) if not self.subscription else set(self.subscription):
-            symbols = self.symbols if not self.subscription else list(self.subscription[channel])
+        for chan in set(self.channels or self.subscription):
+            symbols = set(self.symbols or self.subscription[chan])
             i = 0
-            if channel == 'SubscribeToExchangeDeltas':
+            if chan == 'SubscribeToExchangeDeltas':
                 for symbol in symbols:
                     msg = {'A': [symbol], 'H': 'c2', 'I': i, 'M': 'QueryExchangeState'}
-                    await websocket.send(json.dumps(msg))
+                    await conn.send(json.dumps(msg))
                     i += 1
-            if channel == TRADES:
-                channel = 'SubscribeToExchangeDeltas'
+            if chan == TRADES:
+                chan = 'SubscribeToExchangeDeltas'
             for symbol in symbols:
-                msg = {'A': [symbol] if channel != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': channel}
+                msg = {'A': [symbol] if chan != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': chan}
                 i += 1
-                await websocket.send(json.dumps(msg))
+                await conn.send(json.dumps(msg))

@@ -5,6 +5,7 @@ import uuid
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
@@ -165,7 +166,7 @@ class Upbit(Feed):
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         """
         Doc : https://docs.upbit.com/docs/upbit-quotation-websocket
 
@@ -192,16 +193,13 @@ class Upbit(Feed):
         """
 
         chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
-        for channel in self.channels if not self.subscription else self.subscription:
-            codes = list()
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
-                codes.append(pair)
-
-            if channel == L2_BOOK:
+        for chan in set(self.channels or self.subscription):
+            codes = list(set(self.symbols or self.subscription[chan]))
+            if chan == L2_BOOK:
                 chans.append({"type": "orderbook", "codes": codes, 'isOnlyRealtime': True})
-            if channel == TRADES:
+            if chan == TRADES:
                 chans.append({"type": "trade", "codes": codes, 'isOnlyRealtime': True})
-            if channel == TICKER:
+            if chan == TICKER:
                 chans.append({"type": "ticker", "codes": codes, 'isOnlyRealtime': True})
 
-        await websocket.send(json.dumps(chans))
+        await conn.send(json.dumps(chans))

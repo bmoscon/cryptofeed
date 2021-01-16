@@ -5,6 +5,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -20,14 +21,14 @@ class Deribit(Feed):
     def __init__(self, **kwargs):
         super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
 
+        # TODO: the same verification (below) is done in Bitmex => share this code in a common function in super class Feed
         instruments = self.get_instruments()
         pairs = None
         if self.subscription:
             config_instruments = list(self.subscription.values())
-            pairs = [
-                pair for inner in config_instruments for pair in inner]
+            pairs = [pair for inner in config_instruments for pair in inner]
 
-        for pair in self.symbols if self.symbols else pairs:
+        for pair in set(self.symbols or pairs):
             if pair not in instruments:
                 raise ValueError(f"{pair} is not active on {self.id}")
         self.__reset()
@@ -157,14 +158,14 @@ class Deribit(Feed):
                             receipt_timestamp=timestamp
                             )
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
         channels = []
-        for chan in self.channels if self.channels else self.subscription:
-            for pair in self.symbols if self.symbols else self.subscription[chan]:
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
                 channels.append(f"{chan}.{pair}.raw")
-        await websocket.send(json.dumps(
+        await conn.send(json.dumps(
             {
                 "jsonrpc": "2.0",
                 "id": client_id,

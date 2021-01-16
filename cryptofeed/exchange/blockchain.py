@@ -11,6 +11,7 @@ from itertools import product
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -164,19 +165,11 @@ class Blockchain(Feed):
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        if self.subscription:
-            for channel in self.subscription:
-                for pair in self.subscription[channel]:
-                    await websocket.send(json.dumps({"action": "subscribe",
-                                                     "symbol": pair,
-                                                     "channel": channel
-                                                     }))
-
-        else:
-            for pair, channel in product(self.symbols, self.channels):
-                await websocket.send(json.dumps({"action": "subscribe",
-                                                 "symbol": pair,
-                                                 "channel": channel
-                                                 }))
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                await conn.send(json.dumps({"action": "subscribe",
+                                            "symbol": pair,
+                                            "channel": chan
+                                            }))

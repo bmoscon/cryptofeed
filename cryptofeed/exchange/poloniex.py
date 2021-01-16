@@ -12,6 +12,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES, VOLUME
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -45,7 +46,7 @@ class Poloniex(Feed):
         if channels:
             self.channels = self.symbols
             check = channels
-            self.callback_map = {channel: set(symbols) for channel in channels if channel not in {p_ticker, p_volume}}
+            self.callback_map = {chan: set(symbols) for chan in channels if chan not in {p_ticker, p_volume}}
         elif subscription:
             self.channels = []
             for c, v in self.subscription.items():
@@ -53,6 +54,8 @@ class Poloniex(Feed):
                     self.channels.extend(v)
             check = subscription
             self.callback_map = {key: set(value) for key, value in subscription.items()}
+        else:
+            raise ValueError(f'{self.id}: the arguments channels and subscription are empty - cannot subscribe')
 
         if TICKER in check:
             self.channels.append(p_ticker)
@@ -196,9 +199,7 @@ class Poloniex(Feed):
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for channel in self.channels:
-            await websocket.send(json.dumps({"command": "subscribe",
-                                             "channel": channel
-                                             }))
+        for chan in self.channels:
+            await conn.send(json.dumps({"command": "subscribe", "channel": chan}))

@@ -10,6 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITCOINCOM, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -30,11 +31,11 @@ class BitcoinCom(Feed):
         self.l2_book = {}
         self.seq_no = {}
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in self.channels if self.channels else self.subscription:
-            for pair in self.symbols if self.symbols else self.subscription[chan]:
-                await websocket.send(json.dumps(
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                await conn.send(json.dumps(
                     {
                         "method": chan,
                         "params": {

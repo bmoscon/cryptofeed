@@ -10,6 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
@@ -166,23 +167,23 @@ class Probit(Feed):
             await self._l2_update(msg, timestamp)
         # Probit has a 'ticker' channel, but it provide OHLC-last data, not BBO px.
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
         if self.subscription:
             for chan in self.subscription:
                 for pair in self.subscription[chan]:
-                    await websocket.send(json.dumps({"type": "subscribe",
-                                                     "channel": "marketdata",
-                                                     "filter": [chan],
-                                                     "interval": 100,
-                                                     "market_id": pair,
-                                                     }))
+                    await conn.send(json.dumps({"type": "subscribe",
+                                                "channel": "marketdata",
+                                                "filter": [chan],
+                                                "interval": 100,
+                                                "market_id": pair,
+                                                }))
         else:
             for pair in self.symbols:
-                await websocket.send(json.dumps({"type": "subscribe",
-                                                 "channel": "marketdata",
-                                                 "filter": list(self.channels),
-                                                 "interval": 100,
-                                                 "market_id": pair,
-                                                 }))
+                await conn.send(json.dumps({"type": "subscribe",
+                                            "channel": "marketdata",
+                                            "filter": list(self.channels),
+                                            "interval": 100,
+                                            "market_id": pair,
+                                            }))

@@ -10,6 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std
@@ -152,16 +153,16 @@ class Gateio(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self._reset()
         client_id = 0
-        for chan in self.channels if self.channels else self.subscription:
-            pairs = self.symbols if self.symbols else self.subscription[chan]
+        for chan in set(self.channels or self.subscription):
+            pairs = set(self.symbols or self.subscription[chan])
             client_id += 1
             if 'depth' in chan:
                 pairs = [[pair, 30, "0.00000001"] for pair in pairs]
 
-            await websocket.send(json.dumps(
+            await conn.send(json.dumps(
                 {
                     "method": chan,
                     "params": pairs,

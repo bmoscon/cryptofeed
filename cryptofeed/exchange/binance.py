@@ -10,12 +10,13 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 from time import time
-from typing import Union, Dict
+from typing import Dict, Iterable
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
@@ -28,7 +29,7 @@ class Binance(Feed):
     id = BINANCE
 
     def __init__(self, depth=1000, **kwargs):
-        super().__init__(None, **kwargs)
+        super().__init__({}, **kwargs)
         self.book_depth = depth
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
@@ -252,7 +253,7 @@ class Binance(Feed):
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
 
-    async def _open_interest(self, pairs: list):
+    async def _open_interest(self, pairs: Iterable):
         """
         {
             "openInterest": "10659.509",
@@ -330,12 +331,12 @@ class Binance(Feed):
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         # Binance does not have a separate subscribe message, the
-        # subsription information is included in the
+        # subscription information is included in the
         # connection endpoint
-        for chan in self.channels if self.channels else self.subscription:
-            if chan == 'open_interest':
-                asyncio.create_task(self._open_interest(self.symbols if self.symbols else self.subscription[chan]))
-                break
         self._reset()
+        for chan in set(self.channels or self.subscription):
+            if chan == 'open_interest':
+                asyncio.create_task(self._open_interest(set(self.symbols or self.subscription[chan])))
+                break

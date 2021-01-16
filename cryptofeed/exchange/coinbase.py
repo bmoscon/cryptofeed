@@ -48,8 +48,8 @@ class Coinbase(Feed):
             self.seq_no = None
             # sequence number validation only works when the FULL data stream is enabled
             chan = feed_to_exchange(self.id, L3_BOOK)
-            if chan in self.channels or chan in self.subscription:
-                pairs = self.symbols if self.symbols else self.subscription[chan]
+            if chan in set(self.channels or self.subscription):
+                pairs = set(self.symbols or self.subscription[chan])
                 self.seq_no = {pair: None for pair in pairs}
             self.l3_book = {}
             self.l2_book = {}
@@ -364,12 +364,12 @@ class Coinbase(Feed):
     async def subscribe(self, conn: AsyncConnection, symbol=None):
         self.__reset(symbol=symbol)
 
-        for chan in self.channels if self.channels else self.subscription:
+        for chan in set(self.channels or self.subscription):
             await conn.send(json.dumps({"type": "subscribe",
-                                        "product_ids": list(self.subscription[chan]) if self.subscription else self.symbols,
+                                        "product_ids": list(self.symbols or self.subscription[chan]),
                                         "channels": [chan]
                                         }))
 
         chan = feed_to_exchange(self.id, L3_BOOK)
-        if chan in self.subscription or chan in self.channels:
-            await self._book_snapshot(self.symbols if self.symbols else list(self.subscription[chan]))
+        if chan in set(self.channels or self.subscription):
+            await self._book_snapshot(list(self.symbols or self.subscription[chan]))

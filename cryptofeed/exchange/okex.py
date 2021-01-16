@@ -6,14 +6,19 @@ associated with this software.
 '''
 import asyncio
 from decimal import Decimal
+import logging
 import time
 
 import aiohttp
 import requests
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL
 from cryptofeed.exchange.okcoin import OKCoin
+
+
+LOG = logging.getLogger("feedhandler")
 
 
 class OKEx(OKCoin):
@@ -89,8 +94,8 @@ class OKEx(OKCoin):
                     await asyncio.sleep(0.1)
                 await asyncio.sleep(60)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         if LIQUIDATIONS in self.subscription or LIQUIDATIONS in self.channels:
             pairs = self.subscription[LIQUIDATIONS] if LIQUIDATIONS in self.subscription else self.symbols
-            asyncio.create_task(self._liquidations(pairs))
-        await super().subscribe(websocket)
+            asyncio.create_task(self._liquidations(pairs))  # TODO: use HTTPAsyncConn
+        return await super().subscribe(conn)

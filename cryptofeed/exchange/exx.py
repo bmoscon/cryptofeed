@@ -10,6 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import EXX as EXX_id
 from cryptofeed.defines import L2_BOOK, SELL, TRADES
@@ -157,11 +158,11 @@ class EXX(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
-                await websocket.send(json.dumps({"dataType": f"1_{channel}_{pair}",
-                                                 "dataSize": 50,
-                                                 "action": "ADD"
-                                                 }))
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                await conn.send(json.dumps({"dataType": f"1_{chan}_{pair}",
+                                            "dataSize": 50,
+                                            "action": "ADD"
+                                            }))

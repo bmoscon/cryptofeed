@@ -10,6 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, HITBTC, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -108,14 +109,14 @@ class HitBTC(Feed):
             if 'error' in msg or not msg['result']:
                 LOG.error("%s: Received error from server: %s", self.id, msg)
 
-    async def subscribe(self, websocket):
-        for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
-                await websocket.send(
+    async def subscribe(self, conn: AsyncConnection):
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                await conn.send(
                     json.dumps({
-                        "method": channel,
+                        "method": chan,
                         "params": {
                             "symbol": pair
                         },
-                        "id": websocket.uuid
+                        "id": conn.id
                     }))
