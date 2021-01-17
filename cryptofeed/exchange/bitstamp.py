@@ -12,6 +12,7 @@ import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import feed_to_exchange, symbol_exchange_to_std, timestamp_normalize
@@ -151,18 +152,18 @@ class Bitstamp(Feed):
                     amount = Decimal(update[1])
                     self.l2_book[std_pair][side][price] = amount
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         snaps = []
         self.last_update_id = {}
-        for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
-                await websocket.send(
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                await conn.send(
                     json.dumps({
                         "event": "bts:subscribe",
                         "data": {
-                            "channel": "{}_{}".format(channel, pair)
+                            "channel": f"{chan}_{pair}"
                         }
                     }))
-                if 'diff_order_book' in channel:
+                if 'diff_order_book' in chan:
                     snaps.append(pair)
         await self._snapshot(snaps)

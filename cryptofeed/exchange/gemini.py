@@ -10,6 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
@@ -83,9 +84,9 @@ class Gemini(Feed):
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         pairs = self.symbols if not self.subscription else list(set.union(*list(self.subscription.values())))
         self.__reset(pairs)
 
-        await websocket.send(json.dumps({"type": "subscribe",
-                                         "subscriptions": [{"name": "l2", "symbols": pairs}]}))
+        await conn.send(json.dumps({"type": "subscribe",
+                                    "subscriptions": [{"name": "l2", "symbols": pairs}]}))

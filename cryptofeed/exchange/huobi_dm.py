@@ -32,6 +32,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, symbol_std_to_exchange, timestamp_normalize
@@ -138,14 +139,14 @@ class HuobiDM(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in self.channels if self.channels else self.subscription:
-            for pair in self.symbols if self.symbols else self.subscription[chan]:
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
                 client_id += 1
                 pair = symbol_exchange_to_std(pair)
-                await websocket.send(json.dumps(
+                await conn.send(json.dumps(
                     {
                         "sub": f"market.{pair}.{chan}",
                         "id": str(client_id)

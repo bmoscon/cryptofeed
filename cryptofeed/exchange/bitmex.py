@@ -32,10 +32,12 @@ class Bitmex(Feed):
     def __init__(self, **kwargs):
         super().__init__('wss://www.bitmex.com/realtime', **kwargs)
 
+        # TODO: the below verification is also done in Deribit and Kraken
+        # => move it in a function in super class Feed because this is common to all exchanges
         active_pairs = Bitmex.info()['symbols']
         if self.subscription:
             pairs = list(self.subscription.values())
-            self.symbols = [pair for inner in pairs for pair in inner]
+            self.symbols = set(pair for inner in pairs for pair in inner)
 
         for pair in self.symbols:
             if not pair.startswith('.'):
@@ -507,9 +509,9 @@ class Bitmex(Feed):
         self._reset()
         await self._authenticate(websocket)
         chans = []
-        for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
-                chans.append("{}:{}".format(channel, pair))
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                chans.append(f"{chan}:{pair}")
 
         for i in range(0, len(chans), 10):
             await websocket.send(json.dumps({"op": "subscribe",

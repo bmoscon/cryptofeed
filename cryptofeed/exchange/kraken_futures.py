@@ -11,6 +11,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -26,11 +27,11 @@ class KrakenFutures(Feed):
     def __init__(self, **kwargs):
         super().__init__('wss://futures.kraken.com/ws/v1', **kwargs)
 
+        # TODO: the same verification (below) is done in Bitmex and Kraken => share this code in a common function in super class Feed
         instruments = self.get_instruments()
         if self.subscription:
-            config_instruments = list(self.subscription.values())
-            self.symbols = [
-                pair for inner in config_instruments for pair in inner]
+            subscribing_instruments = list(self.subscription.values())
+            self.symbols = set(pair for inner in subscribing_instruments for pair in inner)
 
         for pair in self.symbols:
             if pair not in instruments:
@@ -48,14 +49,14 @@ class KrakenFutures(Feed):
         r = requests.get('https://futures.kraken.com/derivatives/api/v3/instruments').json()
         return {e['symbol'].upper(): e['symbol'].upper() for e in r['instruments']}
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in self.channels if self.channels else self.subscription:
-            await websocket.send(json.dumps(
+        for chan in set(self.channels or self.subscription):
+            await conn.send(json.dumps(
                 {
                     "event": "subscribe",
                     "feed": chan,
-                    "product_ids": self.symbols if not self.subscription else list(self.subscription[chan])
+                    "product_ids": list(self.symbols or self.subscription[chan])
                 }
             ))
 

@@ -10,11 +10,13 @@ import logging
 from decimal import Decimal
 from time import time
 import zlib
+from typing import Iterable
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
@@ -37,17 +39,18 @@ class FTX(Feed):
         self.funding = {}
         self.open_interest = {}
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in self.channels if self.channels else self.subscription:
+        for chan in set(self.channels or self.subscription):
+            symbols = set(self.symbols or self.subscription[chan])
             if chan == FUNDING:
-                asyncio.create_task(self._funding(self.symbols if self.symbols else self.subscription[chan]))
+                asyncio.create_task(self._funding(symbols))  # TODO: use HTTPAsyncConn
                 continue
             if chan == OPEN_INTEREST:
-                asyncio.create_task(self._open_interest(self.symbols if self.symbols else self.subscription[chan]))
+                asyncio.create_task(self._open_interest(symbols))  # TODO: use HTTPAsyncConn
                 continue
-            for pair in self.symbols if self.symbols else self.subscription[chan]:
-                await websocket.send(json.dumps(
+            for pair in symbols:
+                await conn.send(json.dumps(
                     {
                         "channel": chan,
                         "market": pair,
@@ -74,7 +77,7 @@ class FTX(Feed):
         computed = ":".join(combined).encode()
         return zlib.crc32(computed)
 
-    async def _open_interest(self, pairs: list):
+    async def _open_interest(self, pairs: Iterable):
         """
             {
               "success": true,
@@ -116,7 +119,7 @@ class FTX(Feed):
                 wait_time = 60
                 await asyncio.sleep(wait_time)
 
-    async def _funding(self, pairs: list):
+    async def _funding(self, pairs: Iterable):
         """
             {
               "success": true,

@@ -11,6 +11,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -43,14 +44,14 @@ class Kraken(Feed):
 
         return str(zlib.crc32(combined.encode()))
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         if self.subscription:
             for chan in self.subscription:
                 sub = {"name": chan}
                 if 'book' in chan:
                     sub['depth'] = self.book_depth
-                await websocket.send(json.dumps({
+                await conn.send(json.dumps({
                     "event": "subscribe",
                     "pair": list(self.subscription[chan]),
                     "subscription": sub
@@ -60,7 +61,7 @@ class Kraken(Feed):
                 sub = {"name": chan}
                 if 'book' in chan:
                     sub['depth'] = self.book_depth
-                await websocket.send(json.dumps({
+                await conn.send(json.dumps({
                     "event": "subscribe",
                     "pair": self.symbols,
                     "subscription": sub

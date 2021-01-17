@@ -24,6 +24,7 @@
   * Feature: Support Bitmex authentication using personal API key and secret
   * Feature: Print the origin of the configuration (filename, dict) for better developer experience
   * Bugfix: Add guard against non-supported asyncio add_signal_handler() on windows platforms
+  * Feature: Simplify source code by standardization iterations over channels and symbols
   * Bugfix: Remove remaining character "*" in book_test.py
   * Bugfix: Fix return type of the function book_flatten()
 
