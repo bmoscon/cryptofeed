@@ -17,7 +17,7 @@ from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INT
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
-from cryptofeed.util.split import split_list_by_max_items
+from cryptofeed.util import split
 
 
 LOG = logging.getLogger('feedhandler')
@@ -67,7 +67,7 @@ class OKCoin(Feed):
             return False
 
         # Avoid error "Max frame length of 65536 has been exceeded" by limiting requests to some args
-        for chunk in split_list_by_max_items(symbol_channels, 33):
+        for chunk in split.list_by_max_items(symbol_channels, 33):
             LOG.info("%s: Subscribe to %s args from %r to %r", self.id, len(chunk), chunk[0], chunk[-1])
             request = {"op": "subscribe", "args": chunk}
             await conn.send(json.dumps(request))
