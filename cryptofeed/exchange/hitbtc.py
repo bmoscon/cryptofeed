@@ -118,5 +118,5 @@ class HitBTC(Feed):
                         "params": {
                             "symbol": pair
                         },
-                        "id": conn.id
+                        "id": conn.uuid
                     }))

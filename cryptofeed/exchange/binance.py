@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 from time import time
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Union
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
