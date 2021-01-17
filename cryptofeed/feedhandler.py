@@ -290,7 +290,7 @@ class FeedHandler:
         if not loop:
             loop = asyncio.get_event_loop()
 
-        LOG.info('FH: close WS connections and stop Runner loops (asynchronous run)')
+        LOG.info('FH: close WS connections and stop Runner loops')
         for feed, runners in self.feeds:
             for r in runners:
                 task = loop.create_task(r.shutdown())
