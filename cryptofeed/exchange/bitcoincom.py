@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITCOINCOM, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -32,6 +32,7 @@ class BitcoinCom(Feed):
         self.seq_no = {}
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
@@ -92,9 +93,9 @@ class BitcoinCom(Feed):
                     self.l2_book[pair][s][price] = amount
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, msg['timestamp']), timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
         if 'result' in msg and msg['result'] is True:
             return
         elif 'method' in msg:
@@ -104,7 +105,7 @@ class BitcoinCom(Feed):
                 if data['symbol'] not in self.seq_no:
                     self.seq_no[data['symbol']] = data['sequence']
                 elif self.seq_no[data['symbol']] + 1 != data['sequence']:
-                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, data['sequence'],
+                    LOG.warning("%s: missing sequence number. Received %d, expected %d", conn.id, data['sequence'],
                                 self.seq_no[data['symbol']] + 1)
                     raise MissingSequenceNumber
                 self.seq_no[data['symbol']] = data['sequence']
@@ -120,6 +121,6 @@ class BitcoinCom(Feed):
             elif msg['method'] == 'ticker':
                 await self._ticker(data, timestamp)
             else:
-                LOG.warning("%s: Invalid message type %s", self.id, msg)
+                LOG.warning("%s: Invalid message type %s", conn.id, msg)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, msg)

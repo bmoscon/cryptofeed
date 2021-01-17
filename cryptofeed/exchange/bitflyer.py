@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, TICKER, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, symbol_exchange_to_std
@@ -157,8 +157,9 @@ class Bitflyer(Feed):
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
-        msg = json.loads(msg, parse_float=Decimal)
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
+
+        msg = json.loads(data, parse_float=Decimal)
 
         if msg['params']['channel'].startswith("lightning_ticker_"):
             await self._ticker(msg, timestamp)
@@ -167,9 +168,10 @@ class Bitflyer(Feed):
         elif msg['params']['channel'].startswith('lightning_board_'):
             await self._book(msg, timestamp)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
 
         for chan in set(self.channels or self.subscription):

@@ -12,7 +12,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES, VOLUME
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -158,11 +158,12 @@ class Poloniex(Feed):
         if self.__do_callback(L2_BOOK, pair):
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
+
         if 'error' in msg:
-            LOG.error("%s: Error from exchange: %s", self.id, msg)
+            LOG.error("%s: Error from exchange: %s", conn.id, msg)
             return
 
         chan_id = msg[0]
@@ -187,7 +188,7 @@ class Poloniex(Feed):
             if chan_id not in self.seq_no:
                 self.seq_no[chan_id] = seq_no
             elif self.seq_no[chan_id] + 1 != seq_no and msg[2][0][0] != 'i':
-                LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[chan_id] + 1)
+                LOG.warning("%s: missing sequence number. Received %d, expected %d", conn.id, seq_no, self.seq_no[chan_id] + 1)
                 raise MissingSequenceNumber
             self.seq_no[chan_id] = seq_no
             if msg[2][0][0] == 'i':
@@ -197,9 +198,10 @@ class Poloniex(Feed):
             # heartbeat - ignore
             pass
         else:
-            LOG.warning('%s: Invalid message type %s', self.id, msg)
+            LOG.warning('%s: Invalid message type %s', conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         for chan in self.channels:
             await conn.send(json.dumps({"command": "subscribe", "channel": chan}))

@@ -11,7 +11,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -50,6 +50,7 @@ class KrakenFutures(Feed):
         return {e['symbol'].upper(): e['symbol'].upper() for e in r['instruments']}
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         for chan in set(self.channels or self.subscription):
             await conn.send(json.dumps(
@@ -197,9 +198,9 @@ class KrakenFutures(Feed):
                             receipt_timestamp=timestamp
                             )
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
 
         if 'event' in msg:
             if msg['event'] == 'info':
@@ -207,7 +208,7 @@ class KrakenFutures(Feed):
             elif msg['event'] == 'subscribed':
                 return
             else:
-                LOG.warning("%s: Invalid message type %s", self.id, msg)
+                LOG.warning("%s: Invalid message type %s", conn.id, msg)
         else:
             if msg['feed'] == 'trade':
                 await self._trade(msg, msg['product_id'], timestamp)
@@ -222,4 +223,4 @@ class KrakenFutures(Feed):
             elif msg['feed'] == 'book':
                 await self._book(msg, msg['product_id'], timestamp)
             else:
-                LOG.warning("%s: Invalid message type %s", self.id, msg)
+                LOG.warning("%s: Invalid message type %s", conn.id, msg)

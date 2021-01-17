@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import EXX as EXX_id
 from cryptofeed.defines import L2_BOOK, SELL, TRADES
@@ -144,9 +144,9 @@ class EXX(Feed):
                             receipt_timestamp=timestamp,
                             )
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
 
         if isinstance(msg[0], list):
             msg = msg[0]
@@ -156,9 +156,10 @@ class EXX(Feed):
         elif msg[0] == 'T':
             await self._trade(msg, timestamp)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):

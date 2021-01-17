@@ -7,7 +7,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
@@ -77,9 +77,9 @@ class Bittrex(Feed):
                                     timestamp=timestamp_normalize(self.id, trade['T']),
                                     receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg)
+        msg = json.loads(data)
         if 'M' in msg and len(msg['M']) > 0:
             for update in msg['M']:
                 if update['M'] == 'uE':
@@ -98,9 +98,10 @@ class Bittrex(Feed):
             data = json.loads(zlib.decompress(base64.b64decode(msg['R']), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
             await self._snapshot(data, timestamp)
         elif 'E' in msg:
-            LOG.error("%s: Error from exchange %s", self.id, msg)
+            LOG.error("%s: Error from exchange %s", conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         # H: Hub, M: Message, A: Args, I: Internal ID
         # For more signalR info see:

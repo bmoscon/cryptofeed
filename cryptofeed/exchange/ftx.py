@@ -16,7 +16,7 @@ import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
@@ -40,6 +40,7 @@ class FTX(Feed):
         self.open_interest = {}
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         for chan in set(self.channels or self.subscription):
             symbols = set(self.symbols or self.subscription[chan])
@@ -247,9 +248,9 @@ class FTX(Feed):
                 raise BadChecksum
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
         if 'type' in msg and msg['type'] == 'subscribed':
             return
         elif 'channel' in msg:
@@ -260,6 +261,6 @@ class FTX(Feed):
             elif msg['channel'] == 'ticker':
                 await self._ticker(msg, timestamp)
             else:
-                LOG.warning("%s: Invalid message type %s", self.id, msg)
+                LOG.warning("%s: Invalid message type %s", conn.id, msg)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, msg)

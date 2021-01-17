@@ -5,7 +5,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -159,6 +159,7 @@ class Deribit(Feed):
                             )
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         client_id = 0
         channels = []
@@ -243,13 +244,13 @@ class Deribit(Feed):
                 delta[ASK].append((Decimal(price), Decimal(amount)))
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg_dict = json.loads(msg, parse_float=Decimal)
+        msg_dict = json.loads(data, parse_float=Decimal)
 
         # As a first update after subscription, Deribit sends a notification with no data
         if "testnet" in msg_dict.keys():
-            LOG.debug("%s: Test response from derbit accepted %s", self.id, msg)
+            LOG.debug("%s: Test response from derbit accepted %s", conn.id, data)
         elif "ticker" == msg_dict["params"]["channel"].split(".")[0]:
             await self._ticker(msg_dict, timestamp)
         elif "trades" == msg_dict["params"]["channel"].split(".")[0]:
@@ -263,4 +264,4 @@ class Deribit(Feed):
             elif "prev_change_id" in msg_dict["params"]["data"].keys():
                 await self._book_update(msg_dict, timestamp)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, data)

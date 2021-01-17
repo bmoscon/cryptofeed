@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -146,10 +146,10 @@ class Blockchain(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
-        msg = json.loads(msg, parse_float=Decimal)
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
+        msg = json.loads(data, parse_float=Decimal)
         if self.seq_no is not None and msg['seqnum'] != self.seq_no + 1:
-            LOG.warning("%s: Missing sequence number detected!", self.id)
+            LOG.warning("%s: Missing sequence number detected!", conn.id)
             raise MissingSequenceNumber("Missing sequence number, restarting")
 
         self.seq_no = msg['seqnum']
@@ -162,9 +162,10 @@ class Blockchain(Feed):
             elif msg['channel'] == 'trades':
                 await self._handle_trade_msg(msg, timestamp)
             else:
-                LOG.warning("%s: Invalid message type %s", self.id, msg)
+                LOG.warning("%s: Invalid message type %s", conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):

@@ -6,7 +6,7 @@ from decimal import Decimal
 import aiohttp
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import HUOBI_SWAP, FUNDING
 from cryptofeed.exchange.huobi_dm import HuobiDM
 from cryptofeed.feed import Feed
@@ -24,6 +24,7 @@ class HuobiSwap(HuobiDM):
         self.funding_updates = {}
 
     async def _funding(self, pairs):
+        # TODO: use HTTPAsyncConn by passing the HTTP addresses to super.__init__()
         async with aiohttp.ClientSession() as session:
             while True:
                 for pair in pairs:
@@ -49,10 +50,11 @@ class HuobiSwap(HuobiDM):
                         await asyncio.sleep(0.1)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         chans = list(self.channels)
         sub = dict(self.subscription)
         if FUNDING in (self.channels or self.subscription):
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()  # TODO: use HTTPAsyncConn
             loop.create_task(self._funding(self.symbols if FUNDING in self.channels else self.subscription[FUNDING]))
             self.channels.remove(FUNDING) if FUNDING in self.channels else self.subscription.pop(FUNDING)
 

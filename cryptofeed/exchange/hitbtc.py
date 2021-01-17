@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, HITBTC, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -78,14 +78,14 @@ class HitBTC(Feed):
                                 timestamp=timestamp,
                                 receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
         if 'params' in msg and 'sequence' in msg['params']:
             pair = msg['params']['symbol']
             if pair in self.seq_no:
                 if self.seq_no[pair] + 1 != msg['params']['sequence']:
-                    LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
+                    LOG.warning("%s: Missing sequence number detected for %s", conn.id, pair)
                     raise MissingSequenceNumber("Missing sequence number, restarting")
             self.seq_no[pair] = msg['params']['sequence']
 
@@ -99,17 +99,18 @@ class HitBTC(Feed):
             elif msg['method'] == 'updateTrades' or msg['method'] == 'snapshotTrades':
                 await self._trades(msg['params'], timestamp)
             else:
-                LOG.warning("%s: Invalid message received: %s", self.id, msg)
+                LOG.warning("%s: Invalid message received: %s", conn.id, msg)
         elif 'channel' in msg:
             if msg['channel'] == 'ticker':
                 await self._ticker(msg['data'], timestamp)
             else:
-                LOG.warning("%s: Invalid message received: %s", self.id, msg)
+                LOG.warning("%s: Invalid message received: %s", conn.id, msg)
         else:
             if 'error' in msg or not msg['result']:
-                LOG.error("%s: Received error from server: %s", self.id, msg)
+                LOG.error("%s: Received error from server: %s", conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
                 await conn.send(
@@ -118,5 +119,5 @@ class HitBTC(Feed):
                         "params": {
                             "symbol": pair
                         },
-                        "id": conn.uuid
+                        "id": conn.id
                     }))

@@ -12,7 +12,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -57,6 +57,7 @@ class OKCoin(Feed):
         return zlib.crc32(computed)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self.__reset()
 
         symbol_channels = list(self.get_channel_symbol_combinations())
@@ -182,19 +183,18 @@ class OKCoin(Feed):
                     raise BadChecksum
                 await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
-
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
         # DEFLATE compression, no header
-        msg = zlib.decompress(msg, -15)
-        msg = json.loads(msg, parse_float=Decimal)
+        data = zlib.decompress(data, -15)
+        msg = json.loads(data, parse_float=Decimal)
 
         if 'event' in msg:
             if msg['event'] == 'error':
-                LOG.error("%s: Error: %s", self.id, msg)
+                LOG.error("%s: Error: %s", conn.id, msg)
             elif msg['event'] == 'subscribe':
                 pass
             else:
-                LOG.warning("%s: Unhandled event %s", self.id, msg)
+                LOG.warning("%s: Unhandled event %s", conn.id, msg)
         elif 'table' in msg:
             if 'ticker' in msg['table']:
                 await self._ticker(msg, timestamp)
@@ -205,6 +205,6 @@ class OKCoin(Feed):
             elif 'swap/funding_rate' in msg['table']:
                 await self._funding(msg, timestamp)
             else:
-                LOG.warning("%s: Unhandled message %s", self.id, msg)
+                LOG.warning("%s: Unhandled message %s", conn.id, msg)
         else:
-            LOG.warning("%s: Unhandled message %s", self.id, msg)
+            LOG.warning("%s: Unhandled message %s", conn.id, msg)

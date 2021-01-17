@@ -13,7 +13,7 @@ import aiohttp
 import requests
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL
 from cryptofeed.exchange.okcoin import OKCoin
 
@@ -56,6 +56,7 @@ class OKEx(OKCoin):
         return symbols
 
     async def _liquidations(self, pairs: list):
+        # TODO: Append HTTP addresses in self.address to use HTTPAsyncConn
         last_update = {}
         async with aiohttp.ClientSession() as session:
             while True:
@@ -95,6 +96,7 @@ class OKEx(OKCoin):
                 await asyncio.sleep(60)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         if LIQUIDATIONS in self.subscription or LIQUIDATIONS in self.channels:
             pairs = self.subscription[LIQUIDATIONS] if LIQUIDATIONS in self.subscription else self.symbols
             asyncio.create_task(self._liquidations(pairs))  # TODO: use HTTPAsyncConn

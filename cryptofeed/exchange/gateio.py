@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std
@@ -134,26 +134,27 @@ class Gateio(Feed):
                     delta[side].append((price, amount))
         await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
 
         if "error" in msg:
             if msg['error'] is None:
                 pass
             else:
-                LOG.warning("%s: Error received from exchange - %s", self.id, msg)
+                LOG.warning("%s: Error received from exchange - %s", conn.id, msg)
         elif 'method' in msg:
             if msg['method'] == 'trades.update':
                 await self._trades(msg, timestamp)
             elif msg['method'] == 'depth.update':
                 await self._l2_book(msg, timestamp)
             else:
-                LOG.warning("%s: Unhandled message type %s", self.id, msg)
+                LOG.warning("%s: Unhandled message type %s", conn.id, msg)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self._reset()
         client_id = 0
         for chan in set(self.channels or self.subscription):

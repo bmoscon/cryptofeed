@@ -13,7 +13,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, feed_to_exchange
@@ -316,9 +316,9 @@ class Coinbase(Feed):
 
         await self.book_callback(self.l3_book, L3_BOOK, pair, False, delta, ts, timestamp)
 
-    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
-        # PERF perf_start(self.id, 'msg')
-        msg = json.loads(msg, parse_float=Decimal)
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
+        # PERF perf_start(conn.id, 'msg')
+        msg = json.loads(data, parse_float=Decimal)
         if self.seq_no:
             if 'product_id' in msg and 'sequence' in msg:
                 pair = symbol_exchange_to_std(msg['product_id'])
@@ -327,8 +327,8 @@ class Coinbase(Feed):
                 if msg['sequence'] <= self.seq_no[pair]:
                     return
                 if msg['sequence'] != self.seq_no[pair] + 1:
-                    LOG.warning("%s: Missing sequence number detected for %s. Received %d, expected %d", self.id, pair, msg['sequence'], self.seq_no[pair] + 1)
-                    LOG.warning("%s: Resetting data for %s", self.id, pair)
+                    LOG.warning("%s: Missing sequence number detected for %s. Received %d, expected %d", conn.id, pair, msg['sequence'], self.seq_no[pair] + 1)
+                    LOG.warning("%s: Resetting data for %s", conn.id, pair)
                     self.__reset(symbol=pair)
                     await self._book_snapshot([pair])
                     return
@@ -357,12 +357,14 @@ class Coinbase(Feed):
             elif msg['type'] == 'subscriptions':
                 pass
             else:
-                LOG.warning("%s: Invalid message type %s", self.id, msg)
-            # PERF perf_end(self.id, 'msg')
-            # PERF perf_log(self.id, 'msg')
+                LOG.warning("%s: Invalid message type %s", conn.id, msg)
+            # PERF perf_end(conn.id, 'msg')
+            # PERF perf_log(conn.id, 'msg')
 
-    async def subscribe(self, conn: AsyncConnection, symbol=None):
-        self.__reset(symbol=symbol)
+    async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
+        symbol = conn.ctx['opt']
+        self.__reset(symbol)
 
         for chan in set(self.channels or self.subscription):
             await conn.send(json.dumps({"type": "subscribe",

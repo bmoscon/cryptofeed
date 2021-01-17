@@ -10,7 +10,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
@@ -69,9 +69,9 @@ class Gemini(Feed):
                             timestamp=timestamp_normalize(self.id, msg['timestamp']),
                             receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
 
         if msg['type'] == 'l2_updates':
             await self._book(msg, timestamp)
@@ -82,9 +82,10 @@ class Gemini(Feed):
         elif msg['type'] == 'auction_result' or msg['type'] == 'auction_indicative' or msg['type'] == 'auction_open':
             return
         else:
-            LOG.warning('%s: Invalid message type %s', self.id, msg)
+            LOG.warning('%s: Invalid message type %s', conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         pairs = self.symbols if not self.subscription else list(set.union(*list(self.subscription.values())))
         self.__reset(pairs)
 

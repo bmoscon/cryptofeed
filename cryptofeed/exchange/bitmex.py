@@ -17,6 +17,7 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -472,9 +473,9 @@ class Bitmex(Feed):
                                     timestamp=timestamp,
                                     receipt_timestamp=timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
         if 'table' in msg:
             if msg['table'] == 'trade':
                 await self._trade(msg, timestamp)
@@ -489,33 +490,34 @@ class Bitmex(Feed):
             elif msg['table'] == 'liquidation':
                 await self._liquidation(msg, timestamp)
             else:
-                LOG.warning("%s: Unhandled table=%r in %r", conn.uuid, msg['table'], msg)
+                LOG.warning("%s: Unhandled table=%r in %r", conn.id, msg['table'], msg)
         elif 'info' in msg:
-            LOG.info("%s: Info message from exchange: %s", conn.uuid, msg)
+            LOG.info("%s: Info message from exchange: %s", conn.id, msg)
         elif 'subscribe' in msg:
             if not msg['success']:
-                LOG.error("%s: Subscribe failure: %s", conn.uuid, msg)
+                LOG.error("%s: Subscribe failure: %s", conn.id, msg)
         elif 'error' in msg:
-            LOG.error("%s: Error message from exchange: %s", conn.uuid, msg)
+            LOG.error("%s: Error message from exchange: %s", conn.id, msg)
         elif 'request' in msg:
             if msg['success']:
-                LOG.info("%s: Success %s", conn.uuid, msg['request'].get('op'))
+                LOG.info("%s: Success %s", conn.id, msg['request'].get('op'))
             else:
-                LOG.warning("%s: Failure %s", conn.uuid, msg['request'])
+                LOG.warning("%s: Failure %s", conn.id, msg['request'])
         else:
-            LOG.warning("%s: Unexpected message from exchange: %s", conn.uuid, msg)
+            LOG.warning("%s: Unexpected message from exchange: %s", conn.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         self._reset()
-        await self._authenticate(websocket)
+        await self._authenticate(conn)
         chans = []
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
                 chans.append(f"{chan}:{pair}")
 
         for i in range(0, len(chans), 10):
-            await websocket.send(json.dumps({"op": "subscribe",
-                                             "args": chans[i:i + 10]}))
+            await conn.send(json.dumps({"op": "subscribe",
+                                        "args": chans[i:i + 10]}))
 
     async def _authenticate(self, conn):
         """Send API Key with signed message."""
@@ -525,10 +527,10 @@ class Bitmex(Feed):
         key_id = os.environ.get('CF_BITMEX_KEY_ID') or config.key_id
         key_secret = os.environ.get('CF_BITMEX_KEY_SECRET') or config.key_secret
         if key_id and key_secret:
-            LOG.info('%s: Authenticate with signature', conn.uuid)
+            LOG.info('%s: Authenticate with signature', conn.id)
             expires = int(time.time()) + 365 * 24 * 3600  # One year
             msg = f'GET/realtime{expires}'.encode('utf-8')
             signature = hmac.new(key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
             await conn.send(json.dumps({'op': 'authKeyExpires', 'args': [key_id, expires, signature]}))
         else:
-            LOG.info('%s: No authentication. Enable it using config or env. vars: CF_BITMEX_KEY_ID and CF_BITMEX_KEY_SECRET', conn.uuid)
+            LOG.info('%s: No authentication. Enable it using config or env. vars: CF_BITMEX_KEY_ID and CF_BITMEX_KEY_SECRET', conn.id)

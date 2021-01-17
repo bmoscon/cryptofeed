@@ -12,7 +12,7 @@ import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import feed_to_exchange, symbol_exchange_to_std, timestamp_normalize
@@ -27,6 +27,7 @@ class Bitstamp(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.bitstamp.net/', **kwargs)
+        self.last_update_id = {}
 
     async def _l2_book(self, msg: dict, timestamp: float):
         data = msg['data']
@@ -110,25 +111,25 @@ class Bitstamp(Feed):
                             receipt_timestamp=timestamp,
                             order_id=order_id)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
         if 'bts' in msg['event']:
             if msg['event'] == 'bts:connection_established':
                 pass
             elif msg['event'] == 'bts:subscription_succeeded':
                 pass
             else:
-                LOG.warning("%s: Unexpected message %s", self.id, msg)
+                LOG.warning("%s: Unexpected message %s", conn.id, msg)
         elif msg['event'] == 'trade':
             await self._trades(msg, timestamp)
         elif msg['event'] == 'data':
-            if msg['channel'].startswith(feed_to_exchange(self.id, L2_BOOK)):
+            if msg['channel'].startswith(feed_to_exchange(conn.id, L2_BOOK)):
                 await self._l2_book(msg, timestamp)
-            if msg['channel'].startswith(feed_to_exchange(self.id, L3_BOOK)):
+            if msg['channel'].startswith(feed_to_exchange(conn.id, L3_BOOK)):
                 await self._l3_book(msg, timestamp)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, msg)
 
     async def _snapshot(self, pairs: list):
         await asyncio.sleep(5)
@@ -153,6 +154,7 @@ class Bitstamp(Feed):
                     self.l2_book[std_pair][side][price] = amount
 
     async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
         snaps = []
         self.last_update_id = {}
         for chan in set(self.channels or self.subscription):
