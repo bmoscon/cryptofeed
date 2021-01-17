@@ -209,12 +209,15 @@ class FeedHandler:
             LOG.critical(txt)
             raise ValueError(txt)
 
-        try:
-            import uvloop
-            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-            LOG.info('FH: uvloop activated')
-        except Exception as why:  # ImportError
-            LOG.info('FH: no uvloop because %r', why)
+        # The user managing the ASyncIO loop themselves sets start_loop=False => they decide to enable uvloop if they want to
+        # therefore, the FeedHandler attempts to enable uvloop only when start_loop==True
+        if start_loop:
+            try:
+                import uvloop
+                asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+                LOG.info('FH: uvloop activated')
+            except Exception as why:  # ImportError
+                LOG.info('FH: no uvloop because %r', why)
 
         loop = asyncio.get_event_loop()
         # Good to enable when debugging or without code change: export PYTHONASYNCIODEBUG=1)
