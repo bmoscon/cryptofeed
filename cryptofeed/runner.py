@@ -33,7 +33,7 @@ class Runner:
         return self.conn.id
 
     async def shutdown(self):
-        LOG.info('%s: shutdown runner max_retries: %r -> 0 (zero flags shutdown)', self.id, self.max_retries)
+        LOG.info('%s: shutdown runner max_retries: %r -> 0 (zero value means "shutdown")', self.id, self.max_retries)
         self.max_retries = 0  # Stop infinite loop
         await self.conn.close()
 
