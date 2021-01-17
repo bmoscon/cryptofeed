@@ -232,8 +232,9 @@ class FeedHandler:
                 loop.create_task(self._connect(conn, sub, handler))
                 self.timeout[conn.uuid] = timeout
 
-        if not start_loop:
-            return
+        if not start_loop:return
+
+        return
 
         try:
             loop.run_forever()
@@ -251,9 +252,6 @@ class FeedHandler:
         """Shutdown the Feed backends asynchronously."""
         if not loop:
             loop = asyncio.get_event_loop()
-
-        LOG.info('FH: flag retries=0 to stop the tasks running the connection handlers')
-        self.retries = 0
 
         LOG.info('FH: create the tasks to properly shutdown the backends (to flush the local cache)')
         shutdown_tasks = []
