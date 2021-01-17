@@ -1,0 +1,7 @@
+[run]
+command_line = -m pytest
+branch = True
+source = cryptofeed
+omit = 
+    *__init__.py
+    cryptofeed/util/perf.py
