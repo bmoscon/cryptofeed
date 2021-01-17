@@ -7,7 +7,7 @@ associated with this software.
 from collections import defaultdict
 import logging
 import os
-from typing import Tuple, Callable, Union, List
+from typing import Union
 
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
@@ -24,6 +24,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Feed:
     id = 'NotImplemented'
+    SLEEP_TIME = 1.0  # seconds between each HTTP request to limit the bit rate
 
     def __init__(self, address: Union[dict, str], symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
         """
@@ -111,28 +112,6 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
-
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        """
-        Generic connection method for exchanges. Exchanges that require/support
-        multiple addresses will need to override this method in their specific class
-        unless they use the same subscribe method and message handler for all
-        connections.
-
-        Connect returns a list of tuples. Each tuple contains
-        1. an AsyncConnection object
-        2. the subscribe function pointer associated with this connection
-        3. the message handler for this connection
-        """
-        ret = []
-
-        if isinstance(self.address, str):
-            return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
-
-        for _, addr in self.address.items():
-            ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
-        return ret
-
     @classmethod
     def info(cls, key_id: str = None) -> dict:
         """
@@ -230,13 +209,14 @@ class Feed:
         self.previous_book[symbol] = ret
         return delta, ret
 
-    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
         raise NotImplementedError
 
-    async def subscribe(self, connection: AsyncConnection, **kwargs):
-        """
-        kwargs will not be passed from anywhere, if you need to supply extra data to
-        your subscribe, bind the data to the method with a partial
+    async def subscribe(self, conn: AsyncConnection):
+        """options is passed by AsyncConnection and is from the keys of the address dict in Feed.__init__ (one subscribe call per key).
+
+        Returns True to keep the websocket.
+        Returns None to let AsyncConnection decide depending on the sending of any subscription.
         """
         raise NotImplementedError
 
@@ -245,8 +225,8 @@ class Feed:
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'stop'):
-                    cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
-                    LOG.info('%s: stopping backend %s', self.id, cb_name)
+                    name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
+                    LOG.info('%s: stopping backend %s', self.id, name)
                     await callback.stop()
         LOG.info('%s: feed shutdown completed', self.id)
 

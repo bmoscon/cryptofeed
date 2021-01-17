@@ -5,10 +5,13 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from collections import defaultdict
+import functools
 import logging
 import signal
 from signal import SIGABRT, SIGINT, SIGTERM
 import sys
+from typing import Callable, Iterable, List, Optional, Tuple, Union
 
 try:
     # unix / macos only
@@ -17,15 +20,9 @@ try:
 except ImportError:
     SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
-import zlib
-from collections import defaultdict
-from socket import error as socket_error
-from time import time
-import functools
-
-from websockets import ConnectionClosed
 
 from cryptofeed.config import Config
+from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITFLYER,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
                                 DERIBIT, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
@@ -33,11 +30,12 @@ from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINA
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import L2_BOOK
-from cryptofeed.exceptions import ExhaustedRetries
 from cryptofeed.exchanges import *
-from cryptofeed.providers import *
+from cryptofeed.feed import Feed
 from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
+from cryptofeed.providers import *
+from cryptofeed.runner import Runner
 
 
 LOG = logging.getLogger('feedhandler')
@@ -108,15 +106,13 @@ class FeedHandler:
         raw_message_capture: callback
             if defined, callback to save/process/handle raw message (primarily for debugging purposes)
         handler_enabled: boolean
-            run message handlers (and any registered callbacks) when raw message capture is enabled
+            run message runners (and any registered callbacks) when raw message capture is enabled
         config: str, dict or None
             if str, absolute path (including file name) of the config file. If not provided, config can also be a dictionary of values, or
             can be None, which will default options. See docs/config.md for more information.
         """
-        self.feeds = []
-        self.retries = (retries + 1) if retries >= 0 else -1
-        self.timeout = {}
-        self.last_msg = defaultdict(lambda: None)
+        self.feeds: List[Tuple[Feed, List[Runner]]] = []
+        self.retries = retries
         self.timeout_interval = timeout_interval
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture  # TODO: create/append callbacks to do raw_message_capture
@@ -135,7 +131,9 @@ class FeedHandler:
         counter = 0
         callbacks = defaultdict(int)
 
-        class FakeWS:
+        class FakeWS(AsyncConnection):
+            async def _open(self):
+                self.socket = None
             async def send(self, *args, **kwargs):
                 pass
 
@@ -146,17 +144,17 @@ class FeedHandler:
             f = functools.partial(internal_cb, cb_type=cb_type)
             handler.append(f)
 
-        await feed.subscribe(FakeWS())
-
+        conn = FakeWS(conn_id='FAKE-CONN', ctx={})
+        await feed.subscribe(conn)
         for filename in filenames if isinstance(filenames, list) else [filenames]:
             with open(filename, 'r') as fp:
                 for line in fp:
-                    timestamp, message = line.split(":", 1)
+                    timestamp, data = line.split(":", 1)
                     counter += 1
-                    await feed.message_handler(message, FakeWS(), timestamp)
+                    await feed.handle(data, timestamp, conn)
             return {'messages_processed': counter, 'callbacks': dict(callbacks)}
 
-    def add_feed(self, feed, timeout=120, **kwargs):
+    def add_feed(self, feed: Union[str, Feed], timeout: float = None, **kwargs):
         """
         feed: str or class
             the feed (exchange) to add to the handler
@@ -171,13 +169,51 @@ class FeedHandler:
         """
         if isinstance(feed, str):
             if feed in _EXCHANGES:
-                self.feeds.append((_EXCHANGES[feed](config=self.config, **kwargs), timeout))
+                feed = _EXCHANGES[feed](config=self.config, **kwargs)
             else:
-                raise ValueError("Invalid feed specified")
-        else:
-            self.feeds.append((feed, timeout))
+                txt = f'FH: invalid feed {feed!r} must be one of: {list(_EXCHANGES.values())}'
+                LOG.critical(txt)
+                raise ValueError(txt)
 
-    def add_nbbo(self, feeds, symbols, callback, timeout=120):
+        timeout = timeout if timeout is not None else self.timeout_interval
+        max_retries = self.retries or 1  # Do not set zero because it flags the final shutdown
+        runners = []
+        for conn in self.create_connections(feed):
+            runners.append(Runner(feed, conn, timeout, max_retries))
+
+        if len(runners) == 0:
+            txt = f'FH {feed.id}: No connection prepared.'
+            LOG.critical(txt)
+            raise ValueError(txt)
+
+        LOG.debug('FH %s: prepare feed with %s runners', feed.id, len(runners))
+        self.feeds.append((feed, runners))
+
+    @staticmethod
+    def create_connections(feed: Feed) -> List[AsyncConnection]:
+        if isinstance(feed.address, str):
+            address: dict = {'': feed.address}
+        elif isinstance(feed.address, dict):
+            address: dict = feed.address
+        else:
+            err = f'FH {feed.id}: type of feed address must be str or dict but got {feed.address!r}'
+            LOG.critical(err)
+            raise TypeError(err)
+
+        http_addr = {}
+        for opt, addr in address.items():
+            if addr[:2] == 'ws':
+                LOG.debug('FH %s: prepare WS connection addr: %s', feed.id, addr)
+                yield WSAsyncConn({opt: addr}, feed.id, feed.handle, **feed.ws_defaults)
+            else:
+                http_addr[opt] = addr  # collect all HTTP addresses to create one single HTTPAsyncConn
+
+        if http_addr:
+            addr_compute: Optional[Callable[[], Iterable[dict]]] = getattr(feed, 'addr_compute', None)  # used by HTTPAsyncConn.read()
+            LOG.debug('FH %s: prepare HTTP connection with %s addresses and addr_compute=%s', feed.id, len(http_addr), addr_compute)
+            yield HTTPAsyncConn(http_addr, feed.id, feed.SLEEP_TIME, addr_compute)
+
+    def add_nbbo(self, feeds: list, symbols, callback, timeout: float = 120.0):
         """
         feeds: list of feed classes
             list of feeds (exchanges) that comprises the NBBO
@@ -227,10 +263,11 @@ class FeedHandler:
         if install_signal_handlers:
             setup_signal_handlers(loop)
 
-        for feed, timeout in self.feeds:
-            for conn, sub, handler in feed.connect():
-                loop.create_task(self._connect(conn, sub, handler))
-                self.timeout[conn.uuid] = timeout
+        for feed, runners in self.feeds:
+            for r in runners:
+                LOG.debug('FH %s: The runner task is ready', r.id)
+                task = loop.create_task(r.run(self.handler_enabled, self.raw_message_capture, self.log_messages_on_error))
+                task.set_name(f'runner_{r.id}')
 
         if not start_loop:return
 
@@ -253,9 +290,15 @@ class FeedHandler:
         if not loop:
             loop = asyncio.get_event_loop()
 
+        LOG.info('FH: close WS connections and stop Runner loops (asynchronous run)')
+        for feed, runners in self.feeds:
+            for r in runners:
+                task = loop.create_task(r.shutdown())
+                task.set_name(f'stop_loop_{r.id}')
+
         LOG.info('FH: create the tasks to properly shutdown the backends (to flush the local cache)')
         shutdown_tasks = []
-        for feed, _ in self.feeds:
+        for feed, runners in self.feeds:
             task = loop.create_task(feed.shutdown())
             task.set_name(f'shutdown_feed_{feed.id}')
             shutdown_tasks.append(task)
@@ -286,82 +329,3 @@ class FeedHandler:
 
         LOG.info('FH: close the AsyncIO loop')
         loop.close()
-
-    async def _watch(self, connection):
-        if self.timeout[connection.uuid] == -1:
-            return
-
-        while connection.open:
-            if self.last_msg[connection.uuid]:
-                if time() - self.last_msg[connection.uuid] > self.timeout[connection.uuid]:
-                    LOG.warning("%s: received no messages within timeout, restarting connection", connection.uuid)
-                    await connection.close()
-                    break
-            await asyncio.sleep(self.timeout_interval)
-
-    async def _connect(self, conn, subscribe, handler):
-        """
-        Connect to exchange and subscribe
-        """
-        retries = 0
-        delay = conn.delay
-        while retries < self.retries or self.retries == -1:
-            self.last_msg[conn.uuid] = None
-            try:
-                async with conn.connect() as connection:
-                    asyncio.ensure_future(self._watch(connection))
-                    # connection was successful, reset retry count and delay
-                    retries = 0
-                    delay = conn.delay
-                    await subscribe(connection)
-                    await self._handler(connection, handler)
-            except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                LOG.warning("%s: encountered connection issue %s - reconnecting...", conn.uuid, str(e), exc_info=True)
-                await asyncio.sleep(delay)
-                retries += 1
-                delay *= 2
-            except Exception:
-                LOG.error("%s: encountered an exception, reconnecting", conn.uuid, exc_info=True)
-                await asyncio.sleep(delay)
-                retries += 1
-                delay *= 2
-
-        if self.retries == 0:
-            LOG.info('%s: terminate the connection handler because self.retries=0', conn.uuid)
-        else:
-            LOG.error('%s: failed to reconnect after %d retries - exiting', conn.uuid, retries)
-            raise ExhaustedRetries()
-
-    async def _handler(self, connection, handler):
-        try:
-            if self.raw_message_capture and self.handler_enabled:
-                async for message in connection.read():
-                    if self.retries == 0:
-                        return
-                    self.last_msg[connection.uuid] = time()
-                    await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
-                    await handler(message, connection, self.last_msg[connection.uuid])
-            elif self.raw_message_capture:
-                async for message in connection.read():
-                    if self.retries == 0:
-                        return
-                    self.last_msg[connection.uuid] = time()
-                    await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
-            else:
-                async for message in connection.read():
-                    if self.retries == 0:
-                        return
-                    self.last_msg[connection.uuid] = time()
-                    await handler(message, connection, self.last_msg[connection.uuid])
-        except Exception:
-            if self.retries == 0:
-                return
-            if self.log_messages_on_error:
-                if connection.uuid in {HUOBI, HUOBI_DM}:
-                    message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
-                elif connection.uuid in {OKCOIN, OKEX}:
-                    message = zlib.decompress(message, -15)
-                LOG.error("%s: error handling message %s", connection.uuid, message)
-            # exception will be logged with traceback when connection handler
-            # retries the connection
-            raise
