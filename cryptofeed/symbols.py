@@ -361,8 +361,7 @@ def okcoin_symbols() -> Dict[str, str]:
 
 
 def okex_symbols() -> Dict[str, str]:
-    # We will support soon OKEx options, and enable this following line
-    option_urls = []  # okex_compute_option_urls_from_underlyings()
+    option_urls = okex_compute_option_urls_from_underlyings()
     other_urls = ['https://www.okex.com/api/spot/v3/instruments',
                   'https://www.okex.com/api/swap/v3/instruments/ticker',
                   'https://www.okex.com/api/futures/v3/instruments/ticker']
