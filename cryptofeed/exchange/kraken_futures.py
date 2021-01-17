@@ -30,8 +30,8 @@ class KrakenFutures(Feed):
         # TODO: the same verification (below) is done in Bitmex and Kraken => share this code in a common function in super class Feed
         instruments = self.get_instruments()
         if self.subscription:
-            config_instruments = list(self.subscription.values())
-            self.symbols = set(pair for inner in config_instruments for pair in inner)
+            subscribing_instruments = list(self.subscription.values())
+            self.symbols = set(pair for inner in subscribing_instruments for pair in inner)
 
         for pair in self.symbols:
             if pair not in instruments:

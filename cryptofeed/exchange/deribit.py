@@ -25,8 +25,8 @@ class Deribit(Feed):
         instruments = self.get_instruments()
         pairs = None
         if self.subscription:
-            config_instruments = list(self.subscription.values())
-            pairs = [pair for inner in config_instruments for pair in inner]
+            subscribing_instruments = list(self.subscription.values())
+            pairs = [pair for inner in subscribing_instruments for pair in inner]
 
         for pair in set(self.symbols or pairs):
             if pair not in instruments:
