@@ -69,10 +69,10 @@ class Bitfinex(Feed):
         pair_channels: List[Tuple[str, str]] = []
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
-                if (pair[0] == 't') and (chan == FUNDING):
-                    pair = 'f' + pair[1:]
-                    # LOG.warning("%s: No %s for symbol %s => Skip subscription", self.id, chan, pair)
-                    # continue
+                # if (pair[0] == 't') and (chan == FUNDING):
+                #     pair = 'f' + pair[1:]
+                #     # LOG.warning("%s: No %s for symbol %s => Skip subscription", self.id, chan, pair)
+                #     # continue
                 pair_channels.append((pair, chan))
         # mix pair/channel combinations to avoid having most of the BTC & USD pairs within the same socket
         random.shuffle(pair_channels)
@@ -332,9 +332,6 @@ class Bitfinex(Feed):
                   '='.join(list(msg.items())[-1]), handler.__name__ if hasattr(handler, '__name__') else handler.func.__name__)
         conn.ctx['handlers'][msg['chanId']] = handler
 
-        LOG.warning("%s: Unexpected msg from exchange: %s", conn.id, msg)
-
-
     async def subscribe(self, conn: AsyncConnection):
         assert isinstance(conn, WSAsyncConn)
         assert 'opt' in conn.ctx
@@ -342,8 +339,8 @@ class Bitfinex(Feed):
         opt: Tuple[Tuple[str, str]] = conn.ctx['opt']
         LOG.info("%s: Subscribing to %s combinations: %s", conn.id, len(opt), opt)
 
-        conn.ctx['L2'] = {}
-        conn.ctx['L3'] = {}
+        conn.ctx['L2'] = defaultdict(dict)
+        conn.ctx['L3'] = defaultdict(dict)
         conn.ctx['order_map'] = defaultdict(dict)
         conn.ctx['handlers'] = {}  # maps a channel id (int) to a function
         conn.ctx['seq_no'] = 0
@@ -353,11 +350,9 @@ class Bitfinex(Feed):
             'flags': SEQ_ALL
         }))
 
-        mapping = {FUNDING: 'trades'}
-
         for pair, chan in opt:
             message = {'event': 'subscribe',
-                       'channel': mapping.get(chan, chan),
+                       'channel': chan,
                        'symbol': pair}
             if 'book' in chan:
                 parts = chan.split('-')
