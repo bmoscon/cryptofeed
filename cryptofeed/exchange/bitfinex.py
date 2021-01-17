@@ -6,19 +6,21 @@ associated with this software.
 '''
 from collections import defaultdict
 from decimal import Decimal
+import random
 from functools import partial
 import logging
-from typing import Callable, List, Tuple
+from typing import List, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 from cryptofeed.symbols import gen_symbols
+from cryptofeed.util import split
 
 LOG = logging.getLogger('feedhandler')
 
@@ -52,15 +54,34 @@ class Bitfinex(Feed):
                 if (exch_sym[0] == 'f') == (chan != FUNDING):
                     LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
 
-        super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, subscription=subscription, **kwargs)
-        self.__reset()
+        super().__init__('wss://api.bitfinex.com/ws/2', **kwargs)
+        self.address = self._address('wss://api.bitfinex.com/ws/2')
 
-    def __reset(self):
-        self.l2_book = defaultdict(dict)
-        self.l3_book = defaultdict(dict)
-        self.handlers = {}  # maps a channel id (int) to a function
-        self.order_map = defaultdict(dict)
-        self.seq_no = defaultdict(int)
+    def _address(self, ws_endpoint):
+        """
+        Bitfinex only supports 25 pair/channel combinations per websocket, so
+        if we require more we need to create more connections
+
+        Furthermore, the sequence numbers Bitinex provides are per-connection
+        so we need to bind our connection id to the message handler
+        so we know to which connection the sequence number belongs.
+        """
+        pair_channels: List[Tuple[str, str]] = []
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                if (pair[0] == 't') and (chan == FUNDING):
+                    pair = 'f' + pair[1:]
+                    # LOG.warning("%s: No %s for symbol %s => Skip subscription", self.id, chan, pair)
+                    # continue
+                pair_channels.append((pair, chan))
+        # mix pair/channel combinations to avoid having most of the BTC & USD pairs within the same socket
+        random.shuffle(pair_channels)
+        # Bitfinex max is 25 per connection
+        address = {}
+        for options in split.list_by_max_items(pair_channels, 25):
+            address[tuple(options)] = ws_endpoint
+        LOG.info("%s: prepared %s WS connections", self.id, len(address))
+        return address
 
     async def _ticker(self, pair: str, msg: dict, timestamp: float):
         if msg[1] == 'hb':
@@ -250,32 +271,34 @@ class Bitfinex(Feed):
     async def _do_nothing(msg: dict, timestamp: float):
         pass
 
-    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
-        msg = json.loads(msg, parse_float=Decimal)
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
+        assert 'seq_no' in conn.ctx
+
+        msg = json.loads(data, parse_float=Decimal)
 
         if isinstance(msg, list):
-            chan_handler = self.handlers.get(msg[0])
+            chan_handler = conn.ctx['handlers'].get(msg[0])
             if chan_handler is None:
-                LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
-                return
-            seq_no = msg[-1]
-            expected = self.seq_no[conn.uuid] + 1
-            if seq_no != expected:
-                LOG.warning('%s: missed message (sequence number) received %d, expected %d', conn.uuid, seq_no, expected)
-                raise MissingSequenceNumber
-            self.seq_no[conn.uuid] = seq_no
-            await chan_handler(msg, timestamp)
-
+                LOG.warning('%s: Unregistered channel ID in message %s', conn.id, msg)
+            else:
+                seq_no = msg[-1]
+                expected = conn.ctx['seq_no'] + 1
+                if seq_no != expected:
+                    LOG.warning('%s: missed message (sequence number) received %d, expected %d', conn.id, seq_no, expected)
+                    raise MissingSequenceNumber
+                conn.ctx['seq_no'] = seq_no
+                await chan_handler(msg, timestamp)
         elif 'event' not in msg:
-            LOG.warning('%s: Unexpected msg (missing event) from exchange: %s', conn.uuid, msg)
+            LOG.warning('%s: Unexpected msg (missing event) from exchange: %s', conn.id, msg)
         elif msg['event'] == 'error':
-            LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
+            LOG.error('%s: Error from exchange: %s', conn.id, msg)
         elif msg['event'] in ('info', 'conf'):
-            LOG.info('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
+            LOG.info('%s: %s from exchange: %s', conn.id, msg['event'], msg)
         elif 'chanId' in msg and 'symbol' in msg:
             self.register_channel_handler(msg, conn)
         else:
-            LOG.warning('%s: Unexpected msg from exchange: %s', conn.uuid, msg)
+            LOG.warning('%s: Unexpected msg from exchange: %s', conn.id, msg)
 
     def register_channel_handler(self, msg: dict, conn: AsyncConnection):
         symbol = msg['symbol']
@@ -284,7 +307,7 @@ class Bitfinex(Feed):
 
         if msg['channel'] == 'ticker':
             if is_funding:
-                LOG.warning('%s %s: Ticker funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                LOG.warning('%s %s: Ticker funding not implemented - set _do_nothing() for %s', conn.id, pair, msg)
                 handler = self._do_nothing
             else:
                 handler = partial(self._ticker, pair)
@@ -295,62 +318,47 @@ class Bitfinex(Feed):
                 handler = partial(self._trades, pair)
         elif msg['channel'] == 'book':
             if msg['prec'] == 'R0':
-                handler = partial(self._raw_book, pair, self.l3_book[pair], self.order_map[pair])
+                handler = partial(self._raw_book, pair, conn.ctx['L3'][pair], conn.ctx['order_map'][pair])
             elif is_funding:
-                LOG.warning('%s %s: Book funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                LOG.warning('%s %s: Book funding not implemented - set _do_nothing() for %s', conn.id, pair, msg)
                 handler = self._do_nothing
             else:
-                handler = partial(self._book, pair, self.l2_book[pair])
+                handler = partial(self._book, pair, conn.ctx['L2'][pair])
         else:
-            LOG.warning('%s %s: Unexpected message %s', conn.uuid, pair, msg)
+            LOG.warning('%s %s: Unexpected message %s', conn.id, pair, msg)
             return
 
-        LOG.debug('%s: Register channel=%s pair=%s funding=%s %s -> %s()', conn.uuid, msg['channel'], pair, is_funding,
+        LOG.debug('%s: Register channel=%s pair=%s funding=%s %s -> %s()', conn.id, msg['channel'], pair, is_funding,
                   '='.join(list(msg.items())[-1]), handler.__name__ if hasattr(handler, '__name__') else handler.func.__name__)
-        self.handlers[msg['chanId']] = handler
+        conn.ctx['handlers'][msg['chanId']] = handler
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        """
-        Bitfinex only supports 25 pair/channel combinations per websocket, so
-        if we require more we need to create more connections
+        LOG.warning("%s: Unexpected msg from exchange: %s", conn.id, msg)
 
-        Furthermore, the sequence numbers bitinex provides are per-connection
-        so we need to bind our connection id to the message handler
-        so we know to which connextion the sequence number belongs.
-        """
-        pair_channel = []
-        ret = []
 
-        def build(options: list):
-            subscribe = partial(self.subscribe, options=pair_channel)
-            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
-            return conn, subscribe, self.message_handler
+    async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
+        assert 'opt' in conn.ctx
+        assert isinstance(conn.ctx['opt'], Tuple)
+        opt: Tuple[Tuple[str, str]] = conn.ctx['opt']
+        LOG.info("%s: Subscribing to %s combinations: %s", conn.id, len(opt), opt)
 
-        for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
-                pair_channel.append((pair, channel))
-                # Bitfinex max is 25 per connection
-                if len(pair_channel) == 25:
-                    ret.append(build(pair_channel))
-                    pair_channel = []
+        conn.ctx['L2'] = {}
+        conn.ctx['L3'] = {}
+        conn.ctx['order_map'] = defaultdict(dict)
+        conn.ctx['handlers'] = {}  # maps a channel id (int) to a function
+        conn.ctx['seq_no'] = 0
 
-        if len(pair_channel) > 0:
-            ret.append(build(pair_channel))
-
-        return ret
-
-    async def subscribe(self, connection: AsyncConnection, options: List[Tuple[str, str]] = None):
-        self.__reset()
-        await connection.send(json.dumps({
+        await conn.send(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL
         }))
 
-        for pair, chan in options:
+        mapping = {FUNDING: 'trades'}
+
+        for pair, chan in opt:
             message = {'event': 'subscribe',
-                       'channel': chan,
-                       'symbol': pair
-                       }
+                       'channel': mapping.get(chan, chan),
+                       'symbol': pair}
             if 'book' in chan:
                 parts = chan.split('-')
                 if len(parts) != 1:
@@ -362,4 +370,5 @@ class Bitfinex(Feed):
                     except IndexError:
                         # any non specified params will be defaulted
                         pass
-            await connection.send(json.dumps(message))
+            LOG.info("%s: Send msg %r", conn.id, message)
+            await conn.send(json.dumps(message))
