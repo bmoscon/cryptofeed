@@ -9,6 +9,7 @@ import logging
 
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BINANCE_DELIVERY, OPEN_INTEREST, TICKER
 from cryptofeed.exchange.binance import Binance
 
@@ -21,25 +22,8 @@ class BinanceDelivery(Binance):
     def __init__(self, depth=1000, **kwargs):
         super().__init__(depth=depth, **kwargs)
         # overwrite values previously set by the super class Binance
-        self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
-        self.address = self._address()
-
-    def _address(self):
-        address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.subscription else self.subscription:
-            if chan == OPEN_INTEREST:
-                continue
-            for pair in self.symbols if not self.subscription else self.subscription[chan]:
-                pair = pair.lower()
-                if chan == TICKER:
-                    stream = f"{pair}@bookTicker/"
-                else:
-                    stream = f"{pair}@{chan}/"
-                address += stream
-        if address == f"{self.ws_endpoint}/stream?streams=":
-            return None
-        return address[:-1]
+        self.address = self._address('wss://dstream.binance.com', stream_builder=self.book_ticker_stream)
 
     def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
         skip_update = False
@@ -58,8 +42,9 @@ class BinanceDelivery(Binance):
             skip_update = True
         return skip_update, forced
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
-        msg = json.loads(msg, parse_float=Decimal)
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
+
+        msg = json.loads(data, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
@@ -80,4 +65,4 @@ class BinanceDelivery(Binance):
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
         else:
-            LOG.warning("%s: Unexpected message received: %s", self.id, msg)
+            LOG.warning("%s: Unexpected message received: %s", conn.id, msg)

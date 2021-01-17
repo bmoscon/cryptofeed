@@ -6,11 +6,12 @@ associated with this software.
 '''
 import asyncio
 import logging
+import random
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 from time import time
-from typing import Dict, Iterable, Union
+from typing import Callable, Dict, Iterable, List
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
@@ -20,7 +21,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
-
+from cryptofeed.util import split
 
 LOG = logging.getLogger('feedhandler')
 
@@ -31,12 +32,12 @@ class Binance(Feed):
     def __init__(self, depth=1000, **kwargs):
         super().__init__({}, **kwargs)
         self.book_depth = depth
-        self.ws_endpoint = 'wss://stream.binance.com:9443'
-        self.rest_endpoint = 'https://www.binance.com/api/v1'
-        self.address = self._address()
+        self.open_interest = {}
         self._reset()
+        self.rest_endpoint = 'https://www.binance.com/api/v1'
+        self.address = self._address('wss://stream.binance.com:9443', stream_builder=self.classic_stream)
 
-    def _address(self) -> Union[str, Dict]:
+    def _address(self, ws_endpoint: str, stream_builder: Callable) -> Dict[str, str]:
         """
         Binance has a 200 pair/stream limit per connection, so we need to break the address
         down into multiple connections if necessary. Because the key is currently not used
@@ -46,31 +47,40 @@ class Binance(Feed):
         The generic connect method supplied by Feed will take care of creating the
         correct connection objects from the addresses.
         """
-        ret = {}
-        counter = 0
-        address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[chan]:
-                pair = pair.lower()
-                stream = f"{pair}@{chan}/"
-                address += stream
-                counter += 1
-                if counter == 200:
-                    ret[stream] = address[:-1]
-                    counter = 0
-                    address = self.ws_endpoint + '/stream?streams='
+        pair_channels: List[str] = []
+        for chan in set(self.channels or self.subscription):
+            if chan == OPEN_INTEREST:  # Open Interest is retrieved by HTTP polling (not by websocket)
+                continue
+            for pair in set(self.symbols or self.subscription[chan]):
+                pair_channels.append(stream_builder(pair, chan))
 
-        if len(ret) == 0:
-            return address[:-1]
-        if counter > 0:
-            ret[stream] = address[:-1]
-        return ret
+        # shuffle pair/channel combinations to avoid having most of the BTC & USD pairs in the same websocket
+        random.shuffle(pair_channels)
+
+        address: Dict[str, str] = {}
+        for chunk in split.list_by_max_items(pair_channels, 200):
+            address[chunk[0]] = ws_endpoint + '/stream?streams=' + "/".join(chunk)
+        LOG.info("%s: prepared %s WS subscriptions using %s and URL %s", self.id, len(address), stream_builder.__name__, ws_endpoint)
+        return address
+
+    @staticmethod
+    def classic_stream(pair: str, chan: str) -> str:
+        """classic_stream is used by Binance and BinanceUS."""
+        return f"{pair.lower()}@{chan}"
+
+    @staticmethod
+    def book_ticker_stream(pair: str, chan: str) -> str:
+        """book_ticker_stream is used by BinanceDelivery and BinanceFutures."""
+        if chan == TICKER:
+            return f"{pair}@bookTicker"  # TODO: This subscription does not retrieve data any more :'-(
+        else:
+            return f"{pair}@{chan}"
 
     def _reset(self):
+        # TODO: store context data in conn.ctx
         self.forced = defaultdict(bool)
         self.l2_book = {}
         self.last_update_id = {}
-        self.open_interest = {}
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -307,9 +317,9 @@ class Binance(Feed):
                             next_funding_time=timestamp_normalize(self.id, msg['T']),
                             )
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
@@ -329,7 +339,7 @@ class Binance(Feed):
         elif msg['e'] == 'markPriceUpdate':
             await self._funding(msg, timestamp)
         else:
-            LOG.warning("%s: Unexpected message received: %s", self.id, msg)
+            LOG.warning("%s: Unexpected message received: %s", conn.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
         # Binance does not have a separate subscribe message, the
@@ -338,5 +348,7 @@ class Binance(Feed):
         self._reset()
         for chan in set(self.channels or self.subscription):
             if chan == 'open_interest':
+                # TODO: Append HTTP addresses in self.address to use HTTPAsyncConn
                 asyncio.create_task(self._open_interest(set(self.symbols or self.subscription[chan])))
                 break
+        return True  # True means "Keep WS connection open"
