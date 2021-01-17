@@ -6,13 +6,11 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
-from functools import partial
-from typing import List, Callable, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std as normalize_pair
@@ -31,15 +29,15 @@ class Bybit(Feed):
     def __reset(self):
         self.l2_book = {}
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def handle(self, data: bytes, timestamp: float, conn: AsyncConnection):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(data, parse_float=Decimal)
 
         if "success" in msg:
             if msg['success']:
-                LOG.debug("%s: Subscription success %s", self.id, msg)
+                LOG.debug("%s: Subscription success %s", conn.id, msg)
             else:
-                LOG.error("%s: Error from exchange %s", self.id, msg)
+                LOG.error("%s: Error from exchange %s", conn.id, msg)
         elif "trade" in msg["topic"]:
             await self._trade(msg, timestamp)
         elif "orderBookL2" in msg["topic"]:
@@ -47,35 +45,26 @@ class Bybit(Feed):
         elif "instrument_info" in msg["topic"]:
             await self._instrument_info(msg, timestamp)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.id, msg)
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-
-        if any(pair[-4:] == 'USDT' for pair in self.normalized_symbols):
-            subscribe = partial(self.subscribe, quote='USDT')
-            ret.append((AsyncConnection(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
-        if any(pair[-3:] == 'USD' for pair in self.normalized_symbols):
-            subscribe = partial(self.subscribe, quote='USD')
-            ret.append((AsyncConnection(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
-
-        return ret
-
-    async def subscribe(self, connection: AsyncConnection, quote: str = None):
+    async def subscribe(self, conn: AsyncConnection):
+        assert isinstance(conn, WSAsyncConn)
+        assert 'opt' in conn.ctx
+        assert isinstance(conn.ctx['opt'], str)
+        quote: str = conn.ctx['opt']
         self.__reset()
 
-        for chan in self.channels if self.channels else self.subscription:
-            for pair in self.symbols if self.symbols else self.subscription[chan]:
-                # Bybit uses separate addresses for difference quote currencies
-                if pair[-4:] == 'USDT' and quote != 'USDT':
-                    continue
-                if pair[-3:] == 'USD' and quote != 'USD':
-                    continue
+        LOG.info("%s: Subscribe for quote %r", conn.id, quote)
 
-                await connection.send(json.dumps(
+        for chan in set(self.channels or self.subscription):
+            for symbol in set(self.symbols or self.subscription[chan]):
+                # Bybit uses separate addresses for difference quote currencies
+                if quote and symbol[-len(quote):] != quote:
+                    continue
+                await conn.send(json.dumps(
                     {
                         "op": "subscribe",
-                        "args": [f"{chan}.{pair}"]
+                        "args": [f"{chan}.{symbol}"]
                     }
                 ))
 
