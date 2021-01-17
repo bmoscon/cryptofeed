@@ -9,6 +9,7 @@ Contains all code to normalize and standardize the differences
 between exchanges. These include trading symbols, timestamps, and
 data channel names
 '''
+import collections
 import logging
 
 import pandas as pd
@@ -25,7 +26,7 @@ from cryptofeed.symbols import gen_symbols, _exchange_info
 
 LOG = logging.getLogger('feedhandler')
 
-_std_trading_symbols = {}
+_std_trading_symbols = collections.defaultdict(dict)
 _exchange_to_std = {}
 
 
@@ -35,10 +36,7 @@ def load_exchange_symbol_mapping(exchange: str, key_id=None):
     mapping = gen_symbols(exchange, key_id=key_id)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
-        if std in _std_trading_symbols:
-            _std_trading_symbols[std][exchange] = exch
-        else:
-            _std_trading_symbols[std] = {exchange: exch}
+        _std_trading_symbols[std][exchange] = exch
 
 
 def get_exchange_info(exchange: str, key_id=None):

@@ -4,6 +4,8 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from typing import Any, Dict, List, Union
+
 from cryptofeed.defines import BID, ASK
 
 
@@ -47,7 +49,7 @@ def book_convert(book: dict, data: dict, convert=str):
             data[BID][_level] = convert(book[BID][level])
 
 
-def book_flatten(feed: str, symbol: str, book: dict, timestamp: float, delta: str) -> dict:
+def book_flatten(feed: str, symbol: str, book: dict, timestamp: float, delta: str) -> List[Dict[str, Union[Union[str, float], Any]]]:
     """
     takes book and returns a list of dict, where each element in the list
     is a dictionary with a single row of book data.
