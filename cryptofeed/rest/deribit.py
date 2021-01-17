@@ -42,7 +42,7 @@ class Deribit(API):
             if start and end:
                 return requests.get(f"{self.api}get_last_trades_by_instrument_and_time?&start_timestamp={start}&end_timestamp={end}&instrument_name={instrument}&include_old=true&count={REQUEST_LIMIT}")
             else:
-                return requests.get(f"{self.api}get_last_trades_by_instrument_and_time/")
+                return requests.get(f"{self.api}get_last_trades_by_instrument?instrument_name={instrument}&include_old=true&count={REQUEST_LIMIT}")
 
         while True:
             r = helper(start, end)
@@ -75,7 +75,7 @@ class Deribit(API):
             data = [self._trade_normalization(x) for x in data]
             yield data
 
-            if len(orig_data) < REQUEST_LIMIT:
+            if len(orig_data) < REQUEST_LIMIT or not start or not end:
                 break
 
     def _trade_normalization(self, trade: list) -> dict:

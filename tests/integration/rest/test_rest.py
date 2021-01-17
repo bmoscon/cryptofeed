@@ -33,18 +33,11 @@ def test_rest_bitfinex():
 
 
 def test_rest_deribit():
-    expected = {'timestamp': 1550062892.378,
-                'symbol': 'BTC-PERPETUAL',
-                'id': 15340745,
-                'feed': 'DERIBIT',
-                'side': BUY,
-                'amount': 700.0,
-                'price': 3580.25}
     r = Rest()
     ret = []
-    for data in r.deribit.trades('BTC-PERPETUAL', start='2019-02-13 12:59:10', end='2019-02-13 13:01:33'):
+    for data in r.deribit.trades('BTC-PERPETUAL'):
         ret.extend(data)
-    assert ret[0] == expected
+    assert len(ret) > 1
 
 
 def test_rest_ftx():

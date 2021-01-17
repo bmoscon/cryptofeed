@@ -6,7 +6,6 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
-from itertools import product
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
