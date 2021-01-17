@@ -6,7 +6,7 @@ associated with this software.
 '''
 from cryptofeed.defines import BITCOINCOM, BITFINEX, BITSTAMP, BLOCKCHAIN, COINBASE, GEMINI, HITBTC, POLONIEX
 from cryptofeed.symbols import (bitcoincom_symbols, bitfinex_symbols, bitstamp_symbols, blockchain_symbols,
-                              coinbase_symbols, gemini_symbols, hitbtc_symbols, poloniex_symbols)
+                                coinbase_symbols, gemini_symbols, hitbtc_symbols, poloniex_symbols)
 from cryptofeed.standards import load_exchange_symbol_mapping, symbol_exchange_to_std, symbol_std_to_exchange
 
 

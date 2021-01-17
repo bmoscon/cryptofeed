@@ -36,7 +36,7 @@ async def book(feed, symbol, book, timestamp):
         print("BID", bids[-1])
         print("ASKS", asks[0])
         print("DELTA", t - timestamp)
-        print*("COUNTER", counter)
+        print("COUNTER", counter)
 
     if counter % STATS == 0:
         print("Checked", counter, "updates")
