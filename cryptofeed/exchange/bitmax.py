@@ -140,7 +140,7 @@ class Bitmax(Feed):
     async def subscribe(self, conn: AsyncConnection):
         assert isinstance(conn, WSAsyncConn)
         assert 'opt' in conn.ctx
-        assert isinstance(conn.ctx['opt'], Tuple)
+        assert isinstance(conn.ctx['opt'], tuple)
         opt: Tuple[Tuple[str, str]] = conn.ctx['opt']
         self.__reset()
 
@@ -162,4 +162,3 @@ class Bitmax(Feed):
         #         for symbol in symbols:
         #             message = {"op": "req", "action": "depth-snapshot", "args": {"symbol": symbol}}
         #             await conn.send(json.dumps(message))
-
