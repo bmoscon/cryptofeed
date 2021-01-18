@@ -182,7 +182,7 @@ class FeedHandler:
             runners.append(Runner(feed, conn, timeout, max_retries))
 
         if len(runners) == 0:
-            txt = f'FH {feed.id}: No connection prepared.'
+            txt = f'FH {feed.id}: Nothing to subscribe (no runner).'
             LOG.critical(txt)
             raise ValueError(txt)
 
