@@ -39,7 +39,7 @@ class Gemini(Feed):
             return
 
         data = msg['changes']
-        forced = not len(self.l2_book[pair][BID])
+        forced = len(self.l2_book[pair][BID]) != 0
         delta = {BID: [], ASK: []}
         for entry in data:
             side = ASK if entry[0] == 'sell' else BID
