@@ -118,7 +118,7 @@ class FeedHandler:
         self.last_msg = defaultdict(lambda: None)
         self.timeout_interval = timeout_interval
         self.log_messages_on_error = log_messages_on_error
-        self.raw_message_capture = raw_message_capture
+        self.raw_message_capture = raw_message_capture  # TODO: create/append callbacks to do raw_message_capture
         self.handler_enabled = handler_enabled
         self.config = Config(config=config)
 
@@ -205,18 +205,22 @@ class FeedHandler:
             be called from the main/parent thread's event loop
         """
         if len(self.feeds) == 0:
-            LOG.error('No feeds specified')
-            raise ValueError("No feeds specified")
+            txt = f'FH: No feed specified. Please specify at least one feed among {list(_EXCHANGES.keys())}'
+            LOG.critical(txt)
+            raise ValueError(txt)
 
+        # The user managing the ASyncIO loop themselves sets start_loop=False => they decide to enable uvloop if they want to
+        # therefore, the FeedHandler attempts to enable uvloop only when start_loop==True
         if start_loop:
             try:
                 import uvloop
                 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-            except ImportError:
-                pass
+                LOG.info('FH: uvloop activated')
+            except Exception as why:  # ImportError
+                LOG.info('FH: no uvloop because %r', why)
 
         loop = asyncio.get_event_loop()
-        # Good to enable when debugging
+        # Good to enable when debugging or without code change: export PYTHONASYNCIODEBUG=1)
         # loop.set_debug(True)
 
         if install_signal_handlers:
@@ -227,21 +231,47 @@ class FeedHandler:
                 loop.create_task(self._connect(conn, sub, handler))
                 self.timeout[conn.uuid] = timeout
 
-        if start_loop:
-            try:
-                loop.run_forever()
-            except SystemExit:
-                LOG.info("System Exit received - shutting down")
-            except Exception:
-                LOG.error("Unhandled exception", exc_info=True)
-            finally:
-                self.stop(loop=loop)
+        if not start_loop:
+            return
+
+        try:
+            loop.run_forever()
+        except SystemExit:
+            LOG.info('FH: System Exit received - shutting down')
+        except Exception as why:
+            LOG.exception('FH: Unhandled %r - shutting down', why)
+        finally:
+            self.stop(loop=loop)
+            self.close(loop=loop)
 
     def stop(self, loop=None):
+        """Shutdown the Feed backends asynchronously."""
         if not loop:
             loop = asyncio.get_event_loop()
+
+        LOG.info('FH: create the tasks to properly shutdown the backends (data flush)')
+        shutdown_tasks = []
         for feed, _ in self.feeds:
-            loop.run_until_complete(feed.stop())
+            task = loop.create_task(feed.shutdown())
+            task.set_name(f'shutdown_feed_{feed.id}')
+            shutdown_tasks.append(task)
+
+        LOG.info('FH: wait %s backend tasks until termination', len(shutdown_tasks))
+        loop.run_until_complete(asyncio.gather(*shutdown_tasks))
+
+    def close(self, loop=None):
+        """Stop the asynchronous generators and close the event loop."""
+        if not loop:
+            loop = asyncio.get_event_loop()
+
+        LOG.info('FH: shutdown asynchronous generators')
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        LOG.info('FH: stop the AsyncIO loop: wait for the current batch of callbacks and then exit')
+        loop.stop()
+        LOG.info('FH: run the AsyncIO event loop one last time')
+        loop.run_forever()
+        LOG.info('FH: close the AsyncIO loop')
+        loop.close()
 
     async def _watch(self, connection):
         if self.timeout[connection.uuid] == -1:

@@ -27,6 +27,10 @@ class Feed:
 
     def __init__(self, address: Union[dict, str], symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
         """
+        address: str, or dict
+            address to be used to create the connection.
+            The address protocol (wss or https) will be used to determine the connection type.
+            Use a "str" to pass one single address, or a dict of option/address
         max_depth: int
             Maximum number of levels per side to return in book updates
         book_interval: int
@@ -236,8 +240,13 @@ class Feed:
         """
         raise NotImplementedError
 
-    async def stop(self):
+    async def shutdown(self):
+        LOG.info('%s: feed shutdown starting...', self.id)
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'stop'):
+                    cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
+                    LOG.info('%s: stopping backend %s', self.id, cb_name)
                     await callback.stop()
+        LOG.info('%s: feed shutdown completed', self.id)
+

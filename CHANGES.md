@@ -27,6 +27,7 @@
   * Feature: Simplify source code by standardization iterations over channels and symbols
   * Bugfix: Remove remaining character "*" in book_test.py
   * Bugfix: Fix return type of the function book_flatten()
+  * Feature: Shutdown multiple backends asynchronously, and close the event loop properly
   * Bugfix: Repair the Bitfinex FUNDING
   * Feature: Speedup the handling of Bitfinex messages by reducing intermediate mappings
 
