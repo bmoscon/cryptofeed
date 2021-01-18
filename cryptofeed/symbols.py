@@ -645,7 +645,7 @@ def coingecko_second_pass(intermediate: Dict[str, List[dict]]) -> Dict[str, List
             final[normalized].append(coins[0])
             continue
         set_normalized = False
-        for i in range(len(coins)):
+        for i, _ in enumerate(coins):
             if normalized == coins[i]['nn']:
                 coin = coins.pop(i)
                 final[normalized].append(coin)
@@ -664,7 +664,7 @@ def coingecko_second_pass(intermediate: Dict[str, List[dict]]) -> Dict[str, List
         if not rest:
             continue
         if not set_normalized:
-            rest.sort(key=lambda coin: len(coin['nn']), reverse=True)  # sort by the length of the normalized name
+            rest.sort(key=lambda c: len(c['nn']), reverse=True)  # sort by the length of the normalized name
             coin = rest.pop(0)
             final[normalized].append(coin)
         for coin in rest:
@@ -686,7 +686,7 @@ def coingecko_third_pass(final: Dict[str, List[dict]]) -> Dict[str, str]:
             symbols[normalized] = coins[0]['id']
             continue
         set_normalized = False
-        for i in range(len(coins)):
+        for i, _ in enumerate(coins):
             if normalized == coins[i]['nn']:
                 coin = coins.pop(i)
                 symbols[normalized] = coin['id']
@@ -705,7 +705,7 @@ def coingecko_third_pass(final: Dict[str, List[dict]]) -> Dict[str, str]:
         if not rest:
             continue
         if not set_normalized:
-            rest.sort(key=lambda coin: len(coin['nn']), reverse=True)  # sort by the length of the normalized name
+            rest.sort(key=lambda c: len(c['nn']), reverse=True)  # sort by the length of the normalized name
             coin = rest.pop(0)
             symbols[normalized] = coin['id']
         for coin in rest:
