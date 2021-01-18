@@ -242,8 +242,10 @@ class FeedHandler:
             LOG.exception('FH: Unhandled %r - shutting down', why)
         finally:
             self.stop(loop=loop)
+            self.close(loop=loop)
 
     def stop(self, loop=None):
+        """Shutdown the Feed backends asynchronously."""
         if not loop:
             loop = asyncio.get_event_loop()
 
@@ -255,23 +257,19 @@ class FeedHandler:
             shutdown_tasks.append(task)
 
         LOG.info('FH: wait %s backend tasks until termination', len(shutdown_tasks))
-        try:
-            loop.run_until_complete(asyncio.gather(*shutdown_tasks))
-        finally:
-            pass
+        loop.run_until_complete(asyncio.gather(*shutdown_tasks))
 
-        LOG.info('FH: stop the AsyncIO loop: wait for the current batch of callbacks and then exit')
-        loop.stop()
-
-        LOG.info('FH: last AsyncIO loop run')
-        try:
-            loop.run_forever()
-        finally:
-            pass
+    def close(self, loop=None):
+        """Stop the asynchronous generators and close the event loop."""
+        if not loop:
+            loop = asyncio.get_event_loop()
 
         LOG.info('FH: shutdown asynchronous generators')
         loop.run_until_complete(loop.shutdown_asyncgens())
-
+        LOG.info('FH: stop the AsyncIO loop: wait for the current batch of callbacks and then exit')
+        loop.stop()
+        LOG.info('FH: run the AsyncIO event loop one last time')
+        loop.run_forever()
         LOG.info('FH: close the AsyncIO loop')
         loop.close()
 
