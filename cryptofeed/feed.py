@@ -112,6 +112,7 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
+
     @classmethod
     def info(cls, key_id: str = None) -> dict:
         """
@@ -229,4 +230,3 @@ class Feed:
                     LOG.info('%s: stopping backend %s', self.id, name)
                     await callback.stop()
         LOG.info('%s: feed shutdown completed', self.id)
-
