@@ -109,8 +109,7 @@ def bitfinex_symbols() -> Dict[str, str]:
         ret = {}
         for symbol in [t[0] for t in tickers]:
             if symbol[0] == 'f':
-                # We will repair FUNDING soon on Binance, and enable the following line
-                continue  # normalized = norm.get(symbol[1:], symbol[1:])
+                normalized = norm.get(symbol[1:], symbol[1:])
             else:
                 if len(symbol) == 7:
                     base, quote = symbol[1:4], symbol[4:]
