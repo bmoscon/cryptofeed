@@ -135,6 +135,11 @@ class WSAsyncConn(AsyncConnection):
 
         await self.socket.send(data)
         self.sent += 1
+
+        if __debug__:
+            if all(c.isprintable() for c in str(data)):
+                LOG.debug('%s: Send msg %s', self.id, data)
+
         # slow down the subscription batch by waiting for a response or for a half of a second before next send
         try:
             data = await asyncio.wait_for(self.socket.recv(), timeout=0.5)
