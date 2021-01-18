@@ -7,8 +7,9 @@ associated with this software.
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, FundingCallback, TradeCallback
-from cryptofeed.defines import FUNDING, L2_BOOK, OPEN_INTEREST, TRADES
+from cryptofeed.defines import BITMEX, FUNDING, L2_BOOK, OPEN_INTEREST, TRADES
 from cryptofeed.exchanges import Bitmex
+
 
 # ------------------------------------------------------------------------
 #
@@ -24,14 +25,6 @@ from cryptofeed.exchanges import Bitmex
 # ------------------------------------------------------------------------
 
 
-async def print_all(a=None, b=None, c=None, d=None, e=None, f=None, g=None, h=None, **kwargs):
-    print_all_kwargs(a=a, b=b, c=c, d=d, e=e, f=f, g=g, h=h, **kwargs)
-
-
-def print_all_kwargs(**kwargs):
-    print(kwargs)
-
-
 # To set API key and secret, you have three options:
 #
 # 1. Use the environment variables in the following format:
@@ -42,7 +35,7 @@ def print_all_kwargs(**kwargs):
 # 2. Create a YAML configuration file as the following 'config_example.yml'
 #
 #    log:
-#       filename: demo_bitmex.log
+#       filename: demo_bitmex_config.log
 #       level: DEBUG
 #    bitmex:
 #        key_id: XPIRzadE7dQoGoAiIUsRrbJk
@@ -51,12 +44,15 @@ def print_all_kwargs(**kwargs):
 # 3. Use a dict as the following example:
 config = {
     'log': {
-        'filename': 'demo_bitmex.log',
+        'filename': 'demo_bitmex_config.log',
         'level': 'DEBUG'},
     'bitmex': {
         'key_id': 'XPIRzadE7dQoGoAiIUsRrbJk',
         'key_secret': 'EJ3sgj1HKM_UfLn0YzQJI9fM2Z2TFwoIyO1v_47dMfiwJoB2'},
 }
+
+async def print_all(*args, **kwargs):
+    print(args, kwargs)
 
 
 def main():
@@ -72,9 +68,9 @@ def main():
     f.add_feed(Bitmex(config=config, symbols=bitmex_symbols, channels=[OPEN_INTEREST], callbacks={OPEN_INTEREST: print_all}))
     f.add_feed(Bitmex(config=config, symbols=bitmex_symbols, channels=[TRADES], callbacks={TRADES: TradeCallback(print_all)}))
 
-    # When using the following no need to pass config when using 'BITMEX'
-    f.add_feed('BITMEX', symbols=bitmex_symbols, channels=[FUNDING], callbacks={FUNDING: FundingCallback(print_all)})
-    f.add_feed('BITMEX', symbols=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(print_all)})
+    # When using the following no need to pass config=config when using 'BITMEX'
+    f.add_feed(BITMEX, symbols=bitmex_symbols, channels=[FUNDING], callbacks={FUNDING: FundingCallback(print_all)})
+    f.add_feed(BITMEX, symbols=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(print_all)})
 
     f.run()
 
