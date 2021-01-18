@@ -9,7 +9,7 @@ import zlib
 from json import JSONDecodeError
 from typing import Callable, Optional
 
-import yapic.json._json
+import yapic.json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import HUOBI, HUOBI_DM, OKCOIN, OKEX
@@ -40,7 +40,7 @@ class Runner:
     async def run(self, do_handle: bool, capture_cb: Callable, log_msg: bool):
         """Connect to exchange, subscribe and handle responses."""
         LOG.info('%s: Start infinite loop handle=%s capture=%s log_msg=%s max_retries=%s',
-                 self.id, do_handle, not not capture_cb, log_msg, self.max_retries)
+                 self.id, do_handle, bool(capture_cb), log_msg, self.max_retries)
         # To shutdown the loop: set max_retries=0 and close the socket
         retries = delay = 1
         while self.max_retries:
@@ -86,7 +86,7 @@ class Runner:
                     await capture_cb(data, timestamp, self.feed.id)  # TODO replace capture by callbacks
                     try:
                         await self.feed.handle(data, timestamp, self.conn)
-                    except JSONDecodeError or yapic.json.JsonDecodeError as why:
+                    except (JSONDecodeError, yapic.json.JsonDecodeError) as why:
                         LOG.warning('%s: %r - skip invalid JSON: %.500r', self.id, why, self.decompress(data))
             elif capture_cb:
                 async for data, timestamp in self.conn.read():
@@ -95,7 +95,7 @@ class Runner:
                 async for data, timestamp in self.conn.read():
                     try:
                         await self.feed.handle(data, timestamp, self.conn)
-                    except JSONDecodeError or yapic.json.JsonDecodeError as why:
+                    except (JSONDecodeError, yapic.json.JsonDecodeError) as why:
                         LOG.warning('%s: %r - skip invalid JSON: %.500r', self.id, why, self.decompress(data))
         except Exception as why:
             LOG.error('%s: encountered %r - end of AsyncConnection._handle()', self.id, why)
