@@ -27,6 +27,8 @@
   * Feature: Simplify source code by standardization iterations over channels and symbols
   * Bugfix: Remove remaining character "*" in book_test.py
   * Bugfix: Fix return type of the function book_flatten()
+  * Bugfix: Repair the Bitfinex FUNDING
+  * Feature: Speedup the handling of Bitfinex messages by reducing intermediate mappings
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
