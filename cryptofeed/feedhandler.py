@@ -269,9 +269,8 @@ class FeedHandler:
                 task = loop.create_task(r.run(self.handler_enabled, self.raw_message_capture, self.log_messages_on_error))
                 task.set_name(f'runner_{r.id}')
 
-        if not start_loop:return
-
-        return
+        if not start_loop:
+            return
 
         try:
             loop.run_forever()
