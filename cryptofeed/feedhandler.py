@@ -244,6 +244,8 @@ class FeedHandler:
             self.stop(loop=loop)
             self.close(loop=loop)
 
+        LOG.info('FH: leaving run()')
+
     def stop(self, loop=None):
         """Shutdown the Feed backends asynchronously."""
         if not loop:
