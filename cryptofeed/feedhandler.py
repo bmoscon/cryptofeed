@@ -267,14 +267,24 @@ class FeedHandler:
         if not loop:
             loop = asyncio.get_event_loop()
 
-        LOG.info('FH: shutdown asynchronous generators')
-        # loop.run_until_complete(loop.shutdown_asyncgens())
-        LOG.info('FH: stop the AsyncIO loop: wait for the current batch of callbacks and then exit')
+        LOG.info('FH: stop the AsyncIO loop')
         loop.stop()
         LOG.info('FH: run the AsyncIO event loop one last time')
         loop.run_forever()
+
+        pending = asyncio.all_tasks(loop=loop)
+        LOG.info('FH: cancel the %s pending tasks', len(pending))
+        for task in pending:
+            task.cancel()
+
+        LOG.info('FH: run the pending tasks until complete')
+        loop.run_until_complete(asyncio.gather(*pending, loop=loop, return_exceptions=True))
+
+        LOG.info('FH: shutdown asynchronous generators')
+        loop.run_until_complete(loop.shutdown_asyncgens())
+
         LOG.info('FH: close the AsyncIO loop')
-        # loop.close()
+        loop.close()
 
     async def _watch(self, connection):
         if self.timeout[connection.uuid] == -1:
