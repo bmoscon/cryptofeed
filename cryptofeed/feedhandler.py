@@ -113,7 +113,7 @@ class FeedHandler:
             can be None, which will default options. See docs/config.md for more information.
         """
         self.feeds = []
-        self.retries = retries
+        self.retries = (retries + 1) if retries >= 0 else -1
         self.timeout = {}
         self.last_msg = defaultdict(lambda: None)
         self.timeout_interval = timeout_interval
@@ -249,7 +249,10 @@ class FeedHandler:
         if not loop:
             loop = asyncio.get_event_loop()
 
-        LOG.info('FH: create the tasks to properly shutdown the backends (data flush)')
+        LOG.info('FH: flag retries=0 to stop the tasks running the connection handlers')
+        self.retries = 0
+
+        LOG.info('FH: create the tasks to properly shutdown the backends (to flush the local cache)')
         shutdown_tasks = []
         for feed, _ in self.feeds:
             task = loop.create_task(feed.shutdown())
@@ -291,7 +294,7 @@ class FeedHandler:
         """
         retries = 0
         delay = conn.delay
-        while retries <= self.retries or self.retries == -1:
+        while retries < self.retries or self.retries == -1:
             self.last_msg[conn.uuid] = None
             try:
                 async with conn.connect() as connection:
@@ -312,25 +315,36 @@ class FeedHandler:
                 retries += 1
                 delay *= 2
 
-        LOG.error("%s: failed to reconnect after %d retries - exiting", conn.uuid, retries)
-        raise ExhaustedRetries()
+        if self.retries == 0:
+            LOG.info('%s: terminate the connection handler because self.retries=0', conn.uuid)
+        else:
+            LOG.error('%s: failed to reconnect after %d retries - exiting', conn.uuid, retries)
+            raise ExhaustedRetries()
 
     async def _handler(self, connection, handler):
         try:
             if self.raw_message_capture and self.handler_enabled:
                 async for message in connection.read():
+                    if self.retries == 0:
+                        return
                     self.last_msg[connection.uuid] = time()
                     await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
                     await handler(message, connection, self.last_msg[connection.uuid])
             elif self.raw_message_capture:
                 async for message in connection.read():
+                    if self.retries == 0:
+                        return
                     self.last_msg[connection.uuid] = time()
                     await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
             else:
                 async for message in connection.read():
+                    if self.retries == 0:
+                        return
                     self.last_msg[connection.uuid] = time()
                     await handler(message, connection, self.last_msg[connection.uuid])
         except Exception:
+            if self.retries == 0:
+                return
             if self.log_messages_on_error:
                 if connection.uuid in {HUOBI, HUOBI_DM}:
                     message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
