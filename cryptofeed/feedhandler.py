@@ -7,14 +7,15 @@ associated with this software.
 import asyncio
 import logging
 import signal
-from signal import SIGTERM, SIGINT, SIGABRT
+from signal import SIGABRT, SIGINT, SIGTERM
 import sys
+
 try:
     # unix / macos only
     from signal import SIGHUP
-    SIGNALS = (SIGTERM, SIGINT, SIGABRT, SIGHUP)
+    SIGNALS = (SIGABRT, SIGINT, SIGTERM, SIGHUP)
 except ImportError:
-    SIGNALS = (SIGTERM, SIGINT, SIGABRT)
+    SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
 import zlib
 from collections import defaultdict
