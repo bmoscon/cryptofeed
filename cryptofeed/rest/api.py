@@ -57,9 +57,8 @@ class API:
 
     def __init__(self, config=None, sandbox=False):
         self.mapped = False
-        self.key_id, self.key_secret, self.key_passphrase = None, None, None
         self.sandbox = sandbox
-        self.config = Config(config=config)
+        self.config = config
 
     @staticmethod
     def _timestamp(ts):

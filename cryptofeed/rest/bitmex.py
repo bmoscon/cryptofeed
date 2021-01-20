@@ -53,10 +53,10 @@ class Bitmex(API):
 
         message = verb + path + str(expires) + data
 
-        signature = hmac.new(bytes(self.key_secret, 'utf8'), bytes(message, 'utf8'), digestmod=hashlib.sha256).hexdigest()
+        signature = hmac.new(bytes(self.config.key_secret, 'utf8'), bytes(message, 'utf8'), digestmod=hashlib.sha256).hexdigest()
         return {
             "api-expires": str(expires),
-            "api-key": self.key_id,
+            "api-key": self.config.key_id,
             "api-signature": signature
         }
 
@@ -78,7 +78,7 @@ class Bitmex(API):
             else:
                 endpoint = f'/api/v1/{ep}?symbol={symbol}&reverse=true'
             header = {}
-            if self.key_id and self.key_secret:
+            if self.config.key_id and self.config.key_secret:
                 header = self._generate_signature("GET", endpoint)
             header['Accept'] = 'application/json'
             return requests.get('{}{}'.format(self.api, endpoint), headers=header)

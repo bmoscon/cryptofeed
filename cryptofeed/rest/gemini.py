@@ -67,17 +67,18 @@ class Gemini(API):
             payload = {}
         payload['request'] = command
         payload['nonce'] = int(time() * 1000)
+        if self.config.account_name:
+            payload['account'] = self.config.account_name
 
         api = self.api if not self.sandbox else self.sandbox_api
         api = f"{api}{command}"
-
         b64_payload = base64.b64encode(json.dumps(payload).encode('utf-8'))
-        signature = hmac.new(self.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
+        signature = hmac.new(self.config.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
 
         headers = {
             'Content-Type': "text/plain",
             'Content-Length': "0",
-            'X-GEMINI-APIKEY': self.key_id,
+            'X-GEMINI-APIKEY': self.config.key_id,
             'X-GEMINI-PAYLOAD': b64_payload,
             'X-GEMINI-SIGNATURE': signature,
             'Cache-Control': "no-cache"
