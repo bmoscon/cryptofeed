@@ -25,6 +25,7 @@ poloniex:
 gemini:
     key_id: null
     key_secret: null
+    account_name: null   # this is an optional param needed only when using a master api key
 kraken:
     key_id: null
     key_secret: null

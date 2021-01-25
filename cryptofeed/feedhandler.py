@@ -7,14 +7,15 @@ associated with this software.
 import asyncio
 import logging
 import signal
-from signal import SIGTERM, SIGINT, SIGABRT
+from signal import SIGABRT, SIGINT, SIGTERM
 import sys
+
 try:
     # unix / macos only
     from signal import SIGHUP
-    SIGNALS = (SIGTERM, SIGINT, SIGABRT, SIGHUP)
+    SIGNALS = (SIGABRT, SIGINT, SIGTERM, SIGHUP)
 except ImportError:
-    SIGNALS = (SIGTERM, SIGINT, SIGABRT)
+    SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
 import zlib
 from collections import defaultdict
@@ -113,7 +114,7 @@ class FeedHandler:
             can be None, which will default options. See docs/config.md for more information.
         """
         self.feeds = []
-        self.retries = retries
+        self.retries = (retries + 1) if retries >= 0 else -1
         self.timeout = {}
         self.last_msg = defaultdict(lambda: None)
         self.timeout_interval = timeout_interval
@@ -244,12 +245,17 @@ class FeedHandler:
             self.stop(loop=loop)
             self.close(loop=loop)
 
+        LOG.info('FH: leaving run()')
+
     def stop(self, loop=None):
         """Shutdown the Feed backends asynchronously."""
         if not loop:
             loop = asyncio.get_event_loop()
 
-        LOG.info('FH: create the tasks to properly shutdown the backends (data flush)')
+        LOG.info('FH: flag retries=0 to stop the tasks running the connection handlers')
+        self.retries = 0
+
+        LOG.info('FH: create the tasks to properly shutdown the backends (to flush the local cache)')
         shutdown_tasks = []
         for feed, _ in self.feeds:
             task = loop.create_task(feed.shutdown())
@@ -264,14 +270,24 @@ class FeedHandler:
         if not loop:
             loop = asyncio.get_event_loop()
 
-        LOG.info('FH: shutdown asynchronous generators')
-        # loop.run_until_complete(loop.shutdown_asyncgens())
-        LOG.info('FH: stop the AsyncIO loop: wait for the current batch of callbacks and then exit')
+        LOG.info('FH: stop the AsyncIO loop')
         loop.stop()
         LOG.info('FH: run the AsyncIO event loop one last time')
         loop.run_forever()
+
+        pending = asyncio.all_tasks(loop=loop)
+        LOG.info('FH: cancel the %s pending tasks', len(pending))
+        for task in pending:
+            task.cancel()
+
+        LOG.info('FH: run the pending tasks until complete')
+        loop.run_until_complete(asyncio.gather(*pending, loop=loop, return_exceptions=True))
+
+        LOG.info('FH: shutdown asynchronous generators')
+        loop.run_until_complete(loop.shutdown_asyncgens())
+
         LOG.info('FH: close the AsyncIO loop')
-        # loop.close()
+        loop.close()
 
     async def _watch(self, connection):
         if self.timeout[connection.uuid] == -1:
@@ -291,7 +307,7 @@ class FeedHandler:
         """
         retries = 0
         delay = conn.delay
-        while retries <= self.retries or self.retries == -1:
+        while retries < self.retries or self.retries == -1:
             self.last_msg[conn.uuid] = None
             try:
                 async with conn.connect() as connection:
@@ -312,25 +328,36 @@ class FeedHandler:
                 retries += 1
                 delay *= 2
 
-        LOG.error("%s: failed to reconnect after %d retries - exiting", conn.uuid, retries)
-        raise ExhaustedRetries()
+        if self.retries == 0:
+            LOG.info('%s: terminate the connection handler because self.retries=0', conn.uuid)
+        else:
+            LOG.error('%s: failed to reconnect after %d retries - exiting', conn.uuid, retries)
+            raise ExhaustedRetries()
 
     async def _handler(self, connection, handler):
         try:
             if self.raw_message_capture and self.handler_enabled:
                 async for message in connection.read():
+                    if self.retries == 0:
+                        return
                     self.last_msg[connection.uuid] = time()
                     await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
                     await handler(message, connection, self.last_msg[connection.uuid])
             elif self.raw_message_capture:
                 async for message in connection.read():
+                    if self.retries == 0:
+                        return
                     self.last_msg[connection.uuid] = time()
                     await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
             else:
                 async for message in connection.read():
+                    if self.retries == 0:
+                        return
                     self.last_msg[connection.uuid] = time()
                     await handler(message, connection, self.last_msg[connection.uuid])
         except Exception:
+            if self.retries == 0:
+                return
             if self.log_messages_on_error:
                 if connection.uuid in {HUOBI, HUOBI_DM}:
                     message = zlib.decompress(message, 16 + zlib.MAX_WBITS)

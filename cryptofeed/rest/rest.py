@@ -36,23 +36,21 @@ class Rest:
     """
 
     def __init__(self, config=None, sandbox=False):
-        self.config = Config(config=config)
+        config = Config(config=config)
 
-        lfile = 'rest.log' if not self.config or not self.config.restlog.filename else self.config.restlog.filename
-        level = logging.WARNING if not self.config or not self.config.restlog.level else self.config.restlog.level
-        get_logger('rest', lfile, level)
+        get_logger('rest', config.rest.log.filename, config.rest.log.level)
 
         self.lookup = {
-            'bitmex': Bitmex(config),
-            'bitfinex': Bitfinex(config),
-            'coinbase': Coinbase(config, sandbox=sandbox),
-            'poloniex': Poloniex(config),
-            'gemini': Gemini(config, sandbox=sandbox),
-            'kraken': Kraken(config),
-            'deribit': Deribit(config),
-            'binance_futures': BinanceFutures(config),
-            'binance_delivery': BinanceDelivery(config),
-            'ftx': FTX(config)
+            'bitmex': Bitmex(config.bitmex),
+            'bitfinex': Bitfinex(config.bitfinex),
+            'coinbase': Coinbase(config.coinbase, sandbox=sandbox),
+            'poloniex': Poloniex(config.poloniex),
+            'gemini': Gemini(config.gemini, sandbox=sandbox),
+            'kraken': Kraken(config.kraken),
+            'deribit': Deribit(config.deribit),
+            'binance_futures': BinanceFutures(config.binance_futures),
+            'binance_delivery': BinanceDelivery(config.binance_delivery),
+            'ftx': FTX(config.ftx)
         }
 
     def __getitem__(self, key):
