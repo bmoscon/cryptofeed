@@ -12,7 +12,6 @@ from time import sleep
 import pandas as pd
 import requests
 
-from cryptofeed.config import Config
 from cryptofeed.standards import load_exchange_symbol_mapping
 
 

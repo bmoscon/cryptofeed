@@ -17,6 +17,7 @@ from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INT
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.symbols import get_symbol_separator
 from cryptofeed.util import split
 
 
@@ -74,7 +75,7 @@ class OKCoin(Feed):
 
     @staticmethod
     def instrument_type(pair):
-        dash_count = pair.count("-")
+        dash_count = pair.count(get_symbol_separator())
         if dash_count == 1:  # BTC-USDT
             return 'spot'
         if dash_count == 4:  # BTC-USD-201225-35000-P

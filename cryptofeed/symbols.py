@@ -45,6 +45,11 @@ def set_symbol_separator(separator: str):
     SYMBOL_SEP = separator
 
 
+def get_symbol_separator() -> str:
+    global SYMBOL_SEP
+    return SYMBOL_SEP
+
+
 def gen_symbols(exchange: str, key_id=None) -> Dict[str, str]:
     if exchange not in _symbols_retrieval_cache:
         LOG.info("%s: Getting list of symbols", exchange)

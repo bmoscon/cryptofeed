@@ -249,4 +249,3 @@ class Feed:
                     LOG.info('%s: stopping backend %s', self.id, cb_name)
                     await callback.stop()
         LOG.info('%s: feed shutdown completed', self.id)
-
