@@ -12,10 +12,12 @@ import zlib
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.util import split
 
 
 LOG = logging.getLogger('feedhandler')
@@ -54,32 +56,42 @@ class OKCoin(Feed):
         computed = ":".join(combined).encode()
         return zlib.crc32(computed)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        def chan_format(channel, pair):
-            if "SWAP" in pair:
-                return channel.format('swap')
-            elif len(pair.split("-")) == 3:
-                return channel.format('futures')
-            else:
-                return channel.format('spot')
+        symbol_channels = list(self.get_channel_symbol_combinations())
+        LOG.info("%s: Got %r combinations of pairs and channels", self.id, len(symbol_channels))
 
-        if self.subscription:
-            for chan in self.subscription:
-                if chan == LIQUIDATIONS:
-                    continue
-                args = [f"{chan_format(chan, pair)}:{pair}" for pair in self.subscription[chan]]
-                await websocket.send(json.dumps({
-                    "op": "subscribe",
-                    "args": args
-                }))
-        else:
-            chans = [f"{chan_format(chan, pair)}:{pair}" for chan in self.channels for pair in self.symbols if chan != LIQUIDATIONS]
-            await websocket.send(json.dumps({
-                "op": "subscribe",
-                "args": chans
-            }))
+        if len(symbol_channels) == 0:
+            LOG.info("%s: No websocket subscription", self.id)
+            return False
+
+        # Avoid error "Max frame length of 65536 has been exceeded" by limiting requests to some args
+        for chunk in split.list_by_max_items(symbol_channels, 33):
+            LOG.info("%s: Subscribe to %s args from %r to %r", self.id, len(chunk), chunk[0], chunk[-1])
+            request = {"op": "subscribe", "args": chunk}
+            await conn.send(json.dumps(request))
+
+    @staticmethod
+    def instrument_type(pair):
+        dash_count = pair.count("-")
+        if dash_count == 1:  # BTC-USDT
+            return 'spot'
+        if dash_count == 4:  # BTC-USD-201225-35000-P
+            return 'option'
+        if pair[-4:] == "SWAP":  # BTC-USDT-SWAP
+            return 'swap'
+        return 'futures'  # BTC-USDT-201225
+
+    def get_channel_symbol_combinations(self):
+        for chan in set(self.channels or self.subscription):
+            if chan == LIQUIDATIONS:
+                continue
+            for symbol in set(self.symbols or self.subscription[chan]):
+                instrument_type = self.instrument_type(symbol)
+                if instrument_type != 'swap' and 'funding' in chan:
+                    continue  # No funding for spot, futures and options
+                yield f"{chan.format(instrument_type)}:{symbol}"
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
