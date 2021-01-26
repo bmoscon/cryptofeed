@@ -322,7 +322,7 @@ class Bitfinex(Feed):
         ret = []
 
         def build(options: list):
-            subscribe = partial(self.subscribe, options=pair_channel)
+            subscribe = partial(self.subscribe, options=options)
             conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 

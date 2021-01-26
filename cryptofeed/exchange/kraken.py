@@ -4,8 +4,11 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import logging
+import asyncio
 from decimal import Decimal
+from functools import partial
+import logging
+from typing import Callable, List, Tuple
 import zlib
 
 from sortedcontainers import SortedDict as sd
@@ -16,6 +19,7 @@ from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRA
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std
+from cryptofeed.util.split import list_by_max_items
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,6 +29,8 @@ class Kraken(Feed):
     id = KRAKEN
 
     def __init__(self, depth=1000, **kwargs):
+        if depth not in (10, 25, 100, 500, 1000):
+            raise ValueError("Valid depths for Kraken are 10, 25, 100, 500 or 1000")
         super().__init__('wss://ws.kraken.com', **kwargs)
         self.book_depth = depth
 
@@ -44,28 +50,38 @@ class Kraken(Feed):
 
         return str(zlib.crc32(combined.encode()))
 
-    async def subscribe(self, conn: AsyncConnection):
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
+        """
+        Per Kraken Tech Support, subscribing to more than 20 symbols in a single request can lead
+        to data loss. Furthermore, too many symbols on a single connection can cause data loss as well.
+        """
         self.__reset()
-        if self.subscription:
-            for chan in self.subscription:
-                sub = {"name": chan}
-                if 'book' in chan:
-                    sub['depth'] = self.book_depth
-                await conn.send(json.dumps({
-                    "event": "subscribe",
-                    "pair": list(self.subscription[chan]),
-                    "subscription": sub
-                }))
-        else:
-            for chan in self.channels:
-                sub = {"name": chan}
-                if 'book' in chan:
-                    sub['depth'] = self.book_depth
-                await conn.send(json.dumps({
-                    "event": "subscribe",
-                    "pair": self.symbols,
-                    "subscription": sub
-                }))
+        ret = []
+
+        def build(options: list):
+            subscribe = partial(self.subscribe, options=options)
+            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
+            return conn, subscribe, self.message_handler
+
+        for chan in set(self.channels or self.subscription):
+            symbols = list(set(self.symbols or self.subscription[chan]))
+            for subset in list_by_max_items(symbols, 20):
+                ret.append(build((chan, subset)))
+
+        return ret
+
+    async def subscribe(self, conn: AsyncConnection, options: Tuple[str, List[str]]=None):
+        chan = options[0]
+        symbols = options[1]
+        sub = {"name": chan}
+        if 'book' in chan:
+            sub['depth'] = self.book_depth
+
+        await conn.send(json.dumps({
+            "event": "subscribe",
+            "pair": symbols,
+            "subscription": sub
+        }))
 
     async def _trade(self, msg: dict, pair: str, timestamp: float):
         """

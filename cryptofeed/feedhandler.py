@@ -24,6 +24,7 @@ from time import time
 import functools
 
 from websockets import ConnectionClosed
+from websockets.exceptions import InvalidStatusCode
 
 from cryptofeed.config import Config
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITFLYER,
@@ -306,6 +307,7 @@ class FeedHandler:
         Connect to exchange and subscribe
         """
         retries = 0
+        rate_limited = 1
         delay = conn.delay
         while retries < self.retries or self.retries == -1:
             self.last_msg[conn.uuid] = None
@@ -314,6 +316,7 @@ class FeedHandler:
                     asyncio.ensure_future(self._watch(connection))
                     # connection was successful, reset retry count and delay
                     retries = 0
+                    rate_limited = 0
                     delay = conn.delay
                     await subscribe(connection)
                     await self._handler(connection, handler)
@@ -322,6 +325,11 @@ class FeedHandler:
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
+            except InvalidStatusCode as e:
+                if e.status_code == 429:
+                    LOG.warning("%s: Rate Limited - waiting %d seconds to reconnect", conn.uuid, rate_limited * 60)
+                    await asyncio.sleep(rate_limited * 60)
+                    rate_limited += 1
             except Exception:
                 LOG.error("%s: encountered an exception, reconnecting", conn.uuid, exc_info=True)
                 await asyncio.sleep(delay)
