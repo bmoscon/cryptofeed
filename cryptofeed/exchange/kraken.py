@@ -4,7 +4,6 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 from decimal import Decimal
 from functools import partial
 import logging
@@ -70,7 +69,7 @@ class Kraken(Feed):
 
         return ret
 
-    async def subscribe(self, conn: AsyncConnection, options: Tuple[str, List[str]]=None):
+    async def subscribe(self, conn: AsyncConnection, options: Tuple[str, List[str]] = None):
         chan = options[0]
         symbols = options[1]
         sub = {"name": chan}
