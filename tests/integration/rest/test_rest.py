@@ -1,6 +1,6 @@
 import pandas as pd
 
-from cryptofeed.defines import BUY, SELL
+from cryptofeed.defines import BUY, SELL, BITFINEX
 from cryptofeed.rest import Rest
 
 
@@ -19,7 +19,7 @@ def test_rest_bitfinex():
     expected = {'timestamp': 1483228812.0,
                 'symbol': 'BTC-USD',
                 'id': 25291508,
-                'feed': 'BITFINEX',
+                'feed': BITFINEX,
                 'side': SELL,
                 'amount': 1.65,
                 'price': 966.61}

@@ -13,52 +13,53 @@ from cryptofeed.standards import load_exchange_symbol_mapping, symbol_exchange_t
 def test_coinbase_symbol_conversions():
     load_exchange_symbol_mapping(COINBASE)
     for _, symbol in coinbase_symbols().items():
-        assert(symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, COINBASE))
+        assert symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, COINBASE)
 
 
 def test_poloniex_symbol_conversions():
     load_exchange_symbol_mapping(POLONIEX)
     for _, symbol in poloniex_symbols().items():
         std = symbol_exchange_to_std(symbol)
-        assert(symbol == symbol_std_to_exchange(std, POLONIEX))
+        assert symbol == symbol_std_to_exchange(std, POLONIEX)
 
 
 def test_bitfinex_symbol_conversions():
     load_exchange_symbol_mapping(BITFINEX)
     for _, symbol in bitfinex_symbols().items():
         std = symbol_exchange_to_std(symbol)
-        assert(symbol == symbol_std_to_exchange(std, BITFINEX))
+        assert symbol == symbol_std_to_exchange(std, BITFINEX)
 
 
 def test_hitbtc_symbol_conversions():
     load_exchange_symbol_mapping(HITBTC)
     for _, symbol in hitbtc_symbols().items():
         std = symbol_exchange_to_std(symbol)
-        assert(symbol == symbol_std_to_exchange(std, HITBTC))
+        assert symbol == symbol_std_to_exchange(std, HITBTC)
 
 
 def test_gemini_symbol_conversions():
     load_exchange_symbol_mapping(GEMINI)
-    for _, symbol in gemini_symbols().items():
+    for normalized, symbol in gemini_symbols().items():
         std = symbol_exchange_to_std(symbol)
-        assert(symbol == symbol_std_to_exchange(std, GEMINI))
+        assert symbol == symbol_std_to_exchange(std, GEMINI)
+        assert normalized == std
 
 
 def test_bitstamp_symbol_conversions():
     load_exchange_symbol_mapping(BITSTAMP)
     for _, symbol in bitstamp_symbols().items():
         std = symbol_exchange_to_std(symbol)
-        assert(symbol == symbol_std_to_exchange(std, BITSTAMP))
+        assert symbol == symbol_std_to_exchange(std, BITSTAMP)
 
 
 def test_bitcoincom_symbol_conversions():
     load_exchange_symbol_mapping(BITCOINCOM)
     for _, symbol in bitcoincom_symbols().items():
         std = symbol_exchange_to_std(symbol)
-        assert(symbol == symbol_std_to_exchange(std, BITCOINCOM))
+        assert symbol == symbol_std_to_exchange(std, BITCOINCOM)
 
 
 def test_blockchain_symbol_conversions():
     load_exchange_symbol_mapping(BLOCKCHAIN)
     for _, symbol in blockchain_symbols().items():
-        assert(symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, BLOCKCHAIN))
+        assert symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, BLOCKCHAIN)
