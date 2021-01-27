@@ -28,18 +28,14 @@ def test_trade_history():
     assert len(trade_history) > 0
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-def test_heartbeat():
-    result = sandbox.heartbeat()
-    assert result['result'] == 'ok'
-
-
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_place_order_and_cancel():
+    print(sandbox.config.key_id)
+    print(sandbox.config.key_secret)
     order_resp = sandbox.place_order(
         symbol='btcusd',
         side='buy',
-        type='LIMIT',
+        order_type='LIMIT',
         amount='1.0',
         price='622.13',
         client_order_id='1'
@@ -49,19 +45,19 @@ def test_place_order_and_cancel():
     assert 'order_id' in cancel_resp
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_cancel_all_session_orders():
     cancel_all = sandbox.cancel_all_session_orders()
     assert cancel_all['result'] == 'ok'
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_cancel_all_active_orders():
     cancel_all = sandbox.cancel_all_active_orders()
     assert cancel_all['result'] == 'ok'
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_order_status():
     order_resp = sandbox.place_order(
         symbol='btcusd',
@@ -78,34 +74,34 @@ def test_order_status():
     assert status['side'] == 'buy'
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_get_active_orders():
     active = sandbox.get_active_orders()
 
     assert len(active) == 0
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_get_past_trades():
     trades = sandbox.get_past_trades({'symbol': 'btcusd'})
     assert len(trades) == 0
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_get_notional_volume():
     volume = sandbox.get_notional_volume()
 
     assert volume['maker_fee_bps'] == 25
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_get_trade_volume():
     volume = sandbox.get_trade_volume()
 
     assert len(volume) == 1
 
 
-@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
 def test_get_available_balances():
     balances = sandbox.get_available_balances()
 

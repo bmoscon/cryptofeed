@@ -9,7 +9,7 @@ import os
 import yaml
 
 
-_default_config = {'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}}
+_default_config = {'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}, 'rest': {'log': {'filename': 'rest.log', 'level': 'WARNING'}}}
 
 
 class AttrDict(dict):
