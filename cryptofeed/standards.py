@@ -61,7 +61,7 @@ def symbol_std_to_exchange(symbol: str, exchange: str):
         raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
 
 
-def symbol_exchange_to_std(symbol: str):
+def symbol_exchange_to_std(symbol):
     if symbol in _exchange_to_std:
         return _exchange_to_std[symbol]
     # Bitfinex funding currency

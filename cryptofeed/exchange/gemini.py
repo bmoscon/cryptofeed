@@ -70,7 +70,6 @@ class Gemini(Feed):
                             receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
 
         if msg['type'] == 'l2_updates':
