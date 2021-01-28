@@ -101,6 +101,8 @@ def main():
 
 Cryptofeed supports the following channels from exchanges:
 
+### Market Data Channels (Public)
+
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES - Note this reports the taker's side, even for exchanges that report the maker side.
@@ -115,6 +117,11 @@ Aggregated data from provider is available in channel:
 * TRANSACTIONS - On-chain transactions.
 * MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
  as well as community data (twitter, reddit, facebook...) and scores (coingecko, developer, community...)
+
+### Authenticated Data Channels
+
+* ORDER_INFO - Order status updates
+
 
 ## Backends
 
