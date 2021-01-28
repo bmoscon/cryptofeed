@@ -32,6 +32,7 @@
   * Feature: Speedup the handling of Bitfinex messages by reducing intermediate mappings
   * Feature: Support OKEx options
   * Bugfix: Cancel the pending tasks to gracefully/properly close the ASyncIO loop
+  * Feature: Support for authenticated websocket data channels
 
 ### 1.6.2 (2020-12-25)
   * Feature: Support for Coingecko aggregated data per coin, to be used with a new data channel 'profile'
