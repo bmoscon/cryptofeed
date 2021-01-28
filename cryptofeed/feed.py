@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from functools import partial
 import logging
 import os
 from typing import Tuple, Callable, Union, List
@@ -15,7 +16,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
-from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange
+from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
 
 
@@ -25,12 +26,14 @@ LOG = logging.getLogger('feedhandler')
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address: Union[dict, str], symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
+    def __init__(self, address: Union[dict, str], sandbox=False, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
         """
         address: str, or dict
             address to be used to create the connection.
             The address protocol (wss or https) will be used to determine the connection type.
             Use a "str" to pass one single address, or a dict of option/address
+        sandbox: bool
+            For authenticated channels, run against the sandbox websocket (when True)
         max_depth: int
             Maximum number of levels per side to return in book updates
         book_interval: int
@@ -69,8 +72,10 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
-        key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
-        load_exchange_symbol_mapping(self.id, key_id=key_id)
+        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
+        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
+
+        load_exchange_symbol_mapping(self.id, key_id=self.key_id)
 
         if subscription is not None and (symbols is not None or channels is not None):
             raise ValueError("Use subscription, or channels and symbols, not both")
@@ -78,6 +83,9 @@ class Feed:
         if subscription is not None:
             for channel in subscription:
                 chan = feed_to_exchange(self.id, channel)
+                if is_authenticated_channel(channel):
+                    if not self.key_id or not self.key_secret:
+                        raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
                 self.subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
                 self.normalized_symbols.extend(self.subscription[chan])
 
@@ -86,6 +94,9 @@ class Feed:
             self.symbols = [symbol_std_to_exchange(symbol, self.id) for symbol in symbols]
         if channels:
             self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
+            if any(is_authenticated_channel(chan) for chan in channels):
+                if not self.key_id or not self.key_secret:
+                    raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
 
         self.l3_book = {}
         self.l2_book = {}
@@ -111,6 +122,17 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
+
+    def _connect_builder(self, address: str, options: list, header=None, sub=None, handler=None):
+        """
+        Helper method for building a custom connect tuple
+        """
+        subscribe = partial(self.subscribe if not sub else sub, options=options)
+        conn = AsyncConnection(address, self.id, extra_headers=header, **self.ws_defaults)
+        return conn, subscribe, handler if handler else self.message_handler
+
+    async def _empty_subscribe(self, conn: AsyncConnection, **kwargs):
+        return
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         """

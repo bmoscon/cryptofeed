@@ -100,3 +100,7 @@ class MarketInfoCallback(Callback):
 
 class TransactionsCallback(Callback):
     pass
+
+
+class OrderInfoCallback(Callback):
+    pass

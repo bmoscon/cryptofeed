@@ -45,6 +45,7 @@ COINGECKO = 'COINGECKO'
 WHALE_ALERT = 'WHALE_ALERT'
 
 
+# Market Data
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
 BOOK_DELTA = 'book_delta'
@@ -58,6 +59,10 @@ FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 MARKET_INFO = 'market_info'
 TRANSACTIONS = 'transactions'
+
+# Account Data / Authenticated Channels
+ORDER_INFO = 'order_info'
+
 
 BUY = 'buy'
 SELL = 'sell'

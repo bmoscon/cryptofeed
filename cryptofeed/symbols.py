@@ -194,7 +194,7 @@ def coinbase_symbols() -> Dict[str, str]:
         raise_failure_explanation('COINBASE', why, {"": r})
 
 
-def gemini_symbols() -> Dict[str, str]:
+def gemini_symbols(*args) -> Dict[str, str]:
     r = None
     try:
         r = requests.get('https://api.gemini.com/v1/symbols')

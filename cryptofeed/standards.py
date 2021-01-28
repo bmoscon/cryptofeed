@@ -20,7 +20,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINA
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
-                                TICKER, TRADES, TRANSACTIONS, VOLUME)
+                                TICKER, TRADES, TRANSACTIONS, VOLUME, ORDER_INFO)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedSymbol
 from cryptofeed.symbols import gen_symbols, _exchange_info
 
@@ -250,6 +250,9 @@ _feed_to_exchange_map = {
     },
     FUTURES_INDEX: {
         BYBIT: 'instrument_info.100ms'
+    },
+    ORDER_INFO: {
+        GEMINI: ORDER_INFO
     }
 }
 
@@ -321,3 +324,7 @@ def feed_to_exchange(exchange, feed, silent=False):
     if ret == UNSUPPORTED:
         raise_error()
     return ret
+
+
+def is_authenticated_channel(channel: str) -> bool:
+    return channel in (ORDER_INFO)

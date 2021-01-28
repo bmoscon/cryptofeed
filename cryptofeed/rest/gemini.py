@@ -1,15 +1,12 @@
-import base64
-import hashlib
-import hmac
 import logging
 from decimal import Decimal
-from time import sleep, time
+from time import sleep
 
 import pandas as pd
 import requests
 from sortedcontainers.sorteddict import SortedDict as sd
-from yapic import json
 
+from cryptofeed.auth.gemini import generate_token
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, GEMINI, LIMIT, OPEN, PARTIAL, SELL
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.standards import normalize_trading_options, symbol_exchange_to_std, symbol_std_to_exchange
@@ -63,26 +60,14 @@ class Gemini(API):
         return helper()
 
     def _post(self, command: str, payload=None):
-        if not payload:
-            payload = {}
-        payload['request'] = command
-        payload['nonce'] = int(time() * 1000)
-        if self.config.account_name:
-            payload['account'] = self.config.account_name
+        headers = generate_token(self.config.key_id, self.config.key_secret, command, account_name=self.config.account_name, payload=payload)
+
+        headers['Content-Type'] = "text/plain"
+        headers['Content-Length'] = "0"
+        headers['Cache-Control'] = "no-cache"
 
         api = self.api if not self.sandbox else self.sandbox_api
         api = f"{api}{command}"
-        b64_payload = base64.b64encode(json.dumps(payload).encode('utf-8'))
-        signature = hmac.new(self.config.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
-
-        headers = {
-            'Content-Type': "text/plain",
-            'Content-Length': "0",
-            'X-GEMINI-APIKEY': self.config.key_id,
-            'X-GEMINI-PAYLOAD': b64_payload,
-            'X-GEMINI-SIGNATURE': signature,
-            'Cache-Control': "no-cache"
-        }
 
         resp = requests.post(api, headers=headers)
         self._handle_error(resp, LOG)
