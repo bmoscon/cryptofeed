@@ -321,7 +321,7 @@ class FeedHandler:
                     await subscribe(connection)
                     await self._handler(connection, handler)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                LOG.warning("%s: encountered connection issue %s - reconnecting...", conn.uuid, str(e), exc_info=True)
+                LOG.warning("%s: encountered connection issue %s - reconnecting in %d seconds...", conn.uuid, str(e), delay, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
@@ -331,7 +331,7 @@ class FeedHandler:
                     await asyncio.sleep(rate_limited * 60)
                     rate_limited += 1
             except Exception:
-                LOG.error("%s: encountered an exception, reconnecting", conn.uuid, exc_info=True)
+                LOG.error("%s: encountered an exception, reconnecting in %d seconds", conn.uuid, delay, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
