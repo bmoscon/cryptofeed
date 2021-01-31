@@ -84,6 +84,12 @@ FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
 
+# Instrument type
+SPOT = 'spot'
+PERPETURAL = 'perpetual'
+OPTION = 'option'
+FUTURE = 'future'
+
 
 """
 L2 Orderbook Layout

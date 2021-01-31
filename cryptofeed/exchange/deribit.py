@@ -6,10 +6,11 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, PERPETURAL, OPTION, FUTURE
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.util.instrument import get_instrument_type
 
 
 LOG = logging.getLogger('feedhandler')
@@ -132,12 +133,28 @@ class Deribit(Feed):
         '''
         pair = msg['params']['data']['instrument_name']
         ts = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
+        kwargs = {}
+        instrument_type = get_instrument_type(pair)
+        if instrument_type == OPTION:
+            kwargs['bid_iv'] = Decimal(msg["params"]["data"]["bid_iv"])
+            kwargs['ask_iv'] = Decimal(msg["params"]["data"]["ask_iv"])
+            kwargs['delta'] = Decimal(msg["params"]["data"]["greeks"]["delta"])
+            kwargs['gamma'] = Decimal(msg["params"]["data"]["greeks"]["gamma"])
+            kwargs['rho'] = Decimal(msg["params"]["data"]["greeks"]["rho"])
+            kwargs['theta'] = Decimal(msg["params"]["data"]["greeks"]["theta"])
+            kwargs['vega'] = Decimal(msg["params"]["data"]["greeks"]["vega"])
+            kwargs['mark_price'] = Decimal(msg["params"]["data"]["mark_price"])
+            kwargs['mark_iv'] = Decimal(msg["params"]["data"]["mark_iv"])
+
         await self.callback(TICKER, feed=self.id,
                             symbol=pair,
-                            bid=Decimal(msg["params"]["data"]['best_bid_price']),
+                            bid=Decimal(msg["params"]["data"]["best_bid_price"]),
+                            bid_amount=Decimal(msg["params"]["data"]["best_bid_amount"]),
                             ask=Decimal(msg["params"]["data"]['best_ask_price']),
+                            ask_amount= Decimal(msg["params"]["data"]["best_ask_amount"]),
                             timestamp=ts,
-                            receipt_timestamp=timestamp)
+                            receipt_timestamp=timestamp,
+                            **kwargs)
 
         if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
             await self.callback(FUNDING, feed=self.id,
