@@ -58,6 +58,7 @@ FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 MARKET_INFO = 'market_info'
 TRANSACTIONS = 'transactions'
+OHLCV = 'ohlcv'
 
 BUY = 'buy'
 SELL = 'sell'

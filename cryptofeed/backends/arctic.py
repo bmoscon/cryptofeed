@@ -9,12 +9,12 @@ import pandas as pd
 
 from cryptofeed.backends.backend import (BackendFundingCallback, BackendOpenInterestCallback,
                                          BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback,
-                                         BackendMarketInfoCallback, BackendTransactionsCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS
+                                         BackendMarketInfoCallback, BackendTransactionsCallback, BackendOhlcvCallback)
+from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS, OHLCV
 
 
 class ArcticCallback:
-    def __init__(self, library, host='127.0.0.1', key=None, numeric_type=float, quota=0, **kwargs):
+    def __init__(self, library, host='127.0.0.1', key=None, numeric_type=float, quota=0, ssl=False, **kwargs):
         """
         library: str
             arctic library. Will be created if does not exist.
@@ -30,7 +30,7 @@ class ArcticCallback:
             lib_type in the kwargs. Default is VersionStore, but you can
             set to chunkstore with lib_type=arctic.CHUNK_STORE
         """
-        con = arctic.Arctic(host)
+        con = arctic.Arctic(host, ssl=ssl)
         if library not in con.list_libraries():
             lib_type = kwargs.get('lib_type', arctic.VERSION_STORE)
             con.initialize_library(library, lib_type=lib_type)
@@ -46,6 +46,9 @@ class ArcticCallback:
         df.set_index(['date'], inplace=True)
         df.drop(columns=['timestamp'], inplace=True)
         self.lib.append(self.key, df, upsert=True)
+
+class OhlcvArctic(ArcticCallback, BackendOhlcvCallback):
+    default_key = OHLCV
 
 
 class TradeArctic(ArcticCallback, BackendTradeCallback):
