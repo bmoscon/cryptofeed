@@ -147,7 +147,6 @@ class Feed:
         3. the message handler for this connection
         """
         ret = []
-
         if isinstance(self.address, str):
             return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
 
