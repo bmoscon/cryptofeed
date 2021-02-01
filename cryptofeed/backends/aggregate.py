@@ -64,7 +64,7 @@ class OHLCV(AggregateCallback):
             self.last_update = now
             for p in self.data:
                 self.data[p]['vwap'] /= self.data[p]['volume']
-            await self.handler(data=self.data)
+            await self.handler(feed=feed, symbol=symbol, timestamp=timestamp, receipt_timestamp=receipt_timestamp, window=self.window, data=self.data)
             self.data = {}
 
         self._agg(symbol, amount, price)

@@ -86,3 +86,10 @@ class BackendTransactionsCallback:
         kwargs['symbol'] = symbol
         kwargs['timestamp'] = timestamp
         await self.write(feed, symbol, timestamp, timestamp, kwargs)
+
+class BackendOhlcvCallback:
+    async def __call__(self, *, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, window: int, **kwargs): 
+        pair = next(iter(kwargs['data']))
+        ddata = kwargs['data'][pair]
+        data = {'open': self.numeric_type(ddata['open']), 'high': self.numeric_type(ddata['high']), 'low': self.numeric_type(ddata['low']), 'close': self.numeric_type(ddata['close']), 'volume':self.numeric_type(ddata['volume']), 'vwap': self.numeric_type(ddata['vwap']), 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp}
+        await self.write(feed, symbol, timestamp, receipt_timestamp, data)
