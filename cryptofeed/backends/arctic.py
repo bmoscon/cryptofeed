@@ -9,8 +9,8 @@ import pandas as pd
 
 from cryptofeed.backends.backend import (BackendFundingCallback, BackendOpenInterestCallback,
                                          BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback,
-                                         BackendMarketInfoCallback, BackendTransactionsCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS
+                                         BackendMarketInfoCallback, BackendTransactionsCallback, BackendOhlcvCallback)
+from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS, OHLCV
 
 
 class ArcticCallback:
@@ -46,6 +46,9 @@ class ArcticCallback:
         df.set_index(['date'], inplace=True)
         df.drop(columns=['timestamp'], inplace=True)
         self.lib.append(self.key, df, upsert=True)
+
+class OhlcvArctic(ArcticCallback, BackendOhlcvCallback):
+    default_key = OHLCV
 
 
 class TradeArctic(ArcticCallback, BackendTradeCallback):
