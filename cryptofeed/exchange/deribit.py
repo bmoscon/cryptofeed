@@ -77,6 +77,12 @@ class Deribit(Feed):
         }
         """
         for trade in msg["params"]["data"]:
+            kwargs = {}
+            kwargs['trade_seq'] = Decimal(trade['trade_seq'])
+            kwargs['mark_price'] = Decimal(trade['mark_price'])
+            kwargs['index_price'] = Decimal(trade['index_price'])
+            if get_instrument_type(trade["instrument_name"]) == OPTION:
+                kwargs['iv'] = Decimal(trade['iv'])
             await self.callback(TRADES,
                                 feed=self.id,
                                 symbol=trade["instrument_name"],
@@ -86,6 +92,7 @@ class Deribit(Feed):
                                 price=Decimal(trade['price']),
                                 timestamp=timestamp_normalize(self.id, trade['timestamp']),
                                 receipt_timestamp=timestamp,
+                                **kwargs
                                 )
             if 'liquidation' in trade:
                 await self.callback(LIQUIDATIONS,
@@ -145,6 +152,8 @@ class Deribit(Feed):
             kwargs['vega'] = Decimal(msg["params"]["data"]["greeks"]["vega"])
             kwargs['mark_price'] = Decimal(msg["params"]["data"]["mark_price"])
             kwargs['mark_iv'] = Decimal(msg["params"]["data"]["mark_iv"])
+            kwargs['underlying_index'] = msg["params"]["data"]["underlying_index"]
+            kwargs['underlying_price'] = Decimal(msg["params"]["data"]["underlying_price"])
 
         await self.callback(TICKER, feed=self.id,
                             symbol=pair,

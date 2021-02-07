@@ -51,7 +51,6 @@ class TickerCallback(Callback):
         await super().__call__(feed, symbol, bid, ask, timestamp, receipt_timestamp)
 
 class DeribitTickerCallback():
-    
     def __init__(self, callbacks):
         self.callbacks = callbacks
 
@@ -74,7 +73,9 @@ class DeribitTickerCallback():
         theta: Decimal = None,
         vega: Decimal = None,
         mark_price: Decimal = None,
-        mark_iv: Decimal = None
+        mark_iv: Decimal = None,
+        underlying_index: str = None,
+        underlying_price: Decimal = None
     ):
         instrument_type = get_instrument_type(symbol)
         if not instrument_type in self.callbacks:
@@ -82,7 +83,9 @@ class DeribitTickerCallback():
         if instrument_type == PERPETURAL:
             await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp)
         elif instrument_type == OPTION:
-            await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp, bid_iv, ask_iv, delta, gamma, rho, theta, vega, mark_price, mark_iv)
+            await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp, bid_iv, ask_iv, delta, gamma, rho, theta, vega, mark_price, mark_iv, underlying_index, underlying_price)
+        else:
+            await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp)
 
 class BookCallback(Callback):
     """

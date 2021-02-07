@@ -7,7 +7,7 @@ associated with this software.
 from decimal import Decimal
 
 from cryptofeed.backends._util import book_convert, book_delta_convert
-from cryptofeed.defines import BID, ASK
+from cryptofeed.defines import BID, ASK, BUY, SELL
 
 
 class BackendBookCallback:
@@ -35,6 +35,36 @@ class BackendTradeCallback:
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
+class DeribitBackendTradeCallback:
+    async def __call__(
+        self, 
+        *, 
+        feed: str, 
+        symbol: str, 
+        side: str, 
+        amount: Decimal, 
+        price: Decimal, 
+        order_id = None, 
+        timestamp: float, 
+        receipt_timestamp: float, 
+        trade_seq: Decimal,
+        mark_price: Decimal,
+        index_price: Decimal,
+        iv: Decimal = None
+        ):
+        data = {
+            'trade_id': order_id,
+            'trade_seq': self.numeric_type(trade_seq),
+            'amount': self.numeric_type(amount), 
+            'is_buy': 'true' if side == BUY else 'false',
+            'price': self.numeric_type(price),
+            'mark_price': self.numeric_type(mark_price),
+            'index_price': self.numeric_type(index_price),
+            'iv': self.convert_to_numeric_type(iv)
+        }
+        await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+
 class BackendFundingCallback:
     async def __call__(self, *, feed, symbol, **kwargs):
         for key in kwargs:
@@ -51,6 +81,50 @@ class BackendFundingCallback:
 class BackendTickerCallback:
     async def __call__(self, *, feed: str, symbol: str, bid: Decimal, ask: Decimal, timestamp: float, receipt_timestamp: float):
         data = {'feed': feed, 'symbol': symbol, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
+        await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+
+class DeribitBackendTickerCallback():
+    async def __call__(
+        self,
+        *,
+        feed: str,
+        symbol: str,
+        bid: Decimal,
+        bid_amount: Decimal,
+        ask: Decimal,
+        ask_amount: Decimal,
+        timestamp: float,
+        receipt_timestamp: float,
+        bid_iv: Decimal = None,
+        ask_iv: Decimal = None,
+        delta: Decimal = None,
+        gamma: Decimal = None,
+        rho: Decimal = None,
+        theta: Decimal = None,
+        vega: Decimal = None,
+        mark_price: Decimal = None,
+        mark_iv: Decimal = None,
+        underlying_index: str = None,
+        underlying_price: Decimal = None
+    ):
+        data = {
+            'bid': self.numeric_type(bid), 
+            'bid_amount': self.numeric_type(bid_amount), 
+            'ask': self.numeric_type(ask),
+            'ask_amount': self.numeric_type(ask_amount),
+            'bid_iv': self.convert_to_numeric_type(bid_iv),
+            'ask_iv': self.convert_to_numeric_type(ask_iv),
+            'delta': self.convert_to_numeric_type(delta),
+            'gamma': self.convert_to_numeric_type(gamma),
+            'rho': self.convert_to_numeric_type(rho),
+            'theta': self.convert_to_numeric_type(theta),
+            'vega': self.convert_to_numeric_type(vega),
+            'mark_price': self.convert_to_numeric_type(mark_price),
+            'mark_iv': self.convert_to_numeric_type(mark_iv),
+            'underlying_index': underlying_index,
+            'underlying_price': self.convert_to_numeric_type(underlying_price)
+        }
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
