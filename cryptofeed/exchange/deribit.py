@@ -38,6 +38,7 @@ class Deribit(Feed):
         self.open_interest = {}
         self.l2_book = {}
         self.seq_no = {}
+        self.snapshot = {}
 
     @staticmethod
     def get_instruments_info():
@@ -139,6 +140,15 @@ class Deribit(Feed):
             "jsonrpc" : "2.0"}
         '''
         pair = msg['params']['data']['instrument_name']
+        
+        bid = Decimal(msg["params"]["data"]["best_bid_price"]),
+        bid_amount = Decimal(msg["params"]["data"]["best_bid_amount"]),
+        ask = Decimal(msg["params"]["data"]['best_ask_price']),
+        ask_amount = Decimal(msg["params"]["data"]["best_ask_amount"]),
+        if pair in self.snapshot and self.snapshot[pair] == (bid, bid_amount, ask, ask_amount):
+            return
+        self.snapshot[pair] = (bid, bid_amount, ask, ask_amount)
+
         ts = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
         kwargs = {}
         instrument_type = get_instrument_type(pair)
@@ -157,10 +167,10 @@ class Deribit(Feed):
 
         await self.callback(TICKER, feed=self.id,
                             symbol=pair,
-                            bid=Decimal(msg["params"]["data"]["best_bid_price"]),
-                            bid_amount=Decimal(msg["params"]["data"]["best_bid_amount"]),
-                            ask=Decimal(msg["params"]["data"]['best_ask_price']),
-                            ask_amount= Decimal(msg["params"]["data"]["best_ask_amount"]),
+                            bid=bid,
+                            bid_amount=bid_amount,
+                            ask=ask,
+                            ask_amount=ask_amount,
                             timestamp=ts,
                             receipt_timestamp=timestamp,
                             **kwargs)
