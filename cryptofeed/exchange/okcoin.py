@@ -29,7 +29,6 @@ class OKCoin(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
-        self.book_depth = 200
         self.open_interest = {}
 
     def __reset(self):

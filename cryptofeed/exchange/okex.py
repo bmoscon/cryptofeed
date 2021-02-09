@@ -31,7 +31,6 @@ class OKEx(OKCoin):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.address = 'wss://real.okex.com:8443/ws/v3'
-        self.book_depth = 200
 
     @staticmethod
     def get_active_symbols_info():

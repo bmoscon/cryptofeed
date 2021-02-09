@@ -27,11 +27,10 @@ LOG = logging.getLogger('feedhandler')
 class Kraken(Feed):
     id = KRAKEN
 
-    def __init__(self, depth=1000, **kwargs):
-        if depth not in (10, 25, 100, 500, 1000):
+    def __init__(self, max_depth=1000, **kwargs):
+        if max_depth not in (10, 25, 100, 500, 1000):
             raise ValueError("Valid depths for Kraken are 10, 25, 100, 500 or 1000")
-        super().__init__('wss://ws.kraken.com', **kwargs)
-        self.book_depth = depth
+        super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
 
     def __reset(self):
         self.l2_book = {}
@@ -74,7 +73,7 @@ class Kraken(Feed):
         symbols = options[1]
         sub = {"name": chan}
         if 'book' in chan:
-            sub['depth'] = self.book_depth
+            sub['depth'] = self.max_depth
 
         await conn.send(json.dumps({
             "event": "subscribe",
@@ -150,7 +149,7 @@ class Kraken(Feed):
                                 delta[side].append((price, size))
                                 self.l2_book[pair][side][price] = size
             for side in (BID, ASK):
-                while len(self.l2_book[pair][side]) > self.book_depth:
+                while len(self.l2_book[pair][side]) > self.max_depth:
                     del_price = self.l2_book[pair][side].items()[0 if side == BID else -1][0]
                     del self.l2_book[pair][side][del_price]
                     delta[side].append((del_price, 0))

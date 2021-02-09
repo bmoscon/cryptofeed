@@ -18,8 +18,8 @@ LOG = logging.getLogger('feedhandler')
 class BinanceDelivery(Binance):
     id = BINANCE_DELIVERY
 
-    def __init__(self, depth=1000, **kwargs):
-        super().__init__(depth=depth, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'

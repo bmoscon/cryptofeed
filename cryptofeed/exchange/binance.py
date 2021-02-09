@@ -28,9 +28,8 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed):
     id = BINANCE
 
-    def __init__(self, depth=1000, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__({}, **kwargs)
-        self.book_depth = depth
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.address = self._address()
@@ -169,7 +168,7 @@ class Binance(Feed):
                             receipt_timestamp=timestamp)
 
     async def _snapshot(self, pair: str) -> None:
-        url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.book_depth}'
+        url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.max_depth if self.max_depth else 1000}'
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
