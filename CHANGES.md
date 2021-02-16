@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.7.0
+### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
   * Bugfix: Allow exchanges to customize their retry delays on error
   * Feature: New demo code showing user loop management
