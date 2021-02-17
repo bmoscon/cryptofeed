@@ -194,7 +194,7 @@ class FeedHandler:
         for feed in feeds:
             self.add_feed(feed(channels=[L2_BOOK], symbols=symbols, callbacks={L2_BOOK: cb}), timeout=timeout)
 
-    def run(self, start_loop: bool = True, install_signal_handlers: bool = True):
+    def run(self, start_loop: bool = True, install_signal_handlers: bool = True, tasks = []):
         """
         start_loop: bool, default True
             if false, will not start the event loop. Also, will not
@@ -232,6 +232,9 @@ class FeedHandler:
             for conn, sub, handler in feed.connect():
                 loop.create_task(self._connect(conn, sub, handler))
                 self.timeout[conn.uuid] = timeout
+
+        for task in tasks:
+            loop.create_task(task)
 
         if not start_loop:
             return

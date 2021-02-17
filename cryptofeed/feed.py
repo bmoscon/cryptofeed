@@ -74,6 +74,7 @@ class Feed:
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
         self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
         self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
+        self.connection = None
 
         load_exchange_symbol_mapping(self.id, key_id=self.key_id)
 
@@ -148,7 +149,8 @@ class Feed:
         """
         ret = []
         if isinstance(self.address, str):
-            return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
+            self.connection = AsyncConnection(self.address, self.id, **self.ws_defaults)
+            return [(self.connection, self.subscribe, self.message_handler)]
 
         for _, addr in self.address.items():
             ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
