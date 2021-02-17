@@ -128,6 +128,14 @@ class FeedHandler:
         if self.config.log_msg:
             LOG.info(self.config.log_msg)
 
+        if self.config.uvloop:
+            try:
+                import uvloop
+                asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+                LOG.info('FH: uvloop initalized')
+            except ImportError:
+                LOG.info("FH: uvloop not initialized")
+
     def playback(self, feed, filenames):
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(self._playback(feed, filenames))
@@ -197,9 +205,7 @@ class FeedHandler:
     def run(self, start_loop: bool = True, install_signal_handlers: bool = True):
         """
         start_loop: bool, default True
-            if false, will not start the event loop. Also, will not
-            use uvlib/uvloop if false, the caller will
-            need to init uvloop if desired.
+            if false, will not start the event loop.
         install_signal_handlers: bool, default True
             if True, will install the signal handlers on the event loop. This
             can only be done from the main thread's loop, so if running cryptofeed on
@@ -210,16 +216,6 @@ class FeedHandler:
             txt = f'FH: No feed specified. Please specify at least one feed among {list(_EXCHANGES.keys())}'
             LOG.critical(txt)
             raise ValueError(txt)
-
-        # The user managing the ASyncIO loop themselves sets start_loop=False => they decide to enable uvloop if they want to
-        # therefore, the FeedHandler attempts to enable uvloop only when start_loop==True
-        if start_loop:
-            try:
-                import uvloop
-                asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-                LOG.info('FH: uvloop activated')
-            except Exception as why:  # ImportError
-                LOG.info('FH: no uvloop because %r', why)
 
         loop = asyncio.get_event_loop()
         # Good to enable when debugging or without code change: export PYTHONASYNCIODEBUG=1)
