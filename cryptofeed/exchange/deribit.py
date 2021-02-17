@@ -4,12 +4,14 @@ from decimal import Decimal
 import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
+from collections import defaultdict
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, PERPETURAL, OPTION, FUTURE
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.standards import timestamp_normalize, feed_to_exchange, symbol_std_to_exchange, is_authenticated_channel
+
 from cryptofeed.util.instrument import get_instrument_type
 
 
@@ -51,6 +53,69 @@ class Deribit(Feed):
         r = Deribit.get_instruments_info()
         instruments = [instr['instrumentName'] for instr in r['result']]
         return instruments
+
+    @staticmethod
+    def build_channel_name(channel, pair):
+        return f"{channel}.{pair}.raw"
+
+    async def subscribe(self, conn: AsyncConnection):
+        self.__reset()
+        channels = []
+        for chan in set(self.channels or self.subscription):
+            for pair in set(self.symbols or self.subscription[chan]):
+                channels.append(Deribit.build_channel_name(chan, pair))
+        await self.subscribe_inner(conn, channels)
+
+    async def subscribe_inner(self, conn: AsyncConnection, channels):
+        if not channels:
+            return
+        client_id = 0
+        await conn.send(json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": client_id,
+                "method": "public/subscribe",
+                "params": {
+                    "channels": channels
+                }
+            }
+        ))
+
+    async def unsubscribe_inner(self, conn: AsyncConnection, channels):
+        if not channels:
+            return
+        client_id = 1
+        await conn.send(json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": client_id,
+                "method": "public/unsubscribe",
+                "params": {
+                    "channels": channels
+                }
+            }
+        ))
+
+    async def update_subscription(self, subscription=None):
+        normalized_subscription = defaultdict(set)
+        for channel in subscription:
+            chan = feed_to_exchange(self.id, channel)
+            if is_authenticated_channel(channel):
+                if not self.key_id or not self.key_secret:
+                    raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
+            normalized_subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
+
+        channels_to_subscribe = []
+        channels_to_unsubscribe = []
+        for chan in normalized_subscription:
+            for pair in (set(normalized_subscription[chan]) - set(self.subscription[chan])):
+                channels_to_subscribe.append(Deribit.build_channel_name(chan, pair))
+            for pair in (set(self.subscription[chan]) - set(normalized_subscription[chan])):
+                channels_to_unsubscribe.append(Deribit.build_channel_name(chan, pair))
+        self.subscription = normalized_subscription
+        LOG.info(f"Updating subscription. Channels to subscribe: {channels_to_subscribe}. Channels to unsubscribe: {channels_to_unsubscribe}")
+        await self.subscribe_inner(self.connection, channels_to_subscribe)
+        await self.unsubscribe_inner(self.connection, channels_to_unsubscribe)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -193,24 +258,6 @@ class Deribit(Feed):
                             timestamp=ts,
                             receipt_timestamp=timestamp
                             )
-
-    async def subscribe(self, conn: AsyncConnection):
-        self.__reset()
-        client_id = 0
-        channels = []
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
-                channels.append(f"{chan}.{pair}.raw")
-        await conn.send(json.dumps(
-            {
-                "jsonrpc": "2.0",
-                "id": client_id,
-                "method": "public/subscribe",
-                "params": {
-                    "channels": channels
-                }
-            }
-        ))
 
     async def _book_snapshot(self, msg: dict, timestamp: float):
         """
