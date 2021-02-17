@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.8.0
+  * Bugfix: Init uvloop earlier so backends that use loop will not fail
+
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
   * Bugfix: Allow exchanges to customize their retry delays on error
