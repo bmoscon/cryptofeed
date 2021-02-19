@@ -19,7 +19,7 @@ def main():
     print(len(symbols))
     # symbols = [symbol for symbol in symbols if symbol.endswith("-C") or symbol.endswith("-P")]
     print(len(symbols))
-    f.add_feed(Deribit(channels=[TRADES], symbols=symbols, callbacks={TICKER: DeribitTickerPostgres(**postgres_cfg), TRADES: DeribitTradePostgres(**postgres_cfg)}))
+    f.add_feed(Deribit(channels=[TICKER, TRADES], symbols=symbols, callbacks={TICKER: DeribitTickerPostgres(**postgres_cfg), TRADES: DeribitTradePostgres(**postgres_cfg)}))
     f.run()
 
 

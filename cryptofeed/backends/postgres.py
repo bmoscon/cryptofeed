@@ -13,7 +13,8 @@ from yapic import json
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendFuturesIndexCallback, BackendMarketInfoCallback,
-                                         BackendTransactionsCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback)
+                                         BackendTransactionsCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback,
+                                         DeribitBackendBookCallback)
 from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX, MARKET_INFO, TRANSACTIONS
 
 
@@ -146,6 +147,13 @@ class LiquidationsPostgres(PostgresCallback, BackendLiquidationsCallback):
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
     default_table = 'book'
+
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
+
+
+class DeribitBookPostgres(PostgresCallback, DeribitBackendBookCallback):
+    default_table = 'books'
 
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")

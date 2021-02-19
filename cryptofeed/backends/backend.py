@@ -17,6 +17,13 @@ class BackendBookCallback:
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
+class DeribitBackendBookCallback:
+    async def __call__(self, *, feed: str, symbol: str, book: dict, timestamp: float, receipt_timestamp: float):
+        data = {BID: {}, ASK: {}}
+        book_convert(book, data, convert=self.numeric_type)
+        await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+
 class BackendBookDeltaCallback:
     async def __call__(self, *, feed: str, symbol: str, delta: dict, timestamp: float, receipt_timestamp: float):
         data = {'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'delta': True, BID: {}, ASK: {}}
