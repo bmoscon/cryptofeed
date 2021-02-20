@@ -92,15 +92,6 @@ class AsyncConnection:
                         yield data
                     await asyncio.sleep(self.__sleep)
 
-    async def get(self, *args, **kwargs):
-        async with self.conn.get(*args, **kwargs) as response:
-            data = await response.text()
-            if self.raw_cb:
-                await self.raw_cb(data, time.time(), self.uuid)
-            response.raise_for_status()
-
-            return data
-
     @property
     def open(self):
         if self.conn:
