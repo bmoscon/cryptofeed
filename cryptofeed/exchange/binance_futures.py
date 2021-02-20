@@ -6,11 +6,15 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
+import time
+from typing import List, Tuple, Callable
 
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER
 from cryptofeed.exchange.binance import Binance
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
@@ -41,7 +45,7 @@ class BinanceFutures(Binance):
             return None
         return address[:-1]
 
-    def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
+    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
         forced = not self.forced[pair]
 
@@ -58,8 +62,44 @@ class BinanceFutures(Binance):
             skip_update = True
         return skip_update, forced
 
+    async def _open_interest(self, msg: dict, timestamp: float):
+        """
+        {
+            "openInterest": "10659.509",
+            "symbol": "BTCUSDT",
+            "time": 1589437530011   // Transaction time
+        }
+        """
+        pair = msg['symbol']
+        oi = msg['openInterest']
+        if oi != self.open_interest.get(pair, None):
+            await self.callback(OPEN_INTEREST,
+                                feed=self.id,
+                                symbol=symbol_exchange_to_std(pair),
+                                open_interest=oi,
+                                timestamp=timestamp_normalize(self.id, msg['time']),
+                                receipt_timestamp=time.time()
+                                )
+            self.open_interest[pair] = oi
+
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
+        ret = []
+        if self.address:
+            ret = super().connect()
+
+        for chan in set(self.channels or self.subscription):
+            if chan == 'open_interest':
+                addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in set(self.symbols or self.subscription[chan])]
+                ret.append((AsyncConnection(addrs, self.id, delay=60.0, sleep=1.0, **self.ws_defaults), self.subscribe, self.message_handler))
+        return ret
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
+
+        # Handle REST endpoint messages first
+        if 'openInterest' in msg:
+            await self._open_interest(msg, timestamp)
+            return
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>

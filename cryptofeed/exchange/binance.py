@@ -4,20 +4,17 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 import logging
 from collections import defaultdict
 from decimal import Decimal
-from functools import partial
-from time import time
-from typing import Dict, Iterable, Union, Tuple, List, Callable
+from typing import Dict, Union, Tuple
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
@@ -33,7 +30,6 @@ class Binance(Feed):
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.address = self._address()
-        self.open_interest = {}
         self._reset()
 
     def _address(self) -> Union[str, Dict]:
@@ -70,6 +66,7 @@ class Binance(Feed):
         self.forced = defaultdict(bool)
         self.l2_book = {}
         self.last_update_id = {}
+        self.open_interest = {}
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -252,34 +249,6 @@ class Binance(Feed):
 
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
 
-    async def _open_interest(self, session, conn, timestamp, pairs: Iterable = None):
-        """
-        {
-            "openInterest": "10659.509",
-            "symbol": "BTCUSDT",
-            "time": 1589437530011   // Transaction time
-        }
-        """
-        for pair in pairs:
-            end_point = f"{self.rest_endpoint}/openInterest?symbol={pair}"
-            async with session.get(end_point) as response:
-                response.raise_for_status()
-                data = await response.text()
-                data = json.loads(data, parse_float=Decimal)
-
-                oi = data['openInterest']
-                if oi != self.open_interest.get(pair, None):
-                    await self.callback(OPEN_INTEREST,
-                                        feed=self.id,
-                                        symbol=symbol_exchange_to_std(pair),
-                                        open_interest=oi,
-                                        timestamp=timestamp_normalize(self.id, data['time']),
-                                        receipt_timestamp=time()
-                                        )
-                    self.open_interest[pair] = oi
-            # Binance rate limit is 20 a second (0.05)
-            await asyncio.sleep(0.1)
-
     async def _funding(self, msg: dict, timestamp: float):
         """
         {
@@ -302,14 +271,12 @@ class Binance(Feed):
                             )
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
         pair, _ = msg['stream'].split('@', 1)
         msg = msg['data']
-
         pair = pair.upper()
 
         if msg['e'] == 'depthUpdate':
@@ -325,21 +292,9 @@ class Binance(Feed):
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-        if self.address:
-            ret = super().connect()
-
-        for chan in set(self.channels or self.subscription):
-            if chan == 'open_interest':
-                oi_handler = partial(self._open_interest, pairs=set(self.symbols or self.subscription[chan]))
-                # OI is updated about every 15 min
-                ret.append((AsyncConnection(None, self.id, delay=60.0, **self.ws_defaults), self.subscribe, oi_handler))
-        return ret
-
     async def subscribe(self, conn: AsyncConnection):
         # Binance does not have a separate subscribe message, the
         # subscription information is included in the
         # connection endpoint
-        if conn.conn_type != 'user-managed':
+        if conn.conn_type != 'https':
             self._reset()

@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 from contextlib import asynccontextmanager
+import time
 from typing import Union, List
 import uuid
 
@@ -14,12 +15,11 @@ import websockets
 
 
 class AsyncConnection:
-    def __init__(self, address: Union[str, List[str], None], identifier: str, delay: float = 1.0, sleep: float = 0.0, **kwargs):
+    def __init__(self, address: Union[str, List[str]], identifier: str, delay: float = 1.0, sleep: float = 0.0, **kwargs):
         """
         address: str, or list of str
             address to be used to create the connection. A list of addresses is only valid for HTTPS connections.
-            The address protocol (wss or https) will be used to determine the connection type. If address is None
-            a reuseable/user-managed HTTPS connection is assumed.
+            The address protocol (wss or https) will be used to determine the connection type.
 
         identifier: str
             unique string used to identify the connection.
@@ -46,8 +46,7 @@ class AsyncConnection:
             self.conn_type = 'https'
         elif isinstance(address, str) and address[:5] == 'https':
             self.conn_type = 'https'
-        elif address is None:
-            self.conn_type = 'user-managed'
+            self.address = [address]
         else:
             raise ValueError("Invalid connection type, ensure address contains valid protocol")
 
@@ -72,22 +71,35 @@ class AsyncConnection:
             await self.conn.close()
             self.conn = None
 
-    async def read(self):
+    async def read(self, store_raw_cb=None):
         if self.conn_type == 'ws':
-            async for data in self.conn:
-                yield data
+            if store_raw_cb:
+                async for data in self.conn:
+                    await store_raw_cb(data, time.time(), self.uuid)
+                    yield data
+            else:
+                async for data in self.conn:
+                    yield data
+
         elif self.conn_type == 'https':
             while True:
                 for addr in self.address:
                     async with self.conn.get(addr) as response:
-                        response.raise_for_status()
                         data = await response.text()
+                        if store_raw_cb:
+                            await store_raw_cb(data, time.time(), self.uuid)
+                        response.raise_for_status()
                         yield data
                     await asyncio.sleep(self.__sleep)
-        elif self.conn_type == 'user-managed':
-            while True:
-                yield self.conn
-                await asyncio.sleep(self.__sleep)
+
+    async def get(self, *args, **kwargs):
+        async with self.conn.get(*args, **kwargs) as response:
+            data = await response.text()
+            if self.raw_cb:
+                await self.raw_cb(data, time.time(), self.uuid)
+            response.raise_for_status()
+
+            return data
 
     @property
     def open(self):

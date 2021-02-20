@@ -98,7 +98,7 @@ def setup_signal_handlers(loop):
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, handler_enabled=True, config=None):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, config=None):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -108,8 +108,6 @@ class FeedHandler:
             if true, log the message from the exchange on exceptions
         raw_message_capture: callback
             if defined, callback to save/process/handle raw message (primarily for debugging purposes)
-        handler_enabled: boolean
-            run message handlers (and any registered callbacks) when raw message capture is enabled
         config: str, dict or None
             if str, absolute path (including file name) of the config file. If not provided, config can also be a dictionary of values, or
             can be None, which will default options. See docs/config.md for more information.
@@ -120,8 +118,7 @@ class FeedHandler:
         self.last_msg = defaultdict(lambda: None)
         self.timeout_interval = timeout_interval
         self.log_messages_on_error = log_messages_on_error
-        self.raw_message_capture = raw_message_capture  # TODO: create/append callbacks to do raw_message_capture
-        self.handler_enabled = handler_enabled
+        self.raw_message_capture = raw_message_capture
         self.config = Config(config=config)
 
         get_logger('feedhandler', self.config.log.filename, self.config.log.level)
@@ -340,25 +337,11 @@ class FeedHandler:
 
     async def _handler(self, connection, handler):
         try:
-            if self.raw_message_capture and self.handler_enabled:
-                async for message in connection.read():
-                    if self.retries == 0:
-                        return
-                    self.last_msg[connection.uuid] = time()
-                    await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
-                    await handler(message, connection, self.last_msg[connection.uuid])
-            elif self.raw_message_capture:
-                async for message in connection.read():
-                    if self.retries == 0:
-                        return
-                    self.last_msg[connection.uuid] = time()
-                    await self.raw_message_capture(message, self.last_msg[connection.uuid], connection.uuid)
-            else:
-                async for message in connection.read():
-                    if self.retries == 0:
-                        return
-                    self.last_msg[connection.uuid] = time()
-                    await handler(message, connection, self.last_msg[connection.uuid])
+            async for message in connection.read(store_raw_cb=self.raw_message_capture):
+                if self.retries == 0:
+                    return
+                self.last_msg[connection.uuid] = time()
+                await handler(message, connection, self.last_msg[connection.uuid])
         except Exception:
             if self.retries == 0:
                 return
