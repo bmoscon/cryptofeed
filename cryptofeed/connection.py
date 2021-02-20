@@ -14,11 +14,12 @@ import websockets
 
 
 class AsyncConnection:
-    def __init__(self, address: Union[str, List[str]], identifier: str, delay: float = 1.0, sleep: float = 0.0, **kwargs):
+    def __init__(self, address: Union[str, List[str], None], identifier: str, delay: float = 1.0, sleep: float = 0.0, **kwargs):
         """
         address: str, or list of str
             address to be used to create the connection. A list of addresses is only valid for HTTPS connections.
-            The address protocol (wss or https) will be used to determine the connection type.
+            The address protocol (wss or https) will be used to determine the connection type. If address is None
+            a reuseable/user-managed HTTPS connection is assumed.
 
         identifier: str
             unique string used to identify the connection.
@@ -45,6 +46,8 @@ class AsyncConnection:
             self.conn_type = 'https'
         elif isinstance(address, str) and address[:5] == 'https':
             self.conn_type = 'https'
+        elif address is None:
+            self.conn_type = 'user-managed'
         else:
             raise ValueError("Invalid connection type, ensure address contains valid protocol")
 
@@ -81,6 +84,10 @@ class AsyncConnection:
                         data = await response.text()
                         yield data
                     await asyncio.sleep(self.__sleep)
+        elif self.conn_type == 'user-managed':
+            while True:
+                yield self.conn
+                await asyncio.sleep(self.__sleep)
 
     @property
     def open(self):

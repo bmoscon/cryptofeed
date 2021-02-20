@@ -65,7 +65,7 @@ setup(
         "sortedcontainers>=1.5.9",
         "pandas",
         "pyyaml",
-        "aiohttp>=3.7.1",
+        "aiohttp>=3.7.1, < 4.0.0",
         "aiofile>=2.0.0",
         "yapic.json>=1.4.3",
         'uvloop ; platform_system!="Windows"',

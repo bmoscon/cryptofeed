@@ -327,7 +327,7 @@ class FeedHandler:
                     await asyncio.sleep(rate_limited * 60)
                     rate_limited += 1
             except Exception:
-                LOG.error("%s: encountered an exception, reconnecting", conn.uuid, exc_info=True)
+                LOG.error("%s: encountered an exception, reconnecting after %.1f seconds", conn.uuid, delay, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
