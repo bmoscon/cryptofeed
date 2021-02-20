@@ -3,6 +3,7 @@
 ### 1.8.0
   * Bugfix: Init uvloop earlier so backends that use loop will not fail
   * Docs: Remove FAQ, added performance doc section
+  * Bugfix: #404 - Use AsyncConnection object for Binance OI
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
