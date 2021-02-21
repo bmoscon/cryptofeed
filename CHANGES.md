@@ -4,6 +4,7 @@
   * Bugfix: Init uvloop earlier so backends that use loop will not fail
   * Docs: Remove FAQ, added performance doc section
   * Bugfix: #404 - Use AsyncConnection object for Binance OI
+  * Feature: Rework how raw data is stored (when enabled). REST data can now be captured
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
