@@ -183,6 +183,35 @@ class FeedHandler:
         else:
             self.feeds.append((feed, timeout))
 
+    def add_feed_running(self, feed, loop=None, timeout=120, **kwargs):
+        """
+        Add and start a new feed to a running instance of cryptofeed
+
+        feed: str or class
+            the feed (exchange) to add to the handler
+        loop: None, or EventLoop
+            the loop on which to add the tasks
+        timeout: int
+            number of seconds without a message before the feed is considered
+            to be timed out. The connection will be closed, and if retries
+            have not been exhausted, the connection will be reestablished.
+            If set to -1, no timeout will occur.
+        kwargs: dict
+            if a string is used for the feed, kwargs will be passed to the
+            newly instantiated object
+        """
+        self.add_feed(feed, timeout=timeout, *kwargs)
+
+        if loop is None:
+            loop = asyncio.get_event_loop()
+
+        f, timeout = self.feeds[-1]
+
+        for conn, sub, handler in f.connect():
+            conn.set_raw_data_callback(self.raw_message_capture)
+            self.timeout[conn.uuid] = timeout
+            loop.create_task(self._connect(conn, sub, handler))
+
     def add_nbbo(self, feeds, symbols, callback, timeout=120):
         """
         feeds: list of feed classes
