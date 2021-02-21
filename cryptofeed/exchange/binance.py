@@ -9,7 +9,6 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import Dict, Union, Tuple
 
-import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -164,22 +163,19 @@ class Binance(Feed):
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
-    async def _snapshot(self, pair: str) -> None:
+    async def _snapshot(self, conn: AsyncConnection, pair: str) -> None:
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={self.max_depth if self.max_depth else 1000}'
+        resp = await conn.get(url)
+        resp = json.loads(resp, parse_float=Decimal)
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                response.raise_for_status()
-                resp = await response.json()
-
-                std_pair = symbol_exchange_to_std(pair)
-                self.last_update_id[std_pair] = resp['lastUpdateId']
-                self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
-                for s, side in (('bids', BID), ('asks', ASK)):
-                    for update in resp[s]:
-                        price = Decimal(update[0])
-                        amount = Decimal(update[1])
-                        self.l2_book[std_pair][side][price] = amount
+        std_pair = symbol_exchange_to_std(pair)
+        self.last_update_id[std_pair] = resp['lastUpdateId']
+        self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
+        for s, side in (('bids', BID), ('asks', ASK)):
+            for update in resp[s]:
+                price = Decimal(update[0])
+                amount = Decimal(update[1])
+                self.l2_book[std_pair][side][price] = amount
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
@@ -199,7 +195,7 @@ class Binance(Feed):
 
         return skip_update, forced
 
-    async def _book(self, msg: dict, pair: str, timestamp: float):
+    async def _book(self, conn: AsyncConnection, msg: dict, pair: str, timestamp: float):
         """
         {
             "e": "depthUpdate", // Event type
@@ -225,7 +221,7 @@ class Binance(Feed):
         pair = symbol_exchange_to_std(pair)
 
         if pair not in self.l2_book:
-            await self._snapshot(exchange_pair)
+            await self._snapshot(conn, exchange_pair)
 
         skip_update, forced = self._check_update_id(pair, msg)
         if skip_update:
@@ -280,7 +276,7 @@ class Binance(Feed):
         pair = pair.upper()
 
         if msg['e'] == 'depthUpdate':
-            await self._book(msg, pair, timestamp)
+            await self._book(conn, msg, pair, timestamp)
         elif msg['e'] == 'aggTrade':
             await self._trade(msg, timestamp)
         elif msg['e'] == '24hrTicker':

@@ -93,7 +93,7 @@ class BinanceFutures(Binance):
                 ret.append((AsyncConnection(addrs, self.id, delay=60.0, sleep=1.0, **self.ws_defaults), self.subscribe, self.message_handler))
         return ret
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         # Handle REST endpoint messages first
@@ -112,7 +112,7 @@ class BinanceFutures(Binance):
         if msg_type == 'bookTicker':
             await self._ticker(msg, timestamp)
         elif msg_type == 'depthUpdate':
-            await self._book(msg, pair, timestamp)
+            await self._book(conn, msg, pair, timestamp)
         elif msg_type == 'aggTrade':
             await self._trade(msg, timestamp)
         elif msg_type == 'forceOrder':

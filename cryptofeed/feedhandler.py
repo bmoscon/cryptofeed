@@ -223,6 +223,7 @@ class FeedHandler:
 
         for feed, timeout in self.feeds:
             for conn, sub, handler in feed.connect():
+                conn.set_raw_data_callback(self.raw_message_capture)
                 loop.create_task(self._connect(conn, sub, handler))
                 self.timeout[conn.uuid] = timeout
 
@@ -337,7 +338,7 @@ class FeedHandler:
 
     async def _handler(self, connection, handler):
         try:
-            async for message in connection.read(store_raw_cb=self.raw_message_capture):
+            async for message in connection.read():
                 if self.retries == 0:
                     return
                 self.last_msg[connection.uuid] = time()

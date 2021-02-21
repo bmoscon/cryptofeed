@@ -36,7 +36,15 @@ class AsyncFileCallback:
             self.count[uuid] += 1
             self.pointer[uuid] = 0
 
-    async def __call__(self, data: str, timestamp: float, uuid: str):
-        self.data[uuid].append(f"{timestamp}: {data}")
+    async def __call__(self, data: str, timestamp: float, uuid: str, endpoint: str = None, send: str = None, connect: str = None):
+        if endpoint:
+            self.data[uuid].append(f"{endpoint} -> {timestamp}: {data}")
+        elif send:
+            self.data[uuid].append(f"{send} <- {timestamp}: {data}")
+        elif connect:
+            self.data[uuid].append(f"{connect} <-> {timestamp}")
+        else:
+            self.data[uuid].append(f"{timestamp}: {data}")
+
         if len(self.data[uuid]) >= self.length:
             await self.write(uuid)
