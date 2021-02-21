@@ -5,6 +5,7 @@
   * Docs: Remove FAQ, added performance doc section
   * Bugfix: #404 - Use AsyncConnection object for Binance OI
   * Feature: Rework how raw data is stored (when enabled). REST data can now be captured
+  * Feature: New feedhandler method, `add_feed_running` allows user to add feed to running instance of a feedhandler.
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
