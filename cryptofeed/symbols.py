@@ -237,7 +237,12 @@ def poloniex_id_symbol_mapping():
 
 
 def poloniex_symbols() -> Dict[str, str]:
-    return {value.split("_")[1] + SYMBOL_SEP + value.split("_")[0]: value for _, value in poloniex_id_symbol_mapping().items()}
+    ret = {}
+    for _, value in poloniex_id_symbol_mapping().items():
+        std = value.replace("STR", "XLM")
+        quote, base = std.split("_")
+        ret[quote + SYMBOL_SEP + base] = value
+    return ret
 
 
 def bitstamp_symbols() -> Dict[str, str]:
