@@ -21,7 +21,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, db=None, key=None, create_db=True, numeric_type=str, org=None, bucket=None, token=None, precision='ns', username=None, password=None, **kwargs):
+    def __init__(self, addr: str, db=None, key=None, create_db=False, numeric_type=str, org=None, bucket=None, token=None, precision='ns', username=None, password=None, **kwargs):
         """
         Parent class for InfluxDB callbacks
 
