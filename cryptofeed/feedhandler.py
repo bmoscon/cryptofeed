@@ -283,7 +283,11 @@ class FeedHandler:
         shutdown_tasks = []
         for feed, _ in self.feeds:
             task = loop.create_task(feed.shutdown())
-            task.set_name(f'shutdown_feed_{feed.id}')
+            try:
+                task.set_name(f'shutdown_feed_{feed.id}')
+            except AttributeError:
+                # set_name only in 3.8+
+                pass
             shutdown_tasks.append(task)
 
         LOG.info('FH: wait %s backend tasks until termination', len(shutdown_tasks))
