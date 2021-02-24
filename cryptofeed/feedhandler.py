@@ -122,7 +122,10 @@ class FeedHandler:
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture  # TODO: create/append callbacks to do raw_message_capture
         self.handler_enabled = handler_enabled
-        self.config = Config(config=config)
+        if isinstance(config, Config):
+            self.config = config
+        else:
+            self.config = Config(config=config)
 
         get_logger('feedhandler', self.config.log.filename, self.config.log.level)
         if self.config.log_msg:
