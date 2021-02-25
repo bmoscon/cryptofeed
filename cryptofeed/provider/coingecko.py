@@ -23,7 +23,7 @@ from cryptofeed.standards import timestamp_normalize
 MARKET_INFO_FILTER_S = {'name', 'asset_platform_id', 'contract_address'}
 MARKET_INFO_FILTER_D = {'sentiment_votes_up_percentage', 'sentiment_votes_down_percentage', 'market_cap_rank', 'coingecko_rank',
                         'coingecko_score', 'developer_score', 'community_score', 'liquidity_score', 'public_interest_score'}
-MARKET_DATA_VS_CURRENCY = {'current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h'}
+MARKET_DATA_VS_CURRENCY = {'current_price', 'market_cap', 'fully_diluted_valuation', 'total_volume', 'high_24h', 'low_24h', 'ath', 'ath_date', 'ath_change_percentage', 'atl', 'atl_date', 'atl_change_percentage'}
 OTHER_MARKET_DATA_FILTER = {'total_supply', 'max_supply', 'circulating_supply'}
 ALL_MARKET_DATA = set(list(MARKET_DATA_VS_CURRENCY) + list(OTHER_MARKET_DATA_FILTER))
 
