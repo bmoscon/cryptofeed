@@ -13,7 +13,6 @@ from collections import defaultdict
 from datetime import datetime as dt
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -51,14 +50,6 @@ class Bitmex(Feed):
         for pair in self.symbols:
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             self.order_id[pair] = defaultdict(dict)
-
-    @staticmethod
-    def get_symbol_info():
-        return requests.get(Bitmex.api + 'instrument/').json()
-
-    @staticmethod
-    def get_active_symbols_info():
-        return requests.get(Bitmex.api + 'instrument/active').json()
 
     async def _trade(self, msg: dict, timestamp: float):
         """

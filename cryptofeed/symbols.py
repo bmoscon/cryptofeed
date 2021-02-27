@@ -473,9 +473,26 @@ def gateio_symbols() -> Dict[str, str]:
 
 def bitmex_symbols() -> Dict[str, str]:
     r = None
+    ret = {}
     try:
         r = requests.get("https://www.bitmex.com/api/v1/instrument/active")
-        return {entry['symbol']: entry['symbol'] for entry in r.json()}
+        for entry in r.json():
+            components = []
+            components.append(entry['rootSymbol'])
+            components.append(entry['quoteCurrency'])
+
+            if entry['expiry']:
+                components.append(entry['symbol'][-3:])
+
+            normalized = SYMBOL_SEP.join(components)
+            normalized = normalized.replace("XBT", "BTC")
+            ret[normalized] = entry['symbol']
+            _exchange_info[BITMEX]['tick_size'][normalized] = entry['tickSize']
+
+            if entry['expiry']:
+                _exchange_info[BITMEX]['expiry'][normalized] = entry['expiry']
+
+        return ret
     except Exception as why:
         raise_failure_explanation('BITMEX', why, {"": r})
 

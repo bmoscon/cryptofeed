@@ -10,7 +10,6 @@ import logging
 import time
 
 import aiohttp
-import requests
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
@@ -31,28 +30,6 @@ class OKEx(OKCoin):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.address = 'wss://real.okex.com:8443/ws/v3'
-
-    @staticmethod
-    def get_active_symbols_info():
-        return requests.get(OKEx.api + 'futures/v3/instruments').json()
-
-    @staticmethod
-    def get_active_symbols():
-        symbols = []
-        for data in OKEx.get_active_symbols_info():
-            symbols.append(data['instrument_id'])
-        return symbols
-
-    @staticmethod
-    def get_active_option_contracts_info(underlying: str):
-        return requests.get(OKEx.api + f'option/v3/instruments/{underlying}').json()
-
-    @staticmethod
-    def get_active_option_contracts(underlying: str):
-        symbols = []
-        for data in OKEx.get_active_option_contracts_info(underlying):
-            symbols.append(data['instrument_id'])
-        return symbols
 
     async def _liquidations(self, pairs: list):
         last_update = {}

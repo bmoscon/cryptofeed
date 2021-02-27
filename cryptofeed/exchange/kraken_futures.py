@@ -7,7 +7,6 @@ associated with this software.
 import logging
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -43,11 +42,6 @@ class KrakenFutures(Feed):
         self.open_interest = {}
         self.l2_book = {}
         self.seq_no = {}
-
-    @staticmethod
-    def get_instruments():
-        r = requests.get('https://futures.kraken.com/derivatives/api/v3/instruments').json()
-        return {e['symbol'].upper(): e['symbol'].upper() for e in r['instruments']}
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()

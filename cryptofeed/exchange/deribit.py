@@ -1,7 +1,6 @@
 import logging
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -37,18 +36,6 @@ class Deribit(Feed):
         self.open_interest = {}
         self.l2_book = {}
         self.seq_no = {}
-
-    @staticmethod
-    def get_instruments_info():
-        r = requests.get(
-            'https://www.deribit.com/api/v2/public/getinstruments?expired=false').json()
-        return r
-
-    @staticmethod
-    def get_instruments():
-        r = Deribit.get_instruments_info()
-        instruments = [instr['instrumentName'] for instr in r['result']]
-        return instruments
 
     async def _trade(self, msg: dict, timestamp: float):
         """
