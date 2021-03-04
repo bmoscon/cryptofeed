@@ -28,6 +28,8 @@ class Kraken(Feed):
     id = KRAKEN
 
     def __init__(self, max_depth=1000, **kwargs):
+        if max_depth is None:
+            max_depth=1000
         if max_depth not in (10, 25, 100, 500, 1000):
             raise ValueError("Valid depths for Kraken are 10, 25, 100, 500 or 1000")
         super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
