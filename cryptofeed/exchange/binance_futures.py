@@ -12,7 +12,7 @@ from typing import List, Tuple, Callable
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER
+from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
@@ -21,6 +21,7 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceFutures(Binance):
     id = BINANCE_FUTURES
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -28,22 +29,6 @@ class BinanceFutures(Binance):
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
-
-    def _address(self):
-        address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.subscription else self.subscription:
-            if chan == OPEN_INTEREST:
-                continue
-            for pair in self.symbols if not self.subscription else self.subscription[chan]:
-                pair = pair.lower()
-                if chan == TICKER:
-                    stream = f"{pair}@bookTicker/"
-                else:
-                    stream = f"{pair}@{chan}/"
-                address += stream
-        if address == f"{self.ws_endpoint}/stream?streams=":
-            return None
-        return address[:-1]
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
