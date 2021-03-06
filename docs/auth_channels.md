@@ -4,4 +4,4 @@ Cryptofeed has support for authenticated exchanges and authenticated data channe
 
 | Exchange | Auth Channel | Notes |
 -----------------------------------
-|          |              |       |
+| *         |     *         |   *    |
