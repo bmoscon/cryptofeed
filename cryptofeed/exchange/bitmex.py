@@ -18,7 +18,7 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.standards import timestamp_normalize, symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -30,24 +30,13 @@ class Bitmex(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.bitmex.com/realtime', **kwargs)
-
-        # TODO: the below verification is also done in Deribit and Kraken
-        # => move it in a function in super class Feed because this is common to all exchanges
-        active_pairs = Bitmex.info()['symbols']
-        if self.subscription:
-            pairs = list(self.subscription.values())
-            self.symbols = set(pair for inner in pairs for pair in inner)
-
-        for pair in self.symbols:
-            if not pair.startswith('.'):
-                if pair not in active_pairs:
-                    raise ValueError("{} is not active on BitMEX".format(pair))
         self._reset()
 
     def _reset(self):
         self.partial_received = defaultdict(bool)
         self.order_id = {}
-        for pair in self.symbols:
+        for pair in self.normalized_symbols:
+            pair = symbol_exchange_to_std(pair)
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             self.order_id[pair] = defaultdict(dict)
 
@@ -71,7 +60,7 @@ class Bitmex(Feed):
         for data in msg['data']:
             ts = timestamp_normalize(self.id, data['timestamp'])
             await self.callback(TRADES, feed=self.id,
-                                symbol=data['symbol'],
+                                symbol=symbol_exchange_to_std(data['symbol']),
                                 side=BUY if data['side'] == 'Buy' else SELL,
                                 amount=Decimal(data['size']),
                                 price=Decimal(data['price']),
@@ -88,7 +77,8 @@ class Bitmex(Feed):
         delta = {BID: [], ASK: []}
         # if we reset the book, force a full update
         forced = False
-        pair = msg['data'][0]['symbol']
+        pair = symbol_exchange_to_std(msg['data'][0]['symbol'])
+
         if not self.partial_received[pair]:
             # per bitmex documentation messages received before partial
             # should be discarded
@@ -148,7 +138,7 @@ class Bitmex(Feed):
     async def _ticker(self, msg: dict, timestamp: float):
         for data in msg['data']:
             await self.callback(TICKER, feed=self.id,
-                                symbol=data['symbol'],
+                                symbol=symbol_exchange_to_std(data['symbol']),
                                 bid=Decimal(data['bidPrice']),
                                 ask=Decimal(data['askPrice']),
                                 timestamp=timestamp_normalize(self.id, data['timestamp']),
@@ -188,7 +178,7 @@ class Bitmex(Feed):
             interval = data['fundingInterval']
             interval = int((interval - dt(interval.year, interval.month, interval.day, tzinfo=interval.tzinfo)).total_seconds())
             await self.callback(FUNDING, feed=self.id,
-                                symbol=data['symbol'],
+                                symbol=symbol_exchange_to_std(data['symbol']),
                                 timestamp=ts,
                                 receipt_timestamp=timestamp,
                                 interval=interval,
@@ -435,7 +425,7 @@ class Bitmex(Feed):
             if 'openInterest' in data:
                 ts = timestamp_normalize(self.id, data['timestamp'])
                 await self.callback(OPEN_INTEREST, feed=self.id,
-                                    symbol=data['symbol'],
+                                    symbol=symbol_exchange_to_std(data['symbol']),
                                     open_interest=data['openInterest'],
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
@@ -455,7 +445,7 @@ class Bitmex(Feed):
         if msg['action'] == 'insert':
             for data in msg['data']:
                 await self.callback(LIQUIDATIONS, feed=self.id,
-                                    symbol=data['symbol'],
+                                    symbol=symbol_exchange_to_std(data['symbol']),
                                     side=BUY if data['side'] == 'Buy' else SELL,
                                     leaves_qty=Decimal(data['leavesQty']),
                                     price=Decimal(data['price']),

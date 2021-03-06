@@ -31,8 +31,6 @@ _exchange_to_std = {}
 
 
 def load_exchange_symbol_mapping(exchange: str, key_id=None):
-    if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
-        return
     mapping = gen_symbols(exchange, key_id=key_id)
     for std, exch in mapping.items():
         _exchange_to_std[exch] = std
@@ -46,9 +44,6 @@ def get_exchange_info(exchange: str, key_id=None):
 
 
 def symbol_std_to_exchange(symbol: str, exchange: str):
-    # bitmex does its own validation of trading symbols dynamically
-    if exchange in {BITMEX, DERIBIT, KRAKEN_FUTURES}:
-        return symbol
     if symbol in _std_trading_symbols:
         try:
             return _std_trading_symbols[symbol][exchange]
