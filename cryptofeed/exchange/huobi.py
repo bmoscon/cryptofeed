@@ -232,7 +232,7 @@ class Huobi(Feed):
             if 'trade' in msg['ch']:
                 await self._trade(msg, timestamp)
             elif 'mbp' in msg['ch']:
-                await self._book(conn, msg, msg['ch'].split('.', 1)[0].upper(), timestamp)
+                await self._book(conn, msg, msg['ch'].split('.', 1)[0], timestamp)
             elif 'bbo' in msg['ch']:
                 await self._ticker(msg, timestamp)
             else:
