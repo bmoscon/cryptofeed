@@ -11,6 +11,7 @@
   * Update: Remove extraneous methods in feed objects used to query symbol information
   * Feature: Use realtime ticker for Binance
   * Bugfix: Bitmex symbols not being normalized correctly
+  * Bugfix: Fix GCP PubSub backend
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
