@@ -102,6 +102,8 @@ class Huobi(Feed):
         """
         exchange_pair = pair
         pair = symbol_exchange_to_std(exchange_pair)
+        # response already received, so reset the request limit
+        self.already_req[pair] = False
         self.last_prev_seq_num[pair] = msg["data"]["seqNum"]
 
         tmp = []
