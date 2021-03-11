@@ -75,7 +75,7 @@ setup(
     ],
     extras_require={
         "arctic": ["arctic"],
-        "gcp_pubsub": ["google_cloud_pubsub~=2.2.0", "gcloud_aio_pubsub"],
+        "gcp_pubsub": ["google_cloud_pubsub>=2.2,<2.4", "gcloud_aio_pubsub"],
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
