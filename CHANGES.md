@@ -12,6 +12,8 @@
   * Feature: Use realtime ticker for Binance
   * Bugfix: Bitmex symbols not being normalized correctly
   * Bugfix: Fix GCP PubSub backend
+  * Bugfix: Fix historical data REST api for Bitmex
+  * Feature: Use separate tasks (fed by async queue) for backend writing. Redis now uses this method
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
