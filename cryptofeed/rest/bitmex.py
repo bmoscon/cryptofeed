@@ -23,7 +23,6 @@ from cryptofeed.rest.api import API, request_retry
 from cryptofeed.standards import timestamp_normalize, symbol_std_to_exchange, symbol_exchange_to_std
 
 
-
 S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/{}/{}.csv.gz'
 RATE_LIMIT_SLEEP = 2
 API_MAX = 500
