@@ -16,6 +16,7 @@
   * Feature: Use separate tasks (fed by async queue) for backend writing. Redis now uses this method
   * Bugfix: Allow user specified max depths on Kraken
   * Feature: Add backend queue support to ZMQ backend
+  * Feature: Add backend queue support to Socket backends
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)
