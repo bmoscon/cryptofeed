@@ -19,7 +19,7 @@ async def renko(data=None):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(symbols=['XBTUSD'], channels=[TRADES], callbacks={
+    f.add_feed(Bitmex(symbols=['BTC-USD'], channels=[TRADES], callbacks={
                TRADES: RenkoFixed(Callback(renko), brick_size=3)}))
 
     f.run()
