@@ -7,12 +7,12 @@ associated with this software.
 import aioredis
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
-class RedisCallback:
+class RedisCallback(BackendQueue):
     def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, numeric_type=float, **kwargs):
         """
         setting key lets you override the prefix on the
@@ -28,16 +28,28 @@ class RedisCallback:
 class RedisZSetCallback(RedisCallback):
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         data = json.dumps(data)
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(self.conn_str)
-        await self.redis.zadd(f"{self.key}-{feed}-{symbol}", timestamp, data, exist=self.redis.ZSET_IF_NOT_EXIST)
+        await self.queue.put({'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'data': data})
+
+    async def writer(self):
+        while True:
+            if self.redis is None:
+                self.redis = await aioredis.create_redis_pool(self.conn_str)
+
+            async with self.read_queue() as update:
+                await self.redis.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['timestamp'], update['data'], exist=self.redis.ZSET_IF_NOT_EXIST)
 
 
 class RedisStreamCallback(RedisCallback):
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
-        if self.redis is None:
-            self.redis = await aioredis.create_redis_pool(self.conn_str)
-        await self.redis.xadd(f"{self.key}-{feed}-{symbol}", data)
+        await self.queue.put({'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'data': data})
+
+    async def writer(self):
+        while True:
+            if self.redis is None:
+                self.redis = await aioredis.create_redis_pool(self.conn_str)
+
+            async with self.read_queue() as update:
+                await self.redis.xadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['data'])
 
 
 class TradeRedis(RedisZSetCallback, BackendTradeCallback):

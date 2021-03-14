@@ -255,6 +255,7 @@ class FeedHandler:
                 conn.set_raw_data_callback(self.raw_message_capture)
                 loop.create_task(self._connect(conn, sub, handler))
                 self.timeout[conn.uuid] = timeout
+                feed.start(loop)
 
         if not start_loop:
             return

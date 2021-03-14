@@ -4,10 +4,28 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
+from asyncio.queues import Queue
+from contextlib import asynccontextmanager
 from decimal import Decimal
 
 from cryptofeed.backends._util import book_convert, book_delta_convert
 from cryptofeed.defines import BID, ASK
+
+
+class BackendQueue:
+    def start(self, loop: asyncio.AbstractEventLoop):
+        self.queue = Queue()
+        loop.create_task(self.writer())
+
+    async def writer(self):
+        raise NotImplementedError
+
+    @asynccontextmanager
+    async def read_queue(self):
+        update = await self.queue.get()
+        yield update
+        self.queue.task_done()
 
 
 class BackendBookCallback:

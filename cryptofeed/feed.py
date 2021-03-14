@@ -270,3 +270,12 @@ class Feed:
                     LOG.info('%s: stopping backend %s', self.id, cb_name)
                     await callback.stop()
         LOG.info('%s: feed shutdown completed', self.id)
+
+    def start(self, loop):
+        for callbacks in self.callbacks.values():
+            for callback in callbacks:
+                if hasattr(callback, 'start'):
+                    cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
+                    LOG.info('%s: starting backend task %s', self.id, cb_name)
+                    # Backends start tasks to write messages
+                    callback.start(loop)
