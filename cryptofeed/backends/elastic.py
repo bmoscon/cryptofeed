@@ -35,13 +35,13 @@ class ElasticCallback(HTTPCallback):
         if 'receipt_timestamp' in data:
             data['receipt_timestamp'] = f"{dt.fromtimestamp(data['receipt_timestamp'], tz=tz.utc).isoformat()}Z"
 
-        await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
+        await self.queue.put({'data': json.dumps(data), 'headers': {'content-type': 'application/json'}})
 
     async def write_bulk(self, data):
         data = itertools.chain(*zip([json.dumps({"index": {}})] * len(data), [json.dumps(d) for d in data]))
         data = '\n'.join(data)
         data = f"{data}\n"
-        await self.http_write('POST', data, headers={'content-type': 'application/x-ndjson'})
+        await self.queue.put({'data': data, 'headers': {'content-type': 'application/x-ndjson'}})
 
 
 class TradeElastic(ElasticCallback, BackendTradeCallback):
