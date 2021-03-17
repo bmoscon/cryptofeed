@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import requests
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
@@ -169,3 +169,7 @@ class MarketInfoInflux(InfluxCallback, BackendMarketInfoCallback):
 
 class TransactionsInflux(InfluxCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesInflux(InfluxCallback, BackendCandlesCallback):
+    default_key = 'candles'

@@ -8,7 +8,7 @@ import zmq
 import zmq.asyncio
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
@@ -69,3 +69,7 @@ class MarketInfoZMQ(ZMQCallback, BackendMarketInfoCallback):
 
 class TransactionsZMQ(ZMQCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesZMQ(ZMQCallback, BackendCandlesCallback):
+    default_key = 'candles'

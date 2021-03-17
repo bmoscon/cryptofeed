@@ -12,7 +12,7 @@ from datetime import timezone as tz
 from yapic import json
 
 from cryptofeed.backends._util import book_flatten
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
@@ -108,3 +108,7 @@ class MarketInfoElastic(ElasticCallback, BackendMarketInfoCallback):
 
 class TransactionsElastic(ElasticCallback, BackendTransactionsCallback):
     default_index = 'transactions'
+
+
+class CandlesElastic(ElasticCallback, BackendCandlesCallback):
+    default_index = 'candles'
