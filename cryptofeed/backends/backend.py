@@ -15,8 +15,12 @@ from cryptofeed.defines import BID, ASK
 
 class BackendQueue:
     def start(self, loop: asyncio.AbstractEventLoop):
+        if hasattr(self, 'started') and self.started:
+            # prevent a backend callback from starting more than 1 writer and creating more than 1 queue
+            return
         self.queue = Queue()
         loop.create_task(self.writer())
+        self.started = True
 
     async def writer(self):
         raise NotImplementedError
