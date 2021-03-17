@@ -5,8 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
-from cryptofeed.backends.victoriametrics import TradeVictoriaMetrics
-from cryptofeed.defines import TRADES
+from cryptofeed.backends.victoriametrics import TradeVictoriaMetrics, TickerVictoriaMetrics, BookVictoriaMetrics, BookDeltaVictoriaMetrics
+from cryptofeed.defines import TRADES, TICKER, L2_BOOK, BOOK_DELTA
 from cryptofeed.exchanges import Coinbase
 
 
@@ -16,6 +16,8 @@ def main():
 
     f = FeedHandler()
     f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: TradeVictoriaMetrics(addr, port, 'demo-trades')}))
+    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: TickerVictoriaMetrics(addr, port, 'demo-tickers')}))
+    f.add_feed(Coinbase(channels=[L2_BOOK], symbols=['BTC-USD'], callbacks={L2_BOOK: BookVictoriaMetrics(addr, port, 'demo-book'), BOOK_DELTA: BookDeltaVictoriaMetrics(addr, port, 'demo-book')}))
 
     f.run()
 
