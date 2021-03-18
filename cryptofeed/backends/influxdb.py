@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import requests
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
@@ -100,7 +100,7 @@ class InfluxCallback(HTTPCallback):
         d = d[:-1]
 
         update = f'{self.key}-{feed},symbol={symbol} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp}'
-        await self.http_write('POST', update, self.headers)
+        await self.queue.put({'data': update, 'headers': self.headers})
 
 
 class TradeInflux(InfluxCallback, BackendTradeCallback):
@@ -136,7 +136,7 @@ class InfluxBookCallback(InfluxCallback):
                     else:
                         raise UnsupportedType(f"Type {self.numeric_type} not supported")
                     ts += 1
-        await self.http_write('POST', '\n'.join(msg), self.headers)
+        await self.queue.put({'data': '\n'.join(msg), 'headers': self.headers})
 
 
 class BookInflux(InfluxBookCallback, BackendBookCallback):
@@ -169,3 +169,7 @@ class MarketInfoInflux(InfluxCallback, BackendMarketInfoCallback):
 
 class TransactionsInflux(InfluxCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesInflux(InfluxCallback, BackendCandlesCallback):
+    default_key = 'candles'

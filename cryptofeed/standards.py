@@ -15,7 +15,7 @@ import logging
 import pandas as pd
 
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX, BITMAX, BITMEX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
+                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
@@ -66,11 +66,16 @@ def symbol_exchange_to_std(symbol):
 
 
 def timestamp_normalize(exchange, ts):
+    if exchange == BYBIT:
+        if isinstance(ts, int):
+            return ts / 1000
+        else:
+            return ts.timestamp()
     if exchange in {BITFLYER, COINBASE, BLOCKCHAIN}:
         return ts.timestamp()
     elif exchange in {BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO}:
         return pd.Timestamp(ts).timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, BYBIT, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
+    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
@@ -248,6 +253,9 @@ _feed_to_exchange_map = {
     },
     ORDER_INFO: {
         GEMINI: ORDER_INFO
+    },
+    CANDLES: {
+        BINANCE: 'kline_'
     }
 }
 
@@ -319,6 +327,14 @@ def feed_to_exchange(exchange, feed, silent=False):
     if ret == UNSUPPORTED:
         raise_error()
     return ret
+
+
+def normalize_channel(exchange: str, feed: str) -> str:
+    for chan, entries in _feed_to_exchange_map.items():
+        if exchange in entries:
+            if entries[exchange] == feed:
+                return chan
+    return None
 
 
 def is_authenticated_channel(channel: str) -> bool:

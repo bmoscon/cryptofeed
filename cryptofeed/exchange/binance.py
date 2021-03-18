@@ -13,9 +13,9 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel
 
 
 LOG = logging.getLogger('feedhandler')
@@ -24,11 +24,16 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed):
     id = BINANCE
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
+    # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
+    valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
 
-    def __init__(self, **kwargs):
+    def __init__(self, candle_interval='1m', **kwargs):
         super().__init__({}, **kwargs)
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
+        self.candle_interval = candle_interval
+        if candle_interval not in self.valid_candle_intervals:
+            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         self.address = self._address()
         self._reset()
 
@@ -47,8 +52,11 @@ class Binance(Feed):
         address = self.ws_endpoint + '/stream?streams='
 
         for chan in self.channels if not self.subscription else self.subscription:
-            if chan == OPEN_INTEREST:
+            if normalize_channel(self.id, chan) == OPEN_INTEREST:
                 continue
+            if normalize_channel(self.id, chan) == CANDLES:
+                chan = f"{chan}{self.candle_interval}"
+
             for pair in self.symbols if not self.subscription else self.subscription[chan]:
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
@@ -268,6 +276,49 @@ class Binance(Feed):
                             next_funding_time=timestamp_normalize(self.id, msg['T']),
                             )
 
+    async def _candle(self, msg: dict, timestamp: float):
+        """
+        {
+            'e': 'kline',
+            'E': 1615927655524,
+            's': 'BTCUSDT',
+            'k': {
+                't': 1615927620000,
+                'T': 1615927679999,
+                's': 'BTCUSDT',
+                'i': '1m',
+                'f': 710917276,
+                'L': 710917780,
+                'o': '56215.99000000',
+                'c': '56232.07000000',
+                'h': '56238.59000000',
+                'l': '56181.99000000',
+                'v': '13.80522200',
+                'n': 505,
+                'x': False,
+                'q': '775978.37383076',
+                'V': '7.19660600',
+                'Q': '404521.60814919',
+                'B': '0'
+            }
+        }
+        """
+        await self.callback(CANDLES,
+                            feed=self.id,
+                            symbol=symbol_exchange_to_std(msg['s']),
+                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp,
+                            start=msg['k']['t'] / 1000,
+                            stop=msg['k']['T'] / 1000,
+                            interval=msg['k']['i'],
+                            trades=msg['k']['n'],
+                            open_price=Decimal(msg['k']['o']),
+                            close_price=Decimal(msg['k']['c']),
+                            high_price=Decimal(msg['k']['h']),
+                            low_price=Decimal(msg['k']['l']),
+                            volume=Decimal(msg['k']['v']),
+                            closed=msg['k']['x'])
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -285,6 +336,8 @@ class Binance(Feed):
                 await self._liquidations(msg, timestamp)
             elif msg['e'] == 'markPriceUpdate':
                 await self._funding(msg, timestamp)
+            elif msg['e'] == 'kline':
+                await self._candle(msg, timestamp)
             else:
                 LOG.warning("%s: Unexpected message received: %s", self.id, msg)
         elif 'A' in msg:

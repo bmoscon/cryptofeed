@@ -18,6 +18,10 @@
   * Feature: Add backend queue support to ZMQ backend
   * Feature: Add backend queue support to Socket backends
   * Feature: Add VictoriaMetrics support via backend
+  * Feature: Add backend queue support to influx and elastic
+  * Feature: Candle support
+  * Bugfix: Ignore untradeable symbols in Binance symbol generation
+
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)

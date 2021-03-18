@@ -5,9 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
-from cryptofeed.backends.redis import BookRedis, FundingRedis, OpenInterestRedis, TradeRedis
-from cryptofeed.defines import FUNDING, L2_BOOK, OPEN_INTEREST, TRADES
-from cryptofeed.exchanges import Bitfinex, Bitmex, Coinbase, Gemini
+from cryptofeed.backends.redis import BookRedis, FundingRedis, OpenInterestRedis, TradeRedis, CandlesStream
+from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, OPEN_INTEREST, TRADES
+from cryptofeed.exchanges import Bitfinex, Bitmex, Coinbase, Gemini, Binance
 
 
 def main():
@@ -17,6 +17,7 @@ def main():
     f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
     f.add_feed(Coinbase(max_depth=10, channels=[L2_BOOK], symbols=['BTC-USD'], callbacks={L2_BOOK: BookRedis()}))
     f.add_feed(Gemini(symbols=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
+    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[CANDLES], callbacks={CANDLES: CandlesStream()}))
 
     f.run()
 

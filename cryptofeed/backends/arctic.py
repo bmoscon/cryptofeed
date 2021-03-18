@@ -7,10 +7,10 @@ associated with this software.
 import arctic
 import pandas as pd
 
-from cryptofeed.backends.backend import (BackendFundingCallback, BackendOpenInterestCallback,
+from cryptofeed.backends.backend import (BackendFundingCallback, BackendCandlesCallback, BackendOpenInterestCallback,
                                          BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback,
                                          BackendMarketInfoCallback, BackendTransactionsCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS
+from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS
 
 
 class ArcticCallback:
@@ -74,3 +74,7 @@ class MarketInfoArctic(ArcticCallback, BackendMarketInfoCallback):
 
 class TransactionsArctic(ArcticCallback, BackendTransactionsCallback):
     default_key = TRANSACTIONS
+
+
+class CandlesArctic(ArcticCallback, BackendCandlesCallback):
+    default_key = CANDLES

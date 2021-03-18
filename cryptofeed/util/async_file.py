@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import atexit
 from collections import defaultdict
 
@@ -47,4 +48,4 @@ class AsyncFileCallback:
             self.data[uuid].append(f"{timestamp}: {data}")
 
         if len(self.data[uuid]) >= self.length:
-            await self.write(uuid)
+            await asyncio.create_task(self.write(uuid))
