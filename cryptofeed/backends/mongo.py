@@ -8,7 +8,7 @@ import bson
 import motor.motor_asyncio
 
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
@@ -62,3 +62,7 @@ class MarketInfoMongo(MongoCallback, BackendMarketInfoCallback):
 
 class TransactionsMongo(MongoCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesMongo(MongoCallback, BackendCandlesCallback):
+    default_key = 'candles'

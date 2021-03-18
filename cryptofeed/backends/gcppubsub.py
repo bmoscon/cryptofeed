@@ -22,7 +22,7 @@ from gcloud.aio.pubsub import PublisherClient, PubsubMessage
 
 from cryptofeed.backends.backend import (
     BackendBookCallback,
-    BackendBookDeltaCallback,
+    BackendBookDeltaCallback, BackendCandlesCallback,
     BackendFundingCallback,
     BackendLiquidationsCallback,
     BackendMarketInfoCallback,
@@ -141,3 +141,7 @@ class MarketInfoGCPPubSub(GCPPubSubCallback, BackendMarketInfoCallback):
 
 class TransactionsGCPPubSub(GCPPubSubCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesGCPPubSub(GCPPubSubCallback, BackendCandlesCallback):
+    default_key = 'candles'

@@ -8,8 +8,8 @@ from decimal import Decimal
 
 from cryptofeed.symbols import binance_symbols
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback, FuturesIndexCallback, OpenInterestCallback
-from cryptofeed.defines import BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, VOLUME, FUTURES_INDEX, BOOK_DELTA
+from cryptofeed.callback import CandleCallback, BookCallback, FundingCallback, TickerCallback, TradeCallback, FuturesIndexCallback, OpenInterestCallback
+from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, VOLUME, FUTURES_INDEX, BOOK_DELTA
 from cryptofeed.exchanges import (FTX, Binance, BinanceFutures, Bitfinex, Bitflyer, Bitmax, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
                                   HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit)
 
@@ -20,11 +20,11 @@ from cryptofeed.exchanges import (FTX, Binance, BinanceFutures, Bitfinex, Bitfly
 # while the callbacks are being handled (unless they in turn await other functions or I/O)
 # so they should be as lightweight as possible
 async def ticker(feed, symbol, bid, ask, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} Bid: {bid} Ask: {ask}')
+    print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} Bid: {bid} Ask: {ask}')
 
 
 async def delta(feed, symbol, delta, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} Delta Bid Size is {len(delta[BID])} Delta Ask Size is {len(delta[ASK])}')
+    print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} Delta Bid Size is {len(delta[BID])} Delta Ask Size is {len(delta[ASK])}')
 
 
 async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_timestamp):
@@ -32,11 +32,11 @@ async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_
     assert isinstance(side, str)
     assert isinstance(amount, Decimal)
     assert isinstance(price, Decimal)
-    print(f"Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
+    print(f"Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Symbol: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
 
 async def book(feed, symbol, book, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
+    print(f'Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Symbol: {symbol} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
 
 
 async def funding(**kwargs):
@@ -45,7 +45,7 @@ async def funding(**kwargs):
 
 
 async def oi(feed, symbol, open_interest, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} open interest: {open_interest}')
+    print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} open interest: {open_interest}')
 
 
 async def volume(**kwargs):
@@ -54,6 +54,10 @@ async def volume(**kwargs):
 
 async def futures_index(**kwargs):
     print(f"FuturesIndex: {kwargs}")
+
+
+async def candle_callback(feed, symbol, start, stop, interval, trades, open_price, close_price, high_price, low_price, volume, closed, timestamp, receipt_timestamp):
+    print(f"Candle: {timestamp} {receipt_timestamp} Feed: {feed} Symbol: {symbol} Start: {start} Stop: {stop} Interval: {interval} Trades: {trades} Open: {open_price} Close: {close_price} High: {high_price} Low: {low_price} Volume: {volume} Candle Closed? {closed}")
 
 
 def main():
@@ -100,6 +104,7 @@ def main():
     f.add_feed(Bitmax(symbols=['XRP-USDT', 'BTC-USDT'], channels=[L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book}))
     f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[L2_BOOK, TRADES, TICKER], callbacks={L2_BOOK: book, BOOK_DELTA: delta, TICKER: ticker, TRADES: trade}))
     f.add_feed(BinanceFutures(symbols=['BTC-USDT'], channels=[TICKER], callbacks={TICKER: ticker}))
+    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[CANDLES], callbacks={CANDLES: CandleCallback(candle_callback)}))
 
     f.run()
 

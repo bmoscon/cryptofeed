@@ -12,7 +12,7 @@ from datetime import timezone as tz
 from yapic import json
 
 from cryptofeed.backends._util import book_flatten
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
@@ -35,13 +35,13 @@ class ElasticCallback(HTTPCallback):
         if 'receipt_timestamp' in data:
             data['receipt_timestamp'] = f"{dt.fromtimestamp(data['receipt_timestamp'], tz=tz.utc).isoformat()}Z"
 
-        await self.http_write('POST', json.dumps(data), headers={'content-type': 'application/json'})
+        await self.queue.put({'data': json.dumps(data), 'headers': {'content-type': 'application/json'}})
 
     async def write_bulk(self, data):
         data = itertools.chain(*zip([json.dumps({"index": {}})] * len(data), [json.dumps(d) for d in data]))
         data = '\n'.join(data)
         data = f"{data}\n"
-        await self.http_write('POST', data, headers={'content-type': 'application/x-ndjson'})
+        await self.queue.put({'data': data, 'headers': {'content-type': 'application/x-ndjson'}})
 
 
 class TradeElastic(ElasticCallback, BackendTradeCallback):
@@ -108,3 +108,7 @@ class MarketInfoElastic(ElasticCallback, BackendMarketInfoCallback):
 
 class TransactionsElastic(ElasticCallback, BackendTransactionsCallback):
     default_index = 'transactions'
+
+
+class CandlesElastic(ElasticCallback, BackendCandlesCallback):
+    default_index = 'candles'

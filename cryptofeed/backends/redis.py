@@ -7,7 +7,7 @@ associated with this software.
 import aioredis
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, BackendCandlesCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
@@ -130,3 +130,11 @@ class TransactionsRedis(RedisZSetCallback, BackendTransactionsCallback):
 
 class TransactionsStream(RedisStreamCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesRedis(RedisZSetCallback, BackendCandlesCallback):
+    default_key = 'candles'
+
+
+class CandlesStream(RedisStreamCallback, BackendCandlesCallback):
+    default_key = 'candles'

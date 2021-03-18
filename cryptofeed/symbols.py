@@ -70,6 +70,10 @@ def _binance_symbols(endpoint: str, exchange: str):
         ret = {}
         r = requests.get(endpoint)
         for symbol in r.json()['symbols']:
+            if symbol.get('status', 'TRADING') != "TRADING":
+                continue
+            if symbol.get('contractStatus', 'TRADING') != "TRADING":
+                continue
             split = len(symbol['baseAsset'])
             normalized = symbol['symbol'][:split] + SYMBOL_SEP + symbol['symbol'][split:]
             ret[normalized] = symbol['symbol']
@@ -82,11 +86,11 @@ def _binance_symbols(endpoint: str, exchange: str):
 
 
 def binance_symbols() -> Dict[str, str]:
-    return _binance_symbols('https://api.binance.com/api/v1/exchangeInfo', BINANCE)
+    return _binance_symbols('https://api.binance.com/api/v3/exchangeInfo', BINANCE)
 
 
 def binance_us_symbols() -> Dict[str, str]:
-    return _binance_symbols('https://api.binance.us/api/v1/exchangeInfo', BINANCE_US)
+    return _binance_symbols('https://api.binance.us/api/v3/exchangeInfo', BINANCE_US)
 
 
 def binance_futures_symbols() -> Dict[str, str]:

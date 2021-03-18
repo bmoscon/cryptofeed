@@ -10,7 +10,7 @@ from textwrap import wrap
 
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
@@ -136,3 +136,7 @@ class MarketInfoSocket(SocketCallback, BackendMarketInfoCallback):
 
 class TransactionsSocket(SocketCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesSocket(SocketCallback, BackendCandlesCallback):
+    default_key = 'candles'

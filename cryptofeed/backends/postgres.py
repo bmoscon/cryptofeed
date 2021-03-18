@@ -9,11 +9,11 @@ from datetime import datetime as dt
 import asyncpg
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendFuturesIndexCallback, BackendMarketInfoCallback,
                                          BackendTransactionsCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX, MARKET_INFO, TRANSACTIONS
+from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX, MARKET_INFO, TRANSACTIONS
 
 
 class PostgresCallback:
@@ -138,9 +138,22 @@ class BookDeltaPostgres(PostgresCallback, BackendBookDeltaCallback):
         await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
-class MarquetInfoPostgres(PostgresCallback, BackendMarketInfoCallback):
+class MarketInfoPostgres(PostgresCallback, BackendMarketInfoCallback):
     default_table = MARKET_INFO
+
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
 class TransactionsPostgres(PostgresCallback, BackendTransactionsCallback):
     default_table = TRANSACTIONS
+
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
+
+
+class CandlesPostgres(PostgresCallback, BackendCandlesCallback):
+    default_table = CANDLES
+
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
