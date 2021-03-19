@@ -61,7 +61,8 @@ class PostgresCallback(BackendQueue):
                 async with self.read_many_queue(self._cache_size) as updates:
                     await self.write_cache(updates)
             else:
-                async with self.read_queue() as update:
+                size = max(self.queue.qsize(), 1)
+                async with self.read_many_queue(size) as update:
                     await self.write_cache([update])
 
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
