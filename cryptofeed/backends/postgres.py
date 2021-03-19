@@ -18,7 +18,7 @@ from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, 
 
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, table=None, numeric_type=float, cache_size=0, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, table=None, numeric_type=float, max_batch=100, **kwargs):
         """
         host: str
             Database host address
@@ -30,8 +30,8 @@ class PostgresCallback(BackendQueue):
             Password to be used for authentication, if the server requires one.
         table: str
             Table name to insert into. Defaults to default_table that should be specified in child class
-        cache_size: int
-            Number of lines to cache before writing the whole as a batch. Defaults to 0, meaning no caching.
+        max_batch: int
+            maximum batch size to use when writing rows to postgres
         """
         self.conn = None
         self.table = table if table else self.default_table
@@ -40,7 +40,7 @@ class PostgresCallback(BackendQueue):
         self.db = db
         self.pw = pw
         self.host = host
-        self._cache_size = cache_size
+        self.max_batch = max_batch
 
     async def _connect(self):
         if self.conn is None:
@@ -57,13 +57,10 @@ class PostgresCallback(BackendQueue):
 
     async def writer(self):
         while True:
-            if self._cache_size:
-                async with self.read_many_queue(self._cache_size) as updates:
-                    await self.write_cache(updates)
-            else:
-                size = max(self.queue.qsize(), 1)
-                async with self.read_many_queue(size) as update:
-                    await self.write_cache([update])
+            size = max(self.queue.qsize(), 1)
+            size = min(self.max_batch, size)
+            async with self.read_many_queue(self._cache_size) as updates:
+                await self.write_cache(updates)
 
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         ts = dt.utcfromtimestamp(timestamp)
