@@ -27,11 +27,12 @@ class Binance(Feed):
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
 
-    def __init__(self, candle_interval='1m', **kwargs):
+    def __init__(self, candle_interval='1m', candle_closed_only=False, **kwargs):
         super().__init__({}, **kwargs)
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.candle_interval = candle_interval
+        self.candle_closed_only = candle_closed_only
         if candle_interval not in self.valid_candle_intervals:
             raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         self.address = self._address()
@@ -303,6 +304,9 @@ class Binance(Feed):
             }
         }
         """
+        if self.candle_closed_only and not msg['k']['x']:
+            return
+
         await self.callback(CANDLES,
                             feed=self.id,
                             symbol=symbol_exchange_to_std(msg['s']),

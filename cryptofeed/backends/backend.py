@@ -31,6 +31,20 @@ class BackendQueue:
         yield update
         self.queue.task_done()
 
+    @asynccontextmanager
+    async def read_many_queue(self, count: int):
+        ret = []
+        counter = 0
+        while counter < count:
+            update = await self.queue.get()
+            ret.append(update)
+            counter += 1
+
+        yield ret
+
+        for _ in range(count):
+            self.queue.task_done()
+
 
 class BackendBookCallback:
     async def __call__(self, *, feed: str, symbol: str, book: dict, timestamp: float, receipt_timestamp: float):
