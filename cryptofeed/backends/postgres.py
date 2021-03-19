@@ -59,15 +59,15 @@ class PostgresCallback(BackendQueue):
         while True:
             size = max(self.queue.qsize(), 1)
             size = min(self.max_batch, size)
-            async with self.read_many_queue(self._cache_size) as updates:
-                await self.write_cache(updates)
+            async with self.read_many_queue(size) as updates:
+                await self.write_batch(updates)
 
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         ts = dt.utcfromtimestamp(timestamp)
         rts = dt.utcfromtimestamp(receipt_timestamp)
         await self.queue.put((feed, symbol, ts, rts, data))
 
-    async def write_cache(self, updates: list):
+    async def write_batch(self, updates: list):
         await self._connect()
 
         args_str = ','.join([self.format(u) for u in updates])
@@ -82,7 +82,7 @@ class PostgresCallback(BackendQueue):
     async def stop(self):
         if self.queue.qsize() > 0:
             async with self.read_many_queue(self.queue.qsize()) as updates:
-                await self.write_cache(updates)
+                await self.write_batch(updates)
 
 
 class TradePostgres(PostgresCallback, BackendTradeCallback):
