@@ -33,7 +33,7 @@ class RedisZSetCallback(RedisCallback):
     async def writer(self):
         while True:
             if self.redis is None:
-                self.redis = await aioredis.create_redis_pool(self.conn_str)
+                self.redis = await aioredis.create_redis(self.conn_str)
 
             async with self.read_queue() as update:
                 await self.redis.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['timestamp'], update['data'], exist=self.redis.ZSET_IF_NOT_EXIST)
