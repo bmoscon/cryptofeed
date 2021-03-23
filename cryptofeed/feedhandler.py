@@ -210,6 +210,7 @@ class FeedHandler:
         for conn, sub, handler in f.connect():
             conn.set_raw_data_callback(self.raw_message_capture)
             self.timeout[conn.uuid] = timeout
+            feed.start(loop)
             loop.create_task(self._connect(conn, sub, handler))
 
     def add_nbbo(self, feeds, symbols, callback, timeout=120):
