@@ -19,37 +19,54 @@ class RedisCallback(BackendQueue):
         key used in redis. The defaults are related to the data
         being stored, i.e. trade, funding, etc
         """
-        self.redis = None
+        prefix = 'redis://'
+        if socket:
+            prefix = 'unix://'
+
+        self.redis = aioredis.from_url(f"{prefix}{host}:{port}")
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
-        self.conn_str = socket if socket else f'redis://{host}:{port}'
 
 
 class RedisZSetCallback(RedisCallback):
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         data = json.dumps(data)
-        await self.queue.put({'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'data': data})
+        await self.queue.put({'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'data': data})
 
     async def writer(self):
         while True:
-            if self.redis is None:
-                self.redis = await aioredis.create_redis(self.conn_str)
 
-            async with self.read_queue() as update:
-                await self.redis.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['timestamp'], update['data'], exist=self.redis.ZSET_IF_NOT_EXIST)
+            count = self.queue.qsize()
+            if count > 1:
+                async with self.read_many_queue(count) as updates:
+                    async with self.redis.pipeline(transaction=False) as pipe:
+                        p = pipe
+                        for update in updates:
+                            p = p.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", {update['data']: update['timestamp']}, nx=True)
+                        await pipe.execute()
+            else:
+                async with self.read_queue() as update:
+                    await self.redis.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", {update['data']: update['timestamp']}, nx=True)
 
 
 class RedisStreamCallback(RedisCallback):
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
-        await self.queue.put({'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'data': data})
+        await self.queue.put({'feed': feed, 'symbol': symbol, 'data': data})
 
     async def writer(self):
         while True:
-            if self.redis is None:
-                self.redis = await aioredis.create_redis_pool(self.conn_str)
 
-            async with self.read_queue() as update:
-                await self.redis.xadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['data'])
+            count = self.queue.qsize()
+            if count > 1:
+                async with self.read_many_queue(count) as updates:
+                    async with self.redis.pipeline(transaction=False) as pipe:
+                        p = pipe
+                        for update in updates:
+                            p = p.xadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['data'])
+                        await pipe.execute()
+            else:
+                async with self.read_queue() as update:
+                    await self.redis.xadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['data'])
 
 
 class TradeRedis(RedisZSetCallback, BackendTradeCallback):
@@ -80,7 +97,10 @@ class BookStream(RedisStreamCallback, BackendBookCallback):
     default_key = 'book'
 
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
-        data = {'data': json.dumps(data)}
+        data['delta'] = 'False'
+        data['bid'] = json.dumps(data['bid'])
+        data['ask'] = json.dumps(data['ask'])
+
         await super().write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
@@ -88,7 +108,10 @@ class BookDeltaStream(RedisStreamCallback, BackendBookDeltaCallback):
     default_key = 'book'
 
     async def write(self, feed: str, symbol: str, timestamp: str, receipt_timestamp: float, data: dict):
-        data = {'data': json.dumps(data)}
+        data['delta'] = 'True'
+        data['bid'] = json.dumps(data['bid'])
+        data['ask'] = json.dumps(data['ask'])
+
         await super().write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
