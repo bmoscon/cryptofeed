@@ -8,7 +8,7 @@ associated with this software.
 A set of helper functions for getting instrument info
 '''
 
-from cryptofeed.defines import PERPETURAL, OPTION, FUTURE
+from cryptofeed.defines import PERPETURAL, OPTION, FUTURE, BTC, ETH
 
 def get_instrument_type(instrument_name: str):
     if instrument_name.endswith("-PERPETUAL"):

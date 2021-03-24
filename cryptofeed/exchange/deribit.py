@@ -5,9 +5,10 @@ import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 from collections import defaultdict
+from datetime import datetime
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, PERPETURAL, OPTION, FUTURE
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, PERPETURAL, OPTION, FUTURE, C, P, BTC, ETH
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange, symbol_std_to_exchange, is_authenticated_channel
@@ -17,6 +18,23 @@ from cryptofeed.util.instrument import get_instrument_type
 
 LOG = logging.getLogger('feedhandler')
 
+class DeribitInstrument():
+    def __init__(self, instrument_name):
+        self.instrument_name = instrument_name
+        instrument_properties = instrument_name.split('-')
+        self.currency = BTC if instrument_properties[0] == 'BTC' else ETH
+        if len(instrument_properties) == 2:
+            if instrument_properties[1] == 'PERPETUAL':
+                self.instrument_type = PERPETURAL
+            else:
+                self.instrument_type = FUTURE
+                self.expiry_date = instrument_properties[1]
+        else:
+            self.instrument_type = OPTION
+            self.expiry_date_str = instrument_properties[1]
+            self.expiry_date = datetime.strptime(self.expiry_date_str, "%d%b%y")
+            self.strike_price = instrument_properties[2]
+            self.option_type = C if instrument_properties[3] == 'C' else P
 
 class Deribit(Feed):
     id = DERIBIT
@@ -52,6 +70,13 @@ class Deribit(Feed):
     def get_instruments():
         r = Deribit.get_instruments_info()
         instruments = [instr['instrumentName'] for instr in r['result']]
+        return instruments
+
+    @staticmethod
+    def get_instrument_objects():
+        r = Deribit.get_instruments()
+        print(r)
+        instruments = [DeribitInstrument(instr) for instr in r]
         return instruments
 
     @staticmethod
