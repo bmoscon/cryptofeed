@@ -90,6 +90,13 @@ PERPETURAL = 'perpetual'
 OPTION = 'option'
 FUTURE = 'future'
 
+# Currency
+BTC = 'BTC'
+ETH = 'ETH'
+
+# Option type
+C = 'call'
+P = 'put'
 
 """
 L2 Orderbook Layout
