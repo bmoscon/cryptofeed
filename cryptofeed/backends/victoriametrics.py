@@ -6,7 +6,7 @@ associated with this software.
 '''
 import logging
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.socket import SocketCallback
@@ -137,3 +137,7 @@ class MarketInfoVictoriaMetrics(VictoriaMetricsCallback, BackendMarketInfoCallba
 
 class TransactionsVictoriaMetrics(VictoriaMetricsCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesVictoriaMetrics(VictoriaMetricsCallback, BackendCandlesCallback):
+    default_key = 'candles'
