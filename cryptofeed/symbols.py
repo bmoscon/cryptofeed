@@ -379,7 +379,7 @@ def okcoin_symbols() -> Dict[str, str]:
         raise_failure_explanation('OKCOIN', why, {"": r})
 
 
-def okex_symbols() -> Dict[str, str]:
+def okex_symbols(*args) -> Dict[str, str]:
     option_urls = okex_compute_option_urls_from_underlyings()
     other_urls = ['https://www.okex.com/api/spot/v3/instruments',
                   'https://www.okex.com/api/swap/v3/instruments/ticker',
