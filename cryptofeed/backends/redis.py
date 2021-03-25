@@ -40,9 +40,8 @@ class RedisZSetCallback(RedisCallback):
             if count > 1:
                 async with self.read_many_queue(count) as updates:
                     async with self.redis.pipeline(transaction=False) as pipe:
-                        p = pipe
                         for update in updates:
-                            p = p.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", {update['data']: update['timestamp']}, nx=True)
+                            pipe = pipe.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", {update['data']: update['timestamp']}, nx=True)
                         await pipe.execute()
             else:
                 async with self.read_queue() as update:
@@ -60,9 +59,8 @@ class RedisStreamCallback(RedisCallback):
             if count > 1:
                 async with self.read_many_queue(count) as updates:
                     async with self.redis.pipeline(transaction=False) as pipe:
-                        p = pipe
                         for update in updates:
-                            p = p.xadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['data'])
+                            pipe = pipe.xadd(f"{self.key}-{update['feed']}-{update['symbol']}", update['data'])
                         await pipe.execute()
             else:
                 async with self.read_queue() as update:
