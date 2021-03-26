@@ -9,6 +9,7 @@ import time
 
 from decimal import Decimal
 from itertools import islice
+from functools import partial
 import logging
 import websockets
 import zlib
@@ -192,12 +193,13 @@ class OKCoin(Feed):
                 
     
     async def _order(self, msg: dict, timestamp: float):
+
         if msg['data'][0]['status'] == "open":
             status = "active"
         else:
             status = msg['data'][0]['status']
 
-        keys = ('filled_size', 'size', 'price', 'filled_notional')
+        keys = ('filled_size', 'size', 'filled_notional')
         data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
 
         await self.callback(ORDER_INFO, feed=self.id,
@@ -205,14 +207,14 @@ class OKCoin(Feed):
                             status=status,
                             order_id=msg['data'][0]['order_id'],
                             side=BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
-                            order_type=msg['data'][0]['order_type'],
+                            order_type=msg['data'][0]['type'],
                             timestamp=msg['data'][0]['timestamp'].timestamp(),
                             receipt_timestamp=timestamp,
                             **data
                             )
         
     async def _login(self, msg: dict, timestamp: float):
-        print(f"Login result: {msg}")
+        LOG.info('%s: Websocket logged in? %s', self.id, msg['success'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -226,10 +228,6 @@ class OKCoin(Feed):
             elif msg['event'] == 'subscribe':
                 pass
             elif msg['event'] == 'login':
-                if msg['success'] == True:
-                    LOG.info('%s: Websocket authenticated successfully', self.id)
-                elif msg['success'] == False:
-                    LOG.info('%s: Websocket authentication failure', self.id)
                 await self._login(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
@@ -253,19 +251,23 @@ class OKCoin(Feed):
         ret = []
         for channel in self.subscription or self.channels:
             if is_authenticated_channel(channel):
-                ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), self.auth_subscribe, self.message_handler))
+                if channel in self.subscription:
+                    ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=self.subscription.get(channel).pop()), self.message_handler))
+                else:
+                    for symbol in self.symbols:
+                        ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=symbol), self.message_handler))
             else:
                 ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
 
         return ret
     
-    async def auth_subscribe(self, conn: AsyncConnection, options=None):
+    async def user_order_subscribe(self, conn: AsyncConnection, symbol=None):
         self.__reset()
         timestamp, sign = generate_token(self.key_id, self.key_secret)            
         login_param = {"op": "login", "args": [self.key_id, self.config.okex.key_passphrase, timestamp, sign.decode("utf-8")]}
         login_str = json.dumps(login_param)
         await conn.send(login_str)
         await asyncio.sleep(5)
-        sub_param = {"op": "subscribe", "args": ["spot/order:BTC-USDT"]}
+        sub_param = {"op": "subscribe", "args": ["spot/order:{}".format(symbol)]}
         sub_str = json.dumps(sub_param)
         await conn.send(sub_str)
