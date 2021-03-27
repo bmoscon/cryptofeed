@@ -153,7 +153,12 @@ def bybit_symbols() -> Dict[str, str]:
         r = requests.get('https://api.bybit.com/v2/public/symbols')
         ret = {}
         for symbol in r.json()['result']:
-            normalized = f"{symbol['base_currency']}{SYMBOL_SEP}{symbol['quote_currency']}"
+            quote = symbol['quote_currency']
+            if not symbol['name'].endswith(quote):
+                base, contract = symbol['name'].split(quote)
+                normalized = f"{base}{SYMBOL_SEP}{quote}-{contract}"
+            else:
+                normalized = f"{symbol['base_currency']}{SYMBOL_SEP}{quote}"
             ret[normalized] = symbol['name']
             _exchange_info[BYBIT]['tick_size'][normalized] = symbol['price_filter']['tick_size']
         return ret
