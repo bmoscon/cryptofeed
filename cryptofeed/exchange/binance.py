@@ -55,10 +55,10 @@ class Binance(Feed):
         for chan in self.channels if not self.subscription else self.subscription:
             if normalize_channel(self.id, chan) == OPEN_INTEREST:
                 continue
-            if normalize_channel(self.id, chan) == CANDLES:
-                chan = f"{chan}{self.candle_interval}"
 
             for pair in self.symbols if not self.subscription else self.subscription[chan]:
+                if normalize_channel(self.id, chan) == CANDLES:
+                    chan = f"{chan}{self.candle_interval}"
                 pair = pair.lower()
                 stream = f"{pair}@{chan}/"
                 address += stream
