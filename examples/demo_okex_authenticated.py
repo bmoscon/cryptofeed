@@ -18,5 +18,6 @@ def main():
     f.add_feed(OKEX, channels=[ORDER_INFO], symbols=['BTC-USDT'], callbacks={ORDER_INFO: OrderInfoCallback(order)})
     f.run()
 
+
 if __name__ == '__main__':
     main()

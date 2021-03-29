@@ -9,6 +9,7 @@ import hmac
 import requests
 from dateutil.parser import parse
 
+
 def get_server_time():
     url = "https://www.okex.com/api/general/v3/time"
     response = requests.get(url)
@@ -17,11 +18,13 @@ def get_server_time():
     else:
         return ""
 
+
 def server_timestamp():
     server_time = get_server_time()
     parsed_t = parse(server_time)
     timestamp = parsed_t.timestamp()
     return timestamp
+
 
 def create_sign(timestamp: str, key_secret: str):
     message = timestamp + 'GET' + '/users/self/verify'
@@ -29,6 +32,7 @@ def create_sign(timestamp: str, key_secret: str):
     d = mac.digest()
     sign = base64.b64encode(d)
     return sign
+
 
 def generate_token(key_id: str, key_secret: str) -> dict:
     timestamp = str(server_timestamp())

@@ -5,13 +5,11 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-import time
 
 from decimal import Decimal
 from itertools import islice
 from functools import partial
 import logging
-import websockets
 import zlib
 from typing import List, Tuple, Callable
 
@@ -100,7 +98,7 @@ class OKCoin(Feed):
                     if instrument_type != 'swap' and 'funding' in chan:
                         continue  # No funding for spot, futures and options
                     yield f"{chan.format(instrument_type)}:{symbol}"
-            
+
     async def _ticker(self, msg: dict, timestamp: float):
         """
         {'table': 'spot/ticker', 'data': [{'instrument_id': 'BTC-USD', 'last': '3977.74', 'best_bid': '3977.08', 'best_ask': '3978.73', 'open_24h': '3978.21', 'high_24h': '3995.43', 'low_24h': '3961.02', 'base_volume_24h': '248.245', 'quote_volume_24h': '988112.225861', 'timestamp': '2019-03-22T22:26:34.019Z'}]}
@@ -189,10 +187,8 @@ class OKCoin(Feed):
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
                 await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
-                
-    
-    async def _order(self, msg: dict, timestamp: float):
 
+    async def _order(self, msg: dict, timestamp: float):
         if msg['data'][0]['status'] == "open":
             status = "active"
         else:
@@ -211,7 +207,7 @@ class OKCoin(Feed):
                             receipt_timestamp=timestamp,
                             **data
                             )
-        
+
     async def _login(self, msg: dict, timestamp: float):
         LOG.info('%s: Websocket logged in? %s', self.id, msg['success'])
 
@@ -245,7 +241,7 @@ class OKCoin(Feed):
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
-    
+
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
         for channel in self.subscription or self.channels:
@@ -257,10 +253,10 @@ class OKCoin(Feed):
                 ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
 
         return ret
-    
+
     async def user_order_subscribe(self, conn: AsyncConnection, symbol=None):
         self.__reset()
-        timestamp, sign = generate_token(self.key_id, self.key_secret)            
+        timestamp, sign = generate_token(self.key_id, self.key_secret)
         login_param = {"op": "login", "args": [self.key_id, self.config.okex.key_passphrase, timestamp, sign.decode("utf-8")]}
         login_str = json.dumps(login_param)
         await conn.send(login_str)
