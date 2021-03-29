@@ -77,7 +77,6 @@ class OKCoin(Feed):
         for chunk in split.list_by_max_items(symbol_channels, 33):
             LOG.info("%s: Subscribe to %s args from %r to %r", self.id, len(chunk), chunk[0], chunk[-1])
             request = {"op": "subscribe", "args": chunk}
-            print('request is:', request)
             await conn.send(json.dumps(request))
 
     @staticmethod
@@ -251,11 +250,9 @@ class OKCoin(Feed):
         ret = []
         for channel in self.subscription or self.channels:
             if is_authenticated_channel(channel):
-                if channel in self.subscription:
-                    ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=self.subscription.get(channel).pop()), self.message_handler))
-                else:
-                    for symbol in self.symbols:
-                        ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=symbol), self.message_handler))
+                syms = self.symbols or self.subscription[channel]
+                for s in syms:
+                    ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler))
             else:
                 ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
 
