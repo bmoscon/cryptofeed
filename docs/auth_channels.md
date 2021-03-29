@@ -5,3 +5,4 @@ Cryptofeed has support for authenticated exchanges and authenticated data channe
 | Exchange | Auth Channel | Notes |
 | ---------|--------------|-------|
 | Gemini   | ORDER_INFO   | Information about user's orders |
+| OKEX/OKCOIN | ORDER_INFO | Information about user's orders |
