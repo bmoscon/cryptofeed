@@ -23,6 +23,7 @@
   * Bugfix: Ignore untradeable symbols in Binance symbol generation
   * Feature: Add backend support for queues in Postgres. Rework postgres backend and supply example SQL file to create tables for demo
   * Bugfix: Fix ByBit symbol generation
+  * Feature: Authenticated channel support for OKEX/OKCOIN
 
 
 ### 1.7.0 (2021-02-15)
