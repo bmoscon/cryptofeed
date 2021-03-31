@@ -4,23 +4,23 @@ on:
   push:
     paths:
       - '*.py'
+  pull_request:
+    paths:
+      - '*.py'
 
 jobs:
-  flake8:
+  lint:
+    name: Flake8
     runs-on: ubuntu-latest
     steps:
-      - name: Python Setup
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
         with:
-          python-version: 3.9.2
-          architecture: x64
-      - name: Checkout Repo
-        uses: actions/checkout@master
-      - name: Install flake8
-        run: pip install flake8
+          python-version: "3.9"
       - name: Run flake8
-        uses: suo/flake8-github-action@releases/v1
+        uses: julianwachholz/flake8-action@v1.1.0
         with:
-          checkName: 'flake8'
+          checkName: "Flake8"
+          path: path/to/files
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
