@@ -232,8 +232,8 @@ class FeedHandler:
             setup_signal_handlers(loop)
 
         for feed, timeout in self.feeds:
-            for conn, sub, handler in feed.connect():
-                loop.create_task(self._connect(conn, sub, handler))
+            for conn, sub, handler, authenticate in feed.connect():
+                loop.create_task(self._connect(conn, sub, handler, authenticate))
                 self.timeout[conn.uuid] = timeout
 
         for task in tasks:
@@ -308,7 +308,7 @@ class FeedHandler:
                     break
             await asyncio.sleep(self.timeout_interval)
 
-    async def _connect(self, conn, subscribe, handler):
+    async def _connect(self, conn, subscribe, handler, authenticate):
         """
         Connect to exchange and subscribe
         """
@@ -325,6 +325,7 @@ class FeedHandler:
                     rate_limited = 0
                     delay = conn.delay
                     await subscribe(connection)
+                    await authenticate(connection)
                     await self._handler(connection, handler)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
                 LOG.warning("%s: encountered connection issue %s - reconnecting in %d seconds...", conn.uuid, str(e), delay, exc_info=True)

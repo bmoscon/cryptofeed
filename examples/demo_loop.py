@@ -12,7 +12,7 @@ import functools
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import DeribitTickerCallback
-from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, PERPETURAL, OPTION, FUTURE, TICKER
+from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, PERPETURAL, OPTION, FUTURE, TICKER, USER_TRADES
 from cryptofeed.exchanges import Deribit
 from cryptofeed.util.instrument import get_instrument_type
 
@@ -65,14 +65,23 @@ def get_time_from_timestamp(timestamp):
     return '%s.%03d' % (datetime.datetime.utcfromtimestamp(s).strftime('%H:%M:%S'), ms)
 
 subscriptions = {
-    PERPETURAL: [TICKER],
-    OPTION: [TICKER, TRADES, L2_BOOK],
-    FUTURE: [TICKER]
+    PERPETURAL: [TICKER, USER_TRADES],
+    OPTION: [],
+    FUTURE: []
+    # OPTION: [TICKER, TRADES, L2_BOOK],
+    # FUTURE: [TICKER]
+}
+
+callbacks = {
+    L2_BOOK: book, 
+    TRADES: trade, 
+    TICKER: DeribitTickerCallback(callbacks={OPTION: ticker, PERPETURAL: perp_ticker}),
+    USER_TRADES: trade,
 }
 
 def main():
-    f = FeedHandler()
-    deribit = Deribit(max_depth = 1, subscription=get_new_subscription(), callbacks={L2_BOOK: book, TRADES: trade, TICKER: DeribitTickerCallback(callbacks={OPTION: ticker, PERPETURAL: perp_ticker})})
+    f = FeedHandler(config="config.yaml")
+    deribit = Deribit(config="config.yaml", max_depth=1, subscription=get_new_subscription(), callbacks=callbacks)
     f.add_feed(deribit)
     f.run(start_loop=True, tasks=[do_periodically_at(8, 1, 1, functools.partial(subscribe_to_new_subscription, deribit))])
     
