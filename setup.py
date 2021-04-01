@@ -75,7 +75,7 @@ setup(
     ],
     extras_require={
         "arctic": ["arctic"],
-        "gcp_pubsub": ["google_cloud_pubsub~=2.2.0", "gcloud_aio_pubsub"],
+        "gcp_pubsub": ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"],
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
@@ -84,7 +84,7 @@ setup(
         "zmq": ["pyzmq"],
         "all": [
             "arctic",
-            "google_cloud_pubsub",
+            "google_cloud_pubsub>=2.4.1",
             "gcloud_aio_pubsub"
             "aiokafka>=0.7.0",
             "motor",
