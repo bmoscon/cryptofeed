@@ -90,6 +90,7 @@ SPOT = 'spot'
 PERPETURAL = 'perpetual'
 OPTION = 'option'
 FUTURE = 'future'
+ANY = 'any'
 
 # Currency
 BTC = 'BTC'

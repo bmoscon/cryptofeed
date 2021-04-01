@@ -12,7 +12,7 @@ import functools
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import DeribitTickerCallback
-from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, PERPETURAL, OPTION, FUTURE, TICKER, USER_TRADES
+from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, PERPETURAL, OPTION, FUTURE, ANY, TICKER, USER_TRADES
 from cryptofeed.exchanges import Deribit
 from cryptofeed.util.instrument import get_instrument_type
 
@@ -51,7 +51,7 @@ def get_new_subscription():
     symbols = Deribit.get_instruments()
     new_subscription = defaultdict(set)
     for symbol in symbols:
-        for feed_type in subscriptions[get_instrument_type(symbol)]:
+        for feed_type in subscription[get_instrument_type(symbol)]:
             new_subscription[feed_type].add(symbol)
     return new_subscription
 
@@ -64,12 +64,21 @@ def get_time_from_timestamp(timestamp):
     s, ms = divmod(timestamp, 1000)
     return '%s.%03d' % (datetime.datetime.utcfromtimestamp(s).strftime('%H:%M:%S'), ms)
 
-subscriptions = {
-    PERPETURAL: [TICKER, USER_TRADES],
+subscription = {
+    # PERPETURAL: [TICKER, TRADES],
+    PERPETURAL: [],
     OPTION: [],
     FUTURE: []
+    # OPTION: [TICKER, L2_BOOK],
+    # FUTURE: [TICKER]
+    
     # OPTION: [TICKER, TRADES, L2_BOOK],
     # FUTURE: [TICKER]
+}
+
+other_subscription = {
+    TRADES: [FUTURE, OPTION],
+    USER_TRADES: [ANY],
 }
 
 callbacks = {
@@ -81,7 +90,11 @@ callbacks = {
 
 def main():
     f = FeedHandler(config="config.yaml")
-    deribit = Deribit(config="config.yaml", max_depth=1, subscription=get_new_subscription(), callbacks=callbacks)
+    all_subscription = get_new_subscription()
+    for key, value in other_subscription.items():
+        all_subscription[key].update(value)
+    print(all_subscription)
+    deribit = Deribit(config="config.yaml", max_depth=1, subscription=all_subscription, callbacks=callbacks)
     f.add_feed(deribit)
     f.run(start_loop=True, tasks=[do_periodically_at(8, 1, 1, functools.partial(subscribe_to_new_subscription, deribit))])
     

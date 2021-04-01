@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETURAL, OPTION, FUTURE, C, P, BTC, ETH
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETURAL, OPTION, FUTURE, ANY, C, P, BTC, ETH
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange, symbol_std_to_exchange, is_authenticated_channel
@@ -50,6 +50,8 @@ class Deribit(Feed):
             pairs = [pair for inner in subscribing_instruments for pair in inner]
 
         for pair in set(self.symbols or pairs):
+            if pair in [ANY, FUTURE, OPTION]:
+                continue
             if pair not in instruments:
                 raise ValueError(f"{pair} is not active on {self.id}")
         self.__reset()
@@ -81,6 +83,8 @@ class Deribit(Feed):
 
     @staticmethod
     def build_channel_name(channel, pair):
+        if pair == ANY or pair == OPTION or pair == FUTURE:
+            return f"{channel}.{pair}.any.raw"
         return f"{channel}.{pair}.raw"
 
     async def generate_token(self, conn: AsyncConnection):
@@ -436,6 +440,7 @@ class Deribit(Feed):
 
         # As a first update after subscription, Deribit sends a notification with no data
         if "result" in msg_dict and "access_token" in msg_dict["result"]:
+            LOG.info("%s: Connection successfully authenticated. It is now possible to subscribe to private channels", self.id)
             await self.subscribe(conn, reset=False, subscription=self.authenticated_subscription)
         elif "testnet" in msg_dict:
             LOG.debug("%s: Test response from deribit accepted %s", self.id, msg)
