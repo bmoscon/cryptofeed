@@ -79,9 +79,6 @@ class PostgresCallback:
         if self._cache_counter > 0:
             await self.write_cache()
 
-    def convert_to_numeric_type(self, val):
-        return None if val is None else self.numeric_type(val)
-
 
 class TradePostgres(PostgresCallback, BackendTradeCallback):
     default_table = TRADES

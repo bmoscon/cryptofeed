@@ -65,13 +65,15 @@ def get_time_from_timestamp(timestamp):
     return '%s.%03d' % (datetime.datetime.utcfromtimestamp(s).strftime('%H:%M:%S'), ms)
 
 subscription = {
-    # PERPETURAL: [TICKER, TRADES],
     PERPETURAL: [],
     OPTION: [],
     FUTURE: []
+
+    # PERPETURAL: [TICKER, TRADES],
     # OPTION: [TICKER, L2_BOOK],
     # FUTURE: [TICKER]
-    
+
+    # PERPETURAL: [TICKER, TRADES],
     # OPTION: [TICKER, TRADES, L2_BOOK],
     # FUTURE: [TICKER]
 }

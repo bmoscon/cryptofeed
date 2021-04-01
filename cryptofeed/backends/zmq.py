@@ -10,7 +10,9 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback,
+                                         DeribitBackendBookCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback)
+from cryptofeed.defines import TICKER, TRADES
 
 
 class ZMQCallback:
@@ -34,8 +36,16 @@ class TradeZMQ(ZMQCallback, BackendTradeCallback):
     default_key = 'trades'
 
 
+class DeribitTradeZMQ(ZMQCallback, DeribitBackendTradeCallback):
+    default_key = TRADES
+
+
 class TickerZMQ(ZMQCallback, BackendTickerCallback):
     default_key = 'ticker'
+
+
+class DeribitTickerZMQ(ZMQCallback, DeribitBackendTickerCallback):
+    default_key = 'tickers'
 
 
 class FundingZMQ(ZMQCallback, BackendFundingCallback):
@@ -44,6 +54,10 @@ class FundingZMQ(ZMQCallback, BackendFundingCallback):
 
 class BookZMQ(ZMQCallback, BackendBookCallback):
     default_key = 'book'
+
+
+class DeribitBookZMQ(ZMQCallback, DeribitBackendBookCallback):
+    default_key = 'books'
 
 
 class BookDeltaZMQ(ZMQCallback, BackendBookDeltaCallback):

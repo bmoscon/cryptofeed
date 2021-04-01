@@ -70,6 +70,9 @@ class DeribitBackendTradeCallback:
             'iv': self.convert_to_numeric_type(iv)
         }
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+    
+    def convert_to_numeric_type(self, val):
+        return None if val is None else self.numeric_type(val)
 
 
 class BackendFundingCallback:
@@ -133,6 +136,9 @@ class DeribitBackendTickerCallback():
             'underlying_price': self.convert_to_numeric_type(underlying_price)
         }
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+    def convert_to_numeric_type(self, val):
+        return None if val is None else self.numeric_type(val)
 
 
 class BackendOpenInterestCallback:
