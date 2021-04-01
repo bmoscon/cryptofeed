@@ -14,7 +14,7 @@ from cryptofeed.callback import Callback
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
+                                OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME, USER_TRADES)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -58,6 +58,7 @@ class Feed:
             self.config = Config(config)
 
         self.subscription = defaultdict(set)
+        self.authenticated_subscription = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
         self.snapshot_interval = snapshot_interval
@@ -75,6 +76,8 @@ class Feed:
         self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
         self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
         self.connection = None
+        self.requires_authentication = False
+        self.is_authenticated = False
 
         load_exchange_symbol_mapping(self.id, key_id=self.key_id)
 
@@ -87,8 +90,12 @@ class Feed:
                 if is_authenticated_channel(channel):
                     if not self.key_id or not self.key_secret:
                         raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
-                self.subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
-                self.normalized_symbols.extend(self.subscription[chan])
+                    self.authenticated_subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
+                    self.normalized_symbols.extend(self.authenticated_subscription[chan])
+                    self.requires_authentication = True
+                else:
+                    self.subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
+                    self.normalized_symbols.extend(self.subscription[chan])
 
         if symbols:
             self.normalized_symbols = symbols
@@ -98,6 +105,7 @@ class Feed:
             if any(is_authenticated_channel(chan) for chan in channels):
                 if not self.key_id or not self.key_secret:
                     raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
+                self.requires_authentication = True
 
         self.l3_book = {}
         self.l2_book = {}
@@ -111,7 +119,8 @@ class Feed:
                           TICKER: Callback(None),
                           TRADES: Callback(None),
                           TRANSACTIONS: Callback(None),
-                          VOLUME: Callback(None)
+                          VOLUME: Callback(None),
+                          USER_TRADES: Callback(None)
                           }
 
         if callbacks:
@@ -150,10 +159,10 @@ class Feed:
         ret = []
         if isinstance(self.address, str):
             self.connection = AsyncConnection(self.address, self.id, **self.ws_defaults)
-            return [(self.connection, self.subscribe, self.message_handler)]
+            return [(self.connection, self.subscribe, self.message_handler, self.authenticate)]
 
         for _, addr in self.address.items():
-            ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
+            ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     @classmethod
@@ -166,7 +175,7 @@ class Feed:
         """
         symbols, info = get_exchange_info(cls.id, key_id=key_id)
         data = {'symbols': list(symbols.keys()), 'channels': []}
-        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME):
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME, USER_TRADES):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
@@ -262,6 +271,9 @@ class Feed:
         your subscribe, bind the data to the method with a partial
         """
         raise NotImplementedError
+
+    async def authenticate(self, connection: AsyncConnection):
+        return
 
     async def shutdown(self):
         LOG.info('%s: feed shutdown starting...', self.id)

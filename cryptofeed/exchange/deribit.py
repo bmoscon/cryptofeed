@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, PERPETURAL, OPTION, FUTURE, C, P, BTC, ETH
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETURAL, OPTION, FUTURE, C, P, BTC, ETH
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange, symbol_std_to_exchange, is_authenticated_channel
@@ -83,11 +83,34 @@ class Deribit(Feed):
     def build_channel_name(channel, pair):
         return f"{channel}.{pair}.raw"
 
-    async def subscribe(self, conn: AsyncConnection):
-        self.__reset()
+    async def generate_token(self, conn: AsyncConnection):
+        client_id = 0
+        await conn.send(json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": client_id,
+                "method": "public/auth",
+                "params": {
+                    "grant_type" : "client_credentials",
+                    "client_id" : self.key_id,
+                    "client_secret" : self.key_secret
+                }
+            }
+        ))
+
+    async def authenticate(self, conn: AsyncConnection):
+        if self.requires_authentication:
+            await self.generate_token(conn)
+
+    async def subscribe(self, conn: AsyncConnection, reset=True, subscription=None):
+        if reset:
+            self.__reset()
+        if not subscription:
+            subscription = self.subscription
         channels = []
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+
+        for chan in set(self.channels or subscription):
+            for pair in set(self.symbols or subscription[chan]):
                 channels.append(Deribit.build_channel_name(chan, pair))
         await self.subscribe_inner(conn, channels)
 
@@ -351,24 +374,85 @@ class Deribit(Feed):
                 delta[ASK].append((Decimal(price), Decimal(amount)))
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
 
+    async def _user_trade(self, msg: dict, timestamp: float):
+        """
+        {
+            "params":
+            {
+                "data":
+                [
+                    {
+                        # "trade_seq" : 30289432,
+                        # "trade_id" : "48079254",
+                        # "timestamp" : 1590484156350,
+                        "tick_direction" : 0,
+                        "state" : "filled",
+                        "self_trade" : false,
+                        "reduce_only" : false,
+                        # "price" : 8954,
+                        "post_only" : false,
+                        "order_type" : "market",
+                        # "order_id" : "4008965646",
+                        "matching_id" : null,
+                        # "mark_price" : 8952.86,
+                        "liquidity" : "T",
+                        # "instrument_name" : "BTC-PERPETUAL",
+                        # "index_price" : 8956.73,
+                        "fee_currency" : "BTC",
+                        "fee" : 0.00000168,
+                        # "direction" : "sell",
+                        # "amount" : 20
+                    }
+                ],
+                "channel": "user.trades.BTC-PERPETUAL.raw"
+            },
+            "method": "subscription",
+            "jsonrpc": "2.0"
+        }
+        """
+        for trade in msg["params"]["data"]:
+            kwargs = {}
+            kwargs['trade_seq'] = Decimal(trade['trade_seq'])
+            kwargs['mark_price'] = Decimal(trade['mark_price'])
+            kwargs['index_price'] = Decimal(trade['index_price'])
+            if get_instrument_type(trade["instrument_name"]) == OPTION:
+                kwargs['iv'] = Decimal(trade['iv'])
+                kwargs['underlying_price'] = Decimal(trade['underlying_price'])
+            await self.callback(USER_TRADES,
+                                feed=self.id,
+                                symbol=trade["instrument_name"],
+                                order_id=trade['trade_id'],
+                                side=BUY if trade['direction'] == 'buy' else SELL,
+                                amount=Decimal(trade['amount']),
+                                price=Decimal(trade['price']),
+                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                receipt_timestamp=timestamp,
+                                **kwargs
+                                )
+
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg_dict = json.loads(msg, parse_float=Decimal)
 
         # As a first update after subscription, Deribit sends a notification with no data
-        if "testnet" in msg_dict.keys():
-            LOG.debug("%s: Test response from derbit accepted %s", self.id, msg)
+        if "result" in msg_dict and "access_token" in msg_dict["result"]:
+            await self.subscribe(conn, reset=False, subscription=self.authenticated_subscription)
+        elif "testnet" in msg_dict:
+            LOG.debug("%s: Test response from deribit accepted %s", self.id, msg)
+        elif "user" == msg_dict["params"]["channel"].split(".")[0]:
+            # info is specifically about the user
+            if "trades" == msg_dict["params"]["channel"].split(".")[1]:
+                await self._user_trade(msg_dict, timestamp)
         elif "ticker" == msg_dict["params"]["channel"].split(".")[0]:
             await self._ticker(msg_dict, timestamp)
         elif "trades" == msg_dict["params"]["channel"].split(".")[0]:
             await self._trade(msg_dict, timestamp)
         elif "book" == msg_dict["params"]["channel"].split(".")[0]:
-
             # checking if we got full book or its update
             # if it's update there is 'prev_change_id' field
-            if "prev_change_id" not in msg_dict["params"]["data"].keys():
+            if "prev_change_id" not in msg_dict["params"]["data"]:
                 await self._book_snapshot(msg_dict, timestamp)
-            elif "prev_change_id" in msg_dict["params"]["data"].keys():
+            elif "prev_change_id" in msg_dict["params"]["data"]:
                 await self._book_update(msg_dict, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
