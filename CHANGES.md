@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.8.2 (2020-04-02)
+  * Update to use alpha release of aioredis 2.0. Allows building of wheels again
+
 ### 1.8.1 (2020-04-01)
   * Bugfix: Add manifest file for source dist
 
