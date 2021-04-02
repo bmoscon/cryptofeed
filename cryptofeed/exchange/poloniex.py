@@ -74,9 +74,17 @@ class Poloniex(Feed):
         self.seq_no = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
-        # currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
-        # quoteVolume, isFrozen, 24hrHigh, 24hrLow
-        pair_id, _, ask, bid, _, _, _, _, _, _ = msg
+        """
+        Format:
+
+        currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
+        quoteVolume, isFrozen, 24hrHigh, 24hrLow, postOnly, maintenance mode
+
+        The postOnly field indicates that new orders posted to the market must be non-matching orders (no taker orders).
+        Any orders that would match will be rejected. Maintenance mode indicates that maintenace is being performed
+        and orders will be rejected
+        """
+        pair_id, _, ask, bid, _, _, _, _, _, _, _, _ = msg
         if pair_id not in self.pair_mapping:
             # Ignore new trading pairs that are added during long running sessions
             return
