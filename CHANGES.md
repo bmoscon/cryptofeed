@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.8.1 (2020-04-01)
+  * Bugfix: Add manifest file for source dist
+
 ### 1.8.0 (2020-04-01)
   * Bugfix: Init uvloop earlier so backends that use loop will not fail
   * Docs: Remove FAQ, added performance doc section
