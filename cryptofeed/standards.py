@@ -256,7 +256,8 @@ _feed_to_exchange_map = {
         OKEX: ORDER_INFO
     },
     CANDLES: {
-        BINANCE: 'kline_'
+        BINANCE: 'kline_',
+        BINANCE_FUTURES: 'kline_',
     }
 }
 
@@ -335,7 +336,7 @@ def normalize_channel(exchange: str, feed: str) -> str:
         if exchange in entries:
             if entries[exchange] == feed:
                 return chan
-    return None
+    raise ValueError('Unable to normalize channel %s', feed)
 
 
 def is_authenticated_channel(channel: str) -> bool:

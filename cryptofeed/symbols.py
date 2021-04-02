@@ -94,7 +94,14 @@ def binance_us_symbols() -> Dict[str, str]:
 
 
 def binance_futures_symbols() -> Dict[str, str]:
-    return _binance_symbols('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
+    base = _binance_symbols('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
+    add = {}
+    for symbol, orig in base.items():
+        if "_" in orig:
+            continue
+        add[f"{symbol}-PINDEX"] = f"p{orig}"
+    base.update(add)
+    return base
 
 
 def binance_delivery_symbols() -> Dict[str, str]:

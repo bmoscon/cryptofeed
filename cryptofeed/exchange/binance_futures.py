@@ -104,5 +104,7 @@ class BinanceFutures(Binance):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg['e'] == 'kline':
+            await self._candle(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
