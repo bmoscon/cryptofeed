@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.8.0
+### 1.8.0 (2020-04-01)
   * Bugfix: Init uvloop earlier so backends that use loop will not fail
   * Docs: Remove FAQ, added performance doc section
   * Bugfix: #404 - Use AsyncConnection object for Binance OI
@@ -24,6 +24,9 @@
   * Feature: Add backend support for queues in Postgres. Rework postgres backend and supply example SQL file to create tables for demo
   * Bugfix: Fix ByBit symbol generation
   * Feature: Authenticated channel support for OKEX/OKCOIN
+  * Update: Poloniex changed signaure of ticker data
+  * Feature: Candles for Binance Futures
+  * Feature: Premium Index Candle support for Binance Futures
 
 
 ### 1.7.0 (2021-02-15)
