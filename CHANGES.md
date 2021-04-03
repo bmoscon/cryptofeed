@@ -2,6 +2,7 @@
 
 ### 1.9.0
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
+  * Feature: Remove support for Influx versions prior to 2.0
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
