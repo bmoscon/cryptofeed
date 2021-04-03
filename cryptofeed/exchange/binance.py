@@ -59,7 +59,7 @@ class Binance(Feed):
                 continue
 
             if normalized_chan == CANDLES:
-                    chan = f"{chan}{self.candle_interval}"
+                chan = f"{chan}{self.candle_interval}"
 
             for pair in self.symbols if not self.subscription else self.subscription[chan]:
                 # for everything but premium index the symbols need to be lowercase.

@@ -7,8 +7,6 @@ associated with this software.
 import logging
 from decimal import Decimal
 
-import requests
-
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
@@ -21,7 +19,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, db=None, key=None, create_db=False, numeric_type=str, org=None, bucket=None, token=None, precision='ns', username=None, password=None, **kwargs):
+    def __init__(self, addr: str, org: str, bucket: str, token: str, key=None, numeric_type=str, precision='ns', **kwargs):
         """
         Parent class for InfluxDB callbacks
 
@@ -48,40 +46,23 @@ class InfluxCallback(HTTPCallback):
         addr: str
           Address for connection. Should be in the format:
           http(s)://<ip addr>:port
-        db: str
-          Database to write to
-        key: str
-          key to use when writing data, will be a combination of key-datatype
-        create_db: bool
-          Create database if not exists
-        numeric_type: str/float
-          Convert types before writing (amount and price)
-        org: str (For InfluxDB 2.0 compatibility)
-          Orgnaization name for authentication
-        bucket: str (For InfluxDB 2.0 compatibility)
+        org: str
+          Organization name for authentication
+        bucket: str
           Bucket name for authentication
-        token: str (For InfluxDB 2.0 compatibility)
+        token: str
           Token string for authentication
-        precision: str (For InfluxDB 2.0 compatibility)
-          Precision level among (s, ms, us, ns)
-        username: str
-          Influxdb username for authentication
-        password: str
-          Influxdb password for authentication
+        key:
+          key to use when writing data, will be a combination of key-datatype
+        numeric_type: str/float
+          Convert types before writing (amount, price, and other floating point data)
+        precision: str
+          Precision for timestamps (s, ms, us, ns)
         """
         super().__init__(addr, **kwargs)
         if org and bucket and token:
             self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
             self.headers = {"Authorization": f"Token {token}"}
-        else:
-            if create_db:
-                r = requests.post(f'{addr}/query?u={username}&p={password}', data={'q': f'CREATE DATABASE {db}'})
-                r.raise_for_status()
-            if username and password:
-                self.addr = f"{addr}/write?db={db}&u={username}&p={password}"
-            else:
-                self.addr = f"{addr}/write?db={db}"
-            self.headers = {}
 
         self.session = None
         self.numeric_type = numeric_type
