@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.9.0
+  * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
+
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
 
