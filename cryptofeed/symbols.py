@@ -28,6 +28,17 @@ _symbols_retrieval_cache: Dict[str, Dict[str, str]] = {}
 _exchange_info = defaultdict(lambda: defaultdict(dict))
 
 
+_kraken_futures_product_type = {
+    'FI': 'Inverse Futures',
+    'FV': 'Vanilla Futures',
+    'PI': 'Perpetual Inverse Futures',
+    'PV': 'Perpetual Vanilla Futures',
+    'IN': 'Real Time Index',
+    'RR': 'Reference Rate',
+}
+
+
+
 def raise_failure_explanation(feed_id: str, exception: BaseException, responses: Dict[str, Optional[Response]]):
     LOG.critical('%s: encountered %r while processing response from exchange API', feed_id, exception)
     if len(responses) > 1:
@@ -79,7 +90,7 @@ def _binance_symbols(endpoint: str, exchange: str):
             ret[normalized] = symbol['symbol']
             _exchange_info[exchange]['tick_size'][normalized] = symbol['filters'][0]['tickSize']
             if "contractType" in symbol:
-                _exchange_info[exchange]['contract_type'] = symbol['contractType']
+                _exchange_info[exchange]['contract_type'][normalized] = symbol['contractType']
         return ret
     except Exception as why:
         raise_failure_explanation(exchange, why, {endpoint: r})
@@ -515,26 +526,41 @@ def bitmex_symbols() -> Dict[str, str]:
 
 def deribit_symbols() -> Dict[str, str]:
     url = r = None
+    ret = {}
     try:
+        # TODO: get currencies from https://www.deribit.com/api/v2/public/get_currencies
         currencies = ['BTC', 'ETH']
-        kind = ['future', 'option']
-        data = []
         for c in currencies:
-            for k in kind:
-                url = f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}"
-                r = requests.get(url)
-                data.extend(r.json()['result'])
-        return {d['instrument_name']: d['instrument_name'] for d in data}
+            url = f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false"
+            r = requests.get(url)
+            for entry in r.json()['result']:
+                ret[entry['instrument_name']] = entry['instrument_name']
+                _exchange_info[DERIBIT]['tick_size'][entry['instrument_name']] = entry['tick_size']
+        return ret
     except Exception as why:
         raise_failure_explanation('DERIBIT', why, {url: r})
 
 
 def kraken_future_symbols() -> Dict[str, str]:
     r = None
+    ret = {}
     try:
         r = requests.get('https://futures.kraken.com/derivatives/api/v3/instruments')
         data = r.json()['instruments']
-        return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
+        for entry in data:
+            if not entry['tradeable']:
+                continue
+            normalized = entry['symbol'].upper().replace("_", "-")
+            symbol = normalized[3:6] + SYMBOL_SEP + normalized[6:9]
+            normalized = normalized.replace(normalized[3:9], symbol)
+            normalized = normalized.replace('XBT', 'BTC')
+
+            _exchange_info[KRAKEN_FUTURES]['tick_size'][normalized] = entry['tickSize']
+            _exchange_info[KRAKEN_FUTURES]['contract_size'][normalized] = entry['contractSize']
+            _exchange_info[KRAKEN_FUTURES]['underlying'][normalized] = entry['underlying']
+            _exchange_info[KRAKEN_FUTURES]['product_type'][normalized] = _kraken_futures_product_type[normalized[:2]]
+            ret[normalized] = entry['symbol']
+        return ret
     except Exception as why:
         raise_failure_explanation('KRAKEN_FUTURES', why, {"": r})
 

@@ -25,17 +25,6 @@ class KrakenFutures(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://futures.kraken.com/ws/v1', **kwargs)
-
-        # TODO: the same verification (below) is done in Bitmex and Kraken => share this code in a common function in super class Feed
-        instruments = self.get_instruments()
-        if self.subscription:
-            subscribing_instruments = list(self.subscription.values())
-            self.symbols = set(pair for inner in subscribing_instruments for pair in inner)
-
-        for pair in self.symbols:
-            if pair not in instruments:
-                raise ValueError(f"{pair} is not active on {self.id}")
-
         self.__reset()
 
     def __reset(self):
