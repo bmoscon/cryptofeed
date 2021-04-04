@@ -35,7 +35,7 @@ def test_rest_bitfinex():
 def test_rest_deribit():
     r = Rest()
     ret = []
-    for data in r.deribit.trades('BTC-PERPETUAL'):
+    for data in r.deribit.trades('BTC-USD-PERPETUAL'):
         ret.extend(data)
     assert len(ret) > 1
 
