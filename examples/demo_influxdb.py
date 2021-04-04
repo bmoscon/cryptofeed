@@ -13,16 +13,16 @@ from cryptofeed.exchanges import Bitmex, Coinbase
 INFLUX_ADDR = 'http://localhost:8086'
 ORG = 'crypto'
 BUCKET = 'crypto'
-TOKEN = 'XXXXXX'
+TOKEN = 'XXXXXXX'
 
 
 def main():
 
     f = FeedHandler()
-    f.add_feed(Bitmex(channels=[FUNDING, L2_BOOK], symbols=['BTC-USD'], callbacks={FUNDING: FundingInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN), L2_BOOK: BookInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN, numeric_type=float), BOOK_DELTA: BookDeltaInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN, numeric_type=float)}))
+    f.add_feed(Bitmex(channels=[FUNDING, L2_BOOK], symbols=['BTC-USD'], callbacks={FUNDING: FundingInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN), L2_BOOK: BookInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN), BOOK_DELTA: BookDeltaInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN)}))
     f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: TradeInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN)}))
-    f.add_feed(Coinbase(channels=[L2_BOOK], symbols=['BTC-USD'], callbacks={L2_BOOK: BookInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN, numeric_type=float), BOOK_DELTA: BookDeltaInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN, numeric_type=float)}))
-    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: TickerInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN, numeric_type=float)}))
+    f.add_feed(Coinbase(channels=[L2_BOOK], symbols=['BTC-USD'], callbacks={L2_BOOK: BookInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN), BOOK_DELTA: BookDeltaInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN)}))
+    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: TickerInflux(INFLUX_ADDR, ORG, BUCKET, TOKEN)}))
 
     f.run()
 

@@ -5,21 +5,21 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from decimal import Decimal
+
+from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
-from cryptofeed.exceptions import UnsupportedType
 
 
 LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, org: str, bucket: str, token: str, key=None, numeric_type=str, precision='ns', **kwargs):
+    def __init__(self, addr: str, org: str, bucket: str, token: str, key=None, **kwargs):
         """
         Parent class for InfluxDB callbacks
 
@@ -54,82 +54,59 @@ class InfluxCallback(HTTPCallback):
           Token string for authentication
         key:
           key to use when writing data, will be a combination of key-datatype
-        numeric_type: str/float
-          Convert types before writing (amount, price, and other floating point data)
-        precision: str
-          Precision for timestamps (s, ms, us, ns)
         """
         super().__init__(addr, **kwargs)
-        if org and bucket and token:
-            self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
-            self.headers = {"Authorization": f"Token {token}"}
+        self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision=us"
+        self.headers = {"Authorization": f"Token {token}"}
 
         self.session = None
-        self.numeric_type = numeric_type
         self.key = key if key else self.default_key
+        self.numeric_type = float
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        d = ''
-
+    def format(self, data):
+        ret = []
         for key, value in data.items():
             if key in {'timestamp', 'feed', 'symbol', 'receipt_timestamp'}:
                 continue
-            if isinstance(value, str) or (self.numeric_type is str and isinstance(value, (Decimal, float))):
-                d += f'{key}="{value}",'
+            if isinstance(value, str):
+                ret.append(f'{key}="{value}"')
             else:
-                d += f'{key}={value},'
-        d = d[:-1]
+                ret.append(f'{key}={value}')
+        return ','.join(ret)
 
-        update = f'{self.key}-{feed},symbol={symbol} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp}'
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+        d = self.format(data)
+        update = f'{self.key}-{feed},symbol={symbol} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp} {int(timestamp * 1000000)}'
         await self.queue.put({'data': update, 'headers': self.headers})
 
 
 class TradeInflux(InfluxCallback, BackendTradeCallback):
     default_key = 'trades'
 
+    def format(self, data):
+        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",order_type="{str(data["order_type"])}"'
+
 
 class FundingInflux(InfluxCallback, BackendFundingCallback):
     default_key = 'funding'
 
 
-class InfluxBookCallback(InfluxCallback):
+class BookInflux(InfluxCallback, BackendBookCallback):
     default_key = 'book'
 
-    async def _write_rows(self, start, data, timestamp, receipt_timestamp):
-        msg = []
-        ts = int(timestamp * 1000000000)
-        for side in (BID, ASK):
-            for price, val in data[side].items():
-                if isinstance(val, dict):
-                    for order_id, amount in val.items():
-                        if self.numeric_type is str:
-                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
-                        elif self.numeric_type is float:
-                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
-                        else:
-                            raise UnsupportedType(f"Type {self.numeric_type} not supported")
-                        ts += 1
-                else:
-                    if self.numeric_type is str:
-                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
-                    elif self.numeric_type is float:
-                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
-                    else:
-                        raise UnsupportedType(f"Type {self.numeric_type} not supported")
-                    ts += 1
-        await self.queue.put({'data': '\n'.join(msg), 'headers': self.headers})
+    def format(self, data):
+        bids = json.dumps(data[BID])
+        asks = json.dumps(data[ASK])
+        return f'delta=false,{BID}="{bids}",{ASK}="{asks}"'
 
 
-class BookInflux(InfluxBookCallback, BackendBookCallback):
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        start = f"{self.key}-{feed},symbol={symbol},delta=False"
-        await self._write_rows(start, data, timestamp, receipt_timestamp)
+class BookDeltaInflux(InfluxCallback, BackendBookDeltaCallback):
+    default_key = 'book'
 
-
-class BookDeltaInflux(InfluxBookCallback, BackendBookDeltaCallback):
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        start = f"{self.key}-{feed},symbol={symbol},delta=True"
-        await self._write_rows(start, data, timestamp, receipt_timestamp)
+    def format(self, data):
+        bids = json.dumps(data[BID])
+        asks = json.dumps(data[ASK])
+        return f'delta=true,{BID}="{bids}",{ASK}="{asks}"'
 
 
 class TickerInflux(InfluxCallback, BackendTickerCallback):
