@@ -7,6 +7,8 @@
   * Feature: Revamp InfluxDB code. Drop support for storing floating point as str, store book data as json blob
   * Bugfix: Remove unused get_instrument calls in Deribit and Kraken Futures
   * Feature: Revamp symbol generation and exchange info for Deribit and Kraken Futures
+  * Bugfix: Fix issue using AsyncFile callback to store raw data
+  * Testing: Add exchange tests for Deribit and Binance
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
