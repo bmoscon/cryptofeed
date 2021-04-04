@@ -142,8 +142,28 @@ class FeedHandler:
         callbacks = defaultdict(int)
 
         class FakeWS:
+            def __init__(self, filename):
+                self.conn_type = 'wss'
+                self.filename = filename
+                self.offset = 0
+
             async def send(self, *args, **kwargs):
                 pass
+
+            async def get(self, url):
+                msg = None
+                with open(filename, 'r') as fp:
+                    fp.seek(self.offset)
+                    line = fp.readline()
+                    while line:
+                        if line.startswith('http'):
+                            file_url, data = line.split(' -> ')
+                            assert url == file_url
+                            _, msg = data.split(": ")
+                            break
+                        line = fp.readline()
+                    self.offset = fp.tell()
+                    return msg
 
         async def internal_cb(*args, **kwargs):
             callbacks[kwargs['cb_type']] += 1
@@ -152,18 +172,21 @@ class FeedHandler:
             f = functools.partial(internal_cb, cb_type=cb_type)
             handler.append(f)
 
-        await feed.subscribe(FakeWS())
+        await feed.subscribe(FakeWS(None))
 
         for filename in filenames if isinstance(filenames, list) else [filenames]:
+            ws = FakeWS(filename)
             with open(filename, 'r') as fp:
                 for line in fp:
-                    if line.startswith("wss"):
+                    start = line[:3]
+                    if start == 'wss' or start == 'htt':
                         counter += 1
                         continue
+
                     try:
-                        timestamp, message = line.split(":", 1)
+                        timestamp, message = line.split(": ", 1)
                         counter += 1
-                        await feed.message_handler(message, FakeWS(), timestamp)
+                        await feed.message_handler(message, ws, timestamp)
                     except Exception:
                         LOG.error("Playback failed on message at line %d. Message: %s", counter, message, exc_info=True)
                         return {'messages_processed': None, 'callbacks': {}}

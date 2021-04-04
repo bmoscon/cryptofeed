@@ -13,8 +13,8 @@ from typing import Tuple, Callable, Union, List
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -110,7 +110,9 @@ class Feed:
                           TICKER: Callback(None),
                           TRADES: Callback(None),
                           TRANSACTIONS: Callback(None),
-                          VOLUME: Callback(None)
+                          VOLUME: Callback(None),
+                          CANDLES: Callback(None),
+                          ORDER_INFO: Callback(None)
                           }
 
         if callbacks:

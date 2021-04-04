@@ -8,8 +8,8 @@ import os
 import glob
 
 from cryptofeed import FeedHandler
-from cryptofeed.defines import TICKER, TRADES, L2_BOOK
-from cryptofeed.exchanges import Coinbase, Deribit
+from cryptofeed.defines import CANDLES, TICKER, TRADES, L2_BOOK
+from cryptofeed.exchanges import Coinbase, Deribit, Binance
 
 
 async def cb(*args, **kwargs):
@@ -34,3 +34,13 @@ def test_deribit_playback():
     for pcap in glob.glob(dir + "/../../sample_data/DERIBIT*"):
         results = fh.playback(feed, pcap)
         assert results == {'messages_processed': 17913, 'callbacks': {'l2_book': 17871, 'trades': 109}}
+
+
+def test_binance_playback():
+    fh = FeedHandler()
+    feed = Binance(symbols=['BTC-USDT', 'ETH-USDT', 'DOT-USDT'], callbacks={L2_BOOK: cb, TRADES: cb, CANDLES: cb})
+
+    dir = os.path.dirname(os.path.realpath(__file__))
+    for pcap in glob.glob(dir + "/../../sample_data/BINANCE*"):
+        results = fh.playback(feed, pcap)
+        assert results == {'messages_processed': 4720, 'callbacks': {'l2_book': 2656, 'trades': 1910, 'candles': 118}}
