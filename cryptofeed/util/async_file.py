@@ -25,6 +25,7 @@ class AsyncFileCallback:
         for uuid in list(self.data.keys()):
             with open(f"{self.path}/{uuid}.{self.count[uuid]}", 'a') as fp:
                 fp.write("\n".join(self.data[uuid]))
+                self.data[uuid] = []
 
     async def write(self, uuid):
         p = f"{self.path}/{uuid}.{self.count[uuid]}"

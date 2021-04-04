@@ -38,7 +38,6 @@ _kraken_futures_product_type = {
 }
 
 
-
 def raise_failure_explanation(feed_id: str, exception: BaseException, responses: Dict[str, Optional[Response]]):
     LOG.critical('%s: encountered %r while processing response from exchange API', feed_id, exception)
     if len(responses) > 1:
@@ -534,8 +533,10 @@ def deribit_symbols() -> Dict[str, str]:
             url = f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false"
             r = requests.get(url)
             for entry in r.json()['result']:
-                ret[entry['instrument_name']] = entry['instrument_name']
-                _exchange_info[DERIBIT]['tick_size'][entry['instrument_name']] = entry['tick_size']
+                split = entry['instrument_name'].split("-")
+                normalized = split[0] + SYMBOL_SEP + entry['quote_currency'] + "-" + '-'.join(split[1:])
+                ret[normalized] = entry['instrument_name']
+                _exchange_info[DERIBIT]['tick_size'][normalized] = entry['tick_size']
         return ret
     except Exception as why:
         raise_failure_explanation('DERIBIT', why, {url: r})

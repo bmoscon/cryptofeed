@@ -157,9 +157,17 @@ class FeedHandler:
         for filename in filenames if isinstance(filenames, list) else [filenames]:
             with open(filename, 'r') as fp:
                 for line in fp:
-                    timestamp, message = line.split(":", 1)
-                    counter += 1
-                    await feed.message_handler(message, FakeWS(), timestamp)
+                    if line.startswith("wss"):
+                        counter += 1
+                        continue
+                    try:
+                        timestamp, message = line.split(":", 1)
+                        counter += 1
+                        await feed.message_handler(message, FakeWS(), timestamp)
+                    except Exception:
+                        LOG.error("Playback failed on message at line %d. Message: %s", counter, message, exc_info=True)
+                        return {'messages_processed': None, 'callbacks': {}}
+
             return {'messages_processed': counter, 'callbacks': dict(callbacks)}
 
     def add_feed(self, feed, timeout=120, **kwargs):
