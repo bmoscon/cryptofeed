@@ -36,7 +36,6 @@ class Bitmex(Feed):
         self.partial_received = defaultdict(bool)
         self.order_id = {}
         for pair in self.normalized_symbols:
-            pair = symbol_exchange_to_std(pair)
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             self.order_id[pair] = defaultdict(dict)
 
@@ -454,7 +453,6 @@ class Bitmex(Feed):
                                     receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
         if 'table' in msg:
             if msg['table'] == 'trade':
