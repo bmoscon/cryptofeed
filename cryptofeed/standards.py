@@ -49,19 +49,11 @@ def symbol_std_to_exchange(symbol: str, exchange: str):
             return _std_trading_symbols[symbol][exchange]
         except KeyError:
             raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
-    else:
-        # Bitfinex supports funding symbols that are single currencies, prefixed with f
-        if exchange == BITFINEX and '-' not in symbol:
-            return f"f{symbol}"
-        raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
 
 
 def symbol_exchange_to_std(symbol):
     if symbol in _exchange_to_std:
         return _exchange_to_std[symbol]
-    # Bitfinex funding currency
-    if symbol[0] == 'f':
-        return symbol[1:]
     return None
 
 

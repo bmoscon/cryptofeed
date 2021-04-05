@@ -108,8 +108,8 @@ class OKCoin(Feed):
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,
                                 symbol=pair,
-                                bid=Decimal(update['best_bid']),
-                                ask=Decimal(update['best_ask']),
+                                bid=Decimal(update['best_bid']) if update['best_bid'] else Decimal(0),
+                                ask=Decimal(update['best_ask']) if update['best_ask'] else Decimal(0),
                                 timestamp=update_timestamp,
                                 receipt_timestamp=timestamp)
             if 'open_interest' in update:
@@ -124,7 +124,7 @@ class OKCoin(Feed):
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}
         """
         for trade in msg['data']:
-            if msg['table'] == 'futures/trade':
+            if msg['table'] in {'futures/trade', 'option/trade'}:
                 amount_sym = 'qty'
             else:
                 amount_sym = 'size'

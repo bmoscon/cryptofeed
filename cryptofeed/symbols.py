@@ -330,6 +330,8 @@ def huobi_common_symbols(url: str):
         r = requests.get(url)
         ret = {}
         for e in r.json()['data']:
+            if e['state'] == 'offline':
+                continue
             normalized = f"{e['base-currency'].upper()}{SYMBOL_SEP}{e['quote-currency'].upper()}"
             symbol = f"{e['base-currency']}{e['quote-currency']}"
             ret[normalized] = symbol
