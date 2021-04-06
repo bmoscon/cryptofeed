@@ -12,7 +12,9 @@
   * Bugfix: Fix symbol issue in Bitmex when initializing the orderbook
   * Bugfix: Fix various issues with FTX, OKCOIN/OKEX and Huobi symbol generation
   * Testing: Overhaul exchange tests, all exchanges are now tested with real data. Fixed various bugs as a result of this testing. Revamped AsyncFileCallback.
-             Added new tool to generate test data for testing. 
+             Added new tool to generate test data for testing.
+  * Bugfix: Improve connection cleanup in AsyncConnection object
+  * Feature: Add support for user defined exception handling in FeedHandler
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
