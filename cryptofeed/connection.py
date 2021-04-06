@@ -58,15 +58,15 @@ class AsyncConnection:
 
     @asynccontextmanager
     async def connect(self):
-        if self.session is None or self.session.closed:
-            self.session = aiohttp.ClientSession()
-        if self.conn_type == "ws":
-            if self.raw_cb:
-                await self.raw_cb(None, time.time(), self.uuid, connect=self.address)
-            LOG.debug("Connecting (websocket) to %s", self.address)
-            self.conn = await websockets.connect(self.address, **self.kwargs)
-
         try:
+            if self.session is None or self.session.closed:
+                self.session = aiohttp.ClientSession()
+            if self.conn_type == "ws":
+                if self.raw_cb:
+                    await self.raw_cb(None, time.time(), self.uuid, connect=self.address)
+                LOG.debug("Connecting (websocket) to %s", self.address)
+                self.conn = await websockets.connect(self.address, **self.kwargs)
+
             yield self
         finally:
             if self.conn:
