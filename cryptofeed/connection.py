@@ -58,7 +58,8 @@ class AsyncConnection:
 
     @asynccontextmanager
     async def connect(self):
-        self.session = aiohttp.ClientSession()
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession()
         if self.conn_type == "ws":
             if self.raw_cb:
                 await self.raw_cb(None, time.time(), self.uuid, connect=self.address)
