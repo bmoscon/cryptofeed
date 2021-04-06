@@ -17,7 +17,7 @@ from cryptofeed.defines import HUOBI, UPBIT, OKEX, OKCOIN
 
 def bytes_string_to_bytes(string):
     tree = ast.parse(string)
-    return tree.body[0].value.value
+    return tree.body[0].value.s
 
 
 def playback(feed, filename):

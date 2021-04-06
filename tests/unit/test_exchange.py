@@ -69,7 +69,6 @@ def get_message_count(filename):
 
 @pytest.mark.parametrize("exchange", [e for e in _EXCHANGES.keys() if e not in [COINGECKO, EXX, WHALE_ALERT]])
 def test_exchange_playback(exchange):
-    print(exchange)
     dir = os.path.dirname(os.path.realpath(__file__))
     for pcap in glob.glob(f"{dir}/../../sample_data/{exchange}-*.0"):
         

@@ -29,7 +29,7 @@ def main():
 
     print(f'Generating test data. This will take approximately {(len(_EXCHANGES) - len(set(skip))) * 2} minutes.')
     for exch_str, exchange in _EXCHANGES.items():
-        if exch_str in skip or exch_str != 'KRAKEN':
+        if exch_str in skip:
             continue
         print(f"Collecting data for {exch_str}")
         info = exchange.info()
