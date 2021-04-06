@@ -1,6 +1,26 @@
 ## Changelog
 
-### 1.8.0
+### 1.9.0
+  * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
+  * Feature: Remove support for Influx versions prior to 2.0
+  * Feature: Add stop method to HTTP Backends to gracefully drain queue and write pending data on shutdown
+  * Feature: Revamp InfluxDB code. Drop support for storing floating point as str, store book data as json blob
+  * Bugfix: Remove unused get_instrument calls in Deribit and Kraken Futures
+  * Feature: Revamp symbol generation and exchange info for Deribit and Kraken Futures
+  * Bugfix: Fix issue using AsyncFile callback to store raw data
+  * Testing: Add exchange tests for Deribit and Binance
+  * Bugfix: Fix symbol issue in Bitmex when initializing the orderbook
+  * Bugfix: Fix various issues with FTX, OKCOIN/OKEX and Huobi symbol generation
+  * Testing: Overhaul exchange tests, all exchanges are now tested with real data. Fixed various bugs as a result of this testing. Revamped AsyncFileCallback.
+             Added new tool to generate test data for testing. 
+
+### 1.8.2 (2020-04-02)
+  * Update to use alpha release of aioredis 2.0. Allows building of wheels again
+
+### 1.8.1 (2020-04-01)
+  * Bugfix: Add manifest file for source dist
+
+### 1.8.0 (2020-04-01)
   * Bugfix: Init uvloop earlier so backends that use loop will not fail
   * Docs: Remove FAQ, added performance doc section
   * Bugfix: #404 - Use AsyncConnection object for Binance OI
@@ -22,6 +42,11 @@
   * Feature: Candle support
   * Bugfix: Ignore untradeable symbols in Binance symbol generation
   * Feature: Add backend support for queues in Postgres. Rework postgres backend and supply example SQL file to create tables for demo
+  * Bugfix: Fix ByBit symbol generation
+  * Feature: Authenticated channel support for OKEX/OKCOIN
+  * Update: Poloniex changed signaure of ticker data
+  * Feature: Candles for Binance Futures
+  * Feature: Premium Index Candle support for Binance Futures
 
 
 ### 1.7.0 (2021-02-15)

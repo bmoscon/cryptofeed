@@ -32,7 +32,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.8.0",
+    version="1.9.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
@@ -75,23 +75,24 @@ setup(
     ],
     extras_require={
         "arctic": ["arctic"],
-        "gcp_pubsub": ["google_cloud_pubsub~=2.2.0", "gcloud_aio_pubsub"],
+        "gcp_pubsub": ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"],
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
         "rabbit": ["aio_pika", "pika"],
-        "redis": ["aioredis @ git+https://github.com/aio-libs/aioredis-py@4dfdc05"],
+        "redis": ["hiredis", "aioredis>=2.0.0a1"],
         "zmq": ["pyzmq"],
         "all": [
             "arctic",
-            "google_cloud_pubsub",
+            "google_cloud_pubsub>=2.4.1",
             "gcloud_aio_pubsub"
             "aiokafka>=0.7.0",
             "motor",
             "asyncpg",
             "aio_pika",
             "pika",
-            "aioredis @ git+https://github.com/aio-libs/aioredis-py@4dfdc05",
+            "hiredis",
+            "aioredis>=2.0.0a1",
             "pyzmq",
         ],
     },

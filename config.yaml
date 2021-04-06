@@ -44,3 +44,11 @@ binance_futures:
 binance_delivery:
     key_id: null
     key_secret: null
+okcoin:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+okex:
+    key_id: null
+    key_secret: null
+    key_passphrase: null

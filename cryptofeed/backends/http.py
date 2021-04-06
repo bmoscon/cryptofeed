@@ -19,6 +19,15 @@ class HTTPCallback(BackendQueue):
         self.addr = addr
         self.session = None
 
+    async def stop(self):
+        while self.queue.qsize() > 0:
+            async with self.read_many_queue(self.queue.qsize()) as updates:
+                for update in updates:
+                    await self.http_write(update['data'], headers=update['headers'])
+
+        if self.session:
+            await self.session.close()
+
     async def writer(self):
         while True:
             async with self.read_queue() as update:

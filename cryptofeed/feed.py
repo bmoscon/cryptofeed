@@ -13,8 +13,8 @@ from typing import Tuple, Callable, Union, List
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -74,6 +74,7 @@ class Feed:
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
         self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
         self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
+        self._feed_config = defaultdict(list)
 
         load_exchange_symbol_mapping(self.id, key_id=self.key_id)
 
@@ -86,17 +87,20 @@ class Feed:
                 if is_authenticated_channel(channel):
                     if not self.key_id or not self.key_secret:
                         raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
+                self.normalized_symbols.extend(subscription[channel])
                 self.subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
-                self.normalized_symbols.extend(self.subscription[chan])
+                self._feed_config[channel].extend(self.normalized_symbols)
 
         if symbols:
             self.normalized_symbols = symbols
             self.symbols = [symbol_std_to_exchange(symbol, self.id) for symbol in symbols]
         if channels:
             self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
+            [self._feed_config[channel].extend(self.normalized_symbols) for channel in channels]
             if any(is_authenticated_channel(chan) for chan in channels):
                 if not self.key_id or not self.key_secret:
                     raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
+        self._feed_config = dict(self._feed_config)
 
         self.l3_book = {}
         self.l2_book = {}
@@ -110,7 +114,9 @@ class Feed:
                           TICKER: Callback(None),
                           TRADES: Callback(None),
                           TRANSACTIONS: Callback(None),
-                          VOLUME: Callback(None)
+                          VOLUME: Callback(None),
+                          CANDLES: Callback(None),
+                          ORDER_INFO: Callback(None)
                           }
 
         if callbacks:

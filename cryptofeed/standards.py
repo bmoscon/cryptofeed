@@ -49,19 +49,11 @@ def symbol_std_to_exchange(symbol: str, exchange: str):
             return _std_trading_symbols[symbol][exchange]
         except KeyError:
             raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
-    else:
-        # Bitfinex supports funding symbols that are single currencies, prefixed with f
-        if exchange == BITFINEX and '-' not in symbol:
-            return f"f{symbol}"
-        raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
 
 
 def symbol_exchange_to_std(symbol):
     if symbol in _exchange_to_std:
         return _exchange_to_std[symbol]
-    # Bitfinex funding currency
-    if symbol[0] == 'f':
-        return symbol[1:]
     return None
 
 
@@ -252,10 +244,12 @@ _feed_to_exchange_map = {
         BYBIT: 'instrument_info.100ms'
     },
     ORDER_INFO: {
-        GEMINI: ORDER_INFO
+        GEMINI: ORDER_INFO,
+        OKEX: ORDER_INFO
     },
     CANDLES: {
-        BINANCE: 'kline_'
+        BINANCE: 'kline_',
+        BINANCE_FUTURES: 'kline_',
     }
 }
 
@@ -334,7 +328,7 @@ def normalize_channel(exchange: str, feed: str) -> str:
         if exchange in entries:
             if entries[exchange] == feed:
                 return chan
-    return None
+    raise ValueError('Unable to normalize channel %s', feed)
 
 
 def is_authenticated_channel(channel: str) -> bool:

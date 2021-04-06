@@ -5,23 +5,21 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from decimal import Decimal
 
-import requests
+from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
-from cryptofeed.exceptions import UnsupportedType
 
 
 LOG = logging.getLogger('feedhandler')
 
 
 class InfluxCallback(HTTPCallback):
-    def __init__(self, addr: str, db=None, key=None, create_db=False, numeric_type=str, org=None, bucket=None, token=None, precision='ns', username=None, password=None, **kwargs):
+    def __init__(self, addr: str, org: str, bucket: str, token: str, key=None, **kwargs):
         """
         Parent class for InfluxDB callbacks
 
@@ -48,107 +46,67 @@ class InfluxCallback(HTTPCallback):
         addr: str
           Address for connection. Should be in the format:
           http(s)://<ip addr>:port
-        db: str
-          Database to write to
-        key: str
-          key to use when writing data, will be a combination of key-datatype
-        create_db: bool
-          Create database if not exists
-        numeric_type: str/float
-          Convert types before writing (amount and price)
-        org: str (For InfluxDB 2.0 compatibility)
-          Orgnaization name for authentication
-        bucket: str (For InfluxDB 2.0 compatibility)
+        org: str
+          Organization name for authentication
+        bucket: str
           Bucket name for authentication
-        token: str (For InfluxDB 2.0 compatibility)
+        token: str
           Token string for authentication
-        precision: str (For InfluxDB 2.0 compatibility)
-          Precision level among (s, ms, us, ns)
-        username: str
-          Influxdb username for authentication
-        password: str
-          Influxdb password for authentication
+        key:
+          key to use when writing data, will be a combination of key-datatype
         """
         super().__init__(addr, **kwargs)
-        if org and bucket and token:
-            self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
-            self.headers = {"Authorization": f"Token {token}"}
-        else:
-            if create_db:
-                r = requests.post(f'{addr}/query?u={username}&p={password}', data={'q': f'CREATE DATABASE {db}'})
-                r.raise_for_status()
-            if username and password:
-                self.addr = f"{addr}/write?db={db}&u={username}&p={password}"
-            else:
-                self.addr = f"{addr}/write?db={db}"
-            self.headers = {}
+        self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision=us"
+        self.headers = {"Authorization": f"Token {token}"}
 
         self.session = None
-        self.numeric_type = numeric_type
         self.key = key if key else self.default_key
+        self.numeric_type = float
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        d = ''
-
+    def format(self, data):
+        ret = []
         for key, value in data.items():
             if key in {'timestamp', 'feed', 'symbol', 'receipt_timestamp'}:
                 continue
-            if isinstance(value, str) or (self.numeric_type is str and isinstance(value, (Decimal, float))):
-                d += f'{key}="{value}",'
+            if isinstance(value, str):
+                ret.append(f'{key}="{value}"')
             else:
-                d += f'{key}={value},'
-        d = d[:-1]
+                ret.append(f'{key}={value}')
+        return ','.join(ret)
 
-        update = f'{self.key}-{feed},symbol={symbol} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp}'
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+        d = self.format(data)
+        update = f'{self.key}-{feed},symbol={symbol} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp} {int(timestamp * 1000000)}'
         await self.queue.put({'data': update, 'headers': self.headers})
 
 
 class TradeInflux(InfluxCallback, BackendTradeCallback):
     default_key = 'trades'
 
+    def format(self, data):
+        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",order_type="{str(data["order_type"])}"'
+
 
 class FundingInflux(InfluxCallback, BackendFundingCallback):
     default_key = 'funding'
 
 
-class InfluxBookCallback(InfluxCallback):
+class BookInflux(InfluxCallback, BackendBookCallback):
     default_key = 'book'
 
-    async def _write_rows(self, start, data, timestamp, receipt_timestamp):
-        msg = []
-        ts = int(timestamp * 1000000000)
-        for side in (BID, ASK):
-            for price, val in data[side].items():
-                if isinstance(val, dict):
-                    for order_id, amount in val.items():
-                        if self.numeric_type is str:
-                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
-                        elif self.numeric_type is float:
-                            msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
-                        else:
-                            raise UnsupportedType(f"Type {self.numeric_type} not supported")
-                        ts += 1
-                else:
-                    if self.numeric_type is str:
-                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
-                    elif self.numeric_type is float:
-                        msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
-                    else:
-                        raise UnsupportedType(f"Type {self.numeric_type} not supported")
-                    ts += 1
-        await self.queue.put({'data': '\n'.join(msg), 'headers': self.headers})
+    def format(self, data):
+        bids = json.dumps(data[BID])
+        asks = json.dumps(data[ASK])
+        return f'delta=false,{BID}="{bids}",{ASK}="{asks}"'
 
 
-class BookInflux(InfluxBookCallback, BackendBookCallback):
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        start = f"{self.key}-{feed},symbol={symbol},delta=False"
-        await self._write_rows(start, data, timestamp, receipt_timestamp)
+class BookDeltaInflux(InfluxCallback, BackendBookDeltaCallback):
+    default_key = 'book'
 
-
-class BookDeltaInflux(InfluxBookCallback, BackendBookDeltaCallback):
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        start = f"{self.key}-{feed},symbol={symbol},delta=True"
-        await self._write_rows(start, data, timestamp, receipt_timestamp)
+    def format(self, data):
+        bids = json.dumps(data[BID])
+        asks = json.dumps(data[ASK])
+        return f'delta=true,{BID}="{bids}",{ASK}="{asks}"'
 
 
 class TickerInflux(InfluxCallback, BackendTickerCallback):

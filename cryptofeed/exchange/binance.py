@@ -53,14 +53,24 @@ class Binance(Feed):
         address = self.ws_endpoint + '/stream?streams='
 
         for chan in self.channels if not self.subscription else self.subscription:
-            if normalize_channel(self.id, chan) == OPEN_INTEREST:
+            normalized_chan = normalize_channel(self.id, chan)
+
+            if normalize_channel == OPEN_INTEREST:
                 continue
-            if normalize_channel(self.id, chan) == CANDLES:
-                chan = f"{chan}{self.candle_interval}"
+
+            stream = chan
+            if normalized_chan == CANDLES:
+                stream = f"{chan}{self.candle_interval}"
 
             for pair in self.symbols if not self.subscription else self.subscription[chan]:
-                pair = pair.lower()
-                stream = f"{pair}@{chan}/"
+                # for everything but premium index the symbols need to be lowercase.
+                if pair.startswith("p"):
+                    if normalized_chan != CANDLES:
+                        raise ValueError("Premium Index Symbols only allowed on Candle data feed")
+                else:
+                    pair = pair.lower()
+
+                stream = f"{pair}@{stream}/"
                 address += stream
                 counter += 1
                 if counter == 200:

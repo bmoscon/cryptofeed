@@ -94,12 +94,12 @@ class TradePostgres(PostgresCallback, BackendTradeCallback):
         timestamp = data[2]
         receipt_timestamp = data[3]
         data = data[4]
-        if 'id' not in data:
+        if data['id'] is None:
             data['id'] = 'NULL'
         else:
             data['id'] = f"'{data['id']}'"
 
-        if 'order_type' not in data:
+        if data['order_type'] is None:
             data['order_type'] = 'NULL'
         else:
             data['order_type'] = f"'{data['order_type']}'"

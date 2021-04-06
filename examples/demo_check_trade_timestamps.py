@@ -90,7 +90,7 @@ def main():
     exch_sym_map['Bitstamp'] = ['BTC-USD']
     exch_sym_map['Bybit'] = ['BTC-USD']
     exch_sym_map['Coinbase'] = ['BTC-USD']
-    exch_sym_map['Deribit'] = ['BTC-PERPETUAL']
+    exch_sym_map['Deribit'] = ['BTC-USD-PERPETUAL']
     exch_sym_map['EXX'] = ['BTC-USDT']
     exch_sym_map['Gemini'] = ['BTC-USD']
     exch_sym_map['HitBTC'] = ['BTC-USD']

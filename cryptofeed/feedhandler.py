@@ -21,7 +21,8 @@ import zlib
 from collections import defaultdict
 from socket import error as socket_error
 from time import time
-import functools
+
+from yapic import json
 
 from websockets import ConnectionClosed
 from websockets.exceptions import InvalidStatusCode
@@ -133,35 +134,6 @@ class FeedHandler:
             except ImportError:
                 LOG.info("FH: uvloop not initialized")
 
-    def playback(self, feed, filenames):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self._playback(feed, filenames))
-
-    async def _playback(self, feed, filenames):
-        counter = 0
-        callbacks = defaultdict(int)
-
-        class FakeWS:
-            async def send(self, *args, **kwargs):
-                pass
-
-        async def internal_cb(*args, **kwargs):
-            callbacks[kwargs['cb_type']] += 1
-
-        for cb_type, handler in feed.callbacks.items():
-            f = functools.partial(internal_cb, cb_type=cb_type)
-            handler.append(f)
-
-        await feed.subscribe(FakeWS())
-
-        for filename in filenames if isinstance(filenames, list) else [filenames]:
-            with open(filename, 'r') as fp:
-                for line in fp:
-                    timestamp, message = line.split(":", 1)
-                    counter += 1
-                    await feed.message_handler(message, FakeWS(), timestamp)
-            return {'messages_processed': counter, 'callbacks': dict(callbacks)}
-
     def add_feed(self, feed, timeout=120, **kwargs):
         """
         feed: str or class
@@ -208,7 +180,9 @@ class FeedHandler:
         f, timeout = self.feeds[-1]
 
         for conn, sub, handler in f.connect():
-            conn.set_raw_data_callback(self.raw_message_capture)
+            if self.raw_message_capture:
+                conn.set_raw_data_callback(self.raw_message_capture)
+                self.raw_message_capture.set_header(conn.uuid, json.dumps(f._feed_config))
             self.timeout[conn.uuid] = timeout
             feed.start(loop)
             loop.create_task(self._connect(conn, sub, handler))
@@ -253,7 +227,9 @@ class FeedHandler:
 
         for feed, timeout in self.feeds:
             for conn, sub, handler in feed.connect():
-                conn.set_raw_data_callback(self.raw_message_capture)
+                if self.raw_message_capture:
+                    self.raw_message_capture.set_header(conn.uuid, json.dumps(feed._feed_config))
+                    conn.set_raw_data_callback(self.raw_message_capture)
                 loop.create_task(self._connect(conn, sub, handler))
                 self.timeout[conn.uuid] = timeout
                 feed.start(loop)
@@ -291,6 +267,8 @@ class FeedHandler:
                 # set_name only in 3.8+
                 pass
             shutdown_tasks.append(task)
+        if self.raw_message_capture:
+            self.raw_message_capture.stop()
 
         LOG.info('FH: wait %s backend tasks until termination', len(shutdown_tasks))
         loop.run_until_complete(asyncio.gather(*shutdown_tasks))

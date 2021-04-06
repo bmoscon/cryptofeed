@@ -6,12 +6,16 @@ associated with this software.
 '''
 import asyncio
 from contextlib import asynccontextmanager
+import logging
 import time
 from typing import Callable, Union, List
 import uuid
 
 import aiohttp
 import websockets
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 class AsyncConnection:
@@ -54,10 +58,12 @@ class AsyncConnection:
 
     @asynccontextmanager
     async def connect(self):
-        self.session = aiohttp.ClientSession()
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession()
         if self.conn_type == "ws":
             if self.raw_cb:
                 await self.raw_cb(None, time.time(), self.uuid, connect=self.address)
+            LOG.debug("Connecting (websocket) to %s", self.address)
             self.conn = await websockets.connect(self.address, **self.kwargs)
 
         try:
