@@ -58,8 +58,9 @@ class Binance(Feed):
             if normalize_channel == OPEN_INTEREST:
                 continue
 
+            stream = chan
             if normalized_chan == CANDLES:
-                chan = f"{chan}{self.candle_interval}"
+                stream = f"{chan}{self.candle_interval}"
 
             for pair in self.symbols if not self.subscription else self.subscription[chan]:
                 # for everything but premium index the symbols need to be lowercase.
@@ -69,7 +70,7 @@ class Binance(Feed):
                 else:
                     pair = pair.lower()
 
-                stream = f"{pair}@{chan}/"
+                stream = f"{pair}@{stream}/"
                 address += stream
                 counter += 1
                 if counter == 200:
