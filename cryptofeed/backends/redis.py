@@ -12,6 +12,13 @@ from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, Back
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
+def trades_none_to_str(data):
+    if data['order_type'] is None:
+        data['order_type'] = 'None'
+    if data['id'] is None:
+        data['id'] = 'None'
+
+
 class RedisCallback(BackendQueue):
     def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, numeric_type=float, **kwargs):
         """
@@ -70,10 +77,17 @@ class RedisStreamCallback(RedisCallback):
 class TradeRedis(RedisZSetCallback, BackendTradeCallback):
     default_key = 'trades'
 
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        trades_none_to_str(data)
+        await super().write(feed, symbol, timestamp, receipt_timestamp, data)
+
 
 class TradeStream(RedisStreamCallback, BackendTradeCallback):
     default_key = 'trades'
 
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        trades_none_to_str(data)
+        await super().write(feed, symbol, timestamp, receipt_timestamp, data)
 
 class FundingRedis(RedisZSetCallback, BackendFundingCallback):
     default_key = 'funding'
