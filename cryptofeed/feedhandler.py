@@ -344,7 +344,7 @@ class FeedHandler:
                         if isinstance(e, ex):
                             LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", conn.uuid, str(e))
                             raise
-                LOG.warning("%s: encountered connection issue %s - reconnecting...", conn.uuid, str(e), exc_info=True)
+                LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", conn.uuid, str(e), delay, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
@@ -358,13 +358,18 @@ class FeedHandler:
                     LOG.warning("%s: Rate Limited - waiting %d seconds to reconnect", conn.uuid, rate_limited * 60)
                     await asyncio.sleep(rate_limited * 60)
                     rate_limited += 1
+                else:
+                    LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", conn.uuid, str(e), delay, exc_info=True)
+                    await asyncio.sleep(delay)
+                    retries += 1
+                    delay *= 2
             except Exception:
                 if self.exceptions:
                     for ex in self.exceptions:
                         if isinstance(e, ex):
                             LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", conn.uuid, str(e))
                             raise
-                LOG.error("%s: encountered an exception, reconnecting after %.1f seconds", conn.uuid, delay, exc_info=True)
+                LOG.error("%s: encountered an exception, reconnecting in %.1f seconds", conn.uuid, delay, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
