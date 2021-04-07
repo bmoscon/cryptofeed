@@ -69,9 +69,7 @@ class Binance(Feed):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-
-                stream = f"{pair}@{stream}/"
-                address += stream
+                address += f"{pair}@{stream}/"
                 counter += 1
                 if counter == 200:
                     ret[stream] = address[:-1]
