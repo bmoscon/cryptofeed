@@ -16,6 +16,8 @@
   * Bugfix: Improve connection cleanup in AsyncConnection object
   * Feature: Add support for user defined exception handling in FeedHandler
   * Bugfix: Fix redis backends that can't handle None
+  * Bugfix: Connection exceptions being ignored in Feedhandler
+  * Bugfix: Binance address generation correction
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
