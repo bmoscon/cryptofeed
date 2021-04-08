@@ -89,6 +89,7 @@ class TradeStream(RedisStreamCallback, BackendTradeCallback):
         trades_none_to_str(data)
         await super().write(feed, symbol, timestamp, receipt_timestamp, data)
 
+
 class FundingRedis(RedisZSetCallback, BackendFundingCallback):
     default_key = 'funding'
 

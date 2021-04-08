@@ -48,13 +48,11 @@ class Binance(Feed):
         The generic connect method supplied by Feed will take care of creating the
         correct connection objects from the addresses.
         """
-        ret = {}
-        counter = 0
         address = self.ws_endpoint + '/stream?streams='
+        subs = []
 
         for chan in self.channels if not self.subscription else self.subscription:
             normalized_chan = normalize_channel(self.id, chan)
-
             if normalize_channel == OPEN_INTEREST:
                 continue
 
@@ -69,20 +67,14 @@ class Binance(Feed):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-                address += f"{pair}@{stream}/"
-                counter += 1
-                if counter == 200:
-                    ret[stream] = address[:-1]
-                    counter = 0
-                    address = self.ws_endpoint + '/stream?streams='
-
-        if len(ret) == 0:
-            if address == f"{self.ws_endpoint}/stream?streams=":
-                return None
-            return address[:-1]
-        if counter > 0:
-            ret[stream] = address[:-1]
-        return ret
+                subs.append(f"{pair}@{stream}")
+        if len(subs) < 200:
+            return address + '/'.join(subs)
+        else:
+            def split_list(_list: list, n: int):
+                for i in range(0, len(_list), n):
+                    yield _list[i:i + n]
+            return {chunk[0]: address + '/'.join(chunk) for chunk in split_list(subs, 200)}
 
     def _reset(self):
         self.forced = defaultdict(bool)
