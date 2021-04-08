@@ -67,7 +67,7 @@ setup(
         "pyyaml",
         "aiohttp>=3.7.1, < 4.0.0",
         "aiofile>=2.0.0",
-        "yapic.json>=1.4.3",
+        "yapic.json>=1.6.3",
         'uvloop ; platform_system!="Windows"',
         # Two (optional) dependencies that speed up Cryptofeed:
         "aiodns>=1.1",  # aiodns speeds up DNS resolving
