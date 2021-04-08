@@ -19,17 +19,6 @@ class Deribit(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
-
-        # TODO: the same verification (below) is done in Bitmex => share this code in a common function in super class Feed
-        instruments = self.get_instruments()
-        pairs = None
-        if self.subscription:
-            subscribing_instruments = list(self.subscription.values())
-            pairs = [pair for inner in subscribing_instruments for pair in inner]
-
-        for pair in set(self.symbols or pairs):
-            if pair not in instruments:
-                raise ValueError(f"{pair} is not active on {self.id}")
         self.__reset()
 
     def __reset(self):

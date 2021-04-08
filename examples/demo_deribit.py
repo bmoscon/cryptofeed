@@ -30,9 +30,9 @@ def main():
     # Deribit can't handle 400+ simultaneous requests, so if all
     # instruments are needed they should be fed in the different calls
 
-    sub = {TRADES: ["BTC-PERPETUAL"], TICKER: ['ETH-PERPETUAL'], FUNDING: ['ETH-PERPETUAL'], OPEN_INTEREST: ['ETH-PERPETUAL']}
+    sub = {TRADES: ["BTC-USD-PERPETUAL"], TICKER: ['ETH-USD-PERPETUAL'], FUNDING: ['ETH-USD-PERPETUAL'], OPEN_INTEREST: ['ETH-USD-PERPETUAL']}
     f.add_feed(Deribit(subscription=sub, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
-    f.add_feed(Deribit(symbols=['BTC-PERPETUAL'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Deribit(symbols=['BTC-USD-PERPETUAL'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
 
     f.run()
 

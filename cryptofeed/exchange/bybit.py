@@ -67,9 +67,9 @@ class Bybit(Feed):
         for chan in self.channels if self.channels else self.subscription:
             for pair in self.symbols if self.symbols else self.subscription[chan]:
                 # Bybit uses separate addresses for difference quote currencies
-                if pair[-4:] == 'USDT' and quote != 'USDT':
+                if 'USDT' not in pair and quote == 'USDT':
                     continue
-                if pair[-3:] == 'USD' and quote != 'USD':
+                if 'USDT' in pair and quote == 'USD':
                     continue
 
                 await connection.send(json.dumps(
@@ -155,18 +155,25 @@ class Bybit(Feed):
             updates = msg['data']['update']
 
         for info in updates:
+            if 'updated_at_e9' in info:
+                ts = info['updated_at_e9'] / 1e9
+            elif 'updated_at' in info:
+                ts = timestamp_normalize(self.id, info['updated_at'])
+            else:
+                continue
+
             if 'open_interest' in info:
                 await self.callback(OPEN_INTEREST, feed=self.id,
                                     symbol=normalize_pair(info['symbol']),
                                     open_interest=Decimal(info['open_interest']),
-                                    timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
+                                    timestamp=ts,
                                     receipt_timestamp=timestamp)
 
             if 'index_price_e4' in info:
                 await self.callback(FUTURES_INDEX, feed=self.id,
                                     symbol=normalize_pair(info['symbol']),
                                     futures_index=Decimal(info['index_price_e4']) * Decimal(1e-4),
-                                    timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
+                                    timestamp=ts,
                                     receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):

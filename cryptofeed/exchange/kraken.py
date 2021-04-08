@@ -26,10 +26,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Kraken(Feed):
     id = KRAKEN
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
 
     def __init__(self, max_depth=1000, **kwargs):
-        if max_depth not in (10, 25, 100, 500, 1000):
-            raise ValueError("Valid depths for Kraken are 10, 25, 100, 500 or 1000")
         super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
 
     def __reset(self):
@@ -73,7 +72,13 @@ class Kraken(Feed):
         symbols = options[1]
         sub = {"name": chan}
         if 'book' in chan:
-            sub['depth'] = self.max_depth
+            max_depth = self.max_depth if self.max_depth else 1000
+            if max_depth not in self.valid_depths:
+                for d in self.valid_depths:
+                    if d > max_depth:
+                        max_depth = d
+
+            sub['depth'] = max_depth
 
         await conn.send(json.dumps({
             "event": "subscribe",

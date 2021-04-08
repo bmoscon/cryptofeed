@@ -21,7 +21,9 @@ import zlib
 from collections import defaultdict
 from socket import error as socket_error
 from time import time
-import functools
+from typing import List, Optional
+
+from yapic import json
 
 from websockets import ConnectionClosed
 from websockets.exceptions import InvalidStatusCode
@@ -98,7 +100,7 @@ def setup_signal_handlers(loop):
 
 
 class FeedHandler:
-    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, config=None):
+    def __init__(self, retries=10, timeout_interval=10, log_messages_on_error=False, raw_message_capture=None, config=None, exception_ignore: Optional[List[Exception]] = None):
         """
         retries: int
             number of times the connection will be retried (in the event of a disconnect or other failure)
@@ -111,6 +113,9 @@ class FeedHandler:
         config: str, dict or None
             if str, absolute path (including file name) of the config file. If not provided, config can also be a dictionary of values, or
             can be None, which will default options. See docs/config.md for more information.
+        exception_ignore: list, or None
+            an optional list of exceptions that cryptofeed should ignore (i.e. not handle). These will need to be handled
+            by a user-defined exception handler (provided to run run method) or the exception will kill the task (but not the feedhandler).
         """
         self.feeds = []
         self.retries = (retries + 1) if retries >= 0 else -1
@@ -120,6 +125,9 @@ class FeedHandler:
         self.log_messages_on_error = log_messages_on_error
         self.raw_message_capture = raw_message_capture
         self.config = Config(config=config)
+        if exception_ignore is not None and not isinstance(exception_ignore, list):
+            raise ValueError("exception_ignore must be a list of Exceptions or None")
+        self.exceptions = exception_ignore
 
         get_logger('feedhandler', self.config.log.filename, self.config.log.level)
         if self.config.log_msg:
@@ -132,35 +140,6 @@ class FeedHandler:
                 LOG.info('FH: uvloop initalized')
             except ImportError:
                 LOG.info("FH: uvloop not initialized")
-
-    def playback(self, feed, filenames):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self._playback(feed, filenames))
-
-    async def _playback(self, feed, filenames):
-        counter = 0
-        callbacks = defaultdict(int)
-
-        class FakeWS:
-            async def send(self, *args, **kwargs):
-                pass
-
-        async def internal_cb(*args, **kwargs):
-            callbacks[kwargs['cb_type']] += 1
-
-        for cb_type, handler in feed.callbacks.items():
-            f = functools.partial(internal_cb, cb_type=cb_type)
-            handler.append(f)
-
-        await feed.subscribe(FakeWS())
-
-        for filename in filenames if isinstance(filenames, list) else [filenames]:
-            with open(filename, 'r') as fp:
-                for line in fp:
-                    timestamp, message = line.split(":", 1)
-                    counter += 1
-                    await feed.message_handler(message, FakeWS(), timestamp)
-            return {'messages_processed': counter, 'callbacks': dict(callbacks)}
 
     def add_feed(self, feed, timeout=120, **kwargs):
         """
@@ -208,8 +187,11 @@ class FeedHandler:
         f, timeout = self.feeds[-1]
 
         for conn, sub, handler in f.connect():
-            conn.set_raw_data_callback(self.raw_message_capture)
+            if self.raw_message_capture:
+                conn.set_raw_data_callback(self.raw_message_capture)
+                self.raw_message_capture.set_header(conn.uuid, json.dumps(f._feed_config))
             self.timeout[conn.uuid] = timeout
+            feed.start(loop)
             loop.create_task(self._connect(conn, sub, handler))
 
     def add_nbbo(self, feeds, symbols, callback, timeout=120):
@@ -228,7 +210,7 @@ class FeedHandler:
         for feed in feeds:
             self.add_feed(feed(channels=[L2_BOOK], symbols=symbols, callbacks={L2_BOOK: cb}), timeout=timeout)
 
-    def run(self, start_loop: bool = True, install_signal_handlers: bool = True):
+    def run(self, start_loop: bool = True, install_signal_handlers: bool = True, exception_handler=None):
         """
         start_loop: bool, default True
             if false, will not start the event loop.
@@ -237,6 +219,8 @@ class FeedHandler:
             can only be done from the main thread's loop, so if running cryptofeed on
             a child thread, this must be set to false, and setup_signal_handlers must
             be called from the main/parent thread's event loop
+        exception_handler: asyncio exception handler function pointer
+            a custom exception handler for asyncio
         """
         if len(self.feeds) == 0:
             txt = f'FH: No feed specified. Please specify at least one feed among {list(_EXCHANGES.keys())}'
@@ -252,14 +236,19 @@ class FeedHandler:
 
         for feed, timeout in self.feeds:
             for conn, sub, handler in feed.connect():
-                conn.set_raw_data_callback(self.raw_message_capture)
+                if self.raw_message_capture:
+                    self.raw_message_capture.set_header(conn.uuid, json.dumps(feed._feed_config))
+                    conn.set_raw_data_callback(self.raw_message_capture)
                 loop.create_task(self._connect(conn, sub, handler))
                 self.timeout[conn.uuid] = timeout
+                feed.start(loop)
 
         if not start_loop:
             return
 
         try:
+            if exception_handler:
+                loop.set_exception_handler(exception_handler)
             loop.run_forever()
         except SystemExit:
             LOG.info('FH: System Exit received - shutting down')
@@ -289,6 +278,8 @@ class FeedHandler:
                 # set_name only in 3.8+
                 pass
             shutdown_tasks.append(task)
+        if self.raw_message_capture:
+            self.raw_message_capture.stop()
 
         LOG.info('FH: wait %s backend tasks until termination', len(shutdown_tasks))
         loop.run_until_complete(asyncio.gather(*shutdown_tasks))
@@ -348,17 +339,37 @@ class FeedHandler:
                     await subscribe(connection)
                     await self._handler(connection, handler)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                LOG.warning("%s: encountered connection issue %s - reconnecting...", conn.uuid, str(e), exc_info=True)
+                if self.exceptions:
+                    for ex in self.exceptions:
+                        if isinstance(e, ex):
+                            LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", conn.uuid, str(e))
+                            raise
+                LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", conn.uuid, str(e), delay, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
             except InvalidStatusCode as e:
+                if self.exceptions:
+                    for ex in self.exceptions:
+                        if isinstance(e, ex):
+                            LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", conn.uuid, str(e))
+                            raise
                 if e.status_code == 429:
                     LOG.warning("%s: Rate Limited - waiting %d seconds to reconnect", conn.uuid, rate_limited * 60)
                     await asyncio.sleep(rate_limited * 60)
                     rate_limited += 1
+                else:
+                    LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", conn.uuid, str(e), delay, exc_info=True)
+                    await asyncio.sleep(delay)
+                    retries += 1
+                    delay *= 2
             except Exception:
-                LOG.error("%s: encountered an exception, reconnecting after %.1f seconds", conn.uuid, delay, exc_info=True)
+                if self.exceptions:
+                    for ex in self.exceptions:
+                        if isinstance(e, ex):
+                            LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", conn.uuid, str(e))
+                            raise
+                LOG.error("%s: encountered an exception, reconnecting in %.1f seconds", conn.uuid, delay, exc_info=True)
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2

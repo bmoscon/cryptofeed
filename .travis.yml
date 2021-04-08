@@ -1,9 +1,10 @@
 os: linux
-dist: xenial
+dist: focal
 language: python
 python:
   - "3.7"
   - "3.8"
+  - "3.9"
 install:
   - pip install --upgrade pip
   - pip install --upgrade pyyaml requests websockets

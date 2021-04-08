@@ -8,12 +8,12 @@ import zmq
 import zmq.asyncio
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
 
-class ZMQCallback:
+class ZMQCallback(BackendQueue):
     def __init__(self, host='127.0.0.1', port=5555, numeric_type=float, key=None, dynamic_key=True, **kwargs):
         url = "tcp://{}:{}".format(host, port)
         ctx = zmq.asyncio.Context.instance()
@@ -25,9 +25,14 @@ class ZMQCallback:
 
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         if self.dynamic_key:
-            await self.con.send_string(f'{feed}-{self.key}-{symbol} {json.dumps(data)}')
+            await self.queue.put(f'{feed}-{self.key}-{symbol} {json.dumps(data)}')
         else:
-            await self.con.send_string(f'{self.key} {json.dumps(data)}')
+            await self.queue.put(f'{self.key} {json.dumps(data)}')
+
+    async def writer(self):
+        while True:
+            async with self.read_queue() as update:
+                await self.con.send_string(update)
 
 
 class TradeZMQ(ZMQCallback, BackendTradeCallback):
@@ -64,3 +69,7 @@ class MarketInfoZMQ(ZMQCallback, BackendMarketInfoCallback):
 
 class TransactionsZMQ(ZMQCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesZMQ(ZMQCallback, BackendCandlesCallback):
+    default_key = 'candles'

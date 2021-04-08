@@ -28,7 +28,7 @@ class Rest:
     The rest class is a common interface for accessing the individual exchanges
 
     r = Rest()
-    r.bitmex.trades('XBTUSD', '2018-01-01', '2018-01-01')
+    r.bitmex.trades('BTC-USD', '2018-01-01', '2018-01-01')
 
     The Rest class optionally takes two exchange-related parameters, config, and sandbox.
     In the config file the api key and secrets can be specified. Sandbox enables sandbox
