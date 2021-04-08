@@ -68,6 +68,7 @@ class Binance(Feed):
                 else:
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
+
         if len(subs) < 200:
             return address + '/'.join(subs)
         else:
