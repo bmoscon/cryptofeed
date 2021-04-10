@@ -22,7 +22,6 @@ from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INT
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, is_authenticated_channel
-from cryptofeed.symbols import get_symbol_separator
 from cryptofeed.util import split
 
 
@@ -34,6 +33,15 @@ class OKCoin(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
+
+        for chan in set(self.channels or self.subscription):
+            if chan != LIQUIDATIONS:
+                continue
+            for symbol in set(self.symbols or self.subscription[chan]):
+                instrument_type = self.instrument_type(symbol)
+                if instrument_type == 'spot':
+                    raise ValueError("LIQUIDATIONS only supports futures and swap trading pairs")
+
         self.open_interest = {}
 
     def __reset(self):
@@ -77,16 +85,9 @@ class OKCoin(Feed):
             request = {"op": "subscribe", "args": chunk}
             await conn.send(json.dumps(request))
 
-    @staticmethod
-    def instrument_type(pair):
-        dash_count = pair.count(get_symbol_separator())
-        if dash_count == 1:  # BTC-USDT
-            return 'spot'
-        if dash_count == 4:  # BTC-USD-201225-35000-P
-            return 'option'
-        if pair[-4:] == "SWAP":  # BTC-USDT-SWAP
-            return 'swap'
-        return 'futures'  # BTC-USDT-201225
+    @classmethod
+    def instrument_type(cls, symbol):
+        return cls.info()['instrument_type'][symbol]
 
     def get_channel_symbol_combinations(self):
         for chan in set(self.channels or self.subscription):

@@ -116,7 +116,6 @@ class AsyncConnection:
             if self.raw_cb:
                 await self.raw_cb(data, time.time(), self.uuid, endpoint=uri)
             response.raise_for_status()
-
             return data
 
     def set_raw_data_callback(self, raw_data_cb: Callable):

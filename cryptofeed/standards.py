@@ -49,6 +49,8 @@ def symbol_std_to_exchange(symbol: str, exchange: str):
             return _std_trading_symbols[symbol][exchange]
         except KeyError:
             raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
+    else:
+        raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
 
 
 def symbol_exchange_to_std(symbol):

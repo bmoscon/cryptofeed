@@ -399,22 +399,28 @@ def okcoin_symbols() -> Dict[str, str]:
 
 
 def okex_symbols(*args) -> Dict[str, str]:
-    option_urls = okex_compute_option_urls_from_underlyings()
-    other_urls = ['https://www.okex.com/api/spot/v3/instruments',
-                  'https://www.okex.com/api/swap/v3/instruments/ticker',
-                  'https://www.okex.com/api/futures/v3/instruments/ticker']
-    # To respect rate limit constraints per endpoint, we alternate options and other instrument types
-    urls: List[str] = []
-    for i in range(max(len(option_urls), len(other_urls))):
-        if i < len(option_urls):
-            urls.append(option_urls[i])
-        if i < len(other_urls):
-            urls.append(other_urls[i])
-    # Collect together the symbols of each endpoint
+    urls = ['https://www.okex.com/api/spot/v3/instruments',
+            'https://www.okex.com/api/swap/v3/instruments',
+            'https://www.okex.com/api/futures/v3/instruments']
+    urls = urls + okex_compute_option_urls_from_underlyings()
+
     symbols: Dict[str, str] = {}
     for u in urls:
         time.sleep(0.2)
         symbols.update(okex_symbols_from_one_url(u))
+
+    for symbol in symbols:
+        instrument_type = 'futures'
+        dash_count = symbol.count(get_symbol_separator())
+        if dash_count == 1:  # BTC-USDT
+            instrument_type = 'spot'
+        if dash_count == 4:  # BTC-USD-201225-35000-P
+            instrument_type = 'option'
+        if symbol[-4:] == "SWAP":  # BTC-USDT-SWAP
+            instrument_type = 'swap'
+
+        _exchange_info[OKEX]['instrument_type'][symbol] = instrument_type
+
     return symbols
 
 
@@ -432,7 +438,11 @@ def okex_symbols_from_one_url(url: str) -> Dict[str, str]:
     r = None
     try:
         r = requests.get(url)
-        return {e['instrument_id']: e['instrument_id'] for e in r.json()}
+        ret = {}
+        for e in r.json():
+            ret[e['instrument_id']] = e['instrument_id']
+            _exchange_info[OKEX]['tick_size'][e['instrument_id']] = e['tick_size']
+        return ret
     except Exception as why:
         raise_failure_explanation('OKEX', why, {url: r})
 
