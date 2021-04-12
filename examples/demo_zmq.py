@@ -19,21 +19,28 @@ from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, PERPETURAL, OPTION, FU
 from cryptofeed.exchanges import Deribit
 from cryptofeed.util.instrument import get_instrument_type
 
+import uvloop
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 def receiver(port):
+    async def listen():
+        while True:
+            data = await s.recv_string()
+            key, msg = data.split(" ", 1)
+            print(key)
+            print(json.loads(msg))
+
     import zmq
     addr = 'tcp://127.0.0.1:{}'.format(port)
-    ctx = zmq.Context.instance()
+    ctx = zmq.asyncio.Context.instance()
     s = ctx.socket(zmq.SUB)
     # empty subscription for all data, could be book for just book data, etc
     s.setsockopt(zmq.SUBSCRIBE, b'')
 
     s.bind(addr)
-    while True:
-        data = s.recv_string()
-        key, msg = data.split(" ", 1)
-        print(key)
-        print(json.loads(msg))
+    
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(listen())
 
 async def do_periodically_at(hour, minute, second, periodic_function):
     while True:
@@ -68,13 +75,13 @@ def get_time_from_timestamp(timestamp):
     return '%s.%03d' % (datetime.datetime.utcfromtimestamp(s).strftime('%H:%M:%S'), ms)
 
 subscription = {
-    PERPETURAL: [],
-    OPTION: [],
-    FUTURE: []
+    # PERPETURAL: [],
+    # OPTION: [],
+    # FUTURE: []
 
-    # PERPETURAL: [TICKER, TRADES],
-    # OPTION: [TICKER, L2_BOOK],
-    # FUTURE: [TICKER]
+    PERPETURAL: [TICKER, TRADES],
+    OPTION: [TICKER, L2_BOOK],
+    FUTURE: [TICKER]
 
     # PERPETURAL: [TICKER, TRADES],
     # OPTION: [TICKER, TRADES, L2_BOOK],
@@ -95,9 +102,8 @@ callbacks = {
 
 def main():
     try:
-        p = Process(target=receiver, args=(5678,))
-
-        p.start()
+        # p = Process(target=receiver, args=(5678,))
+        # p.start()
 
         f = FeedHandler(config="config.yaml")
         all_subscription = get_new_subscription()

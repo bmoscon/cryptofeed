@@ -33,7 +33,8 @@ class DeribitInstrument():
             self.instrument_type = OPTION
             self.expiry_date_str = instrument_properties[1]
             self.expiry_date = datetime.strptime(self.expiry_date_str, "%d%b%y")
-            self.strike_price = instrument_properties[2]
+            self.expiry_date = self.expiry_date.replace(hour=8)
+            self.strike_price = Decimal(instrument_properties[2])
             self.option_type = C if instrument_properties[3] == 'C' else P
 
 class Deribit(Feed):
