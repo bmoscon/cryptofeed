@@ -210,4 +210,4 @@ class Poloniex(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         for chan in self.channels:
-            await conn.send(json.dumps({"command": "subscribe", "channel": chan}))
+            await conn.write(json.dumps({"command": "subscribe", "channel": chan}))

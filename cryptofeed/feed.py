@@ -12,7 +12,8 @@ from typing import Tuple, Callable, Union, List
 
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
@@ -26,14 +27,19 @@ LOG = logging.getLogger('feedhandler')
 class Feed:
     id = 'NotImplemented'
 
-    def __init__(self, address: Union[dict, str], sandbox=False, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False):
         """
         address: str, or dict
             address to be used to create the connection.
             The address protocol (wss or https) will be used to determine the connection type.
             Use a "str" to pass one single address, or a dict of option/address
-        sandbox: bool
-            For authenticated channels, run against the sandbox websocket (when True)
+        timeout: int
+            Time, in seconds, between message to wait before a feed is considered dead and will be restarted.
+            Set to -1 for infinite.
+        timeout_interval: int
+            Time, in seconds, between timeout checks.
+        retries: int
+            Number of times to retry a failed connection. Set to -1 for infinite
         max_depth: int
             Maximum number of levels per side to return in book updates
         book_interval: int
@@ -49,6 +55,12 @@ class Feed:
             checksums or provide message sequence numbers.
         origin: str
             Passed into websocket connect. Sets the origin header.
+        exceptions: list of exceptions
+            These exceptions will not be handled internally and will be passed to the asyncio exception handler. To
+            handle them feedhandler will need to be supplied with a custom exception handler. See the `run` method
+            on FeedHandler, specifically the `exception_handler` keyword argument.
+        log_message_on_error: bool
+            If an exception is encountered in the connection handler, log the raw message
         """
         if isinstance(config, Config):
             LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
@@ -57,6 +69,12 @@ class Feed:
             LOG.info('%s: create Config from type: %r', self.id, type(config))
             self.config = Config(config)
 
+        self.log_on_error = log_message_on_error
+        self.retries = retries
+        self.exceptions = exceptions
+        self.connection_handlers = []
+        self.timeout = timeout
+        self.timeout_interval = timeout_interval
         self.subscription = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
@@ -134,7 +152,7 @@ class Feed:
         Helper method for building a custom connect tuple
         """
         subscribe = partial(self.subscribe if not sub else sub, options=options)
-        conn = AsyncConnection(address, self.id, extra_headers=header, **self.ws_defaults)
+        conn = WSAsyncConn(address, self.id, extra_headers=header, **self.ws_defaults)
         return conn, subscribe, handler if handler else self.message_handler
 
     async def _empty_subscribe(self, conn: AsyncConnection, **kwargs):
@@ -154,10 +172,10 @@ class Feed:
         """
         ret = []
         if isinstance(self.address, str):
-            return [(AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
+            return [(WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler)]
 
         for _, addr in self.address.items():
-            ret.append((AsyncConnection(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
+            ret.append((WSAsyncConn(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
         return ret
 
     @classmethod
@@ -278,6 +296,13 @@ class Feed:
         LOG.info('%s: feed shutdown completed', self.id)
 
     def start(self, loop):
+        """
+        Create tasks for exchange interfaces and backends
+        """
+        for conn, sub, handler in self.connect():
+            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
+            self.connection_handlers[-1].start(loop)
+
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'start'):

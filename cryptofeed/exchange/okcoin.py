@@ -83,7 +83,7 @@ class OKCoin(Feed):
         for chunk in split.list_by_max_items(symbol_channels, 33):
             LOG.info("%s: Subscribe to %s args from %r to %r", self.id, len(chunk), chunk[0], chunk[-1])
             request = {"op": "subscribe", "args": chunk}
-            await conn.send(json.dumps(request))
+            await conn.write(json.dumps(request))
 
     @classmethod
     def instrument_type(cls, symbol):
@@ -260,8 +260,8 @@ class OKCoin(Feed):
         timestamp, sign = generate_token(self.key_id, self.key_secret)
         login_param = {"op": "login", "args": [self.key_id, self.config.okex.key_passphrase, timestamp, sign.decode("utf-8")]}
         login_str = json.dumps(login_param)
-        await conn.send(login_str)
+        await conn.write(login_str)
         await asyncio.sleep(5)
         sub_param = {"op": "subscribe", "args": ["spot/order:{}".format(symbol)]}
         sub_str = json.dumps(sub_param)
-        await conn.send(sub_str)
+        await conn.write(sub_str)

@@ -80,7 +80,7 @@ class Kraken(Feed):
 
             sub['depth'] = max_depth
 
-        await conn.send(json.dumps({
+        await conn.write(json.dumps({
             "event": "subscribe",
             "pair": symbols,
             "subscription": sub

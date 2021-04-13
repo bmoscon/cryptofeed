@@ -176,5 +176,5 @@ class Bitflyer(Feed):
             for pair in set(self.symbols or self.subscription[chan]):
                 if chan.startswith('lightning_board'):
                     # need to subscribe to snapshots too if subscribed to L2_BOOKS
-                    await conn.send(json.dumps({"method": "subscribe", "params": {"channel": f'lightning_board_snapshot_{pair}'}}))
-                await conn.send(json.dumps({"method": "subscribe", "params": {"channel": chan.format(pair)}}))
+                    await conn.write(json.dumps({"method": "subscribe", "params": {"channel": f'lightning_board_snapshot_{pair}'}}))
+                await conn.write(json.dumps({"method": "subscribe", "params": {"channel": chan.format(pair)}}))

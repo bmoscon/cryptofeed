@@ -162,7 +162,7 @@ class Gateio(Feed):
             if 'depth' in chan:
                 pairs = [[pair, 30, "0.00000001"] for pair in pairs]
 
-            await conn.send(json.dumps(
+            await conn.write(json.dumps(
                 {
                     "method": chan,
                     "params": pairs,

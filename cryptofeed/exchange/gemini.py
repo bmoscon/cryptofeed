@@ -145,4 +145,4 @@ class Gemini(Feed):
 
     async def subscribe(self, conn: AsyncConnection, options=None):
         self.__reset(options)
-        await conn.send(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": options}]}))
+        await conn.write(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": options}]}))

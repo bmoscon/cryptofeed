@@ -92,7 +92,7 @@ class Huobi(Feed):
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await conn.send(json.dumps({'pong': msg['ping']}))
+            await conn.write(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
@@ -111,7 +111,7 @@ class Huobi(Feed):
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
                 client_id += 1
-                await conn.send(json.dumps(
+                await conn.write(json.dumps(
                     {
                         "sub": f"market.{pair}.{chan}",
                         "id": client_id

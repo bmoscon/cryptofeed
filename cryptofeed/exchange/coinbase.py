@@ -365,10 +365,10 @@ class Coinbase(Feed):
         self.__reset(symbol=symbol)
 
         for chan in set(self.channels or self.subscription):
-            await conn.send(json.dumps({"type": "subscribe",
-                                        "product_ids": list(self.symbols or self.subscription[chan]),
-                                        "channels": [chan]
-                                        }))
+            await conn.write(json.dumps({"type": "subscribe",
+                                         "product_ids": list(self.symbols or self.subscription[chan]),
+                                         "channels": [chan]
+                                         }))
 
         chan = feed_to_exchange(self.id, L3_BOOK)
         if chan in set(self.channels or self.subscription):

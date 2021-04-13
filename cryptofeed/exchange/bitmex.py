@@ -508,6 +508,6 @@ class Bitmex(Feed):
             expires = int(time.time()) + 365 * 24 * 3600  # One year
             msg = f'GET/realtime{expires}'.encode('utf-8')
             signature = hmac.new(key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
-            await conn.send(json.dumps({'op': 'authKeyExpires', 'args': [key_id, expires, signature]}))
+            await conn.write(json.dumps({'op': 'authKeyExpires', 'args': [key_id, expires, signature]}))
         else:
             LOG.info('%s: No authentication. Enable it using config or env. vars: CF_BITMEX_KEY_ID and CF_BITMEX_KEY_SECRET', conn.uuid)

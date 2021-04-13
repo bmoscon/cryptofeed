@@ -202,4 +202,4 @@ class Upbit(Feed):
             if chan == TICKER:
                 chans.append({"type": "ticker", "codes": codes, 'isOnlyRealtime': True})
 
-        await conn.send(json.dumps(chans))
+        await conn.write(json.dumps(chans))

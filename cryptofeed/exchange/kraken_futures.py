@@ -35,7 +35,7 @@ class KrakenFutures(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         for chan in set(self.channels or self.subscription):
-            await conn.send(json.dumps(
+            await conn.write(json.dumps(
                 {
                     "event": "subscribe",
                     "feed": chan,

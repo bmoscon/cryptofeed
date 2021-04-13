@@ -168,7 +168,7 @@ class Blockchain(Feed):
         self.__reset()
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
-                await conn.send(json.dumps({"action": "subscribe",
-                                            "symbol": pair,
-                                            "channel": chan
-                                            }))
+                await conn.write(json.dumps({"action": "subscribe",
+                                             "symbol": pair,
+                                             "channel": chan
+                                             }))

@@ -141,7 +141,7 @@ class Deribit(Feed):
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
                 channels.append(f"{chan}.{pair}.raw")
-        await conn.send(json.dumps(
+        await conn.write(json.dumps(
             {
                 "jsonrpc": "2.0",
                 "id": client_id,

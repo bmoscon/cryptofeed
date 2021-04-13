@@ -98,7 +98,7 @@ class Bitmax(Feed):
             elif msg['m'] == 'trades':
                 await self._trade(msg, timestamp)
             elif msg['m'] == 'ping':
-                await conn.send('{"op":"pong"}')
+                await conn.write('{"op":"pong"}')
             elif msg['m'] == 'connected':
                 return
             elif msg['m'] == 'sub':

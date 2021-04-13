@@ -162,7 +162,7 @@ class EXX(Feed):
         self.__reset()
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
-                await conn.send(json.dumps({"dataType": f"1_{chan}_{pair}",
-                                            "dataSize": 50,
-                                            "action": "ADD"
-                                            }))
+                await conn.write(json.dumps({"dataType": f"1_{chan}_{pair}",
+                                             "dataSize": 50,
+                                             "action": "ADD"
+                                             }))

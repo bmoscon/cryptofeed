@@ -35,7 +35,7 @@ class BitcoinCom(Feed):
         self.__reset()
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
-                await conn.send(json.dumps(
+                await conn.write(json.dumps(
                     {
                         "method": chan,
                         "params": {

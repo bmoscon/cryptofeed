@@ -173,17 +173,17 @@ class Probit(Feed):
         if self.subscription:
             for chan in self.subscription:
                 for pair in self.subscription[chan]:
-                    await conn.send(json.dumps({"type": "subscribe",
-                                                "channel": "marketdata",
-                                                "filter": [chan],
-                                                "interval": 100,
-                                                "market_id": pair,
-                                                }))
+                    await conn.write(json.dumps({"type": "subscribe",
+                                                 "channel": "marketdata",
+                                                 "filter": [chan],
+                                                 "interval": 100,
+                                                 "market_id": pair,
+                                                 }))
         else:
             for pair in self.symbols:
-                await conn.send(json.dumps({"type": "subscribe",
-                                            "channel": "marketdata",
-                                            "filter": list(self.channels),
-                                            "interval": 100,
-                                            "market_id": pair,
-                                            }))
+                await conn.write(json.dumps({"type": "subscribe",
+                                             "channel": "marketdata",
+                                             "filter": list(self.channels),
+                                             "interval": 100,
+                                             "market_id": pair,
+                                             }))

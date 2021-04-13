@@ -50,7 +50,7 @@ class FTX(Feed):
                 asyncio.create_task(self._open_interest(symbols))  # TODO: use HTTPAsyncConn
                 continue
             for pair in symbols:
-                await conn.send(json.dumps(
+                await conn.write(json.dumps(
                     {
                         "channel": chan,
                         "market": pair,

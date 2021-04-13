@@ -150,7 +150,7 @@ class Bitstamp(Feed):
         self.last_update_id = {}
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
-                await conn.send(
+                await conn.write(
                     json.dumps({
                         "event": "bts:subscribe",
                         "data": {

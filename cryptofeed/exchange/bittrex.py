@@ -112,11 +112,11 @@ class Bittrex(Feed):
             if chan == 'SubscribeToExchangeDeltas':
                 for symbol in symbols:
                     msg = {'A': [symbol], 'H': 'c2', 'I': i, 'M': 'QueryExchangeState'}
-                    await conn.send(json.dumps(msg))
+                    await conn.write(json.dumps(msg))
                     i += 1
             if chan == TRADES:
                 chan = 'SubscribeToExchangeDeltas'
             for symbol in symbols:
                 msg = {'A': [symbol] if chan != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': chan}
                 i += 1
-                await conn.send(json.dumps(msg))
+                await conn.write(json.dumps(msg))
