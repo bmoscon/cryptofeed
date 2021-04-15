@@ -48,14 +48,14 @@ class BackendQueue:
 
 class BackendBookCallback:
     async def __call__(self, *, feed: str, symbol: str, book: dict, timestamp: float, receipt_timestamp: float):
-        data = {'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'delta': False, BID: {}, ASK: {}}
+        data = {'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'delta': False, BID: {}, ASK: {}}
         book_convert(book, data, convert=self.numeric_type)
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
 class BackendBookDeltaCallback:
     async def __call__(self, *, feed: str, symbol: str, delta: dict, timestamp: float, receipt_timestamp: float):
-        data = {'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'delta': True, BID: {}, ASK: {}}
+        data = {'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'delta': True, BID: {}, ASK: {}}
         book_delta_convert(delta, data, convert=self.numeric_type)
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
@@ -63,7 +63,7 @@ class BackendBookDeltaCallback:
 class BackendTradeCallback:
     async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, order_id: str = None, timestamp: float, receipt_timestamp: float, order_type: str = None):
         data = {'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp,
-                'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price), 'order_type': order_type, 'id': order_id}
+                'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price), 'order_type': order_type, 'order_id': order_id}
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
