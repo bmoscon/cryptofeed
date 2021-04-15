@@ -8,7 +8,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 import time
-from typing import List, Tuple, Union, AsyncIterable
+from typing import List, Union, AsyncIterable
 
 import aiohttp
 import websockets
