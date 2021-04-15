@@ -12,7 +12,7 @@ from typing import Tuple, Callable, Union, List
 
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME)
@@ -69,6 +69,7 @@ class Feed:
             LOG.info('%s: create Config from type: %r', self.id, type(config))
             self.config = Config(config)
 
+        self.http_conn = HTTPAsyncConn(self.id)
         self.log_on_error = log_message_on_error
         self.retries = retries
         self.exceptions = exceptions
@@ -287,6 +288,7 @@ class Feed:
 
     async def shutdown(self):
         LOG.info('%s: feed shutdown starting...', self.id)
+        await self.http_conn.close()
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'stop'):

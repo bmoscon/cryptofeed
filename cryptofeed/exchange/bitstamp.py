@@ -132,7 +132,7 @@ class Bitstamp(Feed):
     async def _snapshot(self, pairs: list, conn: AsyncConnection):
         await asyncio.sleep(5)
         urls = [f'https://www.bitstamp.net/api/v2/order_book/{sym}' for sym in pairs]
-        results = [await conn.get(url) for url in urls]
+        results = [await self.http_conn.read(url) for url in urls]
         results = [json.loads(resp, parse_float=Decimal) for resp in results]
 
         for r, pair in zip(results, pairs):

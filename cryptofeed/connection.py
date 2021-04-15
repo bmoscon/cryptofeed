@@ -4,10 +4,11 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 import time
-from typing import Union, AsyncIterable
+from typing import List, Tuple, Union, AsyncIterable
 
 import aiohttp
 import websockets
@@ -91,8 +92,7 @@ class HTTPAsyncConn(AsyncConnection):
 
     async def read(self, address: str) -> bytes:
         if not self.is_open:
-            LOG.error('%s: connection closed in read()', self.id)
-            raise ConnectionClosed
+            await self._open()
 
         LOG.debug("%s: requesting data from %s", self.id, address)
         async with self.conn.get(address) as response:
@@ -104,14 +104,40 @@ class HTTPAsyncConn(AsyncConnection):
 
     async def write(self, address: str, msg: str, header=None):
         if not self.is_open:
-            LOG.error('%s: connection closed in write()', self.id)
-            raise ConnectionClosed
+            await self._open()
 
         async with self.conn.post(address, data=msg, headers=header) as response:
             response.raise_for_status()
             data = await response.read()
             self.sent += 1
             return data
+
+
+class HTTPPoll(HTTPAsyncConn):
+    def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1):
+        super().__init__(f'{conn_id}.http.{self.conn_count}')
+        if isinstance(address, str):
+            address = [address]
+        self.address = address
+
+        self.sleep = sleep
+        self.delay = delay
+
+    async def read(self) -> AsyncIterable:
+        while True:
+            for addr in self.address:
+                if not self.is_open:
+                    LOG.error('%s: connection closed in read()', self.id)
+                    raise ConnectionClosed
+                LOG.debug("%s: polling %s", self.id, addr)
+                async with self.conn.get(addr) as response:
+                    response.raise_for_status()
+                    data = await response.text()
+                    self.received += 1
+                    self.last_message = time.time()
+                    yield data
+                    await asyncio.sleep(self.sleep)
+            await asyncio.sleep(self.delay)
 
 
 class WSAsyncConn(AsyncConnection):

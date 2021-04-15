@@ -51,9 +51,10 @@ def main():
     f = FeedHandler()
     f.add_feed(FTX(symbols=ftx_symbols(), channels=[OPEN_INTEREST, LIQUIDATIONS],
                    callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
-                              LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
-    f.add_feed(BinanceFutures(symbols=binance_futures_symbols(), channels=[OPEN_INTEREST, LIQUIDATIONS], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), LIQUIDATIONS: LiquidationCallback(liquidations)}))
+                              LIQUIDATIONS: LiquidationCallback(liquidations)}))
+    symbols = [s for s in binance_futures_symbols() if 'PINDEX' not in s]
+    f.add_feed(BinanceFutures(symbols=symbols, channels=[OPEN_INTEREST, LIQUIDATIONS], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
     f.add_feed(Deribit(symbols=['BTC-USD-PERPETUAL', 'ETH-USD-PERPETUAL'], channels=[LIQUIDATIONS, OPEN_INTEREST],
                        callbacks={OPEN_INTEREST: OpenInterestCallback(oi),

@@ -12,7 +12,7 @@ from typing import Dict, Union, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel
@@ -177,7 +177,7 @@ class Binance(Feed):
                     max_depth = d
 
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
-        resp = await conn.get(url)
+        resp = await self.http_conn.read(url)
         resp = json.loads(resp, parse_float=Decimal)
 
         std_pair = symbol_exchange_to_std(pair)
@@ -354,5 +354,5 @@ class Binance(Feed):
         # Binance does not have a separate subscribe message, the
         # subscription information is included in the
         # connection endpoint
-        if conn.conn_type != 'https':
+        if not isinstance(conn, HTTPPoll):
             self._reset()

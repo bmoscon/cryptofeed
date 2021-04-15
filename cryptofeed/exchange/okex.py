@@ -30,7 +30,7 @@ class OKEx(OKCoin):
         super().__init__(**kwargs)
         self.address = 'wss://real.okex.com:8443/ws/v3'
 
-    async def _liquidations(self, pairs: list, conn: AsyncConnection):
+    async def _liquidations(self, pairs: list):
         last_update = {}
 
         while True:
@@ -42,7 +42,7 @@ class OKEx(OKCoin):
 
                 for status in (0, 1):
                     end_point = f"{self.api}{instrument_type}/v3/instruments/{pair}/liquidation?status={status}&limit=100"
-                    data = await conn.get(end_point)
+                    data = await self.http_conn.read(end_point)
                     data = json.loads(data, parse_float=Decimal)
                     timestamp = time.time()
                     if len(data) == 0 or (len(data) > 0 and last_update.get(pair) == data[0]):
@@ -70,5 +70,5 @@ class OKEx(OKCoin):
     async def subscribe(self, conn: AsyncConnection):
         if LIQUIDATIONS in self.subscription or LIQUIDATIONS in self.channels:
             pairs = self.subscription[LIQUIDATIONS] if LIQUIDATIONS in self.subscription else self.symbols
-            asyncio.create_task(self._liquidations(pairs, conn))
+            asyncio.create_task(self._liquidations(pairs))
         return await super().subscribe(conn)

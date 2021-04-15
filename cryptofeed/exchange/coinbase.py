@@ -9,7 +9,6 @@ import logging
 import time
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -195,7 +194,7 @@ class Coinbase(Feed):
 
         results = []
         for url in urls:
-            ret = requests.get(url)
+            ret = await self.http_conn.read(url)
             results.append(ret)
             # rate limit - 3 per second
             await asyncio.sleep(0.3)
