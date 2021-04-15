@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.connection import AsyncConnection
 import logging
 from decimal import Decimal
 
@@ -108,7 +109,7 @@ class Bitmax(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         l2_pairs = []
 
@@ -120,8 +121,8 @@ class Bitmax(Feed):
 
             pairs = self.symbols if not self.subscription else self.subscription[channel]
             message = {'op': 'sub', 'ch': channel + ','.join(pairs)}
-            await websocket.send(json.dumps(message))
+            await conn.write(json.dumps(message))
 
         for pair in l2_pairs:
             message = {"op": "req", "action": "depth-snapshot", "args": {"symbol": pair}}
-            await websocket.send(json.dumps(message))
+            await conn.write(json.dumps(message))

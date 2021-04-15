@@ -50,13 +50,13 @@ Again by convention the exchange names in `defines.py` are all uppercase.
 Cryptofeed accepts standardized names for data channels/feeds. The `Feed` parent class will convert these to the exchange specific versions for use when subscribing. Per the exchange docs, each subscription to the various data channels must be made with a new subscription message, so for this exchange we can subscribe like so:
 
 ```python
-async def subscribe(self, websocket):
+async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
         for chan in self.channels:
             for symbol in self.symbols:
                 client_id += 1
-                await websocket.send(json.dumps(
+                await conn.send(json.dumps(
                     {
                         "sub": f"market.{symbol}.{chan}",
                         "id": client_id

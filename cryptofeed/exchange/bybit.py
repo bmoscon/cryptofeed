@@ -12,7 +12,7 @@ from typing import List, Callable, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std as normalize_pair
@@ -54,10 +54,10 @@ class Bybit(Feed):
 
         if any(pair[-4:] == 'USDT' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USDT')
-            ret.append((AsyncConnection(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+            ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
         if any(pair[-3:] == 'USD' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USD')
-            ret.append((AsyncConnection(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+            ret.append((WSAsyncConn(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
 
         return ret
 
@@ -72,7 +72,7 @@ class Bybit(Feed):
                 if 'USDT' in pair and quote == 'USD':
                     continue
 
-                await connection.send(json.dumps(
+                await connection.write(json.dumps(
                     {
                         "op": "subscribe",
                         "args": [f"{chan}.{pair}"]

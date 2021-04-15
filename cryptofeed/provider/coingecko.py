@@ -10,7 +10,7 @@ from typing import Tuple, Callable, List
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import COINGECKO, MARKET_INFO
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -68,7 +68,7 @@ class Coingecko(Feed):
             for pair in self.symbols if not self.subscription else self.subscription[chan]:
                 if chan == MARKET_INFO:
                     addrs.append(f"{self.address}coins/{pair}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false")
-        return [(AsyncConnection(addrs, self.id, delay=self.sleep_time * 2, sleep=self.sleep_time), self.subscribe, self.message_handler)]
+        return [(HTTPPoll(addrs, self.id, delay=self.sleep_time * 2, sleep=self.sleep_time), self.subscribe, self.message_handler)]
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

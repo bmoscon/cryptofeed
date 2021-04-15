@@ -13,7 +13,7 @@ import zlib
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -57,7 +57,7 @@ class Kraken(Feed):
 
         def build(options: list):
             subscribe = partial(self.subscribe, options=options)
-            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
+            conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 
         for chan in set(self.channels or self.subscription):

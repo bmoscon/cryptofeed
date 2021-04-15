@@ -17,7 +17,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.auth.okcoin import generate_token
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -249,9 +249,9 @@ class OKCoin(Feed):
             if is_authenticated_channel(channel):
                 syms = self.symbols or self.subscription[channel]
                 for s in syms:
-                    ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler))
+                    ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler))
             else:
-                ret.append((AsyncConnection(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
+                ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
 
         return ret
 

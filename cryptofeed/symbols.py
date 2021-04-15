@@ -393,6 +393,7 @@ def okcoin_symbols() -> Dict[str, str]:
         for e in r.json():
             ret[e['instrument_id']] = e['instrument_id']
             _exchange_info[OKCOIN]['tick_size'][e['instrument_id']] = e['tick_size']
+            _exchange_info[OKCOIN]['instrument_type'][e['instrument_id']] = 'spot'
         return ret
     except Exception as why:
         raise_failure_explanation('OKCOIN', why, {"": r})

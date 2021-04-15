@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.connection import AsyncConnection
 import hashlib
 import hmac
 import logging
@@ -484,19 +485,19 @@ class Bitmex(Feed):
         else:
             LOG.warning("%s: Unexpected message from exchange: %s", conn.uuid, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self._reset()
-        await self._authenticate(websocket)
+        await self._authenticate(conn)
         chans = []
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
                 chans.append(f"{chan}:{pair}")
 
         for i in range(0, len(chans), 10):
-            await websocket.send(json.dumps({"op": "subscribe",
-                                             "args": chans[i:i + 10]}))
+            await conn.write(json.dumps({"op": "subscribe",
+                                         "args": chans[i:i + 10]}))
 
-    async def _authenticate(self, conn):
+    async def _authenticate(self, conn: AsyncConnection):
         """Send API Key with signed message."""
         # Docs: https://www.bitmex.com/app/apiKeys
         # https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py

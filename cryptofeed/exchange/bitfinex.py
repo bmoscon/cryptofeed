@@ -13,7 +13,7 @@ from typing import Callable, List, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -323,7 +323,7 @@ class Bitfinex(Feed):
 
         def build(options: list):
             subscribe = partial(self.subscribe, options=options)
-            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
+            conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 
         for channel in self.channels if not self.subscription else self.subscription:
@@ -341,7 +341,7 @@ class Bitfinex(Feed):
 
     async def subscribe(self, connection: AsyncConnection, options: List[Tuple[str, str]] = None):
         self.__reset()
-        await connection.send(json.dumps({
+        await connection.write(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL
         }))
@@ -362,4 +362,4 @@ class Bitfinex(Feed):
                     except IndexError:
                         # any non specified params will be defaulted
                         pass
-            await connection.send(json.dumps(message))
+            await connection.write(json.dumps(message))

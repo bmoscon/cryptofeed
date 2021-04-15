@@ -97,7 +97,7 @@ class HTTPAsyncConn(AsyncConnection):
         LOG.debug("%s: requesting data from %s", self.id, address)
         async with self.conn.get(address) as response:
             response.raise_for_status()
-            data = await response.read().text()
+            data = await response.text()
             self.received += 1
             self.last_message = time.time()
             return data

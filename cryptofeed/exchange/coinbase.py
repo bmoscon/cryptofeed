@@ -201,7 +201,7 @@ class Coinbase(Feed):
 
         timestamp = time.time()
         for res, pair in zip(results, pairs):
-            orders = res.json()
+            orders = json.loads(res, parse_float=Decimal)
             npair = symbol_exchange_to_std(pair)
             self.l3_book[npair] = {BID: sd(), ASK: sd()}
             self.seq_no[npair] = orders['sequence']
