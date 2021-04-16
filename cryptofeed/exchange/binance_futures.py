@@ -12,7 +12,7 @@ from typing import List, Tuple, Callable
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER, PERPETURAL, FUTURE
+from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER, PERPETURAL, FUTURE, PREMIUM_INDEX
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
@@ -27,7 +27,9 @@ class BinanceFuturesInstrument():
         self.base = pair_arr[0]
         self.quote = pair_arr[1]
         
-        if len(instrument_properties) == 1:
+        if len(pair_arr) == 3 and pair_arr[2].lower() == PREMIUM_INDEX:
+            self.instrument_type = PREMIUM_INDEX
+        elif len(instrument_properties) == 1:
             self.instrument_type = PERPETURAL
         else:
             self.instrument_type = FUTURE
@@ -48,22 +50,6 @@ class BinanceFutures(Binance):
     def get_instrument_objects():
         instruments = BinanceFutures.get_instruments()
         return [BinanceFuturesInstrument(instrument) for instrument in instruments]
-
-    def _address(self):
-        address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.subscription else self.subscription:
-            if chan == OPEN_INTEREST:
-                continue
-            for pair in self.symbols if not self.subscription else self.subscription[chan]:
-                pair = pair.lower()
-                if chan == TICKER:
-                    stream = f"{pair}@bookTicker/"
-                else:
-                    stream = f"{pair}@{chan}/"
-                address += stream
-        if address == f"{self.ws_endpoint}/stream?streams=":
-            return None
-        return address[:-1]
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False

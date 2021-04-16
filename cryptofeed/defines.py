@@ -92,6 +92,7 @@ PERPETURAL = 'perpetual'
 OPTION = 'option'
 FUTURE = 'future'
 ANY = 'any'
+PREMIUM_INDEX = 'pindex'
 
 # Currency
 BTC = 'BTC'

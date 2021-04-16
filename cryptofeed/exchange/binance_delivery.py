@@ -46,22 +46,6 @@ class BinanceDelivery(Binance):
         instruments = BinanceDelivery.get_instruments()
         return [BinanceDeliveryInstrument(instrument) for instrument in instruments]
 
-    def _address(self):
-        address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.subscription else self.subscription:
-            if chan == OPEN_INTEREST:
-                continue
-            for pair in self.symbols if not self.subscription else self.subscription[chan]:
-                pair = pair.lower()
-                if chan == TICKER:
-                    stream = f"{pair}@bookTicker/"
-                else:
-                    stream = f"{pair}@{chan}/"
-                address += stream
-        if address == f"{self.ws_endpoint}/stream?streams=":
-            return None
-        return address[:-1]
-
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
         forced = not self.forced[pair]
@@ -100,5 +84,7 @@ class BinanceDelivery(Binance):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg_type == 'kline':
+            await self._candle(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)

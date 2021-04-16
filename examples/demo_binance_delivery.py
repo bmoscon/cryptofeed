@@ -81,7 +81,7 @@ def main():
             binance_symbols.add(instrument.base + '-USDT')
         print(binance_symbols)
 
-        f.add_feed(BinanceDelivery(symbols=binance_delivery_symbols[PERPETURAL], channels=[FUNDING, TICKER, TRADES], callbacks={FUNDING: FundingZMQ(port=5678), TICKER: TickerZMQ(port=5679), TRADES: TradeZMQ(port=5682)}))
+        f.add_feed(BinanceDelivery(candle_interval='1d', symbols=binance_delivery_symbols[PERPETURAL], channels=[FUNDING, TICKER, TRADES], callbacks={FUNDING: FundingZMQ(port=5678), TICKER: TickerZMQ(port=5679), TRADES: TradeZMQ(port=5682)}))
         f.add_feed(BinanceFutures(symbols=binance_futures_symbols[PERPETURAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5680)}))
         f.add_feed(Binance(symbols=list(binance_symbols), channels=[TICKER, TRADES], callbacks={TICKER: TickerZMQ(port=5681), TRADES: TradeZMQ(port=5683)}))
         f.run()
