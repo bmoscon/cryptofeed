@@ -4,10 +4,11 @@ Copyright (C) 2018-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 from decimal import Decimal
 from functools import partial
-from typing import List, Callable, Tuple
+from typing import Dict, List, Callable, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -15,7 +16,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std as normalize_pair
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -24,6 +24,22 @@ LOG = logging.getLogger('feedhandler')
 
 class Bybit(Feed):
     id = BYBIT
+    symbol_endpoint = 'https://api.bybit.com/v2/public/symbols'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+        for symbol in data['result']:
+            quote = symbol['quote_currency']
+            if not symbol['name'].endswith(quote):
+                base, contract = symbol['name'].split(quote)
+                normalized = f"{base}{symbol_separator}{quote}-{contract}"
+            else:
+                normalized = f"{symbol['base_currency']}{symbol_separator}{quote}"
+            ret[normalized] = symbol['name']
+            info['tick_size'][normalized] = symbol['price_filter']['tick_size']
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, **kwargs)
@@ -164,14 +180,14 @@ class Bybit(Feed):
 
             if 'open_interest' in info:
                 await self.callback(OPEN_INTEREST, feed=self.id,
-                                    symbol=normalize_pair(info['symbol']),
+                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
                                     open_interest=Decimal(info['open_interest']),
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
 
             if 'index_price_e4' in info:
                 await self.callback(FUTURES_INDEX, feed=self.id,
-                                    symbol=normalize_pair(info['symbol']),
+                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
                                     futures_index=Decimal(info['index_price_e4']) * Decimal(1e-4),
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
@@ -199,7 +215,7 @@ class Bybit(Feed):
 
             await self.callback(TRADES,
                                 feed=self.id,
-                                symbol=normalize_pair(trade['symbol']),
+                                symbol=self.exchange_symbol_to_std_symbol(trade['symbol']),
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['side'] == 'Buy' else SELL,
                                 amount=Decimal(trade['size']),
@@ -209,7 +225,7 @@ class Bybit(Feed):
                                 )
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = normalize_pair(msg['topic'].split('.')[1])
+        pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[1])
         update_type = msg['type']
         data = msg['data']
         forced = False

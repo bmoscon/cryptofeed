@@ -113,7 +113,7 @@ async def _trade(self, msg):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                 feed=self.id,
-                symbol=symbol_exchange_to_std(msg['ch'].split('.')[1]),
+                symbol=self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
                 order_id=trade['id'],
                 side=BUY if trade['direction'] == 'buy' else SELL,
                 amount=Decimal(trade['amount']),
@@ -165,7 +165,7 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
   - `_book`
   - ```python
       async def _book(self, msg):
-          symbol = symbol_exchange_to_std(msg['ch'].split('.')[1])
+          symbol = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
           data = msg['tick']
           self.l2_book[symbol] = {
               BID: sd({

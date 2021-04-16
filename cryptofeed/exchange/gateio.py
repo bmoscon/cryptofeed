@@ -6,6 +6,7 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -13,7 +14,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,6 +21,11 @@ LOG = logging.getLogger('feedhandler')
 
 class Gateio(Feed):
     id = GATEIO
+    symbol_endpoint = "https://api.gateio.ws/api/v4/spot/currency_pairs"
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        return {data["id"].replace("_", symbol_separator): data['id'] for data in data}, {}
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.gate.io/v3/', **kwargs)
@@ -80,7 +85,7 @@ class Gateio(Feed):
         }
         """
         symbol, trades = msg['params']
-        symbol = symbol_exchange_to_std(symbol)
+        symbol = self.exchange_symbol_to_std_symbol(symbol)
         # list of trades appears to be in most recent to oldest, to reverse to deliver them in chronological order
         for trade in reversed(trades):
             side = BUY if trade['type'] == 'buy' else SELL
@@ -112,7 +117,7 @@ class Gateio(Feed):
                 'id': None
             }
         """
-        symbol = symbol_exchange_to_std(msg['params'][-1])
+        symbol = self.exchange_symbol_to_std_symbol(msg['params'][-1])
         forced = msg['params'][0]
         delta = {BID: [], ASK: []}
 

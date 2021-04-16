@@ -5,13 +5,14 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from collections import defaultdict
 
 from decimal import Decimal
 from itertools import islice
 from functools import partial
 import logging
 import zlib
-from typing import List, Tuple, Callable
+from typing import Dict, List, Tuple, Callable
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -21,7 +22,7 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, is_authenticated_channel
+from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
 from cryptofeed.util import split
 
 
@@ -30,6 +31,17 @@ LOG = logging.getLogger('feedhandler')
 
 class OKCoin(Feed):
     id = OKCOIN
+    symbol_endpoint = 'https://www.okcoin.com/api/spot/v3/instruments'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+        for e in data:
+            ret[e['instrument_id']] = e['instrument_id']
+            info['tick_size'][e['instrument_id']] = e['tick_size']
+            info['instrument_type'][e['instrument_id']] = 'spot'
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
@@ -86,7 +98,7 @@ class OKCoin(Feed):
             await conn.write(json.dumps(request))
 
     @classmethod
-    def instrument_type(cls, symbol):
+    def instrument_type(cls, symbol: str):
         return cls.info()['instrument_type'][symbol]
 
     def get_channel_symbol_combinations(self):
@@ -131,7 +143,7 @@ class OKCoin(Feed):
                 amount_sym = 'size'
             await self.callback(TRADES,
                                 feed=self.id,
-                                symbol=symbol_exchange_to_std(trade['instrument_id']),
+                                symbol=self.exchange_symbol_to_std_symbol(trade['instrument_id']),
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade[amount_sym]),
@@ -144,7 +156,7 @@ class OKCoin(Feed):
         for update in msg['data']:
             await self.callback(FUNDING,
                                 feed=self.id,
-                                symbol=symbol_exchange_to_std(update['instrument_id']),
+                                symbol=self.exchange_symbol_to_std_symbol(update['instrument_id']),
                                 timestamp=timestamp_normalize(self.id, update['funding_time']),
                                 receipt_timestamp=timestamp,
                                 rate=update['funding_rate'],
@@ -155,7 +167,7 @@ class OKCoin(Feed):
         if msg['action'] == 'partial':
             # snapshot
             for update in msg['data']:
-                pair = symbol_exchange_to_std(update['instrument_id'])
+                pair = self.exchange_symbol_to_std_symbol(update['instrument_id'])
                 self.l2_book[pair] = {
                     BID: sd({
                         Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']
@@ -172,7 +184,7 @@ class OKCoin(Feed):
             # update
             for update in msg['data']:
                 delta = {BID: [], ASK: []}
-                pair = symbol_exchange_to_std(update['instrument_id'])
+                pair = self.exchange_symbol_to_std_symbol(update['instrument_id'])
                 for side in ('bids', 'asks'):
                     s = BID if side == 'bids' else ASK
                     for price, amount, *_ in update[side]:
@@ -199,7 +211,7 @@ class OKCoin(Feed):
         data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
 
         await self.callback(ORDER_INFO, feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['data'][0]['instrument_id'].upper()),  # This uses the REST endpoint format (lower case)
+                            symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instrument_id'].upper()),  # This uses the REST endpoint format (lower case)
                             status=status,
                             order_id=msg['data'][0]['order_id'],
                             side=BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,

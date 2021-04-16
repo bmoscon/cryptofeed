@@ -11,7 +11,7 @@ import json
 import pytest
 
 from cryptofeed.util.async_file import playback
-from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BITCOINCOM, BITFINEX, EXX, BINANCE_FUTURES, BINANCE_US, BITFLYER, BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, COINBASE, COINGECKO, DERIBIT, FTX_US, FTX, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER, TRADES, L2_BOOK, BYBIT, UPBIT, WHALE_ALERT
+from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BITCOINCOM, BITFINEX, EXX, BINANCE_FUTURES, BINANCE_US, BITFLYER, BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, COINBASE, COINGECKO, DERIBIT, FTX_US, FTX, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER, TRADES, L2_BOOK, BYBIT, UPBIT
 from cryptofeed.feedhandler import _EXCHANGES
 
 
@@ -67,7 +67,7 @@ def get_message_count(filename):
         return counter
 
 
-@pytest.mark.parametrize("exchange", [e for e in _EXCHANGES.keys() if e not in [COINGECKO, EXX, WHALE_ALERT]])
+@pytest.mark.parametrize("exchange", [e for e in _EXCHANGES.keys() if e not in [COINGECKO, EXX]])
 def test_exchange_playback(exchange):
     dir = os.path.dirname(os.path.realpath(__file__))
     for pcap in glob.glob(f"{dir}/../../sample_data/{exchange}-*.0"):

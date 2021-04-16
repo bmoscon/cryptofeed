@@ -8,7 +8,7 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import partial
 import logging
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -17,8 +17,8 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
-from cryptofeed.symbols import gen_symbols
+from cryptofeed.standards import timestamp_normalize
+
 
 LOG = logging.getLogger('feedhandler')
 
@@ -41,18 +41,38 @@ CHECKSUM = 131072
 
 class Bitfinex(Feed):
     id = BITFINEX
+    symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
+
+    @classmethod
+    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+        # https://docs.bitfinex.com/docs/ws-general#supported-pairs
+        ret = {}
+        pairs = data[0][0]
+        currencies = data[1][0]
+        for c in currencies:
+            norm = c.replace('BCHN', 'BCH')  # Bitfinex uses BCHN, other exchanges use BCH
+            norm = c.replace('UST', 'USDT')
+            ret[norm] = "f" + c
+
+        for p in pairs:
+            norm = p.replace('BCHN', 'BCH')
+            norm = p.replace('UST', 'USDT')
+            if ':' in norm:
+                norm = norm.replace(":", symbol_separator)
+            else:
+                norm = norm[:3] + symbol_separator + norm[3:]
+            ret[norm] = "t" + p
+
+        return ret, {}
 
     def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):
-        # TRADES and FUNDING use the same subscription channel, only the first symbol character distinguishes them
-        # => Warn when symbols will be subscribed to the wrong channel
-        symbols_exch_to_std = gen_symbols(BITFINEX)
-        for chan in set(channels or subscription):
-            for pair in set(subscription[chan] if subscription else symbols or []):
-                exch_sym = symbols_exch_to_std.get(pair)
-                if (exch_sym[0] == 'f') == (chan != FUNDING):
-                    LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
-
         super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, subscription=subscription, **kwargs)
+        if channels or subscription:
+            for chan in set(channels or subscription):
+                for pair in set(subscription[chan] if subscription else symbols or []):
+                    exch_sym = self.std_symbol_to_exchange_symbol(pair)
+                    if (exch_sym[0] == 'f') == (chan != FUNDING):
+                        LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
         self.__reset()
 
     def __reset(self):
@@ -280,7 +300,7 @@ class Bitfinex(Feed):
     def register_channel_handler(self, msg: dict, conn: AsyncConnection):
         symbol = msg['symbol']
         is_funding = (symbol[0] == 'f')
-        pair = symbol_exchange_to_std(symbol)
+        pair = self.exchange_symbol_to_std_symbol(symbol)
 
         if msg['channel'] == 'ticker':
             if is_funding:

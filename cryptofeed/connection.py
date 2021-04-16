@@ -12,6 +12,7 @@ from typing import List, Union, AsyncIterable
 
 import aiohttp
 import websockets
+import requests
 
 from cryptofeed.exceptions import ConnectionClosed
 
@@ -19,7 +20,27 @@ from cryptofeed.exceptions import ConnectionClosed
 LOG = logging.getLogger('feedhandler')
 
 
-class AsyncConnection:
+class Connection:
+    async def read(self) -> bytes:
+        raise NotImplementedError
+
+    async def write(self, msg: str):
+        raise NotImplementedError
+
+
+class HTTPSync(Connection):
+    def read(self, address: str, json=False, text=True):
+        LOG.debug("HTTPSync: requesting data from %s", address)
+        r = requests.get(address)
+        r.raise_for_status()
+        if json:
+            return r.json()
+        if text:
+            return r.text
+        return r
+
+
+class AsyncConnection(Connection):
     conn_count: int = 0
 
     def __init__(self, conn_id: str):
@@ -59,12 +80,6 @@ class AsyncConnection:
             self.conn = None
             await conn.close()
             LOG.info('%s: closed connection %r', self.id, conn.__class__.__name__)
-
-    async def read(self) -> bytes:
-        raise NotImplementedError
-
-    async def write(self, msg: str):
-        raise NotImplementedError
 
 
 class HTTPAsyncConn(AsyncConnection):

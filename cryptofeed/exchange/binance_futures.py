@@ -7,14 +7,14 @@ associated with this software.
 from decimal import Decimal
 import logging
 import time
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Dict
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
 from cryptofeed.exchange.binance import Binance
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
@@ -22,6 +22,18 @@ LOG = logging.getLogger('feedhandler')
 class BinanceFutures(Binance):
     id = BINANCE_FUTURES
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
+    symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        base, info = super()._parse_symbol_data(data, symbol_separator)
+        add = {}
+        for symbol, orig in base.items():
+            if "_" in orig:
+                continue
+            add[f"{symbol}{symbol_separator}PINDEX"] = f"p{orig}"
+        base.update(add)
+        return base, info
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -60,7 +72,7 @@ class BinanceFutures(Binance):
         if oi != self.open_interest.get(pair, None):
             await self.callback(OPEN_INTEREST,
                                 feed=self.id,
-                                symbol=symbol_exchange_to_std(pair),
+                                symbol=self.exchange_symbol_to_std_symbol(pair),
                                 open_interest=oi,
                                 timestamp=timestamp_normalize(self.id, msg['time']),
                                 receipt_timestamp=time.time()

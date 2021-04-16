@@ -9,7 +9,7 @@ import glob
 import random
 
 from cryptofeed.feedhandler import FeedHandler, _EXCHANGES
-from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, COINGECKO, L2_BOOK, TRADES, TICKER, CANDLES, WHALE_ALERT
+from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, COINGECKO, L2_BOOK, TRADES, TICKER, CANDLES
 from cryptofeed.util.async_file import AsyncFileCallback
 from check_raw_dump import main as check_dump
 
@@ -20,7 +20,7 @@ def stop():
 
 
 def main():
-    skip = [COINGECKO, WHALE_ALERT]
+    skip = [COINGECKO]
     files = glob.glob('*')
     for f in files:
         for e in _EXCHANGES.keys():

@@ -23,7 +23,7 @@ from cryptofeed.config import Config
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITFLYER,
                                 BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
                                 DERIBIT, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
+                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
 from cryptofeed.defines import EXX as EXX_str
 from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import L2_BOOK
@@ -71,7 +71,6 @@ _EXCHANGES = {
     UPBIT: Upbit,
     GATEIO: Gateio,
     PROBIT: Probit,
-    WHALE_ALERT: WhaleAlert
 }
 
 

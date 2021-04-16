@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from typing import Dict, Tuple
 from cryptofeed.connection import AsyncConnection
 import logging
 from decimal import Decimal
@@ -15,7 +16,7 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BITMAX, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,6 +24,20 @@ LOG = logging.getLogger('feedhandler')
 
 class Bitmax(Feed):
     id = BITMAX
+    symbol_endpoint = 'https://bitmax.io/api/pro/v1/products'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+
+        for entry in data['data']:
+            # Only "Normal" status symbols are tradeable
+            if entry['status'] == 'Normal':
+                normalized = f"{entry['baseAsset']}{symbol_separator}{entry['quoteAsset']}"
+                ret[normalized] = entry['symbol']
+                info['tick_size'][normalized] = entry['tickSize']
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://bitmax.io/0/api/pro/v1/stream', **kwargs)
@@ -48,7 +63,7 @@ class Bitmax(Feed):
         """
         for trade in msg['data']:
             await self.callback(TRADES, feed=self.id,
-                                symbol=symbol_exchange_to_std(msg['symbol']),
+                                symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
                                 side=SELL if trade['bm'] else BUY,
                                 amount=Decimal(trade['q']),
                                 price=Decimal(trade['p']),
@@ -58,7 +73,7 @@ class Bitmax(Feed):
 
     async def _book(self, msg: dict, timestamp: float):
         sequence_number = msg['data']['seqnum']
-        pair = symbol_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         delta = {BID: [], ASK: []}
         forced = False
 

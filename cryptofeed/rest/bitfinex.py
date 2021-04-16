@@ -17,8 +17,9 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, SELL
+from cryptofeed.exchanges import Bitfinex as BitfinexEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import symbol_exchange_to_std, symbol_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 5000
@@ -29,6 +30,7 @@ LOG = logging.getLogger('rest')
 class Bitfinex(API):
     ID = BITFINEX
     api = "https://api-pub.bitfinex.com/v2/"
+    info = BitfinexEx()
 
     def _get(self, endpoint, retry, retry_wait):
         @request_retry(self.ID, retry, retry_wait)
@@ -64,7 +66,7 @@ class Bitfinex(API):
 
         ret = {
             'timestamp': timestamp_normalize(self.ID, timestamp),
-            'symbol': symbol_exchange_to_std(symbol),
+            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade_id,
             'feed': self.ID,
             'side': SELL if amount < 0 else BUY,
@@ -152,12 +154,12 @@ class Bitfinex(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = symbol_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"ticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
                 'feed': self.ID,
@@ -186,7 +188,7 @@ class Bitfinex(API):
             symbol = f"f{symbol}"
             funding = True
         else:
-            symbol = symbol_std_to_exchange(symbol, self.ID)
+            symbol = self.info.std_symbol_to_exchange_symbol(symbol)
             ret[symbol] = {BID: sd(), ASK: sd()}
             sym = symbol
 

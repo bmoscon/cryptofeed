@@ -1,5 +1,6 @@
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 import uuid
 
 from sortedcontainers import SortedDict as sd
@@ -8,7 +9,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -17,6 +18,11 @@ LOG = logging.getLogger('feedhandler')
 class Upbit(Feed):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
+    symbol_endpoint = 'https://api.upbit.com/v1/market/all'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        return {f"{data['market'].split('-')[1]}{symbol_separator}{data['market'].split('-')[0]}": data['market'] for data in data}, {}
 
     def __init__(self, **kwargs):
         super().__init__('wss://api.upbit.com/websocket/v1', **kwargs)
@@ -47,7 +53,7 @@ class Upbit(Feed):
         amount = Decimal(msg['tv'])
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['sid'],
-                            symbol=symbol_exchange_to_std(msg['cd']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['cd']),
                             side=BUY if msg['ab'] == 'BID' else SELL,
                             amount=amount,
                             price=price,
@@ -84,7 +90,7 @@ class Upbit(Feed):
             'tms': 1584263923870,  // Timestamp
         }
         """
-        pair = symbol_exchange_to_std(msg['cd'])
+        pair = self.exchange_symbol_to_std_symbol(msg['cd'])
         orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
         forced = pair not in self.l2_book
 

@@ -5,10 +5,12 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import base64
+from cryptofeed.exceptions import UnsupportedSymbol
 import hashlib
 import hmac
 import logging
 import time
+from typing import Dict
 import urllib
 from decimal import Decimal
 
@@ -17,18 +19,36 @@ import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, KRAKEN, LIMIT, MARKET, OPEN, SELL
+from cryptofeed.exchanges import Kraken as KrakenEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import normalize_trading_options, symbol_exchange_to_std, symbol_std_to_exchange
+from cryptofeed.standards import normalize_trading_options
 
 
 LOG = logging.getLogger('rest')
 RATE_LIMIT_SLEEP = 1
 
 
+def kraken_rest_symbols() -> Dict[str, str]:
+    return {normalized: exchange.replace("/", "") for normalized, exchange in KrakenEx.symbol_mapping().items()}
+
+
 class Kraken(API):
     ID = KRAKEN
-
     api = "https://api.kraken.com/0"
+    _normalized_symbol_mapping = kraken_rest_symbols()
+    _exchange_symbol_mapping = {value: key for key, value in _normalized_symbol_mapping.items()}
+
+    def exchange_symbol_to_std_symbol(self, symbol: str) -> str:
+        try:
+            return self._exchange_symbol_mapping[symbol]
+        except KeyError:
+            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
+
+    def std_symbol_to_exchange_symbol(self, symbol: str) -> str:
+        try:
+            return self._normalized_symbol_mapping[symbol]
+        except KeyError:
+            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
     @staticmethod
     def _fix_currencies(currency: str):
@@ -47,8 +67,7 @@ class Kraken(API):
             return cur_map[currency]
         return currency
 
-    @staticmethod
-    def _order_status(order_id: str, order: dict):
+    def _order_status(self, order_id: str, order: dict):
         if order['status'] == 'canceled':
             status = CANCELLED
         if order['status'] == 'open':
@@ -58,7 +77,7 @@ class Kraken(API):
 
         return {
             'order_id': order_id,
-            'symbol': symbol_exchange_to_std(order['descr']['pair']),
+            'symbol': self.exchange_symbol_to_std_symbol(order['descr']['pair']),
             'side': SELL if order['descr']['type'] == 'sell' else BUY,
             'order_type': LIMIT if order['descr']['ordertype'] == 'limit' else MARKET,
             'price': Decimal(order['descr']['price']),
@@ -110,7 +129,7 @@ class Kraken(API):
 
     # public API
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = symbol_std_to_exchange(symbol, self.ID + 'REST')
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._post_public("/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
         data = data['result']
@@ -122,7 +141,7 @@ class Kraken(API):
                     }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = symbol_std_to_exchange(symbol, self.ID + 'REST')
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
         for _, val in data['result'].items():
             return {
@@ -143,14 +162,14 @@ class Kraken(API):
             for data in self._historical_trades(symbol, start, end, retry, retry_wait):
                 yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
         else:
-            sym = symbol_std_to_exchange(symbol, self.ID + 'REST')
+            sym = self.std_symbol_to_exchange_symbol(symbol)
             data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
             data = data['result']
             data = data[list(data.keys())[0]]
             yield [self._trade_normalization(d, symbol) for d in data]
 
     def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
-        symbol = symbol_std_to_exchange(symbol, self.ID + 'REST')
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start_date):
@@ -219,7 +238,7 @@ class Kraken(API):
         ret = []
         for _, orders in data['result'].items():
             for order_id, order in orders.items():
-                ret.append(Kraken._order_status(order_id, order))
+                ret.append(self._order_status(order_id, order))
         return ret
 
     def order_status(self, order_id: str):
@@ -228,7 +247,7 @@ class Kraken(API):
             return data
 
         for order_id, order in data['result'].items():
-            return Kraken._order_status(order_id, order)
+            return self._order_status(order_id, order)
 
     def get_trades_history(self, symbol: str, start=None, end=None):
         params = {}
@@ -252,7 +271,7 @@ class Kraken(API):
             sym = sym.replace('ZGBP', 'GBP')
             sym = sym.replace('ZJPY', 'JPY')
 
-            if symbol_exchange_to_std(sym) != symbol:
+            if self.exchange_symbol_to_std_symbol(sym) != symbol:
                 continue
 
             ret.append({
@@ -271,7 +290,7 @@ class Kraken(API):
         ot = normalize_trading_options(self.ID, order_type)
 
         parameters = {
-            'pair': symbol_std_to_exchange(symbol, self.ID + 'REST'),
+            'pair': self.std_symbol_to_exchange_symbol(symbol),
             'type': 'buy' if side == BUY else 'sell',
             'volume': str(amount),
             'ordertype': ot

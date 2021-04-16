@@ -42,7 +42,6 @@ BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
 
 COINGECKO = 'COINGECKO'
-WHALE_ALERT = 'WHALE_ALERT'
 
 
 # Market Data
@@ -58,7 +57,6 @@ LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 MARKET_INFO = 'market_info'
-TRANSACTIONS = 'transactions'
 CANDLES = 'candles'
 
 # Account Data / Authenticated Channels

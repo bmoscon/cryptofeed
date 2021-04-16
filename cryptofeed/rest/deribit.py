@@ -6,8 +6,9 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, SELL
+from cryptofeed.exchanges import Deribit as DeribitEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import symbol_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 1000
@@ -18,9 +19,10 @@ LOG = logging.getLogger('rest')
 class Deribit(API):
     ID = DERIBIT
     api = "https://www.deribit.com/api/v2/public/"
+    info = DeribitEx()
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = symbol_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades(symbol, start, end, retry, retry_wait):
             yield data
 
@@ -96,7 +98,7 @@ class Deribit(API):
 
     def _book(self, symbol: str, retry=0, retry_wait=0):
         ret = {}
-        symbol = symbol_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         ret[symbol] = {BID: sd(), ASK: sd()}
 
         @request_retry(self.ID, retry, retry_wait)
