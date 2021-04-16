@@ -28,6 +28,16 @@ _symbols_retrieval_cache: Dict[str, Dict[str, str]] = {}
 _exchange_info = defaultdict(lambda: defaultdict(dict))
 
 
+_kraken_futures_product_type = {
+    'FI': 'Inverse Futures',
+    'FV': 'Vanilla Futures',
+    'PI': 'Perpetual Inverse Futures',
+    'PV': 'Perpetual Vanilla Futures',
+    'IN': 'Real Time Index',
+    'RR': 'Reference Rate',
+}
+
+
 def raise_failure_explanation(feed_id: str, exception: BaseException, responses: Dict[str, Optional[Response]]):
     LOG.critical('%s: encountered %r while processing response from exchange API', feed_id, exception)
     if len(responses) > 1:
@@ -70,27 +80,38 @@ def _binance_symbols(endpoint: str, exchange: str):
         ret = {}
         r = requests.get(endpoint)
         for symbol in r.json()['symbols']:
+            if symbol.get('status', 'TRADING') != "TRADING":
+                continue
+            if symbol.get('contractStatus', 'TRADING') != "TRADING":
+                continue
             split = len(symbol['baseAsset'])
             normalized = symbol['symbol'][:split] + SYMBOL_SEP + symbol['symbol'][split:]
             ret[normalized] = symbol['symbol']
             _exchange_info[exchange]['tick_size'][normalized] = symbol['filters'][0]['tickSize']
             if "contractType" in symbol:
-                _exchange_info[exchange]['contract_type'] = symbol['contractType']
+                _exchange_info[exchange]['contract_type'][normalized] = symbol['contractType']
         return ret
     except Exception as why:
         raise_failure_explanation(exchange, why, {endpoint: r})
 
 
 def binance_symbols() -> Dict[str, str]:
-    return _binance_symbols('https://api.binance.com/api/v1/exchangeInfo', BINANCE)
+    return _binance_symbols('https://api.binance.com/api/v3/exchangeInfo', BINANCE)
 
 
 def binance_us_symbols() -> Dict[str, str]:
-    return _binance_symbols('https://api.binance.us/api/v1/exchangeInfo', BINANCE_US)
+    return _binance_symbols('https://api.binance.us/api/v3/exchangeInfo', BINANCE_US)
 
 
 def binance_futures_symbols() -> Dict[str, str]:
-    return _binance_symbols('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
+    base = _binance_symbols('https://fapi.binance.com/fapi/v1/exchangeInfo', BINANCE_FUTURES)
+    add = {}
+    for symbol, orig in base.items():
+        if "_" in orig:
+            continue
+        add[f"{symbol}-PINDEX"] = f"p{orig}"
+    base.update(add)
+    return base
 
 
 def binance_delivery_symbols() -> Dict[str, str]:
@@ -149,7 +170,12 @@ def bybit_symbols() -> Dict[str, str]:
         r = requests.get('https://api.bybit.com/v2/public/symbols')
         ret = {}
         for symbol in r.json()['result']:
-            normalized = f"{symbol['base_currency']}{SYMBOL_SEP}{symbol['quote_currency']}"
+            quote = symbol['quote_currency']
+            if not symbol['name'].endswith(quote):
+                base, contract = symbol['name'].split(quote)
+                normalized = f"{base}{SYMBOL_SEP}{quote}-{contract}"
+            else:
+                normalized = f"{symbol['base_currency']}{SYMBOL_SEP}{quote}"
             ret[normalized] = symbol['name']
             _exchange_info[BYBIT]['tick_size'][normalized] = symbol['price_filter']['tick_size']
         return ret
@@ -237,7 +263,12 @@ def poloniex_id_symbol_mapping():
 
 
 def poloniex_symbols() -> Dict[str, str]:
-    return {value.split("_")[1] + SYMBOL_SEP + value.split("_")[0]: value for _, value in poloniex_id_symbol_mapping().items()}
+    ret = {}
+    for _, value in poloniex_id_symbol_mapping().items():
+        std = value.replace("STR", "XLM")
+        quote, base = std.split("_")
+        ret[quote + SYMBOL_SEP + base] = value
+    return ret
 
 
 def bitstamp_symbols() -> Dict[str, str]:
@@ -299,6 +330,8 @@ def huobi_common_symbols(url: str):
         r = requests.get(url)
         ret = {}
         for e in r.json()['data']:
+            if e['state'] == 'offline':
+                continue
             normalized = f"{e['base-currency'].upper()}{SYMBOL_SEP}{e['quote-currency'].upper()}"
             symbol = f"{e['base-currency']}{e['quote-currency']}"
             ret[normalized] = symbol
@@ -365,23 +398,29 @@ def okcoin_symbols() -> Dict[str, str]:
         raise_failure_explanation('OKCOIN', why, {"": r})
 
 
-def okex_symbols() -> Dict[str, str]:
-    option_urls = okex_compute_option_urls_from_underlyings()
-    other_urls = ['https://www.okex.com/api/spot/v3/instruments',
-                  'https://www.okex.com/api/swap/v3/instruments/ticker',
-                  'https://www.okex.com/api/futures/v3/instruments/ticker']
-    # To respect rate limit constraints per endpoint, we alternate options and other instrument types
-    urls: List[str] = []
-    for i in range(max(len(option_urls), len(other_urls))):
-        if i < len(option_urls):
-            urls.append(option_urls[i])
-        if i < len(other_urls):
-            urls.append(other_urls[i])
-    # Collect together the symbols of each endpoint
+def okex_symbols(*args) -> Dict[str, str]:
+    urls = ['https://www.okex.com/api/spot/v3/instruments',
+            'https://www.okex.com/api/swap/v3/instruments',
+            'https://www.okex.com/api/futures/v3/instruments']
+    urls = urls + okex_compute_option_urls_from_underlyings()
+
     symbols: Dict[str, str] = {}
     for u in urls:
         time.sleep(0.2)
         symbols.update(okex_symbols_from_one_url(u))
+
+    for symbol in symbols:
+        instrument_type = 'futures'
+        dash_count = symbol.count(get_symbol_separator())
+        if dash_count == 1:  # BTC-USDT
+            instrument_type = 'spot'
+        if dash_count == 4:  # BTC-USD-201225-35000-P
+            instrument_type = 'option'
+        if symbol[-4:] == "SWAP":  # BTC-USDT-SWAP
+            instrument_type = 'swap'
+
+        _exchange_info[OKEX]['instrument_type'][symbol] = instrument_type
+
     return symbols
 
 
@@ -399,7 +438,11 @@ def okex_symbols_from_one_url(url: str) -> Dict[str, str]:
     r = None
     try:
         r = requests.get(url)
-        return {e['instrument_id']: e['instrument_id'] for e in r.json()}
+        ret = {}
+        for e in r.json():
+            ret[e['instrument_id']] = e['instrument_id']
+            _exchange_info[OKEX]['tick_size'][e['instrument_id']] = e['tick_size']
+        return ret
     except Exception as why:
         raise_failure_explanation('OKEX', why, {url: r})
 
@@ -468,35 +511,69 @@ def gateio_symbols() -> Dict[str, str]:
 
 def bitmex_symbols() -> Dict[str, str]:
     r = None
+    ret = {}
     try:
         r = requests.get("https://www.bitmex.com/api/v1/instrument/active")
-        return {entry['symbol']: entry['symbol'] for entry in r.json()}
+        for entry in r.json():
+            components = []
+            components.append(entry['rootSymbol'])
+            components.append(entry['quoteCurrency'])
+
+            if entry['expiry']:
+                components.append(entry['symbol'][-3:])
+
+            normalized = SYMBOL_SEP.join(components)
+            normalized = normalized.replace("XBT", "BTC")
+            ret[normalized] = entry['symbol']
+            _exchange_info[BITMEX]['tick_size'][normalized] = entry['tickSize']
+
+            if entry['expiry']:
+                _exchange_info[BITMEX]['expiry'][normalized] = entry['expiry']
+
+        return ret
     except Exception as why:
         raise_failure_explanation('BITMEX', why, {"": r})
 
 
 def deribit_symbols() -> Dict[str, str]:
     url = r = None
+    ret = {}
     try:
+        # TODO: get currencies from https://www.deribit.com/api/v2/public/get_currencies
         currencies = ['BTC', 'ETH']
-        kind = ['future', 'option']
-        data = []
         for c in currencies:
-            for k in kind:
-                url = f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false&kind={k}"
-                r = requests.get(url)
-                data.extend(r.json()['result'])
-        return {d['instrument_name']: d['instrument_name'] for d in data}
+            url = f"https://www.deribit.com/api/v2/public/get_instruments?currency={c}&expired=false"
+            r = requests.get(url)
+            for entry in r.json()['result']:
+                split = entry['instrument_name'].split("-")
+                normalized = split[0] + SYMBOL_SEP + entry['quote_currency'] + "-" + '-'.join(split[1:])
+                ret[normalized] = entry['instrument_name']
+                _exchange_info[DERIBIT]['tick_size'][normalized] = entry['tick_size']
+        return ret
     except Exception as why:
         raise_failure_explanation('DERIBIT', why, {url: r})
 
 
 def kraken_future_symbols() -> Dict[str, str]:
     r = None
+    ret = {}
     try:
         r = requests.get('https://futures.kraken.com/derivatives/api/v3/instruments')
         data = r.json()['instruments']
-        return {d['symbol']: d['symbol'] for d in data if d['tradeable'] is True}
+        for entry in data:
+            if not entry['tradeable']:
+                continue
+            normalized = entry['symbol'].upper().replace("_", "-")
+            symbol = normalized[3:6] + SYMBOL_SEP + normalized[6:9]
+            normalized = normalized.replace(normalized[3:9], symbol)
+            normalized = normalized.replace('XBT', 'BTC')
+
+            _exchange_info[KRAKEN_FUTURES]['tick_size'][normalized] = entry['tickSize']
+            _exchange_info[KRAKEN_FUTURES]['contract_size'][normalized] = entry['contractSize']
+            _exchange_info[KRAKEN_FUTURES]['underlying'][normalized] = entry['underlying']
+            _exchange_info[KRAKEN_FUTURES]['product_type'][normalized] = _kraken_futures_product_type[normalized[:2]]
+            ret[normalized] = entry['symbol']
+        return ret
     except Exception as why:
         raise_failure_explanation('KRAKEN_FUTURES', why, {"": r})
 

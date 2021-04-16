@@ -111,6 +111,7 @@ Cryptofeed supports the following channels from exchanges:
 * FUNDING
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * OPEN_INTEREST - Open interest data.
+* CANDLES - Candlestick / K-Line data.
 
 Aggregated data from provider is available in channel:
 
@@ -134,13 +135,14 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
-* [InfluxDB](https://github.com/influxdata/influxdb) (v1 and v2)
+* [InfluxDB 2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
 * Elastic Search
 * RabbitMQ
 * PostgreSQL
 * GCP Pub/Sub
+* [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)
 
 
 ## Installation
@@ -154,11 +156,11 @@ Cryptofeed can be installed from PyPi. (It's recommended that you install in a v
 Cryptofeed has optional dependencies, depending on the backends used. You can install them individually, or all at once. To install Cryptofeed along with all its optional dependencies in one bundle:
 
     pip install cryptofeed[all]
-    
+
 If you wish to clone the repository and install from source, run this command from the root of the cloned repository
 
     python setup.py install
-    
+
 Alternatively, you can install in 'edit' mode (also called development mode):
 
     python setup.py develop

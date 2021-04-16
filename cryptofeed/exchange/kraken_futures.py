@@ -7,7 +7,6 @@ associated with this software.
 import logging
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -26,28 +25,12 @@ class KrakenFutures(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://futures.kraken.com/ws/v1', **kwargs)
-
-        # TODO: the same verification (below) is done in Bitmex and Kraken => share this code in a common function in super class Feed
-        instruments = self.get_instruments()
-        if self.subscription:
-            subscribing_instruments = list(self.subscription.values())
-            self.symbols = set(pair for inner in subscribing_instruments for pair in inner)
-
-        for pair in self.symbols:
-            if pair not in instruments:
-                raise ValueError(f"{pair} is not active on {self.id}")
-
         self.__reset()
 
     def __reset(self):
         self.open_interest = {}
         self.l2_book = {}
         self.seq_no = {}
-
-    @staticmethod
-    def get_instruments():
-        r = requests.get('https://futures.kraken.com/derivatives/api/v3/instruments').json()
-        return {e['symbol'].upper(): e['symbol'].upper() for e in r['instruments']}
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()

@@ -1,4 +1,4 @@
-# Cryptofeed High Level Overview
+## Cryptofeed High Level Overview
 
 Cryptofeed is composed of the following components:
 

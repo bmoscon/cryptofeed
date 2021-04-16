@@ -59,6 +59,7 @@ FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 MARKET_INFO = 'market_info'
 TRANSACTIONS = 'transactions'
+CANDLES = 'candles'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'

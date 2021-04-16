@@ -8,12 +8,12 @@ poloniex = Rest().Poloniex
 
 
 def test_get_ticker():
-    ticker = poloniex.ticker('BTC-USDT')
+    ticker = poloniex.ticker('BTC-ETH')
     assert ticker['bid'] > 0
 
 
 def test_order_book():
-    order_book = poloniex.l2_book('BTC-USDT')
+    order_book = poloniex.l2_book('BTC-ETH')
 
     assert BID in order_book
     assert ASK in order_book
@@ -21,7 +21,7 @@ def test_order_book():
 
 
 def test_trade_history():
-    trade_history = list(next(poloniex.trades('BTC-USDT', start='2020-12-30', end='2020-12-31')))
+    trade_history = list(next(poloniex.trades('BTC-ETH', start='2020-12-30', end='2020-12-31')))
     assert len(trade_history) > 0
     assert float(trade_history[0]['amount']) > 0
 

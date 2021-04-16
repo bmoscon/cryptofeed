@@ -1,4 +1,4 @@
-### Configuring Cryptofeed
+## Configuring Cryptofeed
 
 Configuration is specified during the creation of the feedhandler object, via the `config` kwarg. It defaults to `None`. Currently the following options exist for specifying a configuration to the feedhandler.
 

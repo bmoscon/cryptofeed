@@ -30,12 +30,12 @@ def test_trade_history():
 
 
 def test_trade_history_specific_time():
-    expected = {'timestamp': 1550062756.000744, 
-                'symbol': 'BTC-USD', 
-                'id': 59158401, 
-                'feed': 'COINBASE', 
-                'side': 'buy', 
-                'amount': Decimal('0.00514473'), 
+    expected = {'timestamp': 1550062756.744,
+                'symbol': 'BTC-USD',
+                'id': 59158401,
+                'feed': 'COINBASE',
+                'side': 'buy',
+                'amount': Decimal('0.00514473'),
                 'price': Decimal('3580.07')}
     ret = []
     for data in public.trades('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
@@ -52,20 +52,20 @@ def test_candle_history():
 def test_candle_history_specific_time():
     expected = [
         {
-            'symbol': 'BTC-USD', 'feed': 'COINBASE', 
+            'symbol': 'BTC-USD', 'feed': 'COINBASE',
             'timestamp': 1578733200,
-            'low': Decimal('8054.64'), 
-            'high': Decimal('8122'), 
+            'low': Decimal('8054.64'),
+            'high': Decimal('8122'),
             'open': Decimal('8054.66'),
-            'close': Decimal('8109.53'), 
-            'volume': Decimal('78.91111363')}, 
+            'close': Decimal('8109.53'),
+            'volume': Decimal('78.91111363')},
         {
-            'symbol': 'BTC-USD', 'feed': 'COINBASE', 
-            'timestamp': 1578736800, 
-            'low': Decimal('8045.67'), 
-            'high': Decimal('8110.95'), 
-            'open': Decimal('8110.95'), 
-            'close': Decimal('8050.94'), 
+            'symbol': 'BTC-USD', 'feed': 'COINBASE',
+            'timestamp': 1578736800,
+            'low': Decimal('8045.67'),
+            'high': Decimal('8110.95'),
+            'open': Decimal('8110.95'),
+            'close': Decimal('8050.94'),
             'volume': Decimal('71.11516828')
         }
     ]
@@ -81,8 +81,8 @@ def test_candle_history_specific_time():
 # def test_heartbeat():
 #     result = sandbox.heartbeat()
 #     assert result['result'] == 'ok'
-# 
-# 
+#
+#
 # @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
 # def test_place_order_and_cancel():
 #     order_resp = sandbox.place_order(

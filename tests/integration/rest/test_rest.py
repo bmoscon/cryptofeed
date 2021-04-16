@@ -9,7 +9,7 @@ def test_rest_bitmex():
     ret = []
     end = pd.Timestamp.now()
     start = end - pd.Timedelta(minutes=2)
-    for data in r.bitmex.trades('XBTUSD', start=start, end=end):
+    for data in r.bitmex.trades('BTC-USD', start=start, end=end):
         ret.extend(data)
 
     assert len(ret) > 0
@@ -35,7 +35,7 @@ def test_rest_bitfinex():
 def test_rest_deribit():
     r = Rest()
     ret = []
-    for data in r.deribit.trades('BTC-PERPETUAL'):
+    for data in r.deribit.trades('BTC-USD-PERPETUAL'):
         ret.extend(data)
     assert len(ret) > 1
 

@@ -111,6 +111,11 @@ class BookUpdateCallback(Callback):
         await super().__call__(feed, symbol, delta, timestamp, receipt_timestamp)
 
 
+class CandleCallback(Callback):
+    async def __call__(self, *, feed: str, symbol: str, start: float, stop: float, interval: str, trades: int, open_price: Decimal, close_price: Decimal, high_price: Decimal, low_price: Decimal, volume: Decimal, closed: bool, timestamp: float, receipt_timestamp: float):
+        await super().__call__(feed, symbol, start, stop, interval, trades, open_price, close_price, high_price, low_price, volume, closed, timestamp, receipt_timestamp)
+
+
 class LiquidationCallback(Callback):
     async def __call__(self, *, feed: str, symbol: str, side: str, leaves_qty: Decimal, price: Decimal, order_id: str, timestamp: float, receipt_timestamp: float):
         await super().__call__(feed, symbol, side, leaves_qty, price, order_id, timestamp, receipt_timestamp)

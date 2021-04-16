@@ -1,7 +1,6 @@
 import logging
 from decimal import Decimal
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 from collections import defaultdict

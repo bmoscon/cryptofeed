@@ -48,8 +48,12 @@ async def abook(feed, symbol, book, timestamp, receipt_timestamp):
     # print(f'BOOK lag: {receipt_timestamp - timestamp} Timestamp: {datetime.fromtimestamp(timestamp)} Receipt Timestamp: {datetime.fromtimestamp(receipt_timestamp)} Feed: {feed} Pair: {symbol} Snapshot: {book}')
 
 
-async def delta(feed, symbol, delta, timestamp, receipt_timestamp):
-    print(f'DELTA lag: {receipt_timestamp - timestamp} Timestamp: {datetime.fromtimestamp(timestamp)} Receipt Timestamp: {datetime.fromtimestamp(receipt_timestamp)} Feed: {feed} Pair: {symbol} Delta: {delta}')
+async def ticker(**kwargs):
+    print(kwargs)
+
+
+async def trades(**kwargs):
+    print(kwargs)
 
 async def funding(feed, symbol, timestamp, receipt_timestamp, mark_price, rate, next_funding_time):
     print(f'FUNDING lag: {receipt_timestamp - timestamp} Feed: {feed} Pair: {symbol} Mark Price: {mark_price} Rate: {rate} Next Funding Time: {next_funding_time}')

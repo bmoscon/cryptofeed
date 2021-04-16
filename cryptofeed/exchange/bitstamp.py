@@ -8,7 +8,6 @@ import asyncio
 import logging
 from decimal import Decimal
 
-import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -130,17 +129,11 @@ class Bitstamp(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def _snapshot(self, pairs: list):
+    async def _snapshot(self, pairs: list, conn: AsyncConnection):
         await asyncio.sleep(5)
         urls = [f'https://www.bitstamp.net/api/v2/order_book/{sym}' for sym in pairs]
-
-        async def fetch(session, url):
-            async with session.get(url) as response:
-                response.raise_for_status()
-                return await response.json()
-
-        async with aiohttp.ClientSession() as session:
-            results = await asyncio.gather(*[fetch(session, url) for url in urls])
+        results = [await conn.get(url) for url in urls]
+        results = [json.loads(resp, parse_float=Decimal) for resp in results]
 
         for r, pair in zip(results, pairs):
             std_pair = symbol_exchange_to_std(pair) if pair else 'BTC-USD'
@@ -166,4 +159,4 @@ class Bitstamp(Feed):
                     }))
                 if 'diff_order_book' in chan:
                     snaps.append(pair)
-        await self._snapshot(snaps)
+        await self._snapshot(snaps, conn)

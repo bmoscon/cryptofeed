@@ -32,7 +32,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.7.0",
+    version="1.9.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
@@ -65,9 +65,9 @@ setup(
         "sortedcontainers>=1.5.9",
         "pandas",
         "pyyaml",
-        "aiohttp>=3.7.1",
+        "aiohttp>=3.7.1, < 4.0.0",
         "aiofile>=2.0.0",
-        "yapic.json>=1.4.3",
+        "yapic.json>=1.6.3",
         'uvloop ; platform_system!="Windows"',
         # Two (optional) dependencies that speed up Cryptofeed:
         "aiodns>=1.1",  # aiodns speeds up DNS resolving
@@ -75,23 +75,24 @@ setup(
     ],
     extras_require={
         "arctic": ["arctic"],
-        "gcp_pubsub": ["google_cloud_pubsub", "gcloud_aio_pubsub"],
+        "gcp_pubsub": ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"],
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
         "rabbit": ["aio_pika", "pika"],
-        "redis": ["aioredis"],
+        "redis": ["hiredis", "aioredis>=2.0.0a1"],
         "zmq": ["pyzmq"],
         "all": [
             "arctic",
-            "google_cloud_pubsub",
+            "google_cloud_pubsub>=2.4.1",
             "gcloud_aio_pubsub"
             "aiokafka>=0.7.0",
             "motor",
             "asyncpg",
             "aio_pika",
             "pika",
-            "aioredis",
+            "hiredis",
+            "aioredis>=2.0.0a1",
             "pyzmq",
         ],
     },
