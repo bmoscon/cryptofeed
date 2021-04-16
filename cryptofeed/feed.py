@@ -124,7 +124,7 @@ class Feed:
                           TRADES: Callback(None),
                           TRANSACTIONS: Callback(None),
                           VOLUME: Callback(None),
-                          USER_TRADES: Callback(None)
+                          USER_TRADES: Callback(None),
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None)
                           }
