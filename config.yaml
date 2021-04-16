@@ -8,6 +8,9 @@ log:
     filename: feedhandler.log
     level: WARNING
 
+# Enable UVLoop (if not installed, will not cause errors)
+uvloop: True
+
 # Secrets for exchanges
 bitmex:
     key_id: null
@@ -41,3 +44,11 @@ binance_futures:
 binance_delivery:
     key_id: null
     key_secret: null
+okcoin:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+okex:
+    key_id: null
+    key_secret: null
+    key_passphrase: null

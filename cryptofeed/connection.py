@@ -6,11 +6,16 @@ associated with this software.
 '''
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Union, List
+import logging
+import time
+from typing import Callable, Union, List
 import uuid
 
 import aiohttp
 import websockets
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 class AsyncConnection:
@@ -35,6 +40,8 @@ class AsyncConnection:
         self.address = address
         self.kwargs = kwargs
         self.conn = None
+        self.session = None
+        self.raw_cb = None
         self.__sleep = sleep
         self.__delay = delay
         self.__identifier = f"{identifier}-{str(uuid.uuid4())[:6]}"
@@ -45,42 +52,74 @@ class AsyncConnection:
             self.conn_type = 'https'
         elif isinstance(address, str) and address[:5] == 'https':
             self.conn_type = 'https'
+            self.address = [address]
         else:
             raise ValueError("Invalid connection type, ensure address contains valid protocol")
 
     @asynccontextmanager
     async def connect(self):
-        if self.conn_type == "ws":
-            self.conn = await websockets.connect(self.address, **self.kwargs)
-        else:
-            self.conn = aiohttp.ClientSession()
         try:
+            if self.session is None or self.session.closed:
+                self.session = aiohttp.ClientSession()
+            if self.conn_type == "ws":
+                if self.raw_cb:
+                    await self.raw_cb(None, time.time(), self.uuid, connect=self.address)
+                LOG.debug("Connecting (websocket) to %s", self.address)
+                self.conn = await websockets.connect(self.address, **self.kwargs)
+
             yield self
         finally:
             if self.conn:
                 await self.conn.close()
                 self.conn = None
+            if self.session:
+                await self.session.close()
+                self.session = None
 
     async def send(self, msg: str):
+        if self.raw_cb:
+            await self.raw_cb(msg, time.time(), self.uuid, send=self.address)
         return await self.conn.send(msg)
 
     async def close(self):
         if self.conn:
             await self.conn.close()
             self.conn = None
+        if self.session:
+            await self.session.close()
+            self.session = None
 
     async def read(self):
         if self.conn_type == 'ws':
-            async for data in self.conn:
-                yield data
+            if self.raw_cb:
+                async for data in self.conn:
+                    await self.raw_cb(data, time.time(), self.uuid)
+                    yield data
+            else:
+                async for data in self.conn:
+                    yield data
+
         elif self.conn_type == 'https':
             while True:
                 for addr in self.address:
-                    async with self.conn.get(addr) as response:
-                        response.raise_for_status()
+                    async with self.session.get(addr) as response:
                         data = await response.text()
+                        if self.raw_cb:
+                            await self.raw_cb(data, time.time(), self.uuid, endpoint=addr)
+                        response.raise_for_status()
                         yield data
                     await asyncio.sleep(self.__sleep)
+
+    async def get(self, uri: str):
+        async with self.session.get(uri) as response:
+            data = await response.text()
+            if self.raw_cb:
+                await self.raw_cb(data, time.time(), self.uuid, endpoint=uri)
+            response.raise_for_status()
+            return data
+
+    def set_raw_data_callback(self, raw_data_cb: Callable):
+        self.raw_cb = raw_data_cb
 
     @property
     def open(self):
@@ -88,7 +127,7 @@ class AsyncConnection:
             if self.conn_type == "ws":
                 return self.conn.open
             elif self.conn_type == 'https':
-                return not self.conn.closed
+                return not self.session.closed
         return False
 
     @property

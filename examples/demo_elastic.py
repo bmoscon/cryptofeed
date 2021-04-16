@@ -27,7 +27,7 @@ def main():
     f = FeedHandler()
 
     f.add_feed(Coinbase(channels=[L2_BOOK, TRADES], symbols=['BTC-USD'], callbacks={L2_BOOK: BookElastic('http://localhost:9200', numeric_type=float), BOOK_DELTA: BookDeltaElastic('http://localhost:9200', numeric_type=float), TRADES: TradeElastic('http://localhost:9200', numeric_type=float)}))
-    f.add_feed(Bitmex(channels=[FUNDING], symbols=['XBTUSD'], callbacks={FUNDING: FundingElastic('http://localhost:9200', numeric_type=float)}))
+    f.add_feed(Bitmex(channels=[FUNDING], symbols=['BTC-USD'], callbacks={FUNDING: FundingElastic('http://localhost:9200', numeric_type=float)}))
 
     f.run()
 

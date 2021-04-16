@@ -86,11 +86,11 @@ def main():
     exch_sym_map = {}
     exch_sym_map['Binance'] = ['BTC-USDT', 'BTC-USDC', 'BTC-TUSD']
     exch_sym_map['Bitfinex'] = ['BTC-USD']
-    exch_sym_map['BitMEX'] = ['XBTUSD']
+    exch_sym_map['BitMEX'] = ['BTC-USD']
     exch_sym_map['Bitstamp'] = ['BTC-USD']
     exch_sym_map['Bybit'] = ['BTC-USD']
     exch_sym_map['Coinbase'] = ['BTC-USD']
-    exch_sym_map['Deribit'] = ['BTC-PERPETUAL']
+    exch_sym_map['Deribit'] = ['BTC-USD-PERPETUAL']
     exch_sym_map['EXX'] = ['BTC-USDT']
     exch_sym_map['Gemini'] = ['BTC-USD']
     exch_sym_map['HitBTC'] = ['BTC-USD']

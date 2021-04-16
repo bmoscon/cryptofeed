@@ -9,7 +9,7 @@ import asyncio
 from aiokafka import AIOKafkaProducer
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
 
@@ -71,3 +71,7 @@ class MarketInfoKafka(KafkaCallback, BackendMarketInfoCallback):
 
 class TransactionsKafka(KafkaCallback, BackendTransactionsCallback):
     default_key = 'transactions'
+
+
+class CandlesKafka(KafkaCallback, BackendCandlesCallback):
+    default_key = 'candles'

@@ -6,6 +6,7 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
+from typing import Tuple
 
 from yapic import json
 
@@ -30,6 +31,7 @@ class BinanceDeliveryInstrument():
             self.expiry_date_str = instrument_properties[1]
 
 class BinanceDelivery(Binance):
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     id = BINANCE_DELIVERY
 
     def __init__(self, **kwargs):
@@ -60,7 +62,7 @@ class BinanceDelivery(Binance):
             return None
         return address[:-1]
 
-    def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
+    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
         forced = not self.forced[pair]
 
@@ -91,7 +93,7 @@ class BinanceDelivery(Binance):
         if msg_type == 'bookTicker':
             await self._ticker(msg, timestamp)
         elif msg_type == 'depthUpdate':
-            await self._book(msg, pair, timestamp)
+            await self._book(conn, msg, pair, timestamp)
         elif msg_type == 'aggTrade':
             await self._trade(msg, timestamp)
         elif msg_type == 'forceOrder':

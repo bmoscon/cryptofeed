@@ -13,8 +13,8 @@ from typing import Tuple, Callable, Union, List
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import (ASK, BID, BOOK_DELTA, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME, USER_TRADES)
+from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, TRANSACTIONS, USER_TRADES, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed
 from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -78,6 +78,7 @@ class Feed:
         self.connection = None
         self.requires_authentication = False
         self.is_authenticated = False
+        self._feed_config = defaultdict(list)
 
         load_exchange_symbol_mapping(self.id, key_id=self.key_id)
 
@@ -96,16 +97,19 @@ class Feed:
                 else:
                     self.subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
                     self.normalized_symbols.extend(self.subscription[chan])
+                self._feed_config[channel].extend(self.normalized_symbols)
 
         if symbols:
             self.normalized_symbols = symbols
             self.symbols = [symbol_std_to_exchange(symbol, self.id) for symbol in symbols]
         if channels:
             self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
+            [self._feed_config[channel].extend(self.normalized_symbols) for channel in channels]
             if any(is_authenticated_channel(chan) for chan in channels):
                 if not self.key_id or not self.key_secret:
                     raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
                 self.requires_authentication = True
+        self._feed_config = dict(self._feed_config)
 
         self.l3_book = {}
         self.l2_book = {}
@@ -121,6 +125,8 @@ class Feed:
                           TRANSACTIONS: Callback(None),
                           VOLUME: Callback(None),
                           USER_TRADES: Callback(None)
+                          CANDLES: Callback(None),
+                          ORDER_INFO: Callback(None)
                           }
 
         if callbacks:
@@ -175,7 +181,7 @@ class Feed:
         """
         symbols, info = get_exchange_info(cls.id, key_id=key_id)
         data = {'symbols': list(symbols.keys()), 'channels': []}
-        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME, USER_TRADES):
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, TRANSACTIONS, VOLUME, USER_TRADES, CANDLES):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
@@ -284,3 +290,12 @@ class Feed:
                     LOG.info('%s: stopping backend %s', self.id, cb_name)
                     await callback.stop()
         LOG.info('%s: feed shutdown completed', self.id)
+
+    def start(self, loop):
+        for callbacks in self.callbacks.values():
+            for callback in callbacks:
+                if hasattr(callback, 'start'):
+                    cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
+                    LOG.info('%s: starting backend task %s', self.id, cb_name)
+                    # Backends start tasks to write messages
+                    callback.start(loop)

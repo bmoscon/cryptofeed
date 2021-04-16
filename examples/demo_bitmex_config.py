@@ -74,7 +74,7 @@ def main():
 
     # When using the following no need to pass config when using 'BITMEX'
     f.add_feed('BITMEX', symbols=bitmex_symbols, channels=[FUNDING], callbacks={FUNDING: FundingCallback(print_all)})
-    f.add_feed('BITMEX', symbols=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(print_all)})
+    f.add_feed('BITMEX', symbols=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(print_all)})
 
     f.run()
 
