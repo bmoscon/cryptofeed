@@ -10,7 +10,7 @@ import random
 
 from cryptofeed.feedhandler import FeedHandler, _EXCHANGES
 from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, COINGECKO, L2_BOOK, TRADES, TICKER, CANDLES
-from cryptofeed.util.async_file import AsyncFileCallback
+from cryptofeed.raw_data_collection import AsyncFileCallback
 from check_raw_dump import main as check_dump
 
 
@@ -24,10 +24,10 @@ def main():
     files = glob.glob('*')
     for f in files:
         for e in _EXCHANGES.keys():
-            if e + "-" in f:
-                skip.append(e.split("-")[0])
+            if e + "." in f:
+                skip.append(e.split(".")[0])
 
-    print(f'Generating test data. This will take approximately {(len(_EXCHANGES) - len(set(skip))) * 2} minutes.')
+    print(f'Generating test data. This will take approximately {(len(_EXCHANGES) - len(set(skip))) * 1} minutes.')
     for exch_str, exchange in _EXCHANGES.items():
         if exch_str in skip:
             continue
@@ -49,13 +49,13 @@ def main():
             else:
                 break
 
-        fh = FeedHandler(raw_message_capture=AsyncFileCallback('./'))
-        fh.add_feed(exchange(symbols=symbols, channels=channels))
+        fh = FeedHandler()
+        fh.add_feed(exchange(raw_data_collection=('./', 10000, 104857600), symbols=symbols, channels=channels))
         fh.run(start_loop=False)
 
         loop = asyncio.get_event_loop()
-        loop.call_later(120, stop)
-        print("Starting feedhandler. Will run for 2 minutes...")
+        loop.call_later(60, stop)
+        print("Starting feedhandler. Will run for 1 minute...")
         loop.run_forever()
 
         fh.stop()

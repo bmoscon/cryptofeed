@@ -28,8 +28,7 @@ class Probit(Feed):
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
         # doc: https://docs-en.probit.com/reference-link/market
         ret = {}
-        r = cls.http_sync.read(cls.symbol_endpoint, json=True)
-        ret = {entry['id'].replace("-", symbol_separator): entry['id'] for entry in r['data']}
+        ret = {entry['id'].replace("-", symbol_separator): entry['id'] for entry in data['data']}
         return ret, {}
 
     def __init__(self, **kwargs):

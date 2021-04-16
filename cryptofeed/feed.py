@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.raw_data_collection import AsyncFileCallback, HTTPAsyncConnRaw, HTTPPollRaw, HTTPSyncRaw, WSAsyncConnRaw
 from cryptofeed.symbols import Symbols
 from functools import partial
 import logging
@@ -13,7 +14,7 @@ from typing import Dict, Tuple, Callable, Union, List
 
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
-from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPPoll, HTTPSync, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, VOLUME)
@@ -29,7 +30,7 @@ class Feed:
     id = 'NotImplemented'
     http_sync = HTTPSync()
 
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, raw_data_collection=False):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -65,6 +66,8 @@ class Feed:
             If an exception is encountered in the connection handler, log the raw message
         sandbox: bool
             enable sandbox mode for exchanges that support this
+        raw_data_collection: tuple of path, length and rotate
+            enable collection of raw data
         """
         if isinstance(config, Config):
             LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
@@ -73,7 +76,8 @@ class Feed:
             LOG.info('%s: create Config from type: %r', self.id, type(config))
             self.config = Config(config)
 
-        self.http_conn = HTTPAsyncConn(self.id)
+        self.sandbox = sandbox
+
         self.log_on_error = log_message_on_error
         self.retries = retries
         self.exceptions = exceptions
@@ -99,9 +103,19 @@ class Feed:
         self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
         self._feed_config = defaultdict(list)
 
+        if raw_data_collection:
+            self.raw_data_cb = AsyncFileCallback(*raw_data_collection)
+            self.http_conn = HTTPAsyncConnRaw(self.raw_data_cb, self.id)
+            Feed.http_sync = HTTPSyncRaw(self.raw_data_cb, self.id)
+            refresh = True
+        else:
+            self.raw_data_cb = None
+            self.http_conn = HTTPAsyncConn(self.id)
+            refresh=False
+
         symbols_cache = Symbols
         if not symbols_cache.populated(self.id):
-            self.symbol_mapping()
+            self.symbol_mapping(refresh=refresh)
 
         self.normalized_symbol_mapping, self.exchange_info = symbols_cache.get(self.id)
         self.exchange_symbol_mapping = {value: key for key, value in self.normalized_symbol_mapping.items()}
@@ -330,6 +344,14 @@ class Feed:
         Create tasks for exchange interfaces and backends
         """
         for conn, sub, handler in self.connect():
+            if self.raw_data_cb:
+                if isinstance(conn, WSAsyncConn):
+                    new_conn = WSAsyncConnRaw(self.raw_data_cb, conn.address, conn.uuid, conn.ws_kwargs)
+                    conn = new_conn
+                elif isinstance(conn, HTTPPoll):
+                    new_conn = HTTPPollRaw(self.raw_data_cb, conn.address, conn.sleep, conn.delay, conn.uuid)
+                    conn = new_conn
+
             self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
             self.connection_handlers[-1].start(loop)
 

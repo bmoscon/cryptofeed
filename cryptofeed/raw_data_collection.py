@@ -7,6 +7,10 @@ associated with this software.
 import asyncio
 import atexit
 from collections import defaultdict
+from cryptofeed.exceptions import ConnectionClosed
+from time import time
+
+from cryptofeed.connection import HTTPAsyncConn, HTTPPoll, HTTPSync, WSAsyncConn
 import functools
 import ast
 
@@ -143,3 +147,87 @@ class AsyncFileCallback:
 
         if len(self.data[uuid]) >= self.length:
             await asyncio.create_task(self.write(uuid))
+
+    def sync_callback(self, data: str, timestamp: float, uuid: str, endpoint: str = None, send: str = None, connect: str = None):
+        if endpoint:
+            self.data[uuid].append(f"{endpoint} -> {timestamp}: {data}")
+        elif send:
+            self.data[uuid].append(f"{send} <- {timestamp}: {data}")
+        elif connect:
+            self.data[uuid].append(f"{connect} <-> {timestamp}")
+        else:
+            self.data[uuid].append(f"{timestamp}: {data}")
+
+
+class HTTPSyncRaw(HTTPSync):
+    def __init__(self, cb, id):
+        self.cb = cb
+        self.id = id + ".symbol"
+
+    def read(self, address: str, **kwargs):
+        print("HELLO")
+        data = super().read(address, **kwargs)
+        self.cb.sync_callback(data, time(), self.id)
+        return data
+
+
+class HTTPAsyncConnRaw(HTTPAsyncConn):
+    def __init__(self, cb, id):
+        super().__init__(id)
+        self.cb = cb
+
+    async def read(self, address):
+        data = await super().read(address)
+        await self.cb(data, self.last_message, self.id, endpoint=address)
+        return data
+
+
+class HTTPPollRaw(HTTPPoll):
+    def __init__(self, cb, address, sleep, delay, id):
+        super().__init__(address, id, delay, sleep)
+        self.cb = cb
+        self.address = address
+        self.sleep = sleep
+        self.delay = delay
+        self.id = id
+
+    async def read(self):
+        while True:
+            for addr in self.address:
+                if not self.is_open:
+                    raise ConnectionClosed
+                async with self.conn.get(addr) as response:
+                    response.raise_for_status()
+                    data = await response.text()
+                    self.received += 1
+                    self.last_message = time()
+                    await self.cb(data, self.last_message, self.uuid)
+                    yield data
+                    await asyncio.sleep(self.sleep)
+            await asyncio.sleep(self.delay)
+
+
+class WSAsyncConnRaw(WSAsyncConn):
+    def __init__(self, cb, address, id, ws_options):
+        super().__init__(address, id, **ws_options)
+        self.cb = cb
+        self.address = address
+        self.id = id
+        self.ws_kwargs = ws_options
+
+    async def _open(self):
+        await self.cb(None, time(), self.id, connect=self.address)
+        await super()._open()
+
+    async def read(self):
+        if not self.is_open:
+            raise ConnectionClosed
+        async for data in self.conn:
+            self.received += 1
+            self.last_message = time()
+            await self.cb(data, self.last_message, self.uuid)
+            yield data
+
+    async def write(self, data: str):
+        await self.cb(data, time(), self.id, send=self.address)
+        await super().write(data)
