@@ -9,11 +9,25 @@ import logging
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER
+from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER, PERPETURAL, FUTURE
 from cryptofeed.exchange.binance import Binance
 
 LOG = logging.getLogger('feedhandler')
 
+class BinanceFuturesInstrument():
+    def __init__(self, instrument_name):
+        self.instrument_name = instrument_name
+        instrument_properties = instrument_name.split('_')
+        self.pair = instrument_properties[0]
+        pair_arr = instrument_properties[0].split('-')
+        self.base = pair_arr[0]
+        self.quote = pair_arr[1]
+        
+        if len(instrument_properties) == 1:
+            self.instrument_type = PERPETURAL
+        else:
+            self.instrument_type = FUTURE
+            self.expiry_date_str = instrument_properties[1]
 
 class BinanceFutures(Binance):
     id = BINANCE_FUTURES
@@ -24,6 +38,11 @@ class BinanceFutures(Binance):
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
+
+    @staticmethod
+    def get_instrument_objects():
+        instruments = BinanceFutures.get_instruments()
+        return [BinanceFuturesInstrument(instrument) for instrument in instruments]
 
     def _address(self):
         address = self.ws_endpoint + '/stream?streams='

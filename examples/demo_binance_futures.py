@@ -5,13 +5,12 @@ from multiprocessing import Process
 from yapic import json
 
 from cryptofeed import FeedHandler
-from cryptofeed.backends.zmq import FundingZMQ, TickerZMQ, TradeZMQ
-from cryptofeed.defines import L2_BOOK, FUNDING, TICKER, PERPETURAL, FUTURE, TRADES
-from cryptofeed.exchanges import BinanceFutures, BinanceDelivery, Binance
+from cryptofeed.backends.zmq import FundingZMQ
+from cryptofeed.defines import L2_BOOK, FUNDING, PERPETURAL
+from cryptofeed.exchanges import BinanceFutures, BinanceDelivery
 
 binance_delivery_data_info = BinanceDelivery.info()
 binance_futures_data_info = BinanceFutures.info()
-binance_data_info = Binance.info()
 
 import uvloop
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -72,14 +71,8 @@ def main():
             binance_delivery_symbols[instrument.instrument_type].append(instrument.instrument_name)
         print(binance_delivery_symbols)
 
-        binance_symbols = set()
-        for instrument in BinanceDelivery.get_instrument_objects():
-            binance_symbols.add(instrument.base + '-USDT')
-        print(binance_symbols)
-
-        f.add_feed(BinanceDelivery(symbols=binance_delivery_symbols[PERPETURAL], channels=[FUNDING, TICKER, TRADES], callbacks={FUNDING: FundingZMQ(port=5678), TICKER: TickerZMQ(port=5679), TRADES: TradeZMQ(port=5682)}))
-        f.add_feed(BinanceFutures(symbols=binance_futures_symbols[PERPETURAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5680)}))
-        f.add_feed(Binance(symbols=list(binance_symbols), channels=[TICKER, TRADES], callbacks={TICKER: TickerZMQ(port=5681), TRADES: TradeZMQ(port=5683)}))
+        # f.add_feed(BinanceDelivery(symbols=binance_delivery_symbols[PERPETURAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5678)}))
+        f.add_feed(BinanceFutures(symbols=binance_futures_symbols[PERPETURAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5679)}))
         f.run()
     
     finally:

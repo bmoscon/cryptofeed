@@ -20,7 +20,7 @@ class ZMQCallback:
         url = "tcp://{}:{}".format(host, port)
         ctx = zmq.asyncio.Context.instance()
         self.con = ctx.socket(zmq.PUB)
-        self.con.connect(url)
+        self.con.bind(url)
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.dynamic_key = dynamic_key

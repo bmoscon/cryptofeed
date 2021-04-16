@@ -9,11 +9,25 @@ import logging
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_DELIVERY, OPEN_INTEREST, TICKER
+from cryptofeed.defines import BINANCE_DELIVERY, OPEN_INTEREST, TICKER, PERPETURAL, FUTURE
 from cryptofeed.exchange.binance import Binance
 
 LOG = logging.getLogger('feedhandler')
 
+class BinanceDeliveryInstrument():
+    def __init__(self, instrument_name):
+        self.instrument_name = instrument_name
+        instrument_properties = instrument_name.split('_')
+        self.pair = instrument_properties[0]
+        pair_arr = instrument_properties[0].split('-')
+        self.base = pair_arr[0]
+        self.quote = pair_arr[1]
+        
+        if instrument_properties[1] == 'PERP':
+            self.instrument_type = PERPETURAL
+        else:
+            self.instrument_type = FUTURE
+            self.expiry_date_str = instrument_properties[1]
 
 class BinanceDelivery(Binance):
     id = BINANCE_DELIVERY
@@ -24,6 +38,11 @@ class BinanceDelivery(Binance):
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
         self.address = self._address()
+
+    @staticmethod
+    def get_instrument_objects():
+        instruments = BinanceDelivery.get_instruments()
+        return [BinanceDeliveryInstrument(instrument) for instrument in instruments]
 
     def _address(self):
         address = self.ws_endpoint + '/stream?streams='

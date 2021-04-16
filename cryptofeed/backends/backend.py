@@ -89,9 +89,16 @@ class BackendFundingCallback:
 
 
 class BackendTickerCallback:
-    async def __call__(self, *, feed: str, symbol: str, bid: Decimal, ask: Decimal, timestamp: float, receipt_timestamp: float):
-        data = {'feed': feed, 'symbol': symbol, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
-        await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+    async def __call__(self, *, feed: str, symbol: str, **kwargs):
+        # data = {'feed': feed, 'symbol': symbol, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
 
 
 class DeribitBackendTickerCallback():

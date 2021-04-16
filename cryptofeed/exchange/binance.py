@@ -71,6 +71,10 @@ class Binance(Feed):
         self.last_update_id = {}
         self.open_interest = {}
 
+    @classmethod
+    def get_instruments(cls):
+        return cls.info()['symbols']
+
     async def _trade(self, msg: dict, timestamp: float):
         """
         {
@@ -132,7 +136,9 @@ class Binance(Feed):
         await self.callback(TICKER, feed=self.id,
                             symbol=pair,
                             bid=bid,
+                            bid_size=Decimal(msg['B']),
                             ask=ask,
+                            ask_size=Decimal(msg['A']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
@@ -301,8 +307,8 @@ class Binance(Feed):
                             symbol=symbol_exchange_to_std(msg['s']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp,
-                            mark_price=msg['p'],
-                            rate=msg['r'],
+                            mark_price=Decimal(msg['p']),
+                            rate=Decimal(msg['r']),
                             next_funding_time=timestamp_normalize(self.id, msg['T']),
                             )
 
