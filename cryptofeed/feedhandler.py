@@ -58,6 +58,7 @@ class FeedHandler:
         """
         self.feeds = []
         self.config = Config(config=config)
+        self.raw_data_collection = None
         if raw_data_collection:
             Connection.raw_data_callback = raw_data_collection
             self.raw_data_collection = raw_data_collection
