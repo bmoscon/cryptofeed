@@ -18,7 +18,7 @@ from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, 
 
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, table=None, numeric_type=float, max_batch=100, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, numeric_type=float, max_batch=100, **kwargs):
         """
         host: str
             Database host address
@@ -40,11 +40,12 @@ class PostgresCallback(BackendQueue):
         self.db = db
         self.pw = pw
         self.host = host
+        self.port = port
         self.max_batch = max_batch
 
     async def _connect(self):
         if self.conn is None:
-            self.conn = await asyncpg.connect(user=self.user, password=self.pw, database=self.db, host=self.host)
+            self.conn = await asyncpg.connect(user=self.user, password=self.pw, database=self.db, host=self.host, port=self.port)
 
     def format(self, data: Tuple):
         feed = data[0]
