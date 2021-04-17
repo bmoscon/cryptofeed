@@ -19,6 +19,8 @@
   * Bugfix: Connection exceptions being ignored in Feedhandler
   * Bugfix: Binance address generation correction
   * Bugfix: OKEX symbol generation incorrect + validate symbols used for channels that dont support all types
+  * Breaking Change: Large rewrite of Feedhandler, Connection, and Feed. Many timeout related options moved from feedhandler to Feed. Symbol specific code
+                     moved to exchange class. Rewrite of raw data collection.
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
