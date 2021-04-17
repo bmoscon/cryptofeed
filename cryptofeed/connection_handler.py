@@ -32,16 +32,13 @@ class ConnectionHandler:
         self.log_on_error = log_on_error
         self.timeout = timeout
         self.timeout_interval = timeout_interval
+        self.running = True
 
     def start(self, loop: asyncio.AbstractEventLoop):
         loop.create_task(self._create_connection())
-        if self.timeout != -1:
-            loop.create_task(self._watcher())
 
     async def _watcher(self):
-        await asyncio.sleep(60)
-
-        while self.conn.is_open:
+        while self.conn.is_open and self.running:
             if self.conn.last_message:
                 if time.time() - self.conn.last_message > self.timeout:
                     LOG.warning("%s: received no messages within timeout, restarting connection", self.conn.uuid)
@@ -53,13 +50,16 @@ class ConnectionHandler:
         retries = 0
         rate_limited = 1
         delay = 1
-        while retries < self.retries or self.retries == -1:
+        while (retries <= self.retries or self.retries == -1) and self.running:
             try:
                 async with self.conn.connect() as connection:
                     # connection was successful, reset retry count and delay
                     retries = 0
                     rate_limited = 0
                     await self.subscribe(connection)
+                    if self.timeout != -1:
+                        loop = asyncio.get_running_loop()
+                        loop.create_task(self._watcher())
                     await self._handler(connection, self.handler)
             except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
                 if self.exceptions:
@@ -82,7 +82,7 @@ class ConnectionHandler:
                     await asyncio.sleep(rate_limited * 60)
                     rate_limited += 1
                 else:
-                    LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", self.onn.uuid, str(e), delay, exc_info=True)
+                    LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", self.conn.uuid, str(e), delay, exc_info=True)
                     await asyncio.sleep(delay)
                     retries += 1
                     delay *= 2
@@ -97,8 +97,8 @@ class ConnectionHandler:
                 retries += 1
                 delay *= 2
 
-        if self.retries == 0:
-            LOG.info('%s: terminate the connection handler because self.retries=0', self.conn.uuid)
+        if not self.running:
+            LOG.info('%s: terminate the connection handler because not running', self.conn.uuid)
         else:
             LOG.error('%s: failed to reconnect after %d retries - exiting', self.conn.uuid, retries)
             raise ExhaustedRetries()
@@ -106,11 +106,12 @@ class ConnectionHandler:
     async def _handler(self, connection, handler):
         try:
             async for message in connection.read():
-                if self.retries == 0:
+                if not self.running:
+                    await connection.close()
                     return
                 await handler(message, connection, self.conn.last_message)
         except Exception:
-            if self.retries == 0:
+            if not self.running:
                 return
             if self.log_on_error:
                 if connection.uuid in {HUOBI, HUOBI_DM, HUOBI_SWAP}:

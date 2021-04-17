@@ -20,12 +20,10 @@ def main(filename):
     with open(filename, 'r') as fp:
         counter = 0
         for line in fp.readlines():
-            if counter == 0:
-                counter += 1
-                continue
-
             counter += 1
             if line == "\n":
+                continue
+            if line.startswith("configuration"):
                 continue
             start = line[:3]
             if start == 'wss':
@@ -40,7 +38,7 @@ def main(filename):
                     if line.startswith('b\'') or line.startswith('b"'):
                         line = bytes_string_to_bytes(line)
                         line = zlib.decompress(line, -15).decode()
-                elif 'HUOBI' in filename:
+                elif 'HUOBI' in filename and 'ws' in filename:
                     line = bytes_string_to_bytes(line)
                     line = zlib.decompress(line, 16 + zlib.MAX_WBITS)
                 elif 'UPBIT' in filename:

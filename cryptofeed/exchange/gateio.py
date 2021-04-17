@@ -25,7 +25,7 @@ class Gateio(Feed):
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        return {data["id"].replace("_", symbol_separator): data['id'] for data in data}, {}
+        return {data["id"].replace("_", symbol_separator): data['id'] for data in data if data["trade_status"] == "tradable"}, {}
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.gate.io/v3/', **kwargs)

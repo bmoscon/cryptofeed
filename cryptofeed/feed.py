@@ -5,16 +5,15 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
-from cryptofeed.raw_data_collection import AsyncFileCallback, HTTPAsyncConnRaw, HTTPPollRaw, HTTPSyncRaw, WSAsyncConnRaw
-from cryptofeed.symbols import Symbols
 from functools import partial
 import logging
 import os
 from typing import Dict, Tuple, Callable, Union, List
 
+from cryptofeed.symbols import Symbols
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
-from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPPoll, HTTPSync, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, VOLUME)
@@ -30,7 +29,7 @@ class Feed:
     id = 'NotImplemented'
     http_sync = HTTPSync()
 
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, raw_data_collection=False):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -66,8 +65,6 @@ class Feed:
             If an exception is encountered in the connection handler, log the raw message
         sandbox: bool
             enable sandbox mode for exchanges that support this
-        raw_data_collection: tuple of path, length and rotate
-            enable collection of raw data
         """
         if isinstance(config, Config):
             LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
@@ -102,20 +99,11 @@ class Feed:
         self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
         self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
         self._feed_config = defaultdict(list)
-
-        if raw_data_collection:
-            self.raw_data_cb = AsyncFileCallback(*raw_data_collection)
-            self.http_conn = HTTPAsyncConnRaw(self.raw_data_cb, self.id)
-            Feed.http_sync = HTTPSyncRaw(self.raw_data_cb, self.id)
-            refresh = True
-        else:
-            self.raw_data_cb = None
-            self.http_conn = HTTPAsyncConn(self.id)
-            refresh=False
+        self.http_conn = HTTPAsyncConn(self.id)
 
         symbols_cache = Symbols
         if not symbols_cache.populated(self.id):
-            self.symbol_mapping(refresh=refresh)
+            self.symbol_mapping()
 
         self.normalized_symbol_mapping, self.exchange_info = symbols_cache.get(self.id)
         self.exchange_symbol_mapping = {value: key for key, value in self.normalized_symbol_mapping.items()}
@@ -231,9 +219,9 @@ class Feed:
             if isinstance(cls.symbol_endpoint, list):
                 data = []
                 for ep in cls.symbol_endpoint:
-                    data.append(cls.http_sync.read(ep, json=True))
+                    data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
             else:
-                data = cls.http_sync.read(cls.symbol_endpoint, json=True)
+                data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
             syms, info = cls._parse_symbol_data(data, symbol_separator)
             Symbols.set(cls.id, syms, info)
             return syms
@@ -283,7 +271,7 @@ class Feed:
                 changed, book = await self.apply_depth(book, False, symbol)
                 if not changed:
                     return
-        # case 4 - increment skiped update, and exit
+        # case 4 - increment skipped update, and exit
         if self.snapshot_interval and self.updates[symbol] < self.snapshot_interval:
             self.updates[symbol] += 1
             return
@@ -331,27 +319,26 @@ class Feed:
     async def shutdown(self):
         LOG.info('%s: feed shutdown starting...', self.id)
         await self.http_conn.close()
+
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'stop'):
                     cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
                     LOG.info('%s: stopping backend %s', self.id, cb_name)
                     await callback.stop()
+        for c in self.connection_handlers:
+            await c.conn.close()
         LOG.info('%s: feed shutdown completed', self.id)
+
+    def stop(self):
+        for c in self.connection_handlers:
+            c.running = False
 
     def start(self, loop):
         """
         Create tasks for exchange interfaces and backends
         """
         for conn, sub, handler in self.connect():
-            if self.raw_data_cb:
-                if isinstance(conn, WSAsyncConn):
-                    new_conn = WSAsyncConnRaw(self.raw_data_cb, conn.address, conn.uuid, conn.ws_kwargs)
-                    conn = new_conn
-                elif isinstance(conn, HTTPPoll):
-                    new_conn = HTTPPollRaw(self.raw_data_cb, conn.address, conn.sleep, conn.delay, conn.uuid)
-                    conn = new_conn
-
             self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
             self.connection_handlers[-1].start(loop)
 

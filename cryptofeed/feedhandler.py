@@ -5,10 +5,12 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from cryptofeed.connection import Connection
 import logging
 import signal
 from signal import SIGABRT, SIGINT, SIGTERM
 import sys
+from typing import List
 
 try:
     # unix / macos only
@@ -17,61 +19,17 @@ try:
 except ImportError:
     SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
-from typing import List
+from yapic import json
 
 from cryptofeed.config import Config
-from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFINEX, BITFLYER,
-                                BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, COINBASE, COINGECKO,
-                                DERIBIT, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
-from cryptofeed.defines import EXX as EXX_str
-from cryptofeed.defines import FTX as FTX_str
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.feed import Feed
-from cryptofeed.exchanges import *
-from cryptofeed.providers import *
 from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
+from cryptofeed.exchanges import EXCHANGE_MAP
 
 
 LOG = logging.getLogger('feedhandler')
-
-
-# Maps string name to class name for use with config
-_EXCHANGES = {
-    BINANCE: Binance,
-    BINANCE_US: BinanceUS,
-    BINANCE_FUTURES: BinanceFutures,
-    BINANCE_DELIVERY: BinanceDelivery,
-    BITCOINCOM: BitcoinCom,
-    BITFINEX: Bitfinex,
-    BITFLYER: Bitflyer,
-    BITMAX: Bitmax,
-    BITMEX: Bitmex,
-    BITSTAMP: Bitstamp,
-    BITTREX: Bittrex,
-    BLOCKCHAIN: Blockchain,
-    BYBIT: Bybit,
-    COINBASE: Coinbase,
-    COINGECKO: Coingecko,
-    DERIBIT: Deribit,
-    EXX_str: EXX,
-    FTX_str: FTX,
-    FTX_US: FTXUS,
-    GEMINI: Gemini,
-    HITBTC: HitBTC,
-    HUOBI_DM: HuobiDM,
-    HUOBI_SWAP: HuobiSwap,
-    HUOBI: Huobi,
-    KRAKEN_FUTURES: KrakenFutures,
-    KRAKEN: Kraken,
-    OKCOIN: OKCoin,
-    OKEX: OKEx,
-    POLONIEX: Poloniex,
-    UPBIT: Upbit,
-    GATEIO: Gateio,
-    PROBIT: Probit,
-}
 
 
 def setup_signal_handlers(loop):
@@ -90,14 +48,19 @@ def setup_signal_handlers(loop):
 
 
 class FeedHandler:
-    def __init__(self, config=None):
+    def __init__(self, config=None, raw_data_collection=None):
         """
         config: str, dict or None
             if str, absolute path (including file name) of the config file. If not provided, config can also be a dictionary of values, or
             can be None, which will default options. See docs/config.md for more information.
+        raw_data_collection: callback (see AsyncFileCallback) or None
+            if set, enables collection of raw data from exchanges. ALL https/wss traffic from the exchanges will be collected.
         """
         self.feeds = []
         self.config = Config(config=config)
+        if raw_data_collection:
+            Connection.raw_data_callback = raw_data_collection
+            self.raw_data_collection = raw_data_collection
 
         get_logger('feedhandler', self.config.log.filename, self.config.log.level)
         if self.config.log_msg:
@@ -120,12 +83,14 @@ class FeedHandler:
             newly instantiated object
         """
         if isinstance(feed, str):
-            if feed in _EXCHANGES:
-                self.feeds.append((_EXCHANGES[feed](config=self.config, **kwargs)))
+            if feed in EXCHANGE_MAP:
+                self.feeds.append((EXCHANGE_MAP[feed](config=self.config, **kwargs)))
             else:
                 raise ValueError("Invalid feed specified")
         else:
             self.feeds.append((feed))
+        if self.raw_data_collection:
+            self.raw_data_collection.write_header(self.feeds[-1].id, json.dumps(self.feeds[-1]._feed_config))
 
     def add_feed_running(self, feed, loop=None, **kwargs):
         """
@@ -172,7 +137,7 @@ class FeedHandler:
             a custom exception handler for asyncio
         """
         if len(self.feeds) == 0:
-            txt = f'FH: No feed specified. Please specify at least one feed among {list(_EXCHANGES.keys())}'
+            txt = f'FH: No feed specified. Please specify at least one feed among {list(EXCHANGE_MAP.keys())}'
             LOG.critical(txt)
             raise ValueError(txt)
 
@@ -208,8 +173,9 @@ class FeedHandler:
         if not loop:
             loop = asyncio.get_event_loop()
 
-        LOG.info('FH: flag retries=0 to stop the tasks running the connection handlers')
-        self.retries = 0
+        LOG.info('FH: shutdown connections handlers in feeds')
+        for feed in self.feeds:
+            feed.stop()
 
         LOG.info('FH: create the tasks to properly shutdown the backends (to flush the local cache)')
         shutdown_tasks = []
@@ -224,6 +190,9 @@ class FeedHandler:
 
         LOG.info('FH: wait %s backend tasks until termination', len(shutdown_tasks))
         loop.run_until_complete(asyncio.gather(*shutdown_tasks))
+        if self.raw_data_collection:
+            LOG.info('FH: shutting down raw data collection')
+            self.raw_data_collection.stop()
 
     def close(self, loop=None):
         """Stop the asynchronous generators and close the event loop."""

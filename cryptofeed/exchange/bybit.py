@@ -44,8 +44,13 @@ class Bybit(Feed):
     def __init__(self, **kwargs):
         super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, **kwargs)
 
-    def __reset(self):
-        self.l2_book = {}
+    def __reset(self, quote=None):
+        if quote is None:
+            self.l2_book = {}
+        else:
+            for symbol in self.l2_book:
+                if quote in symbol:
+                    del self.l2_book[symbol]
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -78,7 +83,7 @@ class Bybit(Feed):
         return ret
 
     async def subscribe(self, connection: AsyncConnection, quote: str = None):
-        self.__reset()
+        self.__reset(quote=quote)
 
         for chan in self.channels if self.channels else self.subscription:
             for pair in self.symbols if self.symbols else self.subscription[chan]:

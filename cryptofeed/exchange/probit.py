@@ -27,8 +27,7 @@ class Probit(Feed):
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
         # doc: https://docs-en.probit.com/reference-link/market
-        ret = {}
-        ret = {entry['id'].replace("-", symbol_separator): entry['id'] for entry in data['data']}
+        ret = {entry['id'].replace("-", symbol_separator): entry['id'] for entry in data['data'] if not entry['closed']}
         return ret, {}
 
     def __init__(self, **kwargs):

@@ -29,9 +29,11 @@ class Bitstamp(Feed):
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
         ret = {}
-        for data in data:
-            normalized = data['name'].replace("/", symbol_separator)
-            symbol = data['url_symbol']
+        for d in data:
+            if d['trading'] != 'Enabled':
+                continue
+            normalized = d['name'].replace("/", symbol_separator)
+            symbol = d['url_symbol']
             ret[normalized] = symbol
         return ret, {}
 

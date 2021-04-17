@@ -274,16 +274,22 @@ class Bitfinex(Feed):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
+            hb_skip = False
             chan_handler = self.handlers.get(msg[0])
             if chan_handler is None:
-                LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
-                return
+                if msg[1] == 'hb':
+                    hb_skip = True
+                else:
+                    LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
+                    return
             seq_no = msg[-1]
             expected = self.seq_no[conn.uuid] + 1
             if seq_no != expected:
                 LOG.warning('%s: missed message (sequence number) received %d, expected %d', conn.uuid, seq_no, expected)
                 raise MissingSequenceNumber
             self.seq_no[conn.uuid] = seq_no
+            if hb_skip:
+                return
             await chan_handler(msg, timestamp)
 
         elif 'event' not in msg:

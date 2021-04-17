@@ -138,9 +138,13 @@ class Bitflyer(Feed):
             }
         }
         """
-        _, base, quote = msg['params']['channel'].rsplit('_', 2)
-        pair = self.exchange_symbol_to_std_symbol(f'{base}_{quote}')
         snapshot = msg['params']['channel'].startswith('lightning_board_snapshot')
+        if snapshot:
+            pair = msg['params']['channel'].split("lightning_board_snapshot")[1][1:]
+        else:
+            pair = msg['params']['channel'].split("lightning_board")[1][1:]
+        pair = self.exchange_symbol_to_std_symbol(pair)
+
         forced = pair not in self.l2_book
 
         # Ignore deltas until a snapshot is received

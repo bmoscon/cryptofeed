@@ -7,12 +7,12 @@ associated with this software.
 import pytest
 
 from cryptofeed.defines import EXX
-from cryptofeed.feedhandler import _EXCHANGES
+from cryptofeed.exchanges import EXCHANGE_MAP
 
 
-@pytest.mark.parametrize("exchange", [e for e in _EXCHANGES.keys() if e not in [EXX]])
+@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
 def test_symbol_conversion(exchange):
-    feed = _EXCHANGES[exchange]()
+    feed = EXCHANGE_MAP[exchange]()
     symbols = feed.symbol_mapping()
     for normalized, original in symbols.items():
         assert feed.std_symbol_to_exchange_symbol(normalized) == original

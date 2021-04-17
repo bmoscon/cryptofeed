@@ -21,6 +21,8 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Connection:
+    raw_data_callback = None
+
     async def read(self) -> bytes:
         raise NotImplementedError
 
@@ -29,9 +31,11 @@ class Connection:
 
 
 class HTTPSync(Connection):
-    def read(self, address: str, json=False, text=True):
+    def read(self, address: str, json=False, text=True, uuid=None):
         LOG.debug("HTTPSync: requesting data from %s", address)
         r = requests.get(address)
+        if self.raw_data_callback:
+            self.raw_data_callback.sync_callback(r.text, time.time(), str(uuid), endpoint=address)
         r.raise_for_status()
         if json:
             return r.json()
@@ -87,8 +91,6 @@ class HTTPAsyncConn(AsyncConnection):
         """
         conn_id: str
             id associated with the connection
-        sleep: float
-            time in seconds to limit rate of request polling.
         """
         super().__init__(f'{conn_id}.http.{self.conn_count}')
 
@@ -111,10 +113,12 @@ class HTTPAsyncConn(AsyncConnection):
 
         LOG.debug("%s: requesting data from %s", self.id, address)
         async with self.conn.get(address) as response:
-            response.raise_for_status()
             data = await response.text()
-            self.received += 1
             self.last_message = time.time()
+            self.received += 1
+            if self.raw_data_callback:
+                await self.raw_data_callback(data, self.last_message, self.id, endpoint=address)
+            response.raise_for_status()
             return data
 
     async def write(self, address: str, msg: str, header=None):
@@ -122,9 +126,11 @@ class HTTPAsyncConn(AsyncConnection):
             await self._open()
 
         async with self.conn.post(address, data=msg, headers=header) as response:
-            response.raise_for_status()
-            data = await response.read()
             self.sent += 1
+            data = await response.read()
+            if self.raw_data_callback:
+                await self.raw_data_callback(data, time.time(), self.id, send=address)
+            response.raise_for_status()
             return data
 
 
@@ -146,10 +152,12 @@ class HTTPPoll(HTTPAsyncConn):
                     raise ConnectionClosed
                 LOG.debug("%s: polling %s", self.id, addr)
                 async with self.conn.get(addr) as response:
-                    response.raise_for_status()
                     data = await response.text()
                     self.received += 1
                     self.last_message = time.time()
+                    if self.raw_data_callback:
+                        await self.raw_data_callback(data, self.last_message, self.id, endpoint=addr)
+                    response.raise_for_status()
                     yield data
                     await asyncio.sleep(self.sleep)
             await asyncio.sleep(self.delay)
@@ -181,6 +189,8 @@ class WSAsyncConn(AsyncConnection):
             LOG.warning('%s: websocket already open', self.id)
         else:
             LOG.debug('%s: connecting to %s', self.id, self.address)
+            if self.raw_data_callback:
+                await self.raw_data_callback(None, time.time(), self.id, connect=self.address)
             self.conn = await websockets.connect(self.address, **self.ws_kwargs)
         self.sent = 0
         self.received = 0
@@ -189,15 +199,24 @@ class WSAsyncConn(AsyncConnection):
         if not self.is_open:
             LOG.error('%s: connection closed in read()', self.id)
             raise ConnectionClosed
-        async for data in self.conn:
-            self.received += 1
-            self.last_message = time.time()
-            yield data
+        if self.raw_data_callback:
+            async for data in self.conn:
+                self.received += 1
+                self.last_message = time.time()
+                await self.raw_data_callback(data, self.last_message, self.id)
+                yield data
+        else:
+            async for data in self.conn:
+                self.received += 1
+                self.last_message = time.time()
+                yield data
 
     async def write(self, data: str):
         if not self.is_open:
             LOG.error('%s: connection closed in write()', self.id)
             raise ConnectionClosed
 
+        if self.raw_data_callback:
+            await self.raw_data_callback(data, time.time(), self.id, send=self.address)
         await self.conn.send(data)
         self.sent += 1
