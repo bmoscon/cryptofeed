@@ -8,10 +8,15 @@ import asyncio
 import glob
 import random
 
-from cryptofeed.feedhandler import FeedHandler, _EXCHANGES
-from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, COINGECKO, L2_BOOK, TRADES, TICKER, CANDLES, WHALE_ALERT
-from cryptofeed.util.async_file import AsyncFileCallback
+import uvloop
+
+from cryptofeed.feedhandler import FeedHandler
+from cryptofeed.exchanges import EXCHANGE_MAP
+from cryptofeed.raw_data_collection import AsyncFileCallback
+from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, COINGECKO, L2_BOOK, TRADES, TICKER, CANDLES, EXX
 from check_raw_dump import main as check_dump
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def stop():
@@ -20,18 +25,21 @@ def stop():
 
 
 def main():
-    skip = [COINGECKO, WHALE_ALERT]
+    skip = [COINGECKO, EXX]
     files = glob.glob('*')
     for f in files:
-        for e in _EXCHANGES.keys():
-            if e + "-" in f:
-                skip.append(e.split("-")[0])
+        for e in EXCHANGE_MAP.keys():
+            if e + "." in f:
+                skip.append(e.split(".")[0])
 
-    print(f'Generating test data. This will take approximately {(len(_EXCHANGES) - len(set(skip))) * 2} minutes.')
-    for exch_str, exchange in _EXCHANGES.items():
+    print(f'Generating test data. This will take approximately {(len(EXCHANGE_MAP) - len(set(skip))) * 0.5} minutes.')
+    loop = asyncio.get_event_loop()
+    for exch_str, exchange in EXCHANGE_MAP.items():
         if exch_str in skip:
             continue
+
         print(f"Collecting data for {exch_str}")
+        fh = FeedHandler(raw_data_collection=AsyncFileCallback("./"), config={'uvloop': False, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}, 'rest': {'log': {'filename': 'rest.log', 'level': 'WARNING'}}})
         info = exchange.info()
         channels = list(set.intersection(set(info['channels']), set([L2_BOOK, TRADES, TICKER, CANDLES])))
         sample_size = 10
@@ -49,20 +57,18 @@ def main():
             else:
                 break
 
-        fh = FeedHandler(raw_message_capture=AsyncFileCallback('./'))
         fh.add_feed(exchange(symbols=symbols, channels=channels))
         fh.run(start_loop=False)
 
-        loop = asyncio.get_event_loop()
-        loop.call_later(120, stop)
-        print("Starting feedhandler. Will run for 2 minutes...")
+        loop.call_later(31, stop)
+        print("Starting feedhandler. Will run for 30 seconds...")
         loop.run_forever()
 
-        fh.stop()
+        fh.stop(loop=loop)
         del fh
 
     print("Checking raw message dumps for errors...")
-    for exch_str, _ in _EXCHANGES.items():
+    for exch_str, _ in EXCHANGE_MAP.items():
         for file in glob.glob(exch_str + "*"):
             try:
                 print(f"Checking {file}")

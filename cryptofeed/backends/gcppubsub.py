@@ -29,7 +29,6 @@ from cryptofeed.backends.backend import (
     BackendOpenInterestCallback,
     BackendTickerCallback,
     BackendTradeCallback,
-    BackendTransactionsCallback,
 )
 
 
@@ -137,10 +136,6 @@ class LiquidationsGCPPubSub(GCPPubSubCallback, BackendLiquidationsCallback):
 
 class MarketInfoGCPPubSub(GCPPubSubCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
-
-
-class TransactionsGCPPubSub(GCPPubSubCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
 
 
 class CandlesGCPPubSub(GCPPubSubCallback, BackendCandlesCallback):

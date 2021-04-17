@@ -8,8 +8,9 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.auth.gemini import generate_token
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, GEMINI, LIMIT, OPEN, PARTIAL, SELL
+from cryptofeed.exchanges import Gemini as GeminiEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import normalize_trading_options, symbol_exchange_to_std, symbol_std_to_exchange
+from cryptofeed.standards import normalize_trading_options
 
 
 LOG = logging.getLogger('rest')
@@ -21,12 +22,12 @@ RATE_LIMIT_SLEEP = 0.5
 # For private API entry points, we limit requests to 600 requests per minute, and recommend that you not exceed 5 requests per second.
 class Gemini(API):
     ID = GEMINI
+    info = GeminiEx()
 
     api = "https://api.gemini.com"
     sandbox_api = "https://api.sandbox.gemini.com"
 
-    @staticmethod
-    def _order_status(data):
+    def _order_status(self, data):
         status = PARTIAL
         if data['is_cancelled']:
             status = CANCELLED
@@ -38,7 +39,7 @@ class Gemini(API):
         price = Decimal(data['price']) if Decimal(data['avg_execution_price']) == 0 else Decimal(data['avg_execution_price'])
         return {
             'order_id': data['order_id'],
-            'symbol': symbol_exchange_to_std(data['symbol'].upper()),  # Gemini uses lowercase symbols for REST and uppercase for WS
+            'symbol': self.info.exchange_symbol_to_std_symbol(data['symbol'].upper()),  # Gemini uses lowercase symbols for REST and uppercase for WS
             'side': BUY if data['side'] == 'buy' else SELL,
             'order_type': LIMIT,
             'price': price,
@@ -76,7 +77,7 @@ class Gemini(API):
 
     # Public Routes
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
                 'feed': self.ID,
@@ -85,7 +86,7 @@ class Gemini(API):
                 }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/book/{sym}", retry, retry_wait)
         return {
             BID: sd({
@@ -99,7 +100,7 @@ class Gemini(API):
         }
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         params = {'limit_trades': 500}
         if start:
             params['since'] = int(pd.Timestamp(start).timestamp() * 1000)
@@ -110,7 +111,7 @@ class Gemini(API):
             return {
                 'feed': self.ID,
                 'order_id': trade['tid'],
-                'symbol': sym,
+                'symbol': self.info.exchange_symbol_to_std_symbol(sym),
                 'side': trade['type'],
                 'amount': Decimal(trade['amount']),
                 'price': Decimal(trade['price']),
@@ -139,7 +140,7 @@ class Gemini(API):
         if not price:
             raise ValueError('Gemini only supports limit orders, must specify price')
         ot = normalize_trading_options(self.ID, order_type)
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
 
         parameters = {
             'type': ot,
@@ -154,22 +155,22 @@ class Gemini(API):
             parameters['client_order_id'] = client_order_id
 
         data = self._post("/v1/order/new", parameters)
-        return Gemini._order_status(data)
+        return self._order_status(data)
 
     def cancel_order(self, order_id: str):
         data = self._post("/v1/order/cancel", {'order_id': int(order_id)})
-        return Gemini._order_status(data)
+        return self._order_status(data)
 
     def order_status(self, order_id: str):
         data = self._post("/v1/order/status", {'order_id': int(order_id)})
-        return Gemini._order_status(data)
+        return self._order_status(data)
 
     def orders(self):
         data = self._post("/v1/orders")
-        return [Gemini._order_status(d) for d in data]
+        return [self._order_status(d) for d in data]
 
     def trade_history(self, symbol: str, start=None, end=None):
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
 
         params = {
             'symbol': sym,

@@ -1,5 +1,7 @@
+from collections import defaultdict
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -16,6 +18,20 @@ LOG = logging.getLogger('feedhandler')
 
 class Deribit(Feed):
     id = DERIBIT
+    symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC&expired=false', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH&expired=false']
+
+    @classmethod
+    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+
+        for entry in data:
+            for e in entry['result']:
+                split = e['instrument_name'].split("-")
+                normalized = split[0] + symbol_separator + e['quote_currency'] + "-" + '-'.join(split[1:])
+                ret[normalized] = e['instrument_name']
+                info['tick_size'][normalized] = e['tick_size']
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
@@ -141,7 +157,7 @@ class Deribit(Feed):
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
                 channels.append(f"{chan}.{pair}.raw")
-        await conn.send(json.dumps(
+        await conn.write(json.dumps(
             {
                 "jsonrpc": "2.0",
                 "id": client_id,

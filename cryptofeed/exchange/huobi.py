@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
+from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
 
@@ -14,7 +15,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -22,6 +23,18 @@ LOG = logging.getLogger('feedhandler')
 
 class Huobi(Feed):
     id = HUOBI
+    symbol_endpoint = 'https://api.huobi.pro/v1/common/symbols'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        for e in data['data']:
+            if e['state'] == 'offline':
+                continue
+            normalized = f"{e['base-currency'].upper()}{symbol_separator}{e['quote-currency'].upper()}"
+            symbol = f"{e['base-currency']}{e['quote-currency']}"
+            ret[normalized] = symbol
+        return ret, {}
 
     def __init__(self, **kwargs):
         super().__init__('wss://api.huobi.pro/ws', **kwargs)
@@ -31,7 +44,7 @@ class Huobi(Feed):
         self.l2_book = {}
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = symbol_exchange_to_std(msg['ch'].split('.')[1])
+        pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
         data = msg['tick']
         forced = pair not in self.l2_book
 
@@ -76,7 +89,7 @@ class Huobi(Feed):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                                 feed=self.id,
-                                symbol=symbol_exchange_to_std(msg['ch'].split('.')[1]),
+                                symbol=self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
                                 order_id=trade['tradeId'],
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
@@ -92,7 +105,7 @@ class Huobi(Feed):
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await conn.send(json.dumps({'pong': msg['ping']}))
+            await conn.write(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
@@ -111,7 +124,7 @@ class Huobi(Feed):
         for chan in set(self.channels or self.subscription):
             for pair in set(self.symbols or self.subscription[chan]):
                 client_id += 1
-                await conn.send(json.dumps(
+                await conn.write(json.dumps(
                     {
                         "sub": f"market.{pair}.{chan}",
                         "id": client_id

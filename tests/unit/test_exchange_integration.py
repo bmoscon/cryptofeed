@@ -6,7 +6,7 @@ associated with this software.
 '''
 import os
 
-from cryptofeed.feedhandler import _EXCHANGES
+from cryptofeed.exchanges import EXCHANGE_MAP
 
 
 def test_exchanges_fh():
@@ -18,4 +18,4 @@ def test_exchanges_fh():
     files += os.listdir(f"{path}/../../cryptofeed/provider")
     files = [f for f in files if '__' not in f]
     files = [f[:-3].upper() for f in files]  # Drop extension .py and uppercase
-    assert(sorted(files) == sorted(_EXCHANGES))
+    assert(sorted(files) == sorted(EXCHANGE_MAP))

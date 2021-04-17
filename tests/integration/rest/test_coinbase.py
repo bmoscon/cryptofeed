@@ -1,4 +1,3 @@
-import pytest
 from decimal import Decimal
 import pandas as pd
 

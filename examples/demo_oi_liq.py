@@ -10,7 +10,6 @@ from cryptofeed import FeedHandler
 from cryptofeed.callback import LiquidationCallback, OpenInterestCallback
 from cryptofeed.defines import BID, ASK, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.exchanges import FTX, BinanceFutures, Deribit
-from cryptofeed.symbols import binance_futures_symbols, ftx_symbols
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -49,11 +48,12 @@ async def liquidations(feed, symbol, side, leaves_qty, price, order_id, timestam
 
 def main():
     f = FeedHandler()
-    f.add_feed(FTX(symbols=ftx_symbols(), channels=[OPEN_INTEREST, LIQUIDATIONS],
+    f.add_feed(FTX(symbols=FTX.info()['symbols'], channels=[OPEN_INTEREST, LIQUIDATIONS],
                    callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
-                              LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
-    f.add_feed(BinanceFutures(symbols=binance_futures_symbols(), channels=[OPEN_INTEREST, LIQUIDATIONS], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), LIQUIDATIONS: LiquidationCallback(liquidations)}))
+                              LIQUIDATIONS: LiquidationCallback(liquidations)}))
+    symbols = [s for s in BinanceFutures.info()['symbols'] if 'PINDEX' not in s]
+    f.add_feed(BinanceFutures(symbols=symbols, channels=[OPEN_INTEREST, LIQUIDATIONS], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
     f.add_feed(Deribit(symbols=['BTC-USD-PERPETUAL', 'ETH-USD-PERPETUAL'], channels=[LIQUIDATIONS, OPEN_INTEREST],
                        callbacks={OPEN_INTEREST: OpenInterestCallback(oi),

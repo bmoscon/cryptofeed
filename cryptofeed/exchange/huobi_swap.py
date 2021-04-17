@@ -1,7 +1,9 @@
 import asyncio
+from collections import defaultdict
 import logging
 import time
 from decimal import Decimal
+from typing import Dict, Tuple
 
 import aiohttp
 from yapic import json
@@ -18,6 +20,17 @@ LOG = logging.getLogger('feedhandler')
 
 class HuobiSwap(HuobiDM):
     id = HUOBI_SWAP
+    symbol_endpoint = 'https://api.hbdm.com/swap-api/v1/swap_contract_info'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        symbols = {}
+        info = defaultdict(dict)
+
+        for e in data['data']:
+            symbols[e['contract_code']] = e['contract_code']
+            info['tick_size'][e['contract_code']] = e['price_tick']
+        return symbols, info
 
     def __init__(self, **kwargs):
         Feed.__init__(self, 'wss://api.hbdm.com/swap-ws', **kwargs)

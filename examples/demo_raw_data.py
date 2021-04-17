@@ -7,11 +7,11 @@ associated with this software.
 from cryptofeed import FeedHandler
 from cryptofeed.defines import L2_BOOK, TICKER, TRADES, OPEN_INTEREST
 from cryptofeed.exchanges import Coinbase, BinanceFutures
-from cryptofeed.util.async_file import AsyncFileCallback
+from cryptofeed.raw_data_collection import AsyncFileCallback
 
 
 def main():
-    f = FeedHandler(raw_message_capture=AsyncFileCallback('./'))
+    f = FeedHandler(raw_data_collection=AsyncFileCallback("./"))
     f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[L2_BOOK, TICKER, TRADES]))
     f.add_feed(BinanceFutures(symbols=['DOT-USDT', 'BTC-USDT'], channels=[OPEN_INTEREST, L2_BOOK]))
 

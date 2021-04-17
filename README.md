@@ -44,7 +44,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 ## Supported aggregated crypto data providers
 
 * [Coingecko](https://www.coingecko.com/en)
-* [Whale Alert](https://whale-alert.io/)
 
 
 ## Basic Usage
@@ -115,7 +114,6 @@ Cryptofeed supports the following channels from exchanges:
 
 Aggregated data from provider is available in channel:
 
-* TRANSACTIONS - On-chain transactions.
 * MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
  as well as community data (twitter, reddit, facebook...) and scores (coingecko, developer, community...)
 

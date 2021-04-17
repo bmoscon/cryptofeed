@@ -50,13 +50,13 @@ Again by convention the exchange names in `defines.py` are all uppercase.
 Cryptofeed accepts standardized names for data channels/feeds. The `Feed` parent class will convert these to the exchange specific versions for use when subscribing. Per the exchange docs, each subscription to the various data channels must be made with a new subscription message, so for this exchange we can subscribe like so:
 
 ```python
-async def subscribe(self, websocket):
+async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
         for chan in self.channels:
             for symbol in self.symbols:
                 client_id += 1
-                await websocket.send(json.dumps(
+                await conn.send(json.dumps(
                     {
                         "sub": f"market.{symbol}.{chan}",
                         "id": client_id
@@ -113,7 +113,7 @@ async def _trade(self, msg):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                 feed=self.id,
-                symbol=symbol_exchange_to_std(msg['ch'].split('.')[1]),
+                symbol=self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
                 order_id=trade['id'],
                 side=BUY if trade['direction'] == 'buy' else SELL,
                 amount=Decimal(trade['amount']),
@@ -128,7 +128,7 @@ async def _trade(self, msg):
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await conn.send(json.dumps({'pong': msg['ping']}))
+            await conn.write(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
@@ -165,7 +165,7 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
   - `_book`
   - ```python
       async def _book(self, msg):
-          symbol = symbol_exchange_to_std(msg['ch'].split('.')[1])
+          symbol = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
           data = msg['tick']
           self.l2_book[symbol] = {
               BID: sd({

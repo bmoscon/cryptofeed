@@ -8,6 +8,7 @@ import calendar
 import logging
 import time
 from decimal import Decimal
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -16,8 +17,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES, VOLUME
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.symbols import poloniex_id_symbol_mapping
-from cryptofeed.standards import feed_to_exchange, symbol_exchange_to_std
+from cryptofeed.standards import feed_to_exchange
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,9 +25,20 @@ LOG = logging.getLogger('feedhandler')
 
 class Poloniex(Feed):
     id = POLONIEX
+    symbol_endpoint = 'https://poloniex.com/public?command=returnTicker'
+    _channel_map = {}
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        for symbol in data:
+            cls._channel_map[data[symbol]['id']] = symbol
+            std = symbol.replace("STR", "XLM")
+            std = std.replace("_", symbol_separator)
+            ret[std] = symbol
+        return ret, {}
 
     def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):
-        self.pair_mapping = poloniex_id_symbol_mapping()
         super().__init__('wss://api2.poloniex.com',
                          symbols=symbols,
                          channels=channels,
@@ -40,29 +51,30 @@ class Poloniex(Feed):
         that we can use to determine if an update should be delivered to the
         end client or not
         """
-        p_ticker = feed_to_exchange(self.id, TICKER)
-        p_volume = feed_to_exchange(self.id, VOLUME)
+        if channels or subscription:
+            p_ticker = feed_to_exchange(self.id, TICKER)
+            p_volume = feed_to_exchange(self.id, VOLUME)
 
-        if channels:
-            self.channels = self.symbols
-            check = channels
-            self.callback_map = {chan: set(symbols) for chan in channels if chan not in {p_ticker, p_volume}}
-        elif subscription:
-            self.channels = []
-            for c, v in self.subscription.items():
-                if c not in {p_ticker, p_volume}:
-                    self.channels.extend(v)
-            check = subscription
-            self.callback_map = {key: set(value) for key, value in subscription.items()}
-        else:
-            raise ValueError(f'{self.id}: the arguments channels and subscription are empty - cannot subscribe')
+            if channels:
+                self.channels = self.symbols
+                check = channels
+                self.callback_map = {chan: set(symbols) for chan in channels if chan not in {p_ticker, p_volume}}
+            elif subscription:
+                self.channels = []
+                for c, v in self.subscription.items():
+                    if c not in {p_ticker, p_volume}:
+                        self.channels.extend(v)
+                check = subscription
+                self.callback_map = {key: set(value) for key, value in subscription.items()}
+            else:
+                raise ValueError(f'{self.id}: the arguments channels and subscription are empty - cannot subscribe')
 
-        if TICKER in check:
-            self.channels.append(p_ticker)
-        if VOLUME in check:
-            self.channels.append(p_volume)
-        # channels = pairs = cannot have duplicates
-        self.channels = list(set(self.channels))
+            if TICKER in check:
+                self.channels.append(p_ticker)
+            if VOLUME in check:
+                self.channels.append(p_volume)
+            # channels = pairs = cannot have duplicates
+            self.channels = list(set(self.channels))
 
         self.__reset()
 
@@ -85,10 +97,10 @@ class Poloniex(Feed):
         and orders will be rejected
         """
         pair_id, _, ask, bid, _, _, _, _, _, _, _, _ = msg
-        if pair_id not in self.pair_mapping:
+        if pair_id not in self._channel_map:
             # Ignore new trading pairs that are added during long running sessions
             return
-        pair = symbol_exchange_to_std(self.pair_mapping[pair_id])
+        pair = self.exchange_symbol_to_std_symbol(self._channel_map[pair_id])
         if self.__do_callback(TICKER, pair):
             await self.callback(TICKER, feed=self.id,
                                 symbol=pair,
@@ -116,7 +128,7 @@ class Poloniex(Feed):
         if msg_type == 'i':
             forced = True
             pair = msg[0][1]['currencyPair']
-            pair = symbol_exchange_to_std(pair)
+            pair = self.exchange_symbol_to_std_symbol(pair)
             self.l2_book[pair] = {BID: sd(), ASK: sd()}
             # 0 is asks, 1 is bids
             order_book = msg[0][1]['orderBook']
@@ -130,8 +142,8 @@ class Poloniex(Feed):
                 price = Decimal(key)
                 self.l2_book[pair][BID][price] = amount
         else:
-            pair = self.pair_mapping[chan_id]
-            pair = symbol_exchange_to_std(pair)
+            pair = self._channel_map[chan_id]
+            pair = self.exchange_symbol_to_std_symbol(pair)
             for update in msg:
                 msg_type = update[0]
                 # order book update
@@ -210,4 +222,4 @@ class Poloniex(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         for chan in self.channels:
-            await conn.send(json.dumps({"command": "subscribe", "channel": chan}))
+            await conn.write(json.dumps({"command": "subscribe", "channel": chan}))

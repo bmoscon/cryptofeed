@@ -7,17 +7,16 @@ associated with this software.
 from decimal import Decimal
 from functools import partial
 import logging
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
 import zlib
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std
 from cryptofeed.util.split import list_by_max_items
 
 
@@ -27,6 +26,25 @@ LOG = logging.getLogger('feedhandler')
 class Kraken(Feed):
     id = KRAKEN
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
+    symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        for symbol in data['result']:
+            if 'wsname' not in data['result'][symbol] or '.d' in symbol:
+                # https://blog.kraken.com/post/259/introducing-the-kraken-dark-pool/
+                # .d is for dark pool symbols
+                continue
+
+            base, quote = data['result'][symbol]['wsname'].split("/")
+
+            normalized = f"{base}{symbol_separator}{quote}"
+            exch = data['result'][symbol]['wsname']
+            normalized = normalized.replace('XBT', 'BTC')
+            normalized = normalized.replace('XDG', 'DOG')
+            ret[normalized] = exch
+        return ret, {}
 
     def __init__(self, max_depth=1000, **kwargs):
         super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
@@ -57,7 +75,7 @@ class Kraken(Feed):
 
         def build(options: list):
             subscribe = partial(self.subscribe, options=options)
-            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
+            conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 
         for chan in set(self.channels or self.subscription):
@@ -80,7 +98,7 @@ class Kraken(Feed):
 
             sub['depth'] = max_depth
 
-        await conn.send(json.dumps({
+        await conn.write(json.dumps({
             "event": "subscribe",
             "pair": symbols,
             "subscription": sub
@@ -190,6 +208,6 @@ class Kraken(Feed):
             elif msg['event'] == 'systemStatus':
                 return
             elif msg['event'] == 'subscriptionStatus' and msg['status'] == 'subscribed':
-                self.channel_map[msg['channelID']] = (msg['subscription']['name'], symbol_exchange_to_std(msg['pair']))
+                self.channel_map[msg['channelID']] = (msg['subscription']['name'], self.exchange_symbol_to_std_symbol(msg['pair']))
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
