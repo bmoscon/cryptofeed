@@ -10,8 +10,9 @@ from typing import Tuple
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_DELIVERY, OPEN_INTEREST, TICKER, PERPETURAL, FUTURE
+from cryptofeed.defines import FUTURES_INDEX, BINANCE_DELIVERY, OPEN_INTEREST, TICKER, PERPETURAL, FUTURE
 from cryptofeed.exchange.binance import Binance
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, _exchange_to_std
 
 LOG = logging.getLogger('feedhandler')
 
@@ -23,8 +24,9 @@ class BinanceDeliveryInstrument():
         pair_arr = instrument_properties[0].split('-')
         self.base = pair_arr[0]
         self.quote = pair_arr[1]
-        
-        if instrument_properties[1] == 'PERP':
+        if len(instrument_properties) == 1:
+            self.instrument_type = None
+        elif instrument_properties[1] == 'PERP':
             self.instrument_type = PERPETURAL
         else:
             self.instrument_type = FUTURE
@@ -63,6 +65,23 @@ class BinanceDelivery(Binance):
             skip_update = True
         return skip_update, forced
 
+    async def _futures_index(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "indexPriceUpdate",  // Event type
+            "E": 1591261236000,       // Event time
+            "i": "BTCUSD",            // Pair
+            "p": "9636.57860000",     // Index Price
+        }
+        """
+        await self.callback(FUTURES_INDEX,
+                            feed=self.id,
+                            symbol=symbol_exchange_to_std(msg['i']),
+                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp,
+                            futures_index=Decimal(msg['p']),
+                            )
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -84,6 +103,8 @@ class BinanceDelivery(Binance):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg_type == 'indexPriceUpdate':
+            await self._futures_index(msg, timestamp)
         elif msg_type == 'kline':
             await self._candle(msg, timestamp)
         else:

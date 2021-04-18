@@ -243,6 +243,7 @@ _feed_to_exchange_map = {
         WHALE_ALERT: TRANSACTIONS
     },
     FUTURES_INDEX: {
+        BINANCE_DELIVERY: 'indexPrice',
         BYBIT: 'instrument_info.100ms'
     },
     ORDER_INFO: {

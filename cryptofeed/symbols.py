@@ -115,7 +115,12 @@ def binance_futures_symbols() -> Dict[str, str]:
 
 
 def binance_delivery_symbols() -> Dict[str, str]:
-    return _binance_symbols('https://dapi.binance.com/dapi/v1/exchangeInfo', BINANCE_DELIVERY)
+    base = _binance_symbols('https://dapi.binance.com/dapi/v1/exchangeInfo', BINANCE_DELIVERY)
+    add = {}
+    for symbol, orig in base.items():
+        add[symbol.split("_")[0]] = orig.split("_")[0]
+    base.update(add)
+    return base
 
 
 def bitfinex_symbols() -> Dict[str, str]:

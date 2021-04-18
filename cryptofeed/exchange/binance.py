@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel
 
@@ -53,7 +53,7 @@ class Binance(Feed):
 
         for chan in self.channels if not self.subscription else self.subscription:
             normalized_chan = normalize_channel(self.id, chan)
-            if normalize_channel == OPEN_INTEREST:
+            if normalized_chan == OPEN_INTEREST:
                 continue
 
             stream = chan
@@ -67,7 +67,11 @@ class Binance(Feed):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-                subs.append(f"{pair}@{stream}")
+                sub = f"{pair}@{stream}"
+                if normalized_chan == FUTURES_INDEX:
+                    pair = pair.split('_')[0]
+                    sub = f"{pair}@{stream}@1s"
+                subs.append(sub)
 
         if len(subs) < 200:
             return address + '/'.join(subs)
