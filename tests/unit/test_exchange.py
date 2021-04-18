@@ -13,6 +13,7 @@ import pytest
 from cryptofeed.defines import CANDLES, BINANCE, BINANCE_DELIVERY, BITCOINCOM, BITFINEX, EXX, BINANCE_FUTURES, BINANCE_US, BITFLYER, BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, COINBASE, COINGECKO, DERIBIT, FTX_US, FTX, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER, TRADES, L2_BOOK, BYBIT, UPBIT
 from cryptofeed.exchanges import EXCHANGE_MAP
 from cryptofeed.raw_data_collection import playback
+from cryptofeed.symbols import Symbols
 
 
 # Some exchanges discard messages so we cant use a normal in == out comparison for testing purposes
@@ -70,15 +71,11 @@ def get_message_count(filenames: str):
 
 @pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [COINGECKO, EXX]])
 def test_exchange_playback(exchange):
+    Symbols.clear()
     dir = os.path.dirname(os.path.realpath(__file__))
     pcap = glob.glob(f"{dir}/../../sample_data/{exchange}.*")
 
-    with open(f"{dir}/../../sample_data/{exchange}.0", 'r') as fp:
-        for line in fp.readlines():
-            if line.startswith("configuration:"):
-                sub = json.loads(line.split(": ", 1)[1])
-
-    results = playback(exchange, sub, pcap)
+    results = playback(exchange, pcap)
     message_count = get_message_count(pcap)
 
     assert results['messages_processed'] == message_count
@@ -86,3 +83,4 @@ def test_exchange_playback(exchange):
         assert results['callbacks'] in lookup_table[exchange]
     else:
         assert lookup_table[exchange] == results['callbacks']
+    Symbols.clear()

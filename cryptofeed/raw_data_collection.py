@@ -22,11 +22,11 @@ def bytes_string_to_bytes(string):
     return tree.body[0].value.s
 
 
-def playback(feed: str, subscription: dict, filenames: list):
-    return asyncio.run(_playback(feed, subscription, filenames))
+def playback(feed: str, filenames: list):
+    return asyncio.run(_playback(feed, filenames))
 
 
-async def _playback(feed: str, subscription: dict, filenames: list):
+async def _playback(feed: str, filenames: list):
     callbacks = defaultdict(int)
 
     class FakeWS:
@@ -52,6 +52,7 @@ async def _playback(feed: str, subscription: dict, filenames: list):
 
     ws = FakeWS(filenames)
     symbol_data = []
+    sub = None
     for f in filenames:
         if 'ws' not in f and 'http' not in f:
             exchange = f.rsplit("/", 1)[1]
@@ -59,7 +60,7 @@ async def _playback(feed: str, subscription: dict, filenames: list):
             with open(f, 'r') as fp:
                 for line in fp.readlines():
                     if 'configuration' in line:
-                        continue
+                        sub = json.loads(line.split(": ", 1)[1])
                     if line == "\n":
                         continue
                     line = line.split(": ", 1)[1]
@@ -78,7 +79,7 @@ async def _playback(feed: str, subscription: dict, filenames: list):
     async def internal_cb(*args, **kwargs):
         callbacks[kwargs['cb_type']] += 1
 
-    feed = EXCHANGE_MAP[feed](subscription=subscription)
+    feed = EXCHANGE_MAP[feed](subscription=sub)
     for cb_type, handler in feed.callbacks.items():
         f = functools.partial(internal_cb, cb_type=cb_type)
         handler.append(f)

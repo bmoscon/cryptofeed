@@ -41,7 +41,7 @@ class Coingecko(Feed):
     symbol_endpoint = 'https://api.coingecko.com/api/v3/coins/list'
 
     @classmethod
-    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
         intermediate = defaultdict(list)
         # First pass: generate & compare normalized symbol/name, and then select the most pertinent
         for coin in data:

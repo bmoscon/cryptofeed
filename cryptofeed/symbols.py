@@ -11,6 +11,9 @@ class _Symbols:
     def __init__(self):
         self.data = {}
 
+    def clear(self):
+        self.data = {}
+
     def set(self, exchange: str, normalized: dict, exchange_info: dict):
         self.data[exchange] = {}
         self.data[exchange]['normalized'] = normalized
