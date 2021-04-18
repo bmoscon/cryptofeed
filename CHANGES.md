@@ -22,6 +22,7 @@
   * Breaking Change: Large rewrite of Feedhandler, Connection, and Feed. Many timeout related options moved from feedhandler to Feed. Symbol specific code
                      moved to exchange class. Rewrite of raw data collection.
   * Feature: Candle support for Huobi
+  * Feature: Allow user to specify Postgres port in Postgres backends
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
