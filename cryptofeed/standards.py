@@ -135,7 +135,7 @@ _feed_to_exchange_map = {
         BITCOINCOM: 'subscribeTrades',
         BITMAX: "trades:",
         UPBIT: TRADES,
-        GATEIO: 'trades.subscribe',
+        GATEIO: 'spot.trades',
         PROBIT: 'recent_trades'
     },
     TICKER: {
@@ -166,7 +166,7 @@ _feed_to_exchange_map = {
         BITCOINCOM: 'subscribeTicker',
         BITMAX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
-        GATEIO: UNSUPPORTED,
+        GATEIO: 'spot.tickers',
         PROBIT: UNSUPPORTED
     },
     VOLUME: {

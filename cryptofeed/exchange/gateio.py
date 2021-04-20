@@ -6,13 +6,14 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
+import time
 from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TRADES, BUY, SELL
+from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
 
 
@@ -28,79 +29,62 @@ class Gateio(Feed):
         return {data["id"].replace("_", symbol_separator): data['id'] for data in data if data["trade_status"] == "tradable"}, {}
 
     def __init__(self, **kwargs):
-        super().__init__('wss://ws.gate.io/v3/', **kwargs)
+        super().__init__('wss://api.gateio.ws/ws/v4/', **kwargs)
 
     def _reset(self):
         self.l2_book = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
-        missing bid/ask so not useable
-
         {
-            'method': 'ticker.update',
-            'params': [
-                'BTC_USDT',
-                {
-                    'period': 86400,
-                    'open': '11836.29',
-                    'close': '11451.58',
-                    'high': '11872.54',
-                    'low': '11380',
-                    'last': '11451.58',
-                    'change': '-3.25',
-                    'quoteVolume': '1360.8451746822',
-                    'baseVolume': '15905013.385494827953'
-                }
-            ],
-            'id': None
+            'time': 1618876417,
+            'channel': 'spot.tickers',
+            'event': 'update',
+            'result': {
+                'currency_pair': 'BTC_USDT',
+                'last': '55636.45',
+                'lowest_ask': '55634.06',
+                'highest_bid': '55634.05',
+                'change_percentage': '-0.7634',
+                'base_volume': '1138.9062880772',
+                'quote_volume': '63844439.342660318028',
+                'high_24h': '63736.81',
+                'low_24h': '50986.18'
+            }
         }
         """
-        pass
+        await self.callback(TICKER, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
+                            bid=Decimal(msg['result']['highest_bid']),
+                            ask=Decimal(msg['result']['lowest_ask']),
+                            timestamp=float(msg['time']),
+                            receipt_timestamp=timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         """
         {
-            'method': 'trades.update',
-            'params': [
-                'BTC_USDT',
-                [
-                    {
-                        'id': 274655681,
-                        'time': Decimal('1598060303.5162649'),
-                        'price': '11449.69',
-                        'amount': '0.0003',
-                        'type': 'buy'
-                    },
-                    {
-                        'id': 274655680,
-                        'time': Decimal('1598060303.5160251'),
-                        'price': '11449.3',
-                        'amount': '0.0012',
-                        'type': 'buy'
-                    }
-                ]
-            ],
-            'id': None
+            "time": 1606292218,
+            "channel": "spot.trades",
+            "event": "update",
+            "result": {
+                "id": 309143071,
+                "create_time": 1606292218,
+                "create_time_ms": "1606292218213.4578",
+                "side": "sell",
+                "currency_pair": "GT_USDT",
+                "amount": "16.4700000000",
+                "price": "0.4705000000"
+            }
         }
         """
-        symbol, trades = msg['params']
-        symbol = self.exchange_symbol_to_std_symbol(symbol)
-        # list of trades appears to be in most recent to oldest, to reverse to deliver them in chronological order
-        for trade in reversed(trades):
-            side = BUY if trade['type'] == 'buy' else SELL
-            amount = Decimal(trade['amount'])
-            price = Decimal(trade['price'])
-            ts = float(trade['time'])
-            order_id = trade['id']
-            await self.callback(TRADES, feed=self.id,
-                                symbol=symbol,
-                                side=side,
-                                amount=amount,
-                                price=price,
-                                timestamp=ts,
-                                receipt_timestamp=timestamp,
-                                order_id=order_id)
+        await self.callback(TRADES, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
+                            side=SELL if msg['result']['side'] == 'sell' else BUY,
+                            amount=Decimal(msg['result']['amount']),
+                            price=Decimal(msg['result']['price']),
+                            timestamp=float(msg['result']['create_time_ms']) / 1000,
+                            receipt_timestamp=timestamp,
+                            order_id=msg['result']['id'])
 
     async def _l2_book(self, msg: dict, timestamp: float):
         """
@@ -148,11 +132,16 @@ class Gateio(Feed):
                 pass
             else:
                 LOG.warning("%s: Error received from exchange - %s", self.id, msg)
-        elif 'method' in msg:
-            if msg['method'] == 'trades.update':
+        if msg['event'] == 'subscribe':
+            return
+        elif 'channel' in msg:
+            market, channel = msg['channel'].split('.')
+            if channel == 'tickers':
+                await self._ticker(msg, timestamp)
+            elif channel == 'trades':
                 await self._trades(msg, timestamp)
-            elif msg['method'] == 'depth.update':
-                await self._l2_book(msg, timestamp)
+            # elif msg['method'] == 'depth.update':
+            #     await self._l2_book(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message type %s", self.id, msg)
         else:
@@ -160,17 +149,16 @@ class Gateio(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self._reset()
-        client_id = 0
         for chan in set(self.channels or self.subscription):
             pairs = set(self.symbols or self.subscription[chan])
-            client_id += 1
             if 'depth' in chan:
                 pairs = [[pair, 30, "0.00000001"] for pair in pairs]
 
             await conn.write(json.dumps(
                 {
-                    "method": chan,
-                    "params": pairs,
-                    "id": client_id
+                    "time": int(time.time()),
+                    "channel": chan,
+                    "event": 'subscribe',
+                    "payload": pairs,
                 }
             ))
