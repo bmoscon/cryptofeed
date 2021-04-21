@@ -74,7 +74,7 @@ _feed_to_exchange_map = {
         BITCOINCOM: 'subscribeOrderbook',
         BITMAX: "depth:",
         UPBIT: L2_BOOK,
-        GATEIO: 'depth.subscribe',
+        GATEIO: 'spot.order_book_update',
         PROBIT: 'order_books'
     },
     L3_BOOK: {
@@ -214,7 +214,8 @@ _feed_to_exchange_map = {
     CANDLES: {
         BINANCE: 'kline_',
         BINANCE_FUTURES: 'kline_',
-        HUOBI: 'kline'
+        HUOBI: 'kline',
+        GATEIO: 'spot.candlesticks'
     }
 }
 
