@@ -37,15 +37,12 @@ class Huobi(Feed):
             ret[normalized] = symbol
         return ret, {}
 
-    def __init__(self, candle_interval='1m', candle_closed_only=False, **kwargs):
+    def __init__(self, candle_interval='1m', **kwargs):
         super().__init__('wss://api.huobi.pro/ws', **kwargs)
         if candle_interval not in self.valid_candle_intervals:
             raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         lookup = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1M': '1mon', '1w': '1week', '1Y': '1year'}
         self.candle_interval = lookup[candle_interval]
-        self.candle_closed_only = candle_closed_only
-        if candle_closed_only:
-            self.candle_cache = {}
         self.normalize_interval = {value: key for key, value in lookup.items()}
         self.__reset()
 
@@ -123,16 +120,7 @@ class Huobi(Feed):
             }
         }
         """
-        closed = False
         interval = self.normalize_interval[interval]
-        if self.candle_closed_only:
-            if symbol not in self.candle_cache or msg['tick']['id'] == self.candle_cache[symbol]['tick']['id']:
-                self.candle_cache[symbol] = msg
-                return
-            cached = self.candle_cache[symbol]
-            self.candle_cache[symbol] = msg
-            closed = True
-            msg = cached
         await self.callback(CANDLES,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(symbol),
@@ -147,7 +135,7 @@ class Huobi(Feed):
                             high_price=Decimal(msg['tick']['high']),
                             low_price=Decimal(msg['tick']['low']),
                             volume=Decimal(msg['tick']['vol']),
-                            closed=closed)
+                            closed=None)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         # unzip message

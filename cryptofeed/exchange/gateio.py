@@ -157,11 +157,11 @@ class Gateio(Feed):
         symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
         if symbol not in self.l2_book:
             await self._snapshot(msg['result']['s'])
-        
+
         skip_update, forced = self._check_update_id(symbol, msg['result'])
         if skip_update:
             return
-        
+
         ts = msg['result']['t'] / 1000
         delta = {BID: [], ASK: []}
 
@@ -181,7 +181,40 @@ class Gateio(Feed):
         await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
 
     async def _candles(self, msg: dict, timestamp: float):
-        print(msg)
+        """
+        {
+            'time': 1619092863,
+            'channel': 'spot.candlesticks',
+            'event': 'update',
+            'result': {
+                't': '1619092860',
+                'v': '1154.64627',
+                'c': '54992.64',
+                'h': '54992.64',
+                'l': '54976.29',
+                'o': '54976.29',
+                'n': '1m_BTC_USDT'
+            }
+        }
+        """
+        interval, symbol = msg['result']['n'].split('_', 1)
+        if interval == '7d':
+            interval = '1w'
+        await self.callback(CANDLES,
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(symbol),
+                            timestamp=float(msg['time']),
+                            receipt_timestamp=timestamp,
+                            start=float(msg['result']['t']),
+                            stop=float(msg['result']['t']) + 59,
+                            interval=interval,
+                            trades=None,
+                            open_price=Decimal(msg['result']['o']),
+                            close_price=Decimal(msg['result']['c']),
+                            high_price=Decimal(msg['result']['h']),
+                            low_price=Decimal(msg['result']['l']),
+                            volume=Decimal(msg['result']['v']),
+                            closed=None)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -201,8 +234,8 @@ class Gateio(Feed):
                 await self._trades(msg, timestamp)
             elif channel == 'order_book_update':
                 await self._l2_book(msg, timestamp)
-            elif channel == 'candlestick':
-                await self._candles(msg, timestmap)
+            elif channel == 'candlesticks':
+                await self._candles(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message type %s", self.id, msg)
         else:
