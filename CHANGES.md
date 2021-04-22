@@ -58,6 +58,7 @@
   * Update: Poloniex changed signaure of ticker data
   * Feature: Candles for Binance Futures
   * Feature: Premium Index Candle support for Binance Futures
+  * Feature: Update Gateio to use new v4 websocket api. Adds support for candles 
 
 
 ### 1.7.0 (2021-02-15)
