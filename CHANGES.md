@@ -23,6 +23,7 @@
                      moved to exchange class. Rewrite of raw data collection.
   * Feature: Candle support for Huobi
   * Feature: Allow user to specify Postgres port in Postgres backends
+  * Bugfix: Report base volume, not quote volume in Huobi candles
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again

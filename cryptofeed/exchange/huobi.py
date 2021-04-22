@@ -134,7 +134,7 @@ class Huobi(Feed):
                             close_price=Decimal(msg['tick']['close']),
                             high_price=Decimal(msg['tick']['high']),
                             low_price=Decimal(msg['tick']['low']),
-                            volume=Decimal(msg['tick']['vol']),
+                            volume=Decimal(msg['tick']['amount']),
                             closed=None)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
