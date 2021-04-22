@@ -4,7 +4,6 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 from collections import defaultdict
 from cryptofeed.standards import normalize_channel
 import logging
@@ -27,7 +26,6 @@ class Gateio(Feed):
     id = GATEIO
     symbol_endpoint = "https://api.gateio.ws/api/v4/spot/currency_pairs"
     valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d', '1w'}
-
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
@@ -246,7 +244,7 @@ class Gateio(Feed):
         for chan in set(self.channels or self.subscription):
             symbols = set(self.symbols or self.subscription[chan])
             nchan = normalize_channel(self.id, chan)
-            if  nchan in {L2_BOOK, CANDLES}:
+            if nchan in {L2_BOOK, CANDLES}:
                 for symbol in symbols:
                     await conn.write(json.dumps(
                         {
