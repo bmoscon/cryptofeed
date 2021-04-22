@@ -66,7 +66,7 @@ def main():
     # Note: EXX is extremely unreliable - sometimes a connection can take many many retries
     # from cryptofeed.exchanges import EXX
     # f.add_feed(EXX(symbols=['BTC-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
-    f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[TRADES, L2_BOOK], callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
+    f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[CANDLES, TICKER, TRADES, L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker}))
     pairs = Binance.info()['symbols']
     f.add_feed(Binance(symbols=pairs, channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(COINBASE, symbols=['BTC-USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)})

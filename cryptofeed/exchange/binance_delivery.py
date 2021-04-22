@@ -59,7 +59,7 @@ class BinanceDelivery(Binance):
         if msg_type == 'bookTicker':
             await self._ticker(msg, timestamp)
         elif msg_type == 'depthUpdate':
-            await self._book(conn, msg, pair, timestamp)
+            await self._book(msg, pair, timestamp)
         elif msg_type == 'aggTrade':
             await self._trade(msg, timestamp)
         elif msg_type == 'forceOrder':

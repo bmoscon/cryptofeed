@@ -187,7 +187,7 @@ class Binance(Feed):
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
-    async def _snapshot(self, conn: AsyncConnection, pair: str) -> None:
+    async def _snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else 1000
         if max_depth not in self.valid_depths:
             for d in self.valid_depths:
@@ -225,7 +225,7 @@ class Binance(Feed):
 
         return skip_update, forced
 
-    async def _book(self, conn: AsyncConnection, msg: dict, pair: str, timestamp: float):
+    async def _book(self, msg: dict, pair: str, timestamp: float):
         """
         {
             "e": "depthUpdate", // Event type
@@ -251,7 +251,7 @@ class Binance(Feed):
         pair = self.exchange_symbol_to_std_symbol(pair)
 
         if pair not in self.l2_book:
-            await self._snapshot(conn, exchange_pair)
+            await self._snapshot(exchange_pair)
 
         skip_update, forced = self._check_update_id(pair, msg)
         if skip_update:
@@ -352,7 +352,7 @@ class Binance(Feed):
         pair = pair.upper()
         if 'e' in msg:
             if msg['e'] == 'depthUpdate':
-                await self._book(conn, msg, pair, timestamp)
+                await self._book(msg, pair, timestamp)
             elif msg['e'] == 'aggTrade':
                 await self._trade(msg, timestamp)
             elif msg['e'] == 'forceOrder':
