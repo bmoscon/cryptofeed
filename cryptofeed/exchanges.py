@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.exchange.kucoin import KuCoin
 from cryptofeed.defines import *
 from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str
 from cryptofeed.provider.coingecko import Coingecko
@@ -67,6 +68,7 @@ EXCHANGE_MAP = {
     HUOBI: Huobi,
     KRAKEN_FUTURES: KrakenFutures,
     KRAKEN: Kraken,
+    KUCOIN: KuCoin,
     OKCOIN: OKCoin,
     OKEX: OKEx,
     POLONIEX: Poloniex,

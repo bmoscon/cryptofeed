@@ -10,7 +10,7 @@ from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback, FuturesIndexCallback, OpenInterestCallback
 from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, VOLUME, FUTURES_INDEX, BOOK_DELTA
 from cryptofeed.exchanges import (FTX, Binance, BinanceFutures, Bitfinex, Bitflyer, Bitmax, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
-                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit)
+                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit, KuCoin)
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -66,6 +66,7 @@ def main():
     # Note: EXX is extremely unreliable - sometimes a connection can take many many retries
     # from cryptofeed.exchanges import EXX
     # f.add_feed(EXX(symbols=['BTC-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
+    f.add_feed(KuCoin(symbols=['BTC-USDT'], channels=[TICKER, TRADES], callbacks={TICKER: ticker, TRADES: trade}))
     f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[CANDLES, TICKER, TRADES, L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker}))
     pairs = Binance.info()['symbols']
     f.add_feed(Binance(symbols=pairs, channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))

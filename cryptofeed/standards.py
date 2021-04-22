@@ -16,7 +16,7 @@ import pandas as pd
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
+                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
                                 TICKER, TRADES, VOLUME, ORDER_INFO)
@@ -136,7 +136,8 @@ _feed_to_exchange_map = {
         BITMAX: "trades:",
         UPBIT: TRADES,
         GATEIO: 'spot.trades',
-        PROBIT: 'recent_trades'
+        PROBIT: 'recent_trades',
+        KUCOIN: '/market/match'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -167,7 +168,8 @@ _feed_to_exchange_map = {
         BITMAX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
         GATEIO: 'spot.tickers',
-        PROBIT: UNSUPPORTED
+        PROBIT: UNSUPPORTED,
+        KUCOIN: '/market/ticker'
     },
     VOLUME: {
         POLONIEX: 1003
