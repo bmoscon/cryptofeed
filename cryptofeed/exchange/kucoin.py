@@ -10,9 +10,10 @@ from decimal import Decimal
 import logging
 from typing import Dict, Tuple
 
+from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BUY, CANDLES, KUCOIN, SELL, TICKER, TRADES
+from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
 
@@ -50,6 +51,7 @@ class KuCoin(Feed):
 
     def __reset(self):
         self.l2_book = {}
+        self.seq_no = {}
 
     async def _candles(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -139,6 +141,84 @@ class KuCoin(Feed):
                             receipt_timestamp=timestamp,
                             order_id=msg['data']['tradeId'])
 
+    async def _snapshot(self, symbol: str):
+        url = f"https://api.kucoin.com/api/v2/market/orderbook/level2?symbol={symbol}"
+        data = await self.http_conn.read(url)
+        data = json.loads(data, parse_float=Decimal)
+        data = data['data']
+        self.seq_no[symbol] = int(data['sequence'])
+        self.l2_book[symbol] = {
+            BID: sd({Decimal(price): Decimal(amount) for price, amount in data['bids']}),
+            ASK: sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
+        }
+
+    async def _l2_book(self, msg: dict, symbol: str, timestamp: float):
+        """
+        {
+            'data': {
+                'sequenceStart': 1615591136351,
+                'symbol': 'BTC-USDT',
+                'changes': {
+                    'asks': [],
+                    'bids': [['49746.9', '0.1488295', '1615591136351']]
+                },
+                'sequenceEnd': 1615591136351
+            },
+            'subject': 'trade.l2update',
+            'topic': '/market/level2:BTC-USDT',
+            'type': 'message'
+        }
+        """
+        forced = False
+        data = msg['data']
+        sequence = data['sequenceStart']
+        if symbol not in self.l2_book or sequence > self.seq_no[symbol] + 1:
+            if symbol in self.seq_no and sequence > self.seq_no[symbol] + 1:
+                LOG.warning("%s: Missing book update detected, resetting book", self.id)
+            await self._snapshot(symbol)
+            forced = True
+
+        data = msg['data']
+        if sequence < self.seq_no[symbol]:
+            return
+
+        self.seq_no[symbol] = data['sequenceEnd']
+
+        delta = {BID: [], ASK: []}
+        for s, side in (('bids', BID), ('asks', ASK)):
+            for update in data['changes'][s]:
+                price = Decimal(update[0])
+                amount = Decimal(update[1])
+
+                if amount == 0:
+                    if price in self.l2_book[symbol][side]:
+                        del self.l2_book[symbol][side][price]
+                        delta[side].append((price, amount))
+                else:
+                    self.l2_book[symbol][side][price] = amount
+                    delta[side].append((price, amount))
+
+        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
+
+    async def message_handler(self, msg: str, conn, timestamp: float):
+        msg = json.loads(msg, parse_float=Decimal)
+        if msg['type'] in {'welcome', 'ack'}:
+            return
+
+        topic, symbol = msg['topic'].split(":", 1)
+        topic = normalize_channel(self.id, topic)
+
+        if topic == TICKER:
+            await self._ticker(msg, symbol, timestamp)
+        elif topic == TRADES:
+            await self._trades(msg, symbol, timestamp)
+        elif topic == CANDLES:
+            await self._candles(msg, symbol, timestamp)
+        elif topic == L2_BOOK:
+            await self._l2_book(msg, symbol, timestamp)
+        else:
+            LOG.warning("%s: Unhandled message type %s", self.id, msg)
+
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         for chan in set(self.channels or self.subscription):
@@ -161,20 +241,3 @@ class KuCoin(Feed):
                     'privateChannel': False,
                     'response': True
                 }))
-
-    async def message_handler(self, msg: str, conn, timestamp: float):
-        msg = json.loads(msg, parse_float=Decimal)
-        if msg['type'] in {'welcome', 'ack'}:
-            return
-
-        topic, symbol = msg['topic'].split(":", 1)
-        topic = normalize_channel(self.id, topic)
-
-        if topic == TICKER:
-            await self._ticker(msg, symbol, timestamp)
-        elif topic == TRADES:
-            await self._trades(msg, symbol, timestamp)
-        elif topic == CANDLES:
-            await self._candles(msg, symbol, timestamp)
-        else:
-            LOG.warning("%s: Unhandled message type %s", self.id, msg)

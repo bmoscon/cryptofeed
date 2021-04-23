@@ -75,7 +75,8 @@ _feed_to_exchange_map = {
         BITMAX: "depth:",
         UPBIT: L2_BOOK,
         GATEIO: 'spot.order_book_update',
-        PROBIT: 'order_books'
+        PROBIT: 'order_books',
+        KUCOIN: '/market/level2'
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
