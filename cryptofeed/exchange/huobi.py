@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.util.time import timedelta_str_to_sec
 import logging
 from typing import Dict, Tuple
 import zlib
@@ -121,13 +122,15 @@ class Huobi(Feed):
         }
         """
         interval = self.normalize_interval[interval]
+        start = int(msg['tick']['id'])
+        end = start + timedelta_str_to_sec(interval) - 1
         await self.callback(CANDLES,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(symbol),
                             timestamp=timestamp_normalize(self.id, msg['ts']),
                             receipt_timestamp=timestamp,
-                            start=msg['tick']['id'],
-                            stop=msg['tick']['id'] + 59,
+                            start=start,
+                            stop=end,
                             interval=interval,
                             trades=msg['tick']['count'],
                             open_price=Decimal(msg['tick']['open']),

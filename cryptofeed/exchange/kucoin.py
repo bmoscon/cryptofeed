@@ -12,9 +12,9 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.defines import BUY, KUCOIN, SELL, TICKER, TRADES
+from cryptofeed.defines import BUY, CANDLES, KUCOIN, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-
+from cryptofeed.util.time import timedelta_str_to_sec
 
 LOG = logging.getLogger('feedhandler')
 
@@ -22,6 +22,7 @@ LOG = logging.getLogger('feedhandler')
 class KuCoin(Feed):
     id = KUCOIN
     symbol_endpoint = 'https://api.kucoin.com/api/v1/symbols'
+    valid_candle_intervals = {'1m', '3m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w'}
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
@@ -35,17 +36,53 @@ class KuCoin(Feed):
             ret[sym] = sym
         return ret, info
 
-    def __init__(self, **kwargs):
+    def __init__(self, candle_interval='1m', **kwargs):
         address_info = self.http_sync.write('https://api.kucoin.com/api/v1/bullet-public', json=True)
         token = address_info['data']['token']
         address = address_info['data']['instanceServers'][0]['endpoint']
         address = f"{address}?token={token}"
         super().__init__(address, **kwargs)
         self.ws_defaults['ping_interval'] = address_info['data']['instanceServers'][0]['pingInterval'] / 2000
+        lookup = {'1m': '1min', '3m': '3min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week'}
+        self.candle_interval = lookup[candle_interval]
+        self.normalize_interval = {value: key for key, value in lookup.items()}
         self.__reset()
 
     def __reset(self):
         self.l2_book = {}
+
+    async def _candles(self, msg: dict, symbol: str, timestamp: float):
+        """
+        {
+            'data': {
+                'symbol': 'BTC-USDT',
+                'candles': ['1619196960', '49885.4', '49821', '49890.5', '49821', '2.60137567', '129722.909001802'],
+                'time': 1619196997007846442
+            },
+            'subject': 'trade.candles.update',
+            'topic': '/market/candles:BTC-USDT_1min',
+            'type': 'message'
+        }
+        """
+        symbol, interval = symbol.split("_")
+        interval = self.normalize_interval[interval]
+        start, open, close, high, low, vol, _ = msg['data']['candles']
+        end = int(start) + timedelta_str_to_sec(interval) - 1
+        await self.callback(CANDLES,
+                            feed=self.id,
+                            symbol=symbol,
+                            timestamp=msg['data']['time'] / 1000000000,
+                            receipt_timestamp=timestamp,
+                            start=int(start),
+                            stop=end,
+                            interval=interval,
+                            trades=None,
+                            open_price=Decimal(open),
+                            close_price=Decimal(close),
+                            high_price=Decimal(high),
+                            low_price=Decimal(low),
+                            volume=Decimal(vol),
+                            closed=None)
 
     async def _ticker(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -106,13 +143,24 @@ class KuCoin(Feed):
         self.__reset()
         for chan in set(self.channels or self.subscription):
             symbols = set(self.symbols or self.subscription[chan])
-            await conn.write(json.dumps({
-                'id': 1,
-                'type': 'subscribe',
-                'topic': f"{chan}:{','.join(symbols)}",
-                'privateChannel': False,
-                'response': True
-            }))
+            nchan = normalize_channel(self.id, chan)
+            if nchan == CANDLES:
+                for symbol in symbols:
+                    await conn.write(json.dumps({
+                        'id': 1,
+                        'type': 'subscribe',
+                        'topic': f"{chan}:{symbol}_{self.candle_interval}",
+                        'privateChannel': False,
+                        'response': True
+                    }))
+            else:
+                await conn.write(json.dumps({
+                    'id': 1,
+                    'type': 'subscribe',
+                    'topic': f"{chan}:{','.join(symbols)}",
+                    'privateChannel': False,
+                    'response': True
+                }))
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -126,5 +174,7 @@ class KuCoin(Feed):
             await self._ticker(msg, symbol, timestamp)
         elif topic == TRADES:
             await self._trades(msg, symbol, timestamp)
+        elif topic == CANDLES:
+            await self._candles(msg, symbol, timestamp)
         else:
             LOG.warning("%s: Unhandled message type %s", self.id, msg)
