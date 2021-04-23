@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from cryptofeed.defines import CANDLES, BINANCE, BINANCE_DELIVERY, BITCOINCOM, BITFINEX, EXX, BINANCE_FUTURES, BINANCE_US, BITFLYER, BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, COINBASE, COINGECKO, DERIBIT, FTX_US, FTX, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER, TRADES, L2_BOOK, BYBIT, UPBIT
+from cryptofeed.defines import CANDLES, BINANCE, BINANCE_DELIVERY, BITCOINCOM, BITFINEX, EXX, BINANCE_FUTURES, BINANCE_US, BITFLYER, BITMAX, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, COINBASE, COINGECKO, DERIBIT, FTX_US, FTX, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, OPEN_INTEREST, POLONIEX, PROBIT, TICKER, TRADES, L2_BOOK, BYBIT, UPBIT
 from cryptofeed.exchanges import EXCHANGE_MAP
 from cryptofeed.raw_data_collection import playback
 from cryptofeed.symbols import Symbols
@@ -50,6 +50,7 @@ lookup_table = {
     UPBIT:  {L2_BOOK: 145, TRADES: 304},
     GATEIO: {CANDLES: 14, L2_BOOK: 169, TICKER: 22, TRADES: 9},
     PROBIT:  {L2_BOOK: 27, TRADES: 1001},
+    KUCOIN: {TRADES: 12, TICKER: 788}
 }
 
 
@@ -79,8 +80,5 @@ def test_exchange_playback(exchange):
     message_count = get_message_count(pcap)
 
     assert results['messages_processed'] == message_count
-    if isinstance(lookup_table[exchange], list):
-        assert results['callbacks'] in lookup_table[exchange]
-    else:
-        assert lookup_table[exchange] == results['callbacks']
+    assert lookup_table[exchange] == results['callbacks']
     Symbols.clear()
