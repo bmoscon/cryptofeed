@@ -186,7 +186,7 @@ class FTX(Feed):
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
-                                order_id=None,
+                                order_id=trade['id'],
                                 timestamp=float(timestamp_normalize(self.id, trade['time'])),
                                 receipt_timestamp=timestamp)
             if bool(trade['liquidation']):
@@ -196,7 +196,7 @@ class FTX(Feed):
                                     side=BUY if trade['side'] == 'buy' else SELL,
                                     leaves_qty=Decimal(trade['size']),
                                     price=Decimal(trade['price']),
-                                    order_id=None,
+                                    order_id=trade['id'],
                                     timestamp=float(timestamp_normalize(self.id, trade['time'])),
                                     receipt_timestamp=timestamp
                                     )
