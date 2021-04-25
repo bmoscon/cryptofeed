@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.9.0
+### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
   * Feature: Remove support for Influx versions prior to 2.0
   * Feature: Add stop method to HTTP Backends to gracefully drain queue and write pending data on shutdown
