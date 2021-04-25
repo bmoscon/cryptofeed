@@ -214,6 +214,19 @@ class BackendTransactionsCallback:
         await self.write(feed, symbol, timestamp, timestamp, kwargs)
 
 
+class BackendVolumeCallback:
+    async def __call__(self, *, feed, symbol, **kwargs):
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
+
+
 class BackendCandlesCallback:
     async def __call__(self, *, feed: str, symbol: str, start: float, stop: float, interval: str, trades: int, open_price: Decimal, close_price: Decimal, high_price: Decimal, low_price: Decimal, volume: Decimal, closed: bool, timestamp: float, receipt_timestamp: float):
         data = {'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp,

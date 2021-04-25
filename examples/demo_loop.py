@@ -12,7 +12,7 @@ import functools
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import DeribitTickerCallback
-from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, PERPETURAL, OPTION, FUTURE, ANY, TICKER, USER_TRADES
+from cryptofeed.defines import BID, ASK, TRADES, L2_BOOK, PERPETUAL, OPTION, FUTURE, ANY, TICKER, USER_TRADES
 from cryptofeed.exchanges import Deribit
 from cryptofeed.util.instrument import get_instrument_type
 
@@ -65,15 +65,15 @@ def get_time_from_timestamp(timestamp):
     return '%s.%03d' % (datetime.datetime.utcfromtimestamp(s).strftime('%H:%M:%S'), ms)
 
 subscription = {
-    PERPETURAL: [],
+    PERPETUAL: [],
     OPTION: [],
     FUTURE: []
 
-    # PERPETURAL: [TICKER, TRADES],
+    # PERPETUAL: [TICKER, TRADES],
     # OPTION: [TICKER, L2_BOOK],
     # FUTURE: [TICKER]
 
-    # PERPETURAL: [TICKER, TRADES],
+    # PERPETUAL: [TICKER, TRADES],
     # OPTION: [TICKER, TRADES, L2_BOOK],
     # FUTURE: [TICKER]
 }
@@ -86,7 +86,7 @@ other_subscription = {
 callbacks = {
     L2_BOOK: book, 
     TRADES: trade, 
-    TICKER: DeribitTickerCallback(callbacks={OPTION: ticker, PERPETURAL: perp_ticker}),
+    TICKER: DeribitTickerCallback(callbacks={OPTION: ticker, PERPETUAL: perp_ticker}),
     USER_TRADES: trade,
 }
 

@@ -9,7 +9,7 @@ import inspect
 from decimal import Decimal
 
 from cryptofeed.util.instrument import get_instrument_type
-from cryptofeed.defines import PERPETURAL, OPTION, FUTURE
+from cryptofeed.defines import PERPETUAL, OPTION, FUTURE
 
 class Callback:
     def __init__(self, callback):
@@ -80,7 +80,7 @@ class DeribitTickerCallback():
         instrument_type = get_instrument_type(symbol)
         if not instrument_type in self.callbacks:
             return
-        if instrument_type == PERPETURAL:
+        if instrument_type == PERPETUAL:
             await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp)
         elif instrument_type == OPTION:
             await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp, bid_iv, ask_iv, delta, gamma, rho, theta, vega, mark_price, mark_iv, underlying_index, underlying_price)

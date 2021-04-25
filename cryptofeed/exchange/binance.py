@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, VOLUME
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel
 
@@ -278,6 +278,8 @@ class Binance(Feed):
             "T": 1562306400000       // Next funding time
         }
         """
+        if not msg['r']:
+            return
         await self.callback(FUNDING,
                             feed=self.id,
                             symbol=symbol_exchange_to_std(msg['s']),
@@ -334,6 +336,28 @@ class Binance(Feed):
                             volume=Decimal(msg['k']['v']),
                             closed=msg['k']['x'])
 
+    async def _volume(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "24hrMiniTicker",  // Event type
+            "E": 123456789,         // Event time
+            "s": "BNBBTC",          // Symbol
+            "c": "0.0025",          // Close price
+            "o": "0.0010",          // Open price
+            "h": "0.0025",          // High price
+            "l": "0.0010",          // Low price
+            "v": "10000",           // Total traded base asset volume
+            "q": "18"               // Total traded quote asset volume
+        }
+        """
+        await self.callback(VOLUME,
+                            feed=self.id,
+                            symbol=symbol_exchange_to_std(msg['s']),
+                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp,
+                            base_volume=Decimal(msg['v']),
+                            quote_volume=Decimal(msg['q']))
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -351,6 +375,8 @@ class Binance(Feed):
                 await self._liquidations(msg, timestamp)
             elif msg['e'] == 'markPriceUpdate':
                 await self._funding(msg, timestamp)
+            elif msg['e'] == '24hrMiniTicker':
+                await self._volume(msg, timestamp)
             elif msg['e'] == 'kline':
                 await self._candle(msg, timestamp)
             else:

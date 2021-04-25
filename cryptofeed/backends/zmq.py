@@ -11,8 +11,9 @@ from yapic import json
 from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendFuturesIndexCallback, BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback,
-                                         DeribitBackendBookCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback)
-from cryptofeed.defines import FUTURES_INDEX, TICKER, TRADES
+                                         DeribitBackendBookCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback,
+                                         BackendVolumeCallback)
+from cryptofeed.defines import FUTURES_INDEX, TICKER, TRADES, VOLUME
 
 
 class ZMQCallback(BackendQueue):
@@ -88,6 +89,9 @@ class TransactionsZMQ(ZMQCallback, BackendTransactionsCallback):
 class FuturesIndexZMQ(ZMQCallback, BackendFuturesIndexCallback):
     default_key = FUTURES_INDEX
 
+
+class VolumeZMQ(ZMQCallback, BackendVolumeCallback):
+    default_key = VOLUME
 
 class CandlesZMQ(ZMQCallback, BackendCandlesCallback):
     default_key = 'candles'

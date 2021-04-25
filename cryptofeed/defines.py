@@ -88,7 +88,7 @@ CANCELLED = 'cancelled'
 
 # Instrument type
 SPOT = 'spot'
-PERPETURAL = 'perpetual'
+PERPETUAL = 'perpetual'
 OPTION = 'option'
 FUTURE = 'future'
 ANY = 'any'

@@ -12,7 +12,7 @@ from typing import List, Tuple, Callable
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER, PERPETURAL, FUTURE, PREMIUM_INDEX
+from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER, PERPETUAL, FUTURE, PREMIUM_INDEX
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
 
@@ -30,7 +30,7 @@ class BinanceFuturesInstrument():
         if len(pair_arr) == 3 and pair_arr[2].lower() == PREMIUM_INDEX:
             self.instrument_type = PREMIUM_INDEX
         elif len(instrument_properties) == 1:
-            self.instrument_type = PERPETURAL
+            self.instrument_type = PERPETUAL
         else:
             self.instrument_type = FUTURE
             self.expiry_date_str = instrument_properties[1]
@@ -50,6 +50,10 @@ class BinanceFutures(Binance):
     def get_instrument_objects():
         instruments = BinanceFutures.get_instruments()
         return [BinanceFuturesInstrument(instrument) for instrument in instruments]
+
+    @staticmethod
+    def convert_to_instrument_object(instrument_name):
+        return BinanceFuturesInstrument(instrument_name)
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
@@ -125,6 +129,8 @@ class BinanceFutures(Binance):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg_type == '24hrMiniTicker':
+            await self._volume(msg, timestamp)
         elif msg['e'] == 'kline':
             await self._candle(msg, timestamp)
         else:

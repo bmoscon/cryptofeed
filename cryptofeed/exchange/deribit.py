@@ -5,9 +5,10 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 from collections import defaultdict
 from datetime import datetime
+import requests
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETURAL, OPTION, FUTURE, ANY, C, P, BTC, ETH
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETUAL, OPTION, FUTURE, ANY, C, P, BTC, ETH
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange, symbol_std_to_exchange, is_authenticated_channel
@@ -24,7 +25,7 @@ class DeribitInstrument():
         self.currency = BTC if instrument_properties[0] == 'BTC' else ETH
         if len(instrument_properties) == 2:
             if instrument_properties[1] == 'PERPETUAL':
-                self.instrument_type = PERPETURAL
+                self.instrument_type = PERPETUAL
             else:
                 self.instrument_type = FUTURE
                 self.expiry_date = instrument_properties[1]

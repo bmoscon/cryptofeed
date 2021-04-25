@@ -205,7 +205,11 @@ _feed_to_exchange_map = {
         PROBIT: UNSUPPORTED
     },
     VOLUME: {
-        POLONIEX: 1003
+        POLONIEX: 1003,
+        BINANCE: 'miniTicker',
+        BINANCE_US: 'miniTicker',
+        BINANCE_FUTURES: 'miniTicker',
+        BINANCE_DELIVERY: 'miniTicker',
     },
     FUNDING: {
         BITMEX: 'funding',

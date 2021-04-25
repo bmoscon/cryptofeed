@@ -6,7 +6,7 @@ from yapic import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.zmq import FundingZMQ
-from cryptofeed.defines import L2_BOOK, FUNDING, PERPETURAL
+from cryptofeed.defines import L2_BOOK, FUNDING, PERPETUAL
 from cryptofeed.exchanges import BinanceFutures, BinanceDelivery
 
 binance_delivery_data_info = BinanceDelivery.info()
@@ -43,8 +43,7 @@ def receiver(port):
     loop.run_until_complete(listen())
 
 async def abook(feed, symbol, book, timestamp, receipt_timestamp):
-    i = 0
-    # print(f'BOOK lag: {receipt_timestamp - timestamp} Timestamp: {datetime.fromtimestamp(timestamp)} Receipt Timestamp: {datetime.fromtimestamp(receipt_timestamp)} Feed: {feed} Pair: {symbol} Snapshot: {book}')
+    print(f'BOOK lag: {receipt_timestamp - timestamp} Timestamp: {datetime.fromtimestamp(timestamp)} Receipt Timestamp: {datetime.fromtimestamp(receipt_timestamp)} Feed: {feed} Pair: {symbol} Snapshot: {book}')
 
 
 async def delta(feed, symbol, delta, timestamp, receipt_timestamp):
@@ -71,8 +70,8 @@ def main():
             binance_delivery_symbols[instrument.instrument_type].append(instrument.instrument_name)
         print(binance_delivery_symbols)
 
-        # f.add_feed(BinanceDelivery(symbols=binance_delivery_symbols[PERPETURAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5678)}))
-        f.add_feed(BinanceFutures(symbols=binance_futures_symbols[PERPETURAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5679)}))
+        # f.add_feed(BinanceDelivery(symbols=binance_delivery_symbols[PERPETUAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5678)}))
+        f.add_feed(BinanceFutures(symbols=binance_futures_symbols[PERPETUAL], channels=[FUNDING], callbacks={FUNDING: FundingZMQ(port=5679)}))
         f.run()
     
     finally:
