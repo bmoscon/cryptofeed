@@ -23,7 +23,6 @@ from cryptofeed.exchanges import Kraken as KrakenEx
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.standards import normalize_trading_options
 
-
 LOG = logging.getLogger('rest')
 RATE_LIMIT_SLEEP = 1
 
@@ -42,13 +41,13 @@ class Kraken(API):
         try:
             return self._exchange_symbol_mapping[symbol]
         except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
+            raise UnsupportedSymbol(f'{symbol} is not supported on {self.ID}')
 
     def std_symbol_to_exchange_symbol(self, symbol: str) -> str:
         try:
             return self._normalized_symbol_mapping[symbol]
         except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
+            raise UnsupportedSymbol(f'{symbol} is not supported on {self.ID}')
 
     @staticmethod
     def _fix_currencies(currency: str):
@@ -96,6 +95,7 @@ class Kraken(API):
             resp = requests.post(url, data={} if not payload else payload)
             self._handle_error(resp, LOG)
             return resp.json()
+
         return helper()
 
     def _post_private(self, command: str, payload=None):
@@ -249,43 +249,6 @@ class Kraken(API):
         for order_id, order in data['result'].items():
             return self._order_status(order_id, order)
 
-    def get_trades_history(self, symbol: str, start=None, end=None):
-        params = {}
-
-        if start:
-            params['start'] = API._timestamp(start).timestamp()
-        if end:
-            params['end'] = API._timestamp(end).timestamp()
-
-        data = self._post_private('/private/TradesHistory', params)
-        if len(data['error']) != 0:
-            return data
-
-        ret = []
-        for trade_id, trade in data['result']['trades'].items():
-            sym = trade['pair']
-            sym = sym.replace('XX', 'X')
-            sym = sym.replace('ZUSD', 'USD')
-            sym = sym.replace('ZCAD', 'CAD')
-            sym = sym.replace('ZEUR', 'EUR')
-            sym = sym.replace('ZGBP', 'GBP')
-            sym = sym.replace('ZJPY', 'JPY')
-
-            if self.exchange_symbol_to_std_symbol(sym) != symbol:
-                continue
-
-            ret.append({
-                'price': Decimal(trade['price']),
-                'amount': Decimal(trade['vol']),
-                'timestamp': trade['time'],
-                'side': SELL if trade['type'] == 'sell' else BUY,
-                'fee_currency': symbol.split('-')[1],
-                'fee_amount': Decimal(trade['fee']),
-                'trade_id': trade_id,
-                'order_id': trade['ordertxid']
-            })
-        return ret
-
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
         ot = normalize_trading_options(self.ID, order_type)
 
@@ -317,3 +280,92 @@ class Kraken(API):
             return data
         else:
             return self.order_status(order_id)
+
+    def trade_history(self, symbol: str = None, start=None, end=None):
+        params = {}
+
+        if start:
+            params['start'] = API._timestamp(start).timestamp()
+        if end:
+            params['end'] = API._timestamp(end).timestamp()
+
+        data = self._post_private('/private/TradesHistory', params)
+        if len(data['error']) != 0:
+            return data
+
+        ret = {}
+        for trade_id, trade in data['result']['trades'].items():
+            sym = self._convert_private_sym(trade['pair'])
+            std_sym = self.exchange_symbol_to_std_symbol(sym)
+            if symbol and self.exchange_symbol_to_std_symbol(sym) != symbol:
+                continue
+            # exception safety?
+            ret[trade_id] = {
+                'order_id': trade['ordertxid'],
+                'trade_id': trade_id,
+                'pair': std_sym,
+                'price': Decimal(trade['price']),
+                'amount': Decimal(trade['vol']),
+                'timestamp': trade['time'],
+                'side': SELL if trade['type'] == 'sell' else BUY,
+                'fee_currency': symbol.split('-')[1] if symbol else std_sym.split('-')[1],
+                'fee_amount': Decimal(trade['fee']),
+                'raw': trade
+            }
+        return ret
+
+    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+
+        params = {}
+        if start:
+            params['start'] = API._timestamp(start).timestamp()
+        if end:
+            params['end'] = API._timestamp(end).timestamp()
+        if aclass:
+            params['aclass'] = aclass
+        if asset:
+            params['asset'] = asset
+        if ledger_type:
+            params['type'] = ledger_type
+
+        data = self._post_private('/private/Ledgers', params)
+        if len(data['error']) != 0:
+            return data
+
+        ret = {}
+        for ledger_id, ledger in data['result']['ledger'].items():
+            sym = self._convert_private_sym(ledger['asset'])
+
+            ret[ledger_id] = {
+                'ref_id': ledger['refid'],
+                'ledger_id': ledger_id,
+                'type': ledger['type'],
+                'sub_type': ledger['subtype'],
+                'asset': sym,
+                'asset_class': ledger['aclass'],
+                'amount': Decimal(ledger['amount']),
+                'balance': Decimal(ledger['balance']),
+                'timestamp': ledger['time'],
+                'fee_currency': sym,
+                'fee_amount': Decimal(ledger['fee']),
+                'raw': ledger
+            }
+        return ret
+
+    def _convert_private_sym(self, sym):
+        """
+            XETHZGBP = > ETHGBP
+            XETH => ETH
+            ZGBP => GBP
+        """
+        cleansym = sym
+        try:
+            symlen = len(sym)
+            if symlen == 8 or symlen == 9:
+                cleansym = sym[1:4] + sym[5:]
+            elif symlen == 4:
+                cleansym = sym[1:]
+        except Exception as ex:
+            LOG.error(f"Couldnt convert private api symbol {sym} for {self.ID}", ex)
+            pass
+        return cleansym

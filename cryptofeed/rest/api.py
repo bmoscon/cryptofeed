@@ -104,13 +104,19 @@ class API:
         """
         raise NotImplementedError
 
-    def trade_history(self, symbol: str, start=None, end=None):
+    def trade_history(self, symbol: str = None, start=None, end=None):
         """
         Executed trade history
         """
         raise NotImplementedError
 
     def balances(self):
+        raise NotImplementedError
+
+    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+        """
+        Executed trade history
+        """
         raise NotImplementedError
 
     def __getitem__(self, key):
