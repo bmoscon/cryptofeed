@@ -282,7 +282,7 @@ class Kraken(API):
         else:
             return self.order_status(order_id)
 
-    def get_trades_history(self, symbol: str = None, start=None, end=None):
+    def trade_history(self, symbol: str = None, start=None, end=None):
         params = {}
 
         if start:
@@ -294,14 +294,14 @@ class Kraken(API):
         if len(data['error']) != 0:
             return data
 
-        ret = []
+        ret = {}
         for trade_id, trade in data['result']['trades'].items():
             sym = self._convert_private_sym(trade['pair'])
             std_sym = self.exchange_symbol_to_std_symbol(sym)
             if symbol and self.exchange_symbol_to_std_symbol(sym) != symbol:
                 continue
             # exception safety?
-            ret.append({
+            ret[trade_id] = {
                 'order_id': trade['ordertxid'],
                 'trade_id': trade_id,
                 'pair': std_sym,
@@ -312,17 +312,59 @@ class Kraken(API):
                 'fee_currency': symbol.split('-')[1] if symbol else std_sym.split('-')[1],
                 'fee_amount': Decimal(trade['fee']),
                 'raw': trade
-            })
+            }
+        return ret
+
+    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+
+        params = {}
+        if start:
+            params['start'] = API._timestamp(start).timestamp()
+        if end:
+            params['end'] = API._timestamp(end).timestamp()
+        if aclass:
+            params['aclass'] = aclass
+        if asset:
+            params['asset'] = asset
+        if ledger_type:
+            params['type'] = ledger_type
+
+        data = self._post_private('/private/Ledgers', params)
+        if len(data['error']) != 0:
+            return data
+
+        ret = {}
+        for ledger_id, ledger in data['result']['ledger'].items():
+            sym = self._convert_private_sym(ledger['asset'])
+
+            ret[ledger_id] = {
+                'ref_id': ledger['refid'],
+                'ledger_id': ledger_id,
+                'type': ledger['type'],
+                'sub_type': ledger['subtype'],
+                'asset': sym,
+                'asset_class': ledger['aclass'],
+                'amount': Decimal(ledger['amount']),
+                'balance': Decimal(ledger['balance']),
+                'timestamp': ledger['time'],
+                'fee_currency': sym,
+                'fee_amount': Decimal(ledger['fee']),
+                'raw': ledger
+            }
         return ret
 
     def _convert_private_sym(self, sym):
         """
             XETHZGBP = > ETHGBP
+            XETH => ETH
+            ZGBP => GBP
         """
         cleansym = sym
         try:
             if len(sym) == 8:
                 cleansym = sym[1:4] + sym[5:]
+            elif len(sym) == 4:
+                cleansym = sym[1:]
         except Exception as ex:
             # worth logging?
             pass

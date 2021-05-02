@@ -80,9 +80,17 @@ def test_get_trade_volume():
     assert trade_volume['result']['currency'] == 'ZUSD'
 
 @pytest.mark.skipif(not kraken.config.key_id or not kraken.config.key_secret, reason="No api key provided")
-def test_get_trades_history():
-    trade_history = kraken.get_trades_history()
+def test_trade_history():
+    trade_history = kraken.trade_history()
     # for trade in trade_history:
     #     for k, v in trade.items():
     #         print(f"{k} => {v}")
     assert len(trade_history) != 0
+
+@pytest.mark.skipif(not kraken.config.key_id or not kraken.config.key_secret, reason="No api key provided")
+def test_ledger():
+    ledger = kraken.ledger()
+    # for trade in trade_history:
+    #     for k, v in trade.items():
+    #         print(f"{k} => {v}")
+    assert len(ledger) != 0
