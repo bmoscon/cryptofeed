@@ -84,9 +84,9 @@ class BinanceFutures(Binance):
         if self.address:
             ret = super().connect()
 
-        for chan in set(self.channels or self.subscription):
+        for chan in set(self.subscription):
             if chan == 'open_interest':
-                addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in set(self.symbols or self.subscription[chan])]
+                addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
                 ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=1.0), self.subscribe, self.message_handler))
         return ret
 

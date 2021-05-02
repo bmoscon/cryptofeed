@@ -53,8 +53,8 @@ Cryptofeed accepts standardized names for data channels/feeds. The `Feed` parent
 async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in self.channels:
-            for symbol in self.symbols:
+        for chan, symbols in self.subscriptions.items():
+            for symbol in symbols:
                 client_id += 1
                 await conn.send(json.dumps(
                     {

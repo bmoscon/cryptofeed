@@ -124,8 +124,8 @@ class HitBTC(Feed):
                 LOG.error("%s: Received error from server: %s", self.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 await conn.write(
                     json.dumps({
                         "method": chan,

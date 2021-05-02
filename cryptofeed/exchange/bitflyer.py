@@ -190,8 +190,8 @@ class Bitflyer(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 if chan.startswith('lightning_board'):
                     # need to subscribe to snapshots too if subscribed to L2_BOOKS
                     await conn.write(json.dumps({"method": "subscribe", "params": {"channel": f'lightning_board_snapshot_{pair}'}}))

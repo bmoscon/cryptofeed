@@ -128,13 +128,12 @@ class Bitmax(Feed):
         self.__reset()
         l2_pairs = []
 
-        for channel in self.channels if not self.subscription else self.subscription:
-            pairs = self.symbols if not self.subscription else self.subscription[channel]
+        for channel in self.subscription:
+            pairs = self.subscription[channel]
 
             if channel == "depth:":
                 l2_pairs.extend(pairs)
 
-            pairs = self.symbols if not self.subscription else self.subscription[channel]
             message = {'op': 'sub', 'ch': channel + ','.join(pairs)}
             await conn.write(json.dumps(message))
 

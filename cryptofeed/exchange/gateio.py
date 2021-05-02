@@ -241,8 +241,8 @@ class Gateio(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self._reset()
-        for chan in set(self.channels or self.subscription):
-            symbols = set(self.symbols or self.subscription[chan])
+        for chan in self.subscription:
+            symbols = self.subscription[chan]
             nchan = normalize_channel(self.id, chan)
             if nchan in {L2_BOOK, CANDLES}:
                 for symbol in symbols:

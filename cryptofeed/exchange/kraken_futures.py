@@ -66,12 +66,12 @@ class KrakenFutures(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in set(self.channels or self.subscription):
+        for chan in self.subscription:
             await conn.write(json.dumps(
                 {
                     "event": "subscribe",
                     "feed": chan,
-                    "product_ids": list(self.symbols or self.subscription[chan])
+                    "product_ids": self.subscription[chan]
                 }
             ))
 

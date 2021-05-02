@@ -46,10 +46,10 @@ class OKCoin(Feed):
     def __init__(self, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
 
-        for chan in set(self.channels or self.subscription):
+        for chan in self.subscription:
             if chan != LIQUIDATIONS:
                 continue
-            for symbol in set(self.symbols or self.subscription[chan]):
+            for symbol in self.subscription[chan]:
                 instrument_type = self.instrument_type(symbol)
                 if instrument_type == 'spot':
                     raise ValueError("LIQUIDATIONS only supports futures and swap trading pairs")
@@ -102,11 +102,11 @@ class OKCoin(Feed):
         return cls.info()['instrument_type'][symbol]
 
     def get_channel_symbol_combinations(self):
-        for chan in set(self.channels or self.subscription):
+        for chan in self.subscription:
             if not is_authenticated_channel(chan):
                 if chan == LIQUIDATIONS:
                     continue
-                for symbol in set(self.symbols or self.subscription[chan]):
+                for symbol in self.subscription[chan]:
                     instrument_type = self.instrument_type(symbol)
                     if instrument_type != 'swap' and 'funding' in chan:
                         continue  # No funding for spot, futures and options
@@ -257,10 +257,9 @@ class OKCoin(Feed):
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
-        for channel in self.subscription or self.channels:
+        for channel in self.subscription:
             if is_authenticated_channel(channel):
-                syms = self.symbols or self.subscription[channel]
-                for s in syms:
+                for s in self.subscription[channel]:
                     ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler))
             else:
                 ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))

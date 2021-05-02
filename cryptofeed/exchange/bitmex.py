@@ -514,8 +514,8 @@ class Bitmex(Feed):
         self._reset()
         await self._authenticate(conn)
         chans = []
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 chans.append(f"{chan}:{pair}")
 
         for i in range(0, len(chans), 10):

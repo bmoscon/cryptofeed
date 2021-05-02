@@ -94,7 +94,6 @@ class OKEx(OKCoin):
             await asyncio.sleep(60)
 
     async def subscribe(self, conn: AsyncConnection):
-        if LIQUIDATIONS in self.subscription or LIQUIDATIONS in self.channels:
-            pairs = self.subscription[LIQUIDATIONS] if LIQUIDATIONS in self.subscription else self.symbols
-            asyncio.create_task(self._liquidations(pairs))
+        if LIQUIDATIONS in self.subscription:
+            asyncio.create_task(self._liquidations(self.subscription[LIQUIDATIONS]))
         return await super().subscribe(conn)

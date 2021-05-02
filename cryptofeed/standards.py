@@ -19,7 +19,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINA
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
-                                TICKER, TRADES, VOLUME, ORDER_INFO)
+                                TICKER, TRADES, ORDER_INFO)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
 
@@ -171,9 +171,6 @@ _feed_to_exchange_map = {
         GATEIO: 'spot.tickers',
         PROBIT: UNSUPPORTED,
         KUCOIN: '/market/ticker'
-    },
-    VOLUME: {
-        POLONIEX: 1003
     },
     FUNDING: {
         BITMEX: 'funding',

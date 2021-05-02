@@ -16,7 +16,7 @@ from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, VOLUME)
+                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
 from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -88,9 +88,7 @@ class Feed:
         self.cross_check = cross_check
         self.updates = defaultdict(int)
         self.do_deltas = False
-        self.symbols = []
         self.normalized_symbols = []
-        self.channels = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
         self.origin = origin
@@ -121,15 +119,19 @@ class Feed:
                 self.subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol) for symbol in subscription[channel]])
                 self._feed_config[channel].extend(self.normalized_symbols)
 
-        if symbols:
-            self.normalized_symbols = symbols
-            self.symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in symbols]
-        if channels:
-            self.channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
-            [self._feed_config[channel].extend(self.normalized_symbols) for channel in channels]
+        if symbols and channels:
             if any(is_authenticated_channel(chan) for chan in channels):
                 if not self.key_id or not self.key_secret:
                     raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
+
+            # if we dont have a subscription dict, we'll use symbols+channels and build one
+            [self._feed_config[channel].extend(symbols) for channel in channels]
+            self.normalized_symbols = symbols
+
+            symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in symbols]
+            channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
+            self.subscription = {chan: symbols for chan in channels}
+
         self._feed_config = dict(self._feed_config)
 
         self.l3_book = {}
@@ -143,7 +145,6 @@ class Feed:
                           MARKET_INFO: Callback(None),
                           TICKER: Callback(None),
                           TRADES: Callback(None),
-                          VOLUME: Callback(None),
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None)
                           }
@@ -201,7 +202,7 @@ class Feed:
         data = Symbols.get(cls.id)[1]
         data['symbols'] = list(symbols.keys())
         data['channels'] = []
-        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, VOLUME, CANDLES):
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, CANDLES):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
@@ -209,6 +210,10 @@ class Feed:
                 pass
 
         return data
+
+    @classmethod
+    def symbols(cls) -> dict:
+        return cls.info()['symbols']
 
     @classmethod
     def symbol_mapping(cls, symbol_separator='-', refresh=False) -> Dict:

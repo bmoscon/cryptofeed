@@ -166,8 +166,8 @@ class Huobi(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 client_id += 1
                 normalized_chan = normalize_channel(self.id, chan)
                 await conn.write(json.dumps(

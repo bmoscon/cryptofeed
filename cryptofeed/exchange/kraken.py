@@ -78,8 +78,8 @@ class Kraken(Feed):
             conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 
-        for chan in set(self.channels or self.subscription):
-            symbols = list(set(self.symbols or self.subscription[chan]))
+        for chan in self.subscription:
+            symbols = list(self.subscription[chan])
             for subset in list_by_max_items(symbols, 20):
                 ret.append(build((chan, subset)))
 

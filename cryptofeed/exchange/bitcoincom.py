@@ -47,8 +47,8 @@ class BitcoinCom(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 await conn.write(json.dumps(
                     {
                         "method": chan,

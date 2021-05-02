@@ -352,8 +352,8 @@ class Bitfinex(Feed):
             conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 
-        for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
+        for channel in self.subscription:
+            for pair in self.subscription[channel]:
                 pair_channel.append((pair, channel))
                 # Bitfinex max is 25 per connection
                 if len(pair_channel) == 25:

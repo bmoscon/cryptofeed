@@ -11,7 +11,7 @@ from cryptofeed.standards import feed_to_exchange
 
 
 def test_binance_address_generation():
-    symbols = Binance.info()['symbols']
+    symbols = Binance.symbols()
     channels = Binance.info()['channels']
     for length in (10, 20, 30, 40, 50, 100, 200, 500, len(symbols)):
         syms = []

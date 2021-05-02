@@ -161,8 +161,8 @@ class Bitstamp(Feed):
     async def subscribe(self, conn: AsyncConnection):
         snaps = []
         self.last_update_id = {}
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 await conn.write(
                     json.dumps({
                         "event": "bts:subscribe",
