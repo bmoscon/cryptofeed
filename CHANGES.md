@@ -6,6 +6,7 @@
   * Feature: add `symbols` class method to all exchanges to get list of supported trading pairs
   * Feature: Clean up internal class attributes in Feed class
   * Feature: Add ledger endpoint to Kraken Rest module, add ability to optionally filter by symbol, or all symbols, for historical trades
+  * Docs: Update documentation regarding adding a new exchange to cryptofeed
 
 ### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
