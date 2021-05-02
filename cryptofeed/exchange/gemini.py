@@ -46,8 +46,6 @@ class Gemini(Feed):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         # Gemini sends ALL data for the symbol, so if we don't actually want
         # the book data, bail before parsing
-        if self.channels and L2_BOOK not in self.channels:
-            return
         if self.subscription and ((L2_BOOK in self.subscription and msg['symbol'] not in self.subscription[L2_BOOK]) or L2_BOOK not in self.subscription):
             return
 
@@ -137,11 +135,11 @@ class Gemini(Feed):
         public = []
         ret = []
 
-        for channel in self.subscription or self.channels:
+        for channel in self.subscription:
             if is_authenticated_channel(channel):
-                authenticated.extend(self.subscription.get(channel) or self.symbols)
+                authenticated.extend(self.subscription.get(channel))
             else:
-                public.extend(self.subscription.get(channel) or self.symbols)
+                public.extend(self.subscription.get(channel))
 
         if authenticated:
             header = generate_token(self.key_id, self.key_secret, "/v1/order/events", self.config.gemini.account_name)

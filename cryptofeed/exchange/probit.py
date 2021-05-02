@@ -187,11 +187,3 @@ class Probit(Feed):
                                                  "interval": 100,
                                                  "market_id": pair,
                                                  }))
-        else:
-            for pair in self.symbols:
-                await conn.write(json.dumps({"type": "subscribe",
-                                             "channel": "marketdata",
-                                             "filter": list(self.channels),
-                                             "interval": 100,
-                                             "market_id": pair,
-                                             }))

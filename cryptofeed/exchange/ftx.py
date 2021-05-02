@@ -55,8 +55,8 @@ class FTX(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in set(self.channels or self.subscription):
-            symbols = set(self.symbols or self.subscription[chan])
+        for chan in self.subscription:
+            symbols = self.subscription[chan]
             if chan == FUNDING:
                 asyncio.create_task(self._funding(symbols))  # TODO: use HTTPAsyncConn
                 continue

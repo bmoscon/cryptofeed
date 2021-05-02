@@ -35,7 +35,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, HUOBI_DM, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, FUNDING, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 
@@ -166,8 +166,10 @@ class HuobiDM(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            if chan == FUNDING:
+                continue
+            for pair in self.subscription[chan]:
                 client_id += 1
                 pair = self.exchange_symbol_to_std_symbol(pair)
                 await conn.write(json.dumps(

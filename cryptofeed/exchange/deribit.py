@@ -154,8 +154,8 @@ class Deribit(Feed):
         self.__reset()
         client_id = 0
         channels = []
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 channels.append(f"{chan}.{pair}.raw")
         await conn.write(json.dumps(
             {

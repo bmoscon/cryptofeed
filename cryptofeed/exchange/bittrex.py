@@ -39,7 +39,7 @@ class Bittrex(Feed):
 
     async def ticker(self, msg: dict, timestamp: float):
         for t in msg['D']:
-            if (not self.subscription and t['M'] in self.symbols) or ('SubscribeToSummaryDeltas' in self.subscription and t['M'] in self.subscription['SubscribeToSummaryDeltas']):
+            if 'SubscribeToSummaryDeltas' in self.subscription and t['M'] in self.subscription['SubscribeToSummaryDeltas']:
                 await self.callback(TICKER, feed=self.id, symbol=self.exchange_symbol_to_std_symbol(t['M']), bid=Decimal(t['B']), ask=Decimal(t['A']), timestamp=timestamp_normalize(self.id, t['T']), receipt_timestamp=timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
@@ -113,17 +113,16 @@ class Bittrex(Feed):
         # For more signalR info see:
         # https://blog.3d-logic.com/2015/03/29/signalr-on-the-wire-an-informal-description-of-the-signalr-protocol/
         # http://blogs.microsoft.co.il/applisec/2014/03/12/signalr-message-format/
-        for chan in set(self.channels or self.subscription):
-            symbols = set(self.symbols or self.subscription[chan])
+        for chan in self.subscription:
             i = 0
             if chan == 'SubscribeToExchangeDeltas':
-                for symbol in symbols:
+                for symbol in self.subscription[chan]:
                     msg = {'A': [symbol], 'H': 'c2', 'I': i, 'M': 'QueryExchangeState'}
                     await conn.write(json.dumps(msg))
                     i += 1
             if chan == TRADES:
                 chan = 'SubscribeToExchangeDeltas'
-            for symbol in symbols:
+            for symbol in self.subscription[chan]:
                 msg = {'A': [symbol] if chan != 'SubscribeToSummaryDeltas' else [], 'H': 'c2', 'I': i, 'M': chan}
                 i += 1
                 await conn.write(json.dumps(msg))

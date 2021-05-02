@@ -62,13 +62,8 @@ class HuobiSwap(HuobiDM):
                         await asyncio.sleep(0.1)
 
     async def subscribe(self, conn: AsyncConnection):
-        chans = list(self.channels)
-        sub = dict(self.subscription)
-        if FUNDING in (self.channels or self.subscription):
+        if FUNDING in self.subscription:
             loop = asyncio.get_event_loop()
-            loop.create_task(self._funding(self.symbols if FUNDING in self.channels else self.subscription[FUNDING]))
-            self.channels.remove(FUNDING) if FUNDING in self.channels else self.subscription.pop(FUNDING)
+            loop.create_task(self._funding(self.subscription[FUNDING]))
 
         await super().subscribe(conn)
-        self.channels = chans
-        self.subscription = sub

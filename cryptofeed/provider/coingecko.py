@@ -80,8 +80,8 @@ class Coingecko(Feed):
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         addrs = []
-        for chan in self.channels if self.channels else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[chan]:
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 if chan == MARKET_INFO:
                     addrs.append(f"{self.address}coins/{pair}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false")
         return [(HTTPPoll(addrs, self.id, delay=self.sleep_time * 2, sleep=self.sleep_time), self.subscribe, self.message_handler)]

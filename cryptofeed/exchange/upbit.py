@@ -199,8 +199,8 @@ class Upbit(Feed):
         """
 
         chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
-        for chan in set(self.channels or self.subscription):
-            codes = list(set(self.symbols or self.subscription[chan]))
+        for chan in self.subscription:
+            codes = list(self.subscription[chan])
             if chan == L2_BOOK:
                 chans.append({"type": "orderbook", "codes": codes, 'isOnlyRealtime': True})
             if chan == TRADES:

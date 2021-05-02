@@ -221,8 +221,8 @@ class KuCoin(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in set(self.channels or self.subscription):
-            symbols = set(self.symbols or self.subscription[chan])
+        for chan in self.subscription:
+            symbols = self.subscription[chan]
             nchan = normalize_channel(self.id, chan)
             if nchan == CANDLES:
                 for symbol in symbols:
