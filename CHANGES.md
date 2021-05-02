@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.9.1
+  * Bugfix: Fix inverted Poloniex symbols
+  * Feature: simplify and cleanup parts of Poloniex
+  * Feature: add `symbols` class method to all exchanges to get list of supported trading pairs
+  * Feature: Clean up internal class attributes in Feed class
+
 ### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
   * Feature: Remove support for Influx versions prior to 2.0
