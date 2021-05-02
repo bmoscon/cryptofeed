@@ -160,8 +160,7 @@ class Kraken(API):
             if not end:
                 end = pd.Timestamp.utcnow()
             for data in self._historical_trades(symbol, start, end, retry, retry_wait):
-                yield list(
-                    map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
+                yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
         else:
             sym = self.std_symbol_to_exchange_symbol(symbol)
             data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
@@ -361,11 +360,12 @@ class Kraken(API):
         """
         cleansym = sym
         try:
-            if len(sym) == 8:
+            symlen = len(sym)
+            if symlen == 8 or symlen == 9:
                 cleansym = sym[1:4] + sym[5:]
-            elif len(sym) == 4:
+            elif symlen == 4:
                 cleansym = sym[1:]
         except Exception as ex:
-            # worth logging?
+            LOG.error(f"Couldnt convert private api symbol {sym} for {self.ID}", ex)
             pass
         return cleansym
