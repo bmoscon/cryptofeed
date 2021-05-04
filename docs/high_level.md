@@ -3,6 +3,8 @@
 Cryptofeed is composed of the following components:
 
 * Feedhandler
+* Connection Abstraction
+* Connection Handler
 * Exchange Interfaces
 * Callbacks
 * Backends
@@ -21,6 +23,10 @@ The feedhandler is the main object that a user of the library will configure. It
 `add_nbbo` lets you compose your own NBBO data feed. It takes the arguments `feeds`, `symbols` and `callback`, which are the normal arguments you'd supply for exchange objects when supplied to the feed handler. The exchanges in the `feeds` list will subscribe to the `symbols` and NBBO updates will be supplied to the `callback` method as they are received from the exchanges.
 
 `run` simply starts the feedhandler. The feedhandler uses asyncio, so `run` will block while the feedhandler runs.
+
+### Connection / Connection Handler
+
+Cryptofeed supports various connection types with exchanges, including HTTP and websocket. These are maintained and monitored in the Connection Handler, which creates connections, handles exceptions, and restarts connections as appropriate.
 
 ### Exchange Interface
 
