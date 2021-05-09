@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
-from decimal import Decimal
 import string
 from typing import Dict, Tuple, Callable, List
 
@@ -88,7 +87,7 @@ class Coingecko(Feed):
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
-        msg = json.loads(msg, parse_float=Decimal)
+        msg = json.loads(msg)
         await self._market_info(msg, timestamp)
 
     async def _market_info(self, msg: dict, receipt_timestamp: float):
@@ -111,7 +110,7 @@ class Coingecko(Feed):
                             continue
                         market_data[f"{key}_{cur}"] = price
                 else:
-                    market_data[key] = value
+                    market_data[key] = value if value else -1
             # 'last_updated' here is assumed to be specific for market data, so it is kept as well.
             market_data['last_updated'] = timestamp_normalize(self.id, msg['market_data']['last_updated'])
             community_data = {k: (v if v else -1) for k, v in msg['community_data'].items()}
