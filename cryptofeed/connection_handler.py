@@ -56,6 +56,7 @@ class ConnectionHandler:
                     # connection was successful, reset retry count and delay
                     retries = 0
                     rate_limited = 0
+                    delay = 1
                     await self.subscribe(connection)
                     if self.timeout != -1:
                         loop = asyncio.get_running_loop()
