@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import decimal
 import hashlib
 import hmac
 import logging
@@ -14,6 +15,7 @@ from datetime import timedelta
 from time import sleep
 from urllib.parse import urlparse
 
+from yapic import json
 import pandas as pd
 import requests
 from sortedcontainers import SortedDict as sd
@@ -110,7 +112,7 @@ class Bitmex(API):
                     sleep(RATE_LIMIT_SLEEP)
 
                 limit = int(r.headers['X-RateLimit-Remaining'])
-                data = r.json()
+                data = json.loads(r.text, parse_float=decimal.Decimal)
 
                 yield data
 

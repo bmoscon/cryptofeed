@@ -11,8 +11,6 @@ data channel names
 '''
 import logging
 
-import pandas as pd
-
 from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
@@ -32,10 +30,8 @@ def timestamp_normalize(exchange, ts):
             return ts / 1000
         else:
             return ts.timestamp()
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN}:
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO}:
         return ts.timestamp()
-    elif exchange in {BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO}:
-        return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
