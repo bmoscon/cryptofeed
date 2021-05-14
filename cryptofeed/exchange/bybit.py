@@ -48,9 +48,9 @@ class Bybit(Feed):
         if quote is None:
             self.l2_book = {}
         else:
-            for symbol in self.l2_book:
-                if quote in symbol:
-                    del self.l2_book[symbol]
+            rem = [symbol for symbol in self.l2_book if quote in symbol]
+            for symbol in rem:
+                del self.l2_book[symbol]
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
