@@ -82,6 +82,7 @@ PENDING = 'pending'
 FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
+UNFILLED = 'unfilled'
 
 
 """

@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, normalize_channel
 
@@ -184,6 +184,7 @@ class Binance(Feed):
                             leaves_qty=Decimal(msg['o']['q']),
                             price=Decimal(msg['o']['p']),
                             order_id=None,
+                            status=FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 

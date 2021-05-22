@@ -20,7 +20,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import FTX as FTX_id
-from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -169,7 +169,9 @@ class FTX(Feed):
                         await self.callback(FUNDING, feed=self.id,
                                             symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
                                             rate=data['result'][0]['rate'],
-                                            timestamp=timestamp_normalize(self.id, data['result'][0]['time']))
+                                            timestamp=timestamp_normalize(self.id, data['result'][0]['time']),
+                                            receipt_timestamp=time()
+                                            )
                     await asyncio.sleep(rate_limiter)
                 await asyncio.sleep(wait_time)
 
@@ -197,9 +199,9 @@ class FTX(Feed):
                                     leaves_qty=Decimal(trade['size']),
                                     price=Decimal(trade['price']),
                                     order_id=trade['id'],
+                                    status=FILLED,
                                     timestamp=float(timestamp_normalize(self.id, trade['time'])),
-                                    receipt_timestamp=timestamp
-                                    )
+                                    receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
