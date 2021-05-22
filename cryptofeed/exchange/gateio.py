@@ -108,13 +108,10 @@ class Gateio(Feed):
         data = json.loads(ret, parse_float=Decimal)
 
         symbol = self.exchange_symbol_to_std_symbol(symbol)
-        timestamp = time.time()
         self.l2_book[symbol] = {}
         self.last_update_id[symbol] = data['id']
         self.l2_book[symbol][BID] = sd({Decimal(price): Decimal(amount) for price, amount in data['bids']})
         self.l2_book[symbol][ASK] = sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
-
-        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, True, None, timestamp, timestamp)
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False

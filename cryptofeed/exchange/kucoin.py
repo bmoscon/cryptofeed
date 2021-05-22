@@ -8,6 +8,7 @@ from cryptofeed.standards import normalize_channel
 from cryptofeed.connection import AsyncConnection
 from decimal import Decimal
 import logging
+import time
 from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
@@ -151,6 +152,9 @@ class KuCoin(Feed):
             BID: sd({Decimal(price): Decimal(amount) for price, amount in data['bids']}),
             ASK: sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
         }
+
+        timestamp = time.time()
+        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, True, None, timestamp, timestamp)
 
     async def _l2_book(self, msg: dict, symbol: str, timestamp: float):
         """
