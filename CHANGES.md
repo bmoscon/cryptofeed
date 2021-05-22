@@ -11,6 +11,7 @@
   * Feature: yapic.json parses strings to datetimes automatically, no longer need to rely on Pandas for datetime parsing
   * Bugfix: #491 - dictionary resized during iteration in ByBit
   * Bugfix: #494 - added status argument to liquidations callback
+  * Bugfix: #399 - book delta issue with Kucoin and Gateio
 
 ### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
