@@ -7,7 +7,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize
@@ -86,6 +86,7 @@ class Deribit(Feed):
                                     leaves_qty=Decimal(trade['amount']),
                                     price=Decimal(trade['price']),
                                     order_id=trade['trade_id'],
+                                    status=FILLED,
                                     timestamp=timestamp_normalize(self.id, trade['timestamp']),
                                     receipt_timestamp=timestamp
                                     )

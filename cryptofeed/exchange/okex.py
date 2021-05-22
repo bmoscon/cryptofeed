@@ -14,7 +14,7 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL
+from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, UNFILLED
 from cryptofeed.exchange.okcoin import OKCoin
 
 
@@ -84,7 +84,7 @@ class OKEx(OKCoin):
                                             leaves_qty=Decimal(entry['size']),
                                             price=Decimal(entry['price']),
                                             order_id=None,
-                                            status='filled' if status == 1 else 'unfilled',
+                                            status=FILLED if status == 1 else UNFILLED,
                                             timestamp=timestamp,
                                             receipt_timestamp=timestamp
                                             )

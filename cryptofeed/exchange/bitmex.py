@@ -18,7 +18,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 
@@ -460,12 +460,12 @@ class Bitmex(Feed):
         liquidation msg example
 
         {
-        'orderID': '9513c849-ca0d-4e11-8190-9d221972288c',
-        'symbol': 'XBTUSD',
-        'side': 'Buy',
-        'price': 6833.5,
-        'leavesQty': 2020
-    }
+            'orderID': '9513c849-ca0d-4e11-8190-9d221972288c',
+            'symbol': 'XBTUSD',
+            'side': 'Buy',
+            'price': 6833.5,
+            'leavesQty': 2020
+        }
         """
         if msg['action'] == 'insert':
             for data in msg['data']:
@@ -475,6 +475,7 @@ class Bitmex(Feed):
                                     leaves_qty=Decimal(data['leavesQty']),
                                     price=Decimal(data['price']),
                                     order_id=data['orderID'],
+                                    status=UNFILLED,
                                     timestamp=timestamp,
                                     receipt_timestamp=timestamp)
 
