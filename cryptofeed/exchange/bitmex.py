@@ -54,7 +54,7 @@ class Bitmex(Feed):
 
         return ret, info
 
-    def __init__(self, **kwargs):
+    def __init__(self, sandbox=False, **kwargs):
         auth_api = 'wss://www.bitmex.com/realtime' if not sandbox else 'wss://testnet.bitmex.com/realtime'
         super().__init__(auth_api, **kwargs)
         self._reset()
