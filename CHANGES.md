@@ -5,6 +5,7 @@
   * Feature: simplify and cleanup parts of Poloniex
   * Feature: add `symbols` class method to all exchanges to get list of supported trading pairs
   * Feature: Clean up internal class attributes in Feed class
+  * Feature: Add graceful stop and shutdown methods for Feeds
   * Feature: Add ledger endpoint to Kraken Rest module, add ability to optionally filter by symbol, or all symbols, for historical trades
   * Docs: Update documentation regarding adding a new exchange to cryptofeed
   * Bugfix: Reset delay after connection is successful
