@@ -105,7 +105,7 @@ class FeedHandler:
             if a string is used for the feed, kwargs will be passed to the
             newly instantiated object
         """
-        self.add_feed(feed, *kwargs)
+        self.add_feed(feed, **kwargs)
 
         if loop is None:
             loop = asyncio.get_event_loop()
