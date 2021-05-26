@@ -224,17 +224,19 @@ class KrakenFutures(Feed):
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
+            # As per Kraken support: websocket product_id is uppercase version of the REST API symbols
+            pair = self.exchange_symbol_to_std_symbol(msg['product_id'].lower())
             if msg['feed'] == 'trade':
-                await self._trade(msg, msg['product_id'], timestamp)
+                await self._trade(msg, pair, timestamp)
             elif msg['feed'] == 'trade_snapshot':
                 return
             elif msg['feed'] == 'ticker_lite':
-                await self._ticker(msg, msg['product_id'], timestamp)
+                await self._ticker(msg, pair, timestamp)
             elif msg['feed'] == 'ticker':
-                await self._funding(msg, msg['product_id'], timestamp)
+                await self._funding(msg, pair, timestamp)
             elif msg['feed'] == 'book_snapshot':
-                await self._book_snapshot(msg, msg['product_id'], timestamp)
+                await self._book_snapshot(msg, pair, timestamp)
             elif msg['feed'] == 'book':
-                await self._book(msg, msg['product_id'], timestamp)
+                await self._book(msg, pair, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
