@@ -17,6 +17,7 @@
   * Feature: Binance US candle support
   * Feature: Kraken Candle support
   * Update: Remove deprecated channel mapping from Kraken, use channel name from message instead
+  * Bugfix: change Kraken Futures to use the standard symbol to be consistent with the rest of the library
 
 ### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
