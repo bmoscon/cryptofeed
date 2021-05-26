@@ -214,7 +214,8 @@ _feed_to_exchange_map = {
         BINANCE_DELIVERY: 'kline_',
         HUOBI: 'kline',
         GATEIO: 'spot.candlesticks',
-        KUCOIN: '/market/candles'
+        KUCOIN: '/market/candles',
+        KRAKEN: 'ohlc'
     }
 }
 

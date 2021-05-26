@@ -14,9 +14,10 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
+from cryptofeed.standards import normalize_channel
 from cryptofeed.util.split import list_by_max_items
 
 
@@ -25,6 +26,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Kraken(Feed):
     id = KRAKEN
+    valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '15d'}
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
 
@@ -46,12 +48,14 @@ class Kraken(Feed):
             ret[normalized] = exch
         return ret, {}
 
-    def __init__(self, max_depth=1000, **kwargs):
+    def __init__(self, candle_interval='1m', max_depth=1000, **kwargs):
+        lookup = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
+        self.candle_interval = lookup[candle_interval]
+        self.normalize_interval = {value: key for key, value in lookup.items()}
         super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
 
     def __reset(self):
         self.l2_book = {}
-        self.channel_map = {}
 
     def __calc_checksum(self, pair):
         bid_prices = list(reversed(self.l2_book[pair][BID].keys()))[:10]
@@ -89,7 +93,7 @@ class Kraken(Feed):
         chan = options[0]
         symbols = options[1]
         sub = {"name": chan}
-        if 'book' in chan:
+        if normalize_channel(self.id, chan) == L2_BOOK:
             max_depth = self.max_depth if self.max_depth else 1000
             if max_depth not in self.valid_depths:
                 for d in self.valid_depths:
@@ -97,6 +101,8 @@ class Kraken(Feed):
                         max_depth = d
 
             sub['depth'] = max_depth
+        if normalize_channel(self.id, chan) == CANDLES:
+            sub['interval'] = self.candle_interval
 
         await conn.write(json.dumps({
             "event": "subscribe",
@@ -181,33 +187,63 @@ class Kraken(Feed):
                 raise BadChecksum("Checksum validation on orderbook failed")
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
+    async def _candle(self, msg: list, pair: str, timestamp: float):
+        """
+        [327,
+            ['1621988141.603324',   start
+             '1621988160.000000',   end
+             '38220.70000',         open
+             '38348.80000',         high
+             '38220.70000',         low
+             '38320.40000',         close
+             '38330.59222',         vwap
+             '3.23539643',          volume
+             42                     count
+            ],
+        'ohlc-1',
+        'XBT/USD']
+        """
+        start, end, open, high, low, close, _, volume, count = msg[1]
+        interval = int(msg[-2].split("-")[-1])
+        await self.callback(CANDLES,
+                            feed=self.id,
+                            symbol=pair,
+                            timestamp=start,
+                            receipt_timestamp=timestamp,
+                            start=float(end) - (interval * 60),
+                            stop=float(end),
+                            interval=self.normalize_interval[interval],
+                            trades=count,
+                            open_price=Decimal(open),
+                            close_price=Decimal(close),
+                            high_price=Decimal(high),
+                            low_price=Decimal(low),
+                            volume=Decimal(volume),
+                            closed=None)
+
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
-            channel_id = msg[0]
-            if channel_id not in self.channel_map:
-                LOG.warning("%s: Invalid channel id received %d", self.id, channel_id)
-                LOG.warning("%s: message with invalid channel id: %s", self.id, msg)
-                LOG.warning("%s: channel map: %s", self.id, self.channel_map)
+            channel, pair = msg[-2:]
+            pair = self.exchange_symbol_to_std_symbol(pair)
+            if channel == 'trade':
+                await self._trade(msg, pair, timestamp)
+            elif channel == 'ticker':
+                await self._ticker(msg, pair, timestamp)
+            elif channel[:4] == 'book':
+                await self._book(msg, pair, timestamp)
+            elif channel[:4] == 'ohlc':
+                await self._candle(msg, pair, timestamp)
             else:
-                channel, pair = self.channel_map[channel_id]
-                if channel == 'trade':
-                    await self._trade(msg, pair, timestamp)
-                elif channel == 'ticker':
-                    await self._ticker(msg, pair, timestamp)
-                elif channel == 'book':
-                    await self._book(msg, pair, timestamp)
-                else:
-                    LOG.warning("%s: No mapping for message %s", self.id, msg)
-                    LOG.warning("%s: channel map: %s", self.id, self.channel_map)
+                LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
             if msg['event'] == 'heartbeat':
                 return
             elif msg['event'] == 'systemStatus':
                 return
             elif msg['event'] == 'subscriptionStatus' and msg['status'] == 'subscribed':
-                self.channel_map[msg['channelID']] = (msg['subscription']['name'], self.exchange_symbol_to_std_symbol(msg['pair']))
+                return
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
