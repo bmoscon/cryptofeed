@@ -15,6 +15,8 @@
   * Bugfix: #399 - book delta issue with Kucoin and Gateio
   * Feature: Binance Delivery candle support
   * Feature: Binance US candle support
+  * Feature: Kraken Candle support
+  * Update: Remove deprecated channel mapping from Kraken, use channel name from message instead
 
 ### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
