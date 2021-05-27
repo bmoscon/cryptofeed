@@ -212,7 +212,9 @@ class Feed:
         return data
 
     @classmethod
-    def symbols(cls) -> dict:
+    def symbols(cls, refresh=False) -> dict:
+        if refresh:
+            cls.symbol_mapping(refresh=True)
         return cls.info()['symbols']
 
     @classmethod
