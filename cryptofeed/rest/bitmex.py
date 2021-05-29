@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import decimal
 import hashlib
 import hmac
 import logging
@@ -14,11 +15,13 @@ from datetime import timedelta
 from time import sleep
 from urllib.parse import urlparse
 
+from yapic import json
 import pandas as pd
 import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, SELL
+from cryptofeed.exchanges import Bitmex as BitmexEx
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.standards import timestamp_normalize
 
@@ -34,6 +37,7 @@ LOG = logging.getLogger('rest')
 class Bitmex(API):
     ID = BITMEX
     api = 'https://www.bitmex.com'
+    info = BitmexEx()
 
     def _generate_signature(self, verb: str, url: str, data='') -> dict:
         """
@@ -53,10 +57,10 @@ class Bitmex(API):
 
         message = verb + path + str(expires) + data
 
-        signature = hmac.new(bytes(self.key_secret, 'utf8'), bytes(message, 'utf8'), digestmod=hashlib.sha256).hexdigest()
+        signature = hmac.new(bytes(self.config.key_secret, 'utf8'), bytes(message, 'utf8'), digestmod=hashlib.sha256).hexdigest()
         return {
             "api-expires": str(expires),
-            "api-key": self.key_id,
+            "api-key": self.config.key_id,
             "api-signature": signature
         }
 
@@ -78,7 +82,7 @@ class Bitmex(API):
             else:
                 endpoint = f'/api/v1/{ep}?symbol={symbol}&reverse=true'
             header = {}
-            if self.key_id and self.key_secret:
+            if self.config.key_id and self.config.key_secret:
                 header = self._generate_signature("GET", endpoint)
             header['Accept'] = 'application/json'
             return requests.get('{}{}'.format(self.api, endpoint), headers=header)
@@ -108,7 +112,7 @@ class Bitmex(API):
                     sleep(RATE_LIMIT_SLEEP)
 
                 limit = int(r.headers['X-RateLimit-Remaining'])
-                data = r.json()
+                data = json.loads(r.text, parse_float=decimal.Decimal)
 
                 yield data
 
@@ -123,7 +127,7 @@ class Bitmex(API):
     def _trade_normalization(self, trade: dict) -> dict:
         return {
             'timestamp': timestamp_normalize(self.ID, trade['timestamp']),
-            'pair': trade['symbol'],
+            'symbol': self.info.exchange_symbol_to_std_symbol(trade['symbol']),
             'id': trade['trdMatchID'],
             'feed': self.ID,
             'side': BUY if trade['side'] == 'Buy' else SELL,
@@ -133,6 +137,8 @@ class Bitmex(API):
 
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         # return list(self._get('quote', symbol, start, end, retry, retry_wait))
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+
         for data in self._scrape_s3(symbol, 'quote', start, end):
             yield data
 
@@ -153,6 +159,8 @@ class Bitmex(API):
             'foreignNotional': 1900
         }
         """
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+
         d = dt.utcnow().date()
         d -= timedelta(days=1)
         rest_end_date = pd.Timestamp(dt(d.year, d.month, d.day))
@@ -180,7 +188,7 @@ class Bitmex(API):
     def _funding_normalization(self, funding: dict) -> dict:
         return {
             'timestamp': funding['timestamp'],
-            'pair': funding['symbol'],
+            'symbol': self.info.exchange_symbol_to_std_symbol(funding['symbol']),
             'feed': self.ID,
             'interval': funding['fundingInterval'],
             'rate': funding['fundingRate'],
@@ -202,7 +210,7 @@ class Bitmex(API):
 
     def l2_book(self, symbol: str, retry=None, retry_wait=10):
         ret = {symbol: {BID: sd(), ASK: sd()}}
-        data = next(self._get('orderBook/L2', symbol, None, None, retry, retry_wait))
+        data = next(self._get('orderBook/L2', self.info.std_symbol_to_exchange_symbol(symbol), None, None, retry, retry_wait))
         for update in data:
             side = ASK if update['side'] == 'Sell' else BID
             ret[symbol][side][update['price']] = update['size']
@@ -212,7 +220,7 @@ class Bitmex(API):
         vals = data.split(",")
         return {
             'timestamp': pd.Timestamp(vals[0].replace("D", "T")).timestamp(),
-            'pair': vals[1],
+            'symbol': self.info.exchange_symbol_to_std_symbol(vals[1]),
             'id': vals[6],
             'feed': self.ID,
             'side': BUY if vals[2] == 'Buy' else SELL,

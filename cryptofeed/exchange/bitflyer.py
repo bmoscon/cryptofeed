@@ -4,8 +4,10 @@ Copyright (C) 2018-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -13,7 +15,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, TICKER, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, pair_exchange_to_std
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,9 +23,21 @@ LOG = logging.getLogger('feedhandler')
 
 class Bitflyer(Feed):
     id = BITFLYER
+    symbol_endpoint = endpoints = ['https://api.bitflyer.com/v1/getmarkets/eu', 'https://api.bitflyer.com/v1/getmarkets/usa', 'https://api.bitflyer.com/v1/getmarkets']
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://ws.lightstream.bitflyer.com/json-rpc', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+        for entry in data:
+            for datum in entry:
+                normalized = datum['product_code'].replace("_", symbol_separator)
+                ret[normalized] = datum['product_code']
+                info['instrument_type'][normalized] = datum['market_type'].lower()
+        return ret, info
+
+    def __init__(self, **kwargs):
+        super().__init__('wss://ws.lightstream.bitflyer.com/json-rpc', **kwargs)
 
     def __reset(self):
         self.l2_book = {}
@@ -55,11 +69,11 @@ class Bitflyer(Feed):
             }
         }
         """
-        pair = pair_exchange_to_std(msg['params']['message']['product_code'])
+        pair = self.exchange_symbol_to_std_symbol(msg['params']['message']['product_code'])
         bid = msg['params']['message']['best_bid']
         ask = msg['params']['message']['best_ask']
         await self.callback(TICKER, feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             bid=bid,
                             ask=ask,
                             timestamp=timestamp_normalize(self.id, msg['params']['message']['timestamp']),
@@ -87,11 +101,11 @@ class Bitflyer(Feed):
         }
         """
         pair = msg['params']['channel'][21:]
-        pair = pair_exchange_to_std(pair)
+        pair = self.exchange_symbol_to_std_symbol(pair)
         for update in msg['params']['message']:
             await self.callback(TRADES, feed=self.id,
                                 order_id=update['id'],
-                                pair=pair,
+                                symbol=pair,
                                 side=BUY if update['side'] == 'BUY' else SELL,
                                 amount=update['size'],
                                 price=update['price'],
@@ -124,9 +138,13 @@ class Bitflyer(Feed):
             }
         }
         """
-        _, base, quote = msg['params']['channel'].rsplit('_', 2)
-        pair = pair_exchange_to_std(f'{base}_{quote}')
         snapshot = msg['params']['channel'].startswith('lightning_board_snapshot')
+        if snapshot:
+            pair = msg['params']['channel'].split("lightning_board_snapshot")[1][1:]
+        else:
+            pair = msg['params']['channel'].split("lightning_board")[1][1:]
+        pair = self.exchange_symbol_to_std_symbol(pair)
+
         forced = pair not in self.l2_book
 
         # Ignore deltas until a snapshot is received
@@ -169,12 +187,12 @@ class Bitflyer(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, conn: AsyncConnection, **kwargs):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if self.pairs else self.config[chan]:
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 if chan.startswith('lightning_board'):
                     # need to subscribe to snapshots too if subscribed to L2_BOOKS
-                    await conn.send(json.dumps({"method": "subscribe", "params": {"channel": f'lightning_board_snapshot_{pair}'}}))
-                await conn.send(json.dumps({"method": "subscribe", "params": {"channel": chan.format(pair)}}))
+                    await conn.write(json.dumps({"method": "subscribe", "params": {"channel": f'lightning_board_snapshot_{pair}'}}))
+                await conn.write(json.dumps({"method": "subscribe", "params": {"channel": chan.format(pair)}}))

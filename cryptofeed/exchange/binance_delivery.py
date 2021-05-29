@@ -6,41 +6,29 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
+from typing import Tuple
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_DELIVERY, OPEN_INTEREST, TICKER
+from cryptofeed.defines import BINANCE_DELIVERY
 from cryptofeed.exchange.binance import Binance
 
 LOG = logging.getLogger('feedhandler')
 
 
 class BinanceDelivery(Binance):
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     id = BINANCE_DELIVERY
+    symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
-        super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, depth=depth, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
         self.address = self._address()
 
-    def _address(self):
-        address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.config else self.config:
-            if chan == OPEN_INTEREST:
-                continue
-            for pair in self.pairs if not self.config else self.config[chan]:
-                pair = pair.lower()
-                if chan == TICKER:
-                    stream = f"{pair}@bookTicker/"
-                else:
-                    stream = f"{pair}@{chan}/"
-                address += stream
-        if address == f"{self.ws_endpoint}/stream?streams=":
-            return None
-        return address[:-1]
-
-    def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
+    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
         forced = not self.forced[pair]
 
@@ -68,10 +56,7 @@ class BinanceDelivery(Binance):
         pair = pair.upper()
 
         msg_type = msg.get('e')
-        if msg_type is None:
-            # For the BinanceDelivery API it appears
-            # the ticker stream (<symbol>@bookTicker) is
-            # the only payload without an "e" key describing the event type
+        if msg_type == 'bookTicker':
             await self._ticker(msg, timestamp)
         elif msg_type == 'depthUpdate':
             await self._book(msg, pair, timestamp)
@@ -81,5 +66,7 @@ class BinanceDelivery(Binance):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg_type == 'kline':
+            await self._candle(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)

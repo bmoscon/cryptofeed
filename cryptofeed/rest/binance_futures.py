@@ -14,9 +14,10 @@ import pandas as pd
 import requests
 from yapic import json
 
+from cryptofeed.exchanges import BinanceFutures, BinanceDelivery
 from cryptofeed.defines import BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 REQUEST_LIMIT = 1000
 RATE_LIMIT_SLEEP = 3
@@ -26,6 +27,7 @@ LOG = logging.getLogger('rest')
 class BinanceDelivery(API):
     ID = BINANCE_DELIVERY
     api = "https://dapi.binance.com/dapi/v1/"
+    info = BinanceDelivery()
 
     def _get(self, endpoint, retry, retry_wait):
         @request_retry(self.ID, retry, retry_wait)
@@ -42,11 +44,11 @@ class BinanceDelivery(API):
     def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
 
         return {
-            "X-MBX-APIKEY": self.key_id,
+            "X-MBX-APIKEY": self.config.key_id,
             "signature": signature,
             "content-type": "application/json"
         }
@@ -54,7 +56,7 @@ class BinanceDelivery(API):
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
             'timestamp': timestamp_normalize(self.ID, trade['T']),
-            'pair': pair_exchange_to_std(symbol),
+            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.ID,
             'side': BUY if trade['m'] is True else SELL,
@@ -116,7 +118,7 @@ class BinanceDelivery(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
@@ -124,6 +126,7 @@ class BinanceDelivery(API):
 class BinanceFutures(API):
     ID = BINANCE_FUTURES
     api = "https://fapi.binance.com/fapi/v1/"
+    info = BinanceFutures()
 
     def _get(self, endpoint, retry, retry_wait):
         @request_retry(self.ID, retry, retry_wait)
@@ -140,11 +143,11 @@ class BinanceFutures(API):
     def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
 
         return {
-            "X-MBX-APIKEY": self.key_id,
+            "X-MBX-APIKEY": self.config.key_id,
             "signature": signature,
             "content-type": "application/json"
         }
@@ -152,7 +155,7 @@ class BinanceFutures(API):
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
             'timestamp': timestamp_normalize(self.ID, trade['T']),
-            'pair': pair_exchange_to_std(symbol),
+            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.ID,
             'side': BUY if trade['m'] else SELL,
@@ -217,6 +220,6 @@ class BinanceFutures(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data

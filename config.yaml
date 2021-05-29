@@ -1,0 +1,54 @@
+# Example Config File
+rest:
+    log:
+        filename: rest.log
+        level: WARNING
+
+log:
+    filename: feedhandler.log
+    level: WARNING
+
+# Enable UVLoop (if not installed, will not cause errors)
+uvloop: True
+
+# Secrets for exchanges
+bitmex:
+    key_id: null
+    key_secret: null
+bitfinex:
+    key_id: null
+    key_secret: null
+coinbase:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+poloniex:
+    key_id: null
+    key_secret: null
+gemini:
+    key_id: null
+    key_secret: null
+    account_name: null   # this is an optional param needed only when using a master api key
+kraken:
+    key_id: null
+    key_secret: null
+deribit:
+    key_id: null
+    key_secret: null
+ftx:
+    key_id: null
+    key_secret: null
+binance_futures:
+    key_id: null
+    key_secret: null
+binance_delivery:
+    key_id: null
+    key_secret: null
+okcoin:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+okex:
+    key_id: null
+    key_secret: null
+    key_passphrase: null

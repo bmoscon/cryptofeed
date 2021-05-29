@@ -4,4 +4,6 @@
 * [Callbacks](callbacks.md)
 * [Adding a new exchange](exchange.md)
 * [Data Integrity for Orderbooks](book_validation.md)
-* [FAQ](../FAQ.md)
+* [Configuration](config.md)
+* [Authenticated Channels](auth_channels.md)
+* [Performance Considerations](performance.md)

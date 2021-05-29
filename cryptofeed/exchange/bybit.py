@@ -4,18 +4,18 @@ Copyright (C) 2018-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 from decimal import Decimal
 from functools import partial
-from typing import List, Callable, Tuple
+from typing import Dict, List, Callable, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std as normalize_pair
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -24,12 +24,33 @@ LOG = logging.getLogger('feedhandler')
 
 class Bybit(Feed):
     id = BYBIT
+    symbol_endpoint = 'https://api.bybit.com/v2/public/symbols'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+        for symbol in data['result']:
+            quote = symbol['quote_currency']
+            if not symbol['name'].endswith(quote):
+                base, contract = symbol['name'].split(quote)
+                normalized = f"{base}{symbol_separator}{quote}-{contract}"
+            else:
+                normalized = f"{symbol['base_currency']}{symbol_separator}{quote}"
+            ret[normalized] = symbol['name']
+            info['tick_size'][normalized] = symbol['price_filter']['tick_size']
+        return ret, info
 
-    def __reset(self):
-        self.l2_book = {}
+    def __init__(self, **kwargs):
+        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, **kwargs)
+
+    def __reset(self, quote=None):
+        if quote is None:
+            self.l2_book = {}
+        else:
+            rem = [symbol for symbol in self.l2_book if quote in symbol]
+            for symbol in rem:
+                del self.l2_book[symbol]
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -52,27 +73,27 @@ class Bybit(Feed):
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
 
-        if any(pair[-4:] == 'USDT' for pair in self.normalized_pairs):
+        if any(pair[-4:] == 'USDT' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USDT')
-            ret.append((AsyncConnection(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
-        if any(pair[-3:] == 'USD' for pair in self.normalized_pairs):
+            ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+        if any(pair[-3:] == 'USD' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USD')
-            ret.append((AsyncConnection(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+            ret.append((WSAsyncConn(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
 
         return ret
 
     async def subscribe(self, connection: AsyncConnection, quote: str = None):
-        self.__reset()
+        self.__reset(quote=quote)
 
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if self.pairs else self.config[chan]:
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 # Bybit uses separate addresses for difference quote currencies
-                if pair[-4:] == 'USDT' and quote != 'USDT':
+                if 'USDT' not in pair and quote == 'USDT':
                     continue
-                if pair[-3:] == 'USD' and quote != 'USD':
+                if 'USDT' in pair and quote == 'USD':
                     continue
 
-                await connection.send(json.dumps(
+                await connection.write(json.dumps(
                     {
                         "op": "subscribe",
                         "args": [f"{chan}.{pair}"]
@@ -155,18 +176,25 @@ class Bybit(Feed):
             updates = msg['data']['update']
 
         for info in updates:
+            if 'updated_at_e9' in info:
+                ts = info['updated_at_e9'] / 1e9
+            elif 'updated_at' in info:
+                ts = timestamp_normalize(self.id, info['updated_at'])
+            else:
+                continue
+
             if 'open_interest' in info:
                 await self.callback(OPEN_INTEREST, feed=self.id,
-                                    pair=normalize_pair(info['symbol']),
+                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
                                     open_interest=Decimal(info['open_interest']),
-                                    timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
+                                    timestamp=ts,
                                     receipt_timestamp=timestamp)
 
             if 'index_price_e4' in info:
                 await self.callback(FUTURES_INDEX, feed=self.id,
-                                    pair=normalize_pair(info['symbol']),
+                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
                                     futures_index=Decimal(info['index_price_e4']) * Decimal(1e-4),
-                                    timestamp=timestamp_normalize(self.id, info['updated_at'].timestamp() * 1000),
+                                    timestamp=ts,
                                     receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -192,7 +220,7 @@ class Bybit(Feed):
 
             await self.callback(TRADES,
                                 feed=self.id,
-                                pair=normalize_pair(trade['symbol']),
+                                symbol=self.exchange_symbol_to_std_symbol(trade['symbol']),
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['side'] == 'Buy' else SELL,
                                 amount=Decimal(trade['size']),
@@ -202,7 +230,7 @@ class Bybit(Feed):
                                 )
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = normalize_pair(msg['topic'].split('.')[1])
+        pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[1])
         update_type = msg['type']
         data = msg['data']
         forced = False

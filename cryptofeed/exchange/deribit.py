@@ -1,11 +1,13 @@
+from collections import defaultdict
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.connection import AsyncConnection
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize
@@ -16,39 +18,29 @@ LOG = logging.getLogger('feedhandler')
 
 class Deribit(Feed):
     id = DERIBIT
+    symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC&expired=false', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH&expired=false']
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        super().__init__('wss://www.deribit.com/ws/api/v2', pairs=pairs,
-                         channels=channels, config=config, callbacks=callbacks, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
 
-        instruments = self.get_instruments()
-        pairs = None
-        if self.config:
-            config_instruments = list(self.config.values())
-            pairs = [
-                pair for inner in config_instruments for pair in inner]
+        for entry in data:
+            for e in entry['result']:
+                split = e['instrument_name'].split("-")
+                normalized = split[0] + symbol_separator + e['quote_currency'] + "-" + '-'.join(split[1:])
+                ret[normalized] = e['instrument_name']
+                info['tick_size'][normalized] = e['tick_size']
+        return ret, info
 
-        for pair in self.pairs if self.pairs else pairs:
-            if pair not in instruments:
-                raise ValueError(f"{pair} is not active on {self.id}")
+    def __init__(self, **kwargs):
+        super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
         self.__reset()
 
     def __reset(self):
         self.open_interest = {}
         self.l2_book = {}
         self.seq_no = {}
-
-    @staticmethod
-    def get_instruments_info():
-        r = requests.get(
-            'https://www.deribit.com/api/v2/public/getinstruments?expired=false').json()
-        return r
-
-    @staticmethod
-    def get_instruments():
-        r = Deribit.get_instruments_info()
-        instruments = [instr['instrumentName'] for instr in r['result']]
-        return instruments
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -78,7 +70,7 @@ class Deribit(Feed):
         for trade in msg["params"]["data"]:
             await self.callback(TRADES,
                                 feed=self.id,
-                                pair=trade["instrument_name"],
+                                symbol=trade["instrument_name"],
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
@@ -89,11 +81,12 @@ class Deribit(Feed):
             if 'liquidation' in trade:
                 await self.callback(LIQUIDATIONS,
                                     feed=self.id,
-                                    pair=trade["instrument_name"],
+                                    symbol=trade["instrument_name"],
                                     side=BUY if trade['direction'] == 'buy' else SELL,
                                     leaves_qty=Decimal(trade['amount']),
                                     price=Decimal(trade['price']),
                                     order_id=trade['trade_id'],
+                                    status=FILLED,
                                     timestamp=timestamp_normalize(self.id, trade['timestamp']),
                                     receipt_timestamp=timestamp
                                     )
@@ -133,7 +126,7 @@ class Deribit(Feed):
         pair = msg['params']['data']['instrument_name']
         ts = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
         await self.callback(TICKER, feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             bid=Decimal(msg["params"]["data"]['best_bid_price']),
                             ask=Decimal(msg["params"]["data"]['best_ask_price']),
                             timestamp=ts,
@@ -141,7 +134,7 @@ class Deribit(Feed):
 
         if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
             await self.callback(FUNDING, feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 timestamp=ts,
                                 receipt_timestamp=timestamp,
                                 rate=msg["params"]["data"]["current_funding"],
@@ -152,20 +145,20 @@ class Deribit(Feed):
         self.open_interest[pair] = oi
         await self.callback(OPEN_INTEREST,
                             feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             open_interest=oi,
                             timestamp=ts,
                             receipt_timestamp=timestamp
                             )
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
         channels = []
-        for chan in self.channels if self.channels else self.config:
-            for pair in self.pairs if self.pairs else self.config[chan]:
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
                 channels.append(f"{chan}.{pair}.raw")
-        await websocket.send(json.dumps(
+        await conn.write(json.dumps(
             {
                 "jsonrpc": "2.0",
                 "id": client_id,

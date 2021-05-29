@@ -5,18 +5,19 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from collections import defaultdict
 import logging
 import time
 from decimal import Decimal
+from typing import Dict, Tuple
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize, feed_to_exchange
+from cryptofeed.standards import timestamp_normalize, feed_to_exchange
 
 
 LOG = logging.getLogger('feedhandler')
@@ -24,9 +25,21 @@ LOG = logging.getLogger('feedhandler')
 
 class Coinbase(Feed):
     id = COINBASE
+    symbol_endpoint = 'https://api.pro.coinbase.com/products'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://ws-feed.pro.coinbase.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+
+        for entry in data:
+            normalized = entry['id'].replace("-", symbol_separator)
+            ret[normalized] = entry['id']
+            info['tick_size'][normalized] = entry['quote_increment']
+        return ret, info
+
+    def __init__(self, callbacks=None, **kwargs):
+        super().__init__('wss://ws-feed.pro.coinbase.com', callbacks=callbacks, **kwargs)
         # we only keep track of the L3 order book if we have at least one subscribed order-book callback.
         # use case: subscribing to the L3 book plus Trade type gives you order_type information (see _received below),
         # and we don't need to do the rest of the book-keeping unless we have an active callback
@@ -35,21 +48,21 @@ class Coinbase(Feed):
             self.keep_l3_book = True
         self.__reset()
 
-    def __reset(self, pair=None):
-        if pair:
-            self.seq_no[pair] = None
-            self.order_map.pop(pair, None)
-            self.order_type_map.pop(pair, None)
-            self.l3_book.pop(pair, None)
-            self.l2_book.pop(pair, None)
+    def __reset(self, symbol=None):
+        if symbol:
+            self.seq_no[symbol] = None
+            self.order_map.pop(symbol, None)
+            self.order_type_map.pop(symbol, None)
+            self.l3_book.pop(symbol, None)
+            self.l2_book.pop(symbol, None)
         else:
             self.order_map = {}
             self.order_type_map = {}
             self.seq_no = None
             # sequence number validation only works when the FULL data stream is enabled
             chan = feed_to_exchange(self.id, L3_BOOK)
-            if chan in self.channels or chan in self.config:
-                pairs = self.pairs if self.pairs else self.config[chan]
+            if chan in self.subscription:
+                pairs = self.subscription[chan]
                 self.seq_no = {pair: None for pair in pairs}
             self.l3_book = {}
             self.l2_book = {}
@@ -89,7 +102,7 @@ class Coinbase(Feed):
         }
         '''
         await self.callback(TICKER, feed=self.id,
-                            pair=pair_exchange_to_std(msg['product_id']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['product_id']),
                             bid=Decimal(msg['best_bid']),
                             ask=Decimal(msg['best_ask']),
                             timestamp=timestamp_normalize(self.id, msg['time']),
@@ -110,10 +123,10 @@ class Coinbase(Feed):
             'time': '2018-05-21T00:26:05.585000Z'
         }
         '''
-        pair = pair_exchange_to_std(msg['product_id'])
+        pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         ts = timestamp_normalize(self.id, msg['time'])
 
-        if self.keep_l3_book and ('full' in self.channels or ('full' in self.config and pair in self.config['full'])):
+        if self.keep_l3_book and 'full' in self.subscription and pair in self.subscription['full']:
             delta = {BID: [], ASK: []}
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
@@ -139,7 +152,7 @@ class Coinbase(Feed):
         order_type = self.order_type_map.get(msg['taker_order_id'])
         await self.callback(TRADES,
                             feed=self.id,
-                            pair=pair_exchange_to_std(msg['product_id']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['product_id']),
                             order_id=msg['trade_id'],
                             side=SELL if msg['side'] == 'buy' else BUY,
                             amount=Decimal(msg['size']),
@@ -150,7 +163,7 @@ class Coinbase(Feed):
                             )
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['product_id'])
+        pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         self.l2_book[pair] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
@@ -165,7 +178,7 @@ class Coinbase(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['product_id'])
+        pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         ts = timestamp_normalize(self.id, msg['time'])
         delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
@@ -195,15 +208,15 @@ class Coinbase(Feed):
 
         results = []
         for url in urls:
-            ret = requests.get(url)
+            ret = await self.http_conn.read(url)
             results.append(ret)
             # rate limit - 3 per second
             await asyncio.sleep(0.3)
 
         timestamp = time.time()
         for res, pair in zip(results, pairs):
-            orders = res.json()
-            npair = pair_exchange_to_std(pair)
+            orders = json.loads(res, parse_float=Decimal)
+            npair = self.exchange_symbol_to_std_symbol(pair)
             self.l3_book[npair] = {BID: sd(), ASK: sd()}
             self.seq_no[npair] = orders['sequence']
             for side in (BID, ASK):
@@ -224,7 +237,7 @@ class Coinbase(Feed):
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         size = Decimal(msg['remaining_size'])
-        pair = pair_exchange_to_std(msg['product_id'])
+        pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         order_id = msg['order_id']
         ts = timestamp_normalize(self.id, msg['time'])
 
@@ -260,7 +273,7 @@ class Coinbase(Feed):
 
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
-            pair = pair_exchange_to_std(msg['product_id'])
+            pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
             ts = timestamp_normalize(self.id, msg['time'])
 
             del self.l3_book[pair][side][price][order_id]
@@ -307,7 +320,7 @@ class Coinbase(Feed):
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         new_size = Decimal(msg['new_size'])
-        pair = pair_exchange_to_std(msg['product_id'])
+        pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
 
         self.l3_book[pair][side][price][order_id] = new_size
         self.order_map[order_id] = (price, new_size)
@@ -321,7 +334,7 @@ class Coinbase(Feed):
         msg = json.loads(msg, parse_float=Decimal)
         if self.seq_no:
             if 'product_id' in msg and 'sequence' in msg:
-                pair = pair_exchange_to_std(msg['product_id'])
+                pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
                 if not self.seq_no.get(pair, None):
                     return
                 if msg['sequence'] <= self.seq_no[pair]:
@@ -329,7 +342,7 @@ class Coinbase(Feed):
                 if msg['sequence'] != self.seq_no[pair] + 1:
                     LOG.warning("%s: Missing sequence number detected for %s. Received %d, expected %d", self.id, pair, msg['sequence'], self.seq_no[pair] + 1)
                     LOG.warning("%s: Resetting data for %s", self.id, pair)
-                    self.__reset(pair=pair)
+                    self.__reset(symbol=pair)
                     await self._book_snapshot([pair])
                     return
 
@@ -361,15 +374,15 @@ class Coinbase(Feed):
             # PERF perf_end(self.id, 'msg')
             # PERF perf_log(self.id, 'msg')
 
-    async def subscribe(self, conn: AsyncConnection, pair=None):
-        self.__reset(pair)
+    async def subscribe(self, conn: AsyncConnection, symbol=None):
+        self.__reset(symbol=symbol)
 
-        for chan in self.channels if self.channels else self.config:
-            await conn.send(json.dumps({"type": "subscribe",
-                                        "product_ids": list(self.config[chan]) if self.config else self.pairs,
-                                        "channels": [chan]
-                                        }))
+        for chan in self.subscription:
+            await conn.write(json.dumps({"type": "subscribe",
+                                         "product_ids": self.subscription[chan],
+                                         "channels": [chan]
+                                         }))
 
         chan = feed_to_exchange(self.id, L3_BOOK)
-        if chan in self.config or chan in self.channels:
-            await self._book_snapshot(self.pairs if self.pairs else list(self.config[chan]))
+        if chan in self.subscription:
+            await self._book_snapshot(self.subscription[chan])

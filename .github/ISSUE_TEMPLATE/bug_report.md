@@ -25,3 +25,4 @@ If applicable, add screenshots to help explain your problem.
  - macOS, linux, etc
 
 **Cryptofeed Version**
+- please list the version you are using, and how it was installed (from source, pypi, etc).

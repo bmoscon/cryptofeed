@@ -29,7 +29,7 @@ def main():
         p.start()
 
         f = FeedHandler()
-        f.add_feed(Kraken(max_depth=2, channels=[L2_BOOK], pairs=['BTC-USD', 'ETH-USD'], callbacks={L2_BOOK: BookRabbit()}))
+        f.add_feed(Kraken(max_depth=2, channels=[L2_BOOK], symbols=['BTC-USD', 'ETH-USD'], callbacks={L2_BOOK: BookRabbit()}))
 
         f.run()
 

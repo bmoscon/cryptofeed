@@ -1,11 +1,14 @@
-import logging
 import asyncio
+from collections import defaultdict
+import logging
 import time
 from decimal import Decimal
+from typing import Dict, Tuple
 
 import aiohttp
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import HUOBI_SWAP, FUNDING
 from cryptofeed.exchange.huobi_dm import HuobiDM
 from cryptofeed.feed import Feed
@@ -17,9 +20,20 @@ LOG = logging.getLogger('feedhandler')
 
 class HuobiSwap(HuobiDM):
     id = HUOBI_SWAP
+    symbol_endpoint = 'https://api.hbdm.com/swap-api/v1/swap_contract_info'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, config=None, **kwargs):
-        Feed.__init__(self, 'wss://api.hbdm.com/swap-ws', pairs=pairs, channels=channels, callbacks=callbacks, config=config, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        symbols = {}
+        info = defaultdict(dict)
+
+        for e in data['data']:
+            symbols[e['contract_code']] = e['contract_code']
+            info['tick_size'][e['contract_code']] = e['price_tick']
+        return symbols, info
+
+    def __init__(self, **kwargs):
+        Feed.__init__(self, 'wss://api.hbdm.com/swap-ws', **kwargs)
         self.funding_updates = {}
 
     async def _funding(self, pairs):
@@ -38,7 +52,7 @@ class HuobiSwap(HuobiDM):
                         self.funding_updates[pair] = update
                         await self.callback(FUNDING,
                                             feed=self.id,
-                                            pair=pair,
+                                            symbol=pair,
                                             timestamp=timestamp_normalize(self.id, data['ts']),
                                             receipt_timestamp=received,
                                             rate=Decimal(update[0]),
@@ -47,14 +61,9 @@ class HuobiSwap(HuobiDM):
 
                         await asyncio.sleep(0.1)
 
-    async def subscribe(self, websocket):
-        chans = list(self.channels)
-        cfg = dict(self.config)
-        if FUNDING in self.channels or FUNDING in self.config:
+    async def subscribe(self, conn: AsyncConnection):
+        if FUNDING in self.subscription:
             loop = asyncio.get_event_loop()
-            loop.create_task(self._funding(self.pairs if FUNDING in self.channels else self.config[FUNDING]))
-            self.channels.remove(FUNDING) if FUNDING in self.channels else self.config.pop(FUNDING)
+            loop.create_task(self._funding(self.subscription[FUNDING]))
 
-        await super().subscribe(websocket)
-        self.channels = chans
-        self.config = cfg
+        await super().subscribe(conn)

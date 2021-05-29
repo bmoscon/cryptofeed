@@ -1,7 +1,7 @@
 # Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.7+-green.svg)
-[![Build Status](https://travis-ci.org/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.org/bmoscon/cryptofeed)
+[![Build Status](https://travis-ci.com/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.com/bmoscon/cryptofeed)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
 
@@ -35,6 +35,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * Huobi Swap
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
+* [KuCoin](https://www.kucoin.com/)
 * [OKCoin](http://okcoin.com/)
 * [OKEx](https://www.okex.com/)
 * [Poloniex](https://www.poloniex.com/)
@@ -44,7 +45,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 ## Supported aggregated crypto data providers
 
 * [Coingecko](https://www.coingecko.com/en)
-* [Whale Alert](https://whale-alert.io/)
 
 
 ## Basic Usage
@@ -64,10 +64,10 @@ trade_cb = {TRADES: TradeCallback(trade)}
 gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
 
 
-fh.add_feed(Coinbase(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Bitfinex(pairs=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
-fh.add_feed(Poloniex(pairs=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
-fh.add_feed(Gemini(pairs=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
+fh.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Bitfinex(symbols=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
+fh.add_feed(Poloniex(symbols=['BTC-USDT'], channels=[TRADES], callbacks=trade_cb))
+fh.add_feed(Gemini(symbols=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], callbacks=gemini_cb))
 
 fh.run()
 ```
@@ -87,8 +87,8 @@ from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase, Gemini, Kraken
 
 
-def nbbo_update(pair, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
-    print(f'Pair: {pair} Bid Price: {bid:.2f} Bid Size: {bid_size:.6f} Bid Feed: {bid_feed} Ask Price: {ask:.2f} Ask Size: {ask_size:.6f} Ask Feed: {ask_feed}')
+def nbbo_update(symbol, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
+    print(f'Pair: {symbol} Bid Price: {bid:.2f} Bid Size: {bid_size:.6f} Bid Feed: {bid_feed} Ask Price: {ask:.2f} Ask Size: {ask_size:.6f} Ask Feed: {ask_feed}')
 
 
 def main():
@@ -101,20 +101,26 @@ def main():
 
 Cryptofeed supports the following channels from exchanges:
 
+### Market Data Channels (Public)
+
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES - Note this reports the taker's side, even for exchanges that report the maker side.
 * TICKER
-* VOLUME
 * FUNDING
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * OPEN_INTEREST - Open interest data.
+* CANDLES - Candlestick / K-Line data.
 
 Aggregated data from provider is available in channel:
 
-* TRANSACTIONS - On-chain transactions.
 * MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
  as well as community data (twitter, reddit, facebook...) and scores (coingecko, developer, community...)
+
+### Authenticated Data Channels
+
+* ORDER_INFO - Order status updates
+
 
 ## Backends
 
@@ -127,13 +133,14 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
-* [InfluxDB](https://github.com/influxdata/influxdb) (v1 and v2)
+* [InfluxDB 2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
 * Elastic Search
 * RabbitMQ
 * PostgreSQL
 * GCP Pub/Sub
+* [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)
 
 
 ## Installation
@@ -147,11 +154,11 @@ Cryptofeed can be installed from PyPi. (It's recommended that you install in a v
 Cryptofeed has optional dependencies, depending on the backends used. You can install them individually, or all at once. To install Cryptofeed along with all its optional dependencies in one bundle:
 
     pip install cryptofeed[all]
-    
+
 If you wish to clone the repository and install from source, run this command from the root of the cloned repository
 
     python setup.py install
-    
+
 Alternatively, you can install in 'edit' mode (also called development mode):
 
     python setup.py develop

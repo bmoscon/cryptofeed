@@ -4,16 +4,19 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, HITBTC, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,18 +24,26 @@ LOG = logging.getLogger('feedhandler')
 
 class HitBTC(Feed):
     id = HITBTC
+    symbol_endpoint = 'https://api.hitbtc.com/api/2/public/symbol'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.hitbtc.com/api/2/ws',
-                         pairs=pairs,
-                         channels=channels,
-                         callbacks=callbacks,
-                         **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+        for symbol in data:
+            split = len(symbol['baseCurrency'])
+            normalized = symbol['id'][:split] + symbol_separator + symbol['id'][split:]
+            ret[normalized] = symbol['id']
+            info['tick_size'][normalized] = symbol['tickSize']
+        return ret, info
+
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.hitbtc.com/api/2/ws', **kwargs)
         self.seq_no = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         await self.callback(TICKER, feed=self.id,
-                            pair=pair_exchange_to_std(msg['symbol']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
                             bid=Decimal(msg['bid']),
                             ask=Decimal(msg['ask']),
                             timestamp=timestamp_normalize(self.id, msg['timestamp']),
@@ -40,7 +51,7 @@ class HitBTC(Feed):
 
     async def _book(self, msg: dict, timestamp: float):
         delta = {BID: [], ASK: []}
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for side in (BID, ASK):
             for entry in msg[side]:
                 price = Decimal(entry['price'])
@@ -55,7 +66,7 @@ class HitBTC(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         self.l2_book[pair] = {ASK: sd(), BID: sd()}
         for side in (BID, ASK):
             for entry in msg[side]:
@@ -65,7 +76,7 @@ class HitBTC(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for update in msg['data']:
             price = Decimal(update['price'])
             quantity = Decimal(update['quantity'])
@@ -73,7 +84,7 @@ class HitBTC(Feed):
             order_id = update['id']
             timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TRADES, feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 side=side,
                                 amount=quantity,
                                 price=price,
@@ -112,14 +123,14 @@ class HitBTC(Feed):
             if 'error' in msg or not msg['result']:
                 LOG.error("%s: Received error from server: %s", self.id, msg)
 
-    async def subscribe(self, websocket):
-        for channel in self.channels if not self.config else self.config:
-            for pair in self.pairs if not self.config else self.config[channel]:
-                await websocket.send(
+    async def subscribe(self, conn: AsyncConnection):
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
+                await conn.write(
                     json.dumps({
-                        "method": channel,
+                        "method": chan,
                         "params": {
                             "symbol": pair
                         },
-                        "id": websocket.uuid
+                        "id": conn.uuid
                     }))

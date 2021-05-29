@@ -9,6 +9,9 @@ import os
 import yaml
 
 
+_default_config = {'uvloop': True, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}, 'rest': {'log': {'filename': 'rest.log', 'level': 'WARNING'}}}
+
+
 class AttrDict(dict):
     def __init__(self, d=None):
         super().__init__()
@@ -22,33 +25,45 @@ class AttrDict(dict):
         super().__setitem__(key, value)
 
     def __getattr__(self, item):
-        try:
-            return self.__getitem__(item)
-        except KeyError:
-            raise AttributeError(item)
+        return self.__getitem__(item)
+
+    def __missing__(self, key):
+        return AttrDict()
 
     __setattr__ = __setitem__
 
 
 class Config:
-    def __init__(self, file_name=None):
-        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
-        if file_name and os.path.exists(file_name):
-            config_file = file_name
-        elif os.environ.get('CRYPTOFEED_CONFIG'):
-            config_file = os.environ.get('CRYPTOFEED_CONFIG')
+    def __init__(self, config=None):
+        self.config = AttrDict(_default_config)
+        self.log_msg = ""
 
-        if os.path.exists(config_file):
-            with open(config_file) as fp:
+        if isinstance(config, str):
+            if config and os.path.exists(config):
+                with open(config) as fp:
+                    self.config = AttrDict(yaml.safe_load(fp))
+                    self.log_msg = f'Config: use file={config!r} containing the following main keys: {", ".join(self.config.keys())}'
+            else:
+                self.log_msg = f'Config: no file={config!r} => default config.'
+        elif isinstance(config, dict):
+            self.config = AttrDict(config)
+            self.log_msg = f'Config: use dict containing the following main keys: {", ".join(self.config.keys())}'
+        elif os.environ.get('CRYPTOFEED_CONFIG') and os.path.exists(os.environ.get('CRYPTOFEED_CONFIG')):
+            config = os.environ.get('CRYPTOFEED_CONFIG')
+            with open(config) as fp:
                 self.config = AttrDict(yaml.safe_load(fp))
+                self.log_msg = f'Config: use file={config!r} from CRYPTOFEED_CONFIG containing the following main keys: {", ".join(self.config.keys())}'
         else:
-            self.config = AttrDict()
+            self.log_msg = f'Config: Only accept str and dict but got {type(config)!r} => default config.'
 
     def __bool__(self):
         return self.config != {}
 
     def __getattr__(self, attr):
         return self.config[attr]
+
+    def __getitem__(self, key):
+        return self.config[key]
 
     def __contains__(self, item):
         return item in self.config

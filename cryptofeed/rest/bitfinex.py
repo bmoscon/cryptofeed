@@ -17,8 +17,9 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, SELL
+from cryptofeed.exchanges import Bitfinex as BitfinexEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import pair_exchange_to_std, pair_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 5000
@@ -29,6 +30,7 @@ LOG = logging.getLogger('rest')
 class Bitfinex(API):
     ID = BITFINEX
     api = "https://api-pub.bitfinex.com/v2/"
+    info = BitfinexEx()
 
     def _get(self, endpoint, retry, retry_wait):
         @request_retry(self.ID, retry, retry_wait)
@@ -44,12 +46,12 @@ class Bitfinex(API):
     def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
 
         return {
             "bfx-nonce": nonce,
-            "bfx-apikey": self.key_id,
+            "bfx-apikey": self.config.key_id,
             "bfx-signature": signature,
             "content-type": "application/json"
         }
@@ -64,7 +66,7 @@ class Bitfinex(API):
 
         ret = {
             'timestamp': timestamp_normalize(self.ID, timestamp),
-            'pair': pair_exchange_to_std(symbol),
+            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade_id,
             'feed': self.ID,
             'side': SELL if amount < 0 else BUY,
@@ -152,14 +154,14 @@ class Bitfinex(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = pair_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"ticker/{sym}", retry, retry_wait)
-        return {'pair': symbol,
+        return {'symbol': symbol,
                 'feed': self.ID,
                 'bid': Decimal(data[0]),
                 'ask': Decimal(data[2])
@@ -186,7 +188,7 @@ class Bitfinex(API):
             symbol = f"f{symbol}"
             funding = True
         else:
-            symbol = pair_std_to_exchange(symbol, self.ID)
+            symbol = self.info.std_symbol_to_exchange_symbol(symbol)
             ret[symbol] = {BID: sd(), ASK: sd()}
             sym = symbol
 

@@ -33,6 +33,7 @@ HUOBI_DM = 'HUOBI_DM'
 HUOBI_SWAP = 'HUOBI_SWAP'
 KRAKEN = 'KRAKEN'
 KRAKEN_FUTURES = 'KRAKEN_FUTURES'
+KUCOIN = 'KUCOIN'
 OKCOIN = 'OKCOIN'
 OKEX = 'OKEX'
 POLONIEX = 'POLONIEX'
@@ -42,22 +43,25 @@ BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
 
 COINGECKO = 'COINGECKO'
-WHALE_ALERT = 'WHALE_ALERT'
 
 
+# Market Data
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
 BOOK_DELTA = 'book_delta'
 TRADES = 'trades'
 TICKER = 'ticker'
-VOLUME = 'volume'
 FUNDING = 'funding'
 OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 MARKET_INFO = 'market_info'
-TRANSACTIONS = 'transactions'
+CANDLES = 'candles'
+
+# Account Data / Authenticated Channels
+ORDER_INFO = 'order_info'
+
 
 BUY = 'buy'
 SELL = 'sell'
@@ -78,16 +82,16 @@ PENDING = 'pending'
 FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
+UNFILLED = 'unfilled'
 
 
 """
 L2 Orderbook Layout
     * BID and ASK are SortedDictionaries
-    * Currency Pairs are defined in standards.py
     * PRICE and SIZE are of type decimal.Decimal
 
 {
-    currency pair: {
+    symbol: {
         BID: {
             PRICE: SIZE,
             PRICE: SIZE,
@@ -99,7 +103,7 @@ L2 Orderbook Layout
             ...
         }
     },
-    currency pair: {
+    symbol: {
         ...
     },
     ...
@@ -110,7 +114,7 @@ L3 Orderbook Layout
     * Similar to L2, except orders are not aggregated by price,
       each price level contains the individual orders for that price level
 {
-    currency pair: {
+    Symbol: {
         BID: {
             PRICE: {
                 order-id: amount,
@@ -138,7 +142,7 @@ L3 Orderbook Layout
             ...
         }
     },
-    currency pair: {
+    Symbol: {
         ...
     },
     ...

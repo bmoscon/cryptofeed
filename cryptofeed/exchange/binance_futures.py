@@ -6,41 +6,43 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
+import time
+from typing import List, Tuple, Callable, Dict
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER
+from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
 from cryptofeed.exchange.binance import Binance
+from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
 
 class BinanceFutures(Binance):
     id = BINANCE_FUTURES
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
+    symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, depth=1000, **kwargs):
-        super().__init__(pairs=pairs, channels=channels, callbacks=callbacks, depth=depth, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        base, info = super()._parse_symbol_data(data, symbol_separator)
+        add = {}
+        for symbol, orig in base.items():
+            if "_" in orig:
+                continue
+            add[f"{symbol}{symbol_separator}PINDEX"] = f"p{orig}"
+        base.update(add)
+        return base, info
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
 
-    def _address(self):
-        address = self.ws_endpoint + '/stream?streams='
-        for chan in self.channels if not self.config else self.config:
-            if chan == OPEN_INTEREST:
-                continue
-            for pair in self.pairs if not self.config else self.config[chan]:
-                pair = pair.lower()
-                if chan == TICKER:
-                    stream = f"{pair}@bookTicker/"
-                else:
-                    stream = f"{pair}@{chan}/"
-                address += stream
-        if address == f"{self.ws_endpoint}/stream?streams=":
-            return None
-        return address[:-1]
-
-    def _check_update_id(self, pair: str, msg: dict) -> (bool, bool):
+    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
         forced = not self.forced[pair]
 
@@ -57,8 +59,44 @@ class BinanceFutures(Binance):
             skip_update = True
         return skip_update, forced
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    async def _open_interest(self, msg: dict, timestamp: float):
+        """
+        {
+            "openInterest": "10659.509",
+            "symbol": "BTCUSDT",
+            "time": 1589437530011   // Transaction time
+        }
+        """
+        pair = msg['symbol']
+        oi = msg['openInterest']
+        if oi != self.open_interest.get(pair, None):
+            await self.callback(OPEN_INTEREST,
+                                feed=self.id,
+                                symbol=self.exchange_symbol_to_std_symbol(pair),
+                                open_interest=oi,
+                                timestamp=timestamp_normalize(self.id, msg['time']),
+                                receipt_timestamp=time.time()
+                                )
+            self.open_interest[pair] = oi
+
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
+        ret = []
+        if self.address:
+            ret = super().connect()
+
+        for chan in set(self.subscription):
+            if chan == 'open_interest':
+                addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
+                ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=1.0), self.subscribe, self.message_handler))
+        return ret
+
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
+
+        # Handle REST endpoint messages first
+        if 'openInterest' in msg:
+            await self._open_interest(msg, timestamp)
+            return
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
@@ -78,5 +116,7 @@ class BinanceFutures(Binance):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg['e'] == 'kline':
+            await self._candle(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)

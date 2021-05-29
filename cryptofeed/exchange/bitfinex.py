@@ -4,20 +4,20 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import logging
 from collections import defaultdict
 from decimal import Decimal
 from functools import partial
-from typing import Callable, List, Tuple
+import logging
+from typing import Callable, Dict, List, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -41,126 +41,123 @@ CHECKSUM = 131072
 
 class Bitfinex(Feed):
     id = BITFINEX
+    symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        if channels is not None and FUNDING in channels:
-            if len(channels) > 1:
-                raise ValueError("Funding channel must be in a separate feedhanlder on Bitfinex or you must use config")
-        super().__init__('wss://api.bitfinex.com/ws/2', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+        # https://docs.bitfinex.com/docs/ws-general#supported-pairs
+        ret = {}
+        pairs = data[0][0]
+        currencies = data[1][0]
+        for c in currencies:
+            norm = c.replace('BCHN', 'BCH')  # Bitfinex uses BCHN, other exchanges use BCH
+            norm = c.replace('UST', 'USDT')
+            ret[norm] = "f" + c
+
+        for p in pairs:
+            norm = p.replace('BCHN', 'BCH')
+            norm = p.replace('UST', 'USDT')
+            if ':' in norm:
+                norm = norm.replace(":", symbol_separator)
+            else:
+                norm = norm[:3] + symbol_separator + norm[3:]
+            ret[norm] = "t" + p
+
+        return ret, {}
+
+    def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):
+        super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, subscription=subscription, **kwargs)
+        if channels or subscription:
+            for chan in set(channels or subscription):
+                for pair in set(subscription[chan] if subscription else symbols or []):
+                    exch_sym = self.std_symbol_to_exchange_symbol(pair)
+                    if (exch_sym[0] == 'f') == (chan != FUNDING):
+                        LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
-        self.l3_book = {}
-        '''
-        channel map maps channel id (int) to a dict of
-           symbol: channel's currency
-           channel: channel name
-           handler: the handler for this channel type
-        '''
-        self.channel_map = {}
+        self.l2_book = defaultdict(dict)
+        self.l3_book = defaultdict(dict)
+        self.handlers = {}  # maps a channel id (int) to a function
         self.order_map = defaultdict(dict)
         self.seq_no = defaultdict(int)
 
-    async def _ticker(self, msg: dict, timestamp: float):
-        chan_id = msg[0]
+    async def _ticker(self, pair: str, msg: dict, timestamp: float):
         if msg[1] == 'hb':
-            # ignore heartbeats
-            pass
-        else:
-            # bid, bid_size, ask, ask_size, daily_change, daily_change_percent,
-            # last_price, volume, high, low
-            bid, _, ask, _, _, _, _, _, _, _ = msg[1]
-            pair = self.channel_map[chan_id]['symbol']
-            pair = pair_exchange_to_std(pair)
-            await self.callback(TICKER, feed=self.id,
-                                pair=pair,
-                                bid=bid,
-                                ask=ask,
-                                timestamp=timestamp,
-                                receipt_timestamp=timestamp)
+            return  # ignore heartbeats
+        # bid, bid_size, ask, ask_size, daily_change, daily_change_percent,
+        # last_price, volume, high, low
+        bid, _, ask, _, _, _, _, _, _, _ = msg[1]
+        await self.callback(TICKER, feed=self.id,
+                            symbol=pair,
+                            bid=bid,
+                            ask=ask,
+                            timestamp=timestamp,
+                            receipt_timestamp=timestamp)
 
-    async def _trades(self, msg: dict, timestamp: float):
-        chan_id = msg[0]
-        pair = self.channel_map[chan_id]['symbol']
-        funding = pair[0] == 'f'
-        pair = pair_exchange_to_std(pair)
-
-        async def _trade_update(trade: list, timestamp: float):
-            if funding:
-                order_id, ts, amount, price, period = trade
-            else:
-                order_id, ts, amount, price = trade
-                period = None
-            ts = timestamp_normalize(self.id, ts)
-            side = SELL if amount < 0 else BUY
-            amount = abs(amount)
-            if period:
-                await self.callback(FUNDING, feed=self.id,
-                                    pair=pair,
-                                    side=side,
-                                    amount=Decimal(amount),
-                                    price=Decimal(price),
-                                    order_id=order_id,
-                                    timestamp=ts,
-                                    receipt_timestamp=timestamp,
-                                    period=period)
-            else:
-                await self.callback(TRADES, feed=self.id,
-                                    pair=pair,
-                                    side=side,
-                                    amount=Decimal(amount),
-                                    price=Decimal(price),
-                                    order_id=order_id,
-                                    timestamp=ts,
-                                    receipt_timestamp=timestamp)
+    async def _funding(self, pair: str, msg: dict, timestamp: float):
+        async def _funding_update(funding: list, timestamp: float):
+            order_id, ts, amount, price, period = funding
+            await self.callback(FUNDING, feed=self.id,
+                                symbol=pair,
+                                side=SELL if amount < 0 else BUY,
+                                amount=abs(amount),
+                                price=Decimal(price),
+                                order_id=order_id,
+                                timestamp=timestamp_normalize(self.id, ts),
+                                receipt_timestamp=timestamp,
+                                period=period)
 
         if isinstance(msg[1], list):
             # snapshot
-            for trade_update in msg[1]:
-                await _trade_update(trade_update, timestamp)
-        else:
+            for funding in msg[1]:
+                await _funding_update(funding, timestamp)
+        elif msg[1] in ('te', 'fte'):
             # update
-            if msg[1] == 'te' or msg[1] == 'fte':
-                await _trade_update(msg[2], timestamp)
-            elif msg[1] == 'tu' or msg[1] == 'ftu':
-                # ignore trade updates
-                pass
-            elif msg[1] == 'hb':
-                # ignore heartbeats
-                pass
-            else:
-                LOG.warning("%s: Unexpected trade message %s", self.id, msg)
+            await _funding_update(msg[2], timestamp)
+        elif msg[1] not in ('tu', 'ftu', 'hb'):
+            # ignore trade updates and heartbeats
+            LOG.warning('%s %s: Unexpected funding message %s', self.id, pair, msg)
 
-    async def _book(self, msg: dict, timestamp: float):
-        """
-        For L2 book updates
-        """
-        chan_id = msg[0]
-        pair = self.channel_map[chan_id]['symbol']
-        pair = pair_exchange_to_std(pair)
-        delta = {BID: [], ASK: []}
-        forced = False
+    async def _trades(self, pair: str, msg: dict, timestamp: float):
+        async def _trade_update(trade: list, timestamp: float):
+            order_id, ts, amount, price = trade
+            await self.callback(TRADES, feed=self.id,
+                                symbol=pair,
+                                side=SELL if amount < 0 else BUY,
+                                amount=abs(amount),
+                                price=Decimal(price),
+                                order_id=order_id,
+                                timestamp=timestamp_normalize(self.id, ts),
+                                receipt_timestamp=timestamp)
 
         if isinstance(msg[1], list):
-            if isinstance(msg[1][0], list):
-                # snapshot so clear book
-                self.l2_book[pair] = {BID: sd(), ASK: sd()}
-                for update in msg[1]:
-                    price, _, amount = update
-                    price = Decimal(price)
-                    amount = Decimal(amount)
+            # snapshot
+            for trade in msg[1]:
+                await _trade_update(trade, timestamp)
+        elif msg[1] in ('te', 'fte'):
+            # update
+            await _trade_update(msg[2], timestamp)
+        elif msg[1] not in ('tu', 'ftu', 'hb'):
+            # ignore trade updates and heartbeats
+            LOG.warning('%s %s: Unexpected trade message %s', self.id, pair, msg)
 
-                    if amount > 0:
-                        side = BID
-                    else:
-                        side = ASK
-                        amount = abs(amount)
-                    self.l2_book[pair][side][price] = amount
-                forced = True
-            else:
-                # book update
-                price, count, amount = msg[1]
+    async def _book(self, pair: str, l2_book: dict, msg: dict, timestamp: float):
+        """For L2 book updates."""
+        if not isinstance(msg[1], list):
+            if msg[1] != 'hb':
+                LOG.warning('%s: Unexpected book L2 msg %s', self.id, msg)
+            return
+
+        delta = {BID: [], ASK: []}
+
+        if isinstance(msg[1][0], list):
+            # snapshot so clear book
+            forced = True
+            l2_book[BID] = sd()
+            l2_book[ASK] = sd()
+            for update in msg[1]:
+                price, _, amount = update
                 price = Decimal(price)
                 amount = Decimal(amount)
 
@@ -169,68 +166,63 @@ class Bitfinex(Feed):
                 else:
                     side = ASK
                     amount = abs(amount)
-
-                if count > 0:
-                    # change at price level
-                    delta[side].append((price, amount))
-                    self.l2_book[pair][side][price] = amount
-                else:
-                    # remove price level
-                    if price in self.l2_book[pair][side]:
-                        del self.l2_book[pair][side][price]
-                        delta[side].append((price, 0))
-        elif msg[1] == 'hb':
-            pass
+                l2_book[side][price] = amount
         else:
-            LOG.warning("%s: Unexpected book msg %s", self.id, msg)
+            # book update
+            forced = False
+            price, count, amount = msg[1]
+            price = Decimal(price)
+            amount = Decimal(amount)
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
-
-    async def _raw_book(self, msg: dict, timestamp: float):
-        """
-        For L3 book updates
-        """
-        def add_to_book(pair, side, price, order_id, amount):
-            if price in self.l3_book[pair][side]:
-                self.l3_book[pair][side][price][order_id] = amount
+            if amount > 0:
+                side = BID
             else:
-                self.l3_book[pair][side][price] = {order_id: amount}
+                side = ASK
+                amount = abs(amount)
 
-        def remove_from_book(pair, side, order_id):
-            price = self.order_map[pair][side][order_id]['price']
-            del self.l3_book[pair][side][price][order_id]
-            if len(self.l3_book[pair][side][price]) == 0:
-                del self.l3_book[pair][side][price]
+            if count > 0:
+                # change at price level
+                delta[side].append((price, amount))
+                l2_book[side][price] = amount
+            else:
+                # remove price level
+                if price in l2_book[side]:
+                    del l2_book[side][price]
+                    delta[side].append((price, 0))
+
+        await self.book_callback(l2_book, L2_BOOK, pair, forced, delta, timestamp, timestamp)
+
+    async def _raw_book(self, pair: str, l3_book: dict, order_map: dict, msg: dict, timestamp: float):
+        """For L3 book updates."""
+        if not isinstance(msg[1], list):
+            if msg[1] != 'hb':
+                LOG.warning('%s: Unexpected book L3 msg %s', self.id, msg)
+            return
+
+        def add_to_book(side, price, order_id, amount):
+            if price in l3_book[side]:
+                l3_book[side][price][order_id] = amount
+            else:
+                l3_book[side][price] = {order_id: amount}
+
+        def remove_from_book(side, order_id):
+            price = order_map[side][order_id]['price']
+            del l3_book[side][price][order_id]
+            if len(l3_book[side][price]) == 0:
+                del l3_book[side][price]
 
         delta = {BID: [], ASK: []}
-        forced = False
-        chan_id = msg[0]
-        pair = self.channel_map[chan_id]['symbol']
-        pair = pair_exchange_to_std(pair)
 
-        if isinstance(msg[1], list):
-            if isinstance(msg[1][0], list):
-                # snapshot so clear orders
-                self.order_map[pair] = {BID: {}, ASK: {}}
-                self.l3_book[pair] = {BID: sd(), ASK: sd()}
+        if isinstance(msg[1][0], list):
+            # snapshot so clear orders
+            forced = True
+            order_map[BID] = {}
+            order_map[ASK] = {}
+            l3_book[BID] = sd()
+            l3_book[ASK] = sd()
 
-                for update in msg[1]:
-                    order_id, price, amount = update
-                    price = Decimal(price)
-                    amount = Decimal(amount)
-
-                    if amount > 0:
-                        side = BID
-                    else:
-                        side = ASK
-                        amount = abs(amount)
-
-                    self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
-                    add_to_book(pair, side, price, order_id, amount)
-                forced = True
-            else:
-                # book update
-                order_id, price, amount = msg[1]
+            for update in msg[1]:
+                order_id, price, amount = update
                 price = Decimal(price)
                 amount = Decimal(amount)
 
@@ -238,68 +230,110 @@ class Bitfinex(Feed):
                     side = BID
                 else:
                     side = ASK
-                    amount = abs(amount)
+                    amount = - amount
 
-                if price == 0:
-                    price = self.order_map[pair][side][order_id]['price']
-                    remove_from_book(pair, side, order_id)
-                    del self.order_map[pair][side][order_id]
-                    delta[side].append((order_id, price, 0))
-                else:
-                    if order_id in self.order_map[pair][side]:
-                        del_price = self.order_map[pair][side][order_id]['price']
-                        delta[side].append((order_id, del_price, 0))
-                        # remove existing order before adding new one
-                        delta[side].append((order_id, price, amount))
-                        remove_from_book(pair, side, order_id)
-                    else:
-                        delta[side].append((order_id, price, amount))
-                    add_to_book(pair, side, price, order_id, amount)
-                    self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
-
-        elif msg[1] == 'hb':
-            return
+                order_map[side][order_id] = {'price': price, 'amount': amount}
+                add_to_book(side, price, order_id, amount)
         else:
-            LOG.warning("%s: Unexpected book msg %s", self.id, msg)
-            return
+            # book update
+            forced = False
+            order_id, price, amount = msg[1]
+            price = Decimal(price)
+            amount = Decimal(amount)
 
-        await self.book_callback(self.l3_book[pair], L3_BOOK, pair, forced, delta, timestamp, timestamp)
+            if amount > 0:
+                side = BID
+            else:
+                side = ASK
+                amount = abs(amount)
+
+            if price == 0:
+                price = order_map[side][order_id]['price']
+                remove_from_book(side, order_id)
+                del order_map[side][order_id]
+                delta[side].append((order_id, price, 0))
+            else:
+                if order_id in order_map[side]:
+                    del_price = order_map[side][order_id]['price']
+                    delta[side].append((order_id, del_price, 0))
+                    # remove existing order before adding new one
+                    delta[side].append((order_id, price, amount))
+                    remove_from_book(side, order_id)
+                else:
+                    delta[side].append((order_id, price, amount))
+                add_to_book(side, price, order_id, amount)
+                order_map[side][order_id] = {'price': price, 'amount': amount}
+
+        await self.book_callback(l3_book, L3_BOOK, pair, forced, delta, timestamp, timestamp)
+
+    @staticmethod
+    async def _do_nothing(msg: dict, timestamp: float):
+        pass
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
-            chan_id = msg[0]
-            if chan_id in self.channel_map:
-                seq_no = msg[-1]
-                if self.seq_no[conn.uuid] + 1 != seq_no:
-                    LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[conn.uuid] + 1)
-                    raise MissingSequenceNumber
-                self.seq_no[conn.uuid] = seq_no
-
-                await self.channel_map[chan_id]['handler'](msg, timestamp)
-            else:
-                LOG.warning("%s: Unexpected message on unregistered channel %s", self.id, msg)
-        elif 'event' in msg and msg['event'] == 'error':
-            LOG.error("%s: Error message from exchange: %s", self.id, msg['msg'])
-        elif 'chanId' in msg and 'symbol' in msg:
-            handler = None
-            if msg['channel'] == 'ticker':
-                handler = self._ticker
-            elif msg['channel'] == 'trades':
-                handler = self._trades
-            elif msg['channel'] == 'book':
-                if msg['prec'] == 'R0':
-                    handler = self._raw_book
+            hb_skip = False
+            chan_handler = self.handlers.get(msg[0])
+            if chan_handler is None:
+                if msg[1] == 'hb':
+                    hb_skip = True
                 else:
-                    handler = self._book
-            else:
-                LOG.warning('%s: Invalid message type %s', self.id, msg)
+                    LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
+                    return
+            seq_no = msg[-1]
+            expected = self.seq_no[conn.uuid] + 1
+            if seq_no != expected:
+                LOG.warning('%s: missed message (sequence number) received %d, expected %d', conn.uuid, seq_no, expected)
+                raise MissingSequenceNumber
+            self.seq_no[conn.uuid] = seq_no
+            if hb_skip:
                 return
+            await chan_handler(msg, timestamp)
 
-            self.channel_map[msg['chanId']] = {'symbol': msg['symbol'],
-                                               'channel': msg['channel'],
-                                               'handler': handler}
+        elif 'event' not in msg:
+            LOG.warning('%s: Unexpected msg (missing event) from exchange: %s', conn.uuid, msg)
+        elif msg['event'] == 'error':
+            LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
+        elif msg['event'] in ('info', 'conf'):
+            LOG.info('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
+        elif 'chanId' in msg and 'symbol' in msg:
+            self.register_channel_handler(msg, conn)
+        else:
+            LOG.warning('%s: Unexpected msg from exchange: %s', conn.uuid, msg)
+
+    def register_channel_handler(self, msg: dict, conn: AsyncConnection):
+        symbol = msg['symbol']
+        is_funding = (symbol[0] == 'f')
+        pair = self.exchange_symbol_to_std_symbol(symbol)
+
+        if msg['channel'] == 'ticker':
+            if is_funding:
+                LOG.warning('%s %s: Ticker funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                handler = self._do_nothing
+            else:
+                handler = partial(self._ticker, pair)
+        elif msg['channel'] == 'trades':
+            if is_funding:
+                handler = partial(self._funding, pair)
+            else:
+                handler = partial(self._trades, pair)
+        elif msg['channel'] == 'book':
+            if msg['prec'] == 'R0':
+                handler = partial(self._raw_book, pair, self.l3_book[pair], self.order_map[pair])
+            elif is_funding:
+                LOG.warning('%s %s: Book funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                handler = self._do_nothing
+            else:
+                handler = partial(self._book, pair, self.l2_book[pair])
+        else:
+            LOG.warning('%s %s: Unexpected message %s', conn.uuid, pair, msg)
+            return
+
+        LOG.debug('%s: Register channel=%s pair=%s funding=%s %s -> %s()', conn.uuid, msg['channel'], pair, is_funding,
+                  '='.join(list(msg.items())[-1]), handler.__name__ if hasattr(handler, '__name__') else handler.func.__name__)
+        self.handlers[msg['chanId']] = handler
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         """
@@ -314,12 +348,12 @@ class Bitfinex(Feed):
         ret = []
 
         def build(options: list):
-            subscribe = partial(self.subscribe, options=pair_channel)
-            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
+            subscribe = partial(self.subscribe, options=options)
+            conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
             return conn, subscribe, self.message_handler
 
-        for channel in self.channels if not self.config else self.config:
-            for pair in self.pairs if not self.config else self.config[channel]:
+        for channel in self.subscription:
+            for pair in self.subscription[channel]:
                 pair_channel.append((pair, channel))
                 # Bitfinex max is 25 per connection
                 if len(pair_channel) == 25:
@@ -333,7 +367,7 @@ class Bitfinex(Feed):
 
     async def subscribe(self, connection: AsyncConnection, options: List[Tuple[str, str]] = None):
         self.__reset()
-        await connection.send(json.dumps({
+        await connection.write(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL
         }))
@@ -354,4 +388,4 @@ class Bitfinex(Feed):
                     except IndexError:
                         # any non specified params will be defaulted
                         pass
-            await connection.send(json.dumps(message))
+            await connection.write(json.dumps(message))

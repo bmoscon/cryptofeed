@@ -6,15 +6,16 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
-from itertools import product
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -22,12 +23,14 @@ LOG = logging.getLogger('feedhandler')
 
 class Blockchain(Feed):
     id = BLOCKCHAIN
+    symbol_endpoint = "https://api.blockchain.com/mercury-gateway/v1/instruments"
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__("wss://ws.prod.blockchain.info/mercury-gateway/v1/ws",
-                         pairs=pairs, channels=channels, callbacks=callbacks,
-                         origin="https://exchange.blockchain.com",
-                         **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        return {data["symbol"].replace("-", symbol_separator): data["symbol"] for data in data if data['status'] == 'open'}, {}
+
+    def __init__(self, **kwargs):
+        super().__init__("wss://ws.prod.blockchain.info/mercury-gateway/v1/ws", origin="https://exchange.blockchain.com", **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -37,7 +40,7 @@ class Blockchain(Feed):
 
     async def _pair_l2_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         forced = False
         if msg['event'] == 'snapshot':
             # Reset the book
@@ -79,7 +82,7 @@ class Blockchain(Feed):
 
     async def _pair_l3_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
-        pair = pair_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
 
         if msg['event'] == 'snapshot':
             # Reset the book
@@ -133,7 +136,7 @@ class Blockchain(Feed):
         }
         """
         await self.callback(TRADES, feed=self.id,
-                            pair=msg['symbol'],
+                            symbol=msg['symbol'],
                             side=BUY if msg['side'] == 'buy' else SELL,
                             amount=msg['qty'],
                             price=msg['price'],
@@ -167,19 +170,11 @@ class Blockchain(Feed):
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        if self.config:
-            for channel in self.config:
-                for pair in self.config[channel]:
-                    await websocket.send(json.dumps({"action": "subscribe",
-                                                     "symbol": pair,
-                                                     "channel": channel
-                                                     }))
-
-        else:
-            for pair, channel in product(self.pairs, self.channels):
-                await websocket.send(json.dumps({"action": "subscribe",
-                                                 "symbol": pair,
-                                                 "channel": channel
-                                                 }))
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
+                await conn.write(json.dumps({"action": "subscribe",
+                                             "symbol": pair,
+                                             "channel": chan
+                                             }))

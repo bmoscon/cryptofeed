@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import socket
+from time import sleep
 from multiprocessing import Process
 
 from yapic import json
@@ -41,9 +42,10 @@ def main():
     try:
         p = Process(target=receiver, args=(5555,))
         p.start()
+        sleep(1)
 
         f = FeedHandler()
-        f.add_feed(Coinbase(channels=[L2_BOOK, TRADES], pairs=['BTC-USD'],
+        f.add_feed(Coinbase(channels=[L2_BOOK, TRADES], symbols=['BTC-USD'],
                             callbacks={TRADES: TradeSocket('udp://127.0.0.1', port=5555),
                                        L2_BOOK: BookSocket('udp://127.0.0.1', port=5555),
                                        BOOK_DELTA: BookDeltaSocket('udp://127.0.0.1', port=5555)

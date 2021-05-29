@@ -17,7 +17,7 @@ def main():
     """
     f = FeedHandler()
     f.add_feed(Coinbase(max_depth=10, channels=[L2_BOOK, TRADES, TICKER],
-                        pairs=['BTC-USD'],
+                        symbols=['BTC-USD'],
                         callbacks={TRADES: TradeMongo('coinbase', collection='trades'),
                                    L2_BOOK: BookMongo('coinbase', collection='l2_book'),
                                    BOOK_DELTA: BookDeltaMongo('coinbase', collection='l2_book'),

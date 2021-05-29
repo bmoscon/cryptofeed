@@ -14,7 +14,7 @@ class MissingMessage(Exception):
     pass
 
 
-class UnsupportedTradingPair(Exception):
+class UnsupportedSymbol(Exception):
     pass
 
 
@@ -43,4 +43,8 @@ class BadChecksum(Exception):
 
 
 class RestResponseError(Exception):
+    pass
+
+
+class ConnectionClosed(Exception):
     pass

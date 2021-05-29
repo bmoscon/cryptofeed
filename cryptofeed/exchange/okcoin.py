@@ -4,18 +4,26 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
+from collections import defaultdict
+
 from decimal import Decimal
 from itertools import islice
+from functools import partial
 import logging
 import zlib
+from typing import Dict, List, Tuple, Callable
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS
+from cryptofeed.auth.okcoin import generate_token
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
+from cryptofeed.util import split
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,10 +31,29 @@ LOG = logging.getLogger('feedhandler')
 
 class OKCoin(Feed):
     id = OKCOIN
+    symbol_endpoint = 'https://www.okcoin.com/api/spot/v3/instruments'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://real.okcoin.com:8443/ws/v3', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
-        self.book_depth = 200
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+        for e in data:
+            ret[e['instrument_id']] = e['instrument_id']
+            info['tick_size'][e['instrument_id']] = e['tick_size']
+            info['instrument_type'][e['instrument_id']] = 'spot'
+        return ret, info
+
+    def __init__(self, **kwargs):
+        super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
+
+        for chan in self.subscription:
+            if chan != LIQUIDATIONS:
+                continue
+            for symbol in self.subscription[chan]:
+                instrument_type = self.instrument_type(symbol)
+                if instrument_type == 'spot':
+                    raise ValueError("LIQUIDATIONS only supports futures and swap trading pairs")
+
         self.open_interest = {}
 
     def __reset(self):
@@ -54,32 +81,36 @@ class OKCoin(Feed):
         computed = ":".join(combined).encode()
         return zlib.crc32(computed)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        def chan_format(channel, pair):
-            if "SWAP" in pair:
-                return channel.format('swap')
-            elif len(pair.split("-")) == 3:
-                return channel.format('futures')
-            else:
-                return channel.format('spot')
+        symbol_channels = list(self.get_channel_symbol_combinations())
+        LOG.info("%s: Got %r combinations of pairs and channels", self.id, len(symbol_channels))
 
-        if self.config:
-            for chan in self.config:
+        if len(symbol_channels) == 0:
+            LOG.info("%s: No websocket subscription", self.id)
+            return False
+
+        # Avoid error "Max frame length of 65536 has been exceeded" by limiting requests to some args
+        for chunk in split.list_by_max_items(symbol_channels, 33):
+            LOG.info("%s: Subscribe to %s args from %r to %r", self.id, len(chunk), chunk[0], chunk[-1])
+            request = {"op": "subscribe", "args": chunk}
+            await conn.write(json.dumps(request))
+
+    @classmethod
+    def instrument_type(cls, symbol: str):
+        return cls.info()['instrument_type'][symbol]
+
+    def get_channel_symbol_combinations(self):
+        for chan in self.subscription:
+            if not is_authenticated_channel(chan):
                 if chan == LIQUIDATIONS:
                     continue
-                args = [f"{chan_format(chan, pair)}:{pair}" for pair in self.config[chan]]
-                await websocket.send(json.dumps({
-                    "op": "subscribe",
-                    "args": args
-                }))
-        else:
-            chans = [f"{chan_format(chan, pair)}:{pair}" for chan in self.channels for pair in self.pairs if chan != LIQUIDATIONS]
-            await websocket.send(json.dumps({
-                "op": "subscribe",
-                "args": chans
-            }))
+                for symbol in self.subscription[chan]:
+                    instrument_type = self.instrument_type(symbol)
+                    if instrument_type != 'swap' and 'funding' in chan:
+                        continue  # No funding for spot, futures and options
+                    yield f"{chan.format(instrument_type)}:{symbol}"
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -89,9 +120,9 @@ class OKCoin(Feed):
             pair = update['instrument_id']
             update_timestamp = timestamp_normalize(self.id, update['timestamp'])
             await self.callback(TICKER, feed=self.id,
-                                pair=pair,
-                                bid=Decimal(update['best_bid']),
-                                ask=Decimal(update['best_ask']),
+                                symbol=pair,
+                                bid=Decimal(update['best_bid']) if update['best_bid'] else Decimal(0),
+                                ask=Decimal(update['best_ask']) if update['best_ask'] else Decimal(0),
                                 timestamp=update_timestamp,
                                 receipt_timestamp=timestamp)
             if 'open_interest' in update:
@@ -99,20 +130,20 @@ class OKCoin(Feed):
                 if pair in self.open_interest and oi == self.open_interest[pair]:
                     continue
                 self.open_interest[pair] = oi
-                await self.callback(OPEN_INTEREST, feed=self.id, pair=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
+                await self.callback(OPEN_INTEREST, feed=self.id, symbol=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
         {'table': 'spot/trade', 'data': [{'instrument_id': 'BTC-USD', 'price': '3977.44', 'side': 'buy', 'size': '0.0096', 'timestamp': '2019-03-22T22:45:44.578Z', 'trade_id': '486519521'}]}
         """
         for trade in msg['data']:
-            if msg['table'] == 'futures/trade':
+            if msg['table'] in {'futures/trade', 'option/trade'}:
                 amount_sym = 'qty'
             else:
                 amount_sym = 'size'
             await self.callback(TRADES,
                                 feed=self.id,
-                                pair=pair_exchange_to_std(trade['instrument_id']),
+                                symbol=self.exchange_symbol_to_std_symbol(trade['instrument_id']),
                                 order_id=trade['trade_id'],
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade[amount_sym]),
@@ -125,7 +156,7 @@ class OKCoin(Feed):
         for update in msg['data']:
             await self.callback(FUNDING,
                                 feed=self.id,
-                                pair=pair_exchange_to_std(update['instrument_id']),
+                                symbol=self.exchange_symbol_to_std_symbol(update['instrument_id']),
                                 timestamp=timestamp_normalize(self.id, update['funding_time']),
                                 receipt_timestamp=timestamp,
                                 rate=update['funding_rate'],
@@ -136,7 +167,7 @@ class OKCoin(Feed):
         if msg['action'] == 'partial':
             # snapshot
             for update in msg['data']:
-                pair = pair_exchange_to_std(update['instrument_id'])
+                pair = self.exchange_symbol_to_std_symbol(update['instrument_id'])
                 self.l2_book[pair] = {
                     BID: sd({
                         Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']
@@ -153,7 +184,7 @@ class OKCoin(Feed):
             # update
             for update in msg['data']:
                 delta = {BID: [], ASK: []}
-                pair = pair_exchange_to_std(update['instrument_id'])
+                pair = self.exchange_symbol_to_std_symbol(update['instrument_id'])
                 for side in ('bids', 'asks'):
                     s = BID if side == 'bids' else ASK
                     for price, amount, *_ in update[side]:
@@ -170,6 +201,29 @@ class OKCoin(Feed):
                     raise BadChecksum
                 await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
 
+    async def _order(self, msg: dict, timestamp: float):
+        if msg['data'][0]['status'] == "open":
+            status = "active"
+        else:
+            status = msg['data'][0]['status']
+
+        keys = ('filled_size', 'size', 'filled_notional')
+        data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
+
+        await self.callback(ORDER_INFO, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instrument_id'].upper()),  # This uses the REST endpoint format (lower case)
+                            status=status,
+                            order_id=msg['data'][0]['order_id'],
+                            side=BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
+                            order_type=msg['data'][0]['type'],
+                            timestamp=msg['data'][0]['timestamp'].timestamp(),
+                            receipt_timestamp=timestamp,
+                            **data
+                            )
+
+    async def _login(self, msg: dict, timestamp: float):
+        LOG.info('%s: Websocket logged in? %s', self.id, msg['success'])
+
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         # DEFLATE compression, no header
@@ -181,6 +235,8 @@ class OKCoin(Feed):
                 LOG.error("%s: Error: %s", self.id, msg)
             elif msg['event'] == 'subscribe':
                 pass
+            elif msg['event'] == 'login':
+                await self._login(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'table' in msg:
@@ -192,7 +248,31 @@ class OKCoin(Feed):
                 await self._book(msg, timestamp)
             elif 'swap/funding_rate' in msg['table']:
                 await self._funding(msg, timestamp)
+            elif 'spot/order' in msg['table']:
+                await self._order(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
+
+    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
+        ret = []
+        for channel in self.subscription:
+            if is_authenticated_channel(channel):
+                for s in self.subscription[channel]:
+                    ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler))
+            else:
+                ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
+
+        return ret
+
+    async def user_order_subscribe(self, conn: AsyncConnection, symbol=None):
+        self.__reset()
+        timestamp, sign = generate_token(self.key_id, self.key_secret)
+        login_param = {"op": "login", "args": [self.key_id, self.config.okex.key_passphrase, timestamp, sign.decode("utf-8")]}
+        login_str = json.dumps(login_param)
+        await conn.write(login_str)
+        await asyncio.sleep(5)
+        sub_param = {"op": "subscribe", "args": ["spot/order:{}".format(symbol)]}
+        sub_str = json.dumps(sub_param)
+        await conn.write(sub_str)

@@ -1,14 +1,15 @@
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 import uuid
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import load_exchange_pair_mapping, pair_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -17,25 +18,14 @@ LOG = logging.getLogger('feedhandler')
 class Upbit(Feed):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
+    symbol_endpoint = 'https://api.upbit.com/v1/market/all'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://api.upbit.com/websocket/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
-        self.__reset()
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        return {f"{data['market'].split('-')[1]}{symbol_separator}{data['market'].split('-')[0]}": data['market'] for data in data}, {}
 
-    def __reset(self):
-        pass
-
-    @staticmethod
-    def get_active_symbols_info():
-        return requests.get(Upbit.api + 'market/all').json()
-
-    @staticmethod
-    def get_active_symbols():
-        load_exchange_pair_mapping(Upbit.id)
-        symbols = []
-        for data in Upbit.get_active_symbols_info():
-            symbols.append(pair_exchange_to_std(data['market']))
-        return symbols
+    def __init__(self, **kwargs):
+        super().__init__('wss://api.upbit.com/websocket/v1', **kwargs)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -63,7 +53,7 @@ class Upbit(Feed):
         amount = Decimal(msg['tv'])
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['sid'],
-                            pair=pair_exchange_to_std(msg['cd']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['cd']),
                             side=BUY if msg['ab'] == 'BID' else SELL,
                             amount=amount,
                             price=price,
@@ -100,7 +90,7 @@ class Upbit(Feed):
             'tms': 1584263923870,  // Timestamp
         }
         """
-        pair = pair_exchange_to_std(msg['cd'])
+        pair = self.exchange_symbol_to_std_symbol(msg['cd'])
         orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
         forced = pair not in self.l2_book
 
@@ -182,7 +172,7 @@ class Upbit(Feed):
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         """
         Doc : https://docs.upbit.com/docs/upbit-quotation-websocket
 
@@ -208,18 +198,14 @@ class Upbit(Feed):
         > [{"ticket":"UNIQUE_TICKET"},{"format":"SIMPLE"},{"type":"trade","codes":["KRW-BTC"]},{"type":"orderbook","codes":["KRW-ETH"]},{"type":"ticker", "codes":["KRW-EOS"]}]
         """
 
-        self.__reset()
         chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
-        for channel in self.channels if not self.config else self.config:
-            codes = list()
-            for pair in self.pairs if not self.config else self.config[channel]:
-                codes.append(pair)
-
-            if channel == L2_BOOK:
+        for chan in self.subscription:
+            codes = list(self.subscription[chan])
+            if chan == L2_BOOK:
                 chans.append({"type": "orderbook", "codes": codes, 'isOnlyRealtime': True})
-            if channel == TRADES:
+            if chan == TRADES:
                 chans.append({"type": "trade", "codes": codes, 'isOnlyRealtime': True})
-            if channel == TICKER:
+            if chan == TICKER:
                 chans.append({"type": "ticker", "codes": codes, 'isOnlyRealtime': True})
 
-        await websocket.send(json.dumps(chans))
+        await conn.write(json.dumps(chans))

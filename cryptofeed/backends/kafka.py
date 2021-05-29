@@ -9,9 +9,9 @@ import asyncio
 from aiokafka import AIOKafkaProducer
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
+from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
 
 
 class KafkaCallback:
@@ -31,9 +31,9 @@ class KafkaCallback:
                                              client_id='cryptofeed')
             await self.producer.start()
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self.__connect()
-        topic = f"{self.key}-{feed}-{pair}"
+        topic = f"{self.key}-{feed}-{symbol}"
         await self.producer.send_and_wait(topic, json.dumps(data).encode('utf-8'))
 
 
@@ -69,5 +69,5 @@ class MarketInfoKafka(KafkaCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
 
 
-class TransactionsKafka(KafkaCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
+class CandlesKafka(KafkaCallback, BackendCandlesCallback):
+    default_key = 'candles'

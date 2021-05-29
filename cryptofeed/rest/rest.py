@@ -17,7 +17,6 @@ from cryptofeed.rest.ftx import FTX
 from cryptofeed.rest.gemini import Gemini
 from cryptofeed.rest.kraken import Kraken
 from cryptofeed.rest.poloniex import Poloniex
-from cryptofeed.standards import load_exchange_pair_mapping
 
 
 LOG = logging.getLogger('rest')
@@ -28,7 +27,7 @@ class Rest:
     The rest class is a common interface for accessing the individual exchanges
 
     r = Rest()
-    r.bitmex.trades('XBTUSD', '2018-01-01', '2018-01-01')
+    r.bitmex.trades('BTC-USD', '2018-01-01', '2018-01-01')
 
     The Rest class optionally takes two exchange-related parameters, config, and sandbox.
     In the config file the api key and secrets can be specified. Sandbox enables sandbox
@@ -36,41 +35,25 @@ class Rest:
     """
 
     def __init__(self, config=None, sandbox=False):
-        self.config = Config(file_name=config)
+        config = Config(config=config)
 
-        lfile = 'rest.log' if not self.config or not self.config.restlog.filename else self.config.restlog.filename
-        level = logging.WARNING if not self.config or not self.config.restlog.level else self.config.restlog.level
-        get_logger('rest', lfile, level)
+        get_logger('rest', config.rest.log.filename, config.rest.log.level)
 
         self.lookup = {
-            'bitmex': Bitmex(config),
-            'bitfinex': Bitfinex(config),
-            'coinbase': Coinbase(config, sandbox=sandbox),
-            'poloniex': Poloniex(config),
-            'gemini': Gemini(config, sandbox=sandbox),
-            'kraken': Kraken(config),
-            'deribit': Deribit(config),
-            'binance_futures': BinanceFutures(config),
-            'binance_delivery': BinanceDelivery(config),
-            'ftx': FTX(config)
+            'bitmex': Bitmex(config.bitmex),
+            'bitfinex': Bitfinex(config.bitfinex),
+            'coinbase': Coinbase(config.coinbase, sandbox=sandbox),
+            'poloniex': Poloniex(config.poloniex),
+            'gemini': Gemini(config.gemini, sandbox=sandbox),
+            'kraken': Kraken(config.kraken),
+            'deribit': Deribit(config.deribit),
+            'binance_futures': BinanceFutures(config.binance_futures),
+            'binance_delivery': BinanceDelivery(config.binance_delivery),
+            'ftx': FTX(config.ftx)
         }
 
     def __getitem__(self, key):
-        exch = self.lookup[key.lower()]
-        if not exch.mapped:
-            try:
-                load_exchange_pair_mapping(exch.ID + 'REST')
-            except KeyError:
-                load_exchange_pair_mapping(exch.ID)
-            exch.mapped = True
-        return exch
+        return self.lookup[key.lower()]
 
     def __getattr__(self, attr):
-        exch = self.lookup[attr.lower()]
-        if not exch.mapped:
-            try:
-                load_exchange_pair_mapping(exch.ID + 'REST')
-            except KeyError:
-                load_exchange_pair_mapping(exch.ID)
-            exch.mapped = True
-        return exch
+        return self.lookup[attr.lower()]

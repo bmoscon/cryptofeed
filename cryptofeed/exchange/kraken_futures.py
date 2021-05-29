@@ -4,13 +4,15 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -22,20 +24,39 @@ LOG = logging.getLogger('feedhandler')
 
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
+    symbol_endpoint = 'https://futures.kraken.com/derivatives/api/v3/instruments'
 
-    def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://futures.kraken.com/ws/v1', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        _kraken_futures_product_type = {
+            'FI': 'Inverse Futures',
+            'FV': 'Vanilla Futures',
+            'PI': 'Perpetual Inverse Futures',
+            'PV': 'Perpetual Vanilla Futures',
+            'IN': 'Real Time Index',
+            'RR': 'Reference Rate',
+        }
+        ret = {}
+        info = defaultdict(dict)
 
-        instruments = self.get_instruments()
-        if self.config:
-            config_instruments = list(self.config.values())
-            self.pairs = [
-                pair for inner in config_instruments for pair in inner]
+        data = data['instruments']
+        for entry in data:
+            if not entry['tradeable']:
+                continue
+            normalized = entry['symbol'].upper().replace("_", "-")
+            symbol = normalized[3:6] + symbol_separator + normalized[6:9]
+            normalized = normalized.replace(normalized[3:9], symbol)
+            normalized = normalized.replace('XBT', 'BTC')
 
-        for pair in self.pairs:
-            if pair not in instruments:
-                raise ValueError(f"{pair} is not active on {self.id}")
+            info['tick_size'][normalized] = entry['tickSize']
+            info['contract_size'][normalized] = entry['contractSize']
+            info['underlying'][normalized] = entry['underlying']
+            info['product_type'][normalized] = _kraken_futures_product_type[normalized[:2]]
+            ret[normalized] = entry['symbol']
+        return ret, info
 
+    def __init__(self, **kwargs):
+        super().__init__('wss://futures.kraken.com/ws/v1', **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -43,19 +64,14 @@ class KrakenFutures(Feed):
         self.l2_book = {}
         self.seq_no = {}
 
-    @staticmethod
-    def get_instruments():
-        r = requests.get('https://futures.kraken.com/derivatives/api/v3/instruments').json()
-        return {e['symbol'].upper(): e['symbol'].upper() for e in r['instruments']}
-
-    async def subscribe(self, websocket):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in self.channels if self.channels else self.config:
-            await websocket.send(json.dumps(
+        for chan in self.subscription:
+            await conn.write(json.dumps(
                 {
                     "event": "subscribe",
                     "feed": chan,
-                    "product_ids": self.pairs if not self.config else list(self.config[chan])
+                    "product_ids": self.subscription[chan]
                 }
             ))
 
@@ -74,7 +90,7 @@ class KrakenFutures(Feed):
         }
         """
         await self.callback(TRADES, feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             side=BUY if msg['side'] == 'buy' else SELL,
                             amount=Decimal(msg['qty']),
                             price=Decimal(msg['price']),
@@ -98,7 +114,7 @@ class KrakenFutures(Feed):
             "maturityTime": 0
         }
         """
-        await self.callback(TICKER, feed=self.id, pair=pair, bid=msg['bid'], ask=msg['ask'], timestamp=timestamp, receipt_timestamp=timestamp)
+        await self.callback(TICKER, feed=self.id, symbol=pair, bid=msg['bid'], ask=msg['ask'], timestamp=timestamp, receipt_timestamp=timestamp)
 
     async def _book_snapshot(self, msg: dict, pair: str, timestamp: float):
         """
@@ -165,7 +181,7 @@ class KrakenFutures(Feed):
         if msg['tag'] == 'perpetual':
             await self.callback(FUNDING,
                                 feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 timestamp=timestamp_normalize(self.id, msg['time']),
                                 receipt_timestamp=timestamp,
                                 tag=msg['tag'],
@@ -177,7 +193,7 @@ class KrakenFutures(Feed):
         else:
             await self.callback(FUNDING,
                                 feed=self.id,
-                                pair=pair,
+                                symbol=pair,
                                 timestamp=timestamp_normalize(self.id, msg['time']),
                                 receipt_timestamp=timestamp,
                                 tag=msg['tag'],
@@ -190,7 +206,7 @@ class KrakenFutures(Feed):
         self.open_interest[pair] = oi
         await self.callback(OPEN_INTEREST,
                             feed=self.id,
-                            pair=pair,
+                            symbol=pair,
                             open_interest=msg['openInterest'],
                             timestamp=timestamp_normalize(self.id, msg['time']),
                             receipt_timestamp=timestamp
@@ -208,17 +224,19 @@ class KrakenFutures(Feed):
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
+            # As per Kraken support: websocket product_id is uppercase version of the REST API symbols
+            pair = self.exchange_symbol_to_std_symbol(msg['product_id'].lower())
             if msg['feed'] == 'trade':
-                await self._trade(msg, msg['product_id'], timestamp)
+                await self._trade(msg, pair, timestamp)
             elif msg['feed'] == 'trade_snapshot':
                 return
             elif msg['feed'] == 'ticker_lite':
-                await self._ticker(msg, msg['product_id'], timestamp)
+                await self._ticker(msg, pair, timestamp)
             elif msg['feed'] == 'ticker':
-                await self._funding(msg, msg['product_id'], timestamp)
+                await self._funding(msg, pair, timestamp)
             elif msg['feed'] == 'book_snapshot':
-                await self._book_snapshot(msg, msg['product_id'], timestamp)
+                await self._book_snapshot(msg, pair, timestamp)
             elif msg['feed'] == 'book':
-                await self._book(msg, msg['product_id'], timestamp)
+                await self._book(msg, pair, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)

@@ -6,8 +6,9 @@ import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, SELL
+from cryptofeed.exchanges import Deribit as DeribitEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import pair_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 1000
@@ -18,9 +19,10 @@ LOG = logging.getLogger('rest')
 class Deribit(API):
     ID = DERIBIT
     api = "https://www.deribit.com/api/v2/public/"
+    info = DeribitEx()
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades(symbol, start, end, retry, retry_wait):
             yield data
 
@@ -42,7 +44,7 @@ class Deribit(API):
             if start and end:
                 return requests.get(f"{self.api}get_last_trades_by_instrument_and_time?&start_timestamp={start}&end_timestamp={end}&instrument_name={instrument}&include_old=true&count={REQUEST_LIMIT}")
             else:
-                return requests.get(f"{self.api}get_last_trades_by_instrument_and_time/")
+                return requests.get(f"{self.api}get_last_trades_by_instrument?instrument_name={instrument}&include_old=true&count={REQUEST_LIMIT}")
 
         while True:
             r = helper(start, end)
@@ -75,14 +77,14 @@ class Deribit(API):
             data = [self._trade_normalization(x) for x in data]
             yield data
 
-            if len(orig_data) < REQUEST_LIMIT:
+            if len(orig_data) < REQUEST_LIMIT or not start or not end:
                 break
 
     def _trade_normalization(self, trade: list) -> dict:
 
         ret = {
             'timestamp': timestamp_normalize(self.ID, trade["timestamp"]),
-            'pair': trade["instrument_name"],
+            'symbol': trade["instrument_name"],
             'id': int(trade["trade_id"]),
             'feed': self.ID,
             'side': BUY if trade["direction"] == 'buy' else SELL,
@@ -96,7 +98,7 @@ class Deribit(API):
 
     def _book(self, symbol: str, retry=0, retry_wait=0):
         ret = {}
-        symbol = pair_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         ret[symbol] = {BID: sd(), ASK: sd()}
 
         @request_retry(self.ID, retry, retry_wait)
