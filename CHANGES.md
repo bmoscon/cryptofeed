@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 1.9.1
+  * Feature: add Bithumb exchange - l2 book and trades
   * Bugfix: Fix inverted Poloniex symbols
   * Feature: simplify and cleanup parts of Poloniex
   * Feature: add `symbols` class method to all exchanges to get list of supported trading pairs

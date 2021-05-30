@@ -10,8 +10,10 @@ between exchanges. These include trading symbols, timestamps, and
 data channel names
 '''
 import logging
+import datetime as dt
 
-from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX, BITMAX, BITMEX,
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
+                                BITHUMB, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
@@ -37,12 +39,16 @@ def timestamp_normalize(exchange, ts):
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
+    elif exchange in {BITHUMB}:
+        return (ts - dt.timedelta(hours=9)).timestamp()
+    # return (dt.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") - dt.timedelta(hours=9)).timestamp()
 
 
 _feed_to_exchange_map = {
     L2_BOOK: {
         BITFINEX: 'book-P0-F0-100',
         BITFLYER: 'lightning_board_{}',
+        BITHUMB: 'orderbook',
         POLONIEX: L2_BOOK,
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
@@ -76,6 +82,7 @@ _feed_to_exchange_map = {
     },
     L3_BOOK: {
         BITFINEX: 'book-R0-F0-100',
+        BITHUMB: UNSUPPORTED,
         BITSTAMP: 'detail_order_book',
         HITBTC: UNSUPPORTED,
         COINBASE: 'full',
@@ -108,6 +115,7 @@ _feed_to_exchange_map = {
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
         BITFLYER: 'lightning_executions_{}',
+        BITHUMB: 'transaction_history',
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN: 'trade',
@@ -166,7 +174,8 @@ _feed_to_exchange_map = {
         UPBIT: UNSUPPORTED,
         GATEIO: 'spot.tickers',
         PROBIT: UNSUPPORTED,
-        KUCOIN: '/market/ticker'
+        KUCOIN: '/market/ticker',
+        BITHUMB: UNSUPPORTED
     },
     FUNDING: {
         BITMEX: 'funding',
