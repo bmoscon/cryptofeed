@@ -48,7 +48,7 @@ _feed_to_exchange_map = {
     L2_BOOK: {
         BITFINEX: 'book-P0-F0-100',
         BITFLYER: 'lightning_board_{}',
-        BITHUMB: 'orderbook',
+        BITHUMB: 'orderbookdepth',
         POLONIEX: L2_BOOK,
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
@@ -115,7 +115,7 @@ _feed_to_exchange_map = {
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
         BITFLYER: 'lightning_executions_{}',
-        BITHUMB: 'transaction_history',
+        BITHUMB: 'transaction',
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN: 'trade',

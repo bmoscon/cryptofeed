@@ -6,15 +6,16 @@ associated with this software.
 '''
 import logging
 import time
-import datetime as dt
 from decimal import Decimal
-from typing import List, Tuple, Callable, Dict
-from functools import partial
+from typing import Tuple, Dict
+from collections import defaultdict
+import copy
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.symbols import Symbols
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITHUMB, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -34,68 +35,86 @@ class Bithumb(Feed):
     shows that there is no USDT symbols available. Please be careful when referencing their api_info page
     '''
     id = BITHUMB
-    symbol_endpoint = 'https://global-openapi.bithumb.pro/market/data/config'
+    api = "https://api.bithumb.com/public"
+    symbol_endpoint = [
+        ('https://api.bithumb.com/public/ticker/ALL_BTC', 'BTC'),
+        ('https://api.bithumb.com/public/ticker/ALL_KRW', 'KRW')
+    ]
+
+    # Override symbol_mapping class method, because this bithumb is a very special case.
+    # There is no actual page in the API for reference info.
+    # Need to query the ticker endpoint by quote currency for that info
+    # To qeury the ticker endpoint, you need to know which quote currency you want. So far, seems like the exhcnage
+    # only offers KRW and BTC as quote currencies.
+    @classmethod
+    def symbol_mapping(cls, symbol_separator='-', refresh=False) -> Dict:
+        if Symbols.populated(cls.id) and not refresh:
+            return Symbols.get(cls.id)[0]
+        try:
+            LOG.debug("%s: reading symbol information from %s", cls.id, cls.symbol_endpoint)
+            data = {}
+            for ep, quote_curr in cls.symbol_endpoint:
+                data[quote_curr] = cls.http_sync.read(ep, json=True, uuid=cls.id)
+
+            syms, info = cls._parse_symbol_data(data, symbol_separator)
+            Symbols.set(cls.id, syms, info)
+            return syms
+        except Exception as e:
+            LOG.error("%s: Failed to parse symbol information: %s", cls.id, str(e), exc_info=True)
+            raise
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        # doc: https://apidocs.bithumb.com/docs/api_info
-
-        # For some unknown reason, bithumb's api_info page lists all their KRW symbols as USDT.
-        # Probably because they bought the exchange and copied everything but didnt bother
-        # to update the reference data.
-        # We'll just assume that anything USDT is actually KRW. a search on their exchange page
-        # shows that there is no USDT symbols available.
-
         ret = {}
 
-        for entry in data['info']['spotConfig']:
-            raw_symbol = entry['symbol']
-            fixed_symbol = raw_symbol.replace('USDT', 'KRW')
-            ret[fixed_symbol.replace("-", symbol_separator)] = fixed_symbol
+        for quote_curr, response in data.items():
+            bases = response['data']
+            for base_curr in bases.keys():
+                ret["{}-{}".format(base_curr, quote_curr)] = "{}_{}".format(base_curr, quote_curr)
 
         return ret, {}
 
     def __init__(self, **kwargs):
-        super().__init__(None, **kwargs)
-        self.rest_endpoint = "https://api.bithumb.com/public"
-        self.last_traded_time = 0
+        super().__init__("wss://pubwss.bithumb.com/pub/ws", **kwargs)
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
+        self.l2_book = defaultdict(lambda: {ASK: sd(), BID: sd()})
 
-    async def _trades(self, msg: dict, rtimestamp: float, bithumb_symbol: str):
+    async def _trades(self, msg: dict, rtimestamp: float):
         '''
-        {"status":"0000","data":[
-            {"transaction_date":"2021-05-30 00:59:26","type":"bid","units_traded":"0.0057","price":"41927000","total":"238983"},
-            {"transaction_date":"2021-05-30 00:59:26","type":"bid","units_traded":"0.1377","price":"41931000","total":"5773898"},
-            {"transaction_date":"2021-05-30 00:59:27","type":"ask","units_traded":"0.0059","price":"41889000","total":"247145"},
-        ]}
-
-        bithumb returns a list of recently made transactions. It's up to us to filter out those which we have
-        already processed before.
-
-        The current way of filtering based on transaction_date field will result in some trades being duplicated
-        when there are multiple trades happening in the same second.
+        {
+            "type": "transaction",
+            "content": {
+                "list": [
+                    {
+                        "symbol": "BTC_KRW", // currency code
+                        "buySellGb": "1", // type of contract (1: sale contract, 2: buy contract)
+                        "contPrice": "10579000", // execution price
+                        "contQty": "0.01", // number of contracts
+                        "contAmt": "105790.00", // execution amount
+                        "contDtm": "2020-01-29 12:24:18.830039", // Signing time
+                        "updn": "dn" // comparison with the previous price: up-up, dn-down
+                    }
+                ]
+            }
+        }
         '''
-        pair = self.exchange_symbol_to_std_symbol(bithumb_symbol)
-        for record in msg['data']:
-            timestamp = timestamp_normalize(self.id, record['transaction_date'])
+        trades = msg.get('content', {}).get('list', [])
 
-            if timestamp < self.last_traded_time:
-                continue
-
-            self.last_traded_time = timestamp
-
-            price = Decimal(record['price'])
-            quantity = Decimal(record['units_traded'])
-            side = BUY if record['type'] == 'bid' else SELL
+        for trade in trades:
+            # API ref list uses '-', but market data returns '_'
+            symbol = self.exchange_symbol_to_std_symbol(trade['symbol'])
+            timestamp = timestamp_normalize(self.id, trade['contDtm'])
+            price = Decimal(trade['contPrice'])
+            quantity = Decimal(trade['contQty'])
+            side = BUY if trade['buySellGb'] == '2' else SELL
 
             # bithumb doesnt provide us with a order_id. create our own based on tsns
             order_id = "%.0f" % (time.time() * 1e9)
 
             await self.callback(TRADES, feed=self.id,
-                                symbol=pair,
+                                symbol=symbol,
                                 side=side,
                                 amount=quantity,
                                 price=price,
@@ -103,71 +122,106 @@ class Bithumb(Feed):
                                 timestamp=timestamp,
                                 receipt_timestamp=rtimestamp)
 
-    async def _l2_update(self, msg: dict, timestamp: float, bithumb_symbol: str):
+    # def _request(self, method: str, endpoint: str, body=None, retry=None, retry_wait=0):
+    #     api = self.api
+    #
+    #     @request_retry(self.ID, retry, retry_wait)
+    #     def helper(method, api, endpoint, body):
+    #         header = None
+    #
+    #         if method == "GET":
+    #             return requests.get(f'{api}{endpoint}', headers=header)
+    #         elif method == 'POST':
+    #             return requests.post(f'{api}{endpoint}', json=body, headers=header)
+    #         elif method == 'DELETE':
+    #             return requests.delete(f'{api}{endpoint}', headers=header)
+    #
+    #     return helper(method, api, endpoint, body)
+    #
+    # def _book(self, symbol: str, retry, retry_wait):
+    #     data = self._request('GET', f"/orderbook/{symbol.replace('-', '_')}", retry=retry, retry_wait=retry_wait)
+    #     return json.loads(data.text, parse_float=Decimal)
+
+    async def _l2_update(self, msg: dict, rtimestamp: float):
         '''
-        Bithumb only sends snapshots
+        Bithumb doesnt seem to send snapshots via WSS.
+        Snapshot API is available on REST, but there doesnt seem to be a way to synchronize the two.
+        Current implementation builds the book based accumulating incoming deltas.
 
-        {"status":"0000","data":{"timestamp":"1622303936985","payment_currency":"KRW","order_currency":"BTC",
-        "bids":[
-            {"price":"41867000","quantity":"0.2301"},
-            {"price":"41865000","quantity":"0.0022"},
-            {"price":"41863000","quantity":"0.0076"}],
-        "asks":[
-            {"price":"41925000","quantity":"0.57632296"},
-            {"price":"41927000","quantity":"0.0296"},
-            {"price":"41935000","quantity":"0.0288"},
-            {"price":"41942000","quantity":"0.0259"}
-        ]}}
+        {
+            "type": "orderbookdepth",
+            "content": {
+                "list": [
+                    {
+                        "symbol": "BTC_KRW",
+                        "orderType": "ask", // order type-bid / ask
+                        "price": "10593000", // quote
+                        "quantity": "1.11223318", // balance
+                        "total": "3" // number of cases
+                    },
+                    {"symbol": "BTC_KRW", "orderType": "ask", "price": "10596000", "quantity": "0.5495", "total": "8"},
+                    {"symbol": "BTC_KRW", "orderType": "ask", "price": "10598000", "quantity": "18.2085", "total": "10"},
+                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10532000", "quantity": "0", "total": "0"},
+                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10572000", "quantity": "2.3324", "total": "4"},
+                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10571000", "quantity": "1.469", "total": "3"},
+                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10569000", "quantity": "0.5152", "total": "2"}
+                ],
+                "datetime":1580268255864325 // date and time
+            }
+        }
         '''
-        pair = self.exchange_symbol_to_std_symbol(bithumb_symbol)
-        levels = msg.get('data', {})
-        self.l2_book[pair] = {ASK: sd(), BID: sd()}
+        depths = msg.get('content', {}).get('list', [])
+        timestamp = msg.get('content', {}).get('datetime', None)
 
-        for bithumb_side in ('bids', 'asks'):
-            side = BID if bithumb_side == "bids" else ASK
-            for level in levels.get(bithumb_side, []):
-                price = Decimal(level['price'])
-                quantity = Decimal(level['quantity'])
+        if len(depths) > 0:
+            # API ref list uses '-', but market data returns '_'
+            # assume that all depths in the same msg belong to the same symbol
+            symbol = self.exchange_symbol_to_std_symbol(depths[0]['symbol'])
 
-                self.l2_book[pair][side][price] = quantity
+            # Copy over so that book_callback can generate deltas.
+            self.previous_book[symbol] = copy.deepcopy(self.l2_book[symbol])
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
+            for depth in depths:
+                price = Decimal(depth['price'])
+                quantity = Decimal(depth['quantity'])
+                side = BID if depth['orderType'] == 'bid' else ASK
 
-    async def message_handler(self, bithumb_symbol: str, msg: str, conn, timestamp: float):
+                if quantity == 0:
+                    self.l2_book[symbol][side].pop(price, None)
+                else:
+                    self.l2_book[symbol][side][price] = quantity
+
+            # I've noticed it's possible for the l2 deltas to be 'incomplete'. sometimes, we will miss a message
+            # to clear a level, resulting in a crossed market. We step thru the BBO, delete both sides if crossing
+            while self.l2_book[symbol][BID].peekitem(-1) <= self.l2_book[symbol][BID].peekitem(0):
+                self.l2_book[symbol][BID].popitem(-1) <= self.l2_book[symbol][BID].popitem(0)
+
+            # Do some trimming of the book. Bithumb API doesnt specify how many levels they keep/support.
+            # This implementation makes the assumption of 25 levels. Anything beyond that - drop.
+            # This is separate from the max_depth setting at the feed level.
+            for book_side, pop_index in ((BID, 0), (ASK, -1)):
+                book = self.l2_book[symbol][book_side]
+                while len(book) > 25:
+                    book.popitem(pop_index)
+
+            await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, False, None, timestamp, timestamp)
+
+    async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        data = msg['data']
+        msg_type = msg.get('type', None)
 
-        if isinstance(data, list):
-            await self._trades(msg, timestamp, bithumb_symbol)
-        elif isinstance(data, dict):
-            await self._l2_update(msg, timestamp, bithumb_symbol)
-
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-
-        if self.address:
-            ret = super().connect()
-
-        # For bithumb, the trade rest api unfortunately does not return an identifier on which symbol the response
-        # is for. Hence, we need to make a HTTPPoll object for each with a partial function to call message_handler
-        # L2 rest api has the information, but lets stick to the same way for both to keep it clean
-        for chan in set(self.subscription):
-            if chan == "orderbook":
-                for pair in self.subscription[chan]:
-                    addr = f"{self.rest_endpoint}/orderbook/{pair.replace('-', '_')}"
-                    ret.append((HTTPPoll([addr], self.id, delay=1, sleep=1.0), self.subscribe, partial(self.message_handler, pair)))
-            if chan == "transaction_history":
-                for pair in self.subscription[chan]:
-                    addr = f"{self.rest_endpoint}/transaction_history/{pair.replace('-', '_')}"
-                    ret.append((HTTPPoll([addr], self.id, delay=1, sleep=1.0), self.subscribe, partial(self.message_handler, pair)))
-            # Bithumb has a 'ticker' channel, but it provide OHLC-last data, not BBO px.
-        return ret
+        if msg_type == 'transaction':
+            await self._trades(msg, timestamp)
+        elif msg_type == 'orderbookdepth':
+            await self._l2_update(msg, timestamp)
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
         if self.subscription:
             for chan in self.subscription:
-                for pair in self.subscription[chan]:
-                    # bithumb is a fully rest exchange. nothing to do here
-                    pass
+                await conn.write(json.dumps({
+                    "type": chan,
+                    "symbols": [symbol for symbol in self.subscription[chan]]
+                    # API ref list uses '-', but subscription requires '_'
+                }))
