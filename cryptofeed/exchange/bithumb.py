@@ -122,26 +122,6 @@ class Bithumb(Feed):
                                 timestamp=timestamp,
                                 receipt_timestamp=rtimestamp)
 
-    # def _request(self, method: str, endpoint: str, body=None, retry=None, retry_wait=0):
-    #     api = self.api
-    #
-    #     @request_retry(self.ID, retry, retry_wait)
-    #     def helper(method, api, endpoint, body):
-    #         header = None
-    #
-    #         if method == "GET":
-    #             return requests.get(f'{api}{endpoint}', headers=header)
-    #         elif method == 'POST':
-    #             return requests.post(f'{api}{endpoint}', json=body, headers=header)
-    #         elif method == 'DELETE':
-    #             return requests.delete(f'{api}{endpoint}', headers=header)
-    #
-    #     return helper(method, api, endpoint, body)
-    #
-    # def _book(self, symbol: str, retry, retry_wait):
-    #     data = self._request('GET', f"/orderbook/{symbol.replace('-', '_')}", retry=retry, retry_wait=retry_wait)
-    #     return json.loads(data.text, parse_float=Decimal)
-
     async def _l2_update(self, msg: dict, rtimestamp: float):
         '''
         Bithumb doesnt seem to send snapshots via WSS.
