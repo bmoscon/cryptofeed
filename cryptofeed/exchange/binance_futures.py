@@ -9,7 +9,7 @@ import logging
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, TICKER
+from cryptofeed.defines import BINANCE_FUTURES, BINANCE, OPEN_INTEREST, TICKER
 from cryptofeed.exchange.binance import Binance
 
 LOG = logging.getLogger('feedhandler')
@@ -68,7 +68,7 @@ class BinanceFutures(Binance):
         pair = pair.upper()
 
         msg_type = msg.get('e')
-        if msg_type is None:
+        if msg_type == 'bookTicker':
             # For the BinanceFutures API it appears
             # the ticker stream (<symbol>@bookTicker) is
             # the only payload without an "e" key describing the event type

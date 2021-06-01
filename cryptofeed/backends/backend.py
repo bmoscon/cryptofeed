@@ -49,8 +49,11 @@ class BackendFundingCallback:
 
 
 class BackendTickerCallback:
-    async def __call__(self, *, feed: str, pair: str, bid: Decimal, ask: Decimal, timestamp: float, receipt_timestamp: float):
-        data = {'feed': feed, 'pair': pair, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
+    async def __call__(self, *, feed: str, pair: str, bid: Decimal, bid_size: Decimal, ask: Decimal, ask_size: Decimal,
+                       timestamp: float, receipt_timestamp: float):
+        data = {'feed': feed, 'pair': pair, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask),
+                'bid_size': self.numeric_type(bid_size), 'ask_size': self.numeric_type(ask_size),
+                'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
         await self.write(feed, pair, timestamp, receipt_timestamp, data)
 
 

@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import atexit
+import logging
 from collections import defaultdict
 
 from aiofile import AIOFile
@@ -27,6 +28,7 @@ class AsyncFileCallback:
 
     async def write(self, uuid):
         p = f"{self.path}/{uuid}.{self.count[uuid]}"
+        logging.info(p)
         async with AIOFile(p, mode='a') as fp:
             r = await fp.write("\n".join(self.data[uuid]) + "\n", offset=self.pointer[uuid])
             self.pointer[uuid] += r

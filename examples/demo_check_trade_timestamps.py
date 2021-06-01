@@ -2,13 +2,13 @@ import collections
 import os
 import time
 from datetime import datetime
-
+import logging
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback
 from cryptofeed.defines import (ASK, BID, BINANCE, BITFINEX, BITMEX, BITSTAMP, BYBIT, COINBASE, DERIBIT, EXX, FUNDING,
                                 GEMINI, HITBTC, HUOBI, KRAKEN, L2_BOOK, OKCOIN, OKEX, POLONIEX, TICKER, TRADES)
 
-
+logging.basicConfig(level='INFO')
 # Gathers the first trade of each exchange and prints out info on the timestamps.
 # To add an exchange, setup exch_sym_map with the most liquid pair.
 # Sample output:
@@ -64,7 +64,8 @@ Ending: 1562808727.693259
 '''
 
 
-async def trade(feed, pair, order_id, timestamp, side, amount, price):
+async def trade(feed, pair, order_id, timestamp, side, amount, price, receipt_ts):
+    #logging.info(kwargs)
     if feed not in trades:
         print(f'Added {feed}.')
         #exch_count += 1
@@ -75,7 +76,8 @@ async def trade(feed, pair, order_id, timestamp, side, amount, price):
                 ts = trades[e]['timestamp']
                 print(f'{e:12s}:', end='')
                 try:
-                    print(f' timestamp:{str(ts):<20} {type(ts)} {datetime.fromtimestamp(ts)}')
+                    print(f' timestamp:{str(ts):<20} {type(ts)} {datetime.fromtimestamp(ts)} '
+                          f'{datetime.fromtimestamp(receipt_ts)}')
                 except TypeError as e:
                     print(e)
             print(f'Ending: {time.time()}')

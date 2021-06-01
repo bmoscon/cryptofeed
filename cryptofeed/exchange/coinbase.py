@@ -17,7 +17,6 @@ from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, 
 from cryptofeed.feed import Feed
 from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
-
 LOG = logging.getLogger('feedhandler')
 
 
@@ -25,7 +24,8 @@ class Coinbase(Feed):
     id = COINBASE
 
     def __init__(self, pairs=None, channels=None, callbacks=None, **kwargs):
-        super().__init__('wss://ws-feed.pro.coinbase.com', pairs=pairs, channels=channels, callbacks=callbacks, **kwargs)
+        super().__init__('wss://ws-feed.pro.coinbase.com', pairs=pairs, channels=channels, callbacks=callbacks,
+                         **kwargs)
         # we only keep track of the L3 order book if we have at least one subscribed order-book callback.
         # use case: subscribing to the L3 book plus Trade type gives you order_type information (see _received below),
         # and we don't need to do the rest of the book-keeping unless we have an active callback
@@ -270,7 +270,6 @@ class Coinbase(Feed):
         order_type = msg["order_type"]
         self.order_type_map[order_id] = order_type
 
-
     async def _change(self, msg: dict, timestamp: float):
         """
         Like done, these updates can be sent for orders that are not in the book. Per the docs:
@@ -308,11 +307,13 @@ class Coinbase(Feed):
         # PERF perf_start(self.id, 'msg')
         msg = json.loads(msg, parse_float=Decimal)
 
-        if 'product_id' in msg and 'sequence' in msg and ('full' in self.channels or ('full' in self.config and msg['product_id'] in self.config['full'])):
+        if 'product_id' in msg and 'sequence' in msg and (
+                'full' in self.channels or ('full' in self.config and msg['product_id'] in self.config['full'])):
             pair = pair_exchange_to_std(msg['product_id'])
             if msg['sequence'] <= self.seq_no[pair]:
                 return
-            elif (self.keep_l3_book and ('full' in self.channels or 'full' in self.config)) and msg['sequence'] != self.seq_no[pair] + 1:
+            elif (self.keep_l3_book and ('full' in self.channels or 'full' in self.config)) and msg['sequence'] != \
+                    self.seq_no[pair] + 1:
                 LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
                 LOG.warning("%s: Requesting book snapshot", self.id)
                 await self._book_snapshot(self.pairs or self.book_pairs)

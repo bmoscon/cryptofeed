@@ -52,17 +52,16 @@ class Binance(Feed):
     async def _trade(self, msg: dict, timestamp: float):
         """
         {
-            "e": "aggTrade",  // Event type
-            "E": 123456789,   // Event time
-            "s": "BNBBTC",    // Symbol
-            "a": 12345,       // Aggregate trade ID
-            "p": "0.001",     // Price
-            "q": "100",       // Quantity
-            "f": 100,         // First trade ID
-            "l": 105,         // Last trade ID
-            "T": 123456785,   // Trade time
-            "m": true,        // Is the buyer the market maker?
-            "M": true         // Ignore
+          "e":"aggTrade",       // Event type
+          "E":1591261134288,    // Event time
+          "a":424951,               // Aggregate trade ID
+          "s":"BTCUSD_200626",  // Symbol
+          "p":"9643.5",         // Price
+          "q":"2",              // Quantity
+          "f":606073,               // First trade ID
+          "l":606073,               // Last trade ID
+          "T":1591261134199,    // Trade time
+          "m":false             / Is the buyer the market maker?
         }
         """
         price = Decimal(msg['p'])
@@ -103,15 +102,28 @@ class Binance(Feed):
         "L": 18150,         // Last trade Id
         "n": 18151          // Total number of trades
         }
+        {
+          "u":400900217,     // order book updateId
+          "s":"BNBUSDT",     // 交易对
+          "b":"25.35190000", // 买单最优挂单价格
+          "B":"31.21000000", // 买单最优挂单数量
+          "a":"25.36520000", // 卖单最优挂单价格
+          "A":"40.66000000"  // 卖单最优挂单数量
+        }
         """
         pair = pair_exchange_to_std(msg['s'])
         bid = Decimal(msg['b'])
+        bid_size = Decimal(msg['B'])
         ask = Decimal(msg['a'])
+        ask_size = Decimal(msg['A'])
+        #udpate_id = msg['u']
         await self.callback(TICKER, feed=self.id,
                             pair=pair,
                             bid=bid,
+                            bid_size=bid_size,
                             ask=ask,
-                            timestamp=timestamp_normalize(self.id, msg['T']),
+                            ask_size = ask_size,
+                            timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
     async def _liquidations(self, msg: dict, timestamp: float):
