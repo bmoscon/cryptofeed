@@ -12,6 +12,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
+* [Bithumb](https://en.bithumb.com/)
 * [BitMax](https://bitmax.io/)
 * [Bitstamp](https://www.bitstamp.net/)
 * [Bittrex](https://global.bittrex.com/)
