@@ -127,9 +127,17 @@ class TickerPostgres(PostgresCallback, BackendTickerCallback):
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
     default_table = OPEN_INTEREST
 
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+        d = f"{data['open_interest']}"
+        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+
 
 class FuturesIndexPostgres(PostgresCallback, BackendFuturesIndexCallback):
     default_table = FUTURES_INDEX
+
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+        d = f"{data['futures_index']}"
+        await super().write(feed, pair, timestamp, receipt_timestamp, d)
 
 
 class LiquidationsPostgres(PostgresCallback, BackendLiquidationsCallback):
