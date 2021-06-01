@@ -23,11 +23,11 @@ class AsyncFileCallback:
 
     def __del__(self):
         for uuid in list(self.data.keys()):
-            with open(f"{self.path}/{uuid}.{self.count[uuid]}", 'a') as fp:
+            with open(f"{self.path}/{uuid}.{self.count[uuid]}.json", 'a') as fp:
                 fp.write("\n".join(self.data[uuid]))
 
     async def write(self, uuid):
-        p = f"{self.path}/{uuid}.{self.count[uuid]}"
+        p = f"{self.path}/{uuid}.{self.count[uuid]}.json"
         logging.info(p)
         async with AIOFile(p, mode='a') as fp:
             r = await fp.write("\n".join(self.data[uuid]) + "\n", offset=self.pointer[uuid])
@@ -39,6 +39,6 @@ class AsyncFileCallback:
             self.pointer[uuid] = 0
 
     async def __call__(self, data: str, timestamp: float, uuid: str):
-        self.data[uuid].append(f"{timestamp}: {data}")
+        self.data[uuid].append(f'{"t": {timestamp}, "msg": {data}}')
         if len(self.data[uuid]) >= self.length:
             await self.write(uuid)

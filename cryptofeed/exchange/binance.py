@@ -123,7 +123,7 @@ class Binance(Feed):
                             bid_size=bid_size,
                             ask=ask,
                             ask_size = ask_size,
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=timestamp,
                             receipt_timestamp=timestamp)
 
     async def _liquidations(self, msg: dict, timestamp: float):
@@ -325,12 +325,13 @@ class Binance(Feed):
         msg = msg['data']
 
         pair = pair.upper()
-
-        if msg['e'] == 'depthUpdate':
+        if 'e' not in msg.keys():
+            await self._ticker(msg, timestamp)
+        elif msg['e'] == 'depthUpdate':
             await self._book(msg, pair, timestamp)
         elif msg['e'] == 'aggTrade':
             await self._trade(msg, timestamp)
-        elif msg['e'] == '24hrTicker':
+        elif msg['e'] == '24hrticker':
             await self._ticker(msg, timestamp)
         elif msg['e'] == 'forceOrder':
             await self._liquidations(msg, timestamp)

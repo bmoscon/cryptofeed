@@ -11,6 +11,7 @@ from yapic import json
 
 from cryptofeed.defines import BINANCE_FUTURES, BINANCE, OPEN_INTEREST, TICKER
 from cryptofeed.exchange.binance import Binance
+from cryptofeed.standards import pair_exchange_to_std, timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
@@ -31,10 +32,10 @@ class BinanceFutures(Binance):
                 continue
             for pair in self.pairs if not self.config else self.config[chan]:
                 pair = pair.lower()
-                if chan == TICKER:
-                    stream = f"{pair}@bookTicker/"
-                else:
-                    stream = f"{pair}@{chan}/"
+                # if chan == TICKER:
+                #     stream = f"{pair}@bookTicker/"
+                # else:
+                stream = f"{pair}@{chan}/"
                 address += stream
         if address == f"{self.ws_endpoint}/stream?streams=":
             return None
@@ -69,9 +70,6 @@ class BinanceFutures(Binance):
 
         msg_type = msg.get('e')
         if msg_type == 'bookTicker':
-            # For the BinanceFutures API it appears
-            # the ticker stream (<symbol>@bookTicker) is
-            # the only payload without an "e" key describing the event type
             await self._ticker(msg, timestamp)
         elif msg_type == 'depthUpdate':
             await self._book(msg, pair, timestamp)
@@ -83,3 +81,32 @@ class BinanceFutures(Binance):
             await self._funding(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
+
+    async def _ticker(self, msg: dict, timestamp: float):
+        """
+        {
+          "e":"bookTicker",     // 事件类型
+          "u":400900217,        // 更新ID
+          "E": 1568014460893,   // 事件推送时间
+          "T": 1568014460891,   // 撮合时间
+          "s":"BNBUSDT",        // 交易对
+          "b":"25.35190000",    // 买单最优挂单价格
+          "B":"31.21000000",    // 买单最优挂单数量
+          "a":"25.36520000",    // 卖单最优挂单价格
+          "A":"40.66000000"     // 卖单最优挂单数量
+        }
+        """
+        pair = pair_exchange_to_std(msg['s'])
+        bid = Decimal(msg['b'])
+        bid_size = Decimal(msg['B'])
+        ask = Decimal(msg['a'])
+        ask_size = Decimal(msg['A'])
+        #udpate_id = msg['u']
+        await self.callback(TICKER, feed=self.id,
+                            pair=pair,
+                            bid=bid,
+                            bid_size=bid_size,
+                            ask=ask,
+                            ask_size = ask_size,
+                            timestamp=msg['E'],
+                            receipt_timestamp=timestamp)
