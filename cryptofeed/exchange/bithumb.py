@@ -69,6 +69,8 @@ class Bithumb(Feed):
         for quote_curr, response in data.items():
             bases = response['data']
             for base_curr in bases.keys():
+                if base_curr == 'date':
+                    continue
                 ret["{}-{}".format(base_curr, quote_curr)] = "{}_{}".format(base_curr, quote_curr)
 
         return ret, {}
