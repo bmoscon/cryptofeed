@@ -24,7 +24,7 @@ def stop():
     loop.stop()
 
 
-def main():
+def main(only_exchange=None):
     skip = [COINGECKO, EXX]
     files = glob.glob('*')
     for f in files:
@@ -34,7 +34,7 @@ def main():
 
     print(f'Generating test data. This will take approximately {(len(EXCHANGE_MAP) - len(set(skip))) * 0.5} minutes.')
     loop = asyncio.get_event_loop()
-    for exch_str, exchange in EXCHANGE_MAP.items():
+    for exch_str, exchange in EXCHANGE_MAP.items() if only_exchange is None else [(only_exchange, EXCHANGE_MAP[only_exchange])]:
         if exch_str in skip:
             continue
 

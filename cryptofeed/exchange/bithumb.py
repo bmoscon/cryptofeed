@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-import time
 from decimal import Decimal
 from typing import Tuple, Dict
 from collections import defaultdict
@@ -75,7 +74,7 @@ class Bithumb(Feed):
         return ret, {}
 
     def __init__(self, **kwargs):
-        super().__init__("wss://pubwss.bithumb.com/pub/ws", **kwargs)
+        super().__init__("wss://pubwss.bithumb.com/pub/ws", cross_check=True, **kwargs)
         self.__reset()
 
     def __reset(self):
@@ -110,24 +109,21 @@ class Bithumb(Feed):
             quantity = Decimal(trade['contQty'])
             side = BUY if trade['buySellGb'] == '2' else SELL
 
-            # bithumb doesnt provide us with a order_id. create our own based on tsns
-            order_id = "%.0f" % (time.time() * 1e9)
-
             await self.callback(TRADES, feed=self.id,
                                 symbol=symbol,
                                 side=side,
                                 amount=quantity,
                                 price=price,
-                                order_id=order_id,
+                                order_id=None,
                                 timestamp=timestamp,
                                 receipt_timestamp=rtimestamp)
 
     async def _l2_update(self, msg: dict, rtimestamp: float):
         '''
-        Bithumb doesnt seem to send snapshots via WSS.
-        Snapshot API is available on REST, but there doesnt seem to be a way to synchronize the two.
-        Current implementation builds the book based accumulating incoming deltas.
-
+        WARNING: API provides no way to synchronize from a REST snapshot,
+        nor does it provide a snapshot via REST. This implementation builds an
+        orderbook solely from deltas, and is likely to take some time to
+        build an accurate state.
         {
             "type": "orderbookdepth",
             "content": {
@@ -171,20 +167,14 @@ class Bithumb(Feed):
                 else:
                     self.l2_book[symbol][side][price] = quantity
 
-            # I've noticed it's possible for the l2 deltas to be 'incomplete'. sometimes, we will miss a message
-            # to clear a level, resulting in a crossed market. We step thru the BBO, delete both sides if crossing
-            while self.l2_book[symbol][BID].peekitem(-1) <= self.l2_book[symbol][BID].peekitem(0):
-                self.l2_book[symbol][BID].popitem(-1) <= self.l2_book[symbol][BID].popitem(0)
-
-            # Do some trimming of the book. Bithumb API doesnt specify how many levels they keep/support.
-            # This implementation makes the assumption of 25 levels. Anything beyond that - drop.
-            # This is separate from the max_depth setting at the feed level.
+            # Bithumb REST orderbooks only show/retain 30 levels, drop
+            # everything past 30 levels
             for book_side, pop_index in ((BID, 0), (ASK, -1)):
                 book = self.l2_book[symbol][book_side]
-                while len(book) > 25:
+                while len(book) > 30:
                     book.popitem(pop_index)
 
-            await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, False, None, timestamp, timestamp)
+            await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, False, None, timestamp, rtimestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -194,6 +184,10 @@ class Bithumb(Feed):
             await self._trades(msg, timestamp)
         elif msg_type == 'orderbookdepth':
             await self._l2_update(msg, timestamp)
+        elif msg_type is None and msg.get('status', None) == '0000':
+            return
+        else:
+            LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
