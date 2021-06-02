@@ -20,26 +20,30 @@ class AsyncFileCallback:
         self.rotate = rotate
         self.count = defaultdict(int)
         self.pointer = defaultdict(int)
-        self.ymd = str(datetime.now()).replace('-', "").replace(' ',"_").replace(':',"").split('.')[0]
+        self.ymd = defaultdict(str)
         atexit.register(self.__del__)
 
     def __del__(self):
         for uuid in list(self.data.keys()):
-            p = f"{self.path}/{self.ymd}_{uuid}.{self.count[uuid]}.json"
+            p = f"{self.path}/{self.ymd[uuid]}_{uuid}.{self.count[uuid]}.json"
             with open(p, 'a') as fp:
                 fp.write("\n".join(self.data[uuid]))
 
     async def write(self, uuid):
+        #print([uuid, self.pointer[uuid]])
+        if uuid not in self.pointer.keys():
+            self.ymd[uuid] = str(datetime.now()).replace('-', "").replace(' ', "_").replace(':', "").split('.')[0]
 
-        p = f"{self.path}/{self.ymd}_{uuid}.{self.count[uuid]}.json"
+        p = f"{self.path}/{self.ymd[uuid]}_{uuid}.{self.count[uuid]}.json"
         logging.info(p)
         async with AIOFile(p, mode='a') as fp:
             r = await fp.write("\n".join(self.data[uuid]) + "\n", offset=self.pointer[uuid])
             self.pointer[uuid] += r
             self.data[uuid] = []
 
+
         if self.pointer[uuid] >= self.rotate:
-            self.ymd = str(datetime.now()).replace('-', "").replace(' ',"_").replace(':',"").split('.')[0]
+            self.ymd[uuid] = str(datetime.now()).replace('-', "").replace(' ',"_").replace(':',"").split('.')[0]
             self.count[uuid] += 1
             self.pointer[uuid] = 0
 
