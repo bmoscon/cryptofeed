@@ -12,8 +12,8 @@ from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, B
                                          BackendFuturesIndexCallback, BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback,
                                          DeribitBackendBookCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback,
-                                         BackendVolumeCallback)
-from cryptofeed.defines import FUTURES_INDEX, TICKER, TRADES, VOLUME
+                                         BackendVolumeCallback, BackendUserBalanceCallback, BackendUserPositionCallback)
+from cryptofeed.defines import FUTURES_INDEX, TICKER, TRADES, VOLUME, USER_BALANCE, USER_POSITION
 
 
 class ZMQCallback(BackendQueue):
@@ -95,3 +95,9 @@ class VolumeZMQ(ZMQCallback, BackendVolumeCallback):
 
 class CandlesZMQ(ZMQCallback, BackendCandlesCallback):
     default_key = 'candles'
+
+class UserBalanceZMQ(ZMQCallback, BackendUserBalanceCallback):
+    default_key = USER_BALANCE
+
+class UserPositionZMQ(ZMQCallback, BackendUserPositionCallback):
+    default_key = USER_POSITION

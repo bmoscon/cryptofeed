@@ -7,15 +7,17 @@ associated with this software.
 import logging
 from collections import defaultdict
 from decimal import Decimal
-from typing import Dict, Union, Tuple
+from functools import partial
+from typing import Callable, Dict, List, Union, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.auth.binance import BinanceAuth
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, VOLUME
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, VOLUME, USER_BALANCE
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel
+from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel, is_authenticated_channel
 
 
 LOG = logging.getLogger('feedhandler')
@@ -29,14 +31,18 @@ class Binance(Feed):
 
     def __init__(self, candle_interval='1m', candle_closed_only=False, **kwargs):
         super().__init__({}, **kwargs)
-        self.ws_endpoint = 'wss://stream.binance.com:9443'
-        self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         if candle_interval not in self.valid_candle_intervals:
             raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
-        self.address = self._address()
+        self.setup()
         self._reset()
+
+    def setup(self):
+        self.ws_endpoint = 'wss://stream.binance.com:9443'
+        self.rest_endpoint = 'https://www.binance.com/api/v1'
+        self.auth = BinanceAuth(self.config)
+        self.address = self._address()
 
     def _address(self) -> Union[str, Dict]:
         """
@@ -48,12 +54,23 @@ class Binance(Feed):
         The generic connect method supplied by Feed will take care of creating the
         correct connection objects from the addresses.
         """
-        address = self.ws_endpoint + '/stream?streams='
+        if self.requires_authentication:
+            listen_key = self.auth.generate_token()
+            address = self.ws_endpoint + '/ws/' + listen_key
+        else:
+            address = self.ws_endpoint + '/stream?streams='
         subs = []
+
+        is_any_private = any(is_authenticated_channel(chan) for chan in (self.channels if not self.subscription else self.subscription))
+        is_any_public = any(not is_authenticated_channel(chan) for chan in (self.channels if not self.subscription else self.subscription))
+        if is_any_private and is_any_public:
+            raise ValueError("Private and public channels should be subscribed to in separate feeds")
 
         for chan in self.channels if not self.subscription else self.subscription:
             normalized_chan = normalize_channel(self.id, chan)
             if normalized_chan == OPEN_INTEREST:
+                continue
+            if is_authenticated_channel(normalized_chan):
                 continue
 
             stream = chan
@@ -358,11 +375,39 @@ class Binance(Feed):
                             base_volume=Decimal(msg['v']),
                             quote_volume=Decimal(msg['q']))
 
+    async def _account_update(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "outboundAccountPosition", //Event type
+            "E": 1564034571105,             //Event Time
+            "u": 1564034571073,             //Time of last account update
+            "B": [                          //Balances Array
+                {
+                "a": "ETH",                 //Asset
+                "f": "10000.000000",        //Free
+                "l": "0.000000"             //Locked
+                }
+            ]
+        }
+        """
+        for balance in msg['B']:
+            await self.callback(USER_BALANCE,
+                                feed=self.id,
+                                symbol=balance['a'],
+                                timestamp=timestamp_normalize(self.id, msg['E']),
+                                receipt_timestamp=timestamp,
+                                wallet_balance=Decimal(balance['f']))
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
+        if self.requires_authentication:
+            msg_type = msg.get('e')
+            if msg_type == 'outboundAccountPosition':
+                await self._account_update(msg, timestamp)
+            return
         pair, _ = msg['stream'].split('@', 1)
         msg = msg['data']
         pair = pair.upper()

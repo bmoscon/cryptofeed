@@ -20,7 +20,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINA
                                 KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
-                                TICKER, TRADES, TRANSACTIONS, VOLUME, ORDER_INFO, USER_TRADES)
+                                TICKER, TRADES, TRANSACTIONS, VOLUME, ORDER_INFO, USER_BALANCE, USER_POSITION, USER_TRADES)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedSymbol
 from cryptofeed.symbols import gen_symbols, _exchange_info
 
@@ -254,6 +254,14 @@ _feed_to_exchange_map = {
         GEMINI: ORDER_INFO,
         OKEX: ORDER_INFO
     },
+    USER_BALANCE: {
+        BINANCE: USER_BALANCE,
+        BINANCE_DELIVERY: USER_BALANCE
+    },
+    USER_POSITION: {
+        BINANCE: USER_BALANCE,
+        BINANCE_DELIVERY: USER_POSITION
+    },
     USER_TRADES: {
         DERIBIT: 'user.trades'
     },
@@ -343,4 +351,4 @@ def normalize_channel(exchange: str, feed: str) -> str:
 
 
 def is_authenticated_channel(channel: str) -> bool:
-    return channel in (ORDER_INFO, USER_TRADES)
+    return channel in (ORDER_INFO, USER_BALANCE, USER_POSITION, USER_TRADES)

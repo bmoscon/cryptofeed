@@ -68,7 +68,7 @@ class BackendBookDeltaCallback:
 
 
 class BackendTradeCallback:
-    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, order_id: str = None, timestamp: float, receipt_timestamp: float, order_type: str = None):
+    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, timestamp: float, receipt_timestamp: float, order_id: str = None, order_type: str = None):
         data = {'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp,
                 'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price), 'order_type': order_type, 'id': order_id}
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
@@ -83,12 +83,12 @@ class DeribitBackendTradeCallback:
         side: str, 
         amount: Decimal, 
         price: Decimal, 
-        order_id = None, 
         timestamp: float, 
         receipt_timestamp: float, 
         trade_seq: Decimal,
         mark_price: Decimal,
         index_price: Decimal,
+        order_id = None,
         iv: Decimal = None
         ):
         data = {
@@ -235,3 +235,27 @@ class BackendCandlesCallback:
                 'volume': self.numeric_type(volume), 'closed': str(closed)
                 }
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+
+class BackendUserBalanceCallback:
+    async def __call__(self, *, feed, symbol, **kwargs):
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
+
+
+class BackendUserPositionCallback:
+    async def __call__(self, *, feed, symbol, **kwargs):
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
