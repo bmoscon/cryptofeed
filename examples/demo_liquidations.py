@@ -4,8 +4,8 @@ from cryptofeed.defines import LIQUIDATIONS
 from cryptofeed.exchanges import Bitmex
 
 
-async def liquidations(feed, symbol, side, leaves_qty, price, order_id, receipt_timestamp):
-    print(f'Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} Side: {side} LeavesQty: {leaves_qty}, Price: {price} ID: {order_id})')
+async def liquidations(feed, symbol, side, leaves_qty, price, order_id, status, timestamp, receipt_timestamp):
+    print(f'Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} Side: {side} LeavesQty: {leaves_qty} Price: {price} ID: {order_id} Status: {status}')
 
 
 def main():

@@ -3,9 +3,7 @@ import pytest
 from cryptofeed.defines import BID
 from cryptofeed.rest import Rest
 
-
 kraken = Rest().kraken
-
 
 def test_get_order_book():
     book = kraken.l2_book('BTC-USD')
@@ -52,7 +50,6 @@ def test_query_orders_info():
     orders_info = kraken.query_orders_info()
     assert orders_info['error'][0] == 'EGeneral:Invalid arguments'
 
-
 @pytest.mark.skipif(not kraken.config.key_id or not kraken.config.key_secret, reason="No api key provided")
 def test_get_get_trades_history():
     trades_history = kraken.get_trades_history()
@@ -81,3 +78,19 @@ def test_get_ledgers_info():
 def test_get_trade_volume():
     trade_volume = kraken.get_trade_volume()
     assert trade_volume['result']['currency'] == 'ZUSD'
+
+@pytest.mark.skipif(not kraken.config.key_id or not kraken.config.key_secret, reason="No api key provided")
+def test_trade_history():
+    trade_history = kraken.trade_history()
+    # for trade in trade_history:
+    #     for k, v in trade.items():
+    #         print(f"{k} => {v}")
+    assert len(trade_history) != 0
+
+@pytest.mark.skipif(not kraken.config.key_id or not kraken.config.key_secret, reason="No api key provided")
+def test_ledger():
+    ledger = kraken.ledger()
+    # for trade in trade_history:
+    #     for k, v in trade.items():
+    #         print(f"{k} => {v}")
+    assert len(ledger) != 0

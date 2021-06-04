@@ -6,6 +6,7 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -13,7 +14,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,6 +22,13 @@ LOG = logging.getLogger('feedhandler')
 
 class Probit(Feed):
     id = PROBIT
+    symbol_endpoint = 'https://api.probit.com/api/exchange/v1/market'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        # doc: https://docs-en.probit.com/reference-link/market
+        ret = {entry['id'].replace("-", symbol_separator): entry['id'] for entry in data['data'] if not entry['closed']}
+        return ret, {}
 
     def __init__(self, **kwargs):
         super().__init__('wss://api.probit.com/api/exchange/v1/ws', **kwargs)
@@ -69,7 +77,7 @@ class Probit(Feed):
             ]
         }
         '''
-        pair = symbol_exchange_to_std(msg['market_id'])
+        pair = self.exchange_symbol_to_std_symbol(msg['market_id'])
         for update in msg['recent_trades']:
             price = Decimal(update['price'])
             quantity = Decimal(update['quantity'])
@@ -125,7 +133,7 @@ class Probit(Feed):
             }]
         }
         '''
-        pair = symbol_exchange_to_std(msg['market_id'])
+        pair = self.exchange_symbol_to_std_symbol(msg['market_id'])
 
         is_snapshot = msg.get('reset', False)
 
@@ -173,17 +181,9 @@ class Probit(Feed):
         if self.subscription:
             for chan in self.subscription:
                 for pair in self.subscription[chan]:
-                    await conn.send(json.dumps({"type": "subscribe",
-                                                "channel": "marketdata",
-                                                "filter": [chan],
-                                                "interval": 100,
-                                                "market_id": pair,
-                                                }))
-        else:
-            for pair in self.symbols:
-                await conn.send(json.dumps({"type": "subscribe",
-                                            "channel": "marketdata",
-                                            "filter": list(self.channels),
-                                            "interval": 100,
-                                            "market_id": pair,
-                                            }))
+                    await conn.write(json.dumps({"type": "subscribe",
+                                                 "channel": "marketdata",
+                                                 "filter": [chan],
+                                                 "interval": 100,
+                                                 "market_id": pair,
+                                                 }))

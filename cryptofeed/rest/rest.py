@@ -17,7 +17,6 @@ from cryptofeed.rest.ftx import FTX
 from cryptofeed.rest.gemini import Gemini
 from cryptofeed.rest.kraken import Kraken
 from cryptofeed.rest.poloniex import Poloniex
-from cryptofeed.standards import load_exchange_symbol_mapping
 
 
 LOG = logging.getLogger('rest')
@@ -54,21 +53,7 @@ class Rest:
         }
 
     def __getitem__(self, key):
-        exch = self.lookup[key.lower()]
-        if not exch.mapped:
-            try:
-                load_exchange_symbol_mapping(exch.ID + 'REST')
-            except KeyError:
-                load_exchange_symbol_mapping(exch.ID)
-            exch.mapped = True
-        return exch
+        return self.lookup[key.lower()]
 
     def __getattr__(self, attr):
-        exch = self.lookup[attr.lower()]
-        if not exch.mapped:
-            try:
-                load_exchange_symbol_mapping(exch.ID + 'REST')
-            except KeyError:
-                load_exchange_symbol_mapping(exch.ID)
-            exch.mapped = True
-        return exch
+        return self.lookup[attr.lower()]

@@ -1,0 +1,53 @@
+wss://ws.kraken.com <-> 1618678132.368463
+wss://ws.kraken.com <- 1618678132.83097: {"event":"subscribe","pair":["WAVES/EUR","XMR/USD","KSM/XBT","GRT/ETH","SC/EUR","ETH/CHF","OCEAN/XBT","OMG/USD","XBT/CHF","ADA/XBT"],"subscription":{"name":"trade"}}
+1618678132.831468: {"connectionID":18239578009413566319,"event":"systemStatus","status":"online","version":"1.8.3"}
+1618678132.9348202: {"channelID":1665,"channelName":"trade","event":"subscriptionStatus","pair":"WAVES/EUR","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.9348822: {"channelID":993,"channelName":"trade","event":"subscriptionStatus","pair":"XMR/USD","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.934907: {"channelID":3649,"channelName":"trade","event":"subscriptionStatus","pair":"KSM/XBT","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.934926: {"channelID":4529,"channelName":"trade","event":"subscriptionStatus","pair":"GRT/ETH","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.934942: {"channelID":1921,"channelName":"trade","event":"subscriptionStatus","pair":"SC/EUR","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.934958: {"channelID":497,"channelName":"trade","event":"subscriptionStatus","pair":"ETH/CHF","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.934974: {"channelID":5105,"channelName":"trade","event":"subscriptionStatus","pair":"OCEAN/XBT","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.9349902: {"channelID":1841,"channelName":"trade","event":"subscriptionStatus","pair":"OMG/USD","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.935004: {"channelID":465,"channelName":"trade","event":"subscriptionStatus","pair":"XBT/CHF","status":"subscribed","subscription":{"name":"trade"}}
+1618678132.935018: {"channelID":1361,"channelName":"trade","event":"subscriptionStatus","pair":"ADA/XBT","status":"subscribed","subscription":{"name":"trade"}}
+1618678133.5561652: {"event":"heartbeat"}
+1618678134.560619: {"event":"heartbeat"}
+1618678135.558302: {"event":"heartbeat"}
+1618678136.558246: {"event":"heartbeat"}
+1618678137.5603259: {"event":"heartbeat"}
+1618678138.560102: {"event":"heartbeat"}
+1618678139.5674188: {"event":"heartbeat"}
+1618678140.566921: {"event":"heartbeat"}
+1618678141.567643: {"event":"heartbeat"}
+1618678142.592855: [993,[["354.11000000","0.89594024","1618678142.557535","s","l",""]],"trade","XMR/USD"]
+1618678142.593102: {"event":"heartbeat"}
+1618678143.592491: {"event":"heartbeat"}
+1618678144.5919738: {"event":"heartbeat"}
+1618678145.5929961: {"event":"heartbeat"}
+1618678145.74465: [993,[["354.55000000","1.25690315","1618678145.715785","b","m",""]],"trade","XMR/USD"]
+1618678145.9489012: [1921,[["0.042990","15979.71727919","1618678145.920708","s","l",""]],"trade","SC/EUR"]
+1618678146.595542: {"event":"heartbeat"}
+1618678147.6151261: {"event":"heartbeat"}
+1618678148.6038039: {"event":"heartbeat"}
+1618678149.604769: {"event":"heartbeat"}
+1618678150.608153: {"event":"heartbeat"}
+1618678150.8565571: [993,[["354.04000000","0.28245396","1618678150.826417","s","m",""],["353.81000000","1.71754604","1618678150.827816","s","m",""]],"trade","XMR/USD"]
+1618678151.607661: {"event":"heartbeat"}
+1618678152.7637708: {"event":"heartbeat"}
+1618678153.615083: {"event":"heartbeat"}
+1618678154.6165178: {"event":"heartbeat"}
+1618678155.615349: {"event":"heartbeat"}
+1618678155.748181: [1921,[["0.042980","8500.00000000","1618678155.718950","b","m",""],["0.043000","2383.16665529","1618678155.720582","b","m",""]],"trade","SC/EUR"]
+1618678156.617617: {"event":"heartbeat"}
+1618678157.70801: {"event":"heartbeat"}
+1618678158.021238: [1921,[["0.043030","1081.72663000","1618678157.908269","b","l",""]],"trade","SC/EUR"]
+1618678158.021298: [1921,[["0.042960","5000.00000000","1618678157.946108","s","m",""]],"trade","SC/EUR"]
+1618678158.165955: [1921,[["0.043040","20000.00000000","1618678158.135041","b","l",""]],"trade","SC/EUR"]
+1618678158.622918: {"event":"heartbeat"}
+1618678159.6351418: {"event":"heartbeat"}
+1618678160.6447349: {"event":"heartbeat"}
+1618678161.651233: {"event":"heartbeat"}
+1618678162.660873: {"event":"heartbeat"}
+
+

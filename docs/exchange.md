@@ -1,8 +1,5 @@
 # Adding a new exchange
 
-
-***Note*** This is slightly outdated - please look at the [file](../cryptofeed/exchange/huobi.py) in question to see how some of this code has changed slightly.
-
 <br><br>
 
 Perhaps the best way to understand the workings of the library is to walk through the addition of a new exchange. For this example, we'll
@@ -11,8 +8,8 @@ add support for these endpoints.
 
 
 ## Adding a new Feed class
-The first step is to define a new class, with the Feed class as the parent. By convention new feeds go into new modules, so the
-class definition will go in the `huobi` module within `cryptofeed`.
+The first step is to define a new class, with the `Feed` class as the parent. By convention new feeds go into new modules, so the
+class definition will go in the `huobi` module within `cryptofeed.exchange`.
 
 ```python
 import logging
@@ -38,7 +35,7 @@ class Huobi(Feed):
         self.__reset()
 ```
 
-We've basically just extended Feed, populated the websocket address in the parent's constructor call, and defined the `__reset` and `subscribe` methods; we may or may not need `__reset` (more on this later). `subscribe` is called every time a connection is made to the exchange - typically just when the feedhandler starts, and again if the connection is interrupted and has to be reestablished. You might notice that `HUOBI` is being imported from `defines`, so we'll need to add that as well:
+We've basically just extended `Feed`, populated the websocket address in the parent's constructor call, and defined the `__reset` and `subscribe` methods; we may or may not need `__reset` (more on this later). `subscribe` is called every time a connection is made to the exchange - typically just when the feedhandler starts, and again if the connection is interrupted and has to be reestablished. You might notice that `HUOBI` is being imported from `defines`, so we'll need to add that as well:
 
 ```python
 HUOBI = 'HUOBI'
@@ -50,21 +47,21 @@ Again by convention the exchange names in `defines.py` are all uppercase.
 Cryptofeed accepts standardized names for data channels/feeds. The `Feed` parent class will convert these to the exchange specific versions for use when subscribing. Per the exchange docs, each subscription to the various data channels must be made with a new subscription message, so for this exchange we can subscribe like so:
 
 ```python
-async def subscribe(self, websocket):
+async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in self.channels:
-            for symbol in self.symbols:
+        for chan, symbols in self.subscriptions.items():
+            for symbol in symbols:
                 client_id += 1
-                await websocket.send(json.dumps(
+                await conn.send(json.dumps(
                     {
                         "sub": f"market.{symbol}.{chan}",
                         "id": client_id
                     }
                 ))
 ```
-We also save the websocket connection to a private data member of the class so we can use it in the message handler to respond to pings (more on this later, this is specific to this exchange).
-This also mean we'll need to add support for the various channel mappings in `standards.py`, add support for the symbol mappings in `symbols.py` and add the exchange import to `exchanges.py`.
+When a client specifies a `Feed` object, they provide channels and symbols, or use a subscription dictionary. These are saved internally in the class as `self.subscription`. The keys to the dictionary are data channels, and the value for each channel is a list of symbols. The user specifies these values as the cryptofeed defined normalizations, and the `Feed` constructor converts them in place to the exchange specific values.
+This also mean we'll need to add support for the various channel mappings in `standards.py`, add support for the symbol mappings in the classmethod `_parse_symbol_data` and add the exchange import to `exchanges.py`.
 
 
 * `standards.py`
@@ -77,26 +74,37 @@ This also mean we'll need to add support for the various channel mappings in `st
             },
         ```
 
-* `symbols.py`
+* the symbol mapping
     - Per the documentation we can get a list of symbols from their REST api via `GET /v1/common/symbols`
-    - ```python
-      def huobi_symbols():
-            r = requests.get('https://api.huobi.com/v1/common/symbols').json()
-            return {'{}-{}'.format(e['base-currency'].upper(), e['quote-currency'].upper()) : '{}{}'.format(e['base-currency'], e['quote-currency']) for e in r['data']}
-
-
-      _exchange_function_map = {
-           ...
-           HUOBI: huobi_symbols
-        }
+    - We need to define a class variable, `symbol_endpoint` and set it to the API endpoint
+      ```python
+      `symbol_endpoint = 'https://poloniex.com/public?command=returnTicker'
       ```
+      
+      We can then define the parser. The feed class will handle calling the API and will call this class method with the data from the REST endpoint.
+
+      ```python
+         @classmethod
+         def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+            ret = {}
+            for e in data['data']:
+                if e['state'] == 'offline':
+                    continue
+                normalized = f"{e['base-currency'].upper()}{symbol_separator}{e['quote-currency'].upper()}"
+                symbol = f"{e['base-currency']}{e['quote-currency']}"
+                ret[normalized] = symbol
+            return ret, {}
+      ```
+      The classmethod needs to return the symbol mapping as well as an info dictionary (if applicable). The info dict should have the tick size, if provided by the exchange. The symbol mapping is in the format normalized symbol -> exchange symbol 
+
 * `exchanges.py`
     - ```python
-      from cryptofeed.huobi.huobi import Huobi
+      from cryptofeed.exchange.huobi import Huobi
       ```
+    - An entry is also needed in the `EXCHANGE_MAP` to map the string `'HUOBI'` to the class `Huobi`.
 
 ## Message Handler
-Now that we can subscribe to trades, we can add the message handler (which is called by the feedhandler when messages are received on a websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot interpret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and symbol are sent in the update so we'll need to parse those out to properly handle the message.
+Now that we can subscribe to trades, we can add the message handler (which is called by the `ConnectionHandler` when messages are received on a websocket). Huobi's documentation informs us that messages sent via websocket are compressed, so we'll need to make sure we uncompress them before handling them. It also informs us that we'll need to respond to pings or be disconnected. Most websocket libraries will do this automatically, but they cannot interpret a ping correctly if the messages are compressed so we'll need to handle pings automatically. We also can see from the documentation that the feed and symbol are sent in the update so we'll need to parse those out to properly handle the message. The `message_handler` is provided with a copy of the websocket connection, `conn`, so we can use this to respond to pings.
 
 
 ```python
@@ -113,7 +121,7 @@ async def _trade(self, msg):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                 feed=self.id,
-                symbol=symbol_exchange_to_std(msg['ch'].split('.')[1]),
+                symbol=self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
                 order_id=trade['id'],
                 side=BUY if trade['direction'] == 'buy' else SELL,
                 amount=Decimal(trade['amount']),
@@ -128,7 +136,7 @@ async def _trade(self, msg):
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await conn.send(json.dumps({'pong': msg['ping']}))
+            await conn.write(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
@@ -165,7 +173,7 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
   - `_book`
   - ```python
       async def _book(self, msg):
-          symbol = symbol_exchange_to_std(msg['ch'].split('.')[1])
+          symbol = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
           data = msg['tick']
           self.l2_book[symbol] = {
               BID: sd({

@@ -4,62 +4,16 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.defines import BITCOINCOM, BITFINEX, BITSTAMP, BLOCKCHAIN, COINBASE, GEMINI, HITBTC, POLONIEX
-from cryptofeed.symbols import (bitcoincom_symbols, bitfinex_symbols, bitstamp_symbols, blockchain_symbols,
-                                coinbase_symbols, gemini_symbols, hitbtc_symbols, poloniex_symbols)
-from cryptofeed.standards import load_exchange_symbol_mapping, symbol_exchange_to_std, symbol_std_to_exchange
+import pytest
+
+from cryptofeed.defines import EXX
+from cryptofeed.exchanges import EXCHANGE_MAP
 
 
-def test_coinbase_symbol_conversions():
-    load_exchange_symbol_mapping(COINBASE)
-    for _, symbol in coinbase_symbols().items():
-        assert symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, COINBASE)
-
-
-def test_poloniex_symbol_conversions():
-    load_exchange_symbol_mapping(POLONIEX)
-    for _, symbol in poloniex_symbols().items():
-        std = symbol_exchange_to_std(symbol)
-        assert symbol == symbol_std_to_exchange(std, POLONIEX)
-
-
-def test_bitfinex_symbol_conversions():
-    load_exchange_symbol_mapping(BITFINEX)
-    for _, symbol in bitfinex_symbols().items():
-        std = symbol_exchange_to_std(symbol)
-        assert symbol == symbol_std_to_exchange(std, BITFINEX)
-
-
-def test_hitbtc_symbol_conversions():
-    load_exchange_symbol_mapping(HITBTC)
-    for _, symbol in hitbtc_symbols().items():
-        std = symbol_exchange_to_std(symbol)
-        assert symbol == symbol_std_to_exchange(std, HITBTC)
-
-
-def test_gemini_symbol_conversions():
-    load_exchange_symbol_mapping(GEMINI)
-    for normalized, symbol in gemini_symbols().items():
-        std = symbol_exchange_to_std(symbol)
-        assert symbol == symbol_std_to_exchange(std, GEMINI)
-        assert normalized == std
-
-
-def test_bitstamp_symbol_conversions():
-    load_exchange_symbol_mapping(BITSTAMP)
-    for _, symbol in bitstamp_symbols().items():
-        std = symbol_exchange_to_std(symbol)
-        assert symbol == symbol_std_to_exchange(std, BITSTAMP)
-
-
-def test_bitcoincom_symbol_conversions():
-    load_exchange_symbol_mapping(BITCOINCOM)
-    for _, symbol in bitcoincom_symbols().items():
-        std = symbol_exchange_to_std(symbol)
-        assert symbol == symbol_std_to_exchange(std, BITCOINCOM)
-
-
-def test_blockchain_symbol_conversions():
-    load_exchange_symbol_mapping(BLOCKCHAIN)
-    for _, symbol in blockchain_symbols().items():
-        assert symbol_exchange_to_std(symbol) == symbol_std_to_exchange(symbol, BLOCKCHAIN)
+@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
+def test_symbol_conversion(exchange):
+    feed = EXCHANGE_MAP[exchange]()
+    symbols = feed.symbol_mapping()
+    for normalized, original in symbols.items():
+        assert feed.std_symbol_to_exchange_symbol(normalized) == original
+        assert feed.exchange_symbol_to_std_symbol(original) == normalized
