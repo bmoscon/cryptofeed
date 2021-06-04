@@ -9,7 +9,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, BackendCandlesCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
 
 
 def trades_none_to_str(data):
@@ -158,14 +158,6 @@ class MarketInfoRedis(RedisZSetCallback, BackendMarketInfoCallback):
 
 class MarketInfoStream(RedisStreamCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
-
-
-class TransactionsRedis(RedisZSetCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
-
-
-class TransactionsStream(RedisStreamCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
 
 
 class CandlesRedis(RedisZSetCallback, BackendCandlesCallback):

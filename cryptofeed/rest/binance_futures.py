@@ -15,9 +15,10 @@ import pandas as pd
 import requests
 from yapic import json
 
+from cryptofeed.exchanges import BinanceFutures, BinanceDelivery
 from cryptofeed.defines import BINANCE, BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import symbol_exchange_to_std, symbol_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 REQUEST_LIMIT = 1000
 RATE_LIMIT_SLEEP = 3
@@ -74,7 +75,7 @@ class Binance(API):
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
             'timestamp': timestamp_normalize(self.ID, trade['T']),
-            'symbol': symbol_exchange_to_std(symbol),
+            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.ID,
             'side': BUY if trade['m'] is True else SELL,
@@ -136,7 +137,7 @@ class Binance(API):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = symbol_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 

@@ -12,8 +12,6 @@ from time import sleep
 import pandas as pd
 import requests
 
-from cryptofeed.standards import load_exchange_symbol_mapping
-
 
 LOG = logging.getLogger('rest')
 
@@ -55,7 +53,6 @@ class API:
     ID = 'NotImplemented'
 
     def __init__(self, config=None, sandbox=False):
-        self.mapped = False
         self.sandbox = sandbox
         self.config = config
 
@@ -107,7 +104,7 @@ class API:
         """
         raise NotImplementedError
 
-    def trade_history(self, symbol: str, start=None, end=None):
+    def trade_history(self, symbol: str = None, start=None, end=None):
         """
         Executed trade history
         """
@@ -116,13 +113,13 @@ class API:
     def balances(self):
         raise NotImplementedError
 
+    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+        """
+        Executed trade history
+        """
+        raise NotImplementedError
+
     def __getitem__(self, key):
-        if not self.mapped:
-            try:
-                load_exchange_symbol_mapping(self.ID + 'REST')
-            except KeyError:
-                load_exchange_symbol_mapping(self.ID)
-            self.mapped = True
         if key == 'trades':
             return self.trades
         elif key == 'funding':

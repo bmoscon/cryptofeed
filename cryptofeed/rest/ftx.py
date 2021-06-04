@@ -14,8 +14,8 @@ from sortedcontainers.sorteddict import SortedDict as sd
 from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import FTX as FTX_ID
 from cryptofeed.defines import SELL
+from cryptofeed.exchanges import FTX as FTXEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import symbol_std_to_exchange
 
 
 LOG = logging.getLogger('rest')
@@ -24,7 +24,7 @@ RATE_LIMIT_SLEEP = 0.2
 
 class FTX(API):
     ID = FTX_ID
-
+    info = FTXEx()
     api = "https://ftx.com/api"
 
     def _get(self, command: str, params=None, retry=None, retry_wait=0):
@@ -38,7 +38,7 @@ class FTX(API):
         return helper()
 
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}", retry=retry, retry_wait=retry_wait)
 
         return {'symbol': symbol,
@@ -48,7 +48,7 @@ class FTX(API):
                 }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = symbol_std_to_exchange(symbol, self.ID)
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}/orderbook", {'depth': 100}, retry=retry, retry_wait=retry_wait)
         return {
             BID: sd({
@@ -62,7 +62,7 @@ class FTX(API):
         }
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = symbol_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbolself.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 

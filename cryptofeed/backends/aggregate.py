@@ -36,7 +36,9 @@ class Throttle(AggregateCallback):
 class OHLCV(AggregateCallback):
     """
     Aggregate trades and calculate OHLCV for time window
-    window is in seconds, defaults to 300 seconds (5 minutes)
+    window is in seconds, defaults to 300 seconds (5 minutes).
+    This is an EXAMPLE of how one might use the Aggregation functionality.
+    You should probably use the candle data channel (if the exchange supports that).
     """
 
     def __init__(self, *args, window=300, **kwargs):

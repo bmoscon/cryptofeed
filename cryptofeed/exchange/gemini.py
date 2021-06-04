@@ -6,7 +6,7 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
-from typing import List, Tuple, Callable
+from typing import Dict, List, Tuple, Callable
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -15,7 +15,7 @@ from cryptofeed.auth.gemini import generate_token
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, is_authenticated_channel
+from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,6 +23,16 @@ LOG = logging.getLogger('feedhandler')
 
 class Gemini(Feed):
     id = GEMINI
+    symbol_endpoint = 'https://api.gemini.com/v1/symbols'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        for symbol in data:
+            std = f"{symbol[:-3]}{symbol_separator}{symbol[-3:]}"
+            std = std.upper()
+            ret[std] = symbol.upper()
+        return ret, {}
 
     def __init__(self, sandbox=False, **kwargs):
         auth_api = 'wss://api.gemini.com' if not sandbox else 'wss://api.sandbox.gemini.com'
@@ -30,14 +40,12 @@ class Gemini(Feed):
 
     def __reset(self, pairs):
         for pair in pairs:
-            self.l2_book[symbol_exchange_to_std(pair)] = {BID: sd(), ASK: sd()}
+            self.l2_book[self.exchange_symbol_to_std_symbol(pair)] = {BID: sd(), ASK: sd()}
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = symbol_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         # Gemini sends ALL data for the symbol, so if we don't actually want
         # the book data, bail before parsing
-        if self.channels and L2_BOOK not in self.channels:
-            return
         if self.subscription and ((L2_BOOK in self.subscription and msg['symbol'] not in self.subscription[L2_BOOK]) or L2_BOOK not in self.subscription):
             return
 
@@ -59,7 +67,7 @@ class Gemini(Feed):
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
-        pair = symbol_exchange_to_std(msg['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         price = Decimal(msg['price'])
         side = SELL if msg['side'] == 'sell' else BUY
         amount = Decimal(msg['quantity'])
@@ -84,7 +92,7 @@ class Gemini(Feed):
         data = {k: Decimal(msg[k]) for k in keys if k in msg}
 
         await self.callback(ORDER_INFO, feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['symbol'].upper()),  # This uses the REST endpoint format (lower case)
+                            symbol=self.exchange_symbol_to_std_symbol(msg['symbol'].upper()),  # This uses the REST endpoint format (lower case)
                             status=status,
                             order_id=msg['order_id'],
                             side=BUY if msg['side'].lower() == 'buy' else SELL,
@@ -127,11 +135,11 @@ class Gemini(Feed):
         public = []
         ret = []
 
-        for channel in self.subscription or self.channels:
+        for channel in self.subscription:
             if is_authenticated_channel(channel):
-                authenticated.extend(self.subscription.get(channel) or self.symbols)
+                authenticated.extend(self.subscription.get(channel))
             else:
-                public.extend(self.subscription.get(channel) or self.symbols)
+                public.extend(self.subscription.get(channel))
 
         if authenticated:
             header = generate_token(self.key_id, self.key_secret, "/v1/order/events", self.config.gemini.account_name)
@@ -145,4 +153,4 @@ class Gemini(Feed):
 
     async def subscribe(self, conn: AsyncConnection, options=None):
         self.__reset(options)
-        await conn.send(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": options}]}))
+        await conn.write(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": options}]}))

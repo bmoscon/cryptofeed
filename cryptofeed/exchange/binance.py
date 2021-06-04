@@ -14,8 +14,8 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.auth.binance import BinanceAuth
-from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, VOLUME, USER_BALANCE
+from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, VOLUME, USER_BALANCE, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel, is_authenticated_channel
 
@@ -28,6 +28,24 @@ class Binance(Feed):
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
+    symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+        for symbol in data['symbols']:
+            if symbol.get('status', 'TRADING') != "TRADING":
+                continue
+            if symbol.get('contractStatus', 'TRADING') != "TRADING":
+                continue
+            split = len(symbol['baseAsset'])
+            normalized = symbol['symbol'][:split] + symbol_separator + symbol['symbol'][split:]
+            ret[normalized] = symbol['symbol']
+            info['tick_size'][normalized] = symbol['filters'][0]['tickSize']
+            if "contractType" in symbol:
+                info['contract_type'][normalized] = symbol['contractType']
+        return ret, info
 
     def __init__(self, candle_interval='1m', candle_closed_only=False, **kwargs):
         super().__init__({}, **kwargs)
@@ -77,7 +95,7 @@ class Binance(Feed):
             if normalized_chan == CANDLES:
                 stream = f"{chan}{self.candle_interval}"
 
-            for pair in self.symbols if not self.subscription else self.subscription[chan]:
+            for pair in self.subscription[chan]:
                 # for everything but premium index the symbols need to be lowercase.
                 if pair.startswith("p"):
                     if normalized_chan != CANDLES:
@@ -128,7 +146,7 @@ class Binance(Feed):
         amount = Decimal(msg['q'])
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['a'],
-                            symbol=symbol_exchange_to_std(msg['s']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
                             side=SELL if msg['m'] else BUY,
                             amount=amount,
                             price=price,
@@ -146,7 +164,7 @@ class Binance(Feed):
             'A': '176.40000000'
         }
         """
-        pair = symbol_exchange_to_std(msg['s'])
+        pair = self.exchange_symbol_to_std_symbol(msg['s'])
         bid = Decimal(msg['b'])
         ask = Decimal(msg['a'])
 
@@ -185,7 +203,7 @@ class Binance(Feed):
             }
         }
         """
-        pair = symbol_exchange_to_std(msg['o']['s'])
+        pair = self.exchange_symbol_to_std_symbol(msg['o']['s'])
         await self.callback(LIQUIDATIONS,
                             feed=self.id,
                             symbol=pair,
@@ -193,10 +211,11 @@ class Binance(Feed):
                             leaves_qty=Decimal(msg['o']['q']),
                             price=Decimal(msg['o']['p']),
                             order_id=None,
+                            status=FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
-    async def _snapshot(self, conn: AsyncConnection, pair: str) -> None:
+    async def _snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else 1000
         if max_depth not in self.valid_depths:
             for d in self.valid_depths:
@@ -204,10 +223,10 @@ class Binance(Feed):
                     max_depth = d
 
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
-        resp = await conn.get(url)
+        resp = await self.http_conn.read(url)
         resp = json.loads(resp, parse_float=Decimal)
 
-        std_pair = symbol_exchange_to_std(pair)
+        std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
         self.l2_book[std_pair] = {BID: sd(), ASK: sd()}
         for s, side in (('bids', BID), ('asks', ASK)):
@@ -234,7 +253,7 @@ class Binance(Feed):
 
         return skip_update, forced
 
-    async def _book(self, conn: AsyncConnection, msg: dict, pair: str, timestamp: float):
+    async def _book(self, msg: dict, pair: str, timestamp: float):
         """
         {
             "e": "depthUpdate", // Event type
@@ -257,10 +276,10 @@ class Binance(Feed):
         }
         """
         exchange_pair = pair
-        pair = symbol_exchange_to_std(pair)
+        pair = self.exchange_symbol_to_std_symbol(pair)
 
         if pair not in self.l2_book:
-            await self._snapshot(conn, exchange_pair)
+            await self._snapshot(exchange_pair)
 
         skip_update, forced = self._check_update_id(pair, msg)
         if skip_update:
@@ -299,7 +318,7 @@ class Binance(Feed):
             return
         await self.callback(FUNDING,
                             feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['s']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp,
                             mark_price=Decimal(msg['p']),
@@ -339,7 +358,7 @@ class Binance(Feed):
 
         await self.callback(CANDLES,
                             feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['s']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp,
                             start=msg['k']['t'] / 1000,
@@ -413,7 +432,7 @@ class Binance(Feed):
         pair = pair.upper()
         if 'e' in msg:
             if msg['e'] == 'depthUpdate':
-                await self._book(conn, msg, pair, timestamp)
+                await self._book(msg, pair, timestamp)
             elif msg['e'] == 'aggTrade':
                 await self._trade(msg, timestamp)
             elif msg['e'] == 'forceOrder':
@@ -435,5 +454,5 @@ class Binance(Feed):
         # Binance does not have a separate subscribe message, the
         # subscription information is included in the
         # connection endpoint
-        if conn.conn_type != 'https':
+        if not isinstance(conn, HTTPPoll):
             self._reset()

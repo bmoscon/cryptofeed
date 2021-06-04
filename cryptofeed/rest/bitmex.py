@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import decimal
 import hashlib
 import hmac
 import logging
@@ -14,13 +15,15 @@ from datetime import timedelta
 from time import sleep
 from urllib.parse import urlparse
 
+from yapic import json
 import pandas as pd
 import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, SELL
+from cryptofeed.exchanges import Bitmex as BitmexEx
 from cryptofeed.rest.api import API, request_retry
-from cryptofeed.standards import timestamp_normalize, symbol_std_to_exchange, symbol_exchange_to_std
+from cryptofeed.standards import timestamp_normalize
 
 
 S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/{}/{}.csv.gz'
@@ -34,6 +37,7 @@ LOG = logging.getLogger('rest')
 class Bitmex(API):
     ID = BITMEX
     api = 'https://www.bitmex.com'
+    info = BitmexEx()
 
     def _generate_signature(self, verb: str, url: str, data='') -> dict:
         """
@@ -108,7 +112,7 @@ class Bitmex(API):
                     sleep(RATE_LIMIT_SLEEP)
 
                 limit = int(r.headers['X-RateLimit-Remaining'])
-                data = r.json()
+                data = json.loads(r.text, parse_float=decimal.Decimal)
 
                 yield data
 
@@ -123,7 +127,7 @@ class Bitmex(API):
     def _trade_normalization(self, trade: dict) -> dict:
         return {
             'timestamp': timestamp_normalize(self.ID, trade['timestamp']),
-            'symbol': symbol_exchange_to_std(trade['symbol']),
+            'symbol': self.info.exchange_symbol_to_std_symbol(trade['symbol']),
             'id': trade['trdMatchID'],
             'feed': self.ID,
             'side': BUY if trade['side'] == 'Buy' else SELL,
@@ -133,7 +137,7 @@ class Bitmex(API):
 
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         # return list(self._get('quote', symbol, start, end, retry, retry_wait))
-        symbol = symbol_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
 
         for data in self._scrape_s3(symbol, 'quote', start, end):
             yield data
@@ -155,7 +159,7 @@ class Bitmex(API):
             'foreignNotional': 1900
         }
         """
-        symbol = symbol_std_to_exchange(symbol, self.ID)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
 
         d = dt.utcnow().date()
         d -= timedelta(days=1)
@@ -184,7 +188,7 @@ class Bitmex(API):
     def _funding_normalization(self, funding: dict) -> dict:
         return {
             'timestamp': funding['timestamp'],
-            'symbol': symbol_exchange_to_std(funding['symbol']),
+            'symbol': self.info.exchange_symbol_to_std_symbol(funding['symbol']),
             'feed': self.ID,
             'interval': funding['fundingInterval'],
             'rate': funding['fundingRate'],
@@ -206,7 +210,7 @@ class Bitmex(API):
 
     def l2_book(self, symbol: str, retry=None, retry_wait=10):
         ret = {symbol: {BID: sd(), ASK: sd()}}
-        data = next(self._get('orderBook/L2', symbol_std_to_exchange(symbol, self.ID), None, None, retry, retry_wait))
+        data = next(self._get('orderBook/L2', self.info.std_symbol_to_exchange_symbol(symbol), None, None, retry, retry_wait))
         for update in data:
             side = ASK if update['side'] == 'Sell' else BID
             ret[symbol][side][update['price']] = update['size']
@@ -216,7 +220,7 @@ class Bitmex(API):
         vals = data.split(",")
         return {
             'timestamp': pd.Timestamp(vals[0].replace("D", "T")).timestamp(),
-            'symbol': symbol_exchange_to_std(vals[1]),
+            'symbol': self.info.exchange_symbol_to_std_symbol(vals[1]),
             'id': vals[6],
             'feed': self.ID,
             'side': BUY if vals[2] == 'Buy' else SELL,

@@ -1,5 +1,7 @@
+from collections import defaultdict
 import logging
 from decimal import Decimal
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -8,7 +10,7 @@ from datetime import datetime
 import requests
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETUAL, OPTION, FUTURE, ANY, C, P, BTC, ETH
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETUAL, OPTION, FUTURE, ANY, C, P, BTC, ETH, FILLED
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange, symbol_std_to_exchange, is_authenticated_channel
@@ -39,6 +41,20 @@ class DeribitInstrument():
 
 class Deribit(Feed):
     id = DERIBIT
+    symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC&expired=false', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH&expired=false']
+
+    @classmethod
+    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+
+        for entry in data:
+            for e in entry['result']:
+                split = e['instrument_name'].split("-")
+                normalized = split[0] + symbol_separator + e['quote_currency'] + "-" + '-'.join(split[1:])
+                ret[normalized] = e['instrument_name']
+                info['tick_size'][normalized] = e['tick_size']
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
@@ -225,6 +241,7 @@ class Deribit(Feed):
                                     leaves_qty=Decimal(trade['amount']),
                                     price=Decimal(trade['price']),
                                     order_id=trade['trade_id'],
+                                    status=FILLED,
                                     timestamp=timestamp_normalize(self.id, trade['timestamp']),
                                     receipt_timestamp=timestamp
                                     )

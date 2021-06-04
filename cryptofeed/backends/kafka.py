@@ -11,7 +11,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
+                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
 
 
 class KafkaCallback:
@@ -67,10 +67,6 @@ class LiquidationsKafka(KafkaCallback, BackendLiquidationsCallback):
 
 class MarketInfoKafka(KafkaCallback, BackendMarketInfoCallback):
     default_key = 'market_info'
-
-
-class TransactionsKafka(KafkaCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
 
 
 class CandlesKafka(KafkaCallback, BackendCandlesCallback):

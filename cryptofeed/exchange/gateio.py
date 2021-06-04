@@ -4,16 +4,19 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
+from cryptofeed.standards import normalize_channel
 import logging
 from decimal import Decimal
+import time
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, GATEIO, L2_BOOK, TRADES, BUY, SELL
+from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,121 +24,194 @@ LOG = logging.getLogger('feedhandler')
 
 class Gateio(Feed):
     id = GATEIO
+    symbol_endpoint = "https://api.gateio.ws/api/v4/spot/currency_pairs"
+    valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d', '1w'}
 
-    def __init__(self, **kwargs):
-        super().__init__('wss://ws.gate.io/v3/', **kwargs)
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        return {data["id"].replace("_", symbol_separator): data['id'] for data in data if data["trade_status"] == "tradable"}, {}
+
+    def __init__(self, candle_interval='1m', **kwargs):
+        super().__init__('wss://api.gateio.ws/ws/v4/', **kwargs)
+        if candle_interval == '1w':
+            candle_interval = '7d'
+        self.candle_interval = candle_interval
+        self._reset()
 
     def _reset(self):
         self.l2_book = {}
+        self.last_update_id = {}
+        self.forced = defaultdict(bool)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
-        missing bid/ask so not useable
-
         {
-            'method': 'ticker.update',
-            'params': [
-                'BTC_USDT',
-                {
-                    'period': 86400,
-                    'open': '11836.29',
-                    'close': '11451.58',
-                    'high': '11872.54',
-                    'low': '11380',
-                    'last': '11451.58',
-                    'change': '-3.25',
-                    'quoteVolume': '1360.8451746822',
-                    'baseVolume': '15905013.385494827953'
-                }
-            ],
-            'id': None
+            'time': 1618876417,
+            'channel': 'spot.tickers',
+            'event': 'update',
+            'result': {
+                'currency_pair': 'BTC_USDT',
+                'last': '55636.45',
+                'lowest_ask': '55634.06',
+                'highest_bid': '55634.05',
+                'change_percentage': '-0.7634',
+                'base_volume': '1138.9062880772',
+                'quote_volume': '63844439.342660318028',
+                'high_24h': '63736.81',
+                'low_24h': '50986.18'
+            }
         }
         """
-        pass
+        await self.callback(TICKER, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
+                            bid=Decimal(msg['result']['highest_bid']),
+                            ask=Decimal(msg['result']['lowest_ask']),
+                            timestamp=float(msg['time']),
+                            receipt_timestamp=timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         """
         {
-            'method': 'trades.update',
-            'params': [
-                'BTC_USDT',
-                [
-                    {
-                        'id': 274655681,
-                        'time': Decimal('1598060303.5162649'),
-                        'price': '11449.69',
-                        'amount': '0.0003',
-                        'type': 'buy'
-                    },
-                    {
-                        'id': 274655680,
-                        'time': Decimal('1598060303.5160251'),
-                        'price': '11449.3',
-                        'amount': '0.0012',
-                        'type': 'buy'
-                    }
-                ]
-            ],
-            'id': None
+            "time": 1606292218,
+            "channel": "spot.trades",
+            "event": "update",
+            "result": {
+                "id": 309143071,
+                "create_time": 1606292218,
+                "create_time_ms": "1606292218213.4578",
+                "side": "sell",
+                "currency_pair": "GT_USDT",
+                "amount": "16.4700000000",
+                "price": "0.4705000000"
+            }
         }
         """
-        symbol, trades = msg['params']
-        symbol = symbol_exchange_to_std(symbol)
-        # list of trades appears to be in most recent to oldest, to reverse to deliver them in chronological order
-        for trade in reversed(trades):
-            side = BUY if trade['type'] == 'buy' else SELL
-            amount = Decimal(trade['amount'])
-            price = Decimal(trade['price'])
-            ts = float(trade['time'])
-            order_id = trade['id']
-            await self.callback(TRADES, feed=self.id,
-                                symbol=symbol,
-                                side=side,
-                                amount=amount,
-                                price=price,
-                                timestamp=ts,
-                                receipt_timestamp=timestamp,
-                                order_id=order_id)
+        await self.callback(TRADES, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
+                            side=SELL if msg['result']['side'] == 'sell' else BUY,
+                            amount=Decimal(msg['result']['amount']),
+                            price=Decimal(msg['result']['price']),
+                            timestamp=float(msg['result']['create_time_ms']) / 1000,
+                            receipt_timestamp=timestamp,
+                            order_id=msg['result']['id'])
+
+    async def _snapshot(self, symbol: str):
+        """
+        {
+            "id": 2679059670,
+            "asks": [[price, amount], [...], ...],
+            "bids": [[price, amount], [...], ...]
+        }
+        """
+        url = f'https://api.gateio.ws/api/v4/spot/order_book?currency_pair={symbol}&limit=100&with_id=true'
+        ret = await self.http_conn.read(url)
+        data = json.loads(ret, parse_float=Decimal)
+
+        symbol = self.exchange_symbol_to_std_symbol(symbol)
+        self.l2_book[symbol] = {}
+        self.last_update_id[symbol] = data['id']
+        self.l2_book[symbol][BID] = sd({Decimal(price): Decimal(amount) for price, amount in data['bids']})
+        self.l2_book[symbol][ASK] = sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
+
+    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
+        skip_update = False
+        forced = not self.forced[pair]
+
+        if forced and msg['u'] <= self.last_update_id[pair]:
+            skip_update = True
+        elif forced and msg['U'] <= self.last_update_id[pair] + 1 <= msg['u']:
+            self.last_update_id[pair] = msg['u']
+            self.forced[pair] = True
+        elif not forced and self.last_update_id[pair] + 1 == msg['U']:
+            self.last_update_id[pair] = msg['u']
+        else:
+            self._reset()
+            LOG.warning("%s: Missing book update detected, resetting book", self.id)
+            skip_update = True
+
+        return skip_update, forced
 
     async def _l2_book(self, msg: dict, timestamp: float):
         """
         {
-            'method': 'depth.update',
-            'params': [
-                    True,   <- true = full book, false = update
-                    {
-                        'asks': [['11681.19', '0.15'], ['11681.83', '0.0049'], ['11682.06', '0.005'], ['11682.25', '0.4663'], ['11682.33', '0.002'], ['11682.5', '0.0001'], ['11682.9', '0.0047'], ['11683.7', '0.7506'], ['11684.46', '0.1076'], ['11684.53', '0.3244'], ['11685', '0.0001'], ['11685.19', '0.00034298'], ['11685.31', '0.00038961'], ['11686.99', '0.144'], ['11687', '0.023'], ['11687.27', '0.1227'], ['11687.3', '0.011'], ['11687.5', '0.0001'], ['11688', '0.2078'], ['11689.69', '0.1787'], ['11689.91', '0.0893'], ['11690', '0.0001'], ['11690.32', '0.0446'], ['11690.47', '0.1087'], ['11690.52', '0.1785'], ['11691.27', '0.0034'], ['11691.39', '0.3'], ['11692.26', '0.2'], ['11692.3', '0.00109695'], ['11692.5', '0.0001']],
-                        'bids': [['11680.86', '0.0089'], ['11680.24', '0.0082'], ['11679.09', '0.7506'], ['11678.48', '0.0342'], ['11675.11', '0.288'], ['11674.97', '0.0342'], ['11674.61', '0.1105'], ['11674.34', '0.18'], ['11673.98', '0.0446'], ['11673.88', '0.3'], ['11673.67', '0.1785'], ['11671.46', '0.0342'], ['11669.72', '0.1112'], ['11669.59', '0.04354248'], ['11668.91', '0.2'], ['11668.78', '0.80535358'], ['11667.95', '0.0342'], ['11666.71', '0.2066'], ['11666.48', '0.04202993'], ['11665.65', '0.01'], ['11664.44', '0.0342'], ['11663.97', '0.428'], ['11660.94', '0.0343'], ['11660.86', '0.2'], ['11660.1', '0.3'], ['11657.44', '0.0219'], ['11657.07', '0.3'], ['11656.96', '0.3'], ['11655.8', '0.1027'], ['11655.36', '0.2098']]
-                    },
-                    'BTC_USDT'
-                ],
-                'id': None
+            'time': 1618961347,
+            'channel': 'spot.order_book_update',
+            'event': 'update',
+            'result': {
+                't': 1618961347345,   ms timestamp
+                'e': 'depthUpdate',   ignore
+                'E': 1618961347,      deprecated timestamp
+                's': 'BTC_USDT',      symbol
+                'U': 2679731734,      start of update seq no
+                'u': 2679731743,      end of update seq no
+                'b': [['56444.4', '0.01'], ['56080.11', '0']],
+                'a': [['56447.57', '0.1252'], ['56448.44', '0'], ['56467.28', '0'], ['56470.74', '0']]
             }
+        }
         """
-        symbol = symbol_exchange_to_std(msg['params'][-1])
-        forced = msg['params'][0]
+        symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
+        if symbol not in self.l2_book:
+            await self._snapshot(msg['result']['s'])
+
+        skip_update, forced = self._check_update_id(symbol, msg['result'])
+        if skip_update:
+            return
+
+        ts = msg['result']['t'] / 1000
         delta = {BID: [], ASK: []}
 
-        if forced:
-            self.l2_book[symbol] = {BID: sd(), ASK: sd()}
-        data = msg['params'][1]
+        for s, side in (('b', BID), ('a', ASK)):
+            for update in msg['result'][s]:
+                price = Decimal(update[0])
+                amount = Decimal(update[1])
 
-        for side, exchange_key in [(BID, 'bids'), (ASK, 'asks')]:
-            if exchange_key in data:
-                for entry in data[exchange_key]:
-                    price = Decimal(entry[0])
-                    amount = Decimal(entry[1])
-
-                    if amount == 0:
+                if amount == 0:
+                    if price in self.l2_book[symbol][side]:
                         del self.l2_book[symbol][side][price]
-                    else:
-                        self.l2_book[symbol][side][price] = amount
-
+                        delta[side].append((price, amount))
+                else:
+                    self.l2_book[symbol][side][price] = amount
                     delta[side].append((price, amount))
-        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
+
+        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
+
+    async def _candles(self, msg: dict, timestamp: float):
+        """
+        {
+            'time': 1619092863,
+            'channel': 'spot.candlesticks',
+            'event': 'update',
+            'result': {
+                't': '1619092860',
+                'v': '1154.64627',
+                'c': '54992.64',
+                'h': '54992.64',
+                'l': '54976.29',
+                'o': '54976.29',
+                'n': '1m_BTC_USDT'
+            }
+        }
+        """
+        interval, symbol = msg['result']['n'].split('_', 1)
+        if interval == '7d':
+            interval = '1w'
+        await self.callback(CANDLES,
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(symbol),
+                            timestamp=float(msg['time']),
+                            receipt_timestamp=timestamp,
+                            start=float(msg['result']['t']),
+                            stop=float(msg['result']['t']) + 59,
+                            interval=interval,
+                            trades=None,
+                            open_price=Decimal(msg['result']['o']),
+                            close_price=Decimal(msg['result']['c']),
+                            high_price=Decimal(msg['result']['h']),
+                            low_price=Decimal(msg['result']['l']),
+                            volume=Decimal(msg['result']['v']),
+                            closed=None)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
 
         if "error" in msg:
@@ -143,11 +219,18 @@ class Gateio(Feed):
                 pass
             else:
                 LOG.warning("%s: Error received from exchange - %s", self.id, msg)
-        elif 'method' in msg:
-            if msg['method'] == 'trades.update':
+        if msg['event'] == 'subscribe':
+            return
+        elif 'channel' in msg:
+            market, channel = msg['channel'].split('.')
+            if channel == 'tickers':
+                await self._ticker(msg, timestamp)
+            elif channel == 'trades':
                 await self._trades(msg, timestamp)
-            elif msg['method'] == 'depth.update':
+            elif channel == 'order_book_update':
                 await self._l2_book(msg, timestamp)
+            elif channel == 'candlesticks':
+                await self._candles(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message type %s", self.id, msg)
         else:
@@ -155,17 +238,25 @@ class Gateio(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self._reset()
-        client_id = 0
-        for chan in set(self.channels or self.subscription):
-            pairs = set(self.symbols or self.subscription[chan])
-            client_id += 1
-            if 'depth' in chan:
-                pairs = [[pair, 30, "0.00000001"] for pair in pairs]
-
-            await conn.send(json.dumps(
-                {
-                    "method": chan,
-                    "params": pairs,
-                    "id": client_id
-                }
-            ))
+        for chan in self.subscription:
+            symbols = self.subscription[chan]
+            nchan = normalize_channel(self.id, chan)
+            if nchan in {L2_BOOK, CANDLES}:
+                for symbol in symbols:
+                    await conn.write(json.dumps(
+                        {
+                            "time": int(time.time()),
+                            "channel": chan,
+                            "event": 'subscribe',
+                            "payload": [symbol, '100ms'] if nchan == L2_BOOK else [self.candle_interval, symbol],
+                        }
+                    ))
+            else:
+                await conn.write(json.dumps(
+                    {
+                        "time": int(time.time()),
+                        "channel": chan,
+                        "event": 'subscribe',
+                        "payload": symbols,
+                    }
+                ))
