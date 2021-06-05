@@ -7,8 +7,7 @@ associated with this software.
 import logging
 from collections import defaultdict
 from decimal import Decimal
-from functools import partial
-from typing import Callable, Dict, List, Union, Tuple
+from typing import Dict, Union, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
