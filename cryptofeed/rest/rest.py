@@ -8,7 +8,7 @@ import logging
 
 from cryptofeed.config import Config
 from cryptofeed.log import get_logger
-from cryptofeed.rest.binance_futures import BinanceFutures, BinanceDelivery
+from cryptofeed.rest.binance_futures import Binance, BinanceFutures, BinanceDelivery
 from cryptofeed.rest.bitfinex import Bitfinex
 from cryptofeed.rest.bitmex import Bitmex
 from cryptofeed.rest.coinbase import Coinbase
@@ -47,6 +47,7 @@ class Rest:
             'gemini': Gemini(config.gemini, sandbox=sandbox),
             'kraken': Kraken(config.kraken),
             'deribit': Deribit(config.deribit),
+            'binance': Binance(config.binance),
             'binance_futures': BinanceFutures(config.binance_futures),
             'binance_delivery': BinanceDelivery(config.binance_delivery),
             'ftx': FTX(config.ftx)

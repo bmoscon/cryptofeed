@@ -7,14 +7,13 @@ associated with this software.
 from datetime import datetime
 from decimal import Decimal
 import logging
-from typing import Tuple
+from typing import Tuple, Dict
 
 from yapic import json
 
-from cryptofeed.auth.binance_delivery import BinanceDeliveryAuth
 from cryptofeed.defines import FUTURES_INDEX, BINANCE_DELIVERY, OPEN_INTEREST, TICKER, USER_BALANCE, USER_POSITION, PERPETUAL, FUTURE, SPOT
 from cryptofeed.exchange.binance import Binance
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
@@ -43,6 +42,15 @@ class BinanceDelivery(Binance):
     id = BINANCE_DELIVERY
     symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
 
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        base, info = super()._parse_symbol_data(data, symbol_separator)
+        add = {}
+        for symbol, orig in base.items():
+            add[symbol.split("_")[0]] = orig.split("_")[0]
+        base.update(add)
+        return base, info
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -50,6 +58,7 @@ class BinanceDelivery(Binance):
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
+        from cryptofeed.auth.binance_delivery import BinanceDeliveryAuth
         self.auth = BinanceDeliveryAuth(self.config)
         self.address = self._address()
 
@@ -90,7 +99,7 @@ class BinanceDelivery(Binance):
         """
         await self.callback(FUTURES_INDEX,
                             feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['i']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['i']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp,
                             futures_index=Decimal(msg['p']),
@@ -163,7 +172,7 @@ class BinanceDelivery(Binance):
         for position in msg['a']['P']:
             await self.callback(USER_POSITION,
                                 feed=self.id,
-                                symbol=symbol_exchange_to_std(position['s']),
+                                symbol=self.exchange_symbol_to_std_symbol(position['s']),
                                 timestamp=timestamp_normalize(self.id, msg['E']),
                                 receipt_timestamp=timestamp,
                                 position_amount=Decimal(position['pa']),

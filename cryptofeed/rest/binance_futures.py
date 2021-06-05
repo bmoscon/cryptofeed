@@ -15,7 +15,6 @@ import pandas as pd
 import requests
 from yapic import json
 
-from cryptofeed.exchanges import BinanceFutures, BinanceDelivery
 from cryptofeed.defines import BINANCE, BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
 from cryptofeed.rest.api import API, request_retry
 from cryptofeed.standards import timestamp_normalize

@@ -13,11 +13,10 @@ from typing import Callable, Dict, List, Union, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.binance import BinanceAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, VOLUME, USER_BALANCE, FILLED, UNFILLED
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize, normalize_channel, is_authenticated_channel
+from cryptofeed.standards import timestamp_normalize, normalize_channel, is_authenticated_channel
 
 
 LOG = logging.getLogger('feedhandler')
@@ -35,7 +34,8 @@ class Binance(Feed):
         ret = {}
         info = defaultdict(dict)
         for symbol in data['symbols']:
-            if symbol.get('status', 'TRADING') != "TRADING":
+            if symbol.get('status', 'TRADING') not in ["TRADING", "BREAK"]:
+                # TODO: is "break" an acceptable status for the symbols?
                 continue
             if symbol.get('contractStatus', 'TRADING') != "TRADING":
                 continue
@@ -59,6 +59,7 @@ class Binance(Feed):
     def setup(self):
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
+        from cryptofeed.auth.binance import BinanceAuth
         self.auth = BinanceAuth(self.config)
         self.address = self._address()
 
@@ -79,12 +80,12 @@ class Binance(Feed):
             address = self.ws_endpoint + '/stream?streams='
         subs = []
 
-        is_any_private = any(is_authenticated_channel(chan) for chan in (self.channels if not self.subscription else self.subscription))
-        is_any_public = any(not is_authenticated_channel(chan) for chan in (self.channels if not self.subscription else self.subscription))
+        is_any_private = any(is_authenticated_channel(chan) for chan in self.subscription)
+        is_any_public = any(not is_authenticated_channel(chan) for chan in self.subscription)
         if is_any_private and is_any_public:
             raise ValueError("Private and public channels should be subscribed to in separate feeds")
 
-        for chan in self.channels if not self.subscription else self.subscription:
+        for chan in self.subscription:
             normalized_chan = normalize_channel(self.id, chan)
             if normalized_chan == OPEN_INTEREST:
                 continue
@@ -388,7 +389,7 @@ class Binance(Feed):
         """
         await self.callback(VOLUME,
                             feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['s']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp,
                             base_volume=Decimal(msg['v']),

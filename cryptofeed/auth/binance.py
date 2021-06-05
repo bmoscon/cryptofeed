@@ -1,5 +1,4 @@
-from cryptofeed.defines import BINANCE
-from cryptofeed.rest.binance_futures import Binance
+from cryptofeed.rest.rest import Rest
 
 class BinanceAuth():
     listen_key_endpoint = 'userDataStream'
@@ -10,7 +9,7 @@ class BinanceAuth():
         self.token = None
 
     def create_rest_api(self, config):
-        self.rest_api = Binance(config=config[BINANCE.lower()])
+        self.rest_api = Rest(config=config).binance
 
     async def refresh_token(self):
         if self.token is None:

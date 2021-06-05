@@ -18,7 +18,7 @@ from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, USER_TRADES, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
-from cryptofeed.standards import feed_to_exchange, get_exchange_info, load_exchange_symbol_mapping, symbol_std_to_exchange, is_authenticated_channel
+from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
 
 
@@ -119,11 +119,11 @@ class Feed:
                 if is_authenticated_channel(channel):
                     if not self.key_id or not self.key_secret:
                         raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
-                    self.authenticated_subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
+                    self.authenticated_subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol, self.id) for symbol in subscription[channel]])
                     self.normalized_symbols.extend(self.authenticated_subscription[chan])
                     self.requires_authentication = True
                 else:
-                    self.subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
+                    self.subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol, self.id) for symbol in subscription[channel]])
                     self.normalized_symbols.extend(self.subscription[chan])
                 self._feed_config[channel].extend(self.normalized_symbols)
 
@@ -359,7 +359,7 @@ class Feed:
         """
         Create tasks for exchange interfaces and backends
         """
-        for conn, sub, handler in self.connect():
+        for conn, sub, handler, auth in self.connect():
             self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
             self.connection_handlers[-1].start(loop)
 

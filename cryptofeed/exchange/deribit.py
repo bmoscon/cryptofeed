@@ -13,7 +13,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETUAL, OPTION, FUTURE, ANY, C, P, BTC, ETH, FILLED
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.standards import timestamp_normalize, feed_to_exchange, symbol_std_to_exchange, is_authenticated_channel
+from cryptofeed.standards import timestamp_normalize, feed_to_exchange, is_authenticated_channel
 
 from cryptofeed.util.instrument import get_instrument_type
 
@@ -66,11 +66,11 @@ class Deribit(Feed):
             subscribing_instruments = list(self.subscription.values())
             pairs = [pair for inner in subscribing_instruments for pair in inner]
 
-        for pair in set(self.symbols or pairs):
-            if Deribit.is_valid_kind(pair):
-                continue
-            if pair not in instruments:
-                raise ValueError(f"{pair} is not active on {self.id}")
+        # for pair in self.symbols:
+        #     if Deribit.is_valid_kind(pair):
+        #         continue
+        #     if pair not in instruments:
+        #         raise ValueError(f"{pair} is not active on {self.id}")
         self.__reset()
 
     def __reset(self):
