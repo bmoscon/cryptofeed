@@ -176,7 +176,7 @@ class Deribit(Feed):
             if is_authenticated_channel(channel):
                 if not self.key_id or not self.key_secret:
                     raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
-            normalized_subscription[chan].update([symbol_std_to_exchange(symbol, self.id) for symbol in subscription[channel]])
+            normalized_subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol, self.id) for symbol in subscription[channel]])
 
         channels_to_subscribe = []
         channels_to_unsubscribe = []
