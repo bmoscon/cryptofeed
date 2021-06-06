@@ -9,6 +9,7 @@ import asyncio
 from collections import defaultdict
 import logging
 from decimal import Decimal
+import hmac
 from time import time
 import zlib
 from typing import Dict, Iterable, Tuple
@@ -18,12 +19,12 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY
+from cryptofeed.defines import BID, ASK, BUY, USER_FILLS
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.standards import feed_to_exchange, is_authenticated_channel, normalize_channel, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -53,6 +54,25 @@ class FTX(Feed):
         self.funding = {}
         self.open_interest = {}
 
+    async def generate_token(self, conn: AsyncConnection):
+        ts = int(time() * 1000)
+        msg = {
+            'op': 'login', 
+            'args': 
+            {
+                'key': self.key_id,
+                'sign': hmac.new(self.key_secret.encode(), f'{ts}websocket_login'.encode(), 'sha256').hexdigest(),
+                'time': ts,
+            }
+        }
+        # TODO: Assumes that the 'Gutenberg' subaccount is being used
+        msg['args']['subaccount'] = 'Gutenberg'
+        await conn.write(json.dumps(msg))
+
+    async def authenticate(self, conn: AsyncConnection):
+        if self.requires_authentication:
+            await self.generate_token(conn)
+
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         for chan in self.subscription:
@@ -62,6 +82,14 @@ class FTX(Feed):
                 continue
             if chan == OPEN_INTEREST:
                 asyncio.create_task(self._open_interest(symbols))  # TODO: use HTTPAsyncConn
+                continue
+            if is_authenticated_channel(normalize_channel(self.id, chan)):
+                await conn.write(json.dumps(
+                    {
+                        "channel": chan,
+                        "op": "subscribe"
+                    }
+                ))
                 continue
             for pair in symbols:
                 await conn.write(json.dumps(
@@ -263,17 +291,64 @@ class FTX(Feed):
                 raise BadChecksum
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
 
+    async def _fill(self, msg: dict, timestamp: float):
+        """
+        example message:
+
+        {
+            "channel": "fills",
+            "data": {
+                "fee": 78.05799225,
+                "feeRate": 0.0014,
+                "future": "BTC-PERP",
+                "id": 7828307,
+                "liquidity": "taker",
+                "market": "BTC-PERP",
+                "orderId": 38065410,
+                "tradeId": 19129310,
+                "price": 3723.75,
+                "side": "buy",
+                "size": 14.973,
+                "time": "2019-05-07T16:40:58.358438+00:00",
+                "type": "order"
+            },
+            "type": "update"
+            }
+        """
+        fill = msg['data']
+        await self.callback(USER_FILLS, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(fill['market']),
+                            side=BUY if fill['side'] == 'buy' else SELL,
+                            amount=Decimal(fill['size']),
+                            price=Decimal(fill['price']),
+                            liquidity=fill['liquidity'],
+                            order_id=fill['id'],
+                            trade_id=fill['tradeId'],
+                            timestamp=float(timestamp_normalize(self.id, fill['time'])),
+                            receipt_timestamp=timestamp)
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        if 'type' in msg and msg['type'] == 'subscribed':
-            return
-        elif 'channel' in msg:
-            if msg['channel'] == 'orderbook':
-                await self._book(msg, timestamp)
-            elif msg['channel'] == 'trades':
-                await self._trade(msg, timestamp)
-            elif msg['channel'] == 'ticker':
-                await self._ticker(msg, timestamp)
+        if 'type' in msg:
+            if msg['type'] == 'subscribed':
+                if 'market' in msg:
+                    LOG.info('%s: Subscribed to %s channel for %s', self.id, msg['channel'], msg['market'])
+                else:
+                    LOG.info('%s: Subscribed to %s channel', self.id, msg['channel'])
+            elif msg['type'] == 'error':
+                LOG.error('%s: Received error message %s', self.id, msg)
+                raise Exception('Error from %s: %s', self.id, msg)
+            elif 'channel' in msg:
+                if msg['channel'] == 'orderbook':
+                    await self._book(msg, timestamp)
+                elif msg['channel'] == 'trades':
+                    await self._trade(msg, timestamp)
+                elif msg['channel'] == 'ticker':
+                    await self._ticker(msg, timestamp)
+                elif msg['channel'] == 'fills':
+                    await self._fill(msg, timestamp)
+                else:
+                    LOG.warning("%s: Invalid message type %s", self.id, msg)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:

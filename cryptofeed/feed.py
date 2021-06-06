@@ -16,7 +16,7 @@ from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, USER_TRADES, VOLUME)
+                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, USER_BALANCE, USER_FILLS, USER_POSITION, USER_TRADES, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
 from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -155,9 +155,12 @@ class Feed:
                           TICKER: Callback(None),
                           TRADES: Callback(None),
                           VOLUME: Callback(None),
-                          USER_TRADES: Callback(None),
                           CANDLES: Callback(None),
-                          ORDER_INFO: Callback(None)
+                          ORDER_INFO: Callback(None),
+                          USER_BALANCE: Callback(None),
+                          USER_FILLS: Callback(None),
+                          USER_POSITION: Callback(None),
+                          USER_TRADES: Callback(None),
                           }
 
         if callbacks:
@@ -360,7 +363,7 @@ class Feed:
         Create tasks for exchange interfaces and backends
         """
         for conn, sub, handler, auth in self.connect():
-            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
+            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
             self.connection_handlers[-1].start(loop)
 
         for callbacks in self.callbacks.values():

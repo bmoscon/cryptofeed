@@ -110,7 +110,7 @@ class Deribit(Feed):
 
     async def generate_token(self, conn: AsyncConnection):
         client_id = 0
-        await conn.send(json.dumps(
+        await conn.write(json.dumps(
             {
                 "jsonrpc": "2.0",
                 "id": client_id,
@@ -143,7 +143,7 @@ class Deribit(Feed):
         if not channels:
             return
         client_id = 0
-        await conn.send(json.dumps(
+        await conn.write(json.dumps(
             {
                 "jsonrpc": "2.0",
                 "id": client_id,
@@ -158,7 +158,7 @@ class Deribit(Feed):
         if not channels:
             return
         client_id = 1
-        await conn.send(json.dumps(
+        await conn.write(json.dumps(
             {
                 "jsonrpc": "2.0",
                 "id": client_id,
