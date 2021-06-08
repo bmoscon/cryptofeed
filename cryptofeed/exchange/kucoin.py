@@ -14,6 +14,7 @@ from typing import Dict, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.auth.kucoin import generate_token
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
@@ -143,8 +144,10 @@ class KuCoin(Feed):
                             order_id=msg['data']['tradeId'])
 
     async def _snapshot(self, symbol: str):
-        url = f"https://api.kucoin.com/api/v2/market/orderbook/level2?symbol={symbol}"
-        data = await self.http_conn.read(url)
+        url = f"https://api.kucoin.com/api/v3/market/orderbook/level2?symbol={symbol}"
+        str_to_sign = "GET" + f"/api/v3/market/orderbook/level2?symbol={symbol}"
+        headers = generate_token(self.key_id, self.key_secret, self.key_passphrase, str_to_sign)
+        data = await self.http_conn.read(url, header=headers)
         data = json.loads(data, parse_float=Decimal)
         data = data['data']
         self.seq_no[symbol] = int(data['sequence'])

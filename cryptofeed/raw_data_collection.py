@@ -47,7 +47,7 @@ async def _playback(feed: str, filenames: list):
         async def write(self, *args, **kwargs):
             pass
 
-        async def read(self, url):
+        async def read(self, url, **kwargs):
             return self.cache[url].pop(0)
 
     ws = FakeWS(filenames)
@@ -79,7 +79,7 @@ async def _playback(feed: str, filenames: list):
     async def internal_cb(*args, **kwargs):
         callbacks[kwargs['cb_type']] += 1
 
-    feed = EXCHANGE_MAP[feed](subscription=sub)
+    feed = EXCHANGE_MAP[feed](config="config.yaml", subscription=sub)
     for cb_type, handler in feed.callbacks.items():
         f = functools.partial(internal_cb, cb_type=cb_type)
         handler.append(f)
