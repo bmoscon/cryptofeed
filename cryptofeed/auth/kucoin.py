@@ -10,14 +10,15 @@ import hmac
 import base64
 import hashlib
 
-def generate_token(key_id:str, key_secret:str, key_passphrase:str, str_to_sign:str) -> dict:
+
+def generate_token(key_id: str, key_secret: str, key_passphrase: str, str_to_sign: str) -> dict:
     # https://docs.kucoin.com/#authentication
-    
-    now = int(time.time() * 1000)    
+
+    now = int(time.time() * 1000)
     str_to_sign = str(now) + str_to_sign
     signature = base64.b64encode(
         hmac.new(key_secret.encode('utf-8'), str_to_sign.encode('utf-8'), hashlib.sha256).digest())
-    
+
     header = {
         "KC-API-SIGN": signature.decode(),
         "KC-API-TIMESTAMP": str(now),

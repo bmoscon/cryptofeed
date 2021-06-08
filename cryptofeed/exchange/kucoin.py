@@ -10,7 +10,6 @@ from decimal import Decimal
 import logging
 import time
 from typing import Dict, Tuple
-import requests
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -144,7 +143,6 @@ class KuCoin(Feed):
                             receipt_timestamp=timestamp,
                             order_id=msg['data']['tradeId'])
 
-    
     async def _snapshot(self, symbol: str):
         url = f"https://api.kucoin.com/api/v3/market/orderbook/level2?symbol={symbol}"
         str_to_sign = "GET" + f"/api/v3/market/orderbook/level2?symbol={symbol}"
