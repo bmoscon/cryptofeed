@@ -115,12 +115,12 @@ class HTTPAsyncConn(AsyncConnection):
             self.sent = 0
             self.received = 0
 
-    async def read(self, address: str) -> bytes:
+    async def read(self, address: str, header=None) -> bytes:
         if not self.is_open:
             await self._open()
 
         LOG.debug("%s: requesting data from %s", self.id, address)
-        async with self.conn.get(address) as response:
+        async with self.conn.get(address, headers=header) as response:
             data = await response.text()
             self.last_message = time.time()
             self.received += 1
@@ -152,14 +152,14 @@ class HTTPPoll(HTTPAsyncConn):
         self.sleep = sleep
         self.delay = delay
 
-    async def read(self) -> AsyncIterable:
+    async def read(self, header=None) -> AsyncIterable:
         while True:
             for addr in self.address:
                 if not self.is_open:
                     LOG.error('%s: connection closed in read()', self.id)
                     raise ConnectionClosed
                 LOG.debug("%s: polling %s", self.id, addr)
-                async with self.conn.get(addr) as response:
+                async with self.conn.get(addr, headers=header) as response:
                     data = await response.text()
                     self.received += 1
                     self.last_message = time.time()
