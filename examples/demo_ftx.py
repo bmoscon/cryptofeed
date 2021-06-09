@@ -11,8 +11,9 @@ from pathlib import Path
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, L2_BOOK, TICKER, TRADES, USER_FILLS
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, TICKER, TRADES, USER_FILLS
 from cryptofeed.exchanges import FTX
+from cryptofeed.rest.rest import Rest
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -47,11 +48,18 @@ def get_time_from_timestamp(timestamp):
 
 def main():
     path_to_config = os.path.join(Path.home(), 'config.yaml')
+
+    ftx = Rest(config=path_to_config)['ftx']
+    print(ftx.ticker('ETH-USD'))
+    print(ftx.orders(symbol='USDT-USD'))
+    print(ftx.place_order(symbol='USDT-USD', side=BUY, amount=0.01, price=0.9995, post_only=True))
+    print(ftx.orders(symbol='USDT-USD'))
+
     # callbacks={L2_BOOK: BookCallback(book), TICKER: ticker, TRADES: TradeCallback(trade), USER_FILLS: fill}
-    callbacks={USER_FILLS: fill}
-    f = FeedHandler()
-    f.add_feed(FTX(config=path_to_config, symbols=['ETH-USD', 'ETH-PERP','ETH-0625'], channels=[TRADES, L2_BOOK, TICKER, USER_FILLS], callbacks=callbacks))
-    f.run()
+    # callbacks={USER_FILLS: fill}
+    # f = FeedHandler()
+    # f.add_feed(FTX(config=path_to_config, symbols=['ETH-USD', 'ETH-PERP','ETH-0625'], channels=[TRADES, L2_BOOK, TICKER, USER_FILLS], callbacks=callbacks))
+    # f.run()
 
 
 if __name__ == '__main__':

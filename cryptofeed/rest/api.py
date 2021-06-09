@@ -92,7 +92,7 @@ class API:
     def cancel_order(self, order_id: str):
         raise NotImplementedError
 
-    def orders(self):
+    def orders(self, symbol: str = None):
         """
         Return outstanding orders
         """

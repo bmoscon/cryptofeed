@@ -4,14 +4,18 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from decimal import Decimal
+import hmac
 import logging
-from time import sleep
+from time import time, sleep
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import requests
 from sortedcontainers.sorteddict import SortedDict as sd
+import urllib.parse
 
-from cryptofeed.defines import BID, ASK, BUY
+from cryptofeed.defines import BID, ASK, BUY, DELETE, GET, LIMIT, POST
 from cryptofeed.defines import FTX as FTX_ID
 from cryptofeed.defines import SELL
 from cryptofeed.exchanges import FTX as FTXEx
@@ -26,16 +30,40 @@ class FTX(API):
     ID = FTX_ID
     info = FTXEx()
     api = "https://ftx.com/api"
+    session = requests.Session()
 
-    def _get(self, command: str, params=None, retry=None, retry_wait=0):
-        url = f"{self.api}{command}"
+    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
+        return self._send_request(endpoint, GET, params=params)
+    
+    def _post(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
+        return self._send_request(endpoint, POST, json=params)
 
+    def _delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
+        return self._send_request(endpoint, DELETE, json=params)
+
+    def _send_request(self, endpoint: str, http_method=GET, retry=None, retry_wait=0, **kwargs):
         @request_retry(self.ID, retry, retry_wait)
         def helper():
-            resp = requests.get(url, params={} if not params else params)
-            self._handle_error(resp, LOG)
-            return resp.json()
+            request = requests.Request(method=http_method, url=self.api + endpoint, **kwargs)
+            self._sign_request(request)
+            r = self.session.send(request.prepare())
+            self._handle_error(r, LOG)
+            return r.json()
         return helper()
+
+    def _sign_request(self, request: requests.Request) -> None:
+        ts = int(time() * 1000)
+        prepared = request.prepare()
+        signature_payload = f'{ts}{prepared.method}{prepared.path_url}'.encode()
+        if prepared.body:
+            signature_payload += prepared.body
+        print(signature_payload)
+        signature = hmac.new(self.config.key_secret.encode(), signature_payload, 'sha256').hexdigest()
+        request.headers['FTX-KEY'] = self.config.key_id
+        request.headers['FTX-SIGN'] = signature
+        request.headers['FTX-TS'] = str(ts)
+        # if self._subaccount_name:
+        request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote('Placeholder')
 
     def ticker(self, symbol: str, retry=None, retry_wait=0):
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
@@ -49,7 +77,7 @@ class FTX(API):
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
-        data = self._get(f"/markets/{sym}/orderbook", {'depth': 100}, retry=retry, retry_wait=retry_wait)
+        data = self._get(f"/markets/{sym}/orderbook", params={'depth': 100}, retry=retry, retry_wait=retry_wait)
         return {
             BID: sd({
                 u[0]: u[1]
@@ -112,6 +140,28 @@ class FTX(API):
 
             data = [self._funding_normalization(x, symbol) for x in data]
             return data
+
+    def place_order(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str=LIMIT, 
+                    reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        return self._post('/orders', params={
+            'market': sym,
+            'side': side,
+            'price': price,
+            'size': amount,
+            'type': order_type, 
+            'reduceOnly': reduce_only,
+            'ioc': ioc,
+            'postOnly': post_only,
+            'clientId': client_id,
+        })
+
+    def cancel_order(self, order_id: str) -> dict:
+        return self._delete(f'/orders/{order_id}')
+
+    def orders(self, symbol: str) -> List[dict]:
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        return self._get('/orders', params={'market': sym})
 
     @staticmethod
     def _dedupe(data, last):

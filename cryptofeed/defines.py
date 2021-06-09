@@ -106,6 +106,12 @@ ETH = 'ETH'
 C = 'call'
 P = 'put'
 
+# HTTP methods
+GET = 'GET'
+DELETE = 'DELETE'
+PUT = 'PUT'
+POST = 'POST'
+
 """
 L2 Orderbook Layout
     * BID and ASK are SortedDictionaries
