@@ -29,7 +29,7 @@ class Feed:
     id = 'NotImplemented'
     http_sync = HTTPSync()
 
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, subaccount=None):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -95,8 +95,9 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
-        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
-        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
+        self.subaccount = subaccount
+        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or (self.config[self.id.lower()][self.subaccount].key_id if self.subaccount else self.config[self.id.lower()].key_id)
+        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or (self.config[self.id.lower()][self.subaccount].key_secret if self.subaccount else self.config[self.id.lower()].key_secret)
         self.connection = None
         self.requires_authentication = False
         self.is_authenticated = False

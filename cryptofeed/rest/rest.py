@@ -34,7 +34,7 @@ class Rest:
     mode, if supported by the exchange.
     """
 
-    def __init__(self, config=None, sandbox=False):
+    def __init__(self, config=None, sandbox=False, subaccount=None):
         config = Config(config=config)
 
         get_logger('rest', config.rest.log.filename, config.rest.log.level)
@@ -50,7 +50,7 @@ class Rest:
             'binance': Binance(config.binance),
             'binance_futures': BinanceFutures(config.binance_futures),
             'binance_delivery': BinanceDelivery(config.binance_delivery),
-            'ftx': FTX(config.ftx)
+            'ftx': FTX(config.ftx, subaccount=subaccount)
         }
 
     def __getitem__(self, key):

@@ -65,8 +65,8 @@ class FTX(Feed):
                 'time': ts,
             }
         }
-        # TODO: Assumes that the 'Gutenberg' subaccount is being used
-        msg['args']['subaccount'] = 'Gutenberg'
+        if self.subaccount:
+            msg['args']['subaccount'] = self.subaccount
         await conn.write(json.dumps(msg))
 
     async def authenticate(self, conn: AsyncConnection):

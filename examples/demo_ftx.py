@@ -49,7 +49,8 @@ def get_time_from_timestamp(timestamp):
 def main():
     path_to_config = os.path.join(Path.home(), 'config.yaml')
 
-    ftx = Rest(config=path_to_config)['ftx']
+    ftx = Rest(config=path_to_config, subaccount='subaccount')['ftx']
+    # print(ftx.config)
     print(ftx.ticker('ETH-USD'))
     print(ftx.orders(symbol='USDT-USD'))
     print(ftx.place_order(symbol='USDT-USD', side=BUY, amount=0.01, price=0.9995, post_only=True))
@@ -58,7 +59,7 @@ def main():
     # callbacks={L2_BOOK: BookCallback(book), TICKER: ticker, TRADES: TradeCallback(trade), USER_FILLS: fill}
     # callbacks={USER_FILLS: fill}
     # f = FeedHandler()
-    # f.add_feed(FTX(config=path_to_config, symbols=['ETH-USD', 'ETH-PERP','ETH-0625'], channels=[TRADES, L2_BOOK, TICKER, USER_FILLS], callbacks=callbacks))
+    # f.add_feed(FTX(config=path_to_config, subaccount='subaccount', symbols=['ETH-USD', 'ETH-PERP','ETH-0625'], channels=[TRADES, L2_BOOK, TICKER, USER_FILLS], callbacks=callbacks))
     # f.run()
 
 

@@ -52,9 +52,12 @@ def request_retry(exchange, retry, retry_wait):
 class API:
     ID = 'NotImplemented'
 
-    def __init__(self, config=None, sandbox=False):
+    def __init__(self, config=None, sandbox=False, subaccount=None):
         self.sandbox = sandbox
         self.config = config
+        self.subaccount = subaccount
+        self.key_id = self.config[self.subaccount].key_id if self.subaccount else self.config.key_id
+        self.key_secret = self.config[self.subaccount].key_secret if self.subaccount else self.config.key_secret
 
     @staticmethod
     def _timestamp(ts):
