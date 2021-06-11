@@ -50,10 +50,10 @@ Cryptofeed accepts standardized names for data channels/feeds. The `Feed` parent
 async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan, symbols in self.subscriptions.items():
+        for chan, symbols in self.subscription.items():
             for symbol in symbols:
                 client_id += 1
-                await conn.send(json.dumps(
+                await conn.write(json.dumps(
                     {
                         "sub": f"market.{symbol}.{chan}",
                         "id": client_id
