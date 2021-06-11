@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.9.1
+### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
   * Bugfix: Fix inverted Poloniex symbols
   * Feature: simplify and cleanup parts of Poloniex
@@ -20,6 +20,7 @@
   * Update: Remove deprecated channel mapping from Kraken, use channel name from message instead
   * Bugfix: change Kraken Futures to use the standard symbol to be consistent with the rest of the library
   * Update: use Kucoin v3 endpoint for orderbook snapshot (v2 deprecated).
+  * Update: Poloniex ticker message format update 
 
 ### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
