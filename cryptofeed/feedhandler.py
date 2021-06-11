@@ -112,7 +112,7 @@ class FeedHandler:
 
         self.feeds[-1].start(loop)
 
-    def add_nbbo(self, feeds: List[Feed], symbols: List[str], callback):
+    def add_nbbo(self, feeds: List[Feed], symbols: List[str], callback, config=None):
         """
         feeds: list of feed classes
             list of feeds (exchanges) that comprises the NBBO
@@ -120,10 +120,12 @@ class FeedHandler:
             the trading symbols
         callback: function pointer
             the callback to be invoked when a new tick is calculated for the NBBO
+        config: dict, str, or None
+            optional information to pass to each exchange that is part of the NBBO feed
         """
         cb = NBBO(callback, symbols)
         for feed in feeds:
-            self.add_feed(feed(channels=[L2_BOOK], symbols=symbols, callbacks={L2_BOOK: cb}))
+            self.add_feed(feed(channels=[L2_BOOK], symbols=symbols, callbacks={L2_BOOK: cb}, config=config))
 
     def run(self, start_loop: bool = True, install_signal_handlers: bool = True, exception_handler=None):
         """
