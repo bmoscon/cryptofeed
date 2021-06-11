@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.9.2
+  * Bugfix: add config kwarg to add_nbbo method
+
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
   * Bugfix: Fix inverted Poloniex symbols
