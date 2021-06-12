@@ -2,6 +2,7 @@
 
 ### 1.9.2
   * Bugfix: add config kwarg to add_nbbo method
+  * Update: changed KuCoin authentication to match new signing method
 
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
