@@ -15,7 +15,7 @@ last_print = 0
 async def book(**kwargs):
     global last_print
     now = timer()
-    if now - last_print > 10:
+    if now - last_print > 10 or last_print == 0:
         print("Book Update:")
         pprint(kwargs)
         last_print = now
