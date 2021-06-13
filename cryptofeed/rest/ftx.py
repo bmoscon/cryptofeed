@@ -162,6 +162,9 @@ class FTX(API):
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
         return self._get('/orders', params={'market': sym})
 
+    def positions(self, show_avg_price: bool = False) -> List[dict]:
+        return self._get('/positions', params={'showAvgPrice': show_avg_price})
+
     @staticmethod
     def _dedupe(data, last):
         if len(last) == 0:

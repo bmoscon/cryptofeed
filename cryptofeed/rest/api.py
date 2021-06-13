@@ -116,6 +116,9 @@ class API:
     def balances(self):
         raise NotImplementedError
 
+    def positions(self, **kwargs):
+        raise NotImplementedError
+
     def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         """
         Executed trade history
