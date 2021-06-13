@@ -52,3 +52,7 @@ pytest-asyncio = "*"
 # pylint_google_style_guide_imports_enforcing = "*"
 # pylint-requests = "*"
 # pylint-unittest = "*"
+flake8 = "*"
+
+[pipenv]
+allow_prereleases = true
