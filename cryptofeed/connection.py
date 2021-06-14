@@ -115,7 +115,7 @@ class HTTPAsyncConn(AsyncConnection):
             self.sent = 0
             self.received = 0
 
-    async def read(self, address: str, header=None) -> bytes:
+    async def read(self, address: str, header=None, return_headers=False) -> bytes:
         if not self.is_open:
             await self._open()
 
@@ -125,8 +125,10 @@ class HTTPAsyncConn(AsyncConnection):
             self.last_message = time.time()
             self.received += 1
             if self.raw_data_callback:
-                await self.raw_data_callback(data, self.last_message, self.id, endpoint=address)
+                await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None if return_headers is False else dict(response.headers))
             response.raise_for_status()
+            if return_headers:
+                return data, response.headers
             return data
 
     async def write(self, address: str, msg: str, header=None):

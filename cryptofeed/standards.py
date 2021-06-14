@@ -32,10 +32,10 @@ def timestamp_normalize(exchange, ts):
             return ts / 1000
         else:
             return ts.timestamp()
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO}:
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX}:
         return ts.timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
-                      BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
+                      BINANCE_DELIVERY, GEMINI, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -72,7 +72,7 @@ _feed_to_exchange_map = {
         FTX: 'orderbook',
         FTX_US: 'orderbook',
         GEMINI: L2_BOOK,
-        BITTREX: 'SubscribeToExchangeDeltas',
+        BITTREX: 'orderbook_{}_{}',
         BITCOINCOM: 'subscribeOrderbook',
         BITMAX: "depth:",
         UPBIT: L2_BOOK,
@@ -81,6 +81,7 @@ _feed_to_exchange_map = {
         KUCOIN: '/market/level2'
     },
     L3_BOOK: {
+        BITTREX: UNSUPPORTED,
         BITFINEX: 'book-R0-F0-100',
         BITHUMB: UNSUPPORTED,
         BITSTAMP: 'detail_order_book',
@@ -136,7 +137,7 @@ _feed_to_exchange_map = {
         FTX: 'trades',
         FTX_US: 'trades',
         GEMINI: TRADES,
-        BITTREX: TRADES,
+        BITTREX: 'trade_{}',
         BITCOINCOM: 'subscribeTrades',
         BITMAX: "trades:",
         UPBIT: TRADES,
@@ -168,7 +169,7 @@ _feed_to_exchange_map = {
         FTX: "ticker",
         FTX_US: "ticker",
         GEMINI: UNSUPPORTED,
-        BITTREX: 'SubscribeToSummaryDeltas',
+        BITTREX: 'ticker_{}',
         BITCOINCOM: 'subscribeTicker',
         BITMAX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
@@ -224,7 +225,8 @@ _feed_to_exchange_map = {
         HUOBI: 'kline',
         GATEIO: 'spot.candlesticks',
         KUCOIN: '/market/candles',
-        KRAKEN: 'ohlc'
+        KRAKEN: 'ohlc',
+        BITTREX: 'candle_{}_{}'
     }
 }
 
