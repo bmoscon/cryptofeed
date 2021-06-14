@@ -4,6 +4,8 @@
   * Bugfix: add config kwarg to add_nbbo method
   * Update: changed KuCoin authentication to match new signing method
   * Bugfix: #518 - fix aggregator example code
+  * Update: Support Bittrex V3
+  * Feature: Add support for candles on Bittrex
 
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
