@@ -57,8 +57,8 @@ class FTX(Feed):
     async def generate_token(self, conn: AsyncConnection):
         ts = int(time() * 1000)
         msg = {
-            'op': 'login', 
-            'args': 
+            'op': 'login',
+            'args':
             {
                 'key': self.key_id,
                 'sign': hmac.new(self.key_secret.encode(), f'{ts}websocket_login'.encode(), 'sha256').hexdigest(),
@@ -323,7 +323,7 @@ class FTX(Feed):
                             trade_id=fill['tradeId'],
                             timestamp=float(timestamp_normalize(self.id, fill['time'])),
                             receipt_timestamp=timestamp)
-    
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if 'type' in msg:
