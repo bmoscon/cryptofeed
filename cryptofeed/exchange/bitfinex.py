@@ -350,7 +350,7 @@ class Bitfinex(Feed):
         def build(options: list):
             subscribe = partial(self.subscribe, options=options)
             conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
-            return conn, subscribe, self.message_handler
+            return conn, subscribe, self.message_handler, self.authenticate
 
         for channel in self.subscription:
             for pair in self.subscription[channel]:
