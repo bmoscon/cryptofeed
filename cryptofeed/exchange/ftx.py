@@ -24,7 +24,7 @@ from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import feed_to_exchange, is_authenticated_channel, normalize_channel, timestamp_normalize
+from cryptofeed.standards import is_authenticated_channel, normalize_channel, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -57,8 +57,8 @@ class FTX(Feed):
     async def generate_token(self, conn: AsyncConnection):
         ts = int(time() * 1000)
         msg = {
-            'op': 'login', 
-            'args': 
+            'op': 'login',
+            'args':
             {
                 'key': self.key_id,
                 'sign': hmac.new(self.key_secret.encode(), f'{ts}websocket_login'.encode(), 'sha256').hexdigest(),
@@ -294,7 +294,6 @@ class FTX(Feed):
     async def _fill(self, msg: dict, timestamp: float):
         """
         example message:
-
         {
             "channel": "fills",
             "data": {

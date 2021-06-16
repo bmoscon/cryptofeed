@@ -6,7 +6,6 @@ associated with this software.
 '''
 import os
 import glob
-import json
 
 import pytest
 
@@ -30,7 +29,7 @@ lookup_table = {
     BITMAX: {L2_BOOK: 279, TRADES: 4},
     BITMEX: {L2_BOOK: 1862, TICKER: 429, TRADES: 18},
     BITSTAMP: {TRADES: 16, L2_BOOK: 538},
-    BITTREX: {TICKER: 22, TRADES: 1, L2_BOOK: 303},
+    BITTREX: {TICKER: 162, CANDLES: 20, L2_BOOK: 1006},
     BLOCKCHAIN: {L2_BOOK: 558},
     BYBIT: {TRADES: 251, L2_BOOK: 4278},
     COINBASE: {L2_BOOK: 9729, TICKER: 107, TRADES: 107},
@@ -46,7 +45,7 @@ lookup_table = {
     KRAKEN: {L2_BOOK: 4279, TICKER: 18, TRADES: 10},
     OKCOIN: {L2_BOOK: 1620, TICKER: 30, TRADES: 30},
     OKEX: {L2_BOOK: 6974, OPEN_INTEREST: 32, TICKER: 99, TRADES: 75},    
-    POLONIEX: {TICKER: 33, TRADES: 2, L2_BOOK: 164},
+    POLONIEX: {TICKER: 68, TRADES: 1, L2_BOOK: 165},
     UPBIT:  {L2_BOOK: 145, TRADES: 304},
     GATEIO: {CANDLES: 14, L2_BOOK: 159, TICKER: 22, TRADES: 9},
     PROBIT:  {L2_BOOK: 27, TRADES: 1001},

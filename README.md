@@ -111,6 +111,8 @@ Cryptofeed supports the following channels from exchanges:
 * FUNDING
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * OPEN_INTEREST - Open interest data.
+* LIQUIDATIONS
+* FUTURES_INDEX
 * CANDLES - Candlestick / K-Line data.
 
 Aggregated data from provider is available in channel:

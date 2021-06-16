@@ -32,7 +32,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.9.1",
+    version="1.9.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
@@ -85,7 +85,7 @@ setup(
         "all": [
             "arctic",
             "google_cloud_pubsub>=2.4.1",
-            "gcloud_aio_pubsub"
+            "gcloud_aio_pubsub",
             "aiokafka>=0.7.0",
             "motor",
             "asyncpg",

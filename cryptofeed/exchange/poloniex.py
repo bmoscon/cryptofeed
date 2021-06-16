@@ -106,8 +106,8 @@ class Poloniex(Feed):
                         delta[side].append((price, amount))
                         self.l2_book[pair][side][price] = amount
                 elif msg_type == 't':
-                    # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp
-                    _, order_id, _, price, amount, server_ts = update
+                    # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp, 6 is timestamp ms
+                    _, order_id, _, price, amount, server_ts, _ = update
                     price = Decimal(price)
                     amount = Decimal(amount)
                     side = BUY if update[2] == 1 else SELL

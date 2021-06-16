@@ -174,13 +174,13 @@ class Feed:
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
-    def _connect_builder(self, address: str, options: list, header=None, sub=None, handler=None):
+    def _connect_builder(self, address: str, options: list, header=None, sub=None, handler=None, auth=None):
         """
         Helper method for building a custom connect tuple
         """
         subscribe = partial(self.subscribe if not sub else sub, options=options)
         conn = WSAsyncConn(address, self.id, extra_headers=header, **self.ws_defaults)
-        return conn, subscribe, handler if handler else self.message_handler
+        return conn, subscribe, handler if handler else self.message_handler, auth if auth else self.authenticate
 
     async def _empty_subscribe(self, conn: AsyncConnection, **kwargs):
         return
@@ -339,7 +339,7 @@ class Feed:
         raise NotImplementedError
 
     async def authenticate(self, connection: AsyncConnection):
-        return
+        pass
 
     async def shutdown(self):
         LOG.info('%s: feed shutdown starting...', self.id)

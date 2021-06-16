@@ -80,7 +80,7 @@ class Kraken(Feed):
         def build(options: list):
             subscribe = partial(self.subscribe, options=options)
             conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
-            return conn, subscribe, self.message_handler
+            return conn, subscribe, self.message_handler, self.authenticate
 
         for chan in self.subscription:
             symbols = list(self.subscription[chan])
