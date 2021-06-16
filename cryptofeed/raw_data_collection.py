@@ -9,9 +9,9 @@ import atexit
 from collections import defaultdict
 import functools
 import ast
+import json
 
 from aiofile import AIOFile
-from yapic import json
 
 from cryptofeed.defines import HUOBI, UPBIT, OKEX, OKCOIN
 from cryptofeed.exchanges import EXCHANGE_MAP
@@ -47,8 +47,13 @@ async def _playback(feed: str, filenames: list):
         async def write(self, *args, **kwargs):
             pass
 
-        async def read(self, url):
-            return self.cache[url].pop(0)
+        async def read(self, url, **kwargs):
+            data = self.cache[url].pop(0)
+            if "header:" in data:
+                ret = data.split(" header: ")
+                header = ret[1].strip()
+                return ret[0], json.loads(header)
+            return data
 
     ws = FakeWS(filenames)
     symbol_data = []
@@ -79,12 +84,12 @@ async def _playback(feed: str, filenames: list):
     async def internal_cb(*args, **kwargs):
         callbacks[kwargs['cb_type']] += 1
 
-    feed = EXCHANGE_MAP[feed](subscription=sub)
+    feed = EXCHANGE_MAP[feed](config="config.yaml", subscription=sub)
     for cb_type, handler in feed.callbacks.items():
         f = functools.partial(internal_cb, cb_type=cb_type)
         handler.append(f)
 
-    for _, sub, handler in feed.connect():
+    for _, sub, handler, auth in feed.connect():
         await sub(ws)
 
     counter = 0
@@ -163,9 +168,12 @@ class AsyncFileCallback:
             self.count[uuid] += 1
             self.pointer[uuid] = 0
 
-    async def __call__(self, data: str, timestamp: float, uuid: str, endpoint: str = None, send: str = None, connect: str = None):
+    async def __call__(self, data: str, timestamp: float, uuid: str, endpoint: str = None, send: str = None, connect: str = None, header: str = None):
         if endpoint:
-            self.data[uuid].append(f"{endpoint} -> {timestamp}: {data}")
+            if header:
+                self.data[uuid].append(f"{endpoint} -> {timestamp}: {data} header: {json.dumps(header)}")
+            else:
+                self.data[uuid].append(f"{endpoint} -> {timestamp}: {data}")
         elif send:
             self.data[uuid].append(f"{send} <- {timestamp}: {data}")
         elif connect:
@@ -176,9 +184,12 @@ class AsyncFileCallback:
         if len(self.data[uuid]) >= self.length:
             await asyncio.create_task(self.write(uuid))
 
-    def sync_callback(self, data: str, timestamp: float, uuid: str, endpoint: str = None, send: str = None, connect: str = None):
+    def sync_callback(self, data: str, timestamp: float, uuid: str, endpoint: str = None, send: str = None, connect: str = None, header: str = None):
         if endpoint:
-            w = f"{endpoint} -> {timestamp}: {data}"
+            if header:
+                w = w = f"{endpoint} -> {timestamp}: {data} header: {json.dumps(header)}"
+            else:
+                w = f"{endpoint} -> {timestamp}: {data}"
         elif send:
             w = f"{send} <- {timestamp}: {data}"
         elif connect:

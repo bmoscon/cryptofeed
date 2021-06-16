@@ -260,9 +260,9 @@ class OKCoin(Feed):
         for channel in self.subscription:
             if is_authenticated_channel(channel):
                 for s in self.subscription[channel]:
-                    ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler))
+                    ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler, self.authenticate))
             else:
-                ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler))
+                ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
 
         return ret
 

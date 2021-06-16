@@ -75,10 +75,10 @@ class Bybit(Feed):
 
         if any(pair[-4:] == 'USDT' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USDT')
-            ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+            ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler, self.authenticate))
         if any(pair[-3:] == 'USD' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USD')
-            ret.append((WSAsyncConn(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler))
+            ret.append((WSAsyncConn(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler, self.authenticate))
 
         return ret
 

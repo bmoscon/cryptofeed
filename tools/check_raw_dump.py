@@ -33,6 +33,8 @@ def main(filename):
                 _, line = line.split(" -> ")
 
             _, line = line.split(": ", 1)
+            if "header: " in line:
+                line = line.split("header:")[0]
             try:
                 if 'OKCOIN' in filename or 'OKEX' in filename:
                     if line.startswith('b\'') or line.startswith('b"'):
