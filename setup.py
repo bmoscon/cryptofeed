@@ -85,7 +85,7 @@ setup(
         "all": [
             "arctic",
             "google_cloud_pubsub>=2.4.1",
-            "gcloud_aio_pubsub"
+            "gcloud_aio_pubsub",
             "aiokafka>=0.7.0",
             "motor",
             "asyncpg",
