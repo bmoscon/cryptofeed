@@ -62,6 +62,7 @@ CANDLES = 'candles'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
+USER_FILLS = 'user_fills'
 
 
 BUY = 'buy'

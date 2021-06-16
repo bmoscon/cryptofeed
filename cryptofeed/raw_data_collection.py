@@ -89,7 +89,7 @@ async def _playback(feed: str, filenames: list):
         f = functools.partial(internal_cb, cb_type=cb_type)
         handler.append(f)
 
-    for _, sub, handler in feed.connect():
+    for _, sub, handler, auth in feed.connect():
         await sub(ws)
 
     counter = 0
