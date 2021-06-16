@@ -32,8 +32,9 @@ def main():
     f.add_feed(Binance(pairs=list_symbol_binance, channels=[TRADES, TICKER]))
     f.add_feed(BinanceFutures(pairs=list_symbol_binance_future, channels=[TRADES]))
     f.add_feed(BinanceFutures(pairs=list_symbol_binance_future, channels=[TICKER]))
+    f.add_feed(BinanceFutures(pairs=list_symbol_binance_future, channels=[LIQUIDATIONS, FUNDING]))
     #f.add_feed(BinanceDelivery(max_depth=5, pairs=list_symbol_binance_delivery, channels=[L2_BOOK]))
-    f.add_feed(BinanceDelivery(pairs=list_symbol_binance_delivery, channels=[TRADES, TICKER, LIQUIDATIONS]))
+    f.add_feed(BinanceDelivery(pairs=list_symbol_binance_delivery, channels=[TRADES, TICKER, LIQUIDATIONS, FUNDING]))
     f.run()
 
 if __name__ == '__main__':

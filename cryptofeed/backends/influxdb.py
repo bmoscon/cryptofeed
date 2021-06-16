@@ -194,12 +194,12 @@ class InfluxCallback(HTTPCallback):
             else:
                 d += f'{key}={value},'
         d = d[:-1]
-        ts = int(timestamp * 1000000000)
-
+        ts = int(timestamp)
         update = f'{self.key},feed={feed},pair={pair} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp} {ts}'
         # await self.http_write('POST', update, self.headers)
         if self.count % 10000 == 0:
-            logging.info([str(datetime.fromtimestamp(timestamp)), update])
+            logging.info(update)
+            #logging.info([str(datetime.fromtimestamp(timestamp)), update])
         self.client.write_points([update], protocol='line')
         self.count += 1
 
@@ -224,32 +224,11 @@ def book2msg(dict_book):
 
 class InfluxBookCallback(InfluxCallback):
     default_key = 'book'
-
     def _write_rows(self, start, data, timestamp, receipt_timestamp):
         # msg = []
-        ts = int(timestamp * 1000000000)
+        ts = timestamp
         book_msg = book2msg(data)
         msg = f"""{start} {book_msg},receipt_timestamp={receipt_timestamp},timestamp={timestamp} {ts}"""
-        # for side in (BID, ASK):
-        #     for price, val in data[side].items():
-        #         if isinstance(val, dict):
-        #             for order_id, amount in val.items():
-        #                 if self.numeric_type is str:
-        #                     msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{amount}" {ts}')
-        #                 elif self.numeric_type is float:
-        #                     msg.append(f'{start} side="{side}",id="{order_id}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
-        #                 else:
-        #                     raise UnsupportedType(f"Type {self.numeric_type} not supported")
-        #                 ts += 1
-        #         else:
-        #             if self.numeric_type is str:
-        #                 msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price="{price}",amount="{val}" {ts}')
-        #             elif self.numeric_type is float:
-        #                 msg.append(f'{start} side="{side}",receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={val} {ts}')
-        #             else:
-        #                 raise UnsupportedType(f"Type {self.numeric_type} not supported")
-        #             ts += 1 //this is wrong
-        # logging.info(msg)
         self.client.write_points([msg], protocol='line')
         # await self.http_write('POST', msg, self.headers)
 

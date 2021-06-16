@@ -101,12 +101,12 @@ class BinanceFutures(Binance):
         bid_size = Decimal(msg['B'])
         ask = Decimal(msg['a'])
         ask_size = Decimal(msg['A'])
-        #udpate_id = msg['u']
+        ts = msg['E']#/1e3
         await self.callback(TICKER, feed=self.id,
                             pair=pair,
                             bid=bid,
                             bid_size=bid_size,
                             ask=ask,
                             ask_size = ask_size,
-                            timestamp=msg['E'],
+                            timestamp=ts,
                             receipt_timestamp=timestamp)

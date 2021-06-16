@@ -66,14 +66,15 @@ class Binance(Feed):
         """
         price = Decimal(msg['p'])
         amount = Decimal(msg['q'])
+        ts = int(msg['T']*1e6)
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['a'],
                             pair=pair_exchange_to_std(msg['s']),
                             side=SELL if msg['m'] else BUY,
                             amount=amount,
                             price=price,
-                            timestamp=timestamp_normalize(self.id, msg['T']),
-                            receipt_timestamp=timestamp)
+                            timestamp=ts,
+                            receipt_timestamp=ts)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -147,6 +148,7 @@ class Binance(Feed):
         }
         """
         pair = pair_exchange_to_std(msg['o']['s'])
+        ts = int(msg['E'])
         await self.callback(LIQUIDATIONS,
                             feed=self.id,
                             pair=pair,
@@ -154,8 +156,8 @@ class Binance(Feed):
                             leaves_qty=Decimal(msg['o']['q']),
                             price=Decimal(msg['o']['p']),
                             order_id=None,
-                            timestamp=timestamp_normalize(self.id, msg['E']),
-                            receipt_timestamp=timestamp)
+                            timestamp=ts,
+                            receipt_timestamp=ts)
 
 
     async def _snapshot(self, pair: str) -> None:
