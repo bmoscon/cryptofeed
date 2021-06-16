@@ -87,6 +87,13 @@ CANCELLED = 'cancelled'
 UNFILLED = 'unfilled'
 
 
+# HTTP methods
+GET = 'GET'
+DELETE = 'DELETE'
+PUT = 'PUT'
+POST = 'POST'
+
+
 """
 L2 Orderbook Layout
     * BID and ASK are SortedDictionaries

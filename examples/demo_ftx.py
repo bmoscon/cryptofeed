@@ -10,6 +10,7 @@ from cryptofeed import FeedHandler
 from cryptofeed.callback import TradeCallback
 from cryptofeed.defines import TRADES, USER_FILLS
 from cryptofeed.exchanges import FTX
+from cryptofeed.rest import Rest
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -30,6 +31,9 @@ async def fill(feed, symbol, order_id, trade_id, timestamp, side, amount, price,
 
 
 def main():
+    ftx = Rest(config='config.yaml')['ftx']
+    print(ftx.ticker('ETH-USD'))
+    print(ftx.orders(symbol='USDT-USD'))
     f = FeedHandler(config="config.yaml")
     f.add_feed(FTX(config="config.yaml", symbols=['BTC-USD', 'BCH-USD', 'USDT-USD'], channels=[TRADES, USER_FILLS], callbacks={TRADES: TradeCallback(trade), USER_FILLS: fill}))
     f.run()

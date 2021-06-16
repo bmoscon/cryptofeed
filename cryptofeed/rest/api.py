@@ -92,7 +92,7 @@ class API:
     def cancel_order(self, order_id: str):
         raise NotImplementedError
 
-    def orders(self):
+    def orders(self, sumbol: str = None):
         """
         Return outstanding orders
         """
@@ -111,6 +111,9 @@ class API:
         raise NotImplementedError
 
     def balances(self):
+        raise NotImplementedError
+
+    def positions(self, **kwargs):
         raise NotImplementedError
 
     def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
