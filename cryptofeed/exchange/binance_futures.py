@@ -87,7 +87,7 @@ class BinanceFutures(Binance):
         for chan in set(self.subscription):
             if chan == 'open_interest':
                 addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
-                ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=1.0), self.subscribe, self.message_handler))
+                ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=1.0), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
