@@ -75,12 +75,12 @@ class Coinbase(API):
     def _generate_signature(self, endpoint: str, method: str, body=''):
         timestamp = str(time.time())
         message = ''.join([timestamp, method, endpoint, body])
-        hmac_key = base64.b64decode(self.config.key_secret)
+        hmac_key = base64.b64decode(self.key_secret)
         signature = hmac.new(hmac_key, message.encode('ascii'), hashlib.sha256)
         signature_b64 = base64.b64encode(signature.digest()).decode('utf-8')
 
         return {
-            'CB-ACCESS-KEY': self.config.key_id,  # The api key as a string.
+            'CB-ACCESS-KEY': self.key_id,  # The api key as a string.
             'CB-ACCESS-SIGN': signature_b64,  # The base64-encoded signature (see Signing a Message).
             'CB-ACCESS-TIMESTAMP': timestamp,  # A timestamp for your request.
             'CB-ACCESS-PASSPHRASE': self.key_passphrase,  # The passphrase you specified when creating the API key

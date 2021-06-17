@@ -61,7 +61,7 @@ class Gemini(API):
         return helper()
 
     def _post(self, command: str, payload=None):
-        headers = generate_token(self.config.key_id, self.config.key_secret, command, account_name=self.config.account_name, payload=payload)
+        headers = generate_token(self.key_id, self.key_secret, command, account_name=self.config.account_name, payload=payload)
 
         headers['Content-Type'] = "text/plain"
         headers['Content-Length'] = "0"

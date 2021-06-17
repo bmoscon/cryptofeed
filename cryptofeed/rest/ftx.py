@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 import requests
 from sortedcontainers.sorteddict import SortedDict as sd
+import urllib.parse
 
 from cryptofeed.defines import BID, ASK, BUY, DELETE, GET, LIMIT, POST
 from cryptofeed.defines import FTX as FTX_ID
@@ -57,10 +58,12 @@ class FTX(API):
         signature_payload = f'{ts}{prepared.method}{prepared.path_url}'.encode()
         if prepared.body:
             signature_payload += prepared.body
-        signature = hmac.new(self.config.key_secret.encode(), signature_payload, 'sha256').hexdigest()
-        request.headers['FTX-KEY'] = self.config.key_id
+        signature = hmac.new(self.key_secret.encode(), signature_payload, 'sha256').hexdigest()
+        request.headers['FTX-KEY'] = self.key_id
         request.headers['FTX-SIGN'] = signature
         request.headers['FTX-TS'] = str(ts)
+        if self.subaccount:
+            request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote(self.subaccount)
 
     def ticker(self, symbol: str, retry=None, retry_wait=0):
         sym = self.info.std_symbol_to_exchange_symbol(symbol)

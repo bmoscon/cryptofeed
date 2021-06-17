@@ -65,6 +65,8 @@ class FTX(Feed):
                 'time': ts,
             }
         }
+        if self.subaccount:
+            msg['args']['subaccount'] = self.subaccount
         await conn.write(json.dumps(msg))
 
     async def authenticate(self, conn: AsyncConnection):

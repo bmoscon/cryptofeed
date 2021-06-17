@@ -46,12 +46,12 @@ class Bitfinex(API):
     def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
 
         return {
             "bfx-nonce": nonce,
-            "bfx-apikey": self.config.key_id,
+            "bfx-apikey": self.key_id,
             "bfx-signature": signature,
             "content-type": "application/json"
         }
