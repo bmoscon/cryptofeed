@@ -310,7 +310,7 @@ class FTX(Feed):
                 "type": "order"
             },
             "type": "update"
-            }
+        }
         """
         fill = msg['data']
         await self.callback(USER_FILLS, feed=self.id,
@@ -325,6 +325,29 @@ class FTX(Feed):
                             receipt_timestamp=timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
+        """
+        example message:
+        {
+            "channel": "orders",
+            "data": {
+                "id": 24852229,
+                "clientId": null,
+                "market": "XRP-PERP",
+                "type": "limit",
+                "side": "buy",
+                "size": 42353.0,
+                "price": 0.2977,
+                "reduceOnly": false,
+                "ioc": false,
+                "postOnly": false,
+                "status": "closed",
+                "filledSize": 0.0,
+                "remainingSize": 0.0,
+                "avgFillPrice": 0.2978
+            },
+            "type": "update"
+        }
+        """
         order = msg['data']
         await self.callback(ORDER_INFO, feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(order['market']),
