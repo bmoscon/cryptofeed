@@ -215,7 +215,8 @@ _feed_to_exchange_map = {
     },
     ORDER_INFO: {
         GEMINI: ORDER_INFO,
-        OKEX: ORDER_INFO
+        OKEX: ORDER_INFO,
+        FTX: 'orders',
     },
     USER_FILLS: {
         FTX: 'fills',

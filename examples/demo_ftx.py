@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import TradeCallback
-from cryptofeed.defines import TRADES, USER_FILLS
+from cryptofeed.defines import ORDER_INFO, TRADES, USER_FILLS
 from cryptofeed.exchanges import FTX
 from cryptofeed.rest import Rest
 
@@ -30,12 +30,16 @@ async def fill(feed, symbol, order_id, trade_id, timestamp, side, amount, price,
     print(f'FILL Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}')
 
 
+async def order(feed, symbol, status, order_id, side, order_type, avg_fill_price, filled_size, remaining_size, amount, timestamp, receipt_timestamp):
+    print(f'ORDER Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Avg Fill Price: {avg_fill_price} Filled Size: {filled_size} Remaining Size: {remaining_size} Status: {status}')
+
+
 def main():
     ftx = Rest(config='config.yaml')['ftx']
     print(ftx.ticker('ETH-USD'))
     print(ftx.orders(symbol='USDT-USD'))
     f = FeedHandler(config="config.yaml")
-    f.add_feed(FTX(config="config.yaml", symbols=['BTC-USD', 'BCH-USD', 'USDT-USD'], channels=[TRADES, USER_FILLS], callbacks={TRADES: TradeCallback(trade), USER_FILLS: fill}))
+    f.add_feed(FTX(config="config.yaml", symbols=['BTC-USD', 'BCH-USD', 'USDT-USD'], channels=[TRADES, USER_FILLS, ORDER_INFO], callbacks={TRADES: TradeCallback(trade), USER_FILLS: fill, ORDER_INFO: order}))
     f.run()
 
 
