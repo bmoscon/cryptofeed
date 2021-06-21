@@ -34,7 +34,7 @@ class FTX(API):
 
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
         return self._send_request(endpoint, GET, params=params)
-    
+
     def _post(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
         return self._send_request(endpoint, POST, json=params)
 
@@ -48,7 +48,7 @@ class FTX(API):
             self._sign_request(request)
             r = self.session.send(request.prepare())
             self._handle_error(r, LOG)
-            return r.json()
+            return r.json()['result']
         return helper()
 
     def _sign_request(self, request: requests.Request) -> None:
@@ -140,15 +140,15 @@ class FTX(API):
             data = [self._funding_normalization(x, symbol) for x in data]
             return data
 
-    def place_order(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str=LIMIT, 
+    def place_order(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str = LIMIT,
                     reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
         return self._post('/orders', params={
             'market': sym,
             'side': side,
-            'price': price,
-            'size': amount,
-            'type': order_type, 
+            'price': str(price),
+            'size': str(amount),
+            'type': order_type,
             'reduceOnly': reduce_only,
             'ioc': ioc,
             'postOnly': post_only,
