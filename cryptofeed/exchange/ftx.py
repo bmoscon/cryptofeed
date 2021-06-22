@@ -359,7 +359,7 @@ class FTX(Feed):
                             filled_size=Decimal(order['filledSize']),
                             remaining_size=Decimal(order['remainingSize']),
                             amount=Decimal(order['size']),
-                            timestamp=time(),
+                            timestamp=timestamp,
                             receipt_timestamp=timestamp,
                             )
 
