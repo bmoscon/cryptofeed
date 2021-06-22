@@ -8,7 +8,7 @@
   * Feature: Add support for candles on Bittrex
   * Feature: Add support to authenticate private channels (e.g. USER_FILLS) on FTX
   * Feature: Support private rest api commands for FTX
-  * Feature: Add support for subaccounts in feeds and REST API
+  * Feature: Add support for subaccounts in feeds and REST API for FTX
 
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
