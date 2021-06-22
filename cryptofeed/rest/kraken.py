@@ -113,12 +113,12 @@ class Kraken(API):
         encoded = (str(payload['nonce']) + postdata).encode('utf8')
         message = urlpath.encode() + hashlib.sha256(encoded).digest()
 
-        signature = hmac.new(base64.b64decode(self.key_secret),
+        signature = hmac.new(base64.b64decode(self.config.key_secret),
                              message, hashlib.sha512)
         sigdigest = base64.b64encode(signature.digest())
 
         headers = {
-            'API-Key': self.key_id,
+            'API-Key': self.config.key_id,
             'API-Sign': sigdigest.decode()
         }
 

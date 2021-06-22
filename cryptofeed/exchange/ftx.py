@@ -10,6 +10,7 @@ from collections import defaultdict
 import logging
 from decimal import Decimal
 import hmac
+import os
 from time import time
 import zlib
 from typing import Dict, Iterable, Tuple
@@ -46,8 +47,13 @@ class FTX(Feed):
             info['tick_size'][normalized] = d['priceIncrement']
         return ret, info
 
-    def __init__(self, **kwargs):
+    def __init__(self, subaccount=None, **kwargs):
+        self.subaccount = subaccount
         super().__init__('wss://ftexchange.com/ws/', **kwargs)
+
+    def load_keys(self):
+        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or (self.config[self.id.lower()][self.subaccount].key_id if self.subaccount else self.config[self.id.lower()].key_id)
+        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or (self.config[self.id.lower()][self.subaccount].key_secret if self.subaccount else self.config[self.id.lower()].key_secret)
 
     def __reset(self):
         self.l2_book = {}

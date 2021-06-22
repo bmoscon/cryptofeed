@@ -44,11 +44,11 @@ class BinanceDelivery(API):
     def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
 
         return {
-            "X-MBX-APIKEY": self.key_id,
+            "X-MBX-APIKEY": self.config.key_id,
             "signature": signature,
             "content-type": "application/json"
         }
@@ -143,11 +143,11 @@ class BinanceFutures(API):
     def _generate_signature(self, url: str, body=json.dumps({})):
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
 
         return {
-            "X-MBX-APIKEY": self.key_id,
+            "X-MBX-APIKEY": self.config.key_id,
             "signature": signature,
             "content-type": "application/json"
         }

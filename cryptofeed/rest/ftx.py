@@ -32,6 +32,12 @@ class FTX(API):
     api = "https://ftx.com/api"
     session = requests.Session()
 
+    def __init__(self, subaccount=None, **kwargs):
+        super().__init__(**kwargs)
+        self.subaccount = subaccount
+        self.key_id = self.config[self.subaccount].key_id if self.subaccount else self.config.key_id
+        self.key_secret = self.config[self.subaccount].key_secret if self.subaccount else self.config.key_secret
+
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
         return self._send_request(endpoint, GET, params=params, retry=retry, retry_wait=retry_wait, auth=auth)
 
