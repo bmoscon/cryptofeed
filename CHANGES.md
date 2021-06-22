@@ -8,6 +8,8 @@
   * Feature: Add support for candles on Bittrex
   * Feature: Add support to authenticate private channels (e.g. USER_FILLS) on FTX
   * Feature: Support private rest api commands for FTX
+  * Update: Improve impl for FTX rest api
+  * Bugfix: #528 - Fix standardisation of Deribit's symbols when passed to callbacks
   * Feature: Add support for private "orders" channel on FTX
 
 ### 1.9.1 (2021-06-10)

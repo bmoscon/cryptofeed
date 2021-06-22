@@ -48,7 +48,7 @@ class FTX(API):
                 self._sign_request(request)
             r = self.session.send(request.prepare())
             self._handle_error(r, LOG)
-            return r.json()
+            return r.json()['result']
         return helper()
 
     def _sign_request(self, request: requests.Request) -> None:
@@ -144,8 +144,8 @@ class FTX(API):
         return self._post('/orders', params={
             'market': sym,
             'side': side,
-            'price': price,
-            'size': amount,
+            'price': str(price),
+            'size': str(amount),
             'type': order_type,
             'reduceOnly': reduce_only,
             'ioc': ioc,
