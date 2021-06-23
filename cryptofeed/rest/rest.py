@@ -34,22 +34,22 @@ class Rest:
     mode, if supported by the exchange.
     """
 
-    def __init__(self, config=None, sandbox=False):
+    def __init__(self, config=None, sandbox=False, subaccount=None):
         config = Config(config=config)
 
         get_logger('rest', config.rest.log.filename, config.rest.log.level)
 
         self.lookup = {
-            'bitmex': Bitmex(config.bitmex),
-            'bitfinex': Bitfinex(config.bitfinex),
-            'coinbase': Coinbase(config.coinbase, sandbox=sandbox),
-            'poloniex': Poloniex(config.poloniex),
-            'gemini': Gemini(config.gemini, sandbox=sandbox),
-            'kraken': Kraken(config.kraken),
-            'deribit': Deribit(config.deribit),
-            'binance_futures': BinanceFutures(config.binance_futures),
-            'binance_delivery': BinanceDelivery(config.binance_delivery),
-            'ftx': FTX(config.ftx)
+            'bitmex': Bitmex(config=config.bitmex),
+            'bitfinex': Bitfinex(config=config.bitfinex),
+            'coinbase': Coinbase(config=config.coinbase, sandbox=sandbox),
+            'poloniex': Poloniex(config=config.poloniex),
+            'gemini': Gemini(config=config.gemini, sandbox=sandbox),
+            'kraken': Kraken(config=config.kraken),
+            'deribit': Deribit(config=config.deribit),
+            'binance_futures': BinanceFutures(config=config.binance_futures),
+            'binance_delivery': BinanceDelivery(config=config.binance_delivery),
+            'ftx': FTX(config=config.ftx, subaccount=subaccount)
         }
 
     def __getitem__(self, key):
