@@ -35,11 +35,11 @@ async def order(feed, symbol, status, order_id, side, order_type, avg_fill_price
 
 
 def main():
-    ftx = Rest(config='config.yaml')['ftx']
+    ftx = Rest(config='config.yaml', subaccount='subaccount')['ftx']
     print(ftx.ticker('ETH-USD'))
     print(ftx.orders(symbol='USDT-USD'))
     f = FeedHandler(config="config.yaml")
-    f.add_feed(FTX(config="config.yaml", symbols=['BTC-USD', 'BCH-USD', 'USDT-USD'], channels=[TRADES, USER_FILLS, ORDER_INFO], callbacks={TRADES: TradeCallback(trade), USER_FILLS: fill, ORDER_INFO: order}))
+    f.add_feed(FTX(config="config.yaml", subaccount='subaccount', symbols=['BTC-USD', 'BCH-USD', 'USDT-USD'], channels=[TRADES, USER_FILLS, ORDER_INFO], callbacks={TRADES: TradeCallback(trade), USER_FILLS: fill, ORDER_INFO: order}))
     f.run()
 
 

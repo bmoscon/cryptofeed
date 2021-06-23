@@ -94,9 +94,7 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
-        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
-        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
-        self.key_passphrase = os.environ.get(f'CF_{self.id}_KEY_PASSWORD') or self.config[self.id.lower()].key_passphrase
+        self.load_keys()
         self.requires_authentication = False
         self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id)
@@ -163,6 +161,11 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
+
+    def load_keys(self):
+        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
+        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
+        self.key_passphrase = os.environ.get(f'CF_{self.id}_KEY_PASSWORD') or self.config[self.id.lower()].key_passphrase
 
     def _connect_builder(self, address: str, options: list, header=None, sub=None, handler=None, auth=None):
         """
