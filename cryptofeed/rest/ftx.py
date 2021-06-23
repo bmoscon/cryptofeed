@@ -7,7 +7,7 @@ associated with this software.
 from decimal import Decimal
 import hmac
 import logging
-from time import time, sleep
+from time import sleep, time
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -32,20 +32,27 @@ class FTX(API):
     api = "https://ftx.com/api"
     session = requests.Session()
 
-    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
-        return self._send_request(endpoint, GET, params=params)
+    def __init__(self, subaccount=None, **kwargs):
+        super().__init__(**kwargs)
+        self.subaccount = subaccount
+        self.key_id = self.config[self.subaccount].key_id if self.subaccount else self.config.key_id
+        self.key_secret = self.config[self.subaccount].key_secret if self.subaccount else self.config.key_secret
 
-    def _post(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
-        return self._send_request(endpoint, POST, json=params)
+    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
+        return self._send_request(endpoint, GET, params=params, retry=retry, retry_wait=retry_wait, auth=auth)
 
-    def _delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0):
-        return self._send_request(endpoint, DELETE, json=params)
+    def _post(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
+        return self._send_request(endpoint, POST, json=params, retry=retry, retry_wait=retry_wait, auth=auth)
 
-    def _send_request(self, endpoint: str, http_method=GET, retry=None, retry_wait=0, **kwargs):
+    def _delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
+        return self._send_request(endpoint, DELETE, json=params, retry=retry, retry_wait=retry_wait, auth=auth)
+
+    def _send_request(self, endpoint: str, http_method=GET, retry=None, retry_wait=0, auth=False, **kwargs):
         @request_retry(self.ID, retry, retry_wait)
         def helper():
             request = requests.Request(method=http_method, url=self.api + endpoint, **kwargs)
-            self._sign_request(request)
+            if auth:
+                self._sign_request(request)
             r = self.session.send(request.prepare())
             self._handle_error(r, LOG)
             return r.json()['result']
@@ -153,17 +160,17 @@ class FTX(API):
             'ioc': ioc,
             'postOnly': post_only,
             'clientId': client_id,
-        })
+        }, auth=True)
 
     def cancel_order(self, order_id: str) -> dict:
-        return self._delete(f'/orders/{order_id}')
+        return self._delete(f'/orders/{order_id}', auth=True)
 
     def orders(self, symbol: str) -> List[dict]:
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
-        return self._get('/orders', params={'market': sym})
+        return self._get('/orders', params={'market': sym}, auth=True)
 
     def positions(self, show_avg_price: bool = False) -> List[dict]:
-        return self._get('/positions', params={'showAvgPrice': show_avg_price})
+        return self._get('/positions', params={'showAvgPrice': show_avg_price}, auth=True)
 
     @staticmethod
     def _dedupe(data, last):

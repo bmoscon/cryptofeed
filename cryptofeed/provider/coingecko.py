@@ -83,7 +83,7 @@ class Coingecko(Feed):
             for pair in self.subscription[chan]:
                 if chan == MARKET_INFO:
                     addrs.append(f"{self.address}coins/{pair}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=false&sparkline=false")
-        return [(HTTPPoll(addrs, self.id, delay=self.sleep_time * 2, sleep=self.sleep_time), self.subscribe, self.message_handler)]
+        return [(HTTPPoll(addrs, self.id, delay=self.sleep_time * 2, sleep=self.sleep_time), self.subscribe, self.message_handler, self.authenticate)]
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
