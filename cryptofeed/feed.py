@@ -69,6 +69,9 @@ class Feed:
         if isinstance(config, Config):
             LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
             self.config = config
+        elif config is None:
+            LOG.info('%s: no Config provided, using default config', self.id)
+            self.config = Config(config)
         else:
             LOG.info('%s: create Config from type: %r', self.id, type(config))
             self.config = Config(config)

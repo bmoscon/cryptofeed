@@ -23,6 +23,7 @@ BLOCKCHAIN = 'BLOCKCHAIN'
 BYBIT = 'BYBIT'
 COINBASE = 'COINBASE'
 DERIBIT = 'DERIBIT'
+DYDX = 'DYDX'
 EXX = 'EXX'
 FTX = 'FTX'
 FTX_US = 'FTX_US'
@@ -71,13 +72,11 @@ BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
 
-
 LIMIT = 'limit'
 MARKET = 'market'
 MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
-
 
 OPEN = 'open'
 PENDING = 'pending'
@@ -85,6 +84,16 @@ FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
 UNFILLED = 'unfilled'
+
+# Instrument Definitions
+
+FUTURE = 'future'
+SWAP = 'swap'
+PERPETUAL = 'perpetual'
+OPTION = 'option'
+SPOT = 'spot'
+CALL = 'call'
+PUT = 'put'
 
 
 # HTTP methods
