@@ -77,8 +77,8 @@ class FTX(API):
 
         return {'symbol': symbol,
                 'feed': self.ID,
-                'bid': data['result']['bid'],
-                'ask': data['result']['ask']
+                'bid': data['bid'],
+                'ask': data['ask']
                 }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
@@ -87,11 +87,11 @@ class FTX(API):
         return {
             BID: sd({
                 u[0]: u[1]
-                for u in data['result']['bids']
+                for u in data['bids']
             }),
             ASK: sd({
                 u[0]: u[1]
-                for u in data['result']['asks']
+                for u in data['asks']
             })
         }
 
