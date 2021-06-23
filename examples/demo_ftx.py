@@ -10,10 +10,10 @@ import os
 from pathlib import Path
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, TICKER, TRADES, USER_FILLS
+from cryptofeed.callback import TradeCallback
+from cryptofeed.defines import BUY, ORDER_INFO, TRADES, USER_FILLS
 from cryptofeed.exchanges import FTX
-from cryptofeed.rest.rest import Rest
+from cryptofeed.rest import Rest
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -46,10 +46,14 @@ def get_time_from_timestamp(timestamp):
     return '%s.%03d' % (datetime.datetime.utcfromtimestamp(s).strftime('%H:%M:%S'), ms)
 
 
+async def order(feed, symbol, status, order_id, side, order_type, avg_fill_price, filled_size, remaining_size, amount, timestamp, receipt_timestamp):
+    print(f'ORDER Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Avg Fill Price: {avg_fill_price} Filled Size: {filled_size} Remaining Size: {remaining_size} Status: {status}')
+
+
 def main():
     path_to_config = os.path.join(Path.home(), 'config.yaml')
 
-    ftx = Rest(config=path_to_config, subaccount='subaccount')['ftx']
+    ftx = Rest(config=path_to_config, subaccount='Gutenberg')['ftx']
     # print(ftx.config)
     print(ftx.ticker('ETH-USD'))
     print(ftx.orders(symbol='USDT-USD'))
