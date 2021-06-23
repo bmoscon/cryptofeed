@@ -12,6 +12,7 @@
   * Bugfix: #528 - Fix standardisation of Deribit's symbols when passed to callbacks
   * Feature: Add support for private "orders" channel on FTX
   * Feature: Add support for subaccounts in feeds and REST API for FTX
+  * Bugfix: Fix FTX rest api return value
 
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
