@@ -20,7 +20,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, USER_FILLS
+from cryptofeed.defines import BID, ASK, BUY, ORDER_INFO, USER_FILLS
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
@@ -318,7 +318,7 @@ class FTX(Feed):
                 "type": "order"
             },
             "type": "update"
-            }
+        }
         """
         fill = msg['data']
         await self.callback(USER_FILLS, feed=self.id,
@@ -331,6 +331,45 @@ class FTX(Feed):
                             trade_id=fill['tradeId'],
                             timestamp=float(timestamp_normalize(self.id, fill['time'])),
                             receipt_timestamp=timestamp)
+
+    async def _order(self, msg: dict, timestamp: float):
+        """
+        example message:
+        {
+            "channel": "orders",
+            "data": {
+                "id": 24852229,
+                "clientId": null,
+                "market": "XRP-PERP",
+                "type": "limit",
+                "side": "buy",
+                "size": 42353.0,
+                "price": 0.2977,
+                "reduceOnly": false,
+                "ioc": false,
+                "postOnly": false,
+                "status": "closed",
+                "filledSize": 0.0,
+                "remainingSize": 0.0,
+                "avgFillPrice": 0.2978
+            },
+            "type": "update"
+        }
+        """
+        order = msg['data']
+        await self.callback(ORDER_INFO, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(order['market']),
+                            status=order['status'],
+                            order_id=order['id'],
+                            side=BUY if order['side'].lower() == 'buy' else SELL,
+                            order_type=order['type'],
+                            avg_fill_price=Decimal(order['avgFillPrice']) if order['avgFillPrice'] else None,
+                            filled_size=Decimal(order['filledSize']),
+                            remaining_size=Decimal(order['remainingSize']),
+                            amount=Decimal(order['size']),
+                            timestamp=timestamp,
+                            receipt_timestamp=timestamp,
+                            )
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -352,6 +391,8 @@ class FTX(Feed):
                     await self._ticker(msg, timestamp)
                 elif msg['channel'] == 'fills':
                     await self._fill(msg, timestamp)
+                elif msg['channel'] == 'orders':
+                    await self._order(msg, timestamp)
                 else:
                     LOG.warning("%s: Invalid message type %s", self.id, msg)
             else:
