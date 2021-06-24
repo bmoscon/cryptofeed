@@ -96,7 +96,7 @@ class FTX(API):
         }
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = self.info.std_symbol_to_exchange_symbolself.info.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
