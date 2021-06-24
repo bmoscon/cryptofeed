@@ -137,7 +137,7 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
-* [InfluxDB 2](https://github.com/influxdata/influxdb)
+* [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
 * Elastic Search
