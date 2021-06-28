@@ -9,52 +9,21 @@ Contains all code to normalize and standardize the differences
 between exchanges. These include trading symbols, timestamps, and
 data channel names
 '''
-import collections
 import logging
+import datetime as dt
 
-import pandas as pd
-
-from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX, BITMAX, BITMEX,
+from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
+                                BITHUMB, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
-                                DERIBIT, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, WHALE_ALERT)
+                                DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, USER_FILLS)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
-                                TICKER, TRADES, TRANSACTIONS, VOLUME, ORDER_INFO)
-from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption, UnsupportedSymbol
-from cryptofeed.symbols import gen_symbols, _exchange_info
+                                TICKER, TRADES, ORDER_INFO)
+from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
+
 
 LOG = logging.getLogger('feedhandler')
-
-_std_trading_symbols = collections.defaultdict(dict)
-_exchange_to_std = {}
-
-
-def load_exchange_symbol_mapping(exchange: str, key_id=None):
-    mapping = gen_symbols(exchange, key_id=key_id)
-    for std, exch in mapping.items():
-        _exchange_to_std[exch] = std
-        _std_trading_symbols[std][exchange] = exch
-
-
-def get_exchange_info(exchange: str, key_id=None):
-    mapping = gen_symbols(exchange, key_id=key_id)
-    info = dict(_exchange_info.get(exchange, {}))
-    return mapping, info
-
-
-def symbol_std_to_exchange(symbol: str, exchange: str):
-    if symbol in _std_trading_symbols:
-        try:
-            return _std_trading_symbols[symbol][exchange]
-        except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {exchange}')
-
-
-def symbol_exchange_to_std(symbol):
-    if symbol in _exchange_to_std:
-        return _exchange_to_std[symbol]
-    return None
 
 
 def timestamp_normalize(exchange, ts):
@@ -63,23 +32,24 @@ def timestamp_normalize(exchange, ts):
             return ts / 1000
         else:
             return ts.timestamp()
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN}:
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX}:
         return ts.timestamp()
-    elif exchange in {BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO}:
-        return pd.Timestamp(ts).timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
-                      BINANCE_DELIVERY, GEMINI, BITTREX, BITMAX, KRAKEN_FUTURES, UPBIT}:
+                      BINANCE_DELIVERY, GEMINI, BITMAX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
-    # WHALE_ALERT
-    return ts
+    elif exchange in {BITHUMB}:
+        return (ts - dt.timedelta(hours=9)).timestamp()
+    # return (dt.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") - dt.timedelta(hours=9)).timestamp()
 
 
 _feed_to_exchange_map = {
     L2_BOOK: {
+        DYDX: 'v3_orderbook',
         BITFINEX: 'book-P0-F0-100',
         BITFLYER: 'lightning_board_{}',
+        BITHUMB: 'orderbookdepth',
         POLONIEX: L2_BOOK,
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
@@ -103,15 +73,18 @@ _feed_to_exchange_map = {
         FTX: 'orderbook',
         FTX_US: 'orderbook',
         GEMINI: L2_BOOK,
-        BITTREX: 'SubscribeToExchangeDeltas',
+        BITTREX: 'orderbook_{}_{}',
         BITCOINCOM: 'subscribeOrderbook',
         BITMAX: "depth:",
         UPBIT: L2_BOOK,
-        GATEIO: 'depth.subscribe',
-        PROBIT: 'order_books'
+        GATEIO: 'spot.order_book_update',
+        PROBIT: 'order_books',
+        KUCOIN: '/market/level2'
     },
     L3_BOOK: {
+        BITTREX: UNSUPPORTED,
         BITFINEX: 'book-R0-F0-100',
+        BITHUMB: UNSUPPORTED,
         BITSTAMP: 'detail_order_book',
         HITBTC: UNSUPPORTED,
         COINBASE: 'full',
@@ -139,11 +112,13 @@ _feed_to_exchange_map = {
         PROBIT: UNSUPPORTED
     },
     TRADES: {
+        DYDX: 'v3_trades',
         POLONIEX: TRADES,
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
         BITFLYER: 'lightning_executions_{}',
+        BITHUMB: 'transaction',
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN: 'trade',
@@ -164,12 +139,13 @@ _feed_to_exchange_map = {
         FTX: 'trades',
         FTX_US: 'trades',
         GEMINI: TRADES,
-        BITTREX: TRADES,
+        BITTREX: 'trade_{}',
         BITCOINCOM: 'subscribeTrades',
         BITMAX: "trades:",
         UPBIT: TRADES,
-        GATEIO: 'trades.subscribe',
-        PROBIT: 'recent_trades'
+        GATEIO: 'spot.trades',
+        PROBIT: 'recent_trades',
+        KUCOIN: '/market/match'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -195,15 +171,14 @@ _feed_to_exchange_map = {
         FTX: "ticker",
         FTX_US: "ticker",
         GEMINI: UNSUPPORTED,
-        BITTREX: 'SubscribeToSummaryDeltas',
+        BITTREX: 'ticker_{}',
         BITCOINCOM: 'subscribeTicker',
         BITMAX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
-        GATEIO: UNSUPPORTED,
-        PROBIT: UNSUPPORTED
-    },
-    VOLUME: {
-        POLONIEX: 1003
+        GATEIO: 'spot.tickers',
+        PROBIT: UNSUPPORTED,
+        KUCOIN: '/market/ticker',
+        BITHUMB: UNSUPPORTED
     },
     FUNDING: {
         BITMEX: 'funding',
@@ -237,19 +212,27 @@ _feed_to_exchange_map = {
     MARKET_INFO: {
         COINGECKO: MARKET_INFO
     },
-    TRANSACTIONS: {
-        WHALE_ALERT: TRANSACTIONS
-    },
     FUTURES_INDEX: {
         BYBIT: 'instrument_info.100ms'
     },
     ORDER_INFO: {
         GEMINI: ORDER_INFO,
-        OKEX: ORDER_INFO
+        OKEX: ORDER_INFO,
+        FTX: 'orders',
+    },
+    USER_FILLS: {
+        FTX: 'fills',
     },
     CANDLES: {
         BINANCE: 'kline_',
+        BINANCE_US: 'kline_',
         BINANCE_FUTURES: 'kline_',
+        BINANCE_DELIVERY: 'kline_',
+        HUOBI: 'kline',
+        GATEIO: 'spot.candlesticks',
+        KUCOIN: '/market/candles',
+        KRAKEN: 'ohlc',
+        BITTREX: 'candle_{}_{}'
     }
 }
 
@@ -310,9 +293,6 @@ def feed_to_exchange(exchange, feed, silent=False):
             LOG.error("Error: %r", exception)
         raise exception
 
-    if exchange == POLONIEX:
-        if feed not in _feed_to_exchange_map:
-            return symbol_std_to_exchange(feed, POLONIEX)
     try:
         ret = _feed_to_exchange_map[feed][exchange]
     except KeyError:
@@ -332,4 +312,4 @@ def normalize_channel(exchange: str, feed: str) -> str:
 
 
 def is_authenticated_channel(channel: str) -> bool:
-    return channel in (ORDER_INFO)
+    return channel in (ORDER_INFO, USER_FILLS)

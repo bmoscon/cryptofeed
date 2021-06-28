@@ -11,7 +11,7 @@ from cryptofeed.callback import BookCallback, BookUpdateCallback
 from cryptofeed.defines import BID, ASK, BOOK_DELTA, L2_BOOK, L3_BOOK
 from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.exchanges import (EXX, Binance, Bitfinex, Bitmex, Bitstamp, Bittrex, Bybit, Bitflyer,
-                                  Coinbase, Gemini, HitBTC, Kraken, OKCoin, Poloniex, Upbit)
+                                  Coinbase, Gemini, HitBTC, Kraken, OKCoin, Poloniex, Upbit, Gateio, KuCoin)
 
 
 class DeltaBook(object):
@@ -92,6 +92,8 @@ def main():
     f.add_feed(Upbit(book_interval=2, symbols=['BTC-KRW'], channels=[L2_BOOK], callbacks=DeltaBook("Upbit").L2))
     f.add_feed(Blockchain(symbols=['BTC-USD'], channels=[L2_BOOK], callbacks=DeltaBook("Blockchain-L2").L2))
     f.add_feed(Bitflyer(symbols=['BTC-JPY'], book_interval=100, channels=[L2_BOOK], callbacks=DeltaBook("Bitflyer-L2").L2))
+    f.add_feed(KuCoin(symbols=['BTC-USDT'], book_interval=100, channels=[L2_BOOK], callbacks=DeltaBook("Kucoin-L2").L2))
+    f.add_feed(Gateio(symbols=['BTC-USDT'], book_interval=100, channels=[L2_BOOK], callbacks=DeltaBook("Gateio-L2").L2))
 
     f.run()
 

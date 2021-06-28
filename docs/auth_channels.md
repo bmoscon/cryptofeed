@@ -1,4 +1,4 @@
-## Authneticated Channels
+## Authenticated Channels
 
 Cryptofeed has support for authenticated exchanges and authenticated data channels over websocket. Not every authenticated data channel has been implemented, so please open a ticket on GitHub if you know an exchange supports an authenticated websocket channel that you are interested in. This is a list of the currently supported authenticated channels.
 
@@ -6,3 +6,5 @@ Cryptofeed has support for authenticated exchanges and authenticated data channe
 | ---------|--------------|-------|
 | Gemini   | ORDER_INFO   | Information about user's orders |
 | OKEX/OKCOIN | ORDER_INFO | Information about user's orders |
+| Kucoin   | L2_BOOK      | Auth required to get book snapshot |
+| FTX      | USER_FILLS        | User's filled orders |

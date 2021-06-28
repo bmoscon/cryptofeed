@@ -25,7 +25,9 @@ Here's what you get for BTC querying https://www.hbdm.com/api/v1/contract_contra
 So we return BTC190927 as the pair name for the BTC quarterly future.
 
 '''
+from collections import defaultdict
 import logging
+from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
 
@@ -33,9 +35,9 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, HUOBI_DM, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, FUNDING, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, symbol_std_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -43,6 +45,28 @@ LOG = logging.getLogger('feedhandler')
 
 class HuobiDM(Feed):
     id = HUOBI_DM
+    symbol_endpoint = 'https://www.hbdm.com/api/v1/contract_contract_info'
+
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        """
+        Mapping is, for instance: {"BTC_CW":"BTC190816"}
+        See header comments in this file
+        """
+        mapping = {
+            "this_week": "CW",
+            "next_week": "NW",
+            "quarter": "CQ",
+            "next_quarter": "NQ"
+        }
+        symbols = {}
+        info = defaultdict(dict)
+
+        for e in data['data']:
+            symbols[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+            info['tick_size'][e['contract_code']] = e['price_tick']
+            info['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
+        return symbols, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.hbdm.com/ws', **kwargs)
@@ -70,7 +94,7 @@ class HuobiDM(Feed):
             'ch':'market.BTC_CW.depth.step0'
         }
         """
-        pair = symbol_std_to_exchange(msg['ch'].split('.')[1], self.id)
+        pair = self.std_symbol_to_exchange_symbol(msg['ch'].split('.')[1])
         data = msg['tick']
         forced = pair not in self.l2_book
 
@@ -109,7 +133,7 @@ class HuobiDM(Feed):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                                 feed=self.id,
-                                symbol=symbol_std_to_exchange(msg['ch'].split('.')[1], self.id),
+                                symbol=self.std_symbol_to_exchange_symbol(msg['ch'].split('.')[1]),
                                 order_id=trade['id'],
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
@@ -126,7 +150,7 @@ class HuobiDM(Feed):
 
         # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
-            await conn.send(json.dumps({'pong': msg['ping']}))
+            await conn.write(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':
             return
         elif 'ch' in msg:
@@ -142,11 +166,13 @@ class HuobiDM(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in set(self.channels or self.subscription):
-            for pair in set(self.symbols or self.subscription[chan]):
+        for chan in self.subscription:
+            if chan == FUNDING:
+                continue
+            for pair in self.subscription[chan]:
                 client_id += 1
-                pair = symbol_exchange_to_std(pair)
-                await conn.send(json.dumps(
+                pair = self.exchange_symbol_to_std_symbol(pair)
+                await conn.write(json.dumps(
                     {
                         "sub": f"market.{pair}.{chan}",
                         "id": str(client_id)

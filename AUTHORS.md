@@ -8,4 +8,4 @@ Cryptofeed was originally created by Bryant Moscon, but many others have contrib
 * [Ryan Tam](https://github.com/ryantam626) - <ryantam626@gmail.com>
 * [Yoh Plala](https://github.com/yohplala) - <yoh.plala@gmail.com>
 * [Alex](https://github.com/globophobe)
-
+* [Michael Zhao](https://github.com/dynamikey) - <mr_michaelzhao@hotmail.com>

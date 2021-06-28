@@ -1,6 +1,45 @@
 ## Changelog
 
-### 1.9.0
+### 1.9.2
+  * Bugfix: add config kwarg to add_nbbo method
+  * Update: changed KuCoin authentication to match new signing method
+  * Bugfix: #518 - fix aggregator example code
+  * Update: Support Bittrex V3
+  * Feature: Add support for candles on Bittrex
+  * Feature: Add support to authenticate private channels (e.g. USER_FILLS) on FTX
+  * Feature: Support private rest api commands for FTX
+  * Update: Improve impl for FTX rest api
+  * Bugfix: #528 - Fix standardisation of Deribit's symbols when passed to callbacks
+  * Feature: Add support for private "orders" channel on FTX
+  * Feature: Add support for subaccounts in feeds and REST API for FTX
+  * Bugfix: Fix FTX rest api return value
+  * Exchange: New exchange - dYdX
+  * Bugfix: Issue #531 - Gemini symbol generation included closed symbols
+  * Feature: Allow user to override the score used in Redis ZSETs
+
+### 1.9.1 (2021-06-10)
+  * Feature: add Bithumb exchange - l2 book and trades
+  * Bugfix: Fix inverted Poloniex symbols
+  * Feature: simplify and cleanup parts of Poloniex
+  * Feature: add `symbols` class method to all exchanges to get list of supported trading pairs
+  * Feature: Clean up internal class attributes in Feed class
+  * Feature: Add graceful stop and shutdown methods for Feeds
+  * Feature: Add ledger endpoint to Kraken Rest module, add ability to optionally filter by symbol, or all symbols, for historical trades
+  * Docs: Update documentation regarding adding a new exchange to cryptofeed
+  * Bugfix: Reset delay after connection is successful
+  * Feature: yapic.json parses strings to datetimes automatically, no longer need to rely on Pandas for datetime parsing
+  * Bugfix: #491 - dictionary resized during iteration in ByBit
+  * Bugfix: #494 - added status argument to liquidations callback
+  * Bugfix: #399 - book delta issue with Kucoin and Gateio
+  * Feature: Binance Delivery candle support
+  * Feature: Binance US candle support
+  * Feature: Kraken Candle support
+  * Update: Remove deprecated channel mapping from Kraken, use channel name from message instead
+  * Bugfix: change Kraken Futures to use the standard symbol to be consistent with the rest of the library
+  * Update: use Kucoin v3 endpoint for orderbook snapshot (v2 deprecated).
+  * Update: Poloniex ticker message format update 
+
+### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
   * Feature: Remove support for Influx versions prior to 2.0
   * Feature: Add stop method to HTTP Backends to gracefully drain queue and write pending data on shutdown
@@ -12,7 +51,19 @@
   * Bugfix: Fix symbol issue in Bitmex when initializing the orderbook
   * Bugfix: Fix various issues with FTX, OKCOIN/OKEX and Huobi symbol generation
   * Testing: Overhaul exchange tests, all exchanges are now tested with real data. Fixed various bugs as a result of this testing. Revamped AsyncFileCallback.
-             Added new tool to generate test data for testing. 
+             Added new tool to generate test data for testing.
+  * Bugfix: Improve connection cleanup in AsyncConnection object
+  * Feature: Add support for user defined exception handling in FeedHandler
+  * Bugfix: Fix redis backends that can't handle None
+  * Bugfix: Connection exceptions being ignored in Feedhandler
+  * Bugfix: Binance address generation correction
+  * Bugfix: OKEX symbol generation incorrect + validate symbols used for channels that dont support all types
+  * Breaking Change: Large rewrite of Feedhandler, Connection, and Feed. Many timeout related options moved from feedhandler to Feed. Symbol specific code
+                     moved to exchange class. Rewrite of raw data collection.
+  * Feature: Candle support for Huobi
+  * Feature: Allow user to specify Postgres port in Postgres backends
+  * Bugfix: Report base volume, not quote volume in Huobi candles
+  * Feature: Support for the KuCoin exchange
 
 ### 1.8.2 (2020-04-02)
   * Update to use alpha release of aioredis 2.0. Allows building of wheels again
@@ -47,6 +98,7 @@
   * Update: Poloniex changed signaure of ticker data
   * Feature: Candles for Binance Futures
   * Feature: Premium Index Candle support for Binance Futures
+  * Feature: Update Gateio to use new v4 websocket api. Adds support for candles 
 
 
 ### 1.7.0 (2021-02-15)

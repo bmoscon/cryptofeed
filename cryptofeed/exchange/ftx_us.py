@@ -15,6 +15,7 @@ LOG = logging.getLogger('feedhandler')
 
 class FTXUS(FTX):
     id = FTX_US
+    symbol_endpoint = 'https://ftx.us/api/markets'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

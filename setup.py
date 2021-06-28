@@ -32,7 +32,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.9.0",
+    version="1.9.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
@@ -67,7 +67,7 @@ setup(
         "pyyaml",
         "aiohttp>=3.7.1, < 4.0.0",
         "aiofile>=2.0.0",
-        "yapic.json>=1.4.3",
+        "yapic.json>=1.6.3",
         'uvloop ; platform_system!="Windows"',
         # Two (optional) dependencies that speed up Cryptofeed:
         "aiodns>=1.1",  # aiodns speeds up DNS resolving
@@ -85,7 +85,7 @@ setup(
         "all": [
             "arctic",
             "google_cloud_pubsub>=2.4.1",
-            "gcloud_aio_pubsub"
+            "gcloud_aio_pubsub",
             "aiokafka>=0.7.0",
             "motor",
             "asyncpg",

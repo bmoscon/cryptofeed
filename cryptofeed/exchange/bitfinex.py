@@ -8,17 +8,17 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import partial
 import logging
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
-from cryptofeed.symbols import gen_symbols
+from cryptofeed.standards import timestamp_normalize
+
 
 LOG = logging.getLogger('feedhandler')
 
@@ -41,18 +41,38 @@ CHECKSUM = 131072
 
 class Bitfinex(Feed):
     id = BITFINEX
+    symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
+
+    @classmethod
+    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+        # https://docs.bitfinex.com/docs/ws-general#supported-pairs
+        ret = {}
+        pairs = data[0][0]
+        currencies = data[1][0]
+        for c in currencies:
+            norm = c.replace('BCHN', 'BCH')  # Bitfinex uses BCHN, other exchanges use BCH
+            norm = c.replace('UST', 'USDT')
+            ret[norm] = "f" + c
+
+        for p in pairs:
+            norm = p.replace('BCHN', 'BCH')
+            norm = p.replace('UST', 'USDT')
+            if ':' in norm:
+                norm = norm.replace(":", symbol_separator)
+            else:
+                norm = norm[:3] + symbol_separator + norm[3:]
+            ret[norm] = "t" + p
+
+        return ret, {}
 
     def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):
-        # TRADES and FUNDING use the same subscription channel, only the first symbol character distinguishes them
-        # => Warn when symbols will be subscribed to the wrong channel
-        symbols_exch_to_std = gen_symbols(BITFINEX)
-        for chan in set(channels or subscription):
-            for pair in set(subscription[chan] if subscription else symbols or []):
-                exch_sym = symbols_exch_to_std.get(pair)
-                if (exch_sym[0] == 'f') == (chan != FUNDING):
-                    LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
-
         super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, subscription=subscription, **kwargs)
+        if channels or subscription:
+            for chan in set(channels or subscription):
+                for pair in set(subscription[chan] if subscription else symbols or []):
+                    exch_sym = self.std_symbol_to_exchange_symbol(pair)
+                    if (exch_sym[0] == 'f') == (chan != FUNDING):
+                        LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
         self.__reset()
 
     def __reset(self):
@@ -254,16 +274,22 @@ class Bitfinex(Feed):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
+            hb_skip = False
             chan_handler = self.handlers.get(msg[0])
             if chan_handler is None:
-                LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
-                return
+                if msg[1] == 'hb':
+                    hb_skip = True
+                else:
+                    LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
+                    return
             seq_no = msg[-1]
             expected = self.seq_no[conn.uuid] + 1
             if seq_no != expected:
                 LOG.warning('%s: missed message (sequence number) received %d, expected %d', conn.uuid, seq_no, expected)
                 raise MissingSequenceNumber
             self.seq_no[conn.uuid] = seq_no
+            if hb_skip:
+                return
             await chan_handler(msg, timestamp)
 
         elif 'event' not in msg:
@@ -280,7 +306,7 @@ class Bitfinex(Feed):
     def register_channel_handler(self, msg: dict, conn: AsyncConnection):
         symbol = msg['symbol']
         is_funding = (symbol[0] == 'f')
-        pair = symbol_exchange_to_std(symbol)
+        pair = self.exchange_symbol_to_std_symbol(symbol)
 
         if msg['channel'] == 'ticker':
             if is_funding:
@@ -323,11 +349,11 @@ class Bitfinex(Feed):
 
         def build(options: list):
             subscribe = partial(self.subscribe, options=options)
-            conn = AsyncConnection(self.address, self.id, **self.ws_defaults)
-            return conn, subscribe, self.message_handler
+            conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
+            return conn, subscribe, self.message_handler, self.authenticate
 
-        for channel in self.channels if not self.subscription else self.subscription:
-            for pair in self.symbols if not self.subscription else self.subscription[channel]:
+        for channel in self.subscription:
+            for pair in self.subscription[channel]:
                 pair_channel.append((pair, channel))
                 # Bitfinex max is 25 per connection
                 if len(pair_channel) == 25:
@@ -341,7 +367,7 @@ class Bitfinex(Feed):
 
     async def subscribe(self, connection: AsyncConnection, options: List[Tuple[str, str]] = None):
         self.__reset()
-        await connection.send(json.dumps({
+        await connection.write(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL
         }))
@@ -362,4 +388,4 @@ class Bitfinex(Feed):
                     except IndexError:
                         # any non specified params will be defaulted
                         pass
-            await connection.send(json.dumps(message))
+            await connection.write(json.dumps(message))

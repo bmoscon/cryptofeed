@@ -17,7 +17,6 @@ from cryptofeed.rest.ftx import FTX
 from cryptofeed.rest.gemini import Gemini
 from cryptofeed.rest.kraken import Kraken
 from cryptofeed.rest.poloniex import Poloniex
-from cryptofeed.standards import load_exchange_symbol_mapping
 
 
 LOG = logging.getLogger('rest')
@@ -35,40 +34,26 @@ class Rest:
     mode, if supported by the exchange.
     """
 
-    def __init__(self, config=None, sandbox=False):
+    def __init__(self, config=None, sandbox=False, subaccount=None):
         config = Config(config=config)
 
         get_logger('rest', config.rest.log.filename, config.rest.log.level)
 
         self.lookup = {
-            'bitmex': Bitmex(config.bitmex),
-            'bitfinex': Bitfinex(config.bitfinex),
-            'coinbase': Coinbase(config.coinbase, sandbox=sandbox),
-            'poloniex': Poloniex(config.poloniex),
-            'gemini': Gemini(config.gemini, sandbox=sandbox),
-            'kraken': Kraken(config.kraken),
-            'deribit': Deribit(config.deribit),
-            'binance_futures': BinanceFutures(config.binance_futures),
-            'binance_delivery': BinanceDelivery(config.binance_delivery),
-            'ftx': FTX(config.ftx)
+            'bitmex': Bitmex(config=config.bitmex),
+            'bitfinex': Bitfinex(config=config.bitfinex),
+            'coinbase': Coinbase(config=config.coinbase, sandbox=sandbox),
+            'poloniex': Poloniex(config=config.poloniex),
+            'gemini': Gemini(config=config.gemini, sandbox=sandbox),
+            'kraken': Kraken(config=config.kraken),
+            'deribit': Deribit(config=config.deribit),
+            'binance_futures': BinanceFutures(config=config.binance_futures),
+            'binance_delivery': BinanceDelivery(config=config.binance_delivery),
+            'ftx': FTX(config=config.ftx, subaccount=subaccount)
         }
 
     def __getitem__(self, key):
-        exch = self.lookup[key.lower()]
-        if not exch.mapped:
-            try:
-                load_exchange_symbol_mapping(exch.ID + 'REST')
-            except KeyError:
-                load_exchange_symbol_mapping(exch.ID)
-            exch.mapped = True
-        return exch
+        return self.lookup[key.lower()]
 
     def __getattr__(self, attr):
-        exch = self.lookup[attr.lower()]
-        if not exch.mapped:
-            try:
-                load_exchange_symbol_mapping(exch.ID + 'REST')
-            except KeyError:
-                load_exchange_symbol_mapping(exch.ID)
-            exch.mapped = True
-        return exch
+        return self.lookup[attr.lower()]

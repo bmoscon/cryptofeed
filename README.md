@@ -12,6 +12,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
+* [Bithumb](https://en.bithumb.com/)
 * [BitMax](https://bitmax.io/)
 * [Bitstamp](https://www.bitstamp.net/)
 * [Bittrex](https://global.bittrex.com/)
@@ -24,6 +25,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [BitMEX](https://www.bitmex.com/)
 * [Coinbase](https://www.coinbase.com/)
 * [Deribit](https://www.deribit.com/)
+* [dYdX](https://dydx.exchange/)
 * [EXX](https://www.exx.com/)
 * [FTX](https://ftx.com/)
 * [FTX US](https://ftx.us/)
@@ -35,6 +37,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * Huobi Swap
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
+* [KuCoin](https://www.kucoin.com/)
 * [OKCoin](http://okcoin.com/)
 * [OKEx](https://www.okex.com/)
 * [Poloniex](https://www.poloniex.com/)
@@ -44,7 +47,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 ## Supported aggregated crypto data providers
 
 * [Coingecko](https://www.coingecko.com/en)
-* [Whale Alert](https://whale-alert.io/)
 
 
 ## Basic Usage
@@ -107,15 +109,15 @@ Cryptofeed supports the following channels from exchanges:
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES - Note this reports the taker's side, even for exchanges that report the maker side.
 * TICKER
-* VOLUME
 * FUNDING
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * OPEN_INTEREST - Open interest data.
+* LIQUIDATIONS
+* FUTURES_INDEX
 * CANDLES - Candlestick / K-Line data.
 
 Aggregated data from provider is available in channel:
 
-* TRANSACTIONS - On-chain transactions.
 * MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
  as well as community data (twitter, reddit, facebook...) and scores (coingecko, developer, community...)
 
@@ -135,7 +137,7 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
-* [InfluxDB 2](https://github.com/influxdata/influxdb)
+* [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
 * Elastic Search

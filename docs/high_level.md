@@ -3,6 +3,8 @@
 Cryptofeed is composed of the following components:
 
 * Feedhandler
+* Connection Abstraction
+* Connection Handler
 * Exchange Interfaces
 * Callbacks
 * Backends
@@ -22,6 +24,10 @@ The feedhandler is the main object that a user of the library will configure. It
 
 `run` simply starts the feedhandler. The feedhandler uses asyncio, so `run` will block while the feedhandler runs.
 
+### Connection / Connection Handler
+
+Cryptofeed supports various connection types with exchanges, including HTTP and websocket. These are maintained and monitored in the Connection Handler, which creates connections, handles exceptions, and restarts connections as appropriate.
+
 ### Exchange Interface
 
 The exchange objects are supplied with the following arguments:
@@ -40,7 +46,6 @@ The supported data channels are:
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES - Note this reports the taker's side, even for exchanges that report the maker side
 * TICKER - Traditional ticker updates
-* VOLUME - Volume information (Poloniex only currently)
 * FUNDING - Exchange specific funding data / updates
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects. Not all exchanges support, as some exchanges send complete books on every update.
 

@@ -15,6 +15,7 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceUS(Binance):
     id = BINANCE_US
+    symbol_endpoint = 'https://api.binance.us/api/v3/exchangeInfo'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

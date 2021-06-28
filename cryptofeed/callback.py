@@ -79,8 +79,8 @@ class CandleCallback(Callback):
 
 
 class LiquidationCallback(Callback):
-    async def __call__(self, *, feed: str, symbol: str, side: str, leaves_qty: Decimal, price: Decimal, order_id: str, timestamp: float, receipt_timestamp: float):
-        await super().__call__(feed, symbol, side, leaves_qty, price, order_id, timestamp, receipt_timestamp)
+    async def __call__(self, *, feed: str, symbol: str, side: str, leaves_qty: Decimal, price: Decimal, order_id: str, status: str, timestamp: float, receipt_timestamp: float):
+        await super().__call__(feed, symbol, side, leaves_qty, price, order_id, status, timestamp, receipt_timestamp)
 
 
 class OpenInterestCallback(Callback):
@@ -100,10 +100,6 @@ class FuturesIndexCallback(Callback):
 
 
 class MarketInfoCallback(Callback):
-    pass
-
-
-class TransactionsCallback(Callback):
     pass
 
 

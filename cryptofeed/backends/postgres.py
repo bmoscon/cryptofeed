@@ -12,13 +12,12 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendQueue, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendFuturesIndexCallback, BackendMarketInfoCallback,
-                                         BackendTransactionsCallback)
-from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX, MARKET_INFO, TRANSACTIONS
+                                         BackendLiquidationsCallback, BackendFuturesIndexCallback, BackendMarketInfoCallback)
+from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX, MARKET_INFO
 
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, table=None, numeric_type=float, max_batch=100, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, numeric_type=float, max_batch=100, **kwargs):
         """
         host: str
             Database host address
@@ -40,11 +39,12 @@ class PostgresCallback(BackendQueue):
         self.db = db
         self.pw = pw
         self.host = host
+        self.port = port
         self.max_batch = max_batch
 
     async def _connect(self):
         if self.conn is None:
-            self.conn = await asyncpg.connect(user=self.user, password=self.pw, database=self.db, host=self.host)
+            self.conn = await asyncpg.connect(user=self.user, password=self.pw, database=self.db, host=self.host, port=self.port)
 
     def format(self, data: Tuple):
         feed = data[0]
@@ -127,9 +127,17 @@ class TickerPostgres(PostgresCallback, BackendTickerCallback):
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
     default_table = OPEN_INTEREST
 
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+        d = f"{data['open_interest']}"
+        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+
 
 class FuturesIndexPostgres(PostgresCallback, BackendFuturesIndexCallback):
     default_table = FUTURES_INDEX
+
+    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
+        d = f"{data['futures_index']}"
+        await super().write(feed, pair, timestamp, receipt_timestamp, d)
 
 
 class LiquidationsPostgres(PostgresCallback, BackendLiquidationsCallback):
@@ -146,10 +154,6 @@ class BookDeltaPostgres(PostgresCallback, BackendBookDeltaCallback):
 
 class MarketInfoPostgres(PostgresCallback, BackendMarketInfoCallback):
     default_table = MARKET_INFO
-
-
-class TransactionsPostgres(PostgresCallback, BackendTransactionsCallback):
-    default_table = TRANSACTIONS
 
 
 class CandlesPostgres(PostgresCallback, BackendCandlesCallback):

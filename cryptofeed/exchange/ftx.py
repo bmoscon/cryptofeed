@@ -6,23 +6,26 @@ associated with this software.
 '''
 
 import asyncio
+from collections import defaultdict
 import logging
 from decimal import Decimal
+import hmac
+import os
 from time import time
 import zlib
-from typing import Iterable
+from typing import Dict, Iterable, Tuple
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY
+from cryptofeed.defines import BID, ASK, BUY, ORDER_INFO, USER_FILLS
 from cryptofeed.defines import FTX as FTX_id
-from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import symbol_exchange_to_std, timestamp_normalize
+from cryptofeed.standards import is_authenticated_channel, normalize_channel, timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -30,27 +33,72 @@ LOG = logging.getLogger('feedhandler')
 
 class FTX(Feed):
     id = FTX_id
+    symbol_endpoint = "https://ftx.com/api/markets"
 
-    def __init__(self, **kwargs):
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = defaultdict(dict)
+
+        for d in data['result']:
+            normalized = d['name'].replace("/", symbol_separator)
+            symbol = d['name']
+            ret[normalized] = symbol
+            info['tick_size'][normalized] = d['priceIncrement']
+        return ret, info
+
+    def __init__(self, subaccount=None, **kwargs):
+        self.subaccount = subaccount
         super().__init__('wss://ftexchange.com/ws/', **kwargs)
+
+    def load_keys(self):
+        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or (self.config[self.id.lower()][self.subaccount].key_id if self.subaccount else self.config[self.id.lower()].key_id)
+        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or (self.config[self.id.lower()][self.subaccount].key_secret if self.subaccount else self.config[self.id.lower()].key_secret)
 
     def __reset(self):
         self.l2_book = {}
         self.funding = {}
         self.open_interest = {}
 
+    async def generate_token(self, conn: AsyncConnection):
+        ts = int(time() * 1000)
+        msg = {
+            'op': 'login',
+            'args':
+            {
+                'key': self.key_id,
+                'sign': hmac.new(self.key_secret.encode(), f'{ts}websocket_login'.encode(), 'sha256').hexdigest(),
+                'time': ts,
+            }
+        }
+        if self.subaccount:
+            msg['args']['subaccount'] = self.subaccount
+        await conn.write(json.dumps(msg))
+
+    async def authenticate(self, conn: AsyncConnection):
+        if self.requires_authentication:
+            await self.generate_token(conn)
+
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        for chan in set(self.channels or self.subscription):
-            symbols = set(self.symbols or self.subscription[chan])
+        for chan in self.subscription:
+            symbols = self.subscription[chan]
             if chan == FUNDING:
                 asyncio.create_task(self._funding(symbols))  # TODO: use HTTPAsyncConn
                 continue
             if chan == OPEN_INTEREST:
                 asyncio.create_task(self._open_interest(symbols))  # TODO: use HTTPAsyncConn
                 continue
+            if is_authenticated_channel(normalize_channel(self.id, chan)):
+                await conn.write(json.dumps(
+                    {
+                        "channel": chan,
+                        "op": "subscribe"
+                    }
+                ))
+                continue
             for pair in symbols:
-                await conn.send(json.dumps(
+                await conn.write(json.dumps(
                     {
                         "channel": chan,
                         "market": pair,
@@ -153,9 +201,11 @@ class FTX(Feed):
                             self.funding[pair] = update
 
                         await self.callback(FUNDING, feed=self.id,
-                                            symbol=symbol_exchange_to_std(data['result'][0]['future']),
+                                            symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
                                             rate=data['result'][0]['rate'],
-                                            timestamp=timestamp_normalize(self.id, data['result'][0]['time']))
+                                            timestamp=timestamp_normalize(self.id, data['result'][0]['time']),
+                                            receipt_timestamp=time()
+                                            )
                     await asyncio.sleep(rate_limiter)
                 await asyncio.sleep(wait_time)
 
@@ -168,24 +218,24 @@ class FTX(Feed):
         """
         for trade in msg['data']:
             await self.callback(TRADES, feed=self.id,
-                                symbol=symbol_exchange_to_std(msg['market']),
+                                symbol=self.exchange_symbol_to_std_symbol(msg['market']),
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
-                                order_id=None,
+                                order_id=trade['id'],
                                 timestamp=float(timestamp_normalize(self.id, trade['time'])),
                                 receipt_timestamp=timestamp)
             if bool(trade['liquidation']):
                 await self.callback(LIQUIDATIONS,
                                     feed=self.id,
-                                    symbol=symbol_exchange_to_std(msg['market']),
+                                    symbol=self.exchange_symbol_to_std_symbol(msg['market']),
                                     side=BUY if trade['side'] == 'buy' else SELL,
                                     leaves_qty=Decimal(trade['size']),
                                     price=Decimal(trade['price']),
-                                    order_id=None,
+                                    order_id=trade['id'],
+                                    status=FILLED,
                                     timestamp=float(timestamp_normalize(self.id, trade['time'])),
-                                    receipt_timestamp=timestamp
-                                    )
+                                    receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -195,7 +245,7 @@ class FTX(Feed):
         "last": 10719.0, "time": 1564834587.1299787}}
         """
         await self.callback(TICKER, feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['market']),
+                            symbol=self.exchange_symbol_to_std_symbol(msg['market']),
                             bid=Decimal(msg['data']['bid'] if msg['data']['bid'] else 0.0),
                             ask=Decimal(msg['data']['ask'] if msg['data']['ask'] else 0.0),
                             timestamp=float(msg['data']['time']),
@@ -216,7 +266,7 @@ class FTX(Feed):
         check = msg['data']['checksum']
         if msg['type'] == 'partial':
             # snapshot
-            pair = symbol_exchange_to_std(msg['market'])
+            pair = self.exchange_symbol_to_std_symbol(msg['market'])
             self.l2_book[pair] = {
                 BID: sd({
                     Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']
@@ -231,7 +281,7 @@ class FTX(Feed):
         else:
             # update
             delta = {BID: [], ASK: []}
-            pair = symbol_exchange_to_std(msg['market'])
+            pair = self.exchange_symbol_to_std_symbol(msg['market'])
             for side in ('bids', 'asks'):
                 s = BID if side == 'bids' else ASK
                 for price, amount in msg['data'][side]:
@@ -247,17 +297,104 @@ class FTX(Feed):
                 raise BadChecksum
             await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
 
+    async def _fill(self, msg: dict, timestamp: float):
+        """
+        example message:
+        {
+            "channel": "fills",
+            "data": {
+                "fee": 78.05799225,
+                "feeRate": 0.0014,
+                "future": "BTC-PERP",
+                "id": 7828307,
+                "liquidity": "taker",
+                "market": "BTC-PERP",
+                "orderId": 38065410,
+                "tradeId": 19129310,
+                "price": 3723.75,
+                "side": "buy",
+                "size": 14.973,
+                "time": "2019-05-07T16:40:58.358438+00:00",
+                "type": "order"
+            },
+            "type": "update"
+        }
+        """
+        fill = msg['data']
+        await self.callback(USER_FILLS, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(fill['market']),
+                            side=BUY if fill['side'] == 'buy' else SELL,
+                            amount=Decimal(fill['size']),
+                            price=Decimal(fill['price']),
+                            liquidity=fill['liquidity'],
+                            order_id=fill['id'],
+                            trade_id=fill['tradeId'],
+                            timestamp=float(timestamp_normalize(self.id, fill['time'])),
+                            receipt_timestamp=timestamp)
+
+    async def _order(self, msg: dict, timestamp: float):
+        """
+        example message:
+        {
+            "channel": "orders",
+            "data": {
+                "id": 24852229,
+                "clientId": null,
+                "market": "XRP-PERP",
+                "type": "limit",
+                "side": "buy",
+                "size": 42353.0,
+                "price": 0.2977,
+                "reduceOnly": false,
+                "ioc": false,
+                "postOnly": false,
+                "status": "closed",
+                "filledSize": 0.0,
+                "remainingSize": 0.0,
+                "avgFillPrice": 0.2978
+            },
+            "type": "update"
+        }
+        """
+        order = msg['data']
+        await self.callback(ORDER_INFO, feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(order['market']),
+                            status=order['status'],
+                            order_id=order['id'],
+                            side=BUY if order['side'].lower() == 'buy' else SELL,
+                            order_type=order['type'],
+                            avg_fill_price=Decimal(order['avgFillPrice']) if order['avgFillPrice'] else None,
+                            filled_size=Decimal(order['filledSize']),
+                            remaining_size=Decimal(order['remainingSize']),
+                            amount=Decimal(order['size']),
+                            timestamp=timestamp,
+                            receipt_timestamp=timestamp,
+                            )
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        if 'type' in msg and msg['type'] == 'subscribed':
-            return
-        elif 'channel' in msg:
-            if msg['channel'] == 'orderbook':
-                await self._book(msg, timestamp)
-            elif msg['channel'] == 'trades':
-                await self._trade(msg, timestamp)
-            elif msg['channel'] == 'ticker':
-                await self._ticker(msg, timestamp)
+        if 'type' in msg:
+            if msg['type'] == 'subscribed':
+                if 'market' in msg:
+                    LOG.info('%s: Subscribed to %s channel for %s', self.id, msg['channel'], msg['market'])
+                else:
+                    LOG.info('%s: Subscribed to %s channel', self.id, msg['channel'])
+            elif msg['type'] == 'error':
+                LOG.error('%s: Received error message %s', self.id, msg)
+                raise Exception('Error from %s: %s', self.id, msg)
+            elif 'channel' in msg:
+                if msg['channel'] == 'orderbook':
+                    await self._book(msg, timestamp)
+                elif msg['channel'] == 'trades':
+                    await self._trade(msg, timestamp)
+                elif msg['channel'] == 'ticker':
+                    await self._ticker(msg, timestamp)
+                elif msg['channel'] == 'fills':
+                    await self._fill(msg, timestamp)
+                elif msg['channel'] == 'orders':
+                    await self._order(msg, timestamp)
+                else:
+                    LOG.warning("%s: Invalid message type %s", self.id, msg)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
