@@ -45,6 +45,7 @@ class FTX(Feed):
             symbol = d['name']
             ret[normalized] = symbol
             info['tick_size'][normalized] = d['priceIncrement']
+            info['quantity_step'][normalized] = d['sizeIncrement']
         return ret, info
 
     def __init__(self, subaccount=None, **kwargs):
