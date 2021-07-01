@@ -24,6 +24,7 @@ from cryptofeed.exchange.blockchain import Blockchain
 from cryptofeed.exchange.bybit import Bybit
 from cryptofeed.exchange.coinbase import Coinbase
 from cryptofeed.exchange.deribit import Deribit
+from cryptofeed.exchange.dydx import dYdX
 from cryptofeed.exchange.exx import EXX
 from cryptofeed.exchange.ftx import FTX
 from cryptofeed.exchange.ftx_us import FTXUS
@@ -60,6 +61,7 @@ EXCHANGE_MAP = {
     COINBASE: Coinbase,
     COINGECKO: Coingecko,
     DERIBIT: Deribit,
+    DYDX: dYdX,
     EXX_str: EXX,
     FTX_str: FTX,
     FTX_US: FTXUS,

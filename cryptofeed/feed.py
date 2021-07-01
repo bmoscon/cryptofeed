@@ -69,6 +69,9 @@ class Feed:
         if isinstance(config, Config):
             LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
             self.config = config
+        elif config is None:
+            LOG.info('%s: no Config provided, using default config', self.id)
+            self.config = Config(config)
         else:
             LOG.info('%s: create Config from type: %r', self.id, type(config))
             self.config = Config(config)
@@ -244,6 +247,11 @@ class Feed:
                 data = []
                 for ep in cls.symbol_endpoint:
                     data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
+            elif isinstance(cls.symbol_endpoint, dict):
+                data = []
+                for input, output in cls.symbol_endpoint.items():
+                    for d in cls.http_sync.read(input, json=True, uuid=cls.id):
+                        data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
             else:
                 data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
             syms, info = cls._parse_symbol_data(data, symbol_separator)
