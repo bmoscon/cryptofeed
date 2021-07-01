@@ -13,6 +13,10 @@
   * Feature: Add support for private "orders" channel on FTX
   * Feature: Add support for subaccounts in feeds and REST API for FTX
   * Bugfix: Fix FTX rest api return value
+  * Exchange: New exchange - dYdX
+  * Bugfix: Issue #531 - Gemini symbol generation included closed symbols
+  * Feature: Allow user to override the score used in Redis ZSETs
+  * Update: Get information about size increment from FTX symbol data
 
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades

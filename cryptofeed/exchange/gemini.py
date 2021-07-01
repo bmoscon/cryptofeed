@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 from decimal import Decimal
 from typing import Dict, List, Tuple, Callable
@@ -23,16 +24,20 @@ LOG = logging.getLogger('feedhandler')
 
 class Gemini(Feed):
     id = GEMINI
-    symbol_endpoint = 'https://api.gemini.com/v1/symbols'
+    symbol_endpoint = {'https://api.gemini.com/v1/symbols': 'https://api.gemini.com/v1/symbols/details/'}
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
         ret = {}
+        info = defaultdict(dict)
+
         for symbol in data:
-            std = f"{symbol[:-3]}{symbol_separator}{symbol[-3:]}"
-            std = std.upper()
-            ret[std] = symbol.upper()
-        return ret, {}
+            if symbol['status'] == 'closed':
+                continue
+            normalized = symbol['base_currency'] + symbol_separator + symbol['quote_currency']
+            ret[normalized] = symbol['symbol']
+            info['tick_size'][normalized] = symbol['tick_size']
+        return ret, info
 
     def __init__(self, sandbox=False, **kwargs):
         auth_api = 'wss://api.gemini.com' if not sandbox else 'wss://api.sandbox.gemini.com'

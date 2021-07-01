@@ -25,6 +25,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [BitMEX](https://www.bitmex.com/)
 * [Coinbase](https://www.coinbase.com/)
 * [Deribit](https://www.deribit.com/)
+* [dYdX](https://dydx.exchange/)
 * [EXX](https://www.exx.com/)
 * [FTX](https://ftx.com/)
 * [FTX US](https://ftx.us/)
@@ -136,7 +137,7 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
-* [InfluxDB 2](https://github.com/influxdata/influxdb)
+* [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
 * Elastic Search
