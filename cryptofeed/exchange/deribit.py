@@ -10,7 +10,7 @@ from datetime import datetime
 import requests
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETUAL, OPTION, FUTURE, ANY, C, P, BTC, ETH, FILLED
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, USER_TRADES, PERPETUAL, OPTION, FUTURE, ANY, CALL, PUT, BTC, ETH, FILLED
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange, is_authenticated_channel
@@ -19,6 +19,7 @@ from cryptofeed.util.instrument import get_instrument_type
 
 
 LOG = logging.getLogger('feedhandler')
+
 
 class DeribitInstrument():
     def __init__(self, instrument_name):
@@ -37,7 +38,8 @@ class DeribitInstrument():
             self.expiry_date = datetime.strptime(self.expiry_date_str, "%d%b%y")
             self.expiry_date = self.expiry_date.replace(hour=8)
             self.strike_price = Decimal(instrument_properties[2])
-            self.option_type = C if instrument_properties[3] == 'C' else P
+            self.option_type = CALL if instrument_properties[3] == 'C' else PUT
+
 
 class Deribit(Feed):
     id = DERIBIT
