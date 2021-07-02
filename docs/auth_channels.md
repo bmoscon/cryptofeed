@@ -8,6 +8,6 @@ Cryptofeed has support for authenticated exchanges and authenticated data channe
 | OKEX/OKCOIN | ORDER_INFO | Information about user's orders |
 | Kucoin   | L2_BOOK      | Auth required to get book snapshot |
 | FTX      | USER_FILLS        | User's filled orders |
-| Bequant | ORDER_INFO | User's order updates: new, suspended, partially filled, filled, cancelled, expired |
-| Bequant | ACC_BALANCE | Real-time feed with balances (and changes to balances) for all non-zero wallets|
-| Bequant | ACC_TRANSACTIONS | Real-time information on account deposits and withdrawals |
+| Bequant & HitBTC| ORDER_INFO | User's order updates: new, suspended, partially filled, filled, cancelled, expired |
+| Bequant & HitBTC | ACC_BALANCES | Real-time feed with balances (and changes to balances) for all non-zero wallets|
+| Bequant & HitBTC| ACC_TRANSACTIONS | Real-time information on account deposits and withdrawals |
