@@ -48,7 +48,7 @@ class Feed:
             Number of updates between snapshots. Only applicable when book deltas are enabled.
             Book deltas are enabled by subscribing to the book delta callback.
         candle_interval: str
-            Length of time between a candle's Open and Close.
+            Length of time between a candle's Open and Close. Valid on exchanges with support for candles
         snapshot_interval: bool/int
             Number of updates between snapshots. Only applicable when book delta is not enabled.
             Updates between snapshots are not delivered to the client
