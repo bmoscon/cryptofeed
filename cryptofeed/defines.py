@@ -9,6 +9,7 @@ Defines contains all constant string definitions for Cryptofeed,
 as well as some documentation (in comment form) regarding
 the book definitions and structure
 '''
+BEQUANT = 'BEQUANT'
 BITFINEX = 'BITFINEX'
 BITHUMB = 'BITHUMB'
 BITMEX = 'BITMEX'
@@ -64,6 +65,8 @@ CANDLES = 'candles'
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
 USER_FILLS = 'user_fills'
+ACC_TRANSACTIONS = 'transactions'
+ACC_BALANCES = 'balances'
 
 
 BUY = 'buy'
@@ -74,6 +77,8 @@ UND = 'undefined'
 
 LIMIT = 'limit'
 MARKET = 'market'
+STOP_LIMIT = 'stop-limit'
+STOP_MARKET = 'stop-market'
 MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
@@ -84,6 +89,8 @@ FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
 UNFILLED = 'unfilled'
+EXPIRED = 'expired'
+SUSPENDED = 'suspended'
 
 # Instrument Definitions
 
