@@ -356,6 +356,7 @@ class Bequant(Feed):
     def __reset(self):
         self.l2_book = {}
 
+ 
     async def _ticker(self, msg: dict, conn: AsyncConnection, ts: float):
         """
         {

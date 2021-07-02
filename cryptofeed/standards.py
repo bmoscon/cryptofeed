@@ -252,6 +252,9 @@ _feed_to_exchange_map = {
         BEQUANT: 'subscribeBalance',
         HITBTC: 'subscribeBalance',
     },
+    ACC_BALANCES: {
+        BEQUANT: 'subscribeBalance'
+    },
 }
 
 _exchange_options = {
