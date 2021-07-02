@@ -9,6 +9,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 ## Supported exchanges
 
+* [Bequant](https://bequant.io)
 * [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
@@ -124,6 +125,8 @@ Aggregated data from provider is available in channel:
 ### Authenticated Data Channels
 
 * ORDER_INFO - Order status updates
+* ACC_TRANSACTIONS - Real-time updates on account deposits and withdrawals
+* ACC_BALANCES - Updates on wallet funds
 
 
 ## Backends
