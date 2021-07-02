@@ -9,7 +9,8 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 ## Supported exchanges
 
-* [Bequant](https://bequant.io)
+
+* [Bequant](https://bequant.io/)
 * [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
