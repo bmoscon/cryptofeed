@@ -19,8 +19,11 @@
   * Update: Get information about size increment from FTX symbol data
   * Bugfix: Fix trades write for Arctic backend
   * Feature: new exchange: Bequant. Supports ticker, L2 book, trades, candles, plus authenticated channels: order info, account transactions and account balances
-  * Features: added support for candles, order info, account transaction and account balances to HitBTC
-  * Update: changed deprecated HitBTC endpoints
+  * Update: BitMax renamed AscendEX
+  * Bugfix: Feed level timeout and timeout interval not being set properly
+  * Features: Add support for candles, order info, account transaction and account balances to HitBTC
+  * Update: HitBTC uses updated endpoints
+
 
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades

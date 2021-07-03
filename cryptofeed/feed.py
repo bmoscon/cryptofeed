@@ -367,7 +367,7 @@ class Feed:
         Create tasks for exchange interfaces and backends
         """
         for conn, sub, handler, auth in self.connect():
-            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
+            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error))
             self.connection_handlers[-1].start(loop)
 
         for callbacks in self.callbacks.values():

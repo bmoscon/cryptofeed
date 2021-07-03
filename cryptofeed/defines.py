@@ -9,6 +9,7 @@ Defines contains all constant string definitions for Cryptofeed,
 as well as some documentation (in comment form) regarding
 the book definitions and structure
 '''
+ASCENDEX = 'ASCENDEX'
 BEQUANT = 'BEQUANT'
 BITFINEX = 'BITFINEX'
 BITHUMB = 'BITHUMB'
@@ -42,7 +43,6 @@ OKEX = 'OKEX'
 POLONIEX = 'POLONIEX'
 PROBIT = 'PROBIT'
 BITCOINCOM = 'BITCOINCOM'
-BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
 
 COINGECKO = 'COINGECKO'

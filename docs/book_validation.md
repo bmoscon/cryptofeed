@@ -7,9 +7,9 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 
 | Exchange      | Checksum      | Sequence Numbers | Snapshots only |
 | ------------- |:-------------:| :---------------:|:--------------:|
+| AscendEX      |               | x                |                |
 | Bitcoin.com   |               | x                |                |
 | Bitfinex      |               | x                |                |
-| Bitmax        |               | x                |                |
 | Bitstamp      |               |                  | x              |
 | Bittrex       |               | x (coming)       |                |
 | Blockchain.com|               | x                |                |

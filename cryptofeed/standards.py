@@ -13,7 +13,7 @@ import logging
 import datetime as dt
 
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
-                                BITHUMB, BITMAX, BITMEX,
+                                BITHUMB, ASCENDEX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
@@ -35,7 +35,7 @@ def timestamp_normalize(exchange, ts):
     if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX, BEQUANT}:
         return ts.timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
-                      BINANCE_DELIVERY, GEMINI, BITMAX, KRAKEN_FUTURES, UPBIT}:
+                      BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1000000.0
@@ -76,7 +76,7 @@ _feed_to_exchange_map = {
         GEMINI: L2_BOOK,
         BITTREX: 'orderbook_{}_{}',
         BITCOINCOM: 'subscribeOrderbook',
-        BITMAX: "depth:",
+        ASCENDEX: "depth:",
         UPBIT: L2_BOOK,
         GATEIO: 'spot.order_book_update',
         PROBIT: 'order_books',
@@ -109,7 +109,7 @@ _feed_to_exchange_map = {
         FTX_US: UNSUPPORTED,
         GEMINI: UNSUPPORTED,
         BITCOINCOM: UNSUPPORTED,
-        BITMAX: UNSUPPORTED,
+        ASCENDEX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
         PROBIT: UNSUPPORTED
     },
@@ -145,7 +145,7 @@ _feed_to_exchange_map = {
         GEMINI: TRADES,
         BITTREX: 'trade_{}',
         BITCOINCOM: 'subscribeTrades',
-        BITMAX: "trades:",
+        ASCENDEX: "trades:",
         UPBIT: TRADES,
         GATEIO: 'spot.trades',
         PROBIT: 'recent_trades',
@@ -179,7 +179,7 @@ _feed_to_exchange_map = {
         GEMINI: UNSUPPORTED,
         BITTREX: 'ticker_{}',
         BITCOINCOM: 'subscribeTicker',
-        BITMAX: UNSUPPORTED,
+        ASCENDEX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
         GATEIO: 'spot.tickers',
         PROBIT: UNSUPPORTED,
