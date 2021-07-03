@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.exchange.phemex import Phemex
 from cryptofeed.exchange.dydx import dYdX
 from decimal import Decimal
 
@@ -110,6 +111,7 @@ def main():
     f.add_feed(BinanceFutures(symbols=['BTC-USDT'], channels=[TICKER], callbacks={TICKER: ticker}))
     f.add_feed(BinanceFutures(subscription={TRADES: ['BTC-USDT'], CANDLES: ['BTC-USDT', 'BTC-USDT-PINDEX']}, callbacks={CANDLES: candle_callback, TRADES: trade}))
     f.add_feed(dYdX(symbols=dYdX.symbols(), channels=[L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, BOOK_DELTA: delta}))
+    f.add_feed(Phemex(symbols=['BTC-USD'], channels=[CANDLES, TRADES], callbacks={TRADES: trade, L2_BOOK: book, CANDLES: candle_callback}))
 
     f.run()
 

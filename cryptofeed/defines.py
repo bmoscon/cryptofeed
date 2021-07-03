@@ -95,7 +95,7 @@ SUSPENDED = 'suspended'
 
 # Instrument Definitions
 
-FUTURE = 'future'
+FUTURES = 'futures'
 SWAP = 'swap'
 PERPETUAL = 'perpetual'
 OPTION = 'option'

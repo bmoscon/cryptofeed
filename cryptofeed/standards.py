@@ -37,10 +37,11 @@ def timestamp_normalize(exchange, ts):
                       BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
-        return ts / 1000000.0
+        return ts / 1_000_000.0
+    elif exchange == PHEMEX:
+        return ts / 1_000_000_000.0
     elif exchange in {BITHUMB}:
         return (ts - dt.timedelta(hours=9)).timestamp()
-    # return (dt.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") - dt.timedelta(hours=9)).timestamp()
 
 
 _feed_to_exchange_map = {
