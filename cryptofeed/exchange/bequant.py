@@ -68,11 +68,11 @@ class Bequant(Feed):
         interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '7d': 'D7', '1M': '1M'}
         self.candle_interval = interval_map[candle_interval]
         self.normalize_interval = {value: key for key, value in interval_map.items()}
-        self.seq_no = {}
         self.__reset()
 
     def __reset(self):
         self.l2_book = {}
+        self.seq_no = {}
 
     async def _ticker(self, msg: dict, conn: AsyncConnection, ts: float):
         """
@@ -311,6 +311,8 @@ class Bequant(Feed):
             pair = msg['params']['symbol']
             if pair in self.seq_no:
                 if self.seq_no[pair] + 1 != msg['params']['sequence']:
+                    if self.seq_no[pair] >= msg['params']['sequence']:
+                        return
                     LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
                     raise MissingSequenceNumber("Missing sequence number, restarting")
             self.seq_no[pair] = msg['params']['sequence']
