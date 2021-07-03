@@ -41,6 +41,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [KuCoin](https://www.kucoin.com/)
 * [OKCoin](http://okcoin.com/)
 * [OKEx](https://www.okex.com/)
+* [Phemex](https://phemex.com/)
 * [Poloniex](https://www.poloniex.com/)
 * [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
