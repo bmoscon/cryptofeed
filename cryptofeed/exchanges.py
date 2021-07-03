@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.exchange.ascendex import AscendEX
 from cryptofeed.defines import *
 from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str
 from cryptofeed.exchange.bequant import Bequant
@@ -15,7 +16,6 @@ from cryptofeed.exchange.bitcoincom import BitcoinCom
 from cryptofeed.exchange.bitfinex import Bitfinex
 from cryptofeed.exchange.bitflyer import Bitflyer
 from cryptofeed.exchange.bithumb import Bithumb
-from cryptofeed.exchange.bitmax import Bitmax
 from cryptofeed.exchange.bitmex import Bitmex
 from cryptofeed.exchange.bitstamp import Bitstamp
 from cryptofeed.exchange.bittrex import Bittrex
@@ -45,6 +45,7 @@ from cryptofeed.provider.coingecko import Coingecko
 
 # Maps string name to class name for use with config
 EXCHANGE_MAP = {
+    ASCENDEX: AscendEX,
     BEQUANT: Bequant,
     BINANCE_DELIVERY: BinanceDelivery,
     BINANCE_FUTURES: BinanceFutures,
@@ -54,7 +55,6 @@ EXCHANGE_MAP = {
     BITFINEX: Bitfinex,
     BITFLYER: Bitflyer,
     BITHUMB: Bithumb,
-    BITMAX: Bitmax,
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
     BITTREX: Bittrex,

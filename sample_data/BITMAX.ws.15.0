@@ -1,16 +1,16 @@
-wss://bitmax.io/0/api/pro/v1/stream <-> 1618677608.08947
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.9205272: {"op":"sub","ch":"depth:ZIG/USDT,DIVI/USDT,XDAI/USDT,NEO/USDT,ROOM/USDT,EGLD/USDT,SRM/BTC,CHZ/USDT,ALTBULL/USDT,CHR/USDT"}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.9206479: {"op":"sub","ch":"trades:ZIG/USDT,DIVI/USDT,XDAI/USDT,NEO/USDT,ROOM/USDT,EGLD/USDT,SRM/BTC,CHZ/USDT,ALTBULL/USDT,CHR/USDT"}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.9206982: {"op":"req","action":"depth-snapshot","args":{"symbol":"ZIG/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.9207418: {"op":"req","action":"depth-snapshot","args":{"symbol":"DIVI/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.92078: {"op":"req","action":"depth-snapshot","args":{"symbol":"XDAI/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.920815: {"op":"req","action":"depth-snapshot","args":{"symbol":"NEO/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.920848: {"op":"req","action":"depth-snapshot","args":{"symbol":"ROOM/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.9208808: {"op":"req","action":"depth-snapshot","args":{"symbol":"EGLD/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.920915: {"op":"req","action":"depth-snapshot","args":{"symbol":"SRM/BTC"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.9209468: {"op":"req","action":"depth-snapshot","args":{"symbol":"CHZ/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.920979: {"op":"req","action":"depth-snapshot","args":{"symbol":"ALTBULL/USDT"}}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.921012: {"op":"req","action":"depth-snapshot","args":{"symbol":"CHR/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <-> 1618677608.08947
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.9205272: {"op":"sub","ch":"depth:ZIG/USDT,DIVI/USDT,XDAI/USDT,NEO/USDT,ROOM/USDT,EGLD/USDT,SRM/BTC,CHZ/USDT,ALTBULL/USDT,CHR/USDT"}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.9206479: {"op":"sub","ch":"trades:ZIG/USDT,DIVI/USDT,XDAI/USDT,NEO/USDT,ROOM/USDT,EGLD/USDT,SRM/BTC,CHZ/USDT,ALTBULL/USDT,CHR/USDT"}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.9206982: {"op":"req","action":"depth-snapshot","args":{"symbol":"ZIG/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.9207418: {"op":"req","action":"depth-snapshot","args":{"symbol":"DIVI/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.92078: {"op":"req","action":"depth-snapshot","args":{"symbol":"XDAI/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.920815: {"op":"req","action":"depth-snapshot","args":{"symbol":"NEO/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.920848: {"op":"req","action":"depth-snapshot","args":{"symbol":"ROOM/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.9208808: {"op":"req","action":"depth-snapshot","args":{"symbol":"EGLD/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.920915: {"op":"req","action":"depth-snapshot","args":{"symbol":"SRM/BTC"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.9209468: {"op":"req","action":"depth-snapshot","args":{"symbol":"CHZ/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.920979: {"op":"req","action":"depth-snapshot","args":{"symbol":"ALTBULL/USDT"}}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677608.921012: {"op":"req","action":"depth-snapshot","args":{"symbol":"CHR/USDT"}}
 1618677608.921396: {"m":"connected","type":"unauth"}
 1618677609.125342: {"m":"sub","ch":"depth:DIVI/USDT","code":0}
 1618677609.125385: {"m":"sub","ch":"depth:ZIG/USDT","code":0}
@@ -188,7 +188,7 @@ wss://bitmax.io/0/api/pro/v1/stream <- 1618677608.921012: {"op":"req","action":"
 1618677623.785056: {"m":"depth","symbol":"SRM/BTC", "data":{"ts":1618677623445,"seqnum":14844468766,"asks":[["0.000112529","154"]],"bids":[]}}
 1618677623.785203: {"m":"depth","symbol":"NEO/USDT", "data":{"ts":1618677623683,"seqnum":32164169276,"asks":[["94.804","11.02"],["94.962","12.19"]],"bids":[["93.721","278.02"]]}}
 1618677623.933064: {"m":"ping","hp":3}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677623.933111: {"op":"pong"}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677623.933111: {"op":"pong"}
 1618677624.07615: {"m":"depth","symbol":"EGLD/USDT", "data":{"ts":1618677623785,"seqnum":14843382645,"asks":[],"bids":[["209.182","0"]]}}
 1618677624.087936: {"m":"depth","symbol":"ALTBULL/USDT", "data":{"ts":1618677623971,"seqnum":21031929395,"asks":[["1443","10.739"]],"bids":[]}}
 1618677624.0880718: {"m":"depth","symbol":"NEO/USDT", "data":{"ts":1618677623941,"seqnum":32164169277,"asks":[["94.804","0"],["94.832","0"],["94.859","9.05"],["94.877","38.49"],["95.226","0"],["95.702","0"]],"bids":[["93.437","0"]]}}
@@ -322,7 +322,7 @@ wss://bitmax.io/0/api/pro/v1/stream <- 1618677623.933111: {"op":"pong"}
 1618677638.7139578: {"m":"depth","symbol":"SRM/BTC", "data":{"ts":1618677638565,"seqnum":14844468789,"asks":[["0.000112528","66"]],"bids":[]}}
 1618677638.7140281: {"m":"depth","symbol":"NEO/USDT", "data":{"ts":1618677638318,"seqnum":32164169316,"asks":[],"bids":[["94.528","11.01"]]}}
 1618677638.948045: {"m":"ping","hp":3}
-wss://bitmax.io/0/api/pro/v1/stream <- 1618677638.948098: {"op":"pong"}
+wss://ascendex.com/1/api/pro/v1/stream <- 1618677638.948098: {"op":"pong"}
 1618677639.022563: {"m":"depth","symbol":"CHZ/USDT", "data":{"ts":1618677638649,"seqnum":21034366184,"asks":[],"bids":[["0.626579","3292"]]}}
 1618677639.0332952: {"m":"depth","symbol":"CHR/USDT", "data":{"ts":1618677638678,"seqnum":45632691693,"asks":[],"bids":[["0.37128","2635"]]}}
 1618677639.332654: {"m":"depth","symbol":"EGLD/USDT", "data":{"ts":1618677639184,"seqnum":14843382659,"asks":[],"bids":[["209.1829","4.49"],["209.1827","0"]]}}
