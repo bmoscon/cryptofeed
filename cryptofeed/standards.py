@@ -16,7 +16,7 @@ from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINA
                                 BITHUMB, BITMAX, BITMEX,
                                 BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, USER_FILLS)
+                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, PHEMEX, POLONIEX, PROBIT, UPBIT, USER_FILLS)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
                                 TICKER, TRADES, ORDER_INFO)
@@ -79,7 +79,8 @@ _feed_to_exchange_map = {
         UPBIT: L2_BOOK,
         GATEIO: 'spot.order_book_update',
         PROBIT: 'order_books',
-        KUCOIN: '/market/level2'
+        KUCOIN: '/market/level2',
+        PHEMEX: 'orderbook.subscribe'
     },
     L3_BOOK: {
         BITTREX: UNSUPPORTED,
@@ -145,7 +146,8 @@ _feed_to_exchange_map = {
         UPBIT: TRADES,
         GATEIO: 'spot.trades',
         PROBIT: 'recent_trades',
-        KUCOIN: '/market/match'
+        KUCOIN: '/market/match',
+        PHEMEX: 'trade.subscribe'
     },
     TICKER: {
         POLONIEX: 1002,
@@ -232,7 +234,8 @@ _feed_to_exchange_map = {
         GATEIO: 'spot.candlesticks',
         KUCOIN: '/market/candles',
         KRAKEN: 'ohlc',
-        BITTREX: 'candle_{}_{}'
+        BITTREX: 'candle_{}_{}',
+        PHEMEX: 'kline.subscribe'
     }
 }
 
