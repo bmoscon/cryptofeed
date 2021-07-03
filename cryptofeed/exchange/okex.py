@@ -14,7 +14,7 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, UNFILLED
+from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, SWAP, UNFILLED, SPOT, FUTURES, SPOT, OPTION
 from cryptofeed.exchange.okcoin import OKCoin
 
 
@@ -40,14 +40,14 @@ class OKEx(OKCoin):
                 info['tick_size'][e['instrument_id']] = e['tick_size']
 
         for symbol in ret:
-            instrument_type = 'futures'
+            instrument_type = FUTURES
             dash_count = symbol.count(symbol_separator)
             if dash_count == 1:  # BTC-USDT
-                instrument_type = 'spot'
+                instrument_type = SPOT
             if dash_count == 4:  # BTC-USD-201225-35000-P
-                instrument_type = 'option'
+                instrument_type = OPTION
             if symbol[-4:] == "SWAP":  # BTC-USDT-SWAP
-                instrument_type = 'swap'
+                instrument_type = SWAP
             info['instrument_type'][symbol] = instrument_type
 
         return ret, info

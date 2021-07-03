@@ -13,8 +13,7 @@ import logging
 import datetime as dt
 
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
-                                BITHUMB, ASCENDEX, BITMEX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
+                                BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
@@ -38,10 +37,11 @@ def timestamp_normalize(exchange, ts):
                       BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
-        return ts / 1000000.0
+        return ts / 1_000_000.0
+    elif exchange == PHEMEX:
+        return ts / 1_000_000_000.0
     elif exchange in {BITHUMB}:
         return (ts - dt.timedelta(hours=9)).timestamp()
-    # return (dt.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") - dt.timedelta(hours=9)).timestamp()
 
 
 _feed_to_exchange_map = {
@@ -80,7 +80,8 @@ _feed_to_exchange_map = {
         UPBIT: L2_BOOK,
         GATEIO: 'spot.order_book_update',
         PROBIT: 'order_books',
-        KUCOIN: '/market/level2'
+        KUCOIN: '/market/level2',
+        PHEMEX: 'orderbook.subscribe'
     },
     L3_BOOK: {
         BEQUANT: UNSUPPORTED,
@@ -148,7 +149,8 @@ _feed_to_exchange_map = {
         UPBIT: TRADES,
         GATEIO: 'spot.trades',
         PROBIT: 'recent_trades',
-        KUCOIN: '/market/match'
+        KUCOIN: '/market/match',
+        PHEMEX: 'trade.subscribe'
     },
     TICKER: {
         BEQUANT: 'subscribeTicker',
@@ -238,7 +240,8 @@ _feed_to_exchange_map = {
         GATEIO: 'spot.candlesticks',
         KUCOIN: '/market/candles',
         KRAKEN: 'ohlc',
-        BITTREX: 'candle_{}_{}'
+        BITTREX: 'candle_{}_{}',
+        PHEMEX: 'kline.subscribe'
     },
     ACC_TRANSACTIONS: {
         BEQUANT: 'subscribeTransactions',

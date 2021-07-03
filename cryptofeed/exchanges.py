@@ -4,9 +4,11 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.exchange.ascendex import AscendEX
+
 from cryptofeed.defines import *
 from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str
+from cryptofeed.exchange.phemex import Phemex
+from cryptofeed.exchange.ascendex import AscendEX
 from cryptofeed.exchange.bequant import Bequant
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.exchange.binance_delivery import BinanceDelivery
@@ -78,6 +80,7 @@ EXCHANGE_MAP = {
     KUCOIN: KuCoin,
     OKCOIN: OKCoin,
     OKEX: OKEx,
+    PHEMEX: Phemex,
     POLONIEX: Poloniex,
     PROBIT: Probit,
     UPBIT: Upbit,
