@@ -21,6 +21,7 @@
   * Feature: new exchange: Bequant. Supports ticker, L2 book, trades, candles, plus authenticated channels: order info, account transactions and account balances
   * Update: BitMax renamed AscendEX
   * Bugfix: Feed level timeout and timeout interval not being set properly
+  * Exchange: Phemex exchange support
 
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
