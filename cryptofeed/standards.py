@@ -152,7 +152,6 @@ _feed_to_exchange_map = {
         KUCOIN: '/market/match'
     },
     TICKER: {
-        HITBTC: 'subscribeTicker',
         BEQUANT: 'subscribeTicker',
         POLONIEX: 1002,
         HITBTC: 'subscribeTicker',
