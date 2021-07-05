@@ -40,6 +40,7 @@ KRAKEN_FUTURES = 'KRAKEN_FUTURES'
 KUCOIN = 'KUCOIN'
 OKCOIN = 'OKCOIN'
 OKEX = 'OKEX'
+PHEMEX = 'PHEMEX'
 POLONIEX = 'POLONIEX'
 PROBIT = 'PROBIT'
 BITCOINCOM = 'BITCOINCOM'
@@ -94,7 +95,7 @@ SUSPENDED = 'suspended'
 
 # Instrument Definitions
 
-FUTURE = 'future'
+FUTURES = 'futures'
 SWAP = 'swap'
 PERPETUAL = 'perpetual'
 OPTION = 'option'

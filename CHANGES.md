@@ -21,6 +21,7 @@
   * Feature: new exchange: Bequant. Supports ticker, L2 book, trades, candles, plus authenticated channels: order info, account transactions and account balances
   * Update: BitMax renamed AscendEX
   * Bugfix: Feed level timeout and timeout interval not being set properly
+  * Exchange: Phemex exchange support
   * Features: added support for candles, order info, account transactions and account balances to HitBTC & Bitcoin.com, plus authentication where required to access these channels
   * Update: previous HitBTC & Bitcoin.com websocket endpoints deprecated. Now using separate Market, Trading and Account endpoints
   
