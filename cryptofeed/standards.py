@@ -116,7 +116,6 @@ _feed_to_exchange_map = {
     },
     TRADES: {
         DYDX: 'v3_trades',
-        HITBTC: 'subscribeTrades',
         BEQUANT: 'subscribeTrades',
         POLONIEX: TRADES,
         HITBTC: 'subscribeTrades',
