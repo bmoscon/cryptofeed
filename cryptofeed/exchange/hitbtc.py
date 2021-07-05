@@ -17,7 +17,6 @@ LOG = logging.getLogger('feedhandler')
 class HitBTC(Bequant):
     id = HITBTC
     symbol_endpoint = 'https://api.hitbtc.com/api/2/public/symbol'
-    valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '7d', '1M'}
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
@@ -37,10 +36,9 @@ class HitBTC(Bequant):
         return ret, info
 
     def __init__(self, **kwargs):
-        urls = {
+        super().__init__(**kwargs)
+        self.address = {
             'market': 'wss://api.hitbtc.com/api/2/ws/public',
             'trading': 'wss://api.hitbtc.com/api/2/ws/trading',
             'account': 'wss://api.hitbtc.com/api/2/ws/account',
         }
-        super().__init__(candle_interval='1m')
-        super(Bequant, self).__init__(urls, **kwargs)
