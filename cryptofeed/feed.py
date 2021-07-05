@@ -245,6 +245,7 @@ class Feed:
                         data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
             else:
                 data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
+
             syms, info = cls._parse_symbol_data(data, symbol_separator)
             Symbols.set(cls.id, syms, info)
             return syms
