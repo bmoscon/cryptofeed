@@ -20,7 +20,7 @@ from yapic import json
 
 from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, UNFILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES, ORDER_INFO
+from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
 from cryptofeed.util import split
@@ -62,20 +62,17 @@ class OKEx(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        self.addresses = {'public':'wss://ws.okex.com:8443/ws/v5/public',
-                          'private':'wss://ws.okex.com:8443/ws/v5/private'}
+        self.addresses = {'public': 'wss://ws.okex.com:8443/ws/v5/public',
+                          'private': 'wss://ws.okex.com:8443/ws/v5/private'}
         super().__init__(self.addresses, **kwargs)
 
     async def _liquidations(self, pairs: list):
         last_update = {}
-        
         """
         for SWAP liquidations, the following arguments are required: uly, state
         for FUTURES liquidations, the following arguments are required: uly, state, alias
-        
         FUTURES, MARGIN and OPTION liquidation request not currently supported by the below
         """
-        
 
         while True:
             for pair in pairs:
@@ -86,7 +83,7 @@ class OKEx(Feed):
                     break
 
                 for status in (0, 1):
-                    end_point = f"{self.api}v5/public/liquidation-orders?instType={instrument_type}&limit=100&state=filled&uly={uly}"
+                    end_point = f"{self.api}v5/public/liquidation-orders?instType={instrument_type}&limit=100&state={FILLED}&uly={uly}"
                     data = await self.http_conn.read(end_point)
                     data = json.loads(data, parse_float=Decimal)
                     timestamp = time.time()
@@ -107,13 +104,11 @@ class OKEx(Feed):
                                             receipt_timestamp=timestamp
                                             )
                     last_update[pair] = data['data'][0]['details'][0]
-
                 await asyncio.sleep(0.1)
             await asyncio.sleep(60)
-    
+
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-
         symbol_channels = list(self.get_channel_symbol_combinations())
         LOG.info("%s: Got %r combinations of pairs and channels", self.id, len(symbol_channels))
 
@@ -126,7 +121,7 @@ class OKEx(Feed):
             LOG.info("%s: Subscribe to %s args from %r to %r", self.id, len(chunk), chunk[0], chunk[-1])
             request = {"op": "subscribe", "args": chunk}
             await conn.write(json.dumps(request))
-    
+
     def __reset(self):
         self.l2_book = {}
         self.open_interest = {}
@@ -148,10 +143,9 @@ class OKEx(Feed):
         else:
             combined = [val for pair in zip(bids, asks[:len(bids)]) for val in pair]
             combined += asks[len(bids):]
-
         computed = ":".join(combined).encode()
         return zlib.crc32(computed)
-    
+
     @classmethod
     def instrument_type(cls, symbol: str):
         return cls.info()['instrument_type'][symbol]
@@ -160,7 +154,7 @@ class OKEx(Feed):
         """
         "args": [{"channel": "tickers","instId": "LTC-USD-200327"},{"channel": "candle1m","instId": "LTC-USD-200327"}]
         """
-        l = []
+        combos = []
         for chan in self.subscription:
             if not is_authenticated_channel(chan):
                 if chan == LIQUIDATIONS:
@@ -171,8 +165,8 @@ class OKEx(Feed):
                     if instrument_type != 'swap' and 'funding' in chan:
                         continue  # No funding for spot, futures and options
                     d.update({"channel": chan, "instId": symbol})
-                    l.append(d)
-        return l
+                    combos.append(d)
+        return combos
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -181,7 +175,7 @@ class OKEx(Feed):
         for update in msg['data']:
             pair = msg['arg']['instId']
             update_timestamp = timestamp_normalize(self.id, int(update['ts']))
-            await self.callback(TICKER, 
+            await self.callback(TICKER,
                                 feed=self.id,
                                 symbol=pair,
                                 bid=Decimal(update['bidPx']) if update['bidPx'] else Decimal(0),
@@ -227,7 +221,6 @@ class OKEx(Feed):
             # snapshot
             pair = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
             for update in msg['data']:
-                
                 self.l2_book[pair] = {
                     BID: sd({
                         Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']
@@ -264,30 +257,30 @@ class OKEx(Feed):
 
     async def _order(self, msg: dict, timestamp: float):
 
-            status = msg['data'][0]['state']
-    
-            keys = ('fillSz', 'sz')
-            data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
-            data.update({'clOrdId':msg['data'][0]['clOrdId']})
-            data.update({'fillPx':msg['data'][0]['fillPx']})
-        
-            await self.callback(ORDER_INFO, 
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instId'].upper()),  # This uses the REST endpoint format (lower case)
-                                status=status,
-                                order_id=msg['data'][0]['ordId'],
-                                side=BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
-                                order_type=msg['data'][0]['ordType'],
-                                timestamp=msg['data'][0]['uTime'],
-                                receipt_timestamp=timestamp,
-                                **data
-                                )
+        status = msg['data'][0]['state']
+        keys = ('fillSz', 'sz')
+        data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
+        data.update({'clOrdId': msg['data'][0]['clOrdId']})
+        data.update({'fillPx': msg['data'][0]['fillPx']})
+
+        await self.callback(ORDER_INFO,
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instId'].upper()),  # This uses the REST endpoint format (lower case)
+                            status=status,
+                            order_id=msg['data'][0]['ordId'],
+                            side=BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
+                            order_type=msg['data'][0]['ordType'],
+                            timestamp=msg['data'][0]['uTime'],
+                            receipt_timestamp=timestamp,
+                            **data
+                            )
+
     async def _swap_order(self, msg: dict, timestamp: float):
-    
+
         keys = ('filled_qty', 'last_fill_qty', 'price_avg', 'fee')
         data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
-    
-        await self.callback(ORDER_INFO, 
+
+        await self.callback(ORDER_INFO,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instrument_id'].upper()),  # This uses the REST endpoint format (lower case)
                             status=int(msg['data'][0]['state']),
@@ -303,9 +296,8 @@ class OKEx(Feed):
         LOG.info('%s: Websocket logged in? %s', self.id, msg['code'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-        
         # DEFLATE compression, no header
-        #msg = zlib.decompress(msg, -15) 
+        # msg = zlib.decompress(msg, -15)
         # not required, as websocket now set to "Per-Message Deflate"
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -321,7 +313,7 @@ class OKEx(Feed):
         elif 'arg' in msg:
             if 'books-l2-tbt' in msg['arg']['channel']:
                 await self._book(msg, timestamp)
-            elif 'tickers'in msg['arg']['channel']:
+            elif 'tickers' in msg['arg']['channel']:
                 await self._ticker(msg, timestamp)
             elif 'trades' in msg['arg']['channel']:
                 await self._trade(msg, timestamp)
@@ -340,13 +332,12 @@ class OKEx(Feed):
                     ret.append((WSAsyncConn(self.addresses['private'], self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler, self.authenticate))
             else:
                 ret.append((WSAsyncConn(self.addresses['public'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
-
         return ret
 
     async def user_order_subscribe(self, conn: AsyncConnection, symbol=None):
         self.__reset()
         timestamp, sign = generate_token(self.key_id, self.key_secret)
-        login_param = {"op": "login", "args": [{"apiKey":self.key_id, "passphrase":self.config.okex.key_passphrase, "timestamp":timestamp, "sign":sign.decode("utf-8")}]}
+        login_param = {"op": "login", "args": [{"apiKey": self.key_id, "passphrase": self.config.okex.key_passphrase, "timestamp": timestamp, "sign": sign.decode("utf-8")}]}
         login_str = json.dumps(login_param)
         await conn.write(login_str)
         await asyncio.sleep(5)
@@ -354,4 +345,3 @@ class OKEx(Feed):
         sub_param = {"op": "subscribe", "args": [{"channel": "orders", "instType": instrument_type.upper(), "instId": symbol}]}
         sub_str = json.dumps(sub_param)
         await conn.write(sub_str)
-
