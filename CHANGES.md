@@ -22,7 +22,9 @@
   * Update: BitMax renamed AscendEX
   * Bugfix: Feed level timeout and timeout interval not being set properly
   * Exchange: Phemex exchange support
-
+  * Features: added support for candles, order info, account transactions and account balances to HitBTC & Bitcoin.com, plus authentication where required to access these channels
+  * Update: previous HitBTC & Bitcoin.com websocket endpoints deprecated. Now using separate Market, Trading and Account endpoints
+  
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
   * Bugfix: Fix inverted Poloniex symbols
