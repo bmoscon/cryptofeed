@@ -24,6 +24,7 @@
   * Exchange: Phemex exchange support
   * Features: added support for candles, order info, account transactions and account balances to HitBTC & Bitcoin.com, plus authentication where required to access these channels
   * Update: previous HitBTC & Bitcoin.com websocket endpoints deprecated. Now using separate Market, Trading and Account endpoints
+  * Feature: added support for user data streams for Binance futures (USDT)
   
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
