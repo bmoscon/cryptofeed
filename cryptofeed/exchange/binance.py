@@ -17,6 +17,8 @@ from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, normalize_channel
 
+from cryptofeed.auth import binance_futures as binance_auth
+
 
 LOG = logging.getLogger('feedhandler')
 
@@ -85,7 +87,12 @@ class Binance(Feed):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-                subs.append(f"{pair}@{stream}")
+                    
+                if chan == "user_data":
+                    listenKey = binance_auth.get_listenKey(self.key_id, self.key_secret)
+                    subs.append(f"{listenKey}")
+                else:
+                    subs.append(f"{pair}@{stream}")
 
         if len(subs) < 200:
             return address + '/'.join(subs)

@@ -16,7 +16,7 @@ from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, ACC_TRANSACTIONS, USER_FILLS, ACC_BALANCES)
+                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, USER_FILLS, ACCOUNT_UPDATE)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
 from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -47,8 +47,6 @@ class Feed:
         book_interval: int
             Number of updates between snapshots. Only applicable when book deltas are enabled.
             Book deltas are enabled by subscribing to the book delta callback.
-        candle_interval: str
-            Length of time between a candle's Open and Close. Valid on exchanges with support for candles
         snapshot_interval: bool/int
             Number of updates between snapshots. Only applicable when book delta is not enabled.
             Updates between snapshots are not delivered to the client
@@ -155,6 +153,7 @@ class Feed:
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None),
                           USER_FILLS: Callback(None),
+                          ACCOUNT_UPDATE: Callback(None)
                           }
 
         if callbacks:
@@ -215,7 +214,7 @@ class Feed:
         data = Symbols.get(cls.id)[1]
         data['symbols'] = list(symbols.keys())
         data['channels'] = []
-        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, CANDLES, USER_FILLS, ORDER_INFO, ACC_TRANSACTIONS, ACC_BALANCES):
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, CANDLES):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
@@ -247,6 +246,7 @@ class Feed:
                         data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
             else:
                 data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
+
             syms, info = cls._parse_symbol_data(data, symbol_separator)
             Symbols.set(cls.id, syms, info)
             return syms
@@ -367,7 +367,7 @@ class Feed:
         Create tasks for exchange interfaces and backends
         """
         for conn, sub, handler, auth in self.connect():
-            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error))
+            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, exceptions=self.exceptions, log_on_error=self.log_on_error))
             self.connection_handlers[-1].start(loop)
 
         for callbacks in self.callbacks.values():

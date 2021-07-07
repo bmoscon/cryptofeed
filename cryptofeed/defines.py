@@ -9,8 +9,6 @@ Defines contains all constant string definitions for Cryptofeed,
 as well as some documentation (in comment form) regarding
 the book definitions and structure
 '''
-ASCENDEX = 'ASCENDEX'
-BEQUANT = 'BEQUANT'
 BITFINEX = 'BITFINEX'
 BITHUMB = 'BITHUMB'
 BITMEX = 'BITMEX'
@@ -40,10 +38,10 @@ KRAKEN_FUTURES = 'KRAKEN_FUTURES'
 KUCOIN = 'KUCOIN'
 OKCOIN = 'OKCOIN'
 OKEX = 'OKEX'
-PHEMEX = 'PHEMEX'
 POLONIEX = 'POLONIEX'
 PROBIT = 'PROBIT'
 BITCOINCOM = 'BITCOINCOM'
+BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
 
 COINGECKO = 'COINGECKO'
@@ -66,9 +64,11 @@ CANDLES = 'candles'
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
 USER_FILLS = 'user_fills'
-ACC_TRANSACTIONS = 'transactions'
-ACC_BALANCES = 'balances'
-
+USER_DATA = 'user_data'
+ACCOUNT_UPDATE = 'account_update'
+MARGIN_CALL = 'margin_call'
+ORDER_TRADE_UPDATE = 'order_trade_update'
+ACCOUNT_CONFIG_UPDATE = 'account_config_update'
 
 BUY = 'buy'
 SELL = 'sell'
@@ -78,8 +78,6 @@ UND = 'undefined'
 
 LIMIT = 'limit'
 MARKET = 'market'
-STOP_LIMIT = 'stop-limit'
-STOP_MARKET = 'stop-market'
 MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
@@ -90,12 +88,10 @@ FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
 UNFILLED = 'unfilled'
-EXPIRED = 'expired'
-SUSPENDED = 'suspended'
 
 # Instrument Definitions
 
-FUTURES = 'futures'
+FUTURE = 'future'
 SWAP = 'swap'
 PERPETUAL = 'perpetual'
 OPTION = 'option'

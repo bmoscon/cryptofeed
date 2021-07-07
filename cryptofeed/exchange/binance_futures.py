@@ -12,7 +12,7 @@ from typing import List, Tuple, Callable, Dict
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
+from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, ACCOUNT_CONFIG_UPDATE, ACCOUNT_UPDATE, MARGIN_CALL, ORDER_INFO, BUY, SELL
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.standards import timestamp_normalize
 
@@ -100,11 +100,11 @@ class BinanceFutures(Binance):
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
-        pair, _ = msg['stream'].split('@', 1)
+        if '@' in msg['stream']:
+            pair, _ = msg['stream'].split('@', 1)
+            pair = pair.upper()
+        
         msg = msg['data']
-
-        pair = pair.upper()
-
         msg_type = msg.get('e')
         if msg_type == 'bookTicker':
             await self._ticker(msg, timestamp)
@@ -118,5 +118,145 @@ class BinanceFutures(Binance):
             await self._funding(msg, timestamp)
         elif msg['e'] == 'kline':
             await self._candle(msg, timestamp)
+        elif msg_type == "ACCOUNT_UPDATE":
+            await self._account_update(msg, timestamp)
+        elif msg_type == "ORDER_TRADE_UPDATE":
+            await self._order(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
+            
+    async def _order(self, msg: dict, timestamp: float):
+        """
+        {
+
+          "e":"ORDER_TRADE_UPDATE",     // Event Type
+          "E":1568879465651,            // Event Time
+          "T":1568879465650,            // Transaction Time
+          "o":{                             
+            "s":"BTCUSDT",              // Symbol
+            "c":"TEST",                 // Client Order Id
+              // special client order id:
+              // starts with "autoclose-": liquidation order
+              // "adl_autoclose": ADL auto close order
+            "S":"SELL",                 // Side
+            "o":"TRAILING_STOP_MARKET", // Order Type
+            "f":"GTC",                  // Time in Force
+            "q":"0.001",                // Original Quantity
+            "p":"0",                    // Original Price
+            "ap":"0",                   // Average Price
+            "sp":"7103.04",             // Stop Price. Please ignore with TRAILING_STOP_MARKET order
+            "x":"NEW",                  // Execution Type
+            "X":"NEW",                  // Order Status
+            "i":8886774,                // Order Id
+            "l":"0",                    // Order Last Filled Quantity
+            "z":"0",                    // Order Filled Accumulated Quantity
+            "L":"0",                    // Last Filled Price
+            "N":"USDT",             // Commission Asset, will not push if no commission
+            "n":"0",                // Commission, will not push if no commission
+            "T":1568879465651,          // Order Trade Time
+            "t":0,                      // Trade Id
+            "b":"0",                    // Bids Notional
+            "a":"9.91",                 // Ask Notional
+            "m":false,                  // Is this trade the maker side?
+            "R":false,                  // Is this reduce only
+            "wt":"CONTRACT_PRICE",      // Stop Price Working Type
+            "ot":"TRAILING_STOP_MARKET",    // Original Order Type
+            "ps":"LONG",                        // Position Side
+            "cp":false,                     // If Close-All, pushed with conditional order
+            "AP":"7476.89",             // Activation Price, only puhed with TRAILING_STOP_MARKET order
+            "cr":"5.0",                 // Callback Rate, only puhed with TRAILING_STOP_MARKET order
+            "rp":"0"                            // Realized Profit of the trade
+          }
+        
+        }
+        """
+
+        status = msg['o']['x']
+        data = {}
+        data.update({'clOrdId': msg['o']['c']})
+        data.update({'fillPx': Decimal(msg['o']['L'])})
+        data.update({'fillSz': Decimal(msg['o']['l'])})
+        if 'n' in msg['o']:
+            data.update({'fillFee': Decimal(msg['o']['n'])})
+            data.update({'fillFeeCcy': msg['o']['N']})
+        else:
+            data.update({'fillFee': Decimal(0)})
+            data.update({'fillFeeCcy': ''})
+            
+        await self.callback(ORDER_INFO, 
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['o']['s'].upper()),
+                            status=status,
+                            order_id=msg['o']['i'],
+                            side=BUY if msg['o']['S'].lower() == 'buy' else SELL,
+                            order_type=msg['o']['ot'],
+                            timestamp=msg['E'],
+                            receipt_timestamp=timestamp,
+                            **data
+                            )
+        
+    async def _account_update(self, msg: dict, timestamp: float):
+        """
+        {
+          "e": "ACCOUNT_UPDATE",                // Event Type
+          "E": 1564745798939,                   // Event Time
+          "T": 1564745798938 ,                  // Transaction
+          "a":                                  // Update Data
+            {
+              "m":"ORDER",                      // Event reason type
+              "B":[                             // Balances
+                {
+                  "a":"USDT",                   // Asset
+                  "wb":"122624.12345678",       // Wallet Balance
+                  "cw":"100.12345678",          // Cross Wallet Balance
+                  "bc":"50.12345678"            // Balance Change except PnL and Commission
+                },
+                {
+                  "a":"BUSD",           
+                  "wb":"1.00000000",
+                  "cw":"0.00000000",         
+                  "bc":"-49.12345678"
+                }
+              ],
+              "P":[
+                {
+                  "s":"BTCUSDT",            // Symbol
+                  "pa":"0",                 // Position Amount
+                  "ep":"0.00000",            // Entry Price
+                  "cr":"200",               // (Pre-fee) Accumulated Realized
+                  "up":"0",                     // Unrealized PnL
+                  "mt":"isolated",              // Margin Type
+                  "iw":"0.00000000",            // Isolated Wallet (if isolated position)
+                  "ps":"BOTH"                   // Position Side
+                }，
+                {
+                    "s":"BTCUSDT",
+                    "pa":"20",
+                    "ep":"6563.66500",
+                    "cr":"0",
+                    "up":"2850.21200",
+                    "mt":"isolated",
+                    "iw":"13200.70726908",
+                    "ps":"LONG"
+                 },
+                {
+                    "s":"BTCUSDT",
+                    "pa":"-10",
+                    "ep":"6563.86000",
+                    "cr":"-45.04000000",
+                    "up":"-1423.15600",
+                    "mt":"isolated",
+                    "iw":"6570.42511771",
+                    "ps":"SHORT"
+                }
+              ]
+            }
+        }
+        """
+        await self.callback(ACCOUNT_UPDATE, 
+                            feed=self.id,
+                            timestamp=msg['E'],
+                            receipt_timestamp=timestamp
+                            )
+        
+    
