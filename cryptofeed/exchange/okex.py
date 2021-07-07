@@ -14,7 +14,7 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, SWAP, UNFILLED, SPOT, FUTURES, SPOT, OPTION
+from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, SWAP, UNFILLED, FUTURES, SPOT, OPTION
 from cryptofeed.exchange.okcoin import OKCoin
 
 

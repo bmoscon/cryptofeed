@@ -12,7 +12,7 @@ from typing import List, Tuple, Callable, Dict
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, ACCOUNT_CONFIG_UPDATE, ACCOUNT_UPDATE, MARGIN_CALL, ORDER_INFO, BUY, SELL
+from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST, ACCOUNT_UPDATE, ORDER_INFO, BUY, SELL
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.standards import timestamp_normalize
 
@@ -103,7 +103,7 @@ class BinanceFutures(Binance):
         if '@' in msg['stream']:
             pair, _ = msg['stream'].split('@', 1)
             pair = pair.upper()
-        
+
         msg = msg['data']
         msg_type = msg.get('e')
         if msg_type == 'bookTicker':
@@ -124,7 +124,7 @@ class BinanceFutures(Binance):
             await self._order(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
-            
+
     async def _order(self, msg: dict, timestamp: float):
         """
         {
@@ -132,7 +132,7 @@ class BinanceFutures(Binance):
           "e":"ORDER_TRADE_UPDATE",     // Event Type
           "E":1568879465651,            // Event Time
           "T":1568879465650,            // Transaction Time
-          "o":{                             
+          "o":{
             "s":"BTCUSDT",              // Symbol
             "c":"TEST",                 // Client Order Id
               // special client order id:
@@ -167,7 +167,7 @@ class BinanceFutures(Binance):
             "cr":"5.0",                 // Callback Rate, only puhed with TRAILING_STOP_MARKET order
             "rp":"0"                            // Realized Profit of the trade
           }
-        
+
         }
         """
 
@@ -182,8 +182,8 @@ class BinanceFutures(Binance):
         else:
             data.update({'fillFee': Decimal(0)})
             data.update({'fillFeeCcy': ''})
-            
-        await self.callback(ORDER_INFO, 
+
+        await self.callback(ORDER_INFO,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(msg['o']['s'].upper()),
                             status=status,
@@ -194,7 +194,7 @@ class BinanceFutures(Binance):
                             receipt_timestamp=timestamp,
                             **data
                             )
-        
+
     async def _account_update(self, msg: dict, timestamp: float):
         """
         {
@@ -212,9 +212,9 @@ class BinanceFutures(Binance):
                   "bc":"50.12345678"            // Balance Change except PnL and Commission
                 },
                 {
-                  "a":"BUSD",           
+                  "a":"BUSD",
                   "wb":"1.00000000",
-                  "cw":"0.00000000",         
+                  "cw":"0.00000000",
                   "bc":"-49.12345678"
                 }
               ],
@@ -253,10 +253,8 @@ class BinanceFutures(Binance):
             }
         }
         """
-        await self.callback(ACCOUNT_UPDATE, 
+        await self.callback(ACCOUNT_UPDATE,
                             feed=self.id,
                             timestamp=msg['E'],
                             receipt_timestamp=timestamp
                             )
-        
-    

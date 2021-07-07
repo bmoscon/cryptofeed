@@ -87,7 +87,7 @@ class Binance(Feed):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-                    
+
                 if chan == "user_data":
                     listenKey = binance_auth.get_listenKey(self.key_id, self.key_secret)
                     subs.append(f"{listenKey}")

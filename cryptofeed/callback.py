@@ -1,6 +1,5 @@
 '''
 Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
-
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
@@ -30,7 +29,6 @@ class TradeCallback(Callback):
         """
         include_order_type is currently supported only on Kraken and Coinbase and enables
         the order_type field in callbacks, which contains information about the order type (market/limit).
-
         Note that to receive order_type on Coinbase, you must also subscribe to the L3_BOOK channel (though
         do not need to specify any L3_BOOK callbacks)
         """
@@ -99,13 +97,21 @@ class FuturesIndexCallback(Callback):
     pass
 
 
-class AccountUpdateCallback(Callback):
-    pass
-
-
 class MarketInfoCallback(Callback):
     pass
 
 
 class OrderInfoCallback(Callback):
+    pass
+
+
+class AccBalancesCallback(Callback):
+    pass
+
+
+class AccTransactionsCallback(Callback):
+    pass
+
+
+class AccountUpdateCallback(Callback):
     pass
