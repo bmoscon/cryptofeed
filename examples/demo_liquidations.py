@@ -12,7 +12,7 @@ def main():
 
     f = FeedHandler()
     # Liquidations happen not frequently, disable feed timeout
-    f.add_feed(Bitmex(channels=[LIQUIDATIONS], symbols=['BTC-USD'], callbacks={LIQUIDATIONS: LiquidationCallback(liquidations)}), timeout=-1)
+    f.add_feed(Bitmex(channels=[LIQUIDATIONS], symbols=['BTC-USD'], callbacks={LIQUIDATIONS: LiquidationCallback(liquidations)}, timeout=-1))
     f.run()
 
 

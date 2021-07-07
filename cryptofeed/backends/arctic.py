@@ -51,6 +51,11 @@ class ArcticCallback:
 class TradeArctic(ArcticCallback, BackendTradeCallback):
     default_key = TRADES
 
+    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+        if 'order_type' in data:
+            data['order_type'] = str(data['order_type'])
+        await super().write(feed, symbol, timestamp, receipt_timestamp, data)
+
 
 class FundingArctic(ArcticCallback, BackendFundingCallback):
     default_key = FUNDING
