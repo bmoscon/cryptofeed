@@ -41,7 +41,7 @@ def main():
 
     # Open Interest, Liquidations, and Funding Rates
     # funding is low volume, so set timeout to -1
-    fh.add_feed(OKEx(symbols=['EOS-USD-SWAP'], channels=[FUNDING, LIQUIDATIONS], callbacks={FUNDING: funding, LIQUIDATIONS: liquidation}), timeout=-1)
+    fh.add_feed(OKEx(symbols=['EOS-USD-SWAP'], channels=[FUNDING, LIQUIDATIONS], callbacks={FUNDING: funding, LIQUIDATIONS: liquidation}, timeout=-1))
 
     fh.run()
 

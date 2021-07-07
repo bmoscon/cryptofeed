@@ -105,3 +105,11 @@ class MarketInfoCallback(Callback):
 
 class OrderInfoCallback(Callback):
     pass
+
+
+class AccBalancesCallback(Callback):
+    pass
+
+
+class AccTransactionsCallback(Callback):
+    pass

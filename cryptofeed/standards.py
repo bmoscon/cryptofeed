@@ -12,13 +12,12 @@ data channel names
 import logging
 import datetime as dt
 
-from cryptofeed.defines import (BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
-                                BITHUMB, BITMAX, BITMEX,
-                                BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
+from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
+                                BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT, USER_FILLS)
+                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
-from cryptofeed.defines import (FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
+from cryptofeed.defines import (ACC_BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
                                 TICKER, TRADES, ORDER_INFO)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -32,21 +31,23 @@ def timestamp_normalize(exchange, ts):
             return ts / 1000
         else:
             return ts.timestamp()
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX}:
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX, BEQUANT}:
         return ts.timestamp()
     elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
-                      BINANCE_DELIVERY, GEMINI, BITMAX, KRAKEN_FUTURES, UPBIT}:
+                      BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
-        return ts / 1000000.0
+        return ts / 1_000_000.0
+    elif exchange == PHEMEX:
+        return ts / 1_000_000_000.0
     elif exchange in {BITHUMB}:
         return (ts - dt.timedelta(hours=9)).timestamp()
-    # return (dt.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") - dt.timedelta(hours=9)).timestamp()
 
 
 _feed_to_exchange_map = {
     L2_BOOK: {
         DYDX: 'v3_orderbook',
+        BEQUANT: 'subscribeOrderbook',
         BITFINEX: 'book-P0-F0-100',
         BITFLYER: 'lightning_board_{}',
         BITHUMB: 'orderbookdepth',
@@ -75,13 +76,15 @@ _feed_to_exchange_map = {
         GEMINI: L2_BOOK,
         BITTREX: 'orderbook_{}_{}',
         BITCOINCOM: 'subscribeOrderbook',
-        BITMAX: "depth:",
+        ASCENDEX: "depth:",
         UPBIT: L2_BOOK,
         GATEIO: 'spot.order_book_update',
         PROBIT: 'order_books',
-        KUCOIN: '/market/level2'
+        KUCOIN: '/market/level2',
+        PHEMEX: 'orderbook.subscribe'
     },
     L3_BOOK: {
+        BEQUANT: UNSUPPORTED,
         BITTREX: UNSUPPORTED,
         BITFINEX: 'book-R0-F0-100',
         BITHUMB: UNSUPPORTED,
@@ -107,12 +110,13 @@ _feed_to_exchange_map = {
         FTX_US: UNSUPPORTED,
         GEMINI: UNSUPPORTED,
         BITCOINCOM: UNSUPPORTED,
-        BITMAX: UNSUPPORTED,
+        ASCENDEX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
         PROBIT: UNSUPPORTED
     },
     TRADES: {
         DYDX: 'v3_trades',
+        BEQUANT: 'subscribeTrades',
         POLONIEX: TRADES,
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
@@ -141,13 +145,15 @@ _feed_to_exchange_map = {
         GEMINI: TRADES,
         BITTREX: 'trade_{}',
         BITCOINCOM: 'subscribeTrades',
-        BITMAX: "trades:",
+        ASCENDEX: "trades:",
         UPBIT: TRADES,
         GATEIO: 'spot.trades',
         PROBIT: 'recent_trades',
-        KUCOIN: '/market/match'
+        KUCOIN: '/market/match',
+        PHEMEX: 'trade.subscribe'
     },
     TICKER: {
+        BEQUANT: 'subscribeTicker',
         POLONIEX: 1002,
         HITBTC: 'subscribeTicker',
         BITFINEX: 'ticker',
@@ -173,7 +179,7 @@ _feed_to_exchange_map = {
         GEMINI: UNSUPPORTED,
         BITTREX: 'ticker_{}',
         BITCOINCOM: 'subscribeTicker',
-        BITMAX: UNSUPPORTED,
+        ASCENDEX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
         GATEIO: 'spot.tickers',
         PROBIT: UNSUPPORTED,
@@ -219,25 +225,45 @@ _feed_to_exchange_map = {
         GEMINI: ORDER_INFO,
         OKEX: ORDER_INFO,
         FTX: 'orders',
+        BEQUANT: 'subscribeReports',
+        BITCOINCOM: 'subscribeReports',
+        HITBTC: 'subscribeReports',
     },
     USER_FILLS: {
         FTX: 'fills',
     },
     CANDLES: {
+        BEQUANT: 'subscribeCandles',
         BINANCE: 'kline_',
         BINANCE_US: 'kline_',
         BINANCE_FUTURES: 'kline_',
         BINANCE_DELIVERY: 'kline_',
+        BITCOINCOM: 'subscribeCandles',
+        HITBTC: 'subscribeCandles',
         HUOBI: 'kline',
         GATEIO: 'spot.candlesticks',
         KUCOIN: '/market/candles',
         KRAKEN: 'ohlc',
-        BITTREX: 'candle_{}_{}'
-    }
+        BITTREX: 'candle_{}_{}',
+        PHEMEX: 'kline.subscribe'
+    },
+    ACC_TRANSACTIONS: {
+        BEQUANT: 'subscribeTransactions',
+        BITCOINCOM: 'subscribeTransactions',
+        HITBTC: 'subscribeTransactions',
+    },
+    ACC_BALANCES: {
+        BEQUANT: 'subscribeBalance',
+        BITCOINCOM: 'subscribeBalance',
+        HITBTC: 'subscribeBalance',
+    },
 }
 
 _exchange_options = {
     LIMIT: {
+        BEQUANT: 'limit',
+        BITCOINCOM: 'limit',
+        HITBTC: 'limit',
         KRAKEN: 'limit',
         GEMINI: 'exchange limit',
         POLONIEX: 'limit',
@@ -245,6 +271,9 @@ _exchange_options = {
         BLOCKCHAIN: 'limit',
     },
     MARKET: {
+        BEQUANT: 'market',
+        BITCOINCOM: 'market',
+        HITBTC: 'market',
         KRAKEN: 'market',
         GEMINI: UNSUPPORTED,
         POLONIEX: UNSUPPORTED,
@@ -252,6 +281,9 @@ _exchange_options = {
         BLOCKCHAIN: 'market',
     },
     FILL_OR_KILL: {
+        BEQUANT: {'timeInForce': 'FOK'},
+        BITCOINCOM: {'timeInForce': 'FOK'},
+        HITBTC: {'timeInForce': 'FOK'},
         GEMINI: 'fill-or-kill',
         POLONIEX: 'fillOrKill',
         COINBASE: {'time_in_force': 'FOK'},
@@ -259,14 +291,20 @@ _exchange_options = {
         BLOCKCHAIN: 'FOK'
     },
     IMMEDIATE_OR_CANCEL: {
+        BEQUANT: {'timeInForce': 'IOC'},
+        BITCOINCOM: {'timeInForce': 'IOC'},
         GEMINI: 'immediate-or-cancel',
+        HITBTC: {'timeInForce': 'IOC'},
         POLONIEX: 'immediateOrCancel',
         COINBASE: {'time_in_force': 'IOC'},
         KRAKEN: UNSUPPORTED,
         BLOCKCHAIN: 'IOC'
     },
     MAKER_OR_CANCEL: {
+        BEQUANT: {'postOnly': 1},
+        BITCOINCOM: {'postOnly': 1},
         GEMINI: 'maker-or-cancel',
+        HITBTC: {'postOnly': 1},
         POLONIEX: 'postOnly',
         COINBASE: {'post_only': 1},
         KRAKEN: 'post'
@@ -312,4 +350,4 @@ def normalize_channel(exchange: str, feed: str) -> str:
 
 
 def is_authenticated_channel(channel: str) -> bool:
-    return channel in (ORDER_INFO, USER_FILLS)
+    return channel in (ORDER_INFO, USER_FILLS, ACC_TRANSACTIONS, ACC_BALANCES)

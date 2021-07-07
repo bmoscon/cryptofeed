@@ -13,7 +13,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITMAX, BUY, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -22,9 +22,9 @@ from cryptofeed.standards import timestamp_normalize
 LOG = logging.getLogger('feedhandler')
 
 
-class Bitmax(Feed):
-    id = BITMAX
-    symbol_endpoint = 'https://bitmax.io/api/pro/v1/products'
+class AscendEX(Feed):
+    id = ASCENDEX
+    symbol_endpoint = 'https://ascendex.com/api/pro/v1/products'
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
@@ -40,7 +40,7 @@ class Bitmax(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__('wss://bitmax.io/0/api/pro/v1/stream', **kwargs)
+        super().__init__('wss://ascendex.com/1/api/pro/v1/stream', **kwargs)
         self.__reset()
 
     def __reset(self):
