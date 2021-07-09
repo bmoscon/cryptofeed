@@ -226,6 +226,8 @@ _feed_to_exchange_map = {
         OKEX: ORDER_INFO,
         FTX: 'orders',
         BEQUANT: 'subscribeReports',
+        BITCOINCOM: 'subscribeReports',
+        HITBTC: 'subscribeReports',
     },
     USER_FILLS: {
         FTX: 'fills',
@@ -236,6 +238,8 @@ _feed_to_exchange_map = {
         BINANCE_US: 'kline_',
         BINANCE_FUTURES: 'kline_',
         BINANCE_DELIVERY: 'kline_',
+        BITCOINCOM: 'subscribeCandles',
+        HITBTC: 'subscribeCandles',
         HUOBI: 'kline',
         GATEIO: 'spot.candlesticks',
         KUCOIN: '/market/candles',
@@ -245,15 +249,21 @@ _feed_to_exchange_map = {
     },
     ACC_TRANSACTIONS: {
         BEQUANT: 'subscribeTransactions',
+        BITCOINCOM: 'subscribeTransactions',
+        HITBTC: 'subscribeTransactions',
     },
     ACC_BALANCES: {
-        BEQUANT: 'subscribeBalance'
+        BEQUANT: 'subscribeBalance',
+        BITCOINCOM: 'subscribeBalance',
+        HITBTC: 'subscribeBalance',
     },
 }
 
 _exchange_options = {
     LIMIT: {
         BEQUANT: 'limit',
+        BITCOINCOM: 'limit',
+        HITBTC: 'limit',
         KRAKEN: 'limit',
         GEMINI: 'exchange limit',
         POLONIEX: 'limit',
@@ -262,6 +272,8 @@ _exchange_options = {
     },
     MARKET: {
         BEQUANT: 'market',
+        BITCOINCOM: 'market',
+        HITBTC: 'market',
         KRAKEN: 'market',
         GEMINI: UNSUPPORTED,
         POLONIEX: UNSUPPORTED,
@@ -270,6 +282,8 @@ _exchange_options = {
     },
     FILL_OR_KILL: {
         BEQUANT: {'timeInForce': 'FOK'},
+        BITCOINCOM: {'timeInForce': 'FOK'},
+        HITBTC: {'timeInForce': 'FOK'},
         GEMINI: 'fill-or-kill',
         POLONIEX: 'fillOrKill',
         COINBASE: {'time_in_force': 'FOK'},
@@ -278,7 +292,9 @@ _exchange_options = {
     },
     IMMEDIATE_OR_CANCEL: {
         BEQUANT: {'timeInForce': 'IOC'},
+        BITCOINCOM: {'timeInForce': 'IOC'},
         GEMINI: 'immediate-or-cancel',
+        HITBTC: {'timeInForce': 'IOC'},
         POLONIEX: 'immediateOrCancel',
         COINBASE: {'time_in_force': 'IOC'},
         KRAKEN: UNSUPPORTED,
@@ -286,7 +302,9 @@ _exchange_options = {
     },
     MAKER_OR_CANCEL: {
         BEQUANT: {'postOnly': 1},
+        BITCOINCOM: {'postOnly': 1},
         GEMINI: 'maker-or-cancel',
+        HITBTC: {'postOnly': 1},
         POLONIEX: 'postOnly',
         COINBASE: {'post_only': 1},
         KRAKEN: 'post'
