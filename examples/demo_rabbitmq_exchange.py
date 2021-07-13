@@ -17,7 +17,7 @@ def receiver(port):
     channel = connection.channel()
     exchange_name = 'amq.topic'
     exchange_type = 'topic'
-    channel.exchange_declare(exchange='amq.topic', exchange_type=exchange_type, durable=True)
+    channel.exchange_declare(exchange=exchange_name, exchange_type=exchange_type, durable=True)
     queue_name = 'cryptofeed'
     channel.queue_declare(queue=queue_name)
     channel.queue_bind(exchange=exchange_name, queue=queue_name)
