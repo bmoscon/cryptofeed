@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.9.2
+### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
   * Update: changed KuCoin authentication to match new signing method
   * Bugfix: #518 - fix aggregator example code
@@ -25,6 +25,7 @@
   * Features: added support for candles, order info, account transactions and account balances to HitBTC & Bitcoin.com, plus authentication where required to access these channels
   * Update: previous HitBTC & Bitcoin.com websocket endpoints deprecated. Now using separate Market, Trading and Account endpoints
   * Bugfix: max_depth on Binance and Kraken was not properly used when querying the snapshot
+  * Bugfix: Handle 429s in HTTP connections (by waiting and retrying).
   
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
