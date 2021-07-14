@@ -194,6 +194,7 @@ class Binance(Feed):
             for d in self.valid_depths:
                 if d > max_depth:
                     max_depth = d
+                    break
 
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
         resp = await self.http_conn.read(url)
