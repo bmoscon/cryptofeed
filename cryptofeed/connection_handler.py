@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class ConnectionHandler:
-    def __init__(self, conn: AsyncConnection, subscribe: Awaitable, handler: Awaitable, authenticate: Awaitable, retries: int, timeout=120, timeout_interval=30, exceptions=None, log_on_error=False):
+    def __init__(self, conn: AsyncConnection, subscribe: Awaitable, handler: Awaitable, authenticate: Awaitable, retries: int, timeout=120, timeout_interval=30, exceptions=None, log_on_error=False, start_delay=0):
         self.conn = conn
         self.subscribe = subscribe
         self.handler = handler
@@ -34,6 +34,7 @@ class ConnectionHandler:
         self.timeout = timeout
         self.timeout_interval = timeout_interval
         self.running = True
+        self.start_delay = start_delay
 
     def start(self, loop: asyncio.AbstractEventLoop):
         loop.create_task(self._create_connection())
@@ -48,6 +49,7 @@ class ConnectionHandler:
             await asyncio.sleep(self.timeout_interval)
 
     async def _create_connection(self):
+        await asyncio.sleep(self.start_delay)
         retries = 0
         rate_limited = 1
         delay = 1
