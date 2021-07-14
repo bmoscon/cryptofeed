@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.9.3
+  * Bugfix: Fix demo.py
+  * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
+
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
   * Update: changed KuCoin authentication to match new signing method
