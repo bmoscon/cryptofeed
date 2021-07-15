@@ -171,14 +171,17 @@ class FeedHandler:
 
         LOG.info('FH: leaving run()')
 
-    def stop(self, loop=None):
-        """Shutdown the Feed backends asynchronously."""
+    def _stop(self, loop=None):
         if not loop:
             loop = asyncio.get_event_loop()
 
         LOG.info('FH: shutdown connections handlers in feeds')
         for feed in self.feeds:
             feed.stop()
+
+        if self.raw_data_collection:
+            LOG.info('FH: shutting down raw data collection')
+            self.raw_data_collection.stop()
 
         LOG.info('FH: create the tasks to properly shutdown the backends (to flush the local cache)')
         shutdown_tasks = []
@@ -192,10 +195,15 @@ class FeedHandler:
             shutdown_tasks.append(task)
 
         LOG.info('FH: wait %s backend tasks until termination', len(shutdown_tasks))
+        return shutdown_tasks
+
+    async def stop_async(self, loop=None):
+        shutdown_tasks = self._stop(loop=loop)
+        await asyncio.gather(*shutdown_tasks)
+
+    def stop(self, loop=None):
+        shutdown_tasks = self._stop(loop=loop)
         loop.run_until_complete(asyncio.gather(*shutdown_tasks))
-        if self.raw_data_collection:
-            LOG.info('FH: shutting down raw data collection')
-            self.raw_data_collection.stop()
 
     def close(self, loop=None):
         """Stop the asynchronous generators and close the event loop."""
