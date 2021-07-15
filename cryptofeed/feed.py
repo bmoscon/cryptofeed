@@ -29,7 +29,7 @@ class Feed:
     id = 'NotImplemented'
     http_sync = HTTPSync()
 
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, delay_start=0):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -67,6 +67,9 @@ class Feed:
             If an exception is encountered in the connection handler, log the raw message
         sandbox: bool
             enable sandbox mode for exchanges that support this
+        delay_start: int, float
+            a delay before starting the feed/connection to the exchange. If you are subscribing to a large number of feeds
+            on a single exchange, you may encounter 429s. You can use this to stagger the starts.
         """
         if isinstance(config, Config):
             LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
@@ -103,6 +106,7 @@ class Feed:
         self.requires_authentication = False
         self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id)
+        self.start_delay = delay_start
 
         symbols_cache = Symbols
         if not symbols_cache.populated(self.id):
@@ -368,7 +372,7 @@ class Feed:
         Create tasks for exchange interfaces and backends
         """
         for conn, sub, handler, auth in self.connect():
-            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error))
+            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error, start_delay=self.start_delay))
             self.connection_handlers[-1].start(loop)
 
         for callbacks in self.callbacks.values():
