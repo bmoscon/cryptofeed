@@ -326,11 +326,11 @@ class Bequant(Feed):
                 await self._book_snapshot(params, conn, ts)
             elif m == 'updateOrderbook':
                 await self._book_update(params, conn, ts)
-            elif m in ['updateTrades', 'snapshotTrades']:
+            elif m in ('updateTrades', 'snapshotTrades'):
                 await self._trades(params, conn, ts)
-            elif m in ['snapshotCandles', 'updateCandles']:
+            elif m in ('snapshotCandles', 'updateCandles'):
                 await self._candles(params, conn, ts)
-            elif m in ['activeOrders', 'report']:
+            elif m in ('activeOrders', 'report'):
                 if isinstance(params, list):
                     for entry in params:
                         # Conn passed up to callback as way of handing authenticated ws (with trading endpoint) to application
