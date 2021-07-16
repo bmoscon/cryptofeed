@@ -1,6 +1,6 @@
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES
+from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback, L1BookCallback
+from cryptofeed.defines import BID, ASK, FUNDING, L1_BOOK, L2_BOOK, OPEN_INTEREST, TICKER, TRADES
 from cryptofeed.exchanges import Deribit
 
 
@@ -23,6 +23,9 @@ async def funding(**kwargs):
 async def oi(feed, symbol, open_interest, timestamp, receipt_timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} open interest: {open_interest}')
 
+async def quote(feed, symbol, bid_price, ask_price, bid_amount, ask_amount, timestamp, receipt_timestamp):
+    print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} Best bid (amount): {bid_price} ({bid_amount}) Best ask (amount): {ask_price} ({ask_amount})')
+
 
 def main():
     f = FeedHandler()
@@ -33,6 +36,8 @@ def main():
     sub = {TRADES: ["BTC-USD-PERPETUAL"], TICKER: ['ETH-USD-PERPETUAL'], FUNDING: ['ETH-USD-PERPETUAL'], OPEN_INTEREST: ['ETH-USD-PERPETUAL']}
     f.add_feed(Deribit(subscription=sub, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
     f.add_feed(Deribit(symbols=['BTC-USD-PERPETUAL'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    
+    f.add_feed(Deribit(symbols=["ETH-24JUN22", "BTC-24JUN22-50000-C"], channels=[L1_BOOK], callbacks={L1_BOOK: L1BookCallback(quote)}))
 
     f.run()
 

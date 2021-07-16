@@ -7,14 +7,18 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L1_BOOK, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
+from cryptofeed.defines import ACC_BALANCES, ORDER_INFO, USER_FILLS, PERPETUAL, FUTURES, OPTION
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.standards import timestamp_normalize, is_authenticated_channel, normalize_channel
+
+# For auth
+import hashlib, hmac
+from datetime import datetime
 
 
 LOG = logging.getLogger('feedhandler')
-
 
 class Deribit(Feed):
     id = DERIBIT
@@ -28,13 +32,23 @@ class Deribit(Feed):
         for entry in data:
             for e in entry['result']:
                 split = e['instrument_name'].split("-")
-                normalized = split[0] + symbol_separator + e['quote_currency'] + "-" + '-'.join(split[1:])
+                if split[1] == 'PERPETUAL':
+                    normalized = split[0] + symbol_separator + e['quote_currency'] + "-" + '-'.join(split[1:])
+                    info['instrument_type'][normalized] = PERPETUAL
+                else:
+                    normalized = e['instrument_name']
+                    info['instrument_type'][normalized] = FUTURES if e['kind'] == 'future' else OPTION
                 ret[normalized] = e['instrument_name']
                 info['tick_size'][normalized] = e['tick_size']
+
+        # For ACC_BALANCES
+        ret['BTC'] = 'BTC'
+        ret['ETH'] = 'ETH'
         return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
+        self.access_token = None
         self.__reset()
 
     def __reset(self):
@@ -151,23 +165,94 @@ class Deribit(Feed):
                             receipt_timestamp=timestamp
                             )
 
+    async def _quote(self, quote: dict, timestamp: float):
+        await self.callback(L1_BOOK,
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(quote['instrument_name']),
+                            bid_price=Decimal(quote['best_bid_price']),
+                            ask_price=Decimal(quote['best_ask_price']),
+                            bid_amount=Decimal(quote['best_bid_amount']),
+                            ask_amount=Decimal(quote['best_ask_amount']),
+                            timestamp=timestamp_normalize(self.id, quote['timestamp']),
+                            receipt_timestamp=timestamp,
+                            )
+
     async def subscribe(self, conn: AsyncConnection):
+        '''
+            Deribit requires access token for subscribing to authencated channels,
+            so we call subscribe_auth later from message_handler after token has been received
+        '''
         self.__reset()
-        client_id = 0
         channels = []
         for chan in self.subscription:
-            for pair in self.subscription[chan]:
-                channels.append(f"{chan}.{pair}.raw")
-        await conn.write(json.dumps(
-            {
-                "jsonrpc": "2.0",
-                "id": client_id,
-                "method": "public/subscribe",
-                "params": {
-                    "channels": channels
+            if not is_authenticated_channel(normalize_channel(self.id, chan)):
+                for pair in self.subscription[chan]:
+                    channel = f"{chan}.{pair}"
+                    if not normalize_channel(self.id, chan) == L1_BOOK:
+                        channel += ".raw"
+                    channels.append(channel)
+        if channels:
+            await conn.write(json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 101,
+                    "method": "public/subscribe",
+                    "params": {
+                        "channels": channels
+                    }
                 }
+            ))
+    
+    async def subscribe_auth(self, conn: AsyncConnection):
+        channels = []
+        for chan in self.subscription:
+            if is_authenticated_channel(normalize_channel(self.id, chan)):
+                for symbol in self.subscription[chan]:
+                    channel = f"{chan}.{symbol}"
+                    if not normalize_channel(self.id, chan) == ACC_BALANCES:
+                        channel += ".raw"
+                    channels.append(channel)
+        if channels:
+            await conn.write(json.dumps({
+                    "jsonrpc": "2.0",
+                    "id": 102,
+                    "method": "private/subscribe",
+                    "params": {
+                        "access_token": self.access_token,
+                        "channels": channels }
+                    })
+            )
+ 
+    async def authenticate(self, conn: AsyncConnection):
+        if self.requires_authentication:
+        # https://docs.deribit.com/?python#authentication
+
+            nonce = 'xyz789'
+            timestamp = round(datetime.now().timestamp() * 1000)
+            signature = hmac.new(
+                bytes(self.key_secret, "latin-1"),
+                msg=bytes('{}\n{}\n{}'.format(timestamp, nonce, ""), "latin-1"),
+                digestmod=hashlib.sha256
+            ).hexdigest().lower()
+            auth = {
+                "jsonrpc": "2.0",
+                "id": 100,
+                "method": "public/auth",
+                "params": {
+                    "grant_type": "client_signature",
+                    "client_id": self.key_id,
+                    "timestamp": timestamp,
+                    "signature": signature,
+                    "nonce": nonce,
+                    "data": ""
+                },
+                "id": conn.uuid
             }
-        ))
+            await conn.write(json.dumps(auth))
+            LOG.info(f"{conn.uuid}: Authenticate request sent")
+            LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
+#            return conn    
+
 
     async def _book_snapshot(self, msg: dict, timestamp: float):
         """
@@ -236,24 +321,84 @@ class Deribit(Feed):
                 delta[ASK].append((Decimal(price), Decimal(amount)))
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
 
+    async def _user_channels(self, conn: AsyncConnection, msg: dict, timestamp: float, subchan: str):
+        if 'data' in msg['params']:
+            data = msg['params']['data']
+
+            if subchan == 'portfolio':
+                currency = self.exchange_symbol_to_std_symbol(data['currency'])
+                await self.callback(ACC_BALANCES, feed=self.id, currency=currency, data=data, receipt_timestamp=timestamp)
+            
+            elif subchan == 'orders':
+                symbol = self.exchange_symbol_to_std_symbol(data['instrument_name'])
+                await self.callback(ORDER_INFO, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+            
+            elif subchan == 'trades':
+                for i in range(len(data)):
+                    symbol = self.exchange_symbol_to_std_symbol(data[i]['instrument_name'])
+                    await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data[i], receipt_timestamp=timestamp)
+            else:
+                LOG.warning("%s: Unknown channel 'user.%s'", conn.uuid, msg)
+        else:
+            LOG.warning("%s: Unknown message %s'", conn.uuid, msg)    
+    
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg_dict = json.loads(msg, parse_float=Decimal)
+        if isinstance(msg_dict, dict):
+            if 'error' in msg_dict.keys():
+                LOG.error("%s: Received Error message: %s, Error code: %s", conn.uuid, msg_dict['error']['message'], msg_dict['error']['code'])
+            
+            elif "result" in msg_dict:
+                result = msg_dict["result"]
 
-        # As a first update after subscription, Deribit sends a notification with no data
-        if "testnet" in msg_dict.keys():
-            LOG.debug("%s: Test response from derbit accepted %s", self.id, msg)
-        elif "ticker" == msg_dict["params"]["channel"].split(".")[0]:
-            await self._ticker(msg_dict, timestamp)
-        elif "trades" == msg_dict["params"]["channel"].split(".")[0]:
-            await self._trade(msg_dict, timestamp)
-        elif "book" == msg_dict["params"]["channel"].split(".")[0]:
+                if 'id' in msg_dict:
+                    id = msg_dict["id"]
+                    if id == 101:
+                        LOG.info("%s: Subscribed to public channels %s", conn.uuid, result)
+                    elif id == 102:
+                        LOG.info("%s: Subscribed to authenticated channels %s", conn.uuid, result)
+                    elif isinstance(result, Dict) and "access_token" in result:
+                        if self.access_token == None:
+                            self.access_token = result["access_token"]
+                            LOG.info("%s: Access token received", conn.uuid)
+                            await self.subscribe_auth(conn)
+                    else:
+                        LOG.warning("%s: Unknown id in message %s", conn.uuid, msg_dict)
+                else:
+                    LOG.warning("%s: Unknown 'result' message received: %s", conn.uuid, msg_dict)
 
-            # checking if we got full book or its update
-            # if it's update there is 'prev_change_id' field
-            if "prev_change_id" not in msg_dict["params"]["data"].keys():
-                await self._book_snapshot(msg_dict, timestamp)
-            elif "prev_change_id" in msg_dict["params"]["data"].keys():
-                await self._book_update(msg_dict, timestamp)
+            elif 'params' in msg_dict:
+                params = msg_dict['params']
+
+                if 'channel' in params:
+                    channel = params['channel']
+
+                    if "ticker" == channel.split(".")[0]:
+                        await self._ticker(msg_dict, timestamp)
+
+                    elif "trades" == channel.split(".")[0]:
+                        await self._trade(msg_dict, timestamp)
+
+                    elif "book" == channel.split(".")[0]:
+                        # checking if we got full book or its update
+                        # if it's update there is 'prev_change_id' field
+                        if "prev_change_id" not in msg_dict["params"]["data"].keys():
+                            await self._book_snapshot(msg_dict, timestamp)
+                        elif "prev_change_id" in msg_dict["params"]["data"].keys():
+                            await self._book_update(msg_dict, timestamp)
+
+                    elif "quote" == channel.split(".")[0]:
+                        await self._quote(params['data'], timestamp)
+
+                    elif channel.startswith("user"):
+                        await self._user_channels(conn, msg_dict, timestamp, channel.split(".")[1])
+
+                    else:
+                        LOG.warning("%s: Unknown channel %s", conn.uuid, msg_dict)    
+                else:
+                    LOG.warning("%s: Unknown 'params' message received: %s", conn.uuid, msg_dict)
+            else:
+                LOG.warning("%s: Unknown message in msg_dict: %s", conn.uuid, msg_dict)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Message is not dict: %s", conn.uuid, msg)

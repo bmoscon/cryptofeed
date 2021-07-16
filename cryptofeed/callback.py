@@ -113,3 +113,11 @@ class AccBalancesCallback(Callback):
 
 class AccTransactionsCallback(Callback):
     pass
+
+
+class UserFillsCallback(Callback):
+    pass
+
+class L1BookCallback(Callback):
+    pass
+
