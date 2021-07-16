@@ -14,10 +14,13 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.standards import timestamp_normalize, is_authenticated_channel, normalize_channel
 
+# For auth
+import hmac
+import time
 
 LOG = logging.getLogger('feedhandler')
 
@@ -28,21 +31,31 @@ class Bybit(Feed):
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        '''
+            Bybit uses two notation fields for instruments: 'name' and 'alias'.
+            On the Bybit's web trading application futures are shown as 'alias' name.
+            Notation 'BTCUSDZ21' in 'name' field assumes only mounthly futures.
+            For compatibility with other exchange's notations, where daily futures are trade,
+            it is better to use 'alias' for FUTURES, which looks like 'BTCUSD1231' 
+            and normilazed as 'BTC-USD-1231' instead of 'BTC-USD-Z21' 
+        '''
         ret = {}
         info = defaultdict(dict)
         for symbol in data['result']:
             quote = symbol['quote_currency']
             if not symbol['name'].endswith(quote):
-                base, contract = symbol['name'].split(quote)
+                base, contract = symbol['alias'].split(quote)
                 normalized = f"{base}{symbol_separator}{quote}-{contract}"
+                info['instrument_type'][normalized] = FUTURES
             else:
                 normalized = f"{symbol['base_currency']}{symbol_separator}{quote}"
+                info['instrument_type'][normalized] = PERPETUAL
             ret[normalized] = symbol['name']
             info['tick_size'][normalized] = symbol['price_filter']['tick_size']
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, **kwargs)
+        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public', 'USDT_PRIV': 'wss://stream.bybit.com/realtime_private'}, **kwargs)
 
     def __reset(self, quote=None):
         if quote is None:
@@ -52,53 +65,75 @@ class Bybit(Feed):
             for symbol in rem:
                 del self.l2_book[symbol]
 
+
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg = json.loads(msg, parse_float=Decimal)
 
         if "success" in msg:
             if msg['success']:
-                LOG.debug("%s: Subscription success %s", self.id, msg)
+                if msg['request']['op'] == 'auth':
+                    LOG.info("%s: Authenticated successful", conn.uuid)
+                    channels = []
+                    for chan in self.subscription:
+                        if is_authenticated_channel(normalize_channel(self.id, chan)):
+                            channels.append(chan)
+                    if channels:
+                        await conn.write(json.dumps({"op": "subscribe", "args": channels}))
+                        LOG.info(f'{conn.uuid}: Subscribe to auth channels request sent: {channels}')
+
+                elif msg['request']['op'] == 'subscribe':
+                    LOG.info("%s: Subscribed to channels: %s", conn.uuid, msg['request']['args'])
+                else:
+                    LOG.warning("%s: Unhandled 'successs' message received", conn.uuid)
             else:
-                LOG.error("%s: Error from exchange %s", self.id, msg)
+                LOG.error("%s: Error from exchange %s", conn.uuid, msg)
         elif "trade" in msg["topic"]:
             await self._trade(msg, timestamp)
         elif "orderBookL2" in msg["topic"]:
             await self._book(msg, timestamp)
         elif "instrument_info" in msg["topic"]:
             await self._instrument_info(msg, timestamp)
+        elif "order" in msg["topic"]:
+            await self._order(msg, timestamp)
+        elif "execution" in msg["topic"]:
+            await self._execution(msg, timestamp)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Unhandled message type %s", conn.uuid, msg)
+
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
 
         if any(pair[-4:] == 'USDT' for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USDT')
-            ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler, self.authenticate))
-        if any(pair[-3:] == 'USD' for pair in self.normalized_symbols):
+            ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults), subscribe, self.message_handler, self.__no_auth))
+        if any((pair[-3:] == 'USD' or pair[-2:].isdigit()) for pair in self.normalized_symbols):
             subscribe = partial(self.subscribe, quote='USD')
             ret.append((WSAsyncConn(self.address['USD'], self.id, **self.ws_defaults), subscribe, self.message_handler, self.authenticate))
 
         return ret
 
+
     async def subscribe(self, connection: AsyncConnection, quote: str = None):
         self.__reset(quote=quote)
 
         for chan in self.subscription:
-            for pair in self.subscription[chan]:
-                # Bybit uses separate addresses for difference quote currencies
-                if 'USDT' not in pair and quote == 'USDT':
-                    continue
-                if 'USDT' in pair and quote == 'USD':
-                    continue
+            if not is_authenticated_channel(normalize_channel(self.id, chan)):
+                for pair in self.subscription[chan]:
+                    # Bybit uses separate addresses for difference quote currencies
+                    if 'USDT' not in pair and quote == 'USDT':
+                        continue
+                    if 'USDT' in pair and quote == 'USD':
+                        continue
 
-                await connection.write(json.dumps(
-                    {
-                        "op": "subscribe",
-                        "args": [f"{chan}.{pair}"]
-                    }
-                ))
+                    await connection.write(json.dumps(
+                        {
+                            "op": "subscribe",
+                            "args": [f"{chan}.{pair}"]
+                        }
+                    ))
+
 
     async def _instrument_info(self, msg: dict, timestamp: float):
         """
@@ -266,3 +301,30 @@ class Bybit(Feed):
         if isinstance(ts, str):
             ts = int(ts)
         await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, ts / 1000000, timestamp)
+
+
+    async def _order(self, msg: dict, timestamp: float):
+        for i in range(len(msg['data'])):
+            data = msg['data'][i]
+            symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
+            await self.callback(ORDER_INFO, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+
+
+    async def _execution(self, msg: dict, timestamp: float):
+        for i in range(len(msg['data'])):
+            data = msg['data'][i]
+            symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
+            await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+
+
+    async def authenticate(self, conn: AsyncConnection):
+        if any(is_authenticated_channel(normalize_channel(self.id, chan)) for chan in self.subscription):
+            # https://bybit-exchange.github.io/docs/inverse/#t-websocketauthentication
+
+            expires = int((time.time() + 60)) * 1000
+            signature = str(hmac.new(bytes(self.key_secret, 'utf-8'), bytes(f'GET/realtime{expires}', 'utf-8'), digestmod='sha256').hexdigest())
+            await conn.write(json.dumps({'op': 'auth','args': [self.key_id, expires, signature]}))
+            LOG.info(f"{conn.uuid}: Authentication request sent")
+            
+    async def __no_auth(self, conn: AsyncConnection):
+        pass
