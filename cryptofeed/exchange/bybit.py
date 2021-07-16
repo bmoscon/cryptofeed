@@ -55,7 +55,7 @@ class Bybit(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public', 'USDT_PRIV': 'wss://stream.bybit.com/realtime_private'}, **kwargs)
+        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public'}, **kwargs)
 
     def __reset(self, quote=None):
         if quote is None:
