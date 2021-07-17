@@ -7,7 +7,6 @@ associated with this software.
 import decimal
 import hashlib
 import hmac
-import logging
 import time
 import zlib
 from datetime import datetime as dt
@@ -22,7 +21,7 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, SELL
 from cryptofeed.exchanges import Bitmex as BitmexEx
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 from cryptofeed.standards import timestamp_normalize
 
 
@@ -31,10 +30,8 @@ RATE_LIMIT_SLEEP = 2
 API_MAX = 500
 API_REFRESH = 300
 
-LOG = logging.getLogger('rest')
 
-
-class Bitmex(API):
+class Bitmex(RestAPI):
     ID = BITMEX
     api = 'https://www.bitmex.com'
     info = BitmexEx()
@@ -69,11 +66,11 @@ class Bitmex(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            dates = pd.interval_range(API._timestamp(start_date), API._timestamp(end_date), freq=freq).tolist()
+            dates = pd.interval_range(self._timestamp(start_date), self._timestamp(end_date), freq=freq).tolist()
             if len(dates) == 0:
-                dates.append(pd.Interval(left=API._timestamp(start_date), right=API._timestamp(end_date)))
-            elif dates[-1].right < API._timestamp(end_date):
-                dates.append(pd.Interval(dates[-1].right, API._timestamp(end_date)))
+                dates.append(pd.Interval(left=self._timestamp(start_date), right=self._timestamp(end_date)))
+            elif dates[-1].right < self._timestamp(end_date):
+                dates.append(pd.Interval(dates[-1].right, self._timestamp(end_date)))
 
         @request_retry(self.ID, retry, retry_wait)
         def helper(start, start_date, end_date):
@@ -100,14 +97,14 @@ class Bitmex(API):
                 r = helper(start, start_date, end_date)
 
                 if r.status_code in {502, 504}:
-                    LOG.warning("%s: %d for URL %s - %s", self.ID, r.status_code, r.url, r.text)
+                    self.log.warning("%s: %d for URL %s - %s", self.ID, r.status_code, r.url, r.text)
                     sleep(retry_wait)
                     continue
                 elif r.status_code == 429:
                     sleep(API_REFRESH)
                     continue
                 elif r.status_code != 200:
-                    self._handle_error(r, LOG)
+                    self._handle_error(r)
                 else:
                     sleep(RATE_LIMIT_SLEEP)
 
@@ -164,8 +161,8 @@ class Bitmex(API):
         d = dt.utcnow().date()
         d -= timedelta(days=1)
         rest_end_date = pd.Timestamp(dt(d.year, d.month, d.day))
-        start = API._timestamp(start) if start else start
-        end = API._timestamp(end) if end else end
+        start = self._timestamp(start) if start else start
+        end = self._timestamp(end) if end else end
         rest_start = start
         s3_scrape = False
 
@@ -176,7 +173,7 @@ class Bitmex(API):
 
         if s3_scrape:
             rest_end_date -= pd.Timedelta(microseconds=1)
-            if API._timestamp(end) < rest_end_date:
+            if self._timestamp(end) < rest_end_date:
                 rest_end_date = end
             for data in self._scrape_s3(symbol, 'trade', start, rest_end_date):
                 yield list(map(self._s3_data_normalization, data))
@@ -243,7 +240,7 @@ class Bitmex(API):
                     count += 1
                     if count == 10:
                         r.raise_for_status()
-                    LOG.warning("%s: Error processing %s: %s - %s, trying again", self.ID, symbol, date, r.status_code)
+                    self.log.warning("%s: Error processing %s: %s - %s, trying again", self.ID, symbol, date, r.status_code)
                     time.sleep(10)
 
             data = zlib.decompress(r.content, zlib.MAX_WBITS | 32)

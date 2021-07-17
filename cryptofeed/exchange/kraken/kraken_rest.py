@@ -8,7 +8,6 @@ import base64
 from cryptofeed.exceptions import UnsupportedSymbol
 import hashlib
 import hmac
-import logging
 import time
 from typing import Dict
 import urllib
@@ -20,10 +19,9 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, KRAKEN, LIMIT, MARKET, OPEN, SELL
 from cryptofeed.exchanges import Kraken as KrakenEx
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 from cryptofeed.standards import normalize_trading_options
 
-LOG = logging.getLogger('rest')
 RATE_LIMIT_SLEEP = 1
 
 
@@ -31,7 +29,7 @@ def kraken_rest_symbols() -> Dict[str, str]:
     return {normalized: exchange.replace("/", "") for normalized, exchange in KrakenEx.symbol_mapping().items()}
 
 
-class Kraken(API):
+class Kraken(RestAPI):
     ID = KRAKEN
     api = "https://api.kraken.com/0"
     _normalized_symbol_mapping = kraken_rest_symbols()
@@ -93,7 +91,7 @@ class Kraken(API):
         @request_retry(self.ID, retry, retry_wait)
         def helper():
             resp = requests.post(url, data={} if not payload else payload)
-            self._handle_error(resp, LOG)
+            self._handle_error(resp)
             return resp.json()
 
         return helper()
@@ -123,7 +121,7 @@ class Kraken(API):
         }
 
         resp = requests.post(f"{self.api}{command}", data=payload, headers=headers)
-        self._handle_error(resp, LOG)
+        self._handle_error(resp)
 
         return resp.json()
 
@@ -176,8 +174,8 @@ class Kraken(API):
             endpoint = f"{self.api}/public/Trades?symbol={symbol}&since={start_date}"
             return requests.get(endpoint)
 
-        start_date = API._timestamp(start_date).timestamp() * 1000000000
-        end_date = API._timestamp(end_date).timestamp() * 1000000000
+        start_date = self._timestamp(start_date).timestamp() * 1000000000
+        end_date = self._timestamp(end_date).timestamp() * 1000000000
 
         while start_date < end_date:
             r = helper(start_date)
@@ -187,7 +185,7 @@ class Kraken(API):
                 time.sleep(60)
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
             else:
                 time.sleep(RATE_LIMIT_SLEEP)
 
@@ -285,9 +283,9 @@ class Kraken(API):
         params = {}
 
         if start:
-            params['start'] = API._timestamp(start).timestamp()
+            params['start'] = self._timestamp(start).timestamp()
         if end:
-            params['end'] = API._timestamp(end).timestamp()
+            params['end'] = self._timestamp(end).timestamp()
 
         data = self._post_private('/private/TradesHistory', params)
         if len(data['error']) != 0:
@@ -318,9 +316,9 @@ class Kraken(API):
 
         params = {}
         if start:
-            params['start'] = API._timestamp(start).timestamp()
+            params['start'] = self._timestamp(start).timestamp()
         if end:
-            params['end'] = API._timestamp(end).timestamp()
+            params['end'] = self._timestamp(end).timestamp()
         if aclass:
             params['aclass'] = aclass
         if asset:
@@ -366,6 +364,6 @@ class Kraken(API):
             elif symlen == 4:
                 cleansym = sym[1:]
         except Exception as ex:
-            LOG.error(f"Couldnt convert private api symbol {sym} for {self.ID}", ex)
+            self.log.error(f"Couldnt convert private api symbol {sym} for {self.ID}", ex)
             pass
         return cleansym

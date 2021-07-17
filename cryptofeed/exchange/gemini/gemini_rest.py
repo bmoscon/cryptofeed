@@ -1,4 +1,9 @@
-import logging
+'''
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from decimal import Decimal
 from time import sleep
 
@@ -9,18 +14,17 @@ from sortedcontainers.sorteddict import SortedDict as sd
 from cryptofeed.auth.gemini import generate_token
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, GEMINI, LIMIT, OPEN, PARTIAL, SELL
 from cryptofeed.exchanges import Gemini as GeminiEx
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 from cryptofeed.standards import normalize_trading_options
 
 
-LOG = logging.getLogger('rest')
 RATE_LIMIT_SLEEP = 0.5
 
 
 # https://docs.gemini.com/rest-api/#introduction
 # For public API entry points, we limit requests to 120 requests per minute, and recommend that you do not exceed 1 request per second.
 # For private API entry points, we limit requests to 600 requests per minute, and recommend that you not exceed 5 requests per second.
-class Gemini(API):
+class Gemini(RestAPI):
     ID = GEMINI
     info = GeminiEx()
 
@@ -56,7 +60,7 @@ class Gemini(API):
         @request_retry(self.ID, retry, retry_wait)
         def helper():
             resp = requests.get(f"{api}{command}", params=params)
-            self._handle_error(resp, LOG)
+            self._handle_error(resp)
             return resp.json()
         return helper()
 
@@ -71,7 +75,7 @@ class Gemini(API):
         api = f"{api}{command}"
 
         resp = requests.post(api, headers=headers)
-        self._handle_error(resp, LOG)
+        self._handle_error(resp)
 
         return resp.json()
 
@@ -177,7 +181,7 @@ class Gemini(API):
             'limit_trades': 500
         }
         if start:
-            params['timestamp'] = API._timestamp(start).timestamp()
+            params['timestamp'] = self._timestamp(start).timestamp()
 
         data = self._post("/v1/mytrades", params)
         return [

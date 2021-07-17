@@ -18,6 +18,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange
+from cryptofeed.exchange.coinbase.coinbase_rest import CoinbaseRest
 
 
 LOG = logging.getLogger('feedhandler')
@@ -46,6 +47,7 @@ class Coinbase(Feed):
         self.keep_l3_book = False
         if callbacks and L3_BOOK in callbacks:
             self.keep_l3_book = True
+        self.rest = CoinbaseRest(config=self.config)
         self.__reset()
 
     def __reset(self, symbol=None):

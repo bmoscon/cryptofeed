@@ -1,4 +1,9 @@
-import logging
+'''
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from time import sleep
 
 import pandas as pd
@@ -7,16 +12,15 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, SELL
 from cryptofeed.exchanges import Deribit as DeribitEx
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 1000
 RATE_LIMIT_SLEEP = 0.2
-LOG = logging.getLogger('rest')
 
 
-class Deribit(API):
+class Deribit(RestAPI):
     ID = DERIBIT
     api = "https://www.deribit.com/api/v2/public/"
     info = DeribitEx()
@@ -33,8 +37,8 @@ class Deribit(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            start = API._timestamp(start_date)
-            end = API._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+            start = self._timestamp(start_date)
+            end = self._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
             start = int(start.timestamp() * 1000)
             end = int(end.timestamp() * 1000)
@@ -53,21 +57,21 @@ class Deribit(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
             else:
                 sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()["result"]["trades"]
             if data == []:
-                LOG.warning("%s: No data for range %d - %d",
+                self.log.warning("%s: No data for range %d - %d",
                             self.ID, start, end)
             else:
                 if data[-1]["timestamp"] == start:
-                    LOG.warning(
+                    self.log.warning(
                         "%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.ID, start)
                     start += 1
                 else:
@@ -112,13 +116,13 @@ class Deribit(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 if retry == 0:
                     break
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
 
             data = r.json()
             break

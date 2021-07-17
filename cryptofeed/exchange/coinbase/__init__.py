@@ -1,1 +1,1 @@
-from .websocket import Coinbase
+from .coinbase import Coinbase

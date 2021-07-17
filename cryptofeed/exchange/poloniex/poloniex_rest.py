@@ -6,7 +6,6 @@ associated with this software.
 '''
 import hashlib
 import hmac
-import logging
 import urllib
 from decimal import Decimal
 from time import time
@@ -17,16 +16,13 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, LIMIT, OPEN, PARTIAL, POLONIEX, SELL
 from cryptofeed.exchanges import Poloniex as PoloniexEx
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 from cryptofeed.standards import normalize_trading_options
-
-
-LOG = logging.getLogger('rest')
 
 
 # API docs https://poloniex.com/support/api/
 # 6 calls per second API limit
-class Poloniex(API):
+class Poloniex(RestAPI):
     ID = POLONIEX
     info = PoloniexEx()
 
@@ -96,7 +92,7 @@ class Poloniex(API):
         @request_retry(self.ID, retry, retry_wait)
         def helper():
             resp = requests.get(base_url, params=options)
-            self._handle_error(resp, LOG)
+            self._handle_error(resp)
             return resp.json()
         return helper()
 
@@ -116,7 +112,7 @@ class Poloniex(API):
             'Content-Type': 'application/x-www-form-urlencoded'
         }
         resp = requests.post(f"{self.rest_api}tradingApi?command={command}", headers=headers, data=paybytes)
-        self._handle_error(resp, LOG)
+        self._handle_error(resp)
 
         return resp.json()
 
@@ -170,8 +166,8 @@ class Poloniex(API):
         else:
             if not end:
                 end = pd.Timestamp.utcnow()
-            start = API._timestamp(start)
-            end = API._timestamp(end) - pd.Timedelta(nanoseconds=1)
+            start = self._timestamp(start)
+            end = self._timestamp(end) - pd.Timedelta(nanoseconds=1)
 
             start = int(start.timestamp())
             end = int(end.timestamp())
@@ -216,9 +212,9 @@ class Poloniex(API):
         payload = {'currencyPair': self.info.std_symbol_to_exchange_symbol(symbol)}
 
         if start:
-            payload['start'] = API._timestamp(start).timestamp()
+            payload['start'] = self._timestamp(start).timestamp()
         if end:
-            payload['end'] = API._timestamp(end).timestamp()
+            payload['end'] = self._timestamp(end).timestamp()
 
         payload['limit'] = 10000
         data = self._post("returnTradeHistory", payload)

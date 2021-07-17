@@ -6,7 +6,6 @@ associated with this software.
 '''
 from decimal import Decimal
 import hmac
-import logging
 from time import sleep, time
 from typing import Any, Dict, List, Optional
 
@@ -19,14 +18,14 @@ from cryptofeed.defines import BID, ASK, BUY, DELETE, GET, LIMIT, POST
 from cryptofeed.defines import FTX as FTX_ID
 from cryptofeed.defines import SELL
 from cryptofeed.exchanges import FTX as FTXEx
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 
 
-LOG = logging.getLogger('rest')
+self.log = logging.getLogger('cryptofeed.rest')
 RATE_LIMIT_SLEEP = 0.2
 
 
-class FTX(API):
+class FTX(RestAPI):
     ID = FTX_ID
     info = FTXEx()
     api = "https://ftx.com/api"
@@ -54,7 +53,7 @@ class FTX(API):
             if auth:
                 self._sign_request(request)
             r = self.session.send(request.prepare())
-            self._handle_error(r, LOG)
+            self._handle_error(r)
             return r.json()['result']
         return helper()
 
@@ -110,8 +109,8 @@ class FTX(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            start = API._timestamp(start_date)
-            end = API._timestamp(end_date)
+            start = self._timestamp(start_date)
+            end = self._timestamp(end_date)
 
             start = int(start.timestamp())
             end = int(end.timestamp())
@@ -130,19 +129,19 @@ class FTX(API):
                 sleep(RATE_LIMIT_SLEEP)
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
             else:
                 sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()['result']
             if data == []:
-                LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
+                self.log.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
-                end = int(API._timestamp(data[-1]["time"]).timestamp()) + 1
+                end = int(self._timestamp(data[-1]["time"]).timestamp()) + 1
 
             data = [self._funding_normalization(x, symbol) for x in data]
             return data
@@ -199,8 +198,8 @@ class FTX(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            start = API._timestamp(start_date)
-            end = API._timestamp(end_date)
+            start = self._timestamp(start_date)
+            end = self._timestamp(end_date)
 
             start = int(start.timestamp())
             end = int(end.timestamp())
@@ -219,19 +218,19 @@ class FTX(API):
                 sleep(RATE_LIMIT_SLEEP)
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
             else:
                 sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()['result']
             if data == []:
-                LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
+                self.log.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
-                end = int(API._timestamp(data[-1]["time"]).timestamp()) + 1
+                end = int(self._timestamp(data[-1]["time"]).timestamp()) + 1
 
             orig_data = list(data)
             data = self._dedupe(data, last)
@@ -245,7 +244,7 @@ class FTX(API):
 
     def _trade_normalization(self, trade: dict, symbol: str) -> dict:
         return {
-            'timestamp': API._timestamp(trade['time']).timestamp(),
+            'timestamp': self._timestamp(trade['time']).timestamp(),
             'symbol': symbol,
             'id': trade['id'],
             'feed': self.ID,
@@ -256,7 +255,7 @@ class FTX(API):
 
     def _funding_normalization(self, funding: dict, symbol: str) -> dict:
         return {
-            'timestamp': API._timestamp(funding['time']).timestamp(),
+            'timestamp': self._timestamp(funding['time']).timestamp(),
             'symbol': funding['future'],
             'feed': self.ID,
             'rate': funding['rate']

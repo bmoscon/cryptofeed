@@ -7,7 +7,6 @@ associated with this software.
 import base64
 import hashlib
 import hmac
-import logging
 import time
 from typing import Optional, Union
 from decimal import Decimal
@@ -20,19 +19,17 @@ from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, COINBASE, FILLED, LIMIT, MARKET, OPEN, PARTIAL, PENDING, SELL
-from cryptofeed.rest.api import API, request_retry
-from cryptofeed.rest.exceptions import UnexpectedMessage
+from cryptofeed.rest import RestAPI, request_retry
+from cryptofeed.exceptions import UnexpectedMessage
 from cryptofeed.standards import normalize_trading_options
 
 
 REQUEST_LIMIT = 10
 RATE_LIMIT_SLEEP = 0.2
 CANDLES_POSITION_NAMES = ['time', 'low', 'high', 'open', 'close', 'volume']
-LOG = logging.getLogger('rest')
 
 
-# API Docs https://docs.gdax.com/
-class Coinbase(API):
+class CoinbaseRest(RestAPI):
     ID = COINBASE
 
     api = "https://api.pro.coinbase.com"
@@ -90,7 +87,7 @@ class Coinbase(API):
     def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry=None, retry_wait=0):
         api = self.sandbox_api if self.sandbox else self.api
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.ID, retry, retry_wait, self.self.log)
         def helper(verb, api, endpoint, body, auth):
             header = None
             if auth:
@@ -120,7 +117,7 @@ class Coinbase(API):
                 time.sleep(10)
                 continue
             elif r.status_code != 200:
-                LOG.warning("Error %s: %s", r.status_code, r.text)
+                self.log.warning("Error %s: %s", r.status_code, r.text)
                 time.sleep(60)
                 continue
             data = json.loads(r.text, parse_float=Decimal)
@@ -172,14 +169,14 @@ class Coinbase(API):
                         time.sleep(10)
                         continue
                     elif r.status_code != 200:
-                        LOG.warning("Error %s: %s", r.status_code, r.text)
+                        self.log.warning("Error %s: %s", r.status_code, r.text)
                         time.sleep(60)
                         continue
                     data = json.loads(r.text, parse_float=Decimal)
                     try:
                         data = list(reversed(data))
                     except Exception:
-                        LOG.warning("Error %s: %s", r.status_code, r.text)
+                        self.log.warning("Error %s: %s", r.status_code, r.text)
                         sleep(60)
                         continue
                 else:
@@ -195,7 +192,7 @@ class Coinbase(API):
 
     def ticker(self, symbol: str, retry=None, retry_wait=10):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
-        self._handle_error(data, LOG)
+        self._handle_error(data, self.log)
         data = json.loads(data.text, parse_float=Decimal)
         return {'symbol': symbol,
                 'feed': self.ID,
@@ -235,7 +232,7 @@ class Coinbase(API):
 
     def balances(self):
         resp = self._request('GET', "/accounts", auth=True)
-        self._handle_error(resp, LOG)
+        self._handle_error(resp)
         return {
             entry['currency']: {
                 'total': Decimal(entry['balance']),
@@ -248,13 +245,13 @@ class Coinbase(API):
         endpoint = "/orders"
         data = self._request("GET", endpoint, auth=True)
         data = json.loads(data.text, parse_float=Decimal)
-        return [Coinbase._order_status(order) for order in data]
+        return [self._order_status(order) for order in data]
 
     def order_status(self, order_id: str):
         endpoint = f"/orders/{order_id}"
         order = self._request("GET", endpoint, auth=True)
         order = json.loads(order.text, parse_float=Decimal)
-        return Coinbase._order_status(order)
+        return self._order_status(order)
 
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
         ot = normalize_trading_options(self.ID, order_type)
@@ -277,7 +274,7 @@ class Coinbase(API):
         if options:
             _ = [body.update(normalize_trading_options(self.ID, o)) for o in options]
         resp = self._request('POST', '/orders', auth=True, body=body)
-        return Coinbase._order_status(json.loads(resp.text, parse_float=Decimal))
+        return self._order_status(json.loads(resp.text, parse_float=Decimal))
 
     def cancel_order(self, order_id: str):
         endpoint = f"/orders/{order_id}"
@@ -361,7 +358,7 @@ class Coinbase(API):
 
             start_id = pd.to_datetime(start, utc=True).floor(td)
             end_id_max = pd.to_datetime(end, utc=True).ceil(td)
-            LOG.info(f"candles - stepping through {symbol} ({start}, {end}) where step = {td}")
+            self.log.info(f"candles - stepping through {symbol} ({start}, {end}) where step = {td}")
             while True:
 
                 end_id = start_id + (limit - 1) * td
@@ -371,13 +368,13 @@ class Coinbase(API):
                     break
 
                 url = f'/products/{symbol}/candles?granularity={granularity}&start={self._to_isoformat(start_id)}&end={self._to_isoformat(end_id)}'
-                LOG.debug(url)
+                self.log.debug(url)
                 r = self._request('GET', url, retry=retry, retry_wait=retry_wait)
                 if r.status_code == 429:
                     time.sleep(10)
                     continue
                 elif r.status_code != 200:
-                    LOG.warning("Error %s: %s", r.status_code, r.text)
+                    self.log.warning("Error %s: %s", r.status_code, r.text)
                     time.sleep(60)
                     continue
 
@@ -386,7 +383,7 @@ class Coinbase(API):
                 try:
                     data = list(reversed(data))
                 except Exception:
-                    LOG.warning("Error %s: %s", r.status_code, r.text)
+                    self.log.warning("Error %s: %s", r.status_code, r.text)
                     sleep(60)
                     continue
                 yield list(map(lambda x: self._candle_normalize(symbol, x), data))

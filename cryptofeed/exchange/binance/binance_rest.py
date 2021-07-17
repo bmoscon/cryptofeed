@@ -16,24 +16,24 @@ from yapic import json
 
 from cryptofeed.exchanges import BinanceFutures, BinanceDelivery
 from cryptofeed.defines import BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 from cryptofeed.standards import timestamp_normalize
 
 REQUEST_LIMIT = 1000
 RATE_LIMIT_SLEEP = 3
-LOG = logging.getLogger('rest')
+LOG = logging.getLogger('cryptofeed.rest')
 
 
-class BinanceDelivery(API):
+class BinanceDelivery(RestAPI):
     ID = BINANCE_DELIVERY
     api = "https://dapi.binance.com/dapi/v1/"
     info = BinanceDelivery()
 
     def _get(self, endpoint, retry, retry_wait):
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.ID, retry, retry_wait, LOG)
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
-            self._handle_error(r, LOG)
+            self._handle_error(r)
             return r.json()
 
         return helper()
@@ -73,13 +73,13 @@ class BinanceDelivery(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            start = API._timestamp(start_date)
-            end = API._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+            start = self._timestamp(start_date)
+            end = self._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
             start = int(start.timestamp() * 1000)
             end = int(end.timestamp() * 1000)
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.ID, retry, retry_wait, LOG)
         def helper(start, end):
             if start and end:
                 return requests.get(f"{self.api}aggTrades?symbol={symbol}&limit={REQUEST_LIMIT}&startTime={start}&endTime={end}")
@@ -97,7 +97,7 @@ class BinanceDelivery(API):
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
             else:
                 sleep(RATE_LIMIT_SLEEP)
 
@@ -123,16 +123,16 @@ class BinanceDelivery(API):
             yield data
 
 
-class BinanceFutures(API):
+class BinanceFutures(RestAPI):
     ID = BINANCE_FUTURES
     api = "https://fapi.binance.com/fapi/v1/"
     info = BinanceFutures()
 
     def _get(self, endpoint, retry, retry_wait):
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.ID, retry, retry_wait, LOG)
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
-            self._handle_error(r, LOG)
+            self._handle_error(r)
             return r.json()
 
         return helper()
@@ -172,13 +172,13 @@ class BinanceFutures(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            start = API._timestamp(start_date)
-            end = API._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+            start = self._timestamp(start_date)
+            end = self._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
             start = int(start.timestamp() * 1000)
             end = int(end.timestamp() * 1000)
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.ID, retry, retry_wait, LOG)
         def helper(start, end):
             if start and end:
                 return requests.get(
@@ -197,7 +197,7 @@ class BinanceFutures(API):
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
             else:
                 sleep(RATE_LIMIT_SLEEP)
 

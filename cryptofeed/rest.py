@@ -4,7 +4,6 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import logging
 from decimal import Decimal
 from functools import wraps
 from time import sleep
@@ -12,11 +11,11 @@ from time import sleep
 import pandas as pd
 import requests
 
+from cryptofeed.log import get_logger
+from cryptofeed.config import Config
 
-LOG = logging.getLogger('rest')
 
-
-def request_retry(exchange, retry, retry_wait):
+def request_retry(exchange, retry, retry_wait, LOG):
     """
     decorator to retry request
     """
@@ -49,12 +48,13 @@ def request_retry(exchange, retry, retry_wait):
     return wrap
 
 
-class API:
+class RestAPI:
     ID = 'NotImplemented'
 
-    def __init__(self, config=None, sandbox=False):
+    def __init__(self, config=None, sandbox=False, subaccount=None):
+        config = Config(config=config)
+        self.log = get_logger('cryptofeed.rest', config.rest.log.filename, config.rest.log.level)
         self.sandbox = sandbox
-        self.config = config
 
     @staticmethod
     def _timestamp(ts):
@@ -62,11 +62,11 @@ class API:
             return pd.to_datetime(ts, unit='s')
         return pd.Timestamp(ts)
 
-    def _handle_error(self, resp, log):
+    def _handle_error(self, resp):
         if resp.status_code != 200:
-            log.error("%s: Status code %d for URL %s", self.ID, resp.status_code, resp.url)
-            log.error("%s: Headers: %s", self.ID, resp.headers)
-            log.error("%s: Resp: %s", self.ID, resp.text)
+            self.log.error("%s: Status code %d for URL %s", self.ID, resp.status_code, resp.url)
+            self.log.error("%s: Headers: %s", self.ID, resp.headers)
+            self.log.error("%s: Resp: %s", self.ID, resp.text)
             resp.raise_for_status()
 
     # public / non account specific

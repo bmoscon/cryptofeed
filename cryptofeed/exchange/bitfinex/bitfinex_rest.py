@@ -6,7 +6,6 @@ associated with this software.
 '''
 import hashlib
 import hmac
-import logging
 import time
 from decimal import Decimal
 from time import sleep
@@ -18,16 +17,15 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, SELL
 from cryptofeed.exchanges import Bitfinex as BitfinexEx
-from cryptofeed.rest.api import API, request_retry
+from cryptofeed.rest import RestAPI, request_retry
 from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 5000
 RATE_LIMIT_SLEEP = 3
-LOG = logging.getLogger('rest')
 
 
-class Bitfinex(API):
+class Bitfinex(RestAPI):
     ID = BITFINEX
     api = "https://api-pub.bitfinex.com/v2/"
     info = BitfinexEx()
@@ -36,7 +34,7 @@ class Bitfinex(API):
         @request_retry(self.ID, retry, retry_wait)
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
-            self._handle_error(r, LOG)
+            self._handle_error(r)
             return r.json()
         return helper()
 
@@ -105,8 +103,8 @@ class Bitfinex(API):
         if start_date:
             if not end_date:
                 end_date = pd.Timestamp.utcnow()
-            start = API._timestamp(start_date)
-            end = API._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+            start = self._timestamp(start_date)
+            end = self._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
 
             start = int(start.timestamp() * 1000)
             end = int(end.timestamp() * 1000)
@@ -125,20 +123,20 @@ class Bitfinex(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
             else:
                 sleep(RATE_LIMIT_SLEEP)
 
             data = r.json()
             if data == []:
-                LOG.warning("%s: No data for range %d - %d", self.ID, start, end)
+                self.log.warning("%s: No data for range %d - %d", self.ID, start, end)
             else:
                 if data[-1][1] == start:
-                    LOG.warning("%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.ID, start)
+                    self.log.warning("%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.ID, start)
                     start += 1
                 else:
                     start = data[-1][1]
@@ -204,13 +202,13 @@ class Bitfinex(API):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                LOG.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
                 sleep(retry_wait)
                 if retry == 0:
                     break
                 continue
             elif r.status_code != 200:
-                self._handle_error(r, LOG)
+                self._handle_error(r)
 
             data = r.json()
             break

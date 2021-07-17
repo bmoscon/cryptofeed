@@ -20,6 +20,7 @@ from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
 from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
+from cryptofeed.rest import RestAPI
 
 
 LOG = logging.getLogger('feedhandler')
@@ -82,7 +83,7 @@ class Feed:
             self.config = Config(config)
 
         self.sandbox = sandbox
-
+        self.rest = RestAPI()
         self.log_on_error = log_message_on_error
         self.retries = retries
         self.exceptions = exceptions
