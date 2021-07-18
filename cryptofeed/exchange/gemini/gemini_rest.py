@@ -24,8 +24,8 @@ RATE_LIMIT_SLEEP = 0.5
 # https://docs.gemini.com/rest-api/#introduction
 # For public API entry points, we limit requests to 120 requests per minute, and recommend that you do not exceed 1 request per second.
 # For private API entry points, we limit requests to 600 requests per minute, and recommend that you not exceed 5 requests per second.
-class Gemini(RestAPI):
-    ID = GEMINI
+class GeminiRest(RestAPI):
+    id = GEMINI
     info = GeminiEx()
 
     api = "https://api.gemini.com"
@@ -57,7 +57,7 @@ class Gemini(RestAPI):
     def _get(self, command: str, retry, retry_wait, params=None):
         api = self.api if not self.sandbox else self.sandbox_api
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             resp = requests.get(f"{api}{command}", params=params)
             self._handle_error(resp)
@@ -84,7 +84,7 @@ class Gemini(RestAPI):
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
-                'feed': self.ID,
+                'feed': self.id,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
                 }
@@ -113,7 +113,7 @@ class Gemini(RestAPI):
 
         def _trade_normalize(trade):
             return {
-                'feed': self.ID,
+                'feed': self.id,
                 'order_id': trade['tid'],
                 'symbol': self.info.exchange_symbol_to_std_symbol(sym),
                 'side': trade['type'],
@@ -143,7 +143,7 @@ class Gemini(RestAPI):
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
         if not price:
             raise ValueError('Gemini only supports limit orders, must specify price')
-        ot = normalize_trading_options(self.ID, order_type)
+        ot = normalize_trading_options(self.id, order_type)
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
 
         parameters = {
@@ -152,7 +152,7 @@ class Gemini(RestAPI):
             'side': side,
             'amount': str(amount),
             'price': str(price),
-            'options': [normalize_trading_options(self.ID, o) for o in options] if options else []
+            'options': [normalize_trading_options(self.id, o) for o in options] if options else []
         }
 
         if client_order_id:

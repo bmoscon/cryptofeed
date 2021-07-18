@@ -49,12 +49,18 @@ def request_retry(exchange, retry, retry_wait, LOG):
 
 
 class RestAPI:
-    ID = 'NotImplemented'
+    id = 'NotImplemented'
 
     def __init__(self, config=None, sandbox=False, subaccount=None):
-        config = Config(config=config)
-        self.log = get_logger('cryptofeed.rest', config.rest.log.filename, config.rest.log.level)
+        self.config = Config(config=config)
+        self.log = get_logger('cryptofeed.rest', self.config.rest.log.filename, self.config.rest.log.level)
         self.sandbox = sandbox
+        
+        keys = self.config[self.id.lower()] if subaccount is None else self.config[self.id.lower()][subaccount]
+        self.key_id = keys.key_id
+        self.key_secret = keys.key_secret
+        self.key_passphrase = keys.key_passphrase
+        self.account_name = keys.account_name
 
     @staticmethod
     def _timestamp(ts):
@@ -64,9 +70,9 @@ class RestAPI:
 
     def _handle_error(self, resp):
         if resp.status_code != 200:
-            self.log.error("%s: Status code %d for URL %s", self.ID, resp.status_code, resp.url)
-            self.log.error("%s: Headers: %s", self.ID, resp.headers)
-            self.log.error("%s: Resp: %s", self.ID, resp.text)
+            self.log.error("%s: Status code %d for URL %s", self.id, resp.status_code, resp.url)
+            self.log.error("%s: Headers: %s", self.id, resp.headers)
+            self.log.error("%s: Resp: %s", self.id, resp.text)
             resp.raise_for_status()
 
     # public / non account specific

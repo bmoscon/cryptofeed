@@ -17,6 +17,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
+from cryptofeed.exchange.gemini.gemini_rest import GeminiRest
 
 
 LOG = logging.getLogger('feedhandler')
@@ -42,6 +43,7 @@ class Gemini(Feed):
     def __init__(self, sandbox=False, **kwargs):
         auth_api = 'wss://api.gemini.com' if not sandbox else 'wss://api.sandbox.gemini.com'
         super().__init__({'public': 'wss://api.gemini.com/v2/marketdata/', 'auth': f'{auth_api}/v1/order/events'}, **kwargs)
+        self.rest = GeminiRest(config=self.config, sandbox=sandbox)
 
     def __reset(self, pairs):
         for pair in pairs:

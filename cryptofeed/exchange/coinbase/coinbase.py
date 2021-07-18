@@ -47,7 +47,7 @@ class Coinbase(Feed):
         self.keep_l3_book = False
         if callbacks and L3_BOOK in callbacks:
             self.keep_l3_book = True
-        self.rest = CoinbaseRest(config=self.config)
+        self.rest = CoinbaseRest(config=self.config, sandbox=self.sandbox)
         self.__reset()
 
     def __reset(self, symbol=None):

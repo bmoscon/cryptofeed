@@ -30,8 +30,7 @@ CANDLES_POSITION_NAMES = ['time', 'low', 'high', 'open', 'close', 'volume']
 
 
 class CoinbaseRest(RestAPI):
-    ID = COINBASE
-
+    id = COINBASE
     api = "https://api.pro.coinbase.com"
     sandbox_api = "https://api-public.sandbox.pro.coinbase.com"
 
@@ -87,7 +86,7 @@ class CoinbaseRest(RestAPI):
     def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry=None, retry_wait=0):
         api = self.sandbox_api if self.sandbox else self.api
 
-        @request_retry(self.ID, retry, retry_wait, self.self.log)
+        @request_retry(self.id, retry, retry_wait, self.log)
         def helper(verb, api, endpoint, body, auth):
             header = None
             if auth:
@@ -143,7 +142,7 @@ class CoinbaseRest(RestAPI):
             'timestamp': data['time'].timestamp(),
             'symbol': symbol,
             'id': data['trade_id'],
-            'feed': self.ID,
+            'feed': self.id,
             'side': SELL if data['side'] == 'buy' else BUY,
             'amount': Decimal(data['size']),
             'price': Decimal(data['price']),
@@ -192,10 +191,10 @@ class CoinbaseRest(RestAPI):
 
     def ticker(self, symbol: str, retry=None, retry_wait=10):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
-        self._handle_error(data, self.log)
+        self._handle_error(data)
         data = json.loads(data.text, parse_float=Decimal)
         return {'symbol': symbol,
-                'feed': self.ID,
+                'feed': self.id,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
                 }
@@ -254,7 +253,7 @@ class CoinbaseRest(RestAPI):
         return self._order_status(order)
 
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
-        ot = normalize_trading_options(self.ID, order_type)
+        ot = normalize_trading_options(self.id, order_type)
         if ot == MARKET and price:
             raise ValueError('Cannot specify price on a market order')
         if ot == LIMIT and not price:
@@ -272,7 +271,7 @@ class CoinbaseRest(RestAPI):
         if client_order_id:
             body['client_oid'] = client_order_id
         if options:
-            _ = [body.update(normalize_trading_options(self.ID, o)) for o in options]
+            _ = [body.update(normalize_trading_options(self.id, o)) for o in options]
         resp = self._request('POST', '/orders', auth=True, body=body)
         return self._order_status(json.loads(resp.text, parse_float=Decimal))
 
@@ -305,7 +304,7 @@ class CoinbaseRest(RestAPI):
         ]
 
     def _candle_normalize(self, symbol: str, data: list) -> dict:
-        res = {'symbol': symbol, 'feed': self.ID}
+        res = {'symbol': symbol, 'feed': self.id}
         for i, name in enumerate(CANDLES_POSITION_NAMES):
             if name == 'time':
                 res['timestamp'] = data[i]

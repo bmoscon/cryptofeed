@@ -26,7 +26,7 @@ RATE_LIMIT_SLEEP = 0.2
 
 
 class FTX(RestAPI):
-    ID = FTX_ID
+    id = FTX_ID
     info = FTXEx()
     api = "https://ftx.com/api"
     session = requests.Session()
@@ -47,7 +47,7 @@ class FTX(RestAPI):
         return self._send_request(endpoint, DELETE, json=params, retry=retry, retry_wait=retry_wait, auth=auth)
 
     def _send_request(self, endpoint: str, http_method=GET, retry=None, retry_wait=0, auth=False, **kwargs):
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             request = requests.Request(method=http_method, url=self.api + endpoint, **kwargs)
             if auth:
@@ -75,7 +75,7 @@ class FTX(RestAPI):
         data = self._get(f"/markets/{sym}", retry=retry, retry_wait=retry_wait)
 
         return {'symbol': symbol,
-                'feed': self.ID,
+                'feed': self.id,
                 'bid': data['bid'],
                 'ask': data['ask']
                 }
@@ -115,7 +115,7 @@ class FTX(RestAPI):
             start = int(start.timestamp())
             end = int(end.timestamp())
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
                 return requests.get(f"{self.api}/funding_rates?future={symbol}&start_time={start}&end_time={end}")
@@ -129,7 +129,7 @@ class FTX(RestAPI):
                 sleep(RATE_LIMIT_SLEEP)
                 continue
             elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
@@ -139,7 +139,7 @@ class FTX(RestAPI):
 
             data = r.json()['result']
             if data == []:
-                self.log.warning("%s: No data for range %d - %d", self.ID, start, end)
+                self.log.warning("%s: No data for range %d - %d", self.id, start, end)
             else:
                 end = int(self._timestamp(data[-1]["time"]).timestamp()) + 1
 
@@ -204,7 +204,7 @@ class FTX(RestAPI):
             start = int(start.timestamp())
             end = int(end.timestamp())
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
                 return requests.get(f"{self.api}/markets/{symbol}/trades?limit=100&start_time={start}&end_time={end}")
@@ -218,7 +218,7 @@ class FTX(RestAPI):
                 sleep(RATE_LIMIT_SLEEP)
                 continue
             elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
@@ -228,7 +228,7 @@ class FTX(RestAPI):
 
             data = r.json()['result']
             if data == []:
-                self.log.warning("%s: No data for range %d - %d", self.ID, start, end)
+                self.log.warning("%s: No data for range %d - %d", self.id, start, end)
             else:
                 end = int(self._timestamp(data[-1]["time"]).timestamp()) + 1
 
@@ -247,7 +247,7 @@ class FTX(RestAPI):
             'timestamp': self._timestamp(trade['time']).timestamp(),
             'symbol': symbol,
             'id': trade['id'],
-            'feed': self.ID,
+            'feed': self.id,
             'side': SELL if trade['side'] == 'sell' else BUY,
             'amount': trade['size'],
             'price': trade['price']
@@ -257,6 +257,6 @@ class FTX(RestAPI):
         return {
             'timestamp': self._timestamp(funding['time']).timestamp(),
             'symbol': funding['future'],
-            'feed': self.ID,
+            'feed': self.id,
             'rate': funding['rate']
         }

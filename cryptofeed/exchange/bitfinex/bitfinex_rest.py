@@ -26,12 +26,12 @@ RATE_LIMIT_SLEEP = 3
 
 
 class Bitfinex(RestAPI):
-    ID = BITFINEX
+    id = BITFINEX
     api = "https://api-pub.bitfinex.com/v2/"
     info = BitfinexEx()
 
     def _get(self, endpoint, retry, retry_wait):
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
             self._handle_error(r)
@@ -63,10 +63,10 @@ class Bitfinex(RestAPI):
             period = None
 
         ret = {
-            'timestamp': timestamp_normalize(self.ID, timestamp),
+            'timestamp': timestamp_normalize(self.id, timestamp),
             'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade_id,
-            'feed': self.ID,
+            'feed': self.id,
             'side': SELL if amount < 0 else BUY,
             'amount': abs(amount),
             'price': price,
@@ -109,7 +109,7 @@ class Bitfinex(RestAPI):
             start = int(start.timestamp() * 1000)
             end = int(end.timestamp() * 1000)
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
                 return requests.get(f"{self.api}trades/{symbol}/hist?limit={REQUEST_LIMIT}&start={start}&end={end}&sort=1")
@@ -123,7 +123,7 @@ class Bitfinex(RestAPI):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
@@ -133,10 +133,10 @@ class Bitfinex(RestAPI):
 
             data = r.json()
             if data == []:
-                self.log.warning("%s: No data for range %d - %d", self.ID, start, end)
+                self.log.warning("%s: No data for range %d - %d", self.id, start, end)
             else:
                 if data[-1][1] == start:
-                    self.log.warning("%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.ID, start)
+                    self.log.warning("%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.id, start)
                     start += 1
                 else:
                     start = data[-1][1]
@@ -160,7 +160,7 @@ class Bitfinex(RestAPI):
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"ticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
-                'feed': self.ID,
+                'feed': self.id,
                 'bid': Decimal(data[0]),
                 'ask': Decimal(data[2])
                 }
@@ -190,7 +190,7 @@ class Bitfinex(RestAPI):
             ret[symbol] = {BID: sd(), ASK: sd()}
             sym = symbol
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             precision = 'R0' if l3 is True else 'P0'
             return requests.get(f"{self.api}/book/{symbol}/{precision}?len=100")
@@ -202,7 +202,7 @@ class Bitfinex(RestAPI):
                 sleep(int(r.headers['Retry-After']))
                 continue
             elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.ID, r.url, r.text)
+                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
                 sleep(retry_wait)
                 if retry == 0:
                     break

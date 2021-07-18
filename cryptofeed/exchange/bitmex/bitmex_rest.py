@@ -32,7 +32,7 @@ API_REFRESH = 300
 
 
 class Bitmex(RestAPI):
-    ID = BITMEX
+    id = BITMEX
     api = 'https://www.bitmex.com'
     info = BitmexEx()
 
@@ -72,7 +72,7 @@ class Bitmex(RestAPI):
             elif dates[-1].right < self._timestamp(end_date):
                 dates.append(pd.Interval(dates[-1].right, self._timestamp(end_date)))
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper(start, start_date, end_date):
             if start_date and end_date:
                 endpoint = f'/api/v1/{ep}?symbol={symbol}&count={API_MAX}&reverse=false&start={start}&startTime={start_date}&endTime={end_date}'
@@ -97,7 +97,7 @@ class Bitmex(RestAPI):
                 r = helper(start, start_date, end_date)
 
                 if r.status_code in {502, 504}:
-                    self.log.warning("%s: %d for URL %s - %s", self.ID, r.status_code, r.url, r.text)
+                    self.log.warning("%s: %d for URL %s - %s", self.id, r.status_code, r.url, r.text)
                     sleep(retry_wait)
                     continue
                 elif r.status_code == 429:
@@ -123,10 +123,10 @@ class Bitmex(RestAPI):
 
     def _trade_normalization(self, trade: dict) -> dict:
         return {
-            'timestamp': timestamp_normalize(self.ID, trade['timestamp']),
+            'timestamp': timestamp_normalize(self.id, trade['timestamp']),
             'symbol': self.info.exchange_symbol_to_std_symbol(trade['symbol']),
             'id': trade['trdMatchID'],
-            'feed': self.ID,
+            'feed': self.id,
             'side': BUY if trade['side'] == 'Buy' else SELL,
             'amount': trade['size'],
             'price': trade['price']
@@ -186,7 +186,7 @@ class Bitmex(RestAPI):
         return {
             'timestamp': funding['timestamp'],
             'symbol': self.info.exchange_symbol_to_std_symbol(funding['symbol']),
-            'feed': self.ID,
+            'feed': self.id,
             'interval': funding['fundingInterval'],
             'rate': funding['fundingRate'],
             'rate_daily': funding['fundingRateDaily']
@@ -219,7 +219,7 @@ class Bitmex(RestAPI):
             'timestamp': pd.Timestamp(vals[0].replace("D", "T")).timestamp(),
             'symbol': self.info.exchange_symbol_to_std_symbol(vals[1]),
             'id': vals[6],
-            'feed': self.ID,
+            'feed': self.id,
             'side': BUY if vals[2] == 'Buy' else SELL,
             'amount': vals[3],
             'price': vals[4]
@@ -240,7 +240,7 @@ class Bitmex(RestAPI):
                     count += 1
                     if count == 10:
                         r.raise_for_status()
-                    self.log.warning("%s: Error processing %s: %s - %s, trying again", self.ID, symbol, date, r.status_code)
+                    self.log.warning("%s: Error processing %s: %s - %s, trying again", self.id, symbol, date, r.status_code)
                     time.sleep(10)
 
             data = zlib.decompress(r.content, zlib.MAX_WBITS | 32)

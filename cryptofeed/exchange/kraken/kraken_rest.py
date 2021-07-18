@@ -30,7 +30,7 @@ def kraken_rest_symbols() -> Dict[str, str]:
 
 
 class Kraken(RestAPI):
-    ID = KRAKEN
+    id = KRAKEN
     api = "https://api.kraken.com/0"
     _normalized_symbol_mapping = kraken_rest_symbols()
     _exchange_symbol_mapping = {value: key for key, value in _normalized_symbol_mapping.items()}
@@ -39,13 +39,13 @@ class Kraken(RestAPI):
         try:
             return self._exchange_symbol_mapping[symbol]
         except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.ID}')
+            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
     def std_symbol_to_exchange_symbol(self, symbol: str) -> str:
         try:
             return self._normalized_symbol_mapping[symbol]
         except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.ID}')
+            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
     @staticmethod
     def _fix_currencies(currency: str):
@@ -88,7 +88,7 @@ class Kraken(RestAPI):
     def _post_public(self, command: str, payload=None, retry=None, retry_wait=0):
         url = f"{self.api}{command}"
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             resp = requests.post(url, data={} if not payload else payload)
             self._handle_error(resp)
@@ -133,7 +133,7 @@ class Kraken(RestAPI):
         data = data['result']
         for _, val in data.items():
             return {'symbol': symbol,
-                    'feed': self.ID,
+                    'feed': self.id,
                     'bid': Decimal(val['b'][0]),
                     'ask': Decimal(val['a'][0])
                     }
@@ -169,7 +169,7 @@ class Kraken(RestAPI):
     def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper(start_date):
             endpoint = f"{self.api}/public/Trades?symbol={symbol}&since={start_date}"
             return requests.get(endpoint)
@@ -209,7 +209,7 @@ class Kraken(RestAPI):
             'timestamp': trade[2],
             'symbol': symbol,
             'id': None,
-            'feed': self.ID,
+            'feed': self.id,
             'side': SELL if trade[3] == 's' else BUY,
             'amount': trade[1],
             'price': trade[0]
@@ -248,7 +248,7 @@ class Kraken(RestAPI):
             return self._order_status(order_id, order)
 
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
-        ot = normalize_trading_options(self.ID, order_type)
+        ot = normalize_trading_options(self.id, order_type)
 
         parameters = {
             'pair': self.std_symbol_to_exchange_symbol(symbol),
@@ -261,7 +261,7 @@ class Kraken(RestAPI):
             parameters['price'] = str(price)
 
         if options:
-            parameters['oflags'] = ','.join([normalize_trading_options(self.ID, o) for o in options])
+            parameters['oflags'] = ','.join([normalize_trading_options(self.id, o) for o in options])
 
         data = self._post_private('/private/AddOrder', parameters)
         if len(data['error']) != 0:
@@ -364,6 +364,6 @@ class Kraken(RestAPI):
             elif symlen == 4:
                 cleansym = sym[1:]
         except Exception as ex:
-            self.log.error(f"Couldnt convert private api symbol {sym} for {self.ID}", ex)
+            self.log.error(f"Couldnt convert private api symbol {sym} for {self.id}", ex)
             pass
         return cleansym

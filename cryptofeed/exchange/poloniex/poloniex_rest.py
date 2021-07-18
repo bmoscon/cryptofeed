@@ -23,7 +23,7 @@ from cryptofeed.standards import normalize_trading_options
 # API docs https://poloniex.com/support/api/
 # 6 calls per second API limit
 class Poloniex(RestAPI):
-    ID = POLONIEX
+    id = POLONIEX
     info = PoloniexEx()
 
     # for public_api add "public" to the url, for trading add "tradingApi" (example: https://poloniex.com/public)
@@ -89,7 +89,7 @@ class Poloniex(RestAPI):
     def _get(self, command: str, options=None, retry=None, retry_wait=0):
         base_url = f"{self.rest_api}public?command={command}"
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             resp = requests.get(base_url, params=options)
             self._handle_error(resp)
@@ -121,7 +121,7 @@ class Poloniex(RestAPI):
         sym = self.info.std_symbol_to_exchange_symbol(symbol)
         data = self._get("returnTicker", retry=retry, retry_wait=retry_wait)
         return {'symbol': symbol,
-                'feed': self.ID,
+                'feed': self.id,
                 'bid': Decimal(data[sym]['lowestAsk']),
                 'ask': Decimal(data[sym]['highestBid'])
                 }
@@ -145,7 +145,7 @@ class Poloniex(RestAPI):
             'timestamp': pd.Timestamp(trade['date']).timestamp(),
             'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade['tradeID'],
-            'feed': self.ID,
+            'feed': self.id,
             'side': BUY if trade['type'] == 'buy' else SELL,
             'amount': Decimal(trade['amount']),
             'price': Decimal(trade['rate'])
@@ -154,7 +154,7 @@ class Poloniex(RestAPI):
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.info.std_symbol_to_exchange_symbol(symbol)
 
-        @request_retry(self.ID, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait)
         def helper(s=None, e=None):
             data = self._get("returnTradeHistory", {'currencyPair': symbol, 'start': s, 'end': e})
             data.reverse()
@@ -244,11 +244,11 @@ class Poloniex(RestAPI):
         if not price:
             raise ValueError('Poloniex only supports limit orders, must specify price')
         # Poloniex only supports limit orders, so check the order type
-        _ = normalize_trading_options(self.ID, order_type)
+        _ = normalize_trading_options(self.id, order_type)
         parameters = {}
         if options:
             parameters = {
-                normalize_trading_options(self.ID, o): 1 for o in options
+                normalize_trading_options(self.id, o): 1 for o in options
             }
         parameters['currencyPair'] = self.info.std_symbol_to_exchange_symbol(symbol)
         parameters['amount'] = str(amount)
