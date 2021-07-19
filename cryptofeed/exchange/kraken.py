@@ -99,6 +99,7 @@ class Kraken(Feed):
                 for d in self.valid_depths:
                     if d > max_depth:
                         max_depth = d
+                        break
 
             sub['depth'] = max_depth
         if normalize_channel(self.id, chan) == CANDLES:

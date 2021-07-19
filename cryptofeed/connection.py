@@ -120,16 +120,21 @@ class HTTPAsyncConn(AsyncConnection):
             await self._open()
 
         LOG.debug("%s: requesting data from %s", self.id, address)
-        async with self.conn.get(address, headers=header) as response:
-            data = await response.text()
-            self.last_message = time.time()
-            self.received += 1
-            if self.raw_data_callback:
-                await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None if return_headers is False else dict(response.headers))
-            response.raise_for_status()
-            if return_headers:
-                return data, response.headers
-            return data
+        while True:
+            async with self.conn.get(address, headers=header) as response:
+                data = await response.text()
+                self.last_message = time.time()
+                self.received += 1
+                if self.raw_data_callback:
+                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None if return_headers is False else dict(response.headers))
+                if response.status == 429:
+                    LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
+                    await asyncio.sleep(60)
+                    continue
+                response.raise_for_status()
+                if return_headers:
+                    return data, response.headers
+                return data
 
     async def write(self, address: str, msg: str, header=None):
         if not self.is_open:
@@ -167,6 +172,10 @@ class HTTPPoll(HTTPAsyncConn):
                     self.last_message = time.time()
                     if self.raw_data_callback:
                         await self.raw_data_callback(data, self.last_message, self.id, endpoint=addr)
+                    if response.status == 429:
+                        LOG.warning("%s: encountered a rate limit for address %s, retrying in %f seconds", self.id, addr, self.delay)
+                        await asyncio.sleep(self.delay)
+                        continue
                     response.raise_for_status()
                     yield data
                     await asyncio.sleep(self.sleep)
