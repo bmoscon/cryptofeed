@@ -99,7 +99,7 @@ class OKEx(Feed):
                                             leaves_quantity=None,
                                             price=Decimal(entry['bkPx']),
                                             order_id=None,
-                                            status='filled',
+                                            status=FILLED,
                                             timestamp=timestamp,
                                             receipt_timestamp=timestamp
                                             )
