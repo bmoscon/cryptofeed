@@ -235,7 +235,7 @@ class Feed:
         return cls.info()['symbols']
 
     @classmethod
-    def symbol_mapping(cls, symbol_separator='-', refresh=False) -> Dict:
+    def symbol_mapping(cls, refresh=False) -> Dict:
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
@@ -251,7 +251,7 @@ class Feed:
                         data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
             else:
                 data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
-            syms, info = cls._parse_symbol_data(data, symbol_separator)
+            syms, info = cls._parse_symbol_data(data)
             Symbols.set(cls.id, syms, info)
             return syms
         except Exception as e:

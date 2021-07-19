@@ -18,6 +18,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, feed_to_exchange
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -28,14 +29,14 @@ class Coinbase(Feed):
     symbol_endpoint = 'https://api.pro.coinbase.com/products'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for entry in data:
-            normalized = entry['id'].replace("-", symbol_separator)
-            ret[normalized] = entry['id']
-            info['tick_size'][normalized] = entry['quote_increment']
+            sym = Symbol(entry['base_currency'], entry['quote_currency'])
+            info['tick_size'][sym.normalized] = entry['quote_increment']
+            ret[entry['id']] = sym.normalized
         return ret, info
 
     def __init__(self, callbacks=None, **kwargs):

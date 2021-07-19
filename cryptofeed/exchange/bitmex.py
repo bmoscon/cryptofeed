@@ -32,7 +32,7 @@ class Bitmex(Feed):
     symbol_endpoint = "https://www.bitmex.com/api/v1/instrument/active"
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 

@@ -4,8 +4,11 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import hashlib
+import hmac
+import random
+import string
 from collections import defaultdict
-from cryptofeed.util.time import timedelta_str_to_sec
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple, Callable, List
@@ -18,12 +21,9 @@ from cryptofeed.defines import ACC_BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2
 from cryptofeed.feed import Feed
 from cryptofeed.standards import is_authenticated_channel, timestamp_normalize, normalize_channel
 from cryptofeed.exceptions import MissingSequenceNumber
+from cryptofeed.util.time import timedelta_str_to_sec
+from cryptofeed.symbols import Symbol
 
-# For auth
-import hashlib
-import hmac
-import random
-import string
 
 LOG = logging.getLogger('feedhandler')
 
@@ -34,7 +34,7 @@ class Bequant(Feed):
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '7d', '1M'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
         normalized_currencies = {
@@ -50,10 +50,9 @@ class Bequant(Feed):
 
             base_currency = normalized_currencies[symbol['baseCurrency']] if symbol['baseCurrency'] in normalized_currencies else symbol['baseCurrency']
             quote_currency = normalized_currencies[symbol['quoteCurrency']] if symbol['quoteCurrency'] in normalized_currencies else symbol['quoteCurrency']
-
-            normalized = f"{base_currency}{symbol_separator}{quote_currency}"
-            ret[normalized] = symbol['id']
-            info['tick_size'][normalized] = symbol['tickSize']
+            s = Symbol(base_currency, quote_currency)
+            ret[s.normalized] = symbol['id']
+            info['tick_size'][s.normalized] = symbol['tickSize']
         return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):

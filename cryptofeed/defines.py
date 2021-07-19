@@ -95,6 +95,7 @@ SUSPENDED = 'suspended'
 
 # Instrument Definitions
 
+CURRENCY = 'currency'
 FUTURES = 'futures'
 SWAP = 'swap'
 PERPETUAL = 'perpetual'
@@ -102,6 +103,7 @@ OPTION = 'option'
 SPOT = 'spot'
 CALL = 'call'
 PUT = 'put'
+FX = 'fx'
 
 
 # HTTP methods

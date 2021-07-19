@@ -13,9 +13,10 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, normalize_channel
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -29,7 +30,7 @@ class Binance(Feed):
     symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
         for symbol in data['symbols']:
@@ -37,12 +38,19 @@ class Binance(Feed):
                 continue
             if symbol.get('contractStatus', 'TRADING') != "TRADING":
                 continue
-            split = len(symbol['baseAsset'])
-            normalized = symbol['symbol'][:split] + symbol_separator + symbol['symbol'][split:]
-            ret[normalized] = symbol['symbol']
-            info['tick_size'][normalized] = symbol['filters'][0]['tickSize']
-            if "contractType" in symbol:
-                info['contract_type'][normalized] = symbol['contractType']
+            
+            expiration = None
+            stype = SPOT
+            if symbol.get('contractType') == 'PERPETUAL':
+                stype = PERPETUAL
+            elif symbol.get('contractType') in ('CURRENT_QUARTER', 'NEXT_QUARTER'):
+                stype = FUTURES
+                expiration = symbol['symbol'].split("_")[1]
+
+            s = Symbol(symbol['baseAsset'], symbol['quoteAsset'], type=stype, expiry_date=expiration)
+            ret[s.normalized] = symbol['symbol']
+            info['tick_size'][s.normalized] = symbol['filters'][0]['tickSize']
+            info['instrument_type'][s.normalized] = stype
         return ret, info
 
     def __init__(self, candle_interval='1m', candle_closed_only=False, **kwargs):
