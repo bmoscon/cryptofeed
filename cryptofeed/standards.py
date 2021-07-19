@@ -31,10 +31,12 @@ def timestamp_normalize(exchange, ts):
             return ts / 1000
         else:
             return ts.timestamp()
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX, BEQUANT}:
+        
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX, BEQUANT}:
         return ts.timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
+    elif exchange in {OKEX, HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
+
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1_000_000.0
@@ -68,7 +70,7 @@ _feed_to_exchange_map = {
         HUOBI_DM: 'depth.step0',
         HUOBI_SWAP: 'depth.step0',
         OKCOIN: 'spot/depth_l2_tbt',
-        OKEX: '{}/depth_l2_tbt',
+        OKEX: 'books-l2-tbt',
         DERIBIT: 'book',
         BYBIT: 'orderBookL2_25',
         FTX: 'orderbook',
@@ -137,7 +139,7 @@ _feed_to_exchange_map = {
         HUOBI_DM: 'trade.detail',
         HUOBI_SWAP: 'trade.detail',
         OKCOIN: 'spot/trade',
-        OKEX: '{}/trade',
+        OKEX: 'trades',
         DERIBIT: 'trades',
         BYBIT: 'trade',
         FTX: 'trades',
@@ -171,7 +173,7 @@ _feed_to_exchange_map = {
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
         OKCOIN: '{}/ticker',
-        OKEX: '{}/ticker',
+        OKEX: 'tickers',
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
         FTX: "ticker",
@@ -193,7 +195,7 @@ _feed_to_exchange_map = {
         BINANCE_DELIVERY: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
-        OKEX: '{}/funding_rate',
+        OKEX: 'funding-rate',
         FTX: 'funding',
         HUOBI_SWAP: 'funding'
     },
