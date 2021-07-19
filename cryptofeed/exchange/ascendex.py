@@ -13,7 +13,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, SPOT, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -38,6 +38,8 @@ class AscendEX(Feed):
                 s = Symbol(entry['baseAsset'], entry['quoteAsset'])
                 ret[s.normalized] = entry['symbol']
                 info['tick_size'][s.normalized] = entry['tickSize']
+                info['instrument_type'][s.normalized] = SPOT
+
         return ret, info
 
     def __init__(self, **kwargs):

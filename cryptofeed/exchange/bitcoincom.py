@@ -8,7 +8,7 @@ from collections import defaultdict
 import logging
 from typing import Dict, Tuple
 
-from cryptofeed.defines import BITCOINCOM
+from cryptofeed.defines import BITCOINCOM, SPOT
 from cryptofeed.exchanges import Bequant
 from cryptofeed.symbols import Symbol
 
@@ -33,6 +33,8 @@ class BitcoinCom(Bequant):
             s = Symbol(base_currency, quote_currency)
             ret[s.normalized] = symbol['id']
             info['tick_size'][s.normalized] = symbol['tickSize']
+            info['instrument_type'][s.normalized] = SPOT
+
         return ret, info
 
     def __init__(self, **kwargs):

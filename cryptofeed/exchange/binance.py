@@ -38,7 +38,7 @@ class Binance(Feed):
                 continue
             if symbol.get('contractStatus', 'TRADING') != "TRADING":
                 continue
-            
+
             expiration = None
             stype = SPOT
             if symbol.get('contractType') == 'PERPETUAL':

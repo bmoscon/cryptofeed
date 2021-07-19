@@ -17,7 +17,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import ACC_BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, ACC_TRANSACTIONS, MARKET, MAKER_OR_CANCEL
+from cryptofeed.defines import ACC_BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, SPOT, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, ACC_TRANSACTIONS, MARKET, MAKER_OR_CANCEL
 from cryptofeed.feed import Feed
 from cryptofeed.standards import is_authenticated_channel, timestamp_normalize, normalize_channel
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -53,6 +53,8 @@ class Bequant(Feed):
             s = Symbol(base_currency, quote_currency)
             ret[s.normalized] = symbol['id']
             info['tick_size'][s.normalized] = symbol['tickSize']
+            info['instrument_type'][s.normalized] = SPOT
+
         return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):

@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.symbols import Symbol
 from typing import Dict, Tuple
 from cryptofeed.connection import AsyncConnection
 import hashlib
@@ -18,7 +19,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, UNFILLED
+from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 
@@ -37,20 +38,17 @@ class Bitmex(Feed):
         info = defaultdict(dict)
 
         for entry in data:
-            components = []
-            components.append(entry['rootSymbol'])
-            components.append(entry['quoteCurrency'])
+            base = entry['rootSymbol'].replace("XBT", "BTC")
+            quote = entry['quoteCurrency'].replace("XBT", "BTC")
 
+            stype = PERPETUAL
             if entry['expiry']:
-                components.append(entry['symbol'][-3:])
+                stype = FUTURES
 
-            normalized = symbol_separator.join(components)
-            normalized = normalized.replace("XBT", "BTC")
-            ret[normalized] = entry['symbol']
-            info['tick_size'][normalized] = entry['tickSize']
-
-            if entry['expiry']:
-                info['expiry'][normalized] = entry['expiry']
+            s = Symbol(base, quote, type=stype, expiry_date=entry['expiry'])
+            ret[s.normalized] = entry['symbol']
+            info['tick_size'][s.normalized] = entry['tickSize']
+            info['instrument_type'][s.normalized] = stype
 
         return ret, info
 

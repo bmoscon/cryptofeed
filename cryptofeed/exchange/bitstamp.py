@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -13,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, SPOT, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import feed_to_exchange, timestamp_normalize
 
@@ -27,15 +28,20 @@ class Bitstamp(Feed):
     # API documentation: https://www.bitstamp.net/websocket/v2/
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
+        info = {'instrument_type': {}}
+
         for d in data:
             if d['trading'] != 'Enabled':
                 continue
-            normalized = d['name'].replace("/", symbol_separator)
+            base, quote = d['name'].split("/")
+            s = Symbol(base, quote)
             symbol = d['url_symbol']
-            ret[normalized] = symbol
-        return ret, {}
+            ret[s.normalized] = symbol
+            info['instrument_type'][s.normalized] = SPOT
+
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.bitstamp.net/', **kwargs)

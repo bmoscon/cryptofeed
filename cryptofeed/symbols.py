@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from datetime import datetime as dt
 from typing import Dict, Tuple
 
 from cryptofeed.defines import FUTURES, FX, OPTION, PERPETUAL, SPOT, CALL, PUT, SWAP, CURRENCY
@@ -41,7 +42,7 @@ class Symbol:
             if strike_price is None:
                 raise ValueError("Missing value for strike_price")
         if type in (FUTURES, OPTION) and expiry_date is None:
-            raise ValueError("Missing value for expiry_date")     
+            raise ValueError("Missing value for expiry_date")
 
         self.quote = quote
         self.base = base
@@ -59,13 +60,18 @@ class Symbol:
 
     @staticmethod
     def date_format(date):
+        if isinstance(date, dt):
+            year = str(date.year)[-2:]
+            month = Symbol.month_code(date.month)
+            day = date.day
+            return f"{year}{month}{day}"
         if len(date) == 6:
             year = date[:2]
             month = Symbol.month_code(date[2:4])
             day = date[4:]
             return f"{year}{month}{day}"
         if len(date) == 9:
-            year, month, day = date[-4:], date[2:5], date[:2]
+            year, month, day = date[-2:], date[2:5], date[:2]
             months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
             month = Symbol.month_code(months.index(month) + 1)
             return f"{year}{month}{day}"
