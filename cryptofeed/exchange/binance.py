@@ -104,14 +104,14 @@ class Binance(Feed):
     async def _trade(self, msg: dict, timestamp: float):
         """
         {
-            "e": "aggTrade",  // Event type
+            "e": "trade",     // Event type
             "E": 123456789,   // Event time
             "s": "BNBBTC",    // Symbol
-            "a": 12345,       // Aggregate trade ID
+            "t": 12345,       // Trade ID
             "p": "0.001",     // Price
             "q": "100",       // Quantity
-            "f": 100,         // First trade ID
-            "l": 105,         // Last trade ID
+            "b": 88,          // Buyer order ID
+            "a": 50,          // Seller order ID
             "T": 123456785,   // Trade time
             "m": true,        // Is the buyer the market maker?
             "M": true         // Ignore
@@ -120,13 +120,14 @@ class Binance(Feed):
         price = Decimal(msg['p'])
         amount = Decimal(msg['q'])
         await self.callback(TRADES, feed=self.id,
-                            order_id=msg['a'],
-                            first_trade_id=msg['f'],
-                            last_trade_id=msg['l'],
+                            trade_id=msg['t'],
+                            buyer_order_id=msg['b'],
+                            seller_order_id=msg['a'],
                             symbol=self.exchange_symbol_to_std_symbol(msg['s']),
                             side=SELL if msg['m'] else BUY,
                             amount=amount,
                             price=price,
+                            trade_time=timestamp_normalize(self.id, msg['T']),
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
