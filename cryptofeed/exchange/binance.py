@@ -121,6 +121,8 @@ class Binance(Feed):
         amount = Decimal(msg['q'])
         await self.callback(TRADES, feed=self.id,
                             order_id=msg['a'],
+                            first_trade_id=msg['f'],
+                            last_trade_id=msg['l'],
                             symbol=self.exchange_symbol_to_std_symbol(msg['s']),
                             side=SELL if msg['m'] else BUY,
                             amount=amount,
