@@ -358,7 +358,7 @@ class Binance(Feed):
         if 'e' in msg:
             if msg['e'] == 'depthUpdate':
                 await self._book(msg, pair, timestamp)
-            elif msg['e'] == 'aggTrade':
+            elif msg['e'] == 'trade':
                 await self._trade(msg, timestamp)
             elif msg['e'] == 'forceOrder':
                 await self._liquidations(msg, timestamp)
