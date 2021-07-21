@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 from collections import defaultdict
+from cryptofeed.symbols import Symbol
 
 from decimal import Decimal
 from itertools import islice
@@ -19,7 +20,7 @@ from yapic import json
 
 from cryptofeed.auth.okcoin import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
+from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, SPOT, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
@@ -34,13 +35,15 @@ class OKCoin(Feed):
     symbol_endpoint = 'https://www.okcoin.com/api/spot/v3/instruments'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
         for e in data:
-            ret[e['instrument_id']] = e['instrument_id']
-            info['tick_size'][e['instrument_id']] = e['tick_size']
-            info['instrument_type'][e['instrument_id']] = 'spot'
+
+            s = Symbol(e['base_currency'], e['quote_currency'])
+            ret[s.normalized] = e['instrument_id']
+            info['tick_size'][s.normalized] = e['tick_size']
+            info['instrument_type'][s.normalized] = SPOT
         return ret, info
 
     def __init__(self, **kwargs):

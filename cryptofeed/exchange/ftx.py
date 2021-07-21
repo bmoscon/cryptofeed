@@ -15,7 +15,6 @@ from time import time
 import zlib
 from typing import Dict, Iterable, Tuple
 
-import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
@@ -141,32 +140,27 @@ class FTX(Feed):
               }
             }
         """
-
-        rate_limiter = 1  # don't fetch too many pairs too fast
-        async with aiohttp.ClientSession() as session:
-            while True:
-                for pair in pairs:
-                    # OI only for perp and futures, so check for / in pair name indicating spot
-                    if '/' in pair:
-                        continue
-                    end_point = f"https://ftx.com/api/futures/{pair}/stats"
-                    async with session.get(end_point) as response:
-                        data = await response.text()
-                        data = json.loads(data, parse_float=Decimal)
-                        if 'result' in data:
-                            oi = data['result']['openInterest']
-                            if oi != self.open_interest.get(pair, None):
-                                await self.callback(OPEN_INTEREST,
-                                                    feed=self.id,
-                                                    symbol=pair,
-                                                    open_interest=oi,
-                                                    timestamp=time(),
-                                                    receipt_timestamp=time()
-                                                    )
-                                self.open_interest[pair] = oi
-                                await asyncio.sleep(rate_limiter)
-                wait_time = 60
-                await asyncio.sleep(wait_time)
+        while True:
+            for pair in pairs:
+                # OI only for perp and futures, so check for / in pair name indicating spot
+                if '/' in pair:
+                    continue
+                end_point = f"https://ftx.com/api/futures/{pair}/stats"
+                data = await self.http_conn.get(end_point)
+                data = json.loads(data, parse_float=Decimal)
+                if 'result' in data:
+                    oi = data['result']['openInterest']
+                    if oi != self.open_interest.get(pair, None):
+                        await self.callback(OPEN_INTEREST,
+                                            feed=self.id,
+                                            symbol=pair,
+                                            open_interest=oi,
+                                            timestamp=time(),
+                                            receipt_timestamp=time()
+                                            )
+                        self.open_interest[pair] = oi
+                        await asyncio.sleep(1)
+            await asyncio.sleep(60)
 
     async def _funding(self, pairs: Iterable):
         """
@@ -181,34 +175,28 @@ class FTX(Feed):
               ]
             }
         """
-        # do not send more than 30 requests per second: doing so will result in HTTP 429 errors
-        rate_limiter = 0.1
-        # funding rates do not change frequently
-        wait_time = 60
-        async with aiohttp.ClientSession() as session:
-            while True:
-                for pair in pairs:
-                    if '-PERP' not in pair:
-                        continue
-                    async with session.get(f"https://ftx.com/api/funding_rates?future={pair}") as response:
-                        data = await response.text()
-                        data = json.loads(data, parse_float=Decimal)
+        while True:
+            for pair in pairs:
+                if '-PERP' not in pair:
+                    continue
+                data = await self.http_conn.get(f"https://ftx.com/api/funding_rates?future={pair}")
+                data = json.loads(data, parse_float=Decimal)
 
-                        last_update = self.funding.get(pair, None)
-                        update = str(data['result'][0]['rate']) + str(data['result'][0]['time'])
-                        if last_update and last_update == update:
-                            continue
-                        else:
-                            self.funding[pair] = update
+                last_update = self.funding.get(pair, None)
+                update = str(data['result'][0]['rate']) + str(data['result'][0]['time'])
+                if last_update and last_update == update:
+                    continue
+                else:
+                    self.funding[pair] = update
 
-                        await self.callback(FUNDING, feed=self.id,
-                                            symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
-                                            rate=data['result'][0]['rate'],
-                                            timestamp=timestamp_normalize(self.id, data['result'][0]['time']),
-                                            receipt_timestamp=time()
-                                            )
-                    await asyncio.sleep(rate_limiter)
-                await asyncio.sleep(wait_time)
+                await self.callback(FUNDING, feed=self.id,
+                                    symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
+                                    rate=data['result'][0]['rate'],
+                                    timestamp=timestamp_normalize(self.id, data['result'][0]['time']),
+                                    receipt_timestamp=time()
+                                    )
+                await asyncio.sleep(0.1)
+            await asyncio.sleep(60)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

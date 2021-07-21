@@ -12,9 +12,10 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, SPOT, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,10 +26,18 @@ class Probit(Feed):
     symbol_endpoint = 'https://api.probit.com/api/exchange/v1/market'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = {'instrument_type': {}}
         # doc: https://docs-en.probit.com/reference-link/market
-        ret = {entry['id'].replace("-", symbol_separator): entry['id'] for entry in data['data'] if not entry['closed']}
-        return ret, {}
+        for entry in data['data']:
+            if entry['closed']:
+                continue
+            s = Symbol(entry['base_currency_id'], entry['quote_currency_id'])
+            ret[s.normalized] = entry['id']
+            info['instrument_type'][s.normalized] = SPOT
+        
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://api.probit.com/api/exchange/v1/ws', **kwargs)

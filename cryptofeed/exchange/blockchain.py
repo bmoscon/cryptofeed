@@ -12,10 +12,11 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, SPOT, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -27,7 +28,16 @@ class Blockchain(Feed):
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
-        return {data["symbol"].replace("-", symbol_separator): data["symbol"] for data in data if data['status'] == 'open'}, {}
+        info = {'instrument_type': {}}
+        ret = {}
+        for entry in data:
+            if data['status'] != 'open':
+                continue
+            base, quote = entry['symbol'].split("-")
+            s = Symbol(base, quote)
+            ret[s.normalized] = data['symbol']
+            info['instrument_type'][s.normalized] = SPOT
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__("wss://ws.prod.blockchain.info/mercury-gateway/v1/ws", origin="https://exchange.blockchain.com", **kwargs)

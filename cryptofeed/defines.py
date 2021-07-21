@@ -109,7 +109,6 @@ FX = 'fx'
 # HTTP methods
 GET = 'GET'
 DELETE = 'DELETE'
-PUT = 'PUT'
 POST = 'POST'
 
 

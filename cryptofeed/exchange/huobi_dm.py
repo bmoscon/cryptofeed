@@ -1,31 +1,11 @@
 '''
-Huobi_DM has 3 futures per currency (with USD as base): weekly, bi-weekly(the next week), quarterly and next quarter.
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
-You must subscribe to them with: CRY_TC
-where
-   CRY = BTC, ETC, etc.
-   TC is the time code mapping below:
-     mapping  = {
-         "this_week": "CW",   # current week
-         "next_week": "NW",   # next week
-         "quarter": "CQ",     # current quarter
-         "next_quarter": "NQ" # Next quarter
-
-     }
-
-So for example, to get the quarterly BTC future, you subscribe to "BTC_CQ", and it is returned to channel "market.BTC_CQ. ..."
-However since the actual contract changes over time, we want to publish the pair name using the actual expiry date, which
-is contained in the exchanges "contract_code".
-
-Here's what you get for BTC querying https://www.hbdm.com/api/v1/contract_contract_info on 2019 Aug 16:
-[{"symbol":"BTC","contract_code":"BTC190816","contract_type":"this_week","contract_size":100.000000000000000000,"price_tick":0.010000000000000000,"delivery_date":"20190816","create_date":"20190802","contract_status":1}
-,{"symbol":"BTC","contract_code":"BTC190823","contract_type":"next_week","contract_size":100.000000000000000000,"price_tick":0.010000000000000000,"delivery_date":"20190823","create_date":"20190809","contract_status":1}
-,{"symbol":"BTC","contract_code":"BTC190927","contract_type":"quarter","contract_size":100.000000000000000000,"price_tick":0.010000000000000000,"delivery_date":"20190927","create_date":"20190614","contract_status":1},
-...]
-So we return BTC190927 as the pair name for the BTC quarterly future.
-
+Please see the LICENSE file for the terms and conditions
+associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.symbols import Symbol
 import logging
 from typing import Dict, Tuple
 import zlib
@@ -35,7 +15,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, HUOBI_DM, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 
@@ -48,25 +28,18 @@ class HuobiDM(Feed):
     symbol_endpoint = 'https://www.hbdm.com/api/v1/contract_contract_info'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        """
-        Mapping is, for instance: {"BTC_CW":"BTC190816"}
-        See header comments in this file
-        """
-        mapping = {
-            "this_week": "CW",
-            "next_week": "NW",
-            "quarter": "CQ",
-            "next_quarter": "NQ"
-        }
-        symbols = {}
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        ret = {}
         info = defaultdict(dict)
 
         for e in data['data']:
-            symbols[f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
-            info['tick_size'][e['contract_code']] = e['price_tick']
-            info['short_code_mappings'][f"{e['symbol']}_{mapping[e['contract_type']]}"] = e['contract_code']
-        return symbols, info
+            # Pricing is all in USD, see https://huobiglobal.zendesk.com/hc/en-us/articles/360000113102-Introduction-of-Huobi-Futures
+            s = Symbol(e['symbol'], 'USD', type=FUTURES, expiry_date=e['contract_code'].replace(e['symbol'], ''))
+            
+            ret[s.normalized] = e['contract_code']
+            info['tick_size'][s.normalized] = e['price_tick']
+            info['instrument_type'][s.normalized] = FUTURES
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://www.hbdm.com/ws', **kwargs)

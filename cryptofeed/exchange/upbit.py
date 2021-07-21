@@ -1,3 +1,4 @@
+from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -7,7 +8,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, SPOT, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 
@@ -21,8 +22,15 @@ class Upbit(Feed):
     symbol_endpoint = 'https://api.upbit.com/v1/market/all'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        return {f"{data['market'].split('-')[1]}{symbol_separator}{data['market'].split('-')[0]}": data['market'] for data in data}, {}
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = {'instrument_type': {}}
+        for entry in data:
+            base, quote = entry['market'].split("-")
+            s = Symbol(base, quote)
+            ret[s.normalized] = entry['market']
+            info['instrument_type'][s.normalized] = SPOT
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://api.upbit.com/websocket/v1', **kwargs)

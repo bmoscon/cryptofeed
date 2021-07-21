@@ -60,6 +60,8 @@ class Symbol:
 
     @staticmethod
     def date_format(date):
+        if isinstance(date, (int, float)):
+            date = dt.fromtimestamp(date)
         if isinstance(date, dt):
             year = str(date.year)[-2:]
             month = Symbol.month_code(date.month)
@@ -79,6 +81,8 @@ class Symbol:
 
     @property
     def normalized(self) -> str:
+        if self.base == self.quote:
+            base = self.base
         base = f"{self.base}{self.symbol_sep}{self.quote}"
         if self.type == SPOT:
             return base
@@ -94,4 +98,4 @@ class Symbol:
             return base
         if self.type == FX:
             return f"{base}{self.symbol_sep}FX"
-        raise ValueError("Unsupported symbol type")
+        raise ValueError(f"Unsupported symbol type: {self.type}")

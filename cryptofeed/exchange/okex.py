@@ -15,16 +15,16 @@ from itertools import islice
 from typing import Dict, List, Tuple, Callable
 
 from sortedcontainers import SortedDict as sd
-
 from yapic import json
 
 from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO
+from cryptofeed.defines import CALL, FUTURES, OKEX, LIQUIDATIONS, BUY, OPTION, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, SWAP, TICKER, TRADES, ORDER_INFO, SPOT
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
 from cryptofeed.util import split
 from cryptofeed.exceptions import BadChecksum
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger("feedhandler")
@@ -39,25 +39,32 @@ class OKEx(Feed):
     symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
 
     @classmethod
-    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for entry in data:
             for e in entry['data']:
-                ret[e['instId'].replace("-", symbol_separator)] = e['instId']
-                info['tickSz'][e['instId']] = e['tickSz']
+                expiry = None
+                otype = None
+                stype = e['instType'].lower()
+                strike = None
 
-        for symbol in ret:
-            instrument_type = FUTURES
-            dash_count = symbol.count(symbol_separator)
-            if dash_count == 1:  # BTC-USDT
-                instrument_type = SPOT
-            if dash_count == 4:  # BTC-USD-201225-35000-P
-                instrument_type = OPTION
-            if symbol[-4:] == "SWAP":  # BTC-USDT-SWAP
-                instrument_type = SWAP
-            info['instrument_type'][symbol] = instrument_type
+                if stype == SPOT:
+                    base = e['baseCcy']
+                    quote = e['quoteCcy']
+                elif stype == FUTURES:
+                    base, quote, expiry = e['instId'].split("-")
+                elif stype == OPTION:
+                    base, quote, expiry, strike, otype = e['instId'].split("-")
+                    otype = PUT if otype == 'P' else CALL
+                elif stype == SWAP:
+                    base, quote, _ = e['instId'].split("-")
+                    print(base)
+                s = Symbol(base, quote, expiry_date=expiry, type=stype, option_type=otype, strike_price=strike)
+                ret[s.normalized] = e['instId']
+                info['tick_size'][s.normalized] = e['tickSz']
+                info['instrument_type'][s.normalized] = stype
 
         return ret, info
 

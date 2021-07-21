@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.symbols import Symbol
 from decimal import Decimal
 from functools import partial
 import logging
@@ -14,7 +15,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, SPOT, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import normalize_channel
@@ -31,21 +32,23 @@ class Kraken(Feed):
     symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
+        info = {'instrument_type': {}}
+
         for symbol in data['result']:
             if 'wsname' not in data['result'][symbol] or '.d' in symbol:
                 # https://blog.kraken.com/post/259/introducing-the-kraken-dark-pool/
                 # .d is for dark pool symbols
                 continue
 
-            base, quote = data['result'][symbol]['wsname'].split("/")
+            sym = data['result'][symbol]['wsname']
+            sym = sym.replace('XBT', 'BTC').replace('XDG', 'DOGE')
+            base, quote = sym.split("/")
+            s = Symbol(base, quote)
 
-            normalized = f"{base}{symbol_separator}{quote}"
-            exch = data['result'][symbol]['wsname']
-            normalized = normalized.replace('XBT', 'BTC')
-            normalized = normalized.replace('XDG', 'DOG')
-            ret[normalized] = exch
+            ret[s.normalized] = data['result'][symbol]['wsname']
+            info['instrument_type'][s.normalized] = SPOT
         return ret, {}
 
     def __init__(self, candle_interval='1m', max_depth=1000, **kwargs):
