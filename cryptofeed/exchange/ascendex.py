@@ -38,7 +38,7 @@ class AscendEX(Feed):
                 s = Symbol(entry['baseAsset'], entry['quoteAsset'])
                 ret[s.normalized] = entry['symbol']
                 info['tick_size'][s.normalized] = entry['tickSize']
-                info['instrument_type'][s.normalized] = SPOT
+                info['instrument_type'][s.normalized] = s.type
 
         return ret, info
 
