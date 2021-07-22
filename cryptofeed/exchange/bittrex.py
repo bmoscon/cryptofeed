@@ -34,7 +34,7 @@ class Bittrex(Feed):
                 continue
             s = Symbol(e['baseCurrencySymbol'], e['quoteCurrencySymbol'])
             ret[s.normalized] = e['symbol']
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, depth=500, candle_interval='1m', **kwargs):

@@ -74,7 +74,7 @@ class Bithumb(Feed):
                     continue
                 s = Symbol(base_curr, quote_curr)
                 ret[s.normalized] = f"{base_curr}_{quote_curr}"
-                info['instrument_type'][s.normalized] = SPOT
+                info['instrument_type'][s.normalized] = s.type
 
         return ret, {}
 

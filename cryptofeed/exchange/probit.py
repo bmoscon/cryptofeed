@@ -35,7 +35,7 @@ class Probit(Feed):
                 continue
             s = Symbol(entry['base_currency_id'], entry['quote_currency_id'])
             ret[s.normalized] = entry['id']
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
 
         return ret, info
 

@@ -67,7 +67,7 @@ class HuobiDM(Feed):
             'ch':'market.BTC_CW.depth.step0'
         }
         """
-        pair = self.std_symbol_to_exchange_symbol(msg['ch'].split('.')[1])
+        pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
         data = msg['tick']
         forced = pair not in self.l2_book
 
@@ -106,7 +106,7 @@ class HuobiDM(Feed):
         for trade in msg['tick']['data']:
             await self.callback(TRADES,
                                 feed=self.id,
-                                symbol=self.std_symbol_to_exchange_symbol(msg['ch'].split('.')[1]),
+                                symbol=self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
                                 order_id=trade['id'],
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
@@ -144,7 +144,6 @@ class HuobiDM(Feed):
                 continue
             for pair in self.subscription[chan]:
                 client_id += 1
-                pair = self.exchange_symbol_to_std_symbol(pair)
                 await conn.write(json.dumps(
                     {
                         "sub": f"market.{pair}.{chan}",

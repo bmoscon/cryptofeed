@@ -36,7 +36,7 @@ class Poloniex(Feed):
             quote, base = std.split("_")
             s = Symbol(base, quote)
             ret[s.normalized] = symbol
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, **kwargs):

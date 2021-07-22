@@ -40,7 +40,7 @@ class Huobi(Feed):
             s = Symbol(base, quote)
 
             ret[s.normalized] = e['symbol']
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):

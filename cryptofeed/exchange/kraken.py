@@ -48,7 +48,7 @@ class Kraken(Feed):
             s = Symbol(base, quote)
 
             ret[s.normalized] = data['result'][symbol]['wsname']
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
         return ret, {}
 
     def __init__(self, candle_interval='1m', max_depth=1000, **kwargs):

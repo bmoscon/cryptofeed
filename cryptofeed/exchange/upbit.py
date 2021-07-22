@@ -1,4 +1,3 @@
-from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -11,6 +10,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, SPOT, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -26,10 +26,10 @@ class Upbit(Feed):
         ret = {}
         info = {'instrument_type': {}}
         for entry in data:
-            base, quote = entry['market'].split("-")
+            quote, base = entry['market'].split("-")
             s = Symbol(base, quote)
             ret[s.normalized] = entry['market']
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, **kwargs):

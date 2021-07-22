@@ -39,7 +39,7 @@ class Bitstamp(Feed):
             s = Symbol(base, quote)
             symbol = d['url_symbol']
             ret[s.normalized] = symbol
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
 
         return ret, info
 

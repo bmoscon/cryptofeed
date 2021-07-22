@@ -31,12 +31,12 @@ class Blockchain(Feed):
         info = {'instrument_type': {}}
         ret = {}
         for entry in data:
-            if data['status'] != 'open':
+            if entry['status'] != 'open':
                 continue
             base, quote = entry['symbol'].split("-")
             s = Symbol(base, quote)
-            ret[s.normalized] = data['symbol']
-            info['instrument_type'][s.normalized] = SPOT
+            ret[s.normalized] = entry['symbol']
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, **kwargs):

@@ -53,7 +53,7 @@ class Bequant(Feed):
             s = Symbol(base_currency, quote_currency)
             ret[s.normalized] = symbol['id']
             info['tick_size'][s.normalized] = symbol['tickSize']
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
 
         return ret, info
 

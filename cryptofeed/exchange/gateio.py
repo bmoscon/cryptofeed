@@ -34,7 +34,7 @@ class Gateio(Feed):
         info = {'instrument_type': {}}
 
         for entry in data:
-            if data["trade_status"] != "tradable":
+            if entry["trade_status"] != "tradable":
                 continue
             s = Symbol(entry['base'], entry['quote'])
             ret[s.normalized] = entry['id']

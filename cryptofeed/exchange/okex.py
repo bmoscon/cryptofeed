@@ -60,7 +60,7 @@ class OKEx(Feed):
                     otype = PUT if otype == 'P' else CALL
                 elif stype == SWAP:
                     base, quote, _ = e['instId'].split("-")
-                    print(base)
+
                 s = Symbol(base, quote, expiry_date=expiry, type=stype, option_type=otype, strike_price=strike)
                 ret[s.normalized] = e['instId']
                 info['tick_size'][s.normalized] = e['tickSz']
@@ -168,8 +168,9 @@ class OKEx(Feed):
                     continue
                 for symbol in self.subscription[chan]:
                     d = {}
-                    instrument_type = self.instrument_type(symbol)
-                    if instrument_type != 'swap' and 'funding' in chan:
+                    sym = self.exchange_symbol_to_std_symbol(symbol)
+                    instrument_type = self.instrument_type(sym)
+                    if instrument_type != SWAP and 'funding' in chan:
                         continue  # No funding for spot, futures and options
                     d.update({"channel": chan, "instId": symbol})
                     combos.append(d)

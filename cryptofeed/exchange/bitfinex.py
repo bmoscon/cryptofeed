@@ -70,7 +70,7 @@ class Bitfinex(Feed):
 
             s = Symbol(base, quote)
             ret[s.normalized] = "t" + p
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):

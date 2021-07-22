@@ -43,7 +43,7 @@ class OKCoin(Feed):
             s = Symbol(e['base_currency'], e['quote_currency'])
             ret[s.normalized] = e['instrument_id']
             info['tick_size'][s.normalized] = e['tick_size']
-            info['instrument_type'][s.normalized] = SPOT
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, **kwargs):

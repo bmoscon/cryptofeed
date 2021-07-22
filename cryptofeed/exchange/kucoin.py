@@ -38,6 +38,7 @@ class KuCoin(Feed):
             s = Symbol(symbol['baseCurrency'], symbol['quoteCurrency'])
             info['tick_size'][s.normalized] = symbol['priceIncrement']
             ret[s.normalized] = symbol['symbol']
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):
