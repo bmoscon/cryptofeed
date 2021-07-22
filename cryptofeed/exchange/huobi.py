@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.symbols import Symbol
 from cryptofeed.util.time import timedelta_str_to_sec
 import logging
 from typing import Dict, Tuple
@@ -28,15 +29,19 @@ class Huobi(Feed):
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
+        info = {'instrument_type': {}}
+
         for e in data['data']:
             if e['state'] == 'offline':
                 continue
-            normalized = f"{e['base-currency'].upper()}{symbol_separator}{e['quote-currency'].upper()}"
-            symbol = f"{e['base-currency']}{e['quote-currency']}"
-            ret[normalized] = symbol
-        return ret, {}
+            base, quote = e['base-currency'].upper(), e['quote-currency'].upper()
+            s = Symbol(base, quote)
+
+            ret[s.normalized] = e['symbol']
+            info['instrument_type'][s.normalized] = s.type
+        return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):
         super().__init__('wss://api.huobi.pro/ws', **kwargs)

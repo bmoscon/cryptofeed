@@ -41,7 +41,7 @@ class Bitmex(API):
 
     def _generate_signature(self, verb: str, url: str, data='') -> dict:
         """
-        verb: GET/POST/PUT
+        verb: GET/POST
         url: api endpoint
         data: body (if present)
         """

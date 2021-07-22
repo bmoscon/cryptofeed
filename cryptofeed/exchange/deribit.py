@@ -7,10 +7,11 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, FILLED
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -21,16 +22,24 @@ class Deribit(Feed):
     symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC&expired=false', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH&expired=false']
 
     @classmethod
-    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for entry in data:
             for e in entry['result']:
-                split = e['instrument_name'].split("-")
-                normalized = split[0] + symbol_separator + e['quote_currency'] + "-" + '-'.join(split[1:])
-                ret[normalized] = e['instrument_name']
-                info['tick_size'][normalized] = e['tick_size']
+                base = e['base_currency']
+                quote = e['quote_currency']
+                stype = e['kind'] if e['settlement_period'] != 'perpetual' else PERPETUAL
+                otype = e.get('option_type')
+                strike_price = e.get('strike')
+                strike_price = int(strike_price) if strike_price else None
+                expiry = e['expiration_timestamp'] / 1000
+                s = Symbol(base, quote, type=FUTURES if stype == 'future' else stype, option_type=otype, strike_price=strike_price, expiry_date=expiry)
+
+                ret[s.normalized] = e['instrument_name']
+                info['tick_size'][s.normalized] = e['tick_size']
+                info['instrument_type'][s.normalized] = stype
         return ret, info
 
     def __init__(self, **kwargs):

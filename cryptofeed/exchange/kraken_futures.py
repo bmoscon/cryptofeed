@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -13,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -27,7 +28,7 @@ class KrakenFutures(Feed):
     symbol_endpoint = 'https://futures.kraken.com/derivatives/api/v3/instruments'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         _kraken_futures_product_type = {
             'FI': 'Inverse Futures',
             'FV': 'Vanilla Futures',
@@ -43,16 +44,23 @@ class KrakenFutures(Feed):
         for entry in data:
             if not entry['tradeable']:
                 continue
-            normalized = entry['symbol'].upper().replace("_", "-")
-            symbol = normalized[3:6] + symbol_separator + normalized[6:9]
-            normalized = normalized.replace(normalized[3:9], symbol)
-            normalized = normalized.replace('XBT', 'BTC')
+            ftype, symbol = entry['symbol'].upper().split("_", maxsplit=1)
+            stype = PERPETUAL
+            expiry = None
+            if "_" in symbol:
+                stype = FUTURES
+                symbol, expiry = symbol.split("_")
+            symbol = symbol.replace('XBT', 'BTC')
+            base, quote = symbol[:3], symbol[3:]
 
-            info['tick_size'][normalized] = entry['tickSize']
-            info['contract_size'][normalized] = entry['contractSize']
-            info['underlying'][normalized] = entry['underlying']
-            info['product_type'][normalized] = _kraken_futures_product_type[normalized[:2]]
-            ret[normalized] = entry['symbol']
+            s = Symbol(base, quote, type=stype, expiry_date=expiry)
+
+            info['tick_size'][s.normalized] = entry['tickSize']
+            info['contract_size'][s.normalized] = entry['contractSize']
+            info['underlying'][s.normalized] = entry['underlying']
+            info['product_type'][s.normalized] = _kraken_futures_product_type[ftype]
+            info['instrument_type'][s.normalized] = stype
+            ret[s.normalized] = entry['symbol']
         return ret, info
 
     def __init__(self, **kwargs):

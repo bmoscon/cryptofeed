@@ -10,6 +10,7 @@ from typing import Dict, Tuple
 
 from cryptofeed.defines import BITCOINCOM
 from cryptofeed.exchanges import Bequant
+from cryptofeed.symbols import Symbol
 
 LOG = logging.getLogger('feedhandler')
 
@@ -19,7 +20,7 @@ class BitcoinCom(Bequant):
     symbol_endpoint = 'https://api.exchange.bitcoin.com/api/2/public/symbol'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
         normalized_currencies = {
@@ -29,9 +30,11 @@ class BitcoinCom(Bequant):
         for symbol in data:
             base_currency = normalized_currencies[symbol['baseCurrency']] if symbol['baseCurrency'] in normalized_currencies else symbol['baseCurrency']
             quote_currency = normalized_currencies[symbol['quoteCurrency']] if symbol['quoteCurrency'] in normalized_currencies else symbol['quoteCurrency']
-            normalized = f"{base_currency}{symbol_separator}{quote_currency}"
-            ret[normalized] = symbol['id']
-            info['tick_size'][normalized] = symbol['tickSize']
+            s = Symbol(base_currency, quote_currency)
+            ret[s.normalized] = symbol['id']
+            info['tick_size'][s.normalized] = symbol['tickSize']
+            info['instrument_type'][s.normalized] = s.type
+
         return ret, info
 
     def __init__(self, **kwargs):

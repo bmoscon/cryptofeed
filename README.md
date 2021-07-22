@@ -46,10 +46,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
 
-## Supported aggregated crypto data providers
-
-* [Coingecko](https://www.coingecko.com/en)
-
 
 ## Basic Usage
 
@@ -117,11 +113,6 @@ Cryptofeed supports the following channels from exchanges:
 * LIQUIDATIONS
 * FUTURES_INDEX
 * CANDLES - Candlestick / K-Line data.
-
-Aggregated data from provider is available in channel:
-
-* MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
- as well as community data (twitter, reddit, facebook...) and scores (coingecko, developer, community...)
 
 ### Authenticated Data Channels
 

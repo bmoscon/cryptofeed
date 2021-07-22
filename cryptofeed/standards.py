@@ -13,11 +13,11 @@ import logging
 import datetime as dt
 
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
-                                BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
+                                BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
-from cryptofeed.defines import (ACC_BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
+from cryptofeed.defines import (ACC_BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
                                 TICKER, TRADES, ORDER_INFO)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -31,8 +31,8 @@ def timestamp_normalize(exchange, ts):
             return ts / 1000
         else:
             return ts.timestamp()
-        
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX, BEQUANT}:
+
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, FTX, FTX_US, BITCOINCOM, PROBIT, BITTREX, DYDX, BEQUANT}:
         return ts.timestamp()
     elif exchange in {OKEX, HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
@@ -216,9 +216,6 @@ _feed_to_exchange_map = {
         FTX: 'trades',
         DERIBIT: 'trades',
         OKEX: LIQUIDATIONS,
-    },
-    MARKET_INFO: {
-        COINGECKO: MARKET_INFO
     },
     FUTURES_INDEX: {
         BYBIT: 'instrument_info.100ms'

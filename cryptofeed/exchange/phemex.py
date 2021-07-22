@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.symbols import Symbol
 from functools import partial
 import logging
 from decimal import Decimal
@@ -29,21 +30,23 @@ class Phemex(Feed):
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for entry in data['data']['products']:
             if entry['status'] != 'Listed':
                 continue
-            normalized = entry['displaySymbol'].replace(" / ", symbol_separator)
-            ret[normalized] = entry['symbol']
-            info['tick_size'][normalized] = entry['tickSize'] if 'tickSize' in entry else entry['quoteTickSize']
-            info['instrument_type'][normalized] = entry['type'].lower()
+            stype = entry['type'].lower()
+            base, quote = entry['displaySymbol'].split(" / ")
+            s = Symbol(base, quote, type=stype)
+            ret[s.normalized] = entry['symbol']
+            info['tick_size'][s.normalized] = entry['tickSize'] if 'tickSize' in entry else entry['quoteTickSize']
+            info['instrument_type'][s.normalized] = stype
             # the price scale for spot symbols is not reported via the API but it is documented
             # here in the API docs: https://github.com/phemex/phemex-api-docs/blob/master/Public-Spot-API-en.md#spot-currency-and-symbols
             # the default value for spot is 10^8
-            cls.price_scale[normalized] = 10 ** entry.get('priceScale', 8)
+            cls.price_scale[s.normalized] = 10 ** entry.get('priceScale', 8)
         return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):

@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.symbols import Symbol
 from cryptofeed.standards import normalize_channel
 from cryptofeed.connection import AsyncConnection
 from decimal import Decimal
@@ -28,15 +29,16 @@ class KuCoin(Feed):
     valid_candle_intervals = {'1m', '3m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
-        info = {'tick_size': {}}
+        info = {'tick_size': {}, 'instrument_type': {}}
         for symbol in data['data']:
             if not symbol['enableTrading']:
                 continue
-            sym = symbol['symbol']
-            info['tick_size'][sym] = symbol['priceIncrement']
-            ret[sym] = sym
+            s = Symbol(symbol['baseCurrency'], symbol['quoteCurrency'])
+            info['tick_size'][s.normalized] = symbol['priceIncrement']
+            ret[s.normalized] = symbol['symbol']
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):

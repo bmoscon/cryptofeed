@@ -14,10 +14,11 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BITFINEX, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -44,26 +45,33 @@ class Bitfinex(Feed):
     symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
 
     @classmethod
-    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
         # https://docs.bitfinex.com/docs/ws-general#supported-pairs
         ret = {}
+        info = {'instrument_type': {}}
+
         pairs = data[0][0]
         currencies = data[1][0]
         for c in currencies:
-            norm = c.replace('BCHN', 'BCH')  # Bitfinex uses BCHN, other exchanges use BCH
-            norm = c.replace('UST', 'USDT')
-            ret[norm] = "f" + c
+            c = c.replace('BCHN', 'BCH')  # Bitfinex uses BCHN, other exchanges use BCH
+            c = c.replace('UST', 'USDT')
+            s = Symbol(c, c, type=CURRENCY)
+            ret[s.normalized] = "f" + c
+            info['instrument_type'][s.normalized] = CURRENCY
 
         for p in pairs:
             norm = p.replace('BCHN', 'BCH')
             norm = p.replace('UST', 'USDT')
-            if ':' in norm:
-                norm = norm.replace(":", symbol_separator)
-            else:
-                norm = norm[:3] + symbol_separator + norm[3:]
-            ret[norm] = "t" + p
 
-        return ret, {}
+            if ':' in norm:
+                base, quote = norm.split(":")
+            else:
+                base, quote = norm[:3], norm[3:]
+
+            s = Symbol(base, quote)
+            ret[s.normalized] = "t" + p
+            info['instrument_type'][s.normalized] = s.type
+        return ret, info
 
     def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):
         super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, subscription=subscription, **kwargs)

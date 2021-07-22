@@ -13,7 +13,7 @@ import copy
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.symbols import Symbols
+from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITHUMB, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
@@ -46,7 +46,7 @@ class Bithumb(Feed):
     # To qeury the ticker endpoint, you need to know which quote currency you want. So far, seems like the exhcnage
     # only offers KRW and BTC as quote currencies.
     @classmethod
-    def symbol_mapping(cls, symbol_separator='-', refresh=False) -> Dict:
+    def symbol_mapping(cls, refresh=False) -> Dict:
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
@@ -55,7 +55,7 @@ class Bithumb(Feed):
             for ep, quote_curr in cls.symbol_endpoint:
                 data[quote_curr] = cls.http_sync.read(ep, json=True, uuid=cls.id)
 
-            syms, info = cls._parse_symbol_data(data, symbol_separator)
+            syms, info = cls._parse_symbol_data(data)
             Symbols.set(cls.id, syms, info)
             return syms
         except Exception as e:
@@ -63,17 +63,20 @@ class Bithumb(Feed):
             raise
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
+        info = {'instrument_type': {}}
 
         for quote_curr, response in data.items():
             bases = response['data']
             for base_curr in bases.keys():
                 if base_curr == 'date':
                     continue
-                ret["{}-{}".format(base_curr, quote_curr)] = "{}_{}".format(base_curr, quote_curr)
+                s = Symbol(base_curr, quote_curr)
+                ret[s.normalized] = f"{base_curr}_{quote_curr}"
+                info['instrument_type'][s.normalized] = s.type
 
-        return ret, {}
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__("wss://pubwss.bithumb.com/pub/ws", cross_check=True, **kwargs)

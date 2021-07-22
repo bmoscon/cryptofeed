@@ -15,17 +15,17 @@ from time import time
 import zlib
 from typing import Dict, Iterable, Tuple
 
-import aiohttp
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import BID, ASK, BUY, FUTURES, ORDER_INFO, PERPETUAL, SPOT, USER_FILLS
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import is_authenticated_channel, normalize_channel, timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -36,16 +36,46 @@ class FTX(Feed):
     symbol_endpoint = "https://ftx.com/api/markets"
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for d in data['result']:
-            normalized = d['name'].replace("/", symbol_separator)
-            symbol = d['name']
-            ret[normalized] = symbol
-            info['tick_size'][normalized] = d['priceIncrement']
-            info['quantity_step'][normalized] = d['sizeIncrement']
+            if not d['enabled']:
+                continue
+            expiry = None
+            stype = SPOT
+            # FTX Futures contracts are stable coin settled, but
+            # prices quoted are in USD, see https://help.ftx.com/hc/en-us/articles/360024780791-What-Are-Futures
+            if "-MOVE-" in d['name']:
+                stype = FUTURES
+                base, expiry = d['name'].rsplit("-", maxsplit=1)
+                quote = 'USD'
+                if 'Q' in expiry:
+                    year, quarter = expiry.split("Q")
+                    year = year[2:]
+                    date = ["0325", "0624", "0924", "1231"]
+                    expiry = year + date[int(quarter) - 1]
+            elif "-" in d['name']:
+                base, expiry = d['name'].split("-")
+                quote = 'USD'
+                stype = FUTURES
+                if expiry == 'PERP':
+                    expiry = None
+                    stype = PERPETUAL
+            elif d['type'] == SPOT:
+                base, quote = d['baseCurrency'], d['quoteCurrency']
+            else:
+                # not enough info to construct a symbol - this is usually caused
+                # by non crypto futures, i.e. TRUMP2024 or other contracts involving
+                # betting on world events
+                continue
+
+            s = Symbol(base, quote, type=stype, expiry_date=expiry)
+            ret[s.normalized] = d['name']
+            info['tick_size'][s.normalized] = d['priceIncrement']
+            info['quantity_step'][s.normalized] = d['sizeIncrement']
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, subaccount=None, **kwargs):
@@ -141,32 +171,27 @@ class FTX(Feed):
               }
             }
         """
-
-        rate_limiter = 1  # don't fetch too many pairs too fast
-        async with aiohttp.ClientSession() as session:
-            while True:
-                for pair in pairs:
-                    # OI only for perp and futures, so check for / in pair name indicating spot
-                    if '/' in pair:
-                        continue
-                    end_point = f"https://ftx.com/api/futures/{pair}/stats"
-                    async with session.get(end_point) as response:
-                        data = await response.text()
-                        data = json.loads(data, parse_float=Decimal)
-                        if 'result' in data:
-                            oi = data['result']['openInterest']
-                            if oi != self.open_interest.get(pair, None):
-                                await self.callback(OPEN_INTEREST,
-                                                    feed=self.id,
-                                                    symbol=pair,
-                                                    open_interest=oi,
-                                                    timestamp=time(),
-                                                    receipt_timestamp=time()
-                                                    )
-                                self.open_interest[pair] = oi
-                                await asyncio.sleep(rate_limiter)
-                wait_time = 60
-                await asyncio.sleep(wait_time)
+        while True:
+            for pair in pairs:
+                # OI only for perp and futures, so check for / in pair name indicating spot
+                if '/' in pair:
+                    continue
+                end_point = f"https://ftx.com/api/futures/{pair}/stats"
+                data = await self.http_conn.get(end_point)
+                data = json.loads(data, parse_float=Decimal)
+                if 'result' in data:
+                    oi = data['result']['openInterest']
+                    if oi != self.open_interest.get(pair, None):
+                        await self.callback(OPEN_INTEREST,
+                                            feed=self.id,
+                                            symbol=pair,
+                                            open_interest=oi,
+                                            timestamp=time(),
+                                            receipt_timestamp=time()
+                                            )
+                        self.open_interest[pair] = oi
+                        await asyncio.sleep(1)
+            await asyncio.sleep(60)
 
     async def _funding(self, pairs: Iterable):
         """
@@ -181,34 +206,28 @@ class FTX(Feed):
               ]
             }
         """
-        # do not send more than 30 requests per second: doing so will result in HTTP 429 errors
-        rate_limiter = 0.1
-        # funding rates do not change frequently
-        wait_time = 60
-        async with aiohttp.ClientSession() as session:
-            while True:
-                for pair in pairs:
-                    if '-PERP' not in pair:
-                        continue
-                    async with session.get(f"https://ftx.com/api/funding_rates?future={pair}") as response:
-                        data = await response.text()
-                        data = json.loads(data, parse_float=Decimal)
+        while True:
+            for pair in pairs:
+                if '-PERP' not in pair:
+                    continue
+                data = await self.http_conn.get(f"https://ftx.com/api/funding_rates?future={pair}")
+                data = json.loads(data, parse_float=Decimal)
 
-                        last_update = self.funding.get(pair, None)
-                        update = str(data['result'][0]['rate']) + str(data['result'][0]['time'])
-                        if last_update and last_update == update:
-                            continue
-                        else:
-                            self.funding[pair] = update
+                last_update = self.funding.get(pair, None)
+                update = str(data['result'][0]['rate']) + str(data['result'][0]['time'])
+                if last_update and last_update == update:
+                    continue
+                else:
+                    self.funding[pair] = update
 
-                        await self.callback(FUNDING, feed=self.id,
-                                            symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
-                                            rate=data['result'][0]['rate'],
-                                            timestamp=timestamp_normalize(self.id, data['result'][0]['time']),
-                                            receipt_timestamp=time()
-                                            )
-                    await asyncio.sleep(rate_limiter)
-                await asyncio.sleep(wait_time)
+                await self.callback(FUNDING, feed=self.id,
+                                    symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
+                                    rate=data['result'][0]['rate'],
+                                    timestamp=timestamp_normalize(self.id, data['result'][0]['time']),
+                                    receipt_timestamp=time()
+                                    )
+                await asyncio.sleep(0.1)
+            await asyncio.sleep(60)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

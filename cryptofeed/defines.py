@@ -46,8 +46,6 @@ PROBIT = 'PROBIT'
 BITCOINCOM = 'BITCOINCOM'
 UPBIT = 'UPBIT'
 
-COINGECKO = 'COINGECKO'
-
 
 # Market Data
 L2_BOOK = 'l2_book'
@@ -60,7 +58,6 @@ OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
-MARKET_INFO = 'market_info'
 CANDLES = 'candles'
 
 # Account Data / Authenticated Channels
@@ -95,6 +92,7 @@ SUSPENDED = 'suspended'
 
 # Instrument Definitions
 
+CURRENCY = 'currency'
 FUTURES = 'futures'
 SWAP = 'swap'
 PERPETUAL = 'perpetual'
@@ -102,12 +100,12 @@ OPTION = 'option'
 SPOT = 'spot'
 CALL = 'call'
 PUT = 'put'
+FX = 'fx'
 
 
 # HTTP methods
 GET = 'GET'
 DELETE = 'DELETE'
-PUT = 'PUT'
 POST = 'POST'
 
 

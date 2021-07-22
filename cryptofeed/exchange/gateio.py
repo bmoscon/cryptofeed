@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.symbols import Symbol
 from cryptofeed.standards import normalize_channel
 import logging
 from decimal import Decimal
@@ -28,8 +29,17 @@ class Gateio(Feed):
     valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d', '1w'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        return {data["id"].replace("_", symbol_separator): data['id'] for data in data if data["trade_status"] == "tradable"}, {}
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = {'instrument_type': {}}
+
+        for entry in data:
+            if entry["trade_status"] != "tradable":
+                continue
+            s = Symbol(entry['base'], entry['quote'])
+            ret[s.normalized] = entry['id']
+            info['instrument_type'][s.normalized] = s.type
+        return ret, info
 
     def __init__(self, candle_interval='1m', **kwargs):
         super().__init__('wss://api.gateio.ws/ws/v4/', **kwargs)
