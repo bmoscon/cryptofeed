@@ -9,7 +9,7 @@ def test_rest_bitmex():
     ret = []
     end = pd.Timestamp.now()
     start = end - pd.Timedelta(minutes=2)
-    for data in r.bitmex.trades('BTC-USD', start=start, end=end):
+    for data in r.bitmex.trades('BTC-USD-PERP', start=start, end=end):
         ret.extend(data)
 
     assert len(ret) > 0
@@ -35,20 +35,20 @@ def test_rest_bitfinex():
 def test_rest_deribit():
     r = Rest()
     ret = []
-    for data in r.deribit.trades('BTC-USD-PERPETUAL'):
+    for data in r.deribit.trades('BTC-USD-PERP'):
         ret.extend(data)
     assert len(ret) > 1
 
 
 def test_rest_ftx():
     expected = {'timestamp': 1607691600.0,
-                'symbol': 'BTC-PERP',
+                'symbol': 'BTC-USD-PERP',
                 'feed': 'FTX',
                 'rate': 1.9e-05}
 
     r = Rest()
     ret = []
-    data = r.ftx.funding('BTC-PERP', start_date='2020-12-10 12:59:10', end_date='2020-12-11 13:01:33')
+    data = r.ftx.funding('BTC-USD-PERP', start_date='2020-12-10 12:59:10', end_date='2020-12-11 13:01:33')
     ret.extend(data)
 
     try:

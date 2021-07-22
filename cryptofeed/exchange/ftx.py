@@ -45,10 +45,12 @@ class FTX(Feed):
                 continue
             expiry = None
             stype = SPOT
+            # FTX Futures contracts are stable coin settled, but
+            # prices quoted are in USD, see https://help.ftx.com/hc/en-us/articles/360024780791-What-Are-Futures
             if "-MOVE-" in d['name']:
                 stype = FUTURES
                 base, expiry = d['name'].rsplit("-", maxsplit=1)
-                quote = base
+                quote = 'USD'
                 if 'Q' in expiry:
                     year, quarter = expiry.split("Q")
                     year = year[2:]
@@ -56,7 +58,7 @@ class FTX(Feed):
                     expiry = year + date[int(quarter) - 1]
             elif "-" in d['name']:
                 base, expiry = d['name'].split("-")
-                quote = base
+                quote = 'USD'
                 stype = FUTURES
                 if expiry == 'PERP':
                     expiry = None
