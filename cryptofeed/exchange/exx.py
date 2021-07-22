@@ -4,6 +4,7 @@ Copyright (C) 2019  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -26,10 +27,17 @@ class EXX(Feed):
     symbol_endpoint = "https://api.exx.com/data/v1/tickers"
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        ret = {}
+        info = {'instrument_type': {}}
+
         exchange = [key.upper() for key in data.keys()]
-        symbols = [key.replace("_", symbol_separator) for key in exchange]
-        return dict(zip(symbols, exchange)), {}
+        for sym in exchange:
+            b, q = sym.split("_")
+            s = Symbol(b, q)
+            ret[s.normalized] = sym
+            info['instrument_type'][s.normalized] = s.type
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.exx.com/websocket', **kwargs)

@@ -9,7 +9,7 @@ import glob
 
 import pytest
 
-from cryptofeed.defines import ASCENDEX, BEQUANT, BITHUMB, CANDLES, BINANCE, BINANCE_DELIVERY, BITCOINCOM, BITFINEX, DYDX, EXX, BINANCE_FUTURES, BINANCE_US, BITFLYER, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, COINBASE, COINGECKO, DERIBIT, FTX_US, FTX, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, OPEN_INTEREST, PHEMEX, POLONIEX, PROBIT, TICKER, TRADES, L2_BOOK, BYBIT, UPBIT
+from cryptofeed.defines import ASCENDEX, BEQUANT, BITHUMB, CANDLES, BINANCE, BINANCE_DELIVERY, BITCOINCOM, BITFINEX, DYDX, EXX, BINANCE_FUTURES, BINANCE_US, BITFLYER, BITMEX, BITSTAMP, BITTREX, BLOCKCHAIN, COINBASE, DERIBIT, FTX_US, FTX, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP, KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, OPEN_INTEREST, PHEMEX, POLONIEX, PROBIT, TICKER, TRADES, L2_BOOK, BYBIT, UPBIT
 from cryptofeed.exchanges import EXCHANGE_MAP
 from cryptofeed.raw_data_collection import playback
 from cryptofeed.symbols import Symbols
@@ -73,7 +73,7 @@ def get_message_count(filenames: str):
     return counter
 
 
-@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [COINGECKO, EXX]])
+@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
 def test_exchange_playback(exchange):
     Symbols.clear()
     dir = os.path.dirname(os.path.realpath(__file__))

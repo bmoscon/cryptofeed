@@ -35,7 +35,7 @@ class HuobiDM(Feed):
         for e in data['data']:
             # Pricing is all in USD, see https://huobiglobal.zendesk.com/hc/en-us/articles/360000113102-Introduction-of-Huobi-Futures
             s = Symbol(e['symbol'], 'USD', type=FUTURES, expiry_date=e['contract_code'].replace(e['symbol'], ''))
-            
+
             ret[s.normalized] = e['contract_code']
             info['tick_size'][s.normalized] = e['price_tick']
             info['instrument_type'][s.normalized] = FUTURES

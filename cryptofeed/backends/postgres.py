@@ -12,8 +12,8 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendQueue, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendFuturesIndexCallback, BackendMarketInfoCallback)
-from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX, MARKET_INFO
+                                         BackendLiquidationsCallback, BackendFuturesIndexCallback)
+from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX
 
 
 class PostgresCallback(BackendQueue):
@@ -150,10 +150,6 @@ class BookPostgres(PostgresCallback, BackendBookCallback):
 
 class BookDeltaPostgres(PostgresCallback, BackendBookDeltaCallback):
     default_table = 'book'
-
-
-class MarketInfoPostgres(PostgresCallback, BackendMarketInfoCallback):
-    default_table = MARKET_INFO
 
 
 class CandlesPostgres(PostgresCallback, BackendCandlesCallback):

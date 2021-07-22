@@ -36,7 +36,7 @@ class Probit(Feed):
             s = Symbol(entry['base_currency_id'], entry['quote_currency_id'])
             ret[s.normalized] = entry['id']
             info['instrument_type'][s.normalized] = SPOT
-        
+
         return ret, info
 
     def __init__(self, **kwargs):

@@ -19,12 +19,13 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import BID, ASK, BUY, FUTURES, ORDER_INFO, PERPETUAL, SPOT, USER_FILLS
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import is_authenticated_channel, normalize_channel, timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -35,16 +36,44 @@ class FTX(Feed):
     symbol_endpoint = "https://ftx.com/api/markets"
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for d in data['result']:
-            normalized = d['name'].replace("/", symbol_separator)
-            symbol = d['name']
-            ret[normalized] = symbol
-            info['tick_size'][normalized] = d['priceIncrement']
-            info['quantity_step'][normalized] = d['sizeIncrement']
+            if not d['enabled']:
+                continue
+            expiry = None
+            stype = SPOT
+            if "-MOVE-" in d['name']:
+                stype = FUTURES
+                base, expiry = d['name'].rsplit("-", maxsplit=1)
+                quote = base
+                if 'Q' in expiry:
+                    year, quarter = expiry.split("Q")
+                    year = year[2:]
+                    date = ["0325", "0624", "0924", "1231"]
+                    expiry = year + date[int(quarter) - 1]
+            elif "-" in d['name']:
+                base, expiry = d['name'].split("-")
+                quote = base
+                stype = FUTURES
+                if expiry == 'PERP':
+                    expiry = None
+                    stype = PERPETUAL
+            elif d['type'] == SPOT:
+                base, quote = d['baseCurrency'], d['quoteCurrency']
+            else:
+                # not enough info to construct a symbol - this is usually caused
+                # by non crypto futures, i.e. TRUMP2024 or other contracts involving
+                # betting on world events
+                continue
+
+            s = Symbol(base, quote, type=stype, expiry_date=expiry)
+            ret[s.normalized] = d['name']
+            info['tick_size'][s.normalized] = d['priceIncrement']
+            info['quantity_step'][s.normalized] = d['sizeIncrement']
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, subaccount=None, **kwargs):

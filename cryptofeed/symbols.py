@@ -63,27 +63,34 @@ class Symbol:
         if isinstance(date, (int, float)):
             date = dt.fromtimestamp(date)
         if isinstance(date, dt):
-            year = str(date.year)[-2:]
+            year = str(date.year)[2:]
             month = Symbol.month_code(date.month)
             day = date.day
             return f"{year}{month}{day}"
+
+        if len(date) == 4:
+            year = str(dt.now().year)[2:]
+            date = year + date
         if len(date) == 6:
             year = date[:2]
             month = Symbol.month_code(date[2:4])
             day = date[4:]
             return f"{year}{month}{day}"
+
         if len(date) == 9:
             year, month, day = date[-2:], date[2:5], date[:2]
             months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
             month = Symbol.month_code(months.index(month) + 1)
             return f"{year}{month}{day}"
-        return date
+
+        raise ValueError(f"Unable to parse expiration date: {date}")
 
     @property
     def normalized(self) -> str:
         if self.base == self.quote:
             base = self.base
-        base = f"{self.base}{self.symbol_sep}{self.quote}"
+        else:
+            base = f"{self.base}{self.symbol_sep}{self.quote}"
         if self.type == SPOT:
             return base
         if self.type == OPTION:

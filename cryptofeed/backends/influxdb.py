@@ -10,7 +10,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
+                                         BackendLiquidationsCallback)
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
 
@@ -119,10 +119,6 @@ class OpenInterestInflux(InfluxCallback, BackendOpenInterestCallback):
 
 class LiquidationsInflux(InfluxCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
-
-
-class MarketInfoInflux(InfluxCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
 
 
 class CandlesInflux(InfluxCallback, BackendCandlesCallback):
