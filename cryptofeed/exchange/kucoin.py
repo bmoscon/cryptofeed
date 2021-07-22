@@ -15,7 +15,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.auth.kucoin import generate_token
-from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES, BOOK_DELTA
 from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
 
@@ -176,6 +176,20 @@ class KuCoin(Feed):
             'type': 'message'
         }
         """
+
+        if(self.do_deltas):
+            await self.callback(
+                BOOK_DELTA,
+                feed=self.id,
+                symbol=symbol,
+                bids=msg['data']['changes']['bids'],
+                asks=msg['data']['changes']['asks'],
+                first_update_id=msg['data']['sequenceStart'],
+                final_update_id=msg['data']['sequenceEnd'],
+                timestamp=timestamp,
+                receipt_timestamp=timestamp)
+            return
+            
         forced = False
         data = msg['data']
         sequence = data['sequenceStart']

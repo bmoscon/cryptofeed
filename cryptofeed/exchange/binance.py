@@ -13,7 +13,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED, UNFILLED, BOOK_DELTA
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, normalize_channel
 
@@ -254,6 +254,19 @@ class Binance(Feed):
         """
         exchange_pair = pair
         pair = self.exchange_symbol_to_std_symbol(pair)
+
+        if(self.do_deltas):
+            await self.callback(
+                BOOK_DELTA,
+                feed=self.id,
+                symbol=pair,
+                bids=msg['b'],
+                asks=msg['a'],
+                first_update_id=msg['U'],
+                final_update_id=msg['u'],
+                timestamp=timestamp_normalize(self.id, msg['E']),
+                receipt_timestamp=timestamp)
+            return
 
         if pair not in self.l2_book:
             await self._snapshot(exchange_pair)
