@@ -36,7 +36,8 @@ class Coinbase(Feed):
         for entry in data:
             sym = Symbol(entry['base_currency'], entry['quote_currency'])
             info['tick_size'][sym.normalized] = entry['quote_increment']
-            ret[entry['id']] = sym.normalized
+            info['instrument_type'][sym.normalized] = sym.type
+            ret[sym.normalized] = entry['id']
         return ret, info
 
     def __init__(self, callbacks=None, **kwargs):

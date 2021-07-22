@@ -76,7 +76,7 @@ class Bithumb(Feed):
                 ret[s.normalized] = f"{base_curr}_{quote_curr}"
                 info['instrument_type'][s.normalized] = s.type
 
-        return ret, {}
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__("wss://pubwss.bithumb.com/pub/ws", cross_check=True, **kwargs)
