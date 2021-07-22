@@ -328,7 +328,7 @@ class FTX(Feed):
                             amount=Decimal(fill['size']),
                             price=Decimal(fill['price']),
                             liquidity=fill['liquidity'],
-                            order_id=fill['id'],
+                            order_id=fill['orderId'],
                             trade_id=fill['tradeId'],
                             timestamp=float(timestamp_normalize(self.id, fill['time'])),
                             receipt_timestamp=timestamp)
