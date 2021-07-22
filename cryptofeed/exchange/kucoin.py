@@ -141,6 +141,8 @@ class KuCoin(Feed):
                             price=Decimal(msg['data']['price']),
                             timestamp=float(msg['data']['time']) / 1000000000,
                             receipt_timestamp=timestamp,
+                            taker_order_id=msg['data']['takerOrderId'],
+                            buyer_order_id=msg['data']['makerOrderId'],
                             order_id=msg['data']['tradeId'])
 
     async def _snapshot(self, symbol: str):
