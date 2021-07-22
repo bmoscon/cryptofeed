@@ -54,7 +54,7 @@ class OKCoin(Feed):
                 continue
             for symbol in self.subscription[chan]:
                 instrument_type = self.instrument_type(symbol)
-                if instrument_type == 'spot':
+                if instrument_type == SPOT:
                     raise ValueError("LIQUIDATIONS only supports futures and swap trading pairs")
 
         self.open_interest = {}

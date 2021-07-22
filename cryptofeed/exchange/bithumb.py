@@ -15,7 +15,7 @@ from yapic import json
 
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, BITHUMB, L2_BOOK, SELL, SPOT, TRADES
+from cryptofeed.defines import BID, ASK, BUY, BITHUMB, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 

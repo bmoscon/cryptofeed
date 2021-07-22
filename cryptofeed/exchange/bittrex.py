@@ -10,7 +10,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, SPOT, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import normalize_channel, timestamp_normalize
 from cryptofeed.symbols import Symbol

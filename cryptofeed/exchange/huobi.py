@@ -15,7 +15,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, CANDLES, HUOBI, L2_BOOK, SELL, SPOT, TRADES
+from cryptofeed.defines import BID, ASK, BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import normalize_channel, timestamp_normalize
 

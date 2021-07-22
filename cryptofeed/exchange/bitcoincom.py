@@ -8,7 +8,7 @@ from collections import defaultdict
 import logging
 from typing import Dict, Tuple
 
-from cryptofeed.defines import BITCOINCOM, SPOT
+from cryptofeed.defines import BITCOINCOM
 from cryptofeed.exchanges import Bequant
 from cryptofeed.symbols import Symbol
 
