@@ -5,6 +5,7 @@
   * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
   * Update: Support Okex v5
   * Breaking Change: Update symbol standardization. Now uses standard names across all exchanges for futures, swaps, and options.
+  * Bugfix: Use order id in FTX fill channel callback
 
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
