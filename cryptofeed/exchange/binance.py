@@ -24,10 +24,11 @@ LOG = logging.getLogger('feedhandler')
 
 class Binance(Feed):
     id = BINANCE
+    symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
-    symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
+    valid_depth_intervals = {'100ms', '1000ms'}
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -53,14 +54,23 @@ class Binance(Feed):
             info['instrument_type'][s.normalized] = stype
         return ret, info
 
-    def __init__(self, candle_interval='1m', candle_closed_only=False, **kwargs):
+    def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', **kwargs):
+        """
+        candle_interval: time between candles updates ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
+        candle_closed_only: return only closed candles, i.e. no updates in between intervals.
+        depth_interval: time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
+        """
+        if candle_interval not in self.valid_candle_intervals:
+            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
+        if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
+            raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
+
         super().__init__({}, **kwargs)
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
+        self.depth_interval = depth_interval
         self.address = self._address()
         self._reset()
 
@@ -85,6 +95,8 @@ class Binance(Feed):
             stream = chan
             if normalized_chan == CANDLES:
                 stream = f"{chan}{self.candle_interval}"
+            elif normalized_chan == L2_BOOK:
+                stream = f"{chan}@{self.depth_interval}"
 
             for pair in self.subscription[chan]:
                 # for everything but premium index the symbols need to be lowercase.
