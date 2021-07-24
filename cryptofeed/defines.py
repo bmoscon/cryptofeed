@@ -94,7 +94,6 @@ SUSPENDED = 'suspended'
 
 CURRENCY = 'currency'
 FUTURES = 'futures'
-SWAP = 'swap'
 PERPETUAL = 'perpetual'
 OPTION = 'option'
 SPOT = 'spot'

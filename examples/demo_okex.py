@@ -36,12 +36,12 @@ def main():
     fh = FeedHandler()
     # Add swaps. Futures and swaps could be added together in one feed, but its clearer to
     # add them as separate feeds.
-    # EOS-USD-SWAP is from the swap exchange, BTC-USDT is from spot exchage, BTC-USD-210129-10000-C is from options
-    fh.add_feed(OKEx(symbols=['EOS-USD-SWAP', 'BTC-USDT', "BTC-USD-210129-10000-C"], channels=[L2_BOOK, TICKER, TRADES], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker}))
+    # EOS-USD-PERP is from the swap exchange, BTC-USDT is from spot exchage, BTC-USD-210129-10000-C is from options
+    fh.add_feed(OKEx(symbols=['EOS-USD-PERP', 'BTC-USDT', "BTC-USD-210129-10000-C"], channels=[L2_BOOK, TICKER, TRADES], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker}))
 
     # Open Interest, Liquidations, and Funding Rates
     # funding is low volume, so set timeout to -1
-    fh.add_feed(OKEx(symbols=['EOS-USD-SWAP'], channels=[FUNDING, LIQUIDATIONS], callbacks={FUNDING: funding, LIQUIDATIONS: liquidation}, timeout=-1))
+    fh.add_feed(OKEx(symbols=['EOS-USD-PERP'], channels=[FUNDING, LIQUIDATIONS], callbacks={FUNDING: funding, LIQUIDATIONS: liquidation}, timeout=-1))
 
     fh.run()
 
