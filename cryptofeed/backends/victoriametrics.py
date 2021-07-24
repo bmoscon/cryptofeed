@@ -8,7 +8,7 @@ import logging
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
+                                         BackendLiquidationsCallback)
 from cryptofeed.backends.socket import SocketCallback
 from cryptofeed.defines import BID, ASK
 from typing import Optional
@@ -129,10 +129,6 @@ class OpenInterestVictoriaMetrics(VictoriaMetricsCallback, BackendOpenInterestCa
 
 class LiquidationsVictoriaMetrics(VictoriaMetricsCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
-
-
-class MarketInfoVictoriaMetrics(VictoriaMetricsCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
 
 
 class CandlesVictoriaMetrics(VictoriaMetricsCallback, BackendCandlesCallback):

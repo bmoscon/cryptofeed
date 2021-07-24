@@ -17,6 +17,7 @@ from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -27,16 +28,18 @@ class AscendEX(Feed):
     symbol_endpoint = 'https://ascendex.com/api/pro/v1/products'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for entry in data['data']:
             # Only "Normal" status symbols are tradeable
             if entry['status'] == 'Normal':
-                normalized = f"{entry['baseAsset']}{symbol_separator}{entry['quoteAsset']}"
-                ret[normalized] = entry['symbol']
-                info['tick_size'][normalized] = entry['tickSize']
+                s = Symbol(entry['baseAsset'], entry['quoteAsset'])
+                ret[s.normalized] = entry['symbol']
+                info['tick_size'][s.normalized] = entry['tickSize']
+                info['instrument_type'][s.normalized] = s.type
+
         return ret, info
 
     def __init__(self, **kwargs):

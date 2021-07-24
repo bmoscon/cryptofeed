@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from functools import partial
@@ -14,7 +15,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUTURES, L2_BOOK, SELL, SPOT, TRADES, OPEN_INTEREST, FUTURES_INDEX
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 
@@ -27,18 +28,25 @@ class Bybit(Feed):
     symbol_endpoint = 'https://api.bybit.com/v2/public/symbols'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
         for symbol in data['result']:
+            base = symbol['base_currency']
             quote = symbol['quote_currency']
+
+            stype = SPOT
+            expiry = None
             if not symbol['name'].endswith(quote):
-                base, contract = symbol['name'].split(quote)
-                normalized = f"{base}{symbol_separator}{quote}-{contract}"
-            else:
-                normalized = f"{symbol['base_currency']}{symbol_separator}{quote}"
-            ret[normalized] = symbol['name']
-            info['tick_size'][normalized] = symbol['price_filter']['tick_size']
+                stype = FUTURES
+                year = symbol['name'].replace(base + quote, '')[-2:]
+                expiry = year + symbol['alias'].replace(base + quote, '')[-4:]
+
+            s = Symbol(base, quote, type=stype, expiry_date=expiry)
+
+            ret[s.normalized] = symbol['name']
+            info['tick_size'][s.normalized] = symbol['price_filter']['tick_size']
+            info['instrument_type'][s.normalized] = stype
         return ret, info
 
     def __init__(self, **kwargs):

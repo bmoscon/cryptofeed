@@ -1,6 +1,5 @@
 import asyncio
 import base64
-from cryptofeed.exceptions import MissingSequenceNumber
 import logging
 from typing import Dict, Tuple
 import zlib
@@ -14,6 +13,8 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import normalize_channel, timestamp_normalize
+from cryptofeed.symbols import Symbol
+from cryptofeed.exceptions import MissingSequenceNumber
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,8 +26,16 @@ class Bittrex(Feed):
     valid_candle_intervals = {'1m', '5m', '1h', '1d'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        return {f"{e['baseCurrencySymbol']}{symbol_separator}{e['quoteCurrencySymbol']}": e['symbol'] for e in data if e['status'] == 'ONLINE'}, {}
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        info = {'instrument_type': {}}
+        ret = {}
+        for e in data:
+            if e['status'] != 'ONLINE':
+                continue
+            s = Symbol(e['baseCurrencySymbol'], e['quoteCurrencySymbol'])
+            ret[s.normalized] = e['symbol']
+            info['instrument_type'][s.normalized] = s.type
+        return ret, info
 
     def __init__(self, depth=500, candle_interval='1m', **kwargs):
         super().__init__('wss://socket-v3.bittrex.com/signalr/connect', **kwargs)

@@ -39,7 +39,6 @@ from cryptofeed.exchange.okex import OKEx
 from cryptofeed.exchange.poloniex import Poloniex
 from cryptofeed.exchange.probit import Probit
 from cryptofeed.exchange.upbit import Upbit
-from cryptofeed.provider.coingecko import Coingecko
 
 # Maps string name to class name for use with config
 EXCHANGE_MAP = {
@@ -59,7 +58,6 @@ EXCHANGE_MAP = {
     BLOCKCHAIN: Blockchain,
     BYBIT: Bybit,
     COINBASE: Coinbase,
-    COINGECKO: Coingecko,
     DERIBIT: Deribit,
     DYDX: dYdX,
     EXX_str: EXX,

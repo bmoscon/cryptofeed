@@ -100,6 +100,7 @@ class FTX(RestAPI):
             yield data
 
     def funding(self, symbol: str, start_date=None, end_date=None, retry=None, retry_wait=10):
+        sym = self.info.std_symbol_to_exchange_symbol(symbol)
         start = None
         end = None
 
@@ -118,9 +119,9 @@ class FTX(RestAPI):
         @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
-                return requests.get(f"{self.api}/funding_rates?future={symbol}&start_time={start}&end_time={end}")
+                return requests.get(f"{self.api}/funding_rates?future={sym}&start_time={start}&end_time={end}")
             else:
-                return requests.get(f"{self.api}/funding_rates?symbol={symbol}")
+                return requests.get(f"{self.api}/funding_rates?symbol={sym}")
 
         while True:
             r = helper(start, end)
@@ -256,7 +257,7 @@ class FTX(RestAPI):
     def _funding_normalization(self, funding: dict, symbol: str) -> dict:
         return {
             'timestamp': self._timestamp(funding['time']).timestamp(),
-            'symbol': funding['future'],
+            'symbol': self.info.exchange_symbol_to_std_symbol(funding['future']),
             'feed': self.id,
             'rate': funding['rate']
         }

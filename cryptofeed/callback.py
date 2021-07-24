@@ -99,10 +99,6 @@ class FuturesIndexCallback(Callback):
     pass
 
 
-class MarketInfoCallback(Callback):
-    pass
-
-
 class OrderInfoCallback(Callback):
     pass
 

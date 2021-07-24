@@ -13,9 +13,10 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, normalize_channel
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,13 +24,14 @@ LOG = logging.getLogger('feedhandler')
 
 class Binance(Feed):
     id = BINANCE
+    symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
-    symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
+    valid_depth_intervals = {'100ms', '1000ms'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
         for symbol in data['symbols']:
@@ -37,22 +39,38 @@ class Binance(Feed):
                 continue
             if symbol.get('contractStatus', 'TRADING') != "TRADING":
                 continue
-            split = len(symbol['baseAsset'])
-            normalized = symbol['symbol'][:split] + symbol_separator + symbol['symbol'][split:]
-            ret[normalized] = symbol['symbol']
-            info['tick_size'][normalized] = symbol['filters'][0]['tickSize']
-            if "contractType" in symbol:
-                info['contract_type'][normalized] = symbol['contractType']
+
+            expiration = None
+            stype = SPOT
+            if symbol.get('contractType') == 'PERPETUAL':
+                stype = PERPETUAL
+            elif symbol.get('contractType') in ('CURRENT_QUARTER', 'NEXT_QUARTER'):
+                stype = FUTURES
+                expiration = symbol['symbol'].split("_")[1]
+
+            s = Symbol(symbol['baseAsset'], symbol['quoteAsset'], type=stype, expiry_date=expiration)
+            ret[s.normalized] = symbol['symbol']
+            info['tick_size'][s.normalized] = symbol['filters'][0]['tickSize']
+            info['instrument_type'][s.normalized] = stype
         return ret, info
 
-    def __init__(self, candle_interval='1m', candle_closed_only=False, **kwargs):
+    def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', **kwargs):
+        """
+        candle_interval: time between candles updates ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
+        candle_closed_only: return only closed candles, i.e. no updates in between intervals.
+        depth_interval: time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
+        """
+        if candle_interval not in self.valid_candle_intervals:
+            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
+        if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
+            raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
+
         super().__init__({}, **kwargs)
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
+        self.depth_interval = depth_interval
         self.address = self._address()
         self._reset()
 
@@ -77,6 +95,8 @@ class Binance(Feed):
             stream = chan
             if normalized_chan == CANDLES:
                 stream = f"{chan}{self.candle_interval}"
+            elif normalized_chan == L2_BOOK:
+                stream = f"{chan}@{self.depth_interval}"
 
             for pair in self.subscription[chan]:
                 # for everything but premium index the symbols need to be lowercase.

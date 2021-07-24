@@ -59,7 +59,7 @@ def main():
                        callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
                                   LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
-    f.add_feed(OKEx(symbols=['BTC-USD-SWAP', 'ETH-USD-SWAP'], channels=[LIQUIDATIONS, OPEN_INTEREST],
+    f.add_feed(OKEx(symbols=['BTC-USD-PERP', 'ETH-USD-PERP'], channels=[LIQUIDATIONS, OPEN_INTEREST],
                     callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
                                LIQUIDATIONS: LiquidationCallback(liquidations)}))
 

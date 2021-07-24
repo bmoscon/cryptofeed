@@ -10,13 +10,13 @@ import logging
 import os
 from typing import Dict, Tuple, Callable, Union, List
 
-from cryptofeed.symbols import Symbols
+from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, MARKET_INFO, ORDER_INFO, TICKER, TRADES, ACC_TRANSACTIONS, USER_FILLS, ACC_BALANCES)
+                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, ACC_TRANSACTIONS, USER_FILLS, ACC_BALANCES)
 from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
 from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
@@ -43,6 +43,8 @@ class Feed:
             Time, in seconds, between timeout checks.
         retries: int
             Number of times to retry a failed connection. Set to -1 for infinite
+        symbols: list of str, Symbol
+            A list of instrument symbols. Symbols must be of type str or Symbol
         max_depth: int
             Maximum number of levels per side to return in book updates
         book_interval: int
@@ -154,7 +156,6 @@ class Feed:
                           L3_BOOK: Callback(None),
                           LIQUIDATIONS: Callback(None),
                           OPEN_INTEREST: Callback(None),
-                          MARKET_INFO: Callback(None),
                           TICKER: Callback(None),
                           TRADES: Callback(None),
                           CANDLES: Callback(None),
@@ -220,7 +221,7 @@ class Feed:
         data = Symbols.get(cls.id)[1]
         data['symbols'] = list(symbols.keys())
         data['channels'] = []
-        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, MARKET_INFO, TICKER, TRADES, CANDLES, USER_FILLS, ORDER_INFO, ACC_TRANSACTIONS, ACC_BALANCES):
+        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, CANDLES, USER_FILLS, ORDER_INFO, ACC_TRANSACTIONS, ACC_BALANCES):
             try:
                 feed_to_exchange(cls.id, channel, silent=True)
                 data['channels'].append(channel)
@@ -236,7 +237,7 @@ class Feed:
         return cls.info()['symbols']
 
     @classmethod
-    def symbol_mapping(cls, symbol_separator='-', refresh=False) -> Dict:
+    def symbol_mapping(cls, refresh=False) -> Dict:
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
@@ -252,7 +253,8 @@ class Feed:
                         data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
             else:
                 data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
-            syms, info = cls._parse_symbol_data(data, symbol_separator)
+
+            syms, info = cls._parse_symbol_data(data)
             Symbols.set(cls.id, syms, info)
             return syms
         except Exception as e:
@@ -389,7 +391,9 @@ class Feed:
         except KeyError:
             raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
-    def std_symbol_to_exchange_symbol(self, symbol: str) -> str:
+    def std_symbol_to_exchange_symbol(self, symbol: Union[str, Symbol]) -> str:
+        if isinstance(symbol, Symbol):
+            symbol = symbol.normalized
         try:
             return self.normalized_symbol_mapping[symbol]
         except KeyError:

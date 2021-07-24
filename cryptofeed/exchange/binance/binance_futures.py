@@ -21,17 +21,18 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceFutures(Binance):
     id = BINANCE_FUTURES
-    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
+    valid_depth_intervals = {'100ms', '250ms', '500ms'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        base, info = super()._parse_symbol_data(data, symbol_separator)
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        base, info = super()._parse_symbol_data(data)
         add = {}
         for symbol, orig in base.items():
             if "_" in orig:
                 continue
-            add[f"{symbol}{symbol_separator}PINDEX"] = f"p{orig}"
+            add[f"{symbol.replace('PERP', 'PINDEX')}"] = f"p{orig}"
         base.update(add)
         return base, info
 

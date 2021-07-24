@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -26,16 +27,17 @@ class dYdX(Feed):
     symbol_endpoint = 'https://api.dydx.exchange/v3/markets'
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for symbol, entry in data['markets'].items():
             if entry['status'] != 'ONLINE':
                 continue
-            normalized = symbol.replace("-", symbol_separator)
-            ret[normalized] = symbol
-            info['tick_size'][normalized] = entry['tickSize']
+            s = Symbol(entry['baseAsset'], entry['quoteAsset'])
+            ret[s.normalized] = symbol
+            info['tick_size'][s.normalized] = entry['tickSize']
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, **kwargs):

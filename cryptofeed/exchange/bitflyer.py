@@ -13,9 +13,10 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, BITFLYER, TICKER, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, BITFLYER, FUTURES, TICKER, L2_BOOK, SELL, TRADES, FX
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -26,14 +27,25 @@ class Bitflyer(Feed):
     symbol_endpoint = endpoints = ['https://api.bitflyer.com/v1/getmarkets/eu', 'https://api.bitflyer.com/v1/getmarkets/usa', 'https://api.bitflyer.com/v1/getmarkets']
 
     @classmethod
-    def _parse_symbol_data(cls, data: list, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
         for entry in data:
             for datum in entry:
-                normalized = datum['product_code'].replace("_", symbol_separator)
-                ret[normalized] = datum['product_code']
-                info['instrument_type'][normalized] = datum['market_type'].lower()
+                stype = datum['market_type'].lower()
+                expiration = None
+
+                if stype == FUTURES:
+                    base, quote = datum['product_code'][:3], datum['product_code'][3:6]
+                    expiration = datum['product_code'][6:]
+                elif stype == FX:
+                    _, base, quote = datum['product_code'].split("_")
+                else:
+                    base, quote = datum['product_code'].split("_")
+
+                s = Symbol(base, quote, type=stype, expiry_date=expiration)
+                ret[s.normalized] = datum['product_code']
+                info['instrument_type'][s.normalized] = stype
         return ret, info
 
     def __init__(self, **kwargs):

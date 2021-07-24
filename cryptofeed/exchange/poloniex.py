@@ -15,6 +15,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -26,15 +27,17 @@ class Poloniex(Feed):
     _channel_map = {}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
+        info = {'instrument_type': {}}
         for symbol in data:
             cls._channel_map[data[symbol]['id']] = symbol
             std = symbol.replace("STR", "XLM")
             quote, base = std.split("_")
-            std = f"{base}{symbol_separator}{quote}"
-            ret[std] = symbol
-        return ret, {}
+            s = Symbol(base, quote)
+            ret[s.normalized] = symbol
+            info['instrument_type'][s.normalized] = s.type
+        return ret, info
 
     def __init__(self, **kwargs):
         super().__init__('wss://api2.poloniex.com', **kwargs)

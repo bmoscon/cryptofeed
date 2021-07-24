@@ -13,11 +13,11 @@ import logging
 import datetime as dt
 
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
-                                BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE, COINGECKO,
+                                BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
-from cryptofeed.defines import (ACC_BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, MARKET_INFO,
+from cryptofeed.defines import (ACC_BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
                                 TICKER, TRADES, ORDER_INFO)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -31,10 +31,12 @@ def timestamp_normalize(exchange, ts):
             return ts / 1000
         else:
             return ts.timestamp()
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, OKEX, FTX, FTX_US, BITCOINCOM, PROBIT, COINGECKO, BITTREX, DYDX, BEQUANT}:
+
+    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, FTX, FTX_US, BITCOINCOM, PROBIT, BITTREX, DYDX, BEQUANT}:
         return ts.timestamp()
-    elif exchange in {HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
+    elif exchange in {OKEX, HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
+
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
         return ts / 1_000_000.0
@@ -58,17 +60,17 @@ _feed_to_exchange_map = {
         BITSTAMP: 'diff_order_book',
         KRAKEN: 'book',
         KRAKEN_FUTURES: 'book',
-        BINANCE: 'depth@100ms',
-        BINANCE_US: 'depth@100ms',
-        BINANCE_FUTURES: 'depth@100ms',
-        BINANCE_DELIVERY: 'depth@100ms',
+        BINANCE: 'depth',
+        BINANCE_US: 'depth',
+        BINANCE_FUTURES: 'depth',
+        BINANCE_DELIVERY: 'depth',
         BLOCKCHAIN: 'l2',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
         HUOBI_DM: 'depth.step0',
         HUOBI_SWAP: 'depth.step0',
         OKCOIN: 'spot/depth_l2_tbt',
-        OKEX: '{}/depth_l2_tbt',
+        OKEX: 'books-l2-tbt',
         DERIBIT: 'book',
         BYBIT: 'orderBookL2_25',
         FTX: 'orderbook',
@@ -137,7 +139,7 @@ _feed_to_exchange_map = {
         HUOBI_DM: 'trade.detail',
         HUOBI_SWAP: 'trade.detail',
         OKCOIN: 'spot/trade',
-        OKEX: '{}/trade',
+        OKEX: 'trades',
         DERIBIT: 'trades',
         BYBIT: 'trade',
         FTX: 'trades',
@@ -171,7 +173,7 @@ _feed_to_exchange_map = {
         HUOBI: UNSUPPORTED,
         HUOBI_DM: UNSUPPORTED,
         OKCOIN: '{}/ticker',
-        OKEX: '{}/ticker',
+        OKEX: 'tickers',
         DERIBIT: "ticker",
         BYBIT: UNSUPPORTED,
         FTX: "ticker",
@@ -193,7 +195,7 @@ _feed_to_exchange_map = {
         BINANCE_DELIVERY: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
-        OKEX: '{}/funding_rate',
+        OKEX: 'funding-rate',
         FTX: 'funding',
         HUOBI_SWAP: 'funding'
     },
@@ -214,9 +216,6 @@ _feed_to_exchange_map = {
         FTX: 'trades',
         DERIBIT: 'trades',
         OKEX: LIQUIDATIONS,
-    },
-    MARKET_INFO: {
-        COINGECKO: MARKET_INFO
     },
     FUTURES_INDEX: {
         BYBIT: 'instrument_info.100ms'

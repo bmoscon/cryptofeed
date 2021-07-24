@@ -13,13 +13,15 @@ from yapic import json
 from cryptofeed.defines import BINANCE_DELIVERY
 from cryptofeed.exchange.binance import Binance
 
+
 LOG = logging.getLogger('feedhandler')
 
 
 class BinanceDelivery(Binance):
-    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     id = BINANCE_DELIVERY
     symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
+    valid_depth_intervals = {'100ms', '250ms', '500ms'}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

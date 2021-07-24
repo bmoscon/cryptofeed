@@ -18,6 +18,7 @@ from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORD
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
 from cryptofeed.exchange.gemini.gemini_rest import GeminiRest
+from cryptofeed.symbols import Symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -28,16 +29,17 @@ class Gemini(Feed):
     symbol_endpoint = {'https://api.gemini.com/v1/symbols': 'https://api.gemini.com/v1/symbols/details/'}
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
         for symbol in data:
             if symbol['status'] == 'closed':
                 continue
-            normalized = symbol['base_currency'] + symbol_separator + symbol['quote_currency']
-            ret[normalized] = symbol['symbol']
-            info['tick_size'][normalized] = symbol['tick_size']
+            s = Symbol(symbol['base_currency'], symbol['quote_currency'])
+            ret[s.normalized] = symbol['symbol']
+            info['tick_size'][s.normalized] = symbol['tick_size']
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __init__(self, sandbox=False, **kwargs):

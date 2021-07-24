@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from decimal import Decimal
 import logging
 from contextlib import asynccontextmanager
 import time
@@ -13,6 +14,7 @@ from typing import List, Union, AsyncIterable
 import aiohttp
 import websockets
 import requests
+from yapic import json as json_parser
 
 from cryptofeed.exceptions import ConnectionClosed
 
@@ -36,7 +38,7 @@ class HTTPSync(Connection):
             self.raw_data_callback.sync_callback(r.text, time.time(), str(uuid), endpoint=address)
         r.raise_for_status()
         if json:
-            return r.json()
+            return json_parser.loads(r.text, parse_float=Decimal)
         if text:
             return r.text
         return r
