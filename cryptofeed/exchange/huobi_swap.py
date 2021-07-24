@@ -15,7 +15,7 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import HUOBI_SWAP, FUNDING, SWAP
+from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL
 from cryptofeed.exchange.huobi_dm import HuobiDM
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
@@ -35,10 +35,11 @@ class HuobiSwap(HuobiDM):
 
         for e in data['data']:
             base, quote = e['contract_code'].split("-")
-            s = Symbol(base, quote, type=SWAP)
+            # Perpetual futures contract == perpetual swap
+            s = Symbol(base, quote, type=PERPETUAL)
             ret[s.normalized] = e['contract_code']
             info['tick_size'][e['contract_code']] = e['price_tick']
-            info['instrument_type'][s.normalized] = SWAP
+            info['instrument_type'][s.normalized] = s.type
 
         return ret, info
 
