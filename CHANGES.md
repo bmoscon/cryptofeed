@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 1.9.3
+  * Feature: Add support for private channels USER_FILLS and ORDER_INFO on Bybit
   * Bugfix: Fix demo.py
   * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
   * Update: Support Okex v5
@@ -8,6 +9,7 @@
   * Feature: Allow user to specify depth_interval for Binance L2_BOOK.
   * Bugfix: Use order id in FTX fill channel callback
   * Feature: Add ability to use the Symbols class to identify all exchanges that support a given instrument
+  * Feature: Allow user to specify 'http_proxy' in feeds.
 
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
