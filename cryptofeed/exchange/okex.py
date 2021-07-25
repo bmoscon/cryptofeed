@@ -19,7 +19,7 @@ from yapic import json
 
 from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import CALL, FUTURES, OKEX, LIQUIDATIONS, BUY, OPTION, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, SWAP, TICKER, TRADES, ORDER_INFO, SPOT
+from cryptofeed.defines import CALL, FUTURES, OKEX, LIQUIDATIONS, BUY, OPTION, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
 from cryptofeed.util import split
@@ -58,7 +58,9 @@ class OKEx(Feed):
                 elif stype == OPTION:
                     base, quote, expiry, strike, otype = e['instId'].split("-")
                     otype = PUT if otype == 'P' else CALL
-                elif stype == SWAP:
+                elif stype == 'swap':
+                    # this is a perpetual swap (aka perpetual futures contract), not a real swap
+                    stype = PERPETUAL
                     base, quote, _ = e['instId'].split("-")
 
                 s = Symbol(base, quote, expiry_date=expiry, type=stype, option_type=otype, strike_price=strike)
@@ -76,14 +78,14 @@ class OKEx(Feed):
     async def _liquidations(self, pairs: list):
         last_update = {}
         """
-        for SWAP liquidations, the following arguments are required: uly, state
+        for PERP liquidations, the following arguments are required: uly, state
         for FUTURES liquidations, the following arguments are required: uly, state, alias
         FUTURES, MARGIN and OPTION liquidation request not currently supported by the below
         """
 
         while True:
             for pair in pairs:
-                if 'SWAP' in pair:
+                if 'PERP' in pair:
                     instrument_type = 'SWAP'
                     uly = pair.split("-")[0] + "-" + pair.split("-")[1]
                 else:
@@ -170,7 +172,7 @@ class OKEx(Feed):
                     d = {}
                     sym = self.exchange_symbol_to_std_symbol(symbol)
                     instrument_type = self.instrument_type(sym)
-                    if instrument_type != SWAP and 'funding' in chan:
+                    if instrument_type != PERPETUAL and 'funding' in chan:
                         continue  # No funding for spot, futures and options
                     d.update({"channel": chan, "instId": symbol})
                     combos.append(d)

@@ -11,7 +11,7 @@ import os
 from typing import Dict, Tuple, Callable, Union, List
 from aiohttp.typedefs import StrOrURL
 
-from cryptofeed.symbols import Symbols
+from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
@@ -43,6 +43,8 @@ class Feed:
             Time, in seconds, between timeout checks.
         retries: int
             Number of times to retry a failed connection. Set to -1 for infinite
+        symbols: list of str, Symbol
+            A list of instrument symbols. Symbols must be of type str or Symbol
         max_depth: int
             Maximum number of levels per side to return in book updates
         book_interval: int
@@ -392,7 +394,9 @@ class Feed:
         except KeyError:
             raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
-    def std_symbol_to_exchange_symbol(self, symbol: str) -> str:
+    def std_symbol_to_exchange_symbol(self, symbol: Union[str, Symbol]) -> str:
+        if isinstance(symbol, Symbol):
+            symbol = symbol.normalized
         try:
             return self.normalized_symbol_mapping[symbol]
         except KeyError:

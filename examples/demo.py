@@ -4,13 +4,14 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.symbols import Symbol
 from cryptofeed.exchange.phemex import Phemex
 from cryptofeed.exchange.dydx import dYdX
 from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, FundingCallback, TickerCallback, TradeCallback, FuturesIndexCallback, OpenInterestCallback
-from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, FUTURES_INDEX, BOOK_DELTA
+from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, OPEN_INTEREST, PERPETUAL, TICKER, TRADES, FUTURES_INDEX, BOOK_DELTA
 from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
                                   HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit, KuCoin)
 
@@ -112,7 +113,8 @@ def main():
     f.add_feed(BinanceFutures(symbols=['BTC-USDT-PERP'], channels=[TICKER], callbacks={TICKER: ticker}))
     f.add_feed(BinanceFutures(subscription={TRADES: ['BTC-USDT-PERP'], CANDLES: ['BTC-USDT-PERP', 'BTC-USDT-PINDEX']}, callbacks={CANDLES: candle_callback, TRADES: trade}))
     f.add_feed(dYdX(symbols=dYdX.symbols(), channels=[L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, BOOK_DELTA: delta}))
-    f.add_feed(Phemex(symbols=['BTC-USD-PERP'], channels=[CANDLES, TRADES], callbacks={TRADES: trade, L2_BOOK: book, CANDLES: candle_callback}))
+    symbol = Symbol('BTC', 'USD', type=PERPETUAL)
+    f.add_feed(Phemex(symbols=[symbol], channels=[CANDLES, TRADES], callbacks={TRADES: trade, L2_BOOK: book, CANDLES: candle_callback}))
 
     f.run()
 

@@ -5,31 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from datetime import datetime as dt
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
-from cryptofeed.defines import FUTURES, FX, OPTION, PERPETUAL, SPOT, CALL, PUT, SWAP, CURRENCY
-
-
-class _Symbols:
-    def __init__(self):
-        self.data = {}
-
-    def clear(self):
-        self.data = {}
-
-    def set(self, exchange: str, normalized: dict, exchange_info: dict):
-        self.data[exchange] = {}
-        self.data[exchange]['normalized'] = normalized
-        self.data[exchange]['info'] = exchange_info
-
-    def get(self, exchange: str) -> Tuple[Dict, Dict]:
-        return self.data[exchange]['normalized'], self.data[exchange]['info']
-
-    def populated(self, exchange: str) -> bool:
-        return exchange in self.data
-
-
-Symbols = _Symbols()
+from cryptofeed.defines import FUTURES, FX, OPTION, PERPETUAL, SPOT, CALL, PUT, CURRENCY
 
 
 class Symbol:
@@ -99,10 +77,46 @@ class Symbol:
             return f"{base}{self.symbol_sep}{self.expiry_date}"
         if self.type == PERPETUAL:
             return f"{base}{self.symbol_sep}PERP"
-        if self.type == SWAP:
-            return f"{base}{self.symbol_sep}SWAP"
         if self.type == CURRENCY:
             return base
         if self.type == FX:
             return f"{base}{self.symbol_sep}FX"
         raise ValueError(f"Unsupported symbol type: {self.type}")
+
+
+class _Symbols:
+    def __init__(self):
+        self.data = {}
+
+    def clear(self):
+        self.data = {}
+
+    def load_all(self):
+        from cryptofeed.exchanges import EXCHANGE_MAP
+
+        for _, exchange in EXCHANGE_MAP.items():
+            exchange.symbols(refresh=True)
+
+    def set(self, exchange: str, normalized: dict, exchange_info: dict):
+        self.data[exchange] = {}
+        self.data[exchange]['normalized'] = normalized
+        self.data[exchange]['info'] = exchange_info
+
+    def get(self, exchange: str) -> Tuple[Dict, Dict]:
+        return self.data[exchange]['normalized'], self.data[exchange]['info']
+
+    def populated(self, exchange: str) -> bool:
+        return exchange in self.data
+
+    def find(self, symbol: Union[str, Symbol]):
+        ret = []
+
+        if isinstance(symbol, Symbol):
+            symbol = symbol.normalized
+        for exchange, data in self.data.items():
+            if symbol in data['normalized']:
+                ret.append(exchange)
+        return ret
+
+
+Symbols = _Symbols()

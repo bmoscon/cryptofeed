@@ -227,9 +227,14 @@ _feed_to_exchange_map = {
         BEQUANT: 'subscribeReports',
         BITCOINCOM: 'subscribeReports',
         HITBTC: 'subscribeReports',
+        BYBIT: 'order',
+        DERIBIT: 'user.orders',
+
     },
     USER_FILLS: {
         FTX: 'fills',
+        BYBIT: 'execution',
+        DERIBIT: 'user.trades',
     },
     CANDLES: {
         BEQUANT: 'subscribeCandles',
