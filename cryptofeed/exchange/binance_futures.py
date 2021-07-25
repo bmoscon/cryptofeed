@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from asyncio import create_task
 from decimal import Decimal
 import logging
 import time
@@ -96,8 +97,10 @@ class BinanceFutures(Binance):
 
         # Handle REST endpoint messages first
         if 'openInterest' in msg:
-            await self._open_interest(msg, timestamp)
-            return
+            coro = self._open_interest(msg, timestamp)
+            if self.concurrent_http:
+                return create_task(coro)
+            return await coro
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
