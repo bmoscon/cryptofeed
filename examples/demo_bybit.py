@@ -22,8 +22,8 @@ async def book(feed, symbol, book, timestamp, receipt):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Bybit(symbols=['BTC-USD', 'ETH-USD', 'XRP-USD', 'EOS-USD'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Bybit(symbols=['BTC-USD', 'ETH-USD', 'XRP-USD', 'EOS-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Bybit(symbols=['BTC-USD-PERP', 'ETH-USD-PERP', 'XRP-USD-PERP', 'EOS-USD-PERP'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
+    f.add_feed(Bybit(symbols=['BTC-USD-PERP', 'ETH-USD-PERP', 'XRP-USD-PERP', 'EOS-USD-PERP'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
 
     f.run()
 
