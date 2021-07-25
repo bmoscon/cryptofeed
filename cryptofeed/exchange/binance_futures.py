@@ -12,7 +12,7 @@ from typing import List, Tuple, Callable, Dict
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
 from cryptofeed.exchange.binance import Binance
 from cryptofeed.standards import timestamp_normalize
@@ -85,11 +85,11 @@ class BinanceFutures(Binance):
         ret = []
         if self.address:
             ret = super().connect()
-
+        PollCls = HTTPConcurrentPoll if self.concurrent_http else HTTPPoll
         for chan in set(self.subscription):
             if chan == 'open_interest':
                 addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
-                ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=1.0, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
+                ret.append((PollCls(addrs, self.id, delay=60.0, sleep=1.0, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):

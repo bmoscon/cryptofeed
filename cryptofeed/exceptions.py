@@ -48,3 +48,6 @@ class RestResponseError(Exception):
 
 class ConnectionClosed(Exception):
     pass
+
+class ConnectionExists(Exception):
+    pass

@@ -21,29 +21,31 @@ def callback(channel, symbols):
         symbol = kwargs['symbol']
         feed = kwargs['feed']
         counter[symbol] += 1
-        print(f'[{feed}] [{channel}] {symbol}: {counter[symbol]} msgs  ({len(counter)}/{len(symbols)} symbols)')
+        if counter[symbol] == 1:
+            print(f'[{feed}] [{channel}] {symbol}: {counter[symbol]} msgs  ({len(counter)}/{len(symbols)} symbols)', kwargs['timestamp'])
 
     return _callback
 
 
-def main(proxy: str):
-    book_symbols = Binance.info()['symbols']
+def main(proxy):
+    book_symbols = Binance.info()['symbols'][:10]
     oi_symbols = BinanceFutures.info()['symbols']
     oi_symbols = [symbol for symbol in oi_symbols if 'PINDEX' not in symbol]
 
     print(f'BINANCE - L2_BOOK: Subscribing to {len(book_symbols)} symbols')
-    print(f'BINANCE_FUTURES - OPEN_INTEREST: Subscribing to {len(oi_symbols)} symbols')
-    print(f'BINANCE_FUTURES - L2_BOOK: Subscribing to {len(oi_symbols)} symbols')
 
     f = FeedHandler()
-    f.add_feed(Binance(http_proxy=proxy,
-                       max_depth=3,
-                       symbols=book_symbols,
-                       channels=[L2_BOOK],
-                       callbacks={L2_BOOK: callback(L2_BOOK, book_symbols)}))
+    # f.add_feed(Binance(
+    #     max_depth=1,
+    #     symbols=book_symbols,
+    #     channels=[L2_BOOK],
+    #     callbacks={L2_BOOK: callback(L2_BOOK, book_symbols)},
+    #     concurrent_http=True,
+    #     http_proxy=proxy))
     f.add_feed(BinanceFutures(http_proxy=proxy,
+                              concurrent_http=True,
                               symbols=oi_symbols,
-                              channels=[L2_BOOK, OPEN_INTEREST],
+                              channels=[OPEN_INTEREST],
                               callbacks={OPEN_INTEREST: callback(OPEN_INTEREST, oi_symbols), L2_BOOK: callback(L2_BOOK, oi_symbols)}))
     f.run()
 
