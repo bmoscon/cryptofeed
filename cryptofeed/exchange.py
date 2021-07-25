@@ -26,10 +26,7 @@ class Exchange:
     @classmethod
     def info(cls) -> Dict:
         """
-        Return information about the Exchange - what trading symbols are supported, what data channels, etc
-
-        key_id: str
-            API key to query the feed, required when requesting supported coins/symbols.
+        Return information about the Exchange for REST and Websocket data channels
         """
         symbols = cls.symbol_mapping()
         data = Symbols.get(cls.id)[1]

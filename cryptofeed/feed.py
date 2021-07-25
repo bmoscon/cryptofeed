@@ -29,7 +29,6 @@ from cryptofeed.rest import RestAPI
 LOG = logging.getLogger('feedhandler')
 
 
-<<<<<<< HEAD
 class Feed(Exchange):
     def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, delay_start=0, http_proxy: StrOrURL = None):
         """
