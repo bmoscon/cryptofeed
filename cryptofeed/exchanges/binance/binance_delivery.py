@@ -11,7 +11,7 @@ from typing import Tuple
 from yapic import json
 
 from cryptofeed.defines import BINANCE_DELIVERY
-from cryptofeed.exchange.binance import Binance
+from cryptofeed.exchanges.binance import Binance
 
 
 LOG = logging.getLogger('feedhandler')

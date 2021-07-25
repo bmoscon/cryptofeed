@@ -7,7 +7,7 @@ associated with this software.
 import logging
 
 from cryptofeed.defines import FTX_US
-from cryptofeed.exchange.ftx import FTX
+from cryptofeed.exchanges.ftx import FTX
 
 
 LOG = logging.getLogger('feedhandler')

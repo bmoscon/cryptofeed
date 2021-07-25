@@ -16,7 +16,7 @@ from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL
-from cryptofeed.exchange.huobi_dm import HuobiDM
+from cryptofeed.exchanges.huobi_dm import HuobiDM
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 

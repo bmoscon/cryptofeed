@@ -8,28 +8,26 @@ from collections import defaultdict
 from functools import partial
 import logging
 import os
-from typing import Dict, Tuple, Callable, Union, List
+from typing import Tuple, Callable, Union, List
 
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.callback import Callback
 from cryptofeed.config import Config
-from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, ACC_TRANSACTIONS, USER_FILLS, ACC_BALANCES)
-from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
+from cryptofeed.exceptions import BidAskOverlapping, UnsupportedSymbol
 from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
 from cryptofeed.util.book import book_delta, depth
+from cryptofeed.exchange import Exchange
 from cryptofeed.rest import RestAPI
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Feed:
-    id = 'NotImplemented'
-    http_sync = HTTPSync()
-
+class Feed(Exchange):
     def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, delay_start=0):
         """
         address: str, or dict
@@ -208,58 +206,6 @@ class Feed:
         for _, addr in self.address.items():
             ret.append((WSAsyncConn(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
-
-    @classmethod
-    def info(cls) -> dict:
-        """
-        Return information about the Exchange - what trading symbols are supported, what data channels, etc
-
-        key_id: str
-            API key to query the feed, required when requesting supported coins/symbols.
-        """
-        symbols = cls.symbol_mapping()
-        data = Symbols.get(cls.id)[1]
-        data['symbols'] = list(symbols.keys())
-        data['channels'] = []
-        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, CANDLES, USER_FILLS, ORDER_INFO, ACC_TRANSACTIONS, ACC_BALANCES):
-            try:
-                feed_to_exchange(cls.id, channel, silent=True)
-                data['channels'].append(channel)
-            except UnsupportedDataFeed:
-                pass
-
-        return data
-
-    @classmethod
-    def symbols(cls, refresh=False) -> dict:
-        if refresh:
-            cls.symbol_mapping(refresh=True)
-        return cls.info()['symbols']
-
-    @classmethod
-    def symbol_mapping(cls, refresh=False) -> Dict:
-        if Symbols.populated(cls.id) and not refresh:
-            return Symbols.get(cls.id)[0]
-        try:
-            LOG.debug("%s: reading symbol information from %s", cls.id, cls.symbol_endpoint)
-            if isinstance(cls.symbol_endpoint, list):
-                data = []
-                for ep in cls.symbol_endpoint:
-                    data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
-            elif isinstance(cls.symbol_endpoint, dict):
-                data = []
-                for input, output in cls.symbol_endpoint.items():
-                    for d in cls.http_sync.read(input, json=True, uuid=cls.id):
-                        data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
-            else:
-                data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
-
-            syms, info = cls._parse_symbol_data(data)
-            Symbols.set(cls.id, syms, info)
-            return syms
-        except Exception as e:
-            LOG.error("%s: Failed to parse symbol information: %s", cls.id, str(e), exc_info=True)
-            raise
 
     async def book_callback(self, book: dict, book_type: str, symbol: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """

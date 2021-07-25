@@ -5,8 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchange.phemex import Phemex
-from cryptofeed.exchange.dydx import dYdX
+from cryptofeed.exchanges.phemex import Phemex
+from cryptofeed.exchanges.dydx import dYdX
 from decimal import Decimal
 
 from cryptofeed import FeedHandler

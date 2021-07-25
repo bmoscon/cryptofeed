@@ -13,7 +13,7 @@ from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
-from cryptofeed.exchange.binance import Binance
+from cryptofeed.exchanges.binance import Binance
 from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')

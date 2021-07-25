@@ -99,7 +99,7 @@ This also mean we'll need to add support for the various channel mappings in `st
 
 * `exchanges.py`
     - ```python
-      from cryptofeed.exchange.huobi import Huobi
+      from cryptofeed.exchanges.huobi import Huobi
       ```
     - An entry is also needed in the `EXCHANGE_MAP` to map the string `'HUOBI'` to the class `Huobi`.
 

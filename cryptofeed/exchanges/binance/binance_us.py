@@ -7,7 +7,7 @@ associated with this software.
 import logging
 
 from cryptofeed.defines import BINANCE_US
-from cryptofeed.exchange.binance import Binance
+from cryptofeed.exchanges.binance import Binance
 
 
 LOG = logging.getLogger('feedhandler')
