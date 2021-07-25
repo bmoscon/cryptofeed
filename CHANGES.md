@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 1.9.3
+  * Feature: Add support for private channels USER_FILLS and ORDER_INFO on Bybit
   * Bugfix: Fix demo.py
   * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
   * Update: Support Okex v5

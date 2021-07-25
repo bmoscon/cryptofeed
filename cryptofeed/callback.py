@@ -109,3 +109,7 @@ class AccBalancesCallback(Callback):
 
 class AccTransactionsCallback(Callback):
     pass
+
+
+class UserFillsCallback(Callback):
+    pass
