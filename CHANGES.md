@@ -9,6 +9,7 @@
   * Feature: Allow user to specify depth_interval for Binance L2_BOOK.
   * Bugfix: Use order id in FTX fill channel callback
   * Feature: Add ability to use the Symbols class to identify all exchanges that support a given instrument
+  * Feature: Allow user to specify 'http_proxy' in feeds.
 
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
