@@ -8,10 +8,6 @@ Notes:
     2. There is a "startup lag" with L2_BOOKS with binance because requests are made sequentially.
 """
 from collections import defaultdict
-from typing import Union
-
-from yarl import URL
-
 from cryptofeed import FeedHandler
 from cryptofeed.defines import L2_BOOK, OPEN_INTEREST
 from cryptofeed.exchange.binance_futures import BinanceFutures
@@ -30,7 +26,7 @@ def callback(channel, symbols):
     return _callback
 
 
-def main(proxy: Union[str, URL]):
+def main(proxy: str):
     book_symbols = Binance.info()['symbols']
     oi_symbols = BinanceFutures.info()['symbols']
     oi_symbols = [symbol for symbol in oi_symbols if 'PINDEX' not in symbol]
