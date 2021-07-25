@@ -15,7 +15,7 @@ import aiohttp
 import websockets
 import requests
 from yapic import json as json_parser
-
+from aiohttp.typedefs import StrOrURL
 from cryptofeed.exceptions import ConnectionClosed
 
 
@@ -97,12 +97,15 @@ class AsyncConnection(Connection):
 
 
 class HTTPAsyncConn(AsyncConnection):
-    def __init__(self, conn_id: str):
+    def __init__(self, conn_id: str, proxy: StrOrURL = None):
         """
         conn_id: str
             id associated with the connection
+        proxy: str, URL
+            proxy url (GET only)
         """
         super().__init__(f'{conn_id}.http.{self.conn_count}')
+        self.proxy = proxy
 
     @property
     def is_open(self) -> bool:
@@ -123,7 +126,7 @@ class HTTPAsyncConn(AsyncConnection):
 
         LOG.debug("%s: requesting data from %s", self.id, address)
         while True:
-            async with self.conn.get(address, headers=header) as response:
+            async with self.conn.get(address, headers=header, proxy=self.proxy) as response:
                 data = await response.text()
                 self.last_message = time.time()
                 self.received += 1
@@ -152,8 +155,8 @@ class HTTPAsyncConn(AsyncConnection):
 
 
 class HTTPPoll(HTTPAsyncConn):
-    def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1):
-        super().__init__(f'{conn_id}.http.{self.conn_count}')
+    def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1, proxy: Union[str, URL] = None):
+        super().__init__(f'{conn_id}.http.{self.conn_count}', proxy)
         if isinstance(address, str):
             address = [address]
         self.address = address
@@ -168,7 +171,7 @@ class HTTPPoll(HTTPAsyncConn):
                     LOG.error('%s: connection closed in read()', self.id)
                     raise ConnectionClosed
                 LOG.debug("%s: polling %s", self.id, addr)
-                async with self.conn.get(addr, headers=header) as response:
+                async with self.conn.get(addr, headers=header, proxy=self.proxy) as response:
                     data = await response.text()
                     self.received += 1
                     self.last_message = time.time()

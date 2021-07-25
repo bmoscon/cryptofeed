@@ -9,6 +9,7 @@ from functools import partial
 import logging
 import os
 from typing import Dict, Tuple, Callable, Union, List
+from aiohttp.typedefs import StrOrURL
 
 from cryptofeed.symbols import Symbols
 from cryptofeed.callback import Callback
@@ -29,7 +30,7 @@ class Feed:
     id = 'NotImplemented'
     http_sync = HTTPSync()
 
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, delay_start=0):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, delay_start=0, http_proxy: StrOrURL = None):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -70,6 +71,8 @@ class Feed:
         delay_start: int, float
             a delay before starting the feed/connection to the exchange. If you are subscribing to a large number of feeds
             on a single exchange, you may encounter 429s. You can use this to stagger the starts.
+        http_proxy: str
+            Passed to HTTPPoll and HTTPAsyncConn. Only used for GET requests.
         """
         if isinstance(config, Config):
             LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
@@ -105,7 +108,8 @@ class Feed:
         self.load_keys()
         self.requires_authentication = False
         self._feed_config = defaultdict(list)
-        self.http_conn = HTTPAsyncConn(self.id)
+        self.http_conn = HTTPAsyncConn(self.id, http_proxy)
+        self.http_proxy = http_proxy
         self.start_delay = delay_start
 
         symbols_cache = Symbols
