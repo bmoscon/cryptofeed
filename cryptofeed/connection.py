@@ -155,7 +155,7 @@ class HTTPAsyncConn(AsyncConnection):
 
 
 class HTTPPoll(HTTPAsyncConn):
-    def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1, proxy: Union[str, URL] = None):
+    def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1, proxy: StrOrURL = None):
         super().__init__(f'{conn_id}.http.{self.conn_count}', proxy)
         if isinstance(address, str):
             address = [address]
