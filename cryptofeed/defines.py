@@ -48,6 +48,7 @@ UPBIT = 'UPBIT'
 
 
 # Market Data
+L1_BOOK = 'l1_book'
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
 BOOK_DELTA = 'book_delta'
