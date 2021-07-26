@@ -170,18 +170,18 @@ class HTTPPoll(HTTPAsyncConn):
             LOG.error('%s: connection closed in read()', self.id)
             raise ConnectionClosed
         LOG.debug("%s: polling %s", self.id, address)
-        async with self.conn.get(address, headers=header, proxy=self.proxy) as response:
-            data = await response.text()
-            self.received += 1
-            self.last_message = time.time()
-            if self.raw_data_callback:
-                await self.raw_data_callback(data, self.last_message, self.id, endpoint=address)
-            if response.status != 429:
-                response.raise_for_status()
-                return data
-        LOG.warning("%s: encountered a rate limit for address %s, retrying in %f seconds", self.id, address, self.delay)
-        await asyncio.sleep(self.delay)
-        return await self._read_address(address, header)
+        while True:
+            async with self.conn.get(address, headers=header, proxy=self.proxy) as response:
+                data = await response.text()
+                self.received += 1
+                self.last_message = time.time()
+                if self.raw_data_callback:
+                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address)
+                if response.status != 429:
+                    response.raise_for_status()
+                    return data
+            LOG.warning("%s: encountered a rate limit for address %s, retrying in %f seconds", self.id, address, self.delay)
+            await asyncio.sleep(self.delay)
 
     async def read(self, header=None) -> AsyncIterable[str]:
         while True:
@@ -255,7 +255,7 @@ class WSAsyncConn(AsyncConnection):
 
     async def read(self) -> AsyncIterable:
         if not self.is_open:
-            LOG.error('%s: connection closed in read()', self.id)
+            LOG.error('%s: connection closed in read()', id(self))
             raise ConnectionClosed
         if self.raw_data_callback:
             async for data in self.conn:
@@ -271,7 +271,6 @@ class WSAsyncConn(AsyncConnection):
 
     async def write(self, data: str):
         if not self.is_open:
-            LOG.error('%s: connection closed in write()', self.id)
             raise ConnectionClosed
 
         if self.raw_data_callback:
