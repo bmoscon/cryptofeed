@@ -15,7 +15,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, normalize_channel
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -88,8 +88,8 @@ class Binance(Feed):
         subs = []
 
         for chan in self.subscription:
-            normalized_chan = normalize_channel(self.id, chan)
-            if normalize_channel == OPEN_INTEREST:
+            normalized_chan = self.exchange_channel_to_std(chan)
+            if self.exchange_channel_to_std(chan) == OPEN_INTEREST:
                 continue
 
             stream = chan

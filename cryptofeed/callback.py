@@ -103,7 +103,7 @@ class OrderInfoCallback(Callback):
     pass
 
 
-class AccBalancesCallback(Callback):
+class BalancesCallback(Callback):
     pass
 
 

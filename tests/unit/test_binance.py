@@ -7,7 +7,6 @@ associated with this software.
 import random
 
 from cryptofeed.exchanges import Binance
-from cryptofeed.standards import feed_to_exchange
 
 
 def test_binance_address_generation():

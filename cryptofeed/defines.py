@@ -64,7 +64,13 @@ CANDLES = 'candles'
 ORDER_INFO = 'order_info'
 USER_FILLS = 'user_fills'
 ACC_TRANSACTIONS = 'transactions'
-ACC_BALANCES = 'balances'
+BALANCES = 'balances'
+PLACE_ORDER = 'place_order'
+CANCEL_ORDER = 'cancel_order'
+ORDERS = 'orders'
+ORDER_STATUS = 'order_status'
+TRADE_HISTORY = 'trade_history'
+
 
 
 BUY = 'buy'

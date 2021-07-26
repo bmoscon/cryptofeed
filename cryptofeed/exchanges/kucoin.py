@@ -4,8 +4,6 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.symbols import Symbol
-from cryptofeed.standards import normalize_channel
 from cryptofeed.connection import AsyncConnection
 from decimal import Decimal
 import logging
@@ -19,6 +17,8 @@ from cryptofeed.auth.kucoin import generate_token
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
+from cryptofeed.symbols import Symbol
+
 
 LOG = logging.getLogger('feedhandler')
 
@@ -215,7 +215,7 @@ class KuCoin(Feed):
             return
 
         topic, symbol = msg['topic'].split(":", 1)
-        topic = normalize_channel(self.id, topic)
+        topic = self.exchange_channel_to_std(topic)
 
         if topic == TICKER:
             await self._ticker(msg, symbol, timestamp)
@@ -232,7 +232,7 @@ class KuCoin(Feed):
         self.__reset()
         for chan in self.subscription:
             symbols = self.subscription[chan]
-            nchan = normalize_channel(self.id, chan)
+            nchan = self.exchange_channel_to_std(chan)
             if nchan == CANDLES:
                 for symbol in symbols:
                     await conn.write(json.dumps({

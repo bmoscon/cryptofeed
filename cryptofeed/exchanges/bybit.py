@@ -17,7 +17,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL, SPOT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, is_authenticated_channel, normalize_channel
+from cryptofeed.standards import timestamp_normalize
 # For auth
 import hmac
 import time
@@ -112,10 +112,10 @@ class Bybit(Feed):
         '''
         ret = []
         if any(pair.split('-')[1] == 'USDT' for pair in self.normalized_symbols):
-            if any(is_authenticated_channel(normalize_channel(self.id, chan)) for chan in self.subscription):
+            if any(is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
                 ret.append((WSAsyncConn(self.address['USDTP'], self.id, **self.ws_defaults),
                             partial(self.subscribe, quote='USDTP'), self.message_handler, self.authenticate))
-            if any(not is_authenticated_channel(normalize_channel(self.id, chan)) for chan in self.subscription):
+            if any(not is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
                 ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults),
                             partial(self.subscribe, quote='USDT'), self.message_handler, self.__no_auth))
         if any(pair.split('-')[1] == 'USD' for pair in self.normalized_symbols):
@@ -128,7 +128,7 @@ class Bybit(Feed):
         if quote == 'USD' or quote == 'USDTP':
             channels = []
             for chan in self.subscription:
-                if is_authenticated_channel(normalize_channel(self.id, chan)):
+                if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                     channels.append(chan)
             if channels:
                 await connection.write(json.dumps({"op": "subscribe", "args": channels}))
@@ -140,7 +140,7 @@ class Bybit(Feed):
         self.__reset(quote=quote)
 
         for chan in self.subscription:
-            if not is_authenticated_channel(normalize_channel(self.id, chan)):
+            if not is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 for pair in self.subscription[chan]:
                     # Bybit uses separate addresses for difference quote currencies
                     if 'USDT' not in pair and quote == 'USDT':
@@ -336,7 +336,7 @@ class Bybit(Feed):
             await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
 
     async def authenticate(self, conn: AsyncConnection):
-        if any(is_authenticated_channel(normalize_channel(self.id, chan)) for chan in self.subscription):
+        if any(is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
             auth = self._auth(self.key_id, self.key_secret)
             LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
             await conn.write(auth)

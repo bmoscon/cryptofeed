@@ -23,7 +23,7 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, SPOT, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.util import split
 
 
@@ -261,7 +261,7 @@ class OKCoin(Feed):
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
         for channel in self.subscription:
-            if is_authenticated_channel(channel):
+            if self.is_authenticated_channel(channel):
                 for s in self.subscription[channel]:
                     ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler, self.authenticate))
             else:

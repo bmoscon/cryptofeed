@@ -118,7 +118,7 @@ Cryptofeed supports the following channels from exchanges:
 
 * ORDER_INFO - Order status updates
 * ACC_TRANSACTIONS - Real-time updates on account deposits and withdrawals
-* ACC_BALANCES - Updates on wallet funds
+* BALANCES - Updates on wallet funds
 
 
 ## Backends

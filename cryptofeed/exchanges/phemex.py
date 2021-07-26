@@ -17,7 +17,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import normalize_channel, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -207,6 +207,6 @@ class Phemex(Feed):
 
         for chan, symbol in subs:
             msg = {"id": 1, "method": chan, "params": [symbol]}
-            if normalize_channel(self.id, chan) == CANDLES:
+            if self.exchange_channel_to_std(chan) == CANDLES:
                 msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
             await conn.write(json.dumps(msg))

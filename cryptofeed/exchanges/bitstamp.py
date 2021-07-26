@@ -16,7 +16,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import feed_to_exchange, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -141,9 +141,9 @@ class Bitstamp(Feed):
         elif msg['event'] == 'trade':
             await self._trades(msg, timestamp)
         elif msg['event'] == 'data':
-            if msg['channel'].startswith(feed_to_exchange(self.id, L2_BOOK)):
+            if msg['channel'].startswith('diff_order_book'):
                 await self._l2_book(msg, timestamp)
-            if msg['channel'].startswith(feed_to_exchange(self.id, L3_BOOK)):
+            if msg['channel'].startswith('detail_order_book'):
                 await self._l3_book(msg, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)

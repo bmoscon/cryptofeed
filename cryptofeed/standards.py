@@ -17,7 +17,7 @@ from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTU
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
-from cryptofeed.defines import (ACC_BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
+from cryptofeed.defines import (BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
                                 TICKER, TRADES, ORDER_INFO)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -256,7 +256,7 @@ _feed_to_exchange_map = {
         BITCOINCOM: 'subscribeTransactions',
         HITBTC: 'subscribeTransactions',
     },
-    ACC_BALANCES: {
+    BALANCES: {
         BEQUANT: 'subscribeBalance',
         BITCOINCOM: 'subscribeBalance',
         HITBTC: 'subscribeBalance',
@@ -326,32 +326,3 @@ def normalize_trading_options(exchange, option):
     if ret == UNSUPPORTED:
         raise UnsupportedTradingOption
     return ret
-
-
-def feed_to_exchange(exchange, feed, silent=False):
-    def raise_error():
-        exception = UnsupportedDataFeed(f"{feed} is not currently supported on {exchange}")
-        if not silent:
-            LOG.error("Error: %r", exception)
-        raise exception
-
-    try:
-        ret = _feed_to_exchange_map[feed][exchange]
-    except KeyError:
-        raise_error()
-
-    if ret == UNSUPPORTED:
-        raise_error()
-    return ret
-
-
-def normalize_channel(exchange: str, feed: str) -> str:
-    for chan, entries in _feed_to_exchange_map.items():
-        if exchange in entries:
-            if entries[exchange] == feed:
-                return chan
-    raise ValueError('Unable to normalize channel %s', feed)
-
-
-def is_authenticated_channel(channel: str) -> bool:
-    return channel in (ORDER_INFO, USER_FILLS, ACC_TRANSACTIONS, ACC_BALANCES)

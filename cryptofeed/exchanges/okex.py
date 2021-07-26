@@ -21,7 +21,7 @@ from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import CALL, FUTURES, OKEX, LIQUIDATIONS, BUY, OPTION, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.util import split
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
@@ -337,7 +337,7 @@ class OKEx(Feed):
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
         for channel in self.subscription:
-            if is_authenticated_channel(channel):
+            if self.is_authenticated_channel(channel):
                 for s in self.subscription[channel]:
                     ret.append((WSAsyncConn(self.addresses['private'], self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler, self.authenticate))
             else:

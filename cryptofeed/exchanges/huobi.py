@@ -17,7 +17,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import normalize_channel, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -174,7 +174,7 @@ class Huobi(Feed):
         for chan in self.subscription:
             for pair in self.subscription[chan]:
                 client_id += 1
-                normalized_chan = normalize_channel(self.id, chan)
+                normalized_chan = self.exchange_channel_to_std(chan)
                 await conn.write(json.dumps(
                     {
                         "sub": f"market.{pair}.{chan}" if normalized_chan != CANDLES else f"market.{pair}.{chan}.{self.candle_interval}",

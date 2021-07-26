@@ -12,7 +12,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import normalize_channel, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 from cryptofeed.exceptions import MissingSequenceNumber
 
@@ -256,7 +256,7 @@ class Bittrex(Feed):
         # https://blog.3d-logic.com/2015/03/29/signalr-on-the-wire-an-informal-description-of-the-signalr-protocol/
         # http://blogs.microsoft.co.il/applisec/2014/03/12/signalr-message-format/
         for chan in self.subscription:
-            channel = normalize_channel(self.id, chan)
+            channel = self.exchange_channel_to_std(chan)
             i = 1
             for symbol in self.subscription[chan]:
                 if channel == L2_BOOK:

@@ -16,7 +16,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DYDX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import normalize_channel, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -146,7 +146,7 @@ class dYdX(Feed):
         msg = json.loads(msg, parse_float=Decimal)
 
         if msg['type'] == 'channel_data' or msg['type'] == 'subscribed':
-            chan = normalize_channel(self.id, msg['channel'])
+            chan = self.exchange_channel_to_std(msg['channel'])
             if chan == L2_BOOK:
                 await self._book(msg, timestamp)
             elif chan == TRADES:
@@ -164,6 +164,6 @@ class dYdX(Feed):
         for chan, symbols in self.subscription.items():
             for symbol in symbols:
                 msg = {"type": "subscribe", "channel": chan, "id": symbol}
-                if normalize_channel(self.id, chan) == L2_BOOK:
+                if self.exchange_channel_to_std(chan) == L2_BOOK:
                     msg['includeOffsets'] = True
                 await conn.write(json.dumps(msg))

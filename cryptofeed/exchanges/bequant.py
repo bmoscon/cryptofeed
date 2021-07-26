@@ -17,9 +17,9 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import ACC_BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, ACC_TRANSACTIONS, MARKET, MAKER_OR_CANCEL
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, ACC_TRANSACTIONS, MARKET, MAKER_OR_CANCEL
 from cryptofeed.feed import Feed
-from cryptofeed.standards import is_authenticated_channel, timestamp_normalize, normalize_channel
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
@@ -302,7 +302,7 @@ class Bequant(Feed):
     async def _balances(self, msg: str, conn: AsyncConnection, ts: float):
         accounts = [{k: Decimal(v) if k in ['available', 'reserved'] else v for (k, v) in account.items()} for account in msg]
 
-        await self.callback(ACC_BALANCES, feed=self.id, conn=conn, accounts=accounts)
+        await self.callback(BALANCES, feed=self.id, conn=conn, accounts=accounts)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, ts: float):
 
@@ -361,12 +361,12 @@ class Bequant(Feed):
         ret = []
 
         for chan in self.subscription:
-            chan = normalize_channel(self.id, chan)
-            if is_authenticated_channel(chan):
+            chan = self.exchange_channel_to_std(chan)
+            if self.is_authenticated_channel(chan):
                 LOG.info(f'{self.id}: {chan} will be authenticated')
                 if chan == ORDER_INFO:
                     ret.append((WSAsyncConn(self.address['trading'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
-                if chan in [ACC_BALANCES, ACC_TRANSACTIONS]:
+                if chan in [BALANCES, ACC_TRANSACTIONS]:
                     ret.append((WSAsyncConn(self.address['account'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
             else:
                 ret.append((WSAsyncConn(self.address['market'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))

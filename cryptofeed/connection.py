@@ -10,16 +10,51 @@ import logging
 from contextlib import asynccontextmanager
 import time
 from typing import List, Union, AsyncIterable
+from functools import wraps
 
 import aiohttp
 import websockets
 import requests
 from yapic import json as json_parser
 from aiohttp.typedefs import StrOrURL
+
 from cryptofeed.exceptions import ConnectionClosed
 
 
 LOG = logging.getLogger('feedhandler')
+
+
+def request_retry(exchange, retry, retry_wait, LOG):
+    """
+    decorator to retry request
+    """
+    def wrap(f):
+        @wraps(f)
+        def wrapped_f(*args, **kwargs):
+            retry_count = retry
+            while True:
+                try:
+                    return f(*args, **kwargs)
+                except TimeoutError as e:
+                    LOG.warning("%s: Timeout - %s", exchange, e)
+                    if retry_count is not None:
+                        if retry_count == 0:
+                            raise
+                        else:
+                            retry_count -= 1
+                    time.sleep(retry_wait)
+                    continue
+                except requests.exceptions.ConnectionError as e:
+                    LOG.warning("%s: Connection error - %s", exchange, e)
+                    if retry_count is not None:
+                        if retry_count == 0:
+                            raise
+                        else:
+                            retry_count -= 1
+                    time.sleep(retry_wait)
+                    continue
+        return wrapped_f
+    return wrap
 
 
 class Connection:

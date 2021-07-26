@@ -24,7 +24,7 @@ from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import is_authenticated_channel, normalize_channel, timestamp_normalize
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -82,10 +82,6 @@ class FTX(Feed):
         self.subaccount = subaccount
         super().__init__('wss://ftexchange.com/ws/', **kwargs)
 
-    def load_keys(self):
-        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or (self.config[self.id.lower()][self.subaccount].key_id if self.subaccount else self.config[self.id.lower()].key_id)
-        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or (self.config[self.id.lower()][self.subaccount].key_secret if self.subaccount else self.config[self.id.lower()].key_secret)
-
     def __reset(self):
         self.l2_book = {}
         self.funding = {}
@@ -120,7 +116,7 @@ class FTX(Feed):
             if chan == OPEN_INTEREST:
                 asyncio.create_task(self._open_interest(symbols))  # TODO: use HTTPAsyncConn
                 continue
-            if is_authenticated_channel(normalize_channel(self.id, chan)):
+            if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 await conn.write(json.dumps(
                     {
                         "channel": chan,

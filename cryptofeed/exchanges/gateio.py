@@ -5,8 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
-from cryptofeed.symbols import Symbol
-from cryptofeed.standards import normalize_channel
 import logging
 from decimal import Decimal
 import time
@@ -18,7 +16,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
-
+from cryptofeed.symbols import Symbol
 
 LOG = logging.getLogger('feedhandler')
 
@@ -250,7 +248,7 @@ class Gateio(Feed):
         self._reset()
         for chan in self.subscription:
             symbols = self.subscription[chan]
-            nchan = normalize_channel(self.id, chan)
+            nchan = self.exchange_channel_to_std(chan)
             if nchan in {L2_BOOK, CANDLES}:
                 for symbol in symbols:
                     await conn.write(json.dumps(

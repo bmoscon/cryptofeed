@@ -16,7 +16,7 @@ from cryptofeed.auth.gemini import generate_token
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize, is_authenticated_channel
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -143,7 +143,7 @@ class Gemini(Feed):
         ret = []
 
         for channel in self.subscription:
-            if is_authenticated_channel(channel):
+            if self.is_authenticated_channel(channel):
                 authenticated.extend(self.subscription.get(channel))
             else:
                 public.extend(self.subscription.get(channel))

@@ -18,7 +18,6 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import normalize_channel
 from cryptofeed.util.split import list_by_max_items
 
 
@@ -96,7 +95,7 @@ class Kraken(Feed):
         chan = options[0]
         symbols = options[1]
         sub = {"name": chan}
-        if normalize_channel(self.id, chan) == L2_BOOK:
+        if self.exchange_channel_to_std(chan) == L2_BOOK:
             max_depth = self.max_depth if self.max_depth else 1000
             if max_depth not in self.valid_depths:
                 for d in self.valid_depths:
@@ -105,7 +104,7 @@ class Kraken(Feed):
                         break
 
             sub['depth'] = max_depth
-        if normalize_channel(self.id, chan) == CANDLES:
+        if self.exchange_channel_to_std(chan) == CANDLES:
             sub['interval'] = self.candle_interval
 
         await conn.write(json.dumps({
