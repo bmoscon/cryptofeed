@@ -117,3 +117,11 @@ class UserFillsCallback(Callback):
 
 class L1BookCallback(Callback):
     pass
+
+
+class UserDataCallback(Callback):
+    pass
+
+
+class LastPriceCallback(Callback):
+    pass

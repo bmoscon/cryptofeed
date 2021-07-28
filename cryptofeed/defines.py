@@ -60,13 +60,14 @@ LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 CANDLES = 'candles'
+LAST_PRICE = 'last_price'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
 USER_FILLS = 'user_fills'
 ACC_TRANSACTIONS = 'transactions'
 ACC_BALANCES = 'balances'
-
+USER_DATA = 'user_data'
 
 BUY = 'buy'
 SELL = 'sell'

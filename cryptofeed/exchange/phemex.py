@@ -15,9 +15,12 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, USER_DATA, LAST_PRICE
 from cryptofeed.feed import Feed
-from cryptofeed.standards import normalize_channel, timestamp_normalize
+from cryptofeed.standards import normalize_channel, timestamp_normalize, is_authenticated_channel, feed_to_exchange
+# For auth
+import hmac
+import time
 
 
 LOG = logging.getLogger('feedhandler')
@@ -68,6 +71,7 @@ class Phemex(Feed):
 
     def __reset(self):
         self.l2_book = {}
+        self.accounts = {}
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -112,6 +116,10 @@ class Phemex(Feed):
         await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
+        # for i in range(len(msg['trades'])):
+        #     print(f'--{i}--')
+        #     print(msg['trades'][i])
+        # quit()
         """
         {
             'sequence': 9047166781,
@@ -166,13 +174,32 @@ class Phemex(Feed):
                                 volume=Decimal(volume),
                                 closed=None)
 
+    async def _last_price(self, msg: dict, timestamp: float):
+        for s in self.normalized_symbols:
+            if msg['symbol'][1:] in s:
+                symbol = s
+                break
+        await self.callback(LAST_PRICE, feed=self.id,
+                            symbol=symbol,
+                            last_price=msg["last"] / 10 ** msg["scale"],
+                            receipt_timestamp=timestamp)
+
+    async def _user_data(self, msg: dict, timestamp: float):
+
+        await self.callback(USER_DATA, feed=self.id, data=msg, receipt_timestamp=timestamp)
+
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         # Phemex only allows 5 connections, with 20 subscriptions per connection, so split the subscription into separate
         # connections if necessary
         ret = []
         sub_pair = []
 
+        if feed_to_exchange(self.id, USER_DATA) in self.subscription:
+            sub_pair.append([feed_to_exchange(self.id, USER_DATA), USER_DATA])
+
         for chan, symbols in self.subscription.items():
+            if normalize_channel(self.id, chan) == USER_DATA:
+                continue
             for sym in symbols:
                 sub_pair.append([chan, sym])
                 if len(sub_pair) == 20:
@@ -187,9 +214,29 @@ class Phemex(Feed):
         return ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
+
         msg = json.loads(msg, parse_float=Decimal)
 
-        if 'book' in msg:
+        if 'id' in msg and msg['id'] == 100:
+            if not msg['error']:
+                LOG.info("%s: Auth request result: %s", conn.uuid, msg['result']['status'])
+                msg = json.dumps({"id": 101, "method": feed_to_exchange(self.id, USER_DATA), "params": []})
+                LOG.debug(f"{conn.uuid}: Subscribing to authenticated channels: {msg}")
+                await conn.write(msg)
+            else:
+                LOG.warning("%s: Auth unsuccessful: %s", conn.uuid, msg)
+        elif 'id' in msg and msg['id'] == 101:
+            if not msg['error']:
+                LOG.info("%s: Subscribe to auth channels request result: %s", conn.uuid, msg['result']['status'])
+            else:
+                LOG.warning(f"{conn.uuid}: Subscription unsuccessful: {msg}")
+        elif 'id' in msg and msg['id'] == 1 and not msg['error']:
+            pass
+        elif {'accounts', 'orders', 'positions'} <= set(msg) or 'position_info' in msg:
+            await self._user_data(msg, timestamp)
+        elif 'tick' in msg:
+            await self._last_price(msg["tick"], timestamp)
+        elif 'book' in msg:
             await self._book(msg, timestamp)
         elif 'trades' in msg:
             await self._trade(msg, timestamp)
@@ -197,16 +244,36 @@ class Phemex(Feed):
             await self._candle(msg, timestamp)
         elif 'result' in msg:
             if 'error' in msg and msg['error'] is not None:
-                LOG.warning("%s: Error from exchange %s", self.id, msg)
-            return
+                LOG.warning("%s: Error from exchange %s", conn.uuid, msg)
+                return
+            else:
+                LOG.warning("%s: Unhandled 'result' message: %s", conn.uuid, msg)
         else:
-            LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", conn.uuid, msg)
 
     async def subscribe(self, conn: AsyncConnection, subs=None):
         self.__reset()
 
         for chan, symbol in subs:
-            msg = {"id": 1, "method": chan, "params": [symbol]}
-            if normalize_channel(self.id, chan) == CANDLES:
-                msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
-            await conn.write(json.dumps(msg))
+            if not normalize_channel(self.id, chan) == USER_DATA:
+                msg = {"id": 1, "method": chan, "params": [symbol]}
+                if normalize_channel(self.id, chan) == CANDLES:
+                    msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
+                elif normalize_channel(self.id, chan) == LAST_PRICE:
+                    base = self.exchange_symbol_to_std_symbol(symbol).split('-')[0]
+                    msg['params'] = [f'.{base}']
+                LOG.debug(f"{conn.uuid}: Sending subscribe request to public channel: {msg}")
+                await conn.write(json.dumps(msg))
+
+    async def authenticate(self, conn: AsyncConnection):
+        if any(is_authenticated_channel(normalize_channel(self.id, chan)) for chan in self.subscription):
+            auth = json.dumps(self._auth(self.key_id, self.key_secret))
+            LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
+            await conn.write(auth)
+
+    def _auth(self, key_id, key_secret, session_id=100):
+        # https://github.com/phemex/phemex-api-docs/blob/master/Public-Contract-API-en.md#api-user-authentication
+        expires = int((time.time() + 60))
+        signature = str(hmac.new(bytes(key_secret, 'utf-8'), bytes(f'{key_id}{expires}', 'utf-8'), digestmod='sha256').hexdigest())
+        auth = {"method": "user.auth", "params": ["API", key_id, signature, expires], "id": session_id}
+        return auth
