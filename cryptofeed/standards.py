@@ -15,10 +15,10 @@ import datetime as dt
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
                                 BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
+                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
-from cryptofeed.defines import (ACC_BALANCES, FUNDING, FUTURES_INDEX, L1_BOOK, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
-                                TICKER, TRADES, ORDER_INFO)
+from cryptofeed.defines import (ACC_BALANCES, ACC_TRANSACTIONS, FUNDING, FUTURES_INDEX, L1_BOOK, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
+                                TICKER, TRADES, ORDER_INFO, USER_DATA, USER_FILLS, LAST_PRICE)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
 
@@ -265,6 +265,13 @@ _feed_to_exchange_map = {
         HITBTC: 'subscribeBalance',
         DERIBIT: 'user.portfolio',
     },
+    USER_DATA: {
+        DERIBIT: 'user.changes',
+        PHEMEX: 'aop.subscribe',
+    },
+    LAST_PRICE: {
+        PHEMEX: 'tick.subscribe',
+    },
 }
 
 _exchange_options = {
@@ -358,4 +365,4 @@ def normalize_channel(exchange: str, feed: str) -> str:
 
 
 def is_authenticated_channel(channel: str) -> bool:
-    return channel in (ORDER_INFO, USER_FILLS, ACC_TRANSACTIONS, ACC_BALANCES)
+    return channel in (ORDER_INFO, USER_FILLS, ACC_TRANSACTIONS, ACC_BALANCES, USER_DATA)
