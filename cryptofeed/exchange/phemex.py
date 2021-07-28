@@ -71,7 +71,6 @@ class Phemex(Feed):
 
     def __reset(self):
         self.l2_book = {}
-        self.accounts = {}
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -116,10 +115,6 @@ class Phemex(Feed):
         await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
-        # for i in range(len(msg['trades'])):
-        #     print(f'--{i}--')
-        #     print(msg['trades'][i])
-        # quit()
         """
         {
             'sequence': 9047166781,
@@ -185,7 +180,6 @@ class Phemex(Feed):
                             receipt_timestamp=timestamp)
 
     async def _user_data(self, msg: dict, timestamp: float):
-
         await self.callback(USER_DATA, feed=self.id, data=msg, receipt_timestamp=timestamp)
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
