@@ -4,17 +4,17 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
-import aiohttp
-import requests
-import websockets
 import logging
 import time
+import asyncio
 from asyncio import Queue, create_task
 from contextlib import asynccontextmanager
-from decimal import Decimal
 from typing import List, Union, AsyncIterable, Optional
+from decimal import Decimal
 
+import requests
+import websockets
+import aiohttp
 from aiohttp.typedefs import StrOrURL
 from yapic import json as json_parser
 
