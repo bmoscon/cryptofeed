@@ -18,7 +18,7 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, USER_DATA, LAST_PRICE
 from cryptofeed.feed import Feed
 
-from cryptofeed.standards import normalize_channel, timestamp_normalize, is_authenticated_channel, feed_to_exchange
+from cryptofeed.standards import timestamp_normalize
 import hmac
 import time
 
@@ -188,11 +188,11 @@ class Phemex(Feed):
         ret = []
         sub_pair = []
 
-        if feed_to_exchange(self.id, USER_DATA) in self.subscription:
-            sub_pair.append([feed_to_exchange(self.id, USER_DATA), USER_DATA])
+        if self.exchange_channel_to_std(USER_DATA) in self.subscription:
+            sub_pair.append([self.exchange_channel_to_std(USER_DATA), USER_DATA])
 
         for chan, symbols in self.subscription.items():
-            if normalize_channel(self.id, chan) == USER_DATA:
+            if self.exchange_channel_to_std(chan) == USER_DATA:
                 continue
             for sym in symbols:
                 sub_pair.append([chan, sym])
@@ -249,24 +249,18 @@ class Phemex(Feed):
         self.__reset()
 
         for chan, symbol in subs:
-<<<<<<< HEAD:cryptofeed/exchanges/phemex.py
-            msg = {"id": 1, "method": chan, "params": [symbol]}
-            if self.exchange_channel_to_std(chan) == CANDLES:
-                msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
-            await conn.write(json.dumps(msg))
-=======
-            if not normalize_channel(self.id, chan) == USER_DATA:
+            if not self.exchange_channel_to_std(chan) == USER_DATA:
                 msg = {"id": 1, "method": chan, "params": [symbol]}
-                if normalize_channel(self.id, chan) == CANDLES:
+                if self.exchange_channel_to_std(self.id, chan) == CANDLES:
                     msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
-                elif normalize_channel(self.id, chan) == LAST_PRICE:
+                elif self.exchange_channel_to_std(chan) == LAST_PRICE:
                     base = self.exchange_symbol_to_std_symbol(symbol).split('-')[0]
                     msg['params'] = [f'.{base}']
                 LOG.debug(f"{conn.uuid}: Sending subscribe request to public channel: {msg}")
                 await conn.write(json.dumps(msg))
 
     async def authenticate(self, conn: AsyncConnection):
-        if any(is_authenticated_channel(normalize_channel(self.id, chan)) for chan in self.subscription):
+        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
             auth = json.dumps(self._auth(self.key_id, self.key_secret))
             LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
             await conn.write(auth)
@@ -277,4 +271,3 @@ class Phemex(Feed):
         signature = str(hmac.new(bytes(key_secret, 'utf-8'), bytes(f'{key_id}{expires}', 'utf-8'), digestmod='sha256').hexdigest())
         auth = {"method": "user.auth", "params": ["API", key_id, signature, expires], "id": session_id}
         return auth
->>>>>>> master:cryptofeed/exchange/phemex.py
