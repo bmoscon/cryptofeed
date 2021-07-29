@@ -10,7 +10,7 @@ from decimal import Decimal
 import logging
 from typing import Any, Dict, Union
 
-from cryptofeed.defines import ACC_TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol
@@ -106,7 +106,7 @@ class Exchange:
 
     @classmethod
     def is_authenticated_channel(channel: str) -> bool:
-        return channel in (ORDER_INFO, USER_FILLS, ACC_TRANSACTIONS, BALANCES)
+        return channel in (ORDER_INFO, USER_FILLS, TRANSACTIONS, BALANCES)
 
     def exchange_symbol_to_std_symbol(self, symbol: str) -> str:
         try:

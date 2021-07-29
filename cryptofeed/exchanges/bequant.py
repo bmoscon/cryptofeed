@@ -17,7 +17,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, ACC_TRANSACTIONS, MARKET, MAKER_OR_CANCEL
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET, MAKER_OR_CANCEL
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -297,7 +297,7 @@ class Bequant(Feed):
         #     'confirmations': msg['confirmations'],
         # }
 
-        await self.callback(ACC_TRANSACTIONS, feed=self.id, conn=conn, **transaction)
+        await self.callback(TRANSACTIONS, feed=self.id, conn=conn, **transaction)
 
     async def _balances(self, msg: str, conn: AsyncConnection, ts: float):
         accounts = [{k: Decimal(v) if k in ['available', 'reserved'] else v for (k, v) in account.items()} for account in msg]
@@ -366,7 +366,7 @@ class Bequant(Feed):
                 LOG.info(f'{self.id}: {chan} will be authenticated')
                 if chan == ORDER_INFO:
                     ret.append((WSAsyncConn(self.address['trading'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
-                if chan in [BALANCES, ACC_TRANSACTIONS]:
+                if chan in [BALANCES, TRANSACTIONS]:
                     ret.append((WSAsyncConn(self.address['account'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
             else:
                 ret.append((WSAsyncConn(self.address['market'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))

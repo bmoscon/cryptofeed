@@ -4,21 +4,22 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
-from decimal import Decimal
 import logging
-from contextlib import asynccontextmanager
 import time
-from typing import List, Union, AsyncIterable
 from functools import wraps
+import asyncio
+from asyncio import Queue, create_task
+from contextlib import asynccontextmanager
+from typing import List, Union, AsyncIterable, Optional
+from decimal import Decimal
 
-import aiohttp
-import websockets
 import requests
-from yapic import json as json_parser
+import websockets
+import aiohttp
 from aiohttp.typedefs import StrOrURL
+from yapic import json as json_parser
 
-from cryptofeed.exceptions import ConnectionClosed
+from cryptofeed.exceptions import ConnectionClosed, ConnectionExists
 
 
 LOG = logging.getLogger('feedhandler')
@@ -199,27 +200,60 @@ class HTTPPoll(HTTPAsyncConn):
         self.sleep = sleep
         self.delay = delay
 
-    async def read(self, header=None) -> AsyncIterable:
+    async def _read_address(self, address: str, header=None) -> str:
+        if not self.is_open:
+            LOG.error('%s: connection closed in read()', self.id)
+            raise ConnectionClosed
+        LOG.debug("%s: polling %s", self.id, address)
+        while True:
+            async with self.conn.get(address, headers=header, proxy=self.proxy) as response:
+                data = await response.text()
+                self.received += 1
+                self.last_message = time.time()
+                if self.raw_data_callback:
+                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address)
+                if response.status != 429:
+                    response.raise_for_status()
+                    return data
+            LOG.warning("%s: encountered a rate limit for address %s, retrying in %f seconds", self.id, address, self.delay)
+            await asyncio.sleep(self.delay)
+
+    async def read(self, header=None) -> AsyncIterable[str]:
         while True:
             for addr in self.address:
-                if not self.is_open:
-                    LOG.error('%s: connection closed in read()', self.id)
-                    raise ConnectionClosed
-                LOG.debug("%s: polling %s", self.id, addr)
-                async with self.conn.get(addr, headers=header, proxy=self.proxy) as response:
-                    data = await response.text()
-                    self.received += 1
-                    self.last_message = time.time()
-                    if self.raw_data_callback:
-                        await self.raw_data_callback(data, self.last_message, self.id, endpoint=addr)
-                    if response.status == 429:
-                        LOG.warning("%s: encountered a rate limit for address %s, retrying in %f seconds", self.id, addr, self.delay)
-                        await asyncio.sleep(self.delay)
-                        continue
-                    response.raise_for_status()
-                    yield data
-                    await asyncio.sleep(self.sleep)
-            await asyncio.sleep(self.delay)
+                yield await self._read_address(addr, header)
+            await asyncio.sleep(self.sleep)
+
+
+class HTTPConcurrentPoll(HTTPPoll):
+    """Polls each address concurrently in it's own Task"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._queue: Optional[Queue] = None
+
+    async def _poll_address(self, address: str, header=None):
+        try:
+            while True:
+                data = await self._read_address(address, header)
+                await asyncio.gather(self._queue.put(data), asyncio.sleep(self.sleep))
+        except Exception as e:
+            await self._queue.put(e)
+
+    async def read(self, header=None) -> AsyncIterable[str]:
+        if self._queue:
+            raise ConnectionExists('Only one reader allowed per poll')
+
+        self._queue = Queue()
+
+        for address in self.address:
+            create_task(self._poll_address(address, header))
+
+        while True:
+            data = await self._queue.get()
+            if isinstance(data, Exception):
+                raise data
+            yield data
 
 
 class WSAsyncConn(AsyncConnection):
@@ -256,7 +290,7 @@ class WSAsyncConn(AsyncConnection):
 
     async def read(self) -> AsyncIterable:
         if not self.is_open:
-            LOG.error('%s: connection closed in read()', self.id)
+            LOG.error('%s: connection closed in read()', id(self))
             raise ConnectionClosed
         if self.raw_data_callback:
             async for data in self.conn:
@@ -272,7 +306,6 @@ class WSAsyncConn(AsyncConnection):
 
     async def write(self, data: str):
         if not self.is_open:
-            LOG.error('%s: connection closed in write()', self.id)
             raise ConnectionClosed
 
         if self.raw_data_callback:

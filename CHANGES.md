@@ -1,6 +1,9 @@
 ## Changelog
 
 ### 1.9.3
+  * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
+  * Feature: Add support for private channels USER_FILLS, ORDER_INFO, ACC_BALANCES on Deribit
+  * Feature: Add support for public channel L1_BOOK on Deribit
   * Feature: Add support for private channels USER_FILLS and ORDER_INFO on Bybit
   * Bugfix: Fix demo.py
   * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
@@ -10,6 +13,7 @@
   * Bugfix: Use order id in FTX fill channel callback
   * Feature: Add ability to use the Symbols class to identify all exchanges that support a given instrument
   * Feature: Allow user to specify 'http_proxy' in feeds.
+  * Feature: Add support for 'concurrent_http' requests in Binance feeds. 
 
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method

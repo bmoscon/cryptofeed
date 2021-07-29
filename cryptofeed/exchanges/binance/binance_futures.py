@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from asyncio import create_task
 from decimal import Decimal
 import logging
 import time
@@ -11,7 +12,7 @@ from typing import List, Tuple, Callable, Dict
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.standards import timestamp_normalize
@@ -84,11 +85,11 @@ class BinanceFutures(Binance):
         ret = []
         if self.address:
             ret = super().connect()
-
+        PollCls = HTTPConcurrentPoll if self.concurrent_http else HTTPPoll
         for chan in set(self.subscription):
             if chan == 'open_interest':
                 addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
-                ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=1.0, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
+                ret.append((PollCls(addrs, self.id, delay=60.0, sleep=1.0, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
@@ -96,8 +97,10 @@ class BinanceFutures(Binance):
 
         # Handle REST endpoint messages first
         if 'openInterest' in msg:
-            await self._open_interest(msg, timestamp)
-            return
+            coro = self._open_interest(msg, timestamp)
+            if self.concurrent_http:
+                return create_task(coro)
+            return await coro
 
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>

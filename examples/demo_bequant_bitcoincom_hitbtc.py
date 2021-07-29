@@ -7,10 +7,10 @@ associated with this software.
 
 from decimal import Decimal
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.callback import BalancesCallback, AccTransactionsCallback, TickerCallback
+from cryptofeed.callback import BalancesCallback, TransactionsCallback, TickerCallback
 import pprint
 from cryptofeed import FeedHandler
-from cryptofeed.defines import ASK, BEQUANT, HITBTC, BITCOINCOM, BID, L2_BOOK, ORDER_INFO, BALANCES, ACC_TRANSACTIONS, TICKER, CANDLES, TRADES
+from cryptofeed.defines import ASK, BEQUANT, HITBTC, BITCOINCOM, BID, L2_BOOK, ORDER_INFO, BALANCES, TRANSACTIONS, TICKER, CANDLES, TRADES
 
 '''
 Bequant, Bitcoin.com and HitBTC all share the same API.
@@ -76,9 +76,9 @@ def main():
     f.add_feed(BEQUANT, timeout=-1, channels=[BALANCES], symbols=['XLM-USDT'], callbacks={BALANCES: BalancesCallback(balances)})
     f.add_feed(BITCOINCOM, timeout=-1, channels=[BALANCES], symbols=['LTC-USDT'], callbacks={BALANCES: BalancesCallback(balances)})
     f.add_feed(HITBTC, timeout=-1, channels=[BALANCES], symbols=['ADA-USDT'], callbacks={BALANCES: BalancesCallback(balances)})
-    f.add_feed(BEQUANT, timeout=-1, channels=[ACC_TRANSACTIONS], symbols=['ADA-USDT'], callbacks={ACC_TRANSACTIONS: AccTransactionsCallback(transactions)})
-    f.add_feed(BITCOINCOM, timeout=-1, channels=[ACC_TRANSACTIONS], symbols=['ZEC-USDT'], callbacks={ACC_TRANSACTIONS: AccTransactionsCallback(transactions)})
-    f.add_feed(HITBTC, timeout=-1, channels=[ACC_TRANSACTIONS], symbols=['ADA-USDT'], callbacks={ACC_TRANSACTIONS: AccTransactionsCallback(transactions)})
+    f.add_feed(BEQUANT, timeout=-1, channels=[TRANSACTIONS], symbols=['ADA-USDT'], callbacks={TRANSACTIONS: TransactionsCallback(transactions)})
+    f.add_feed(BITCOINCOM, timeout=-1, channels=[TRANSACTIONS], symbols=['ZEC-USDT'], callbacks={TRANSACTIONS: TransactionsCallback(transactions)})
+    f.add_feed(HITBTC, timeout=-1, channels=[TRANSACTIONS], symbols=['ADA-USDT'], callbacks={TRANSACTIONS: TransactionsCallback(transactions)})
     f.run()
 
 

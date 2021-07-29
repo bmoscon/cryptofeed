@@ -15,9 +15,9 @@ import datetime as dt
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
                                 BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE,
                                 DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, ACC_TRANSACTIONS, UPBIT, USER_FILLS)
+                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
-from cryptofeed.defines import (BALANCES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
+from cryptofeed.defines import (BALANCES, TRANSACTIONS, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
                                 TICKER, TRADES, ORDER_INFO)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
@@ -47,6 +47,9 @@ def timestamp_normalize(exchange, ts):
 
 
 _feed_to_exchange_map = {
+    L1_BOOK: {
+        DERIBIT: 'quote',
+    },
     L2_BOOK: {
         DYDX: 'v3_orderbook',
         BEQUANT: 'subscribeOrderbook',
@@ -251,7 +254,7 @@ _feed_to_exchange_map = {
         BITTREX: 'candle_{}_{}',
         PHEMEX: 'kline.subscribe'
     },
-    ACC_TRANSACTIONS: {
+    TRANSACTIONS: {
         BEQUANT: 'subscribeTransactions',
         BITCOINCOM: 'subscribeTransactions',
         HITBTC: 'subscribeTransactions',
@@ -260,6 +263,14 @@ _feed_to_exchange_map = {
         BEQUANT: 'subscribeBalance',
         BITCOINCOM: 'subscribeBalance',
         HITBTC: 'subscribeBalance',
+        DERIBIT: 'user.portfolio',
+    },
+    USER_DATA: {
+        DERIBIT: 'user.changes',
+        PHEMEX: 'aop.subscribe',
+    },
+    LAST_PRICE: {
+        PHEMEX: 'tick.subscribe',
     },
 }
 

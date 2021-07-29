@@ -5,7 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from collections import defaultdict
+from asyncio import create_task
+from collections import defaultdict, deque
 from decimal import Decimal
 from typing import Dict, Union, Tuple
 
@@ -17,7 +18,6 @@ from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
-
 
 LOG = logging.getLogger('feedhandler')
 
@@ -54,11 +54,16 @@ class Binance(Feed):
             info['instrument_type'][s.normalized] = stype
         return ret, info
 
-    def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', **kwargs):
+    def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', concurrent_http=False, **kwargs):
         """
-        candle_interval: time between candles updates ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
-        candle_closed_only: return only closed candles, i.e. no updates in between intervals.
-        depth_interval: time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
+        candle_interval: str
+            time between candles updates ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
+        candle_closed_only: bool
+            return only closed candles, i.e. no updates in between intervals.
+        depth_interval: str
+            time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
+        concurrent_http: bool
+            http requests will be made concurrently, if False requests will be made one at a time (affects L2_BOOK, OPEN_INTEREST).
         """
         if candle_interval not in self.valid_candle_intervals:
             raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
@@ -72,6 +77,8 @@ class Binance(Feed):
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
         self.address = self._address()
+        self.concurrent_http = concurrent_http
+
         self._reset()
 
     def _address(self) -> Union[str, Dict]:
@@ -113,6 +120,7 @@ class Binance(Feed):
             def split_list(_list: list, n: int):
                 for i in range(0, len(_list), n):
                     yield _list[i:i + n]
+
             return {chunk[0]: address + '/'.join(chunk) for chunk in split_list(subs, 200)}
 
     def _reset(self):
@@ -120,6 +128,10 @@ class Binance(Feed):
         self.l2_book = {}
         self.last_update_id = {}
         self.open_interest = {}
+
+        if self.concurrent_http:
+            # buffer 'depthUpdate' book msgs until snapshot is fetched
+            self._book_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -208,6 +220,29 @@ class Binance(Feed):
                             timestamp=timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp)
 
+    def _check_update_id(self, std_pair: str, msg: dict) -> Tuple[bool, bool, bool]:
+        """
+        'current_match' is True if the msg's update_id matches snapshot's update_id in self.last_update_id.
+        Messages will be queued (or buffered if concurrent_http is True) while fetching for snapshot, and we can return a book_callback using this msg's data instead of waiting for the next update.
+        """
+        skip_update = False
+        forced = not self.forced[std_pair]
+        current_match = msg['u'] == self.last_update_id[std_pair]
+
+        if forced and msg['u'] <= self.last_update_id[std_pair]:
+            skip_update = True
+        elif forced and msg['U'] <= self.last_update_id[std_pair] + 1 <= msg['u']:
+            self.last_update_id[std_pair] = msg['u']
+            self.forced[std_pair] = True
+        elif not forced and self.last_update_id[std_pair] + 1 == msg['U']:
+            self.last_update_id[std_pair] = msg['u']
+        else:
+            self._reset()
+            LOG.warning("%s: Missing book update detected, resetting book", self.id)
+            skip_update = True
+
+        return skip_update, forced, current_match
+
     async def _snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else 1000
         if max_depth not in self.valid_depths:
@@ -229,25 +264,37 @@ class Binance(Feed):
                 amount = Decimal(update[1])
                 self.l2_book[std_pair][side][price] = amount
 
-    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
-        skip_update = False
-        forced = not self.forced[pair]
+    async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
+        """
+        Processes 'depthUpdate' update book msg. This method should only be called if pair's l2_book exists.
+        """
+        std_pair = self.exchange_symbol_to_std_symbol(pair)
+        skip_update, forced, current_match = self._check_update_id(std_pair, msg)
+        if current_match:
+            # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
+            return await self.book_callback(self.l2_book[std_pair], L2_BOOK, std_pair, forced, self.l2_book[std_pair], timestamp_normalize(self.id, msg['E']), timestamp)
 
-        if forced and msg['u'] <= self.last_update_id[pair]:
-            skip_update = True
-        elif forced and msg['U'] <= self.last_update_id[pair] + 1 <= msg['u']:
-            self.last_update_id[pair] = msg['u']
-            self.forced[pair] = True
-        elif not forced and self.last_update_id[pair] + 1 == msg['U']:
-            self.last_update_id[pair] = msg['u']
-        else:
-            self._reset()
-            LOG.warning("%s: Missing book update detected, resetting book", self.id)
-            skip_update = True
+        if skip_update:
+            return
 
-        return skip_update, forced
+        delta = {BID: [], ASK: []}
+        ts = msg['E']
 
-    async def _book(self, msg: dict, pair: str, timestamp: float):
+        for s, side in (('b', BID), ('a', ASK)):
+            for update in msg[s]:
+                price = Decimal(update[0])
+                amount = Decimal(update[1])
+
+                if amount == 0:
+                    if price in self.l2_book[std_pair][side]:
+                        del self.l2_book[std_pair][side][price]
+                        delta[side].append((price, amount))
+                else:
+                    self.l2_book[std_pair][side][price] = amount
+                    delta[side].append((price, amount))
+        await self.book_callback(self.l2_book[std_pair], L2_BOOK, std_pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
+
+    async def _book(self, msg: dict, pair: str, timestamp: float) -> None:
         """
         {
             "e": "depthUpdate", // Event type
@@ -269,33 +316,36 @@ class Binance(Feed):
             ]
         }
         """
-        exchange_pair = pair
-        pair = self.exchange_symbol_to_std_symbol(pair)
+        book_args = (msg, pair, timestamp)
+        std_pair = self.exchange_symbol_to_std_symbol(pair)
 
-        if pair not in self.l2_book:
-            await self._snapshot(exchange_pair)
+        if not self.concurrent_http:
+            # handle snapshot (a)synchronously
+            if std_pair not in self.l2_book:
+                await self._snapshot(pair)
 
-        skip_update, forced = self._check_update_id(pair, msg)
-        if skip_update:
-            return
+            return await self._handle_book_msg(*book_args)
 
-        delta = {BID: [], ASK: []}
-        ts = msg['E']
+        if std_pair in self._book_buffer:
+            # snapshot is currently being fetched. std_pair will exist in self.l2_book after snapshot, but we need to continue buffering until all previous buffered messages have been processed.
+            return self._book_buffer[std_pair].append(book_args)
 
-        for s, side in (('b', BID), ('a', ASK)):
-            for update in msg[s]:
-                price = Decimal(update[0])
-                amount = Decimal(update[1])
+        elif std_pair in self.l2_book:
+            # snapshot exists
+            return await self._handle_book_msg(*book_args)
 
-                if amount == 0:
-                    if price in self.l2_book[pair][side]:
-                        del self.l2_book[pair][side][price]
-                        delta[side].append((price, amount))
-                else:
-                    self.l2_book[pair][side][price] = amount
-                    delta[side].append((price, amount))
+        # Initiate buffer & get snapshot
+        self._book_buffer[std_pair] = deque()
+        self._book_buffer[std_pair].append(book_args)
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
+        async def _concurrent_snapshot():
+            await self._snapshot(pair)
+            while len(self._book_buffer[std_pair]) > 0:
+                book_args = self._book_buffer[std_pair].popleft()
+                await self._handle_book_msg(*book_args)
+            del self._book_buffer[std_pair]
+
+        create_task(_concurrent_snapshot())
 
     async def _funding(self, msg: dict, timestamp: float):
         """

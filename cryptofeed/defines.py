@@ -48,6 +48,7 @@ UPBIT = 'UPBIT'
 
 
 # Market Data
+L1_BOOK = 'l1_book'
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
 BOOK_DELTA = 'book_delta'
@@ -59,19 +60,19 @@ LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
 CANDLES = 'candles'
+LAST_PRICE = 'last_price'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
 USER_FILLS = 'user_fills'
-ACC_TRANSACTIONS = 'transactions'
+TRANSACTIONS = 'transactions'
 BALANCES = 'balances'
 PLACE_ORDER = 'place_order'
 CANCEL_ORDER = 'cancel_order'
 ORDERS = 'orders'
 ORDER_STATUS = 'order_status'
 TRADE_HISTORY = 'trade_history'
-
-
+USER_DATA = 'user_data'
 
 BUY = 'buy'
 SELL = 'sell'

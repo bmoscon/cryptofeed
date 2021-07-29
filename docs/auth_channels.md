@@ -10,4 +10,4 @@ Cryptofeed has support for authenticated exchanges and authenticated data channe
 | FTX      | USER_FILLS        | User's filled orders |
 | Bequant, HitBTC, Bitcoin.com | ORDER_INFO | User's order updates: new, suspended, partially filled, filled, cancelled, expired |
 | Bequant, HitBTC, Bitcoin.com | ACC_BALANCE | Real-time feed with balances (and changes to balances) for all non-zero wallets|
-| Bequant, HitBTC, Bitcoin.com | ACC_TRANSACTIONS | Real-time information on account deposits and withdrawals |
+| Bequant, HitBTC, Bitcoin.com | TRANSACTIONS | Real-time information on account deposits and withdrawals |
