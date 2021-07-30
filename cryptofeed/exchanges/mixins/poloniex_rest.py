@@ -8,26 +8,34 @@ import hashlib
 import hmac
 import urllib
 from decimal import Decimal
-from time import time
+import time
+import logging
 
 import pandas as pd
 import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 
-from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, LIMIT, OPEN, PARTIAL, POLONIEX, SELL
-from cryptofeed.exchanges import Poloniex as PoloniexEx
-from cryptofeed.rest import RestAPI, request_retry
-from cryptofeed.standards import normalize_trading_options
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, POLONIEX, SELL, TICKER, TRADES, TRADE_HISTORY
+from cryptofeed.exchange import RestExchange
+from cryptofeed.connection import request_retry
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 # API docs https://poloniex.com/support/api/
 # 6 calls per second API limit
-class Poloniex(RestAPI):
-    id = POLONIEX
-    info = PoloniexEx()
-
-    # for public_api add "public" to the url, for trading add "tradingApi" (example: https://poloniex.com/public)
-    rest_api = "https://poloniex.com/"
+class PoloniexRestMixin(RestExchange):
+    api = "https://poloniex.com"
+    rest_channels = (
+        TRADES, TICKER, L2_BOOK, ORDER_INFO, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY
+    )
+    rest_options = {
+        LIMIT: 'limit',
+        FILL_OR_KILL: 'fillOrKill',
+        IMMEDIATE_OR_CANCEL: 'immediateOrCancel',
+        MAKER_OR_CANCEL: 'postOnly',
+    }
 
     def _order_status(self, order, symbol=None):
         if symbol:
@@ -48,7 +56,7 @@ class Poloniex(RestAPI):
 
         return {
             'order_id': order_id,
-            'symbol': symbol if symbol else self.info.exchange_symbol_to_std_symbol(data['currencyPair']),
+            'symbol': symbol if symbol else self.exchange_symbol_to_std_symbol(data['currencyPair']),
             'side': BUY if data['type'] == 'buy' else SELL,
             'order_type': LIMIT,
             'price': Decimal(data['rate']),
@@ -75,7 +83,7 @@ class Poloniex(RestAPI):
 
         return {
             'order_id': order_id,
-            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
+            'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'side': side,
             'order_type': LIMIT,
             'price': price,
@@ -87,9 +95,9 @@ class Poloniex(RestAPI):
         }
 
     def _get(self, command: str, options=None, retry=None, retry_wait=0):
-        base_url = f"{self.rest_api}public?command={command}"
+        base_url = f"{self.api}/public?command={command}"
 
-        @request_retry(self.id, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait, LOG)
         def helper():
             resp = requests.get(base_url, params=options)
             self._handle_error(resp)
@@ -101,7 +109,7 @@ class Poloniex(RestAPI):
             payload = {}
         # need to sign the payload, referenced https://stackoverflow.com/questions/43559332/python-3-hash-hmac-sha512
         payload['command'] = command
-        payload['nonce'] = int(time() * 1000)
+        payload['nonce'] = int(time.time() * 1000)
 
         paybytes = urllib.parse.urlencode(payload).encode('utf8')
         sign = hmac.new(bytes(self.config.key_secret, 'utf8'), paybytes, hashlib.sha512).hexdigest()
@@ -111,14 +119,14 @@ class Poloniex(RestAPI):
             "Sign": sign,
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        resp = requests.post(f"{self.rest_api}tradingApi?command={command}", headers=headers, data=paybytes)
+        resp = requests.post(f"{self.api}tradingApi?command={command}", headers=headers, data=paybytes)
         self._handle_error(resp)
 
         return resp.json()
 
     # Public API Routes
     def ticker(self, symbol: str, retry=None, retry_wait=10):
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get("returnTicker", retry=retry, retry_wait=retry_wait)
         return {'symbol': symbol,
                 'feed': self.id,
@@ -127,7 +135,7 @@ class Poloniex(RestAPI):
                 }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get("returnOrderBook", {'currencyPair': sym}, retry=retry, retry_wait=retry_wait)
         return {
             BID: sd({
@@ -143,7 +151,7 @@ class Poloniex(RestAPI):
     def _trade_normalize(self, trade, symbol):
         return {
             'timestamp': pd.Timestamp(trade['date']).timestamp(),
-            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
+            'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['tradeID'],
             'feed': self.id,
             'side': BUY if trade['type'] == 'buy' else SELL,
@@ -152,7 +160,7 @@ class Poloniex(RestAPI):
         }
 
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
-        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
 
         @request_retry(self.id, retry, retry_wait)
         def helper(s=None, e=None):
@@ -209,7 +217,7 @@ class Poloniex(RestAPI):
         return ret
 
     def trade_history(self, symbol: str, start=None, end=None):
-        payload = {'currencyPair': self.info.std_symbol_to_exchange_symbol(symbol)}
+        payload = {'currencyPair': self.std_symbol_to_exchange_symbol(symbol)}
 
         if start:
             payload['start'] = self._timestamp(start).timestamp()
@@ -244,13 +252,13 @@ class Poloniex(RestAPI):
         if not price:
             raise ValueError('Poloniex only supports limit orders, must specify price')
         # Poloniex only supports limit orders, so check the order type
-        _ = normalize_trading_options(self.id, order_type)
+        _ = self.normalize_order_options(self.id, order_type)
         parameters = {}
         if options:
             parameters = {
-                normalize_trading_options(self.id, o): 1 for o in options
+                self.normalize_order_options(self.id, o): 1 for o in options
             }
-        parameters['currencyPair'] = self.info.std_symbol_to_exchange_symbol(symbol)
+        parameters['currencyPair'] = self.std_symbol_to_exchange_symbol(symbol)
         parameters['amount'] = str(amount)
         parameters['rate'] = str(price)
 

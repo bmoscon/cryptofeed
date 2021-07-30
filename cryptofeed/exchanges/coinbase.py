@@ -119,7 +119,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
                             symbol=self.exchange_symbol_to_std_symbol(msg['product_id']),
                             bid=Decimal(msg['best_bid']),
                             ask=Decimal(msg['best_ask']),
-                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            timestamp=self.timestamp_normalize(msg['time']),
                             receipt_timestamp=timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
@@ -138,7 +138,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         }
         '''
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
-        ts = timestamp_normalize(self.id, msg['time'])
+        ts = self.timestamp_normalize(msg['time'])
 
         if self.keep_l3_book and 'full' in self.subscription and pair in self.subscription['full']:
             delta = {BID: [], ASK: []}
@@ -193,7 +193,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
-        ts = timestamp_normalize(self.id, msg['time'])
+        ts = self.timestamp_normalize(msg['time'])
         delta = {BID: [], ASK: []}
         for side, price, amount in msg['changes']:
             side = BID if side == 'buy' else ASK
@@ -253,7 +253,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         size = Decimal(msg['remaining_size'])
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         order_id = msg['order_id']
-        ts = timestamp_normalize(self.id, msg['time'])
+        ts = self.timestamp_normalize(msg['time'])
 
         if price in self.__l3_book[pair][side]:
             self.__l3_book[pair][side][price][order_id] = size
@@ -288,7 +288,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
             price = Decimal(msg['price'])
             side = ASK if msg['side'] == 'sell' else BID
             pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
-            ts = timestamp_normalize(self.id, msg['time'])
+            ts = self.timestamp_normalize(msg['time'])
 
             del self.__l3_book[pair][side][price][order_id]
             if len(self.__l3_book[pair][side][price]) == 0:
@@ -330,7 +330,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         if order_id not in self.order_map:
             return
 
-        ts = timestamp_normalize(self.id, msg['time'])
+        ts = self.timestamp_normalize(msg['time'])
         price = Decimal(msg['price'])
         side = ASK if msg['side'] == 'sell' else BID
         new_size = Decimal(msg['new_size'])

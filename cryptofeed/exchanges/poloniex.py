@@ -25,6 +25,11 @@ class Poloniex(Feed):
     id = POLONIEX
     symbol_endpoint = 'https://poloniex.com/public?command=returnTicker'
     _channel_map = {}
+    websocket_channels = {
+        L2_BOOK: L2_BOOK,
+        TRADES: TRADES,
+        TICKER: 1002,
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
