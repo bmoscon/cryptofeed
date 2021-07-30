@@ -1,10 +1,10 @@
 import pytest
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.rest import Rest
+from cryptofeed.exchanges.poloniex import Poloniex
 
 
-poloniex = Rest().Poloniex
+poloniex = Poloniex()
 
 
 def test_get_ticker():
@@ -21,7 +21,7 @@ def test_order_book():
 
 
 def test_trade_history():
-    trade_history = list(next(poloniex.trades('ETH-BTC', start='2020-12-30', end='2020-12-31')))
+    trade_history = list(next(poloniex.trades('ETH-BTC', start='2020-12-30 00:00:00', end='2020-12-31 00:00:00')))
     assert len(trade_history) > 0
     assert float(trade_history[0]['amount']) > 0
 

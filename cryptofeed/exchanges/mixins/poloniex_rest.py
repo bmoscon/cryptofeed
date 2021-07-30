@@ -10,12 +10,13 @@ import urllib
 from decimal import Decimal
 import time
 import logging
+from datetime import datetime as dt
 
-import pandas as pd
 import requests
+from yapic import json
 from sortedcontainers.sorteddict import SortedDict as sd
 
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, POLONIEX, SELL, TICKER, TRADES, TRADE_HISTORY
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
 from cryptofeed.connection import request_retry
 
@@ -63,7 +64,7 @@ class PoloniexRestMixin(RestExchange):
             'total': Decimal(data['startingAmount']),
             'executed': Decimal(data['startingAmount']) - Decimal(data['amount']),
             'pending': Decimal(data['amount']),
-            'timestamp': pd.Timestamp(data['date']).timestamp(),
+            'timestamp': data['date'].timestamp(),
             'order_status': status
         }
 
@@ -90,7 +91,7 @@ class PoloniexRestMixin(RestExchange):
             'total': total,
             'executed': amount,
             'pending': total - amount,
-            'timestamp': pd.Timestamp(date).timestamp(),
+            'timestamp': date.timestamp(),
             'order_status': FILLED
         }
 
@@ -101,7 +102,7 @@ class PoloniexRestMixin(RestExchange):
         def helper():
             resp = requests.get(base_url, params=options)
             self._handle_error(resp)
-            return resp.json()
+            return json.loads(resp.text, parse_float=Decimal)
         return helper()
 
     def _post(self, command: str, payload=None):
@@ -150,7 +151,7 @@ class PoloniexRestMixin(RestExchange):
 
     def _trade_normalize(self, trade, symbol):
         return {
-            'timestamp': pd.Timestamp(trade['date']).timestamp(),
+            'timestamp': trade['date'].timestamp(),
             'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['tradeID'],
             'feed': self.id,
@@ -162,23 +163,20 @@ class PoloniexRestMixin(RestExchange):
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
 
-        @request_retry(self.id, retry, retry_wait)
+        @request_retry(self.id, retry, retry_wait, LOG)
         def helper(s=None, e=None):
             data = self._get("returnTradeHistory", {'currencyPair': symbol, 'start': s, 'end': e})
             data.reverse()
             return data
 
         if not start:
-            yield map(lambda x: self._trade_normalize(x, symbol), helper())
+            yield list(map(lambda x: self._trade_normalize(x, symbol), helper()))
 
         else:
             if not end:
-                end = pd.Timestamp.utcnow()
-            start = self._timestamp(start)
-            end = self._timestamp(end) - pd.Timedelta(nanoseconds=1)
-
-            start = int(start.timestamp())
-            end = int(end.timestamp())
+                end = dt.now().timestamp()
+            start = int(self._datetime_normalize(start))
+            end = int(self._datetime_normalize(end))
 
             s = start
             e = start + 21600
@@ -186,7 +184,7 @@ class PoloniexRestMixin(RestExchange):
                 if e > end:
                     e = end
 
-                yield map(lambda x: self._trade_normalize(x, symbol), helper(s=s, e=e))
+                yield list(map(lambda x: self._trade_normalize(x, symbol), helper(s=s, e=e)))
 
                 s = e
                 e += 21600
@@ -231,7 +229,7 @@ class PoloniexRestMixin(RestExchange):
             ret.append({
                 'price': Decimal(trade['rate']),
                 'amount': Decimal(trade['amount']),
-                'timestamp': pd.Timestamp(trade['date']).timestamp(),
+                'timestamp': trade['date'].timestamp(),
                 'side': BUY if trade['type'] == 'buy' else SELL,
                 'fee_currency': symbol.split('-')[1],
                 'fee_amount': Decimal(trade['fee']),

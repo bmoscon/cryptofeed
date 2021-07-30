@@ -16,12 +16,13 @@ from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, T
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.poloniex_rest import PoloniexRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Poloniex(Feed):
+class Poloniex(Feed, PoloniexRestMixin):
     id = POLONIEX
     symbol_endpoint = 'https://poloniex.com/public?command=returnTicker'
     _channel_map = {}
