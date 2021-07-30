@@ -10,12 +10,11 @@ import hashlib
 from decimal import Decimal
 import logging
 import time
-from datetime import datetime as dt
+from datetime import datetime as dt, timezone
 from typing import Optional, Union
 
 import requests
 from yapic import json
-import pandas as pd
 from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import ASK, BID, BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
@@ -319,12 +318,12 @@ class CoinbaseRestMixin(RestExchange):
                 res[name] = Decimal(data[i])
         return res
 
-    def _to_isoformat(self, dt: pd.Timestamp):
+    def _to_isoformat(self, timestamp):
         """Required as cryptostore doesnt allow +00:00 for UTC requires Z explicitly.
         """
-        return dt.isoformat().replace("+00:00", 'Z')
+        return dt.utcfromtimestamp(timestamp).isoformat()
 
-    def candles(self, symbol: str, start: Optional[Union[str, pd.Timestamp]] = None, end: Optional[Union[str, pd.Timestamp]] = None, granularity: Optional[Union[pd.Timedelta, int]] = 3600, retry=None, retry_wait=10):
+    def candles(self, symbol: str, start: Optional[Union[str, dt, float]] = None, end: Optional[Union[str, dt, float]] = None, granularity: Optional[Union[int]] = 3600, retry=None, retry_wait=10):
         """
         Historic rate OHLC candles
         [
@@ -337,7 +336,7 @@ class CoinbaseRestMixin(RestExchange):
         :param symbol: the symbol to query data for e.g. BTC-USD
         :param start: the start time (optional)
         :param end: the end time (optional)
-        :param granularity: in seconds (int) or a specified pandas timedelta. This field must be one of the following values: {60, 300, 900, 3600, 21600, 86400}
+        :param granularity: in seconds (int). This field must be one of the following values: {60, 300, 900, 3600, 21600, 86400}
         If data points are readily available, your response may contain as many as 300
         candles and some of those candles may precede your declared start value.
 
@@ -348,33 +347,26 @@ class CoinbaseRestMixin(RestExchange):
         requests with new start/end ranges
         """
         limit = 300  # return max of 300 rows per request
-
-        # Check granularity
-        if isinstance(granularity, pd.Timedelta):
-            granularity = granularity.total_seconds()
-        granularity = int(granularity)
         assert granularity in {60, 300, 900, 3600, 21600, 86400}, 'Granularity must be in {60, 300, 900, 3600, 21600, 86400} as per https://docs.pro.coinbase.com/#get-historic-rates'
-        td = pd.to_timedelta(granularity, unit='s')
 
         if end and not start:
-            start = '2014-12-01'
+            start = '2014-12-01 00:00:00'
         if start:
             if not end:
-                end = pd.Timestamp.utcnow().tz_localize(None)
+                end = dt.now().timestamp()
+            start_id = self._datetime_normalize(start)
+            end_id_max = self._datetime_normalize(end)
 
-            start_id = pd.to_datetime(start, utc=True).floor(td)
-            end_id_max = pd.to_datetime(end, utc=True).ceil(td)
-            LOG.info(f"candles - stepping through {symbol} ({start}, {end}) where step = {td}")
+            LOG.info(f"candles - stepping through {symbol} ({start}, {end})")
             while True:
 
-                end_id = start_id + (limit - 1) * td
+                end_id = start_id + (limit - 1) * granularity
                 if end_id > end_id_max:
                     end_id = end_id_max
                 if start_id > end_id_max:
                     break
 
                 url = f'/products/{symbol}/candles?granularity={granularity}&start={self._to_isoformat(start_id)}&end={self._to_isoformat(end_id)}'
-                LOG.debug(url)
                 r = self._request('GET', url, retry=retry, retry_wait=retry_wait)
                 if r.status_code == 429:
                     time.sleep(10)
@@ -394,7 +386,7 @@ class CoinbaseRestMixin(RestExchange):
                     continue
                 yield list(map(lambda x: self._candle_normalize(symbol, x), data))
                 time.sleep(1 / self.request_limit)
-                start_id = end_id + td
+                start_id = end_id + granularity
         else:
             data = self._request('GET', f"/products/{symbol}/candles", retry=retry, retry_wait=retry_wait)
             data = json.loads(data.text, parse_float=Decimal)

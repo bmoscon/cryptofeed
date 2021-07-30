@@ -6,7 +6,7 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
-from datetime import datetime as dt
+from datetime import datetime as dt, timezone
 from typing import Any, Dict, Union
 
 from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
@@ -138,12 +138,12 @@ class RestExchange:
         if isinstance(timestamp, float):
             return timestamp
         if isinstance(timestamp, dt):
-            return timestamp.timestamp()
+            return timestamp.replace(tzinfo=timezone.utc).timestamp()
         if isinstance(timestamp, str):
             try:
-                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f').timestamp()
+                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=timezone.utc).timestamp()
             except ValueError:
-                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S').timestamp()
+                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
 
     def _handle_error(self, resp):
         if resp.status_code != 200:

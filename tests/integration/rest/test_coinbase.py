@@ -1,14 +1,13 @@
 from decimal import Decimal
 
 import pytest
-import pandas as pd
 
 from cryptofeed.defines import BID, ASK, BUY, LIMIT
 from cryptofeed.exchanges import Coinbase
 
 
-public = Coinbase(config='config.yaml').rest
-sandbox = Coinbase(sandbox=True, config='config.yaml').rest
+public = Coinbase(config='config.yaml')
+sandbox = Coinbase(sandbox=True, config='config.yaml')
 
 
 def test_ticker():
@@ -41,6 +40,7 @@ def test_trade_history_specific_time():
     ret = []
     for data in public.trades('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
         ret.extend(data)
+
     assert len(ret) == 1
     assert ret[0] == expected
 
@@ -70,10 +70,13 @@ def test_candle_history_specific_time():
             'volume': Decimal('71.11516828')
         }
     ]
-    s = pd.Timestamp('2020-01-11 04:00:00-0500', tz='US/Eastern')
-    e = pd.Timestamp('2020-01-11 05:00:00-0500', tz='US/Eastern')
+    s = '2020-01-11 09:00:00'
+    e = '2020-01-11 10:00:00'
     granularity = 3600
-    candle_history = list(public.candles('BTC-USD', start=s, end=e, granularity=granularity))[0]
+    candle_history = []
+    for entry in public.candles('BTC-USD', start=s, end=e, granularity=granularity):
+        candle_history.extend(entry)
+
     assert len(candle_history) == 2
     assert candle_history == expected
 
