@@ -4,16 +4,16 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.log import get_logger
-from cryptofeed.config import Config
 from decimal import Decimal
 import logging
+from datetime import datetime as dt
 from typing import Any, Dict, Union
 
-from cryptofeed.defines import TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
-from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol
+from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
+from cryptofeed.config import Config
 
 
 LOG = logging.getLogger('feedhandler')
@@ -24,11 +24,10 @@ class Exchange:
     symbol_endpoint = NotImplemented
     _parse_symbol_data = NotImplemented
     websocket_channels = NotImplemented
-    rest_channels = NotImplemented
-    rest_options = NotImplemented
+    request_limit = NotImplemented
     http_sync = HTTPSync()
 
-    def __init__(self, *args, config=None, sandbox=False, subaccount=None, **kwargs):
+    def __init__(self, config=None, sandbox=False, subaccount=None, **kwargs):
         self.config = Config(config=config)
         self.sandbox = sandbox
 
@@ -44,8 +43,14 @@ class Exchange:
         self.exchange_symbol_mapping = {value: key for key, value in self.normalized_symbol_mapping.items()}
 
     @classmethod
-    def timestamp_normalize(ts: Any):
+    def timestamp_normalize(cls, ts: Any):
         raise NotImplementedError
+    
+    @classmethod
+    def normalize_order_options(cls, option: str):
+        if option not in cls.order_options:
+            raise UnsupportedTradingOption
+        return cls.order_options[option]
 
     @classmethod
     def info(cls) -> Dict:
@@ -56,7 +61,7 @@ class Exchange:
         data = Symbols.get(cls.id)[1]
         data['symbols'] = list(symbols.keys())
         data['channels'] = {
-            'rest': list(cls.rest_channels),
+            'rest': list(cls.rest_channels) if hasattr(cls, 'rest_channels') else [],
             'websocket': list(cls.websocket_channels.keys())
         }
         return data
@@ -122,7 +127,24 @@ class Exchange:
         except KeyError:
             raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
-    # Definitions for REST interface
+
+class RestExchange:
+    api = NotImplemented
+    sandbox_api = NotImplemented
+    rest_channels = NotImplemented
+    order_options = NotImplemented
+
+    def _datetime_normalize(self, timestamp: Union[str, float, dt]):
+        if isinstance(timestamp, float):
+            return timestamp
+        if isinstance(timestamp, dt):
+            return timestamp.timestamp()
+        if isinstance(timestamp, str):
+            try:
+                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f').timestamp()
+            except ValueError:
+                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S').timestamp()
+
     def _handle_error(self, resp):
         if resp.status_code != 200:
             self.log.error("%s: Status code %d for URL %s", self.id, resp.status_code, resp.url)
@@ -184,13 +206,13 @@ class Exchange:
         raise NotImplementedError
 
     def __getitem__(self, key):
-        if key == 'trades':
+        if key == TRADES:
             return self.trades
-        elif key == 'funding':
+        elif key == FUNDING:
             return self.funding
-        elif key == 'l2_book':
+        elif key == L2_BOOK:
             return self.l2_book
-        elif key == 'l3_book':
+        elif key == L3_BOOK:
             return self.l3_book
-        elif key == 'ticker':
+        elif key == TICKER:
             return self.ticker

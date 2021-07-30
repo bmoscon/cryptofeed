@@ -44,7 +44,7 @@ class Probit(Feed):
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
 
     async def _trades(self, msg: dict, timestamp: float):
         '''
@@ -147,15 +147,15 @@ class Probit(Feed):
         is_snapshot = msg.get('reset', False)
 
         if is_snapshot:
-            self.l2_book[pair] = {ASK: sd(), BID: sd()}
+            self.__l2_book[pair] = {ASK: sd(), BID: sd()}
 
             for entry in msg["order_books"]:
                 price = Decimal(entry['price'])
                 quantity = Decimal(entry['quantity'])
                 side = BID if entry['side'] == "buy" else ASK
-                self.l2_book[pair][side][price] = quantity
+                self.__l2_book[pair][side][price] = quantity
 
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
+            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
         else:
             delta = {BID: [], ASK: []}
 
@@ -164,14 +164,14 @@ class Probit(Feed):
                 quantity = Decimal(entry['quantity'])
                 side = BID if entry['side'] == "buy" else ASK
                 if quantity == 0:
-                    if price in self.l2_book[pair][side]:
-                        del self.l2_book[pair][side][price]
+                    if price in self.__l2_book[pair][side]:
+                        del self.__l2_book[pair][side][price]
                     delta[side].append((price, 0))
                 else:
-                    self.l2_book[pair][side][price] = quantity
+                    self.__l2_book[pair][side][price] = quantity
                     delta[side].append((price, quantity))
 
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
+            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

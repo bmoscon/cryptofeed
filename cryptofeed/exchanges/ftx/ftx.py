@@ -53,7 +53,7 @@ class FTX(Feed):
         super().__init__('wss://ftexchange.com/ws/', **kwargs)
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
         self.funding = {}
         self.open_interest = {}
 
@@ -104,11 +104,11 @@ class FTX(Feed):
                 ))
 
     def __calc_checksum(self, pair):
-        bid_it = reversed(self.l2_book[pair][BID])
-        ask_it = iter(self.l2_book[pair][ASK])
+        bid_it = reversed(self.__l2_book[pair][BID])
+        ask_it = iter(self.__l2_book[pair][ASK])
 
-        bids = [f"{bid}:{self.l2_book[pair][BID][bid]}" for bid in bid_it]
-        asks = [f"{ask}:{self.l2_book[pair][ASK][ask]}" for ask in ask_it]
+        bids = [f"{bid}:{self.__l2_book[pair][BID][bid]}" for bid in bid_it]
+        asks = [f"{ask}:{self.__l2_book[pair][ASK][ask]}" for ask in ask_it]
 
         if len(bids) == len(asks):
             combined = [val for pair in zip(bids, asks) for val in pair]
@@ -264,7 +264,7 @@ class FTX(Feed):
         if msg['type'] == 'partial':
             # snapshot
             pair = self.exchange_symbol_to_std_symbol(msg['market'])
-            self.l2_book[pair] = {
+            self.__l2_book[pair] = {
                 BID: sd({
                     Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']
                 }),
@@ -274,7 +274,7 @@ class FTX(Feed):
             }
             if self.checksum_validation and self.__calc_checksum(pair) != check:
                 raise BadChecksum
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, float(msg['data']['time']), timestamp)
+            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, float(msg['data']['time']), timestamp)
         else:
             # update
             delta = {BID: [], ASK: []}
@@ -286,13 +286,13 @@ class FTX(Feed):
                     amount = Decimal(amount)
                     if amount == 0:
                         delta[s].append((price, 0))
-                        del self.l2_book[pair][s][price]
+                        del self.__l2_book[pair][s][price]
                     else:
                         delta[s].append((price, amount))
-                        self.l2_book[pair][s][price] = amount
+                        self.__l2_book[pair][s][price] = amount
             if self.checksum_validation and self.__calc_checksum(pair) != check:
                 raise BadChecksum
-            await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
+            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
 
     async def _fill(self, msg: dict, timestamp: float):
         """

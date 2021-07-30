@@ -61,7 +61,7 @@ class Bitmex(Feed):
         self.partial_received = defaultdict(bool)
         self.order_id = {}
         for pair in self.normalized_symbols:
-            self.l2_book[pair] = {BID: sd(), ASK: sd()}
+            self.__l2_book[pair] = {BID: sd(), ASK: sd()}
             self.order_id[pair] = defaultdict(dict)
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -118,7 +118,7 @@ class Bitmex(Feed):
                 size = Decimal(data['size'])
                 order_id = data['id']
 
-                self.l2_book[pair][side][price] = size
+                self.__l2_book[pair][side][price] = size
                 self.order_id[pair][side][order_id] = price
         elif msg['action'] == 'insert':
             for data in msg['data']:
@@ -127,7 +127,7 @@ class Bitmex(Feed):
                 size = Decimal(data['size'])
                 order_id = data['id']
 
-                self.l2_book[pair][side][price] = size
+                self.__l2_book[pair][side][price] = size
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, size))
         elif msg['action'] == 'update':
@@ -138,7 +138,7 @@ class Bitmex(Feed):
 
                 price = self.order_id[pair][side][order_id]
 
-                self.l2_book[pair][side][price] = update_size
+                self.__l2_book[pair][side][price] = update_size
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, update_size))
         elif msg['action'] == 'delete':
@@ -148,7 +148,7 @@ class Bitmex(Feed):
 
                 delete_price = self.order_id[pair][side][order_id]
                 del self.order_id[pair][side][order_id]
-                del self.l2_book[pair][side][delete_price]
+                del self.__l2_book[pair][side][delete_price]
                 delta[side].append((delete_price, 0))
 
         else:
@@ -157,7 +157,7 @@ class Bitmex(Feed):
         # PERF perf_end(self.id, 'book_msg')
         # PERF perf_log(self.id, 'book_msg')
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         for data in msg['data']:

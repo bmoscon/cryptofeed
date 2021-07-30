@@ -70,7 +70,7 @@ class Phemex(Feed):
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -95,7 +95,7 @@ class Phemex(Feed):
 
         if msg['type'] == 'snapshot':
             forced = True
-            self.l2_book[symbol] = {
+            self.__l2_book[symbol] = {
                 BID: sd({Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['bids']}),
                 ASK: sd({Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['asks']})
             }
@@ -107,12 +107,12 @@ class Phemex(Feed):
                     delta[side].append((price, amount))
                     if amount == 0:
                         # for some unknown reason deletes can be repeated in book updates
-                        if price in self.l2_book[symbol][side]:
-                            del self.l2_book[symbol][side][price]
+                        if price in self.__l2_book[symbol][side]:
+                            del self.__l2_book[symbol][side][price]
                     else:
-                        self.l2_book[symbol][side][price] = amount
+                        self.__l2_book[symbol][side][price] = amount
 
-        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
+        await self.book_callback(self.__l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

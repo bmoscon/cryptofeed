@@ -72,7 +72,7 @@ class Bequant(Feed):
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
         self.seq_no = {}
 
     async def _ticker(self, msg: dict, conn: AsyncConnection, ts: float):
@@ -99,7 +99,7 @@ class Bequant(Feed):
 
     async def _book_snapshot(self, msg: dict, conn: AsyncConnection, ts: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        self.l2_book[pair] = {
+        self.__l2_book[pair] = {
             BID: sd({
                 Decimal(bid['price']): Decimal(bid['size']) for bid in msg['bid']
             }),
@@ -107,7 +107,7 @@ class Bequant(Feed):
                 Decimal(ask['price']): Decimal(ask['size']) for ask in msg['ask']
             })
         }
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, msg['timestamp']), ts)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, msg['timestamp']), ts)
 
     async def _book_update(self, msg: dict, conn: AsyncConnection, ts: float):
         delta = {BID: [], ASK: []}
@@ -119,11 +119,11 @@ class Bequant(Feed):
                 amount = Decimal(entry['size'])
                 if amount == 0:
                     delta[s].append((price, 0))
-                    del self.l2_book[pair][s][price]
+                    del self.__l2_book[pair][s][price]
                 else:
                     delta[s].append((price, amount))
-                    self.l2_book[pair][s][price] = amount
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, msg['timestamp']), ts)
+                    self.__l2_book[pair][s][price] = amount
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, msg['timestamp']), ts)
 
     async def _trades(self, msg: dict, conn: AsyncConnection, ts: float):
         """

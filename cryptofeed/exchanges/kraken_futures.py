@@ -69,7 +69,7 @@ class KrakenFutures(Feed):
 
     def __reset(self):
         self.open_interest = {}
-        self.l2_book = {}
+        self.__l2_book = {}
         self.seq_no = {}
 
     async def subscribe(self, conn: AsyncConnection):
@@ -148,11 +148,11 @@ class KrakenFutures(Feed):
             "tickSize": null
         }
         """
-        self.l2_book[pair] = {
+        self.__l2_book[pair] = {
             BID: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['bids']}),
             ASK: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['asks']})
         }
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
@@ -178,12 +178,12 @@ class KrakenFutures(Feed):
 
         if amount == 0:
             delta[s].append((price, 0))
-            del self.l2_book[pair][s][price]
+            del self.__l2_book[pair][s][price]
         else:
             delta[s].append((price, amount))
-            self.l2_book[pair][s][price] = amount
+            self.__l2_book[pair][s][price] = amount
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def _funding(self, msg: dict, pair: str, timestamp: float):
         if msg['tag'] == 'perpetual':

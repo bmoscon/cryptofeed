@@ -18,7 +18,7 @@ from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTU
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (BALANCES, TRANSACTIONS, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
-                                TICKER, TRADES, ORDER_INFO)
+                                TICKER, TRADES, ORDER_INFO, L1_BOOK, USER_FILLS, USER_DATA, LAST_PRICE)
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
 
@@ -325,15 +325,3 @@ _exchange_options = {
         KRAKEN: 'post'
     }
 }
-
-
-def normalize_trading_options(exchange, option):
-    if option not in _exchange_options:
-        raise UnsupportedTradingOption
-    if exchange not in _exchange_options[option]:
-        raise UnsupportedTradingOption
-
-    ret = _exchange_options[option][exchange]
-    if ret == UNSUPPORTED:
-        raise UnsupportedTradingOption
-    return ret

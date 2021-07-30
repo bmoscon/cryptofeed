@@ -45,7 +45,7 @@ class dYdX(Feed):
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
         self.offsets = {}
 
     async def _book(self, msg: dict, timestamp: float):
@@ -68,15 +68,15 @@ class dYdX(Feed):
 
                     self.offsets[pair][price] = offset
                     if amount == 0:
-                        if price in self.l2_book[pair]:
-                            del self.l2_book[pair][side][price]
+                        if price in self.__l2_book[pair]:
+                            del self.__l2_book[pair][side][price]
                         delta[side].append((price, 0))
                     else:
-                        self.l2_book[pair][side][price] = amount
+                        self.__l2_book[pair][side][price] = amount
                         delta[side].append((price, amount))
         else:
             # snapshot
-            self.l2_book[pair] = {BID: sd(), ASK: sd()}
+            self.__l2_book[pair] = {BID: sd(), ASK: sd()}
             self.offsets[pair] = {}
             forced = True
 
@@ -84,9 +84,9 @@ class dYdX(Feed):
                 side = BID if side == 'bids' else ASK
                 for entry in data:
                     self.offsets[pair][Decimal(entry['price'])] = int(entry['offset'])
-                    self.l2_book[pair][side][Decimal(entry['price'])] = Decimal(entry['size'])
+                    self.__l2_book[pair][side][Decimal(entry['price'])] = Decimal(entry['size'])
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

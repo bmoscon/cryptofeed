@@ -132,16 +132,16 @@ class OKEx(Feed):
             await conn.write(json.dumps(request))
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
         self.open_interest = {}
 
     def __calc_checksum(self, pair):
-        bid_it = reversed(self.l2_book[pair][BID])
-        ask_it = iter(self.l2_book[pair][ASK])
+        bid_it = reversed(self.__l2_book[pair][BID])
+        ask_it = iter(self.__l2_book[pair][ASK])
 
-        bids = (f"{bid}:{self.l2_book[pair][BID][bid]}" for bid in bid_it)
+        bids = (f"{bid}:{self.__l2_book[pair][BID][bid]}" for bid in bid_it)
         bids = list(islice(bids, 25))
-        asks = (f"{ask}:{self.l2_book[pair][ASK][ask]}" for ask in ask_it)
+        asks = (f"{ask}:{self.__l2_book[pair][ASK][ask]}" for ask in ask_it)
         asks = list(islice(asks, 25))
 
         if len(bids) == len(asks):
@@ -231,7 +231,7 @@ class OKEx(Feed):
             # snapshot
             pair = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
             for update in msg['data']:
-                self.l2_book[pair] = {
+                self.__l2_book[pair] = {
                     BID: sd({
                         Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']
                     }),
@@ -242,7 +242,7 @@ class OKEx(Feed):
 
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, int(update['ts'])), timestamp)
+                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, int(update['ts'])), timestamp)
         else:
             # update
             pair = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
@@ -255,15 +255,15 @@ class OKEx(Feed):
                         price = Decimal(price)
                         amount = Decimal(amount)
                         if amount == 0:
-                            if price in self.l2_book[pair][s]:
+                            if price in self.__l2_book[pair][s]:
                                 delta[s].append((price, 0))
-                                del self.l2_book[pair][s][price]
+                                del self.__l2_book[pair][s][price]
                         else:
                             delta[s].append((price, amount))
-                            self.l2_book[pair][s][price] = amount
+                            self.__l2_book[pair][s][price] = amount
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, int(update['ts'])), timestamp)
+                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, int(update['ts'])), timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
 

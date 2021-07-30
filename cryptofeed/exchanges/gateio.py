@@ -47,7 +47,7 @@ class Gateio(Feed):
         self._reset()
 
     def _reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
         self.last_update_id = {}
         self.forced = defaultdict(bool)
 
@@ -116,10 +116,10 @@ class Gateio(Feed):
         data = json.loads(ret, parse_float=Decimal)
 
         symbol = self.exchange_symbol_to_std_symbol(symbol)
-        self.l2_book[symbol] = {}
+        self.__l2_book[symbol] = {}
         self.last_update_id[symbol] = data['id']
-        self.l2_book[symbol][BID] = sd({Decimal(price): Decimal(amount) for price, amount in data['bids']})
-        self.l2_book[symbol][ASK] = sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
+        self.__l2_book[symbol][BID] = sd({Decimal(price): Decimal(amount) for price, amount in data['bids']})
+        self.__l2_book[symbol][ASK] = sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
@@ -158,7 +158,7 @@ class Gateio(Feed):
         }
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
-        if symbol not in self.l2_book:
+        if symbol not in self.__l2_book:
             await self._snapshot(msg['result']['s'])
 
         skip_update, forced = self._check_update_id(symbol, msg['result'])
@@ -174,14 +174,14 @@ class Gateio(Feed):
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self.l2_book[symbol][side]:
-                        del self.l2_book[symbol][side][price]
+                    if price in self.__l2_book[symbol][side]:
+                        del self.__l2_book[symbol][side][price]
                         delta[side].append((price, amount))
                 else:
-                    self.l2_book[symbol][side][price] = amount
+                    self.__l2_book[symbol][side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
+        await self.book_callback(self.__l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
 
     async def _candles(self, msg: dict, timestamp: float):
         """
@@ -236,7 +236,7 @@ class Gateio(Feed):
             elif channel == 'trades':
                 await self._trades(msg, timestamp)
             elif channel == 'order_book_update':
-                await self._l2_book(msg, timestamp)
+                await self.__l2_book(msg, timestamp)
             elif channel == 'candlesticks':
                 await self._candles(msg, timestamp)
             else:

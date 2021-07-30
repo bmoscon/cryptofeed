@@ -54,7 +54,7 @@ class KuCoin(Feed):
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
         self.seq_no = {}
 
     async def _candles(self, msg: dict, symbol: str, timestamp: float):
@@ -153,13 +153,13 @@ class KuCoin(Feed):
         data = json.loads(data, parse_float=Decimal)
         data = data['data']
         self.seq_no[symbol] = int(data['sequence'])
-        self.l2_book[symbol] = {
+        self.__l2_book[symbol] = {
             BID: sd({Decimal(price): Decimal(amount) for price, amount in data['bids']}),
             ASK: sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
         }
 
         timestamp = time.time()
-        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, True, None, timestamp, timestamp)
+        await self.book_callback(self.__l2_book[symbol], L2_BOOK, symbol, True, None, timestamp, timestamp)
 
     async def _l2_book(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -181,7 +181,7 @@ class KuCoin(Feed):
         forced = False
         data = msg['data']
         sequence = data['sequenceStart']
-        if symbol not in self.l2_book or sequence > self.seq_no[symbol] + 1:
+        if symbol not in self.__l2_book or sequence > self.seq_no[symbol] + 1:
             if symbol in self.seq_no and sequence > self.seq_no[symbol] + 1:
                 LOG.warning("%s: Missing book update detected, resetting book", self.id)
             await self._snapshot(symbol)
@@ -200,14 +200,14 @@ class KuCoin(Feed):
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self.l2_book[symbol][side]:
-                        del self.l2_book[symbol][side][price]
+                    if price in self.__l2_book[symbol][side]:
+                        del self.__l2_book[symbol][side][price]
                         delta[side].append((price, amount))
                 else:
-                    self.l2_book[symbol][side][price] = amount
+                    self.__l2_book[symbol][side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
+        await self.book_callback(self.__l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -224,7 +224,7 @@ class KuCoin(Feed):
         elif topic == CANDLES:
             await self._candles(msg, symbol, timestamp)
         elif topic == L2_BOOK:
-            await self._l2_book(msg, symbol, timestamp)
+            await self.__l2_book(msg, symbol, timestamp)
         else:
             LOG.warning("%s: Unhandled message type %s", self.id, msg)
 

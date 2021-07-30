@@ -83,7 +83,7 @@ class Bithumb(Feed):
         self.__reset()
 
     def __reset(self):
-        self.l2_book = defaultdict(lambda: {ASK: sd(), BID: sd()})
+        self.__l2_book = defaultdict(lambda: {ASK: sd(), BID: sd()})
 
     async def _trades(self, msg: dict, rtimestamp: float):
         '''
@@ -160,7 +160,7 @@ class Bithumb(Feed):
             symbol = self.exchange_symbol_to_std_symbol(depths[0]['symbol'])
 
             # Copy over so that book_callback can generate deltas.
-            self.previous_book[symbol] = copy.deepcopy(self.l2_book[symbol])
+            self.previous_book[symbol] = copy.deepcopy(self.__l2_book[symbol])
 
             for depth in depths:
                 price = Decimal(depth['price'])
@@ -168,18 +168,18 @@ class Bithumb(Feed):
                 side = BID if depth['orderType'] == 'bid' else ASK
 
                 if quantity == 0:
-                    self.l2_book[symbol][side].pop(price, None)
+                    self.__l2_book[symbol][side].pop(price, None)
                 else:
-                    self.l2_book[symbol][side][price] = quantity
+                    self.__l2_book[symbol][side][price] = quantity
 
             # Bithumb REST orderbooks only show/retain 30 levels, drop
             # everything past 30 levels
             for book_side, pop_index in ((BID, 0), (ASK, -1)):
-                book = self.l2_book[symbol][book_side]
+                book = self.__l2_book[symbol][book_side]
                 while len(book) > 30:
                     book.popitem(pop_index)
 
-            await self.book_callback(self.l2_book[symbol], L2_BOOK, symbol, False, None, timestamp, rtimestamp)
+            await self.book_callback(self.__l2_book[symbol], L2_BOOK, symbol, False, None, timestamp, rtimestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

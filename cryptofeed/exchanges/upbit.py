@@ -100,7 +100,7 @@ class Upbit(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['cd'])
         orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
-        forced = pair not in self.l2_book
+        forced = pair not in self.__l2_book
 
         update = {
             BID: sd({
@@ -114,10 +114,10 @@ class Upbit(Feed):
         }
 
         if not forced:
-            self.previous_book[pair] = self.l2_book[pair]
-        self.l2_book[pair] = update
+            self.previous_book[pair] = self.__l2_book[pair]
+        self.__l2_book[pair] = update
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, orderbook_timestamp, timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, orderbook_timestamp, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """

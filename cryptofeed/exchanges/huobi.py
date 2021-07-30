@@ -53,12 +53,12 @@ class Huobi(Feed):
         self.__reset()
 
     def __reset(self):
-        self.l2_book = {}
+        self.__l2_book = {}
 
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
         data = msg['tick']
-        forced = pair not in self.l2_book
+        forced = pair not in self.__l2_book
 
         update = {
             BID: sd({
@@ -72,10 +72,10 @@ class Huobi(Feed):
         }
 
         if not forced:
-            self.previous_book[pair] = self.l2_book[pair]
-        self.l2_book[pair] = update
+            self.previous_book[pair] = self.__l2_book[pair]
+        self.__l2_book[pair] = update
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

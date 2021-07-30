@@ -47,7 +47,7 @@ class Gemini(Feed):
 
     def __reset(self, pairs):
         for pair in pairs:
-            self.l2_book[self.exchange_symbol_to_std_symbol(pair)] = {BID: sd(), ASK: sd()}
+            self.__l2_book[self.exchange_symbol_to_std_symbol(pair)] = {BID: sd(), ASK: sd()}
 
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
@@ -57,21 +57,21 @@ class Gemini(Feed):
             return
 
         data = msg['changes']
-        forced = not len(self.l2_book[pair][BID])
+        forced = not len(self.__l2_book[pair][BID])
         delta = {BID: [], ASK: []}
         for entry in data:
             side = ASK if entry[0] == 'sell' else BID
             price = Decimal(entry[1])
             amount = Decimal(entry[2])
             if amount == 0:
-                if price in self.l2_book[pair][side]:
-                    del self.l2_book[pair][side][price]
+                if price in self.__l2_book[pair][side]:
+                    del self.__l2_book[pair][side][price]
                     delta[side].append((price, 0))
             else:
-                self.l2_book[pair][side][price] = amount
+                self.__l2_book[pair][side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])

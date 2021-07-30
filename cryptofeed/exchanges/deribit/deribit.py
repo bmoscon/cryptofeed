@@ -8,10 +8,10 @@ from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, FILLED
-from cryptofeed.defines import CURRENCY, ACC_BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
+from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.standards import timestamp_normalize, is_authenticated_channel, normalize_channel
+from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 # For auth
 import hashlib
@@ -59,7 +59,7 @@ class Deribit(Feed):
 
     def __reset(self):
         self.open_interest = {}
-        self.l2_book = {}
+        self.__l2_book = {}
         self.seq_no = {}
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -189,15 +189,15 @@ class Deribit(Feed):
         pub_channels = []
         pri_channels = []
         for chan in self.subscription:
-            if is_authenticated_channel(normalize_channel(self.id, chan)):
+            if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 for pair in self.subscription[chan]:
-                    if normalize_channel(self.id, chan) == ACC_BALANCES:
+                    if self.exchange_channel_to_std(chan) == BALANCES:
                         pri_channels.append(f"{chan}.{pair}")
                     else:
                         pri_channels.append(f"{chan}.{pair}.raw")
             else:
                 for pair in self.subscription[chan]:
-                    if normalize_channel(self.id, chan) == L1_BOOK:
+                    if self.exchange_channel_to_std(chan) == L1_BOOK:
                         pub_channels.append(f"{chan}.{pair}")
                     else:
                         pub_channels.append(f"{chan}.{pair}.raw")
@@ -236,7 +236,7 @@ class Deribit(Feed):
         """
         ts = msg["params"]["data"]["timestamp"]
         pair = self.exchange_symbol_to_std_symbol(msg["params"]["data"]["instrument_name"])
-        self.l2_book[pair] = {
+        self.__l2_book[pair] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
                 # _ is always 'new' for snapshot
@@ -250,7 +250,7 @@ class Deribit(Feed):
 
         self.seq_no[pair] = msg["params"]["data"]["change_id"]
 
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, ts), timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
         ts = msg["params"]["data"]["timestamp"]
@@ -266,7 +266,7 @@ class Deribit(Feed):
         delta = {BID: [], ASK: []}
 
         for action, price, amount in msg["params"]["data"]["bids"]:
-            bidask = self.l2_book[pair][BID]
+            bidask = self.__l2_book[pair][BID]
             if action != "delete":
                 bidask[price] = Decimal(amount)
                 delta[BID].append((Decimal(price), Decimal(amount)))
@@ -275,14 +275,14 @@ class Deribit(Feed):
                 delta[BID].append((Decimal(price), Decimal(amount)))
 
         for action, price, amount in msg["params"]["data"]["asks"]:
-            bidask = self.l2_book[pair][ASK]
+            bidask = self.__l2_book[pair][ASK]
             if action != "delete":
                 bidask[price] = amount
                 delta[ASK].append((Decimal(price), Decimal(amount)))
             else:
                 del bidask[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(self.l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -384,7 +384,7 @@ class Deribit(Feed):
 
             if subchan == 'portfolio':
                 currency = self.exchange_symbol_to_std_symbol(data['currency'])
-                await self.callback(ACC_BALANCES, feed=self.id, currency=currency, data=data, receipt_timestamp=timestamp)
+                await self.callback(BALANCES, feed=self.id, currency=currency, data=data, receipt_timestamp=timestamp)
 
             elif subchan == 'orders':
                 symbol = self.exchange_symbol_to_std_symbol(data['instrument_name'])

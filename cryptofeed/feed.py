@@ -28,7 +28,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -72,7 +72,7 @@ class Feed(Exchange):
         http_proxy: str
             URL of proxy server. Passed to HTTPPoll and HTTPAsyncConn. Only used for HTTP GET requests.
         """
-
+        super().__init__(**kwargs)
         self.log_on_error = log_message_on_error
         self.retries = retries
         self.exceptions = exceptions
@@ -128,8 +128,8 @@ class Feed(Exchange):
 
         self._feed_config = dict(self._feed_config)
 
-        self.l3_book = {}
-        self.l2_book = {}
+        self.__l3_book = {}
+        self.__l2_book = {}
         self.callbacks = {FUNDING: Callback(None),
                           FUTURES_INDEX: Callback(None),
                           L2_BOOK: Callback(None),
