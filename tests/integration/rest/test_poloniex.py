@@ -26,21 +26,21 @@ def test_trade_history():
     assert float(trade_history[0]['amount']) > 0
 
 
-@pytest.mark.skipif(not poloniex.config.key_id or not poloniex.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not poloniex.key_id or not poloniex.key_secret, reason="No api key provided")
 def test_balances():
     balances = poloniex.balances()
 
     assert float(balances['UIS']) == 0.0
 
 
-@pytest.mark.skipif(not poloniex.config.key_id or not poloniex.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not poloniex.key_id or not poloniex.key_secret, reason="No api key provided")
 def test_complete_balances():
     complete_balances = poloniex.complete_balances()
 
     assert float(complete_balances['UIS']['available']) == 0.0
 
 
-@pytest.mark.skipif(not poloniex.config.key_id or not poloniex.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not poloniex.key_id or not poloniex.key_secret, reason="No api key provided")
 def test_deposit_addresses():
     deposit_addresses = poloniex.deposit_addresses()
     if len(deposit_addresses) == 0:
@@ -50,7 +50,7 @@ def test_deposit_addresses():
     assert len(deposit_addresses) > 0
 
 
-@pytest.mark.skipif(not poloniex.config.key_id or not poloniex.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not poloniex.key_id or not poloniex.key_secret, reason="No api key provided")
 def test_deposit_withdrawals():
     deposit_withdrawals = poloniex.deposit_withdrawals({"start": 1410158341, "end": 1410499372})
 
@@ -58,21 +58,21 @@ def test_deposit_withdrawals():
     assert 'withdrawals' in deposit_withdrawals
 
 
-@pytest.mark.skipif(not poloniex.config.key_id or not poloniex.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not poloniex.key_id or not poloniex.key_secret, reason="No api key provided")
 def test_open_orders():
     open_orders = poloniex.open_orders()
 
     assert 'BTC_BCN' in open_orders
 
 
-@pytest.mark.skipif(not poloniex.config.key_id or not poloniex.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not poloniex.key_id or not poloniex.key_secret, reason="No api key provided")
 def test_available_account_balances():
     available_account_balances = poloniex.available_account_balances()
 
     assert len(available_account_balances) >= 0
 
 
-@pytest.mark.skipif(not poloniex.config.key_id or not poloniex.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not poloniex.key_id or not poloniex.key_secret, reason="No api key provided")
 def test_tradable_balances():
     tradable_balances = poloniex.tradable_balances()
 
