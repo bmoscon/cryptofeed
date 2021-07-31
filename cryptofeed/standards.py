@@ -14,8 +14,8 @@ import datetime as dt
 
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
                                 BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE,
-                                DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, GEMINI, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, POLONIEX, PROBIT, UPBIT)
+                                DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (BALANCES, TRANSACTIONS, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
                                 TICKER, TRADES, ORDER_INFO, L1_BOOK, USER_FILLS, USER_DATA, LAST_PRICE)
@@ -32,10 +32,10 @@ def timestamp_normalize(exchange, ts):
         else:
             return ts.timestamp()
 
-    if exchange in {BITFLYER, COINBASE, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, FTX, FTX_US, BITCOINCOM, PROBIT, BITTREX, DYDX, BEQUANT}:
+    if exchange in {BITFLYER, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, FTX, FTX_US, BITCOINCOM, PROBIT, BITTREX, DYDX, BEQUANT}:
         return ts.timestamp()
     elif exchange in {OKEX, HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
-                      BINANCE_DELIVERY, GEMINI, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
+                      BINANCE_DELIVERY, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
 
         return ts / 1000.0
     elif exchange in {BITSTAMP}:
@@ -56,7 +56,6 @@ _feed_to_exchange_map = {
         BITFINEX: 'book-P0-F0-100',
         BITFLYER: 'lightning_board_{}',
         BITHUMB: 'orderbookdepth',
-        POLONIEX: L2_BOOK,
         HITBTC: 'subscribeOrderbook',
         COINBASE: 'level2',
         BITMEX: 'orderBookL2',
@@ -78,7 +77,6 @@ _feed_to_exchange_map = {
         BYBIT: 'orderBookL2_25',
         FTX: 'orderbook',
         FTX_US: 'orderbook',
-        GEMINI: L2_BOOK,
         BITTREX: 'orderbook_{}_{}',
         BITCOINCOM: 'subscribeOrderbook',
         ASCENDEX: "depth:",
@@ -97,7 +95,6 @@ _feed_to_exchange_map = {
         HITBTC: UNSUPPORTED,
         COINBASE: 'full',
         BITMEX: UNSUPPORTED,
-        POLONIEX: UNSUPPORTED,  # supported by specifying a trading symbol as the channel,
         KRAKEN: UNSUPPORTED,
         KRAKEN_FUTURES: UNSUPPORTED,
         BINANCE: UNSUPPORTED,
@@ -113,7 +110,6 @@ _feed_to_exchange_map = {
         BYBIT: UNSUPPORTED,
         FTX: UNSUPPORTED,
         FTX_US: UNSUPPORTED,
-        GEMINI: UNSUPPORTED,
         BITCOINCOM: UNSUPPORTED,
         ASCENDEX: UNSUPPORTED,
         UPBIT: UNSUPPORTED,
@@ -122,7 +118,6 @@ _feed_to_exchange_map = {
     TRADES: {
         DYDX: 'v3_trades',
         BEQUANT: 'subscribeTrades',
-        POLONIEX: TRADES,
         HITBTC: 'subscribeTrades',
         BITSTAMP: 'live_trades',
         BITFINEX: 'trades',
@@ -147,7 +142,6 @@ _feed_to_exchange_map = {
         BYBIT: 'trade',
         FTX: 'trades',
         FTX_US: 'trades',
-        GEMINI: TRADES,
         BITTREX: 'trade_{}',
         BITCOINCOM: 'subscribeTrades',
         ASCENDEX: "trades:",
@@ -159,7 +153,6 @@ _feed_to_exchange_map = {
     },
     TICKER: {
         BEQUANT: 'subscribeTicker',
-        POLONIEX: 1002,
         HITBTC: 'subscribeTicker',
         BITFINEX: 'ticker',
         BITSTAMP: UNSUPPORTED,
@@ -181,7 +174,6 @@ _feed_to_exchange_map = {
         BYBIT: UNSUPPORTED,
         FTX: "ticker",
         FTX_US: "ticker",
-        GEMINI: UNSUPPORTED,
         BITTREX: 'ticker_{}',
         BITCOINCOM: 'subscribeTicker',
         ASCENDEX: UNSUPPORTED,
@@ -224,7 +216,6 @@ _feed_to_exchange_map = {
         BYBIT: 'instrument_info.100ms'
     },
     ORDER_INFO: {
-        GEMINI: ORDER_INFO,
         OKEX: ORDER_INFO,
         FTX: 'orders',
         BEQUANT: 'subscribeReports',
@@ -280,9 +271,6 @@ _exchange_options = {
         BITCOINCOM: 'limit',
         HITBTC: 'limit',
         KRAKEN: 'limit',
-        GEMINI: 'exchange limit',
-        POLONIEX: 'limit',
-        COINBASE: 'limit',
         BLOCKCHAIN: 'limit',
     },
     MARKET: {
@@ -290,38 +278,26 @@ _exchange_options = {
         BITCOINCOM: 'market',
         HITBTC: 'market',
         KRAKEN: 'market',
-        GEMINI: UNSUPPORTED,
-        POLONIEX: UNSUPPORTED,
-        COINBASE: 'market',
         BLOCKCHAIN: 'market',
     },
     FILL_OR_KILL: {
         BEQUANT: {'timeInForce': 'FOK'},
         BITCOINCOM: {'timeInForce': 'FOK'},
         HITBTC: {'timeInForce': 'FOK'},
-        GEMINI: 'fill-or-kill',
-        POLONIEX: 'fillOrKill',
-        COINBASE: {'time_in_force': 'FOK'},
         KRAKEN: UNSUPPORTED,
         BLOCKCHAIN: 'FOK'
     },
     IMMEDIATE_OR_CANCEL: {
         BEQUANT: {'timeInForce': 'IOC'},
         BITCOINCOM: {'timeInForce': 'IOC'},
-        GEMINI: 'immediate-or-cancel',
         HITBTC: {'timeInForce': 'IOC'},
-        POLONIEX: 'immediateOrCancel',
-        COINBASE: {'time_in_force': 'IOC'},
         KRAKEN: UNSUPPORTED,
         BLOCKCHAIN: 'IOC'
     },
     MAKER_OR_CANCEL: {
         BEQUANT: {'postOnly': 1},
         BITCOINCOM: {'postOnly': 1},
-        GEMINI: 'maker-or-cancel',
         HITBTC: {'postOnly': 1},
-        POLONIEX: 'postOnly',
-        COINBASE: {'post_only': 1},
         KRAKEN: 'post'
     }
 }

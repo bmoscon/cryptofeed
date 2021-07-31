@@ -25,7 +25,7 @@ from cryptofeed.exceptions import ConnectionClosed, ConnectionExists
 LOG = logging.getLogger('feedhandler')
 
 
-def request_retry(exchange, retry, retry_wait, LOG):
+def request_retry(exchange, retry, retry_wait):
     """
     decorator to retry request
     """

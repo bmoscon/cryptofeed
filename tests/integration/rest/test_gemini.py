@@ -4,8 +4,8 @@ from cryptofeed.defines import BID, ASK, LIMIT, BUY, CANCELLED
 from cryptofeed.exchanges import Gemini
 
 
-public = Gemini(config='config.yaml').rest
-sandbox = Gemini(sandbox=True, config='config.yaml').rest
+public = Gemini(config='config.yaml')
+sandbox = Gemini(sandbox=True, config='config.yaml')
 
 
 def test_ticker():

@@ -91,7 +91,7 @@ class CoinbaseRestMixin(RestExchange):
     def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry=None, retry_wait=0):
         api = self.sandbox_api if self.sandbox else self.api
 
-        @request_retry(self.id, retry, retry_wait, LOG)
+        @request_retry(self.id, retry, retry_wait)
         def helper(verb, api, endpoint, body, auth):
             header = None
             if auth:

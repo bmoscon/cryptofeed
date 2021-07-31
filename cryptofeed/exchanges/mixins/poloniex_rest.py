@@ -98,7 +98,7 @@ class PoloniexRestMixin(RestExchange):
     def _get(self, command: str, options=None, retry=None, retry_wait=0):
         base_url = f"{self.api}/public?command={command}"
 
-        @request_retry(self.id, retry, retry_wait, LOG)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             resp = requests.get(base_url, params=options)
             self._handle_error(resp)
@@ -163,7 +163,7 @@ class PoloniexRestMixin(RestExchange):
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
 
-        @request_retry(self.id, retry, retry_wait, LOG)
+        @request_retry(self.id, retry, retry_wait)
         def helper(s=None, e=None):
             data = self._get("returnTradeHistory", {'currencyPair': symbol, 'start': s, 'end': e})
             data.reverse()
