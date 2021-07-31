@@ -23,7 +23,8 @@ from .coinbase import Coinbase
 from .deribit import Deribit
 from .dydx import dYdX
 from .exx import EXX
-from .ftx import FTX, FTXUS
+from .ftx import FTX
+from .ftx_us import FTXUS
 from .gateio import Gateio
 from .gemini import Gemini
 from .hitbtc import HitBTC

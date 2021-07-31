@@ -14,7 +14,7 @@ import datetime as dt
 
 from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
                                 BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE,
-                                DERIBIT, DYDX, EXX, FTX, FTX_US, GATEIO, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
+                                DERIBIT, DYDX, EXX, GATEIO, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
                                 KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (BALANCES, TRANSACTIONS, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
@@ -32,7 +32,7 @@ def timestamp_normalize(exchange, ts):
         else:
             return ts.timestamp()
 
-    if exchange in {BITFLYER, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, FTX, FTX_US, BITCOINCOM, PROBIT, BITTREX, DYDX, BEQUANT}:
+    if exchange in {BITFLYER, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, BITCOINCOM, PROBIT, BITTREX, DYDX, BEQUANT}:
         return ts.timestamp()
     elif exchange in {OKEX, HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
                       BINANCE_DELIVERY, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
@@ -74,8 +74,6 @@ _feed_to_exchange_map = {
         OKEX: 'books-l2-tbt',
         DERIBIT: 'book',
         BYBIT: 'orderBookL2_25',
-        FTX: 'orderbook',
-        FTX_US: 'orderbook',
         BITTREX: 'orderbook_{}_{}',
         BITCOINCOM: 'subscribeOrderbook',
         ASCENDEX: "depth:",
@@ -115,8 +113,6 @@ _feed_to_exchange_map = {
         OKEX: 'trades',
         DERIBIT: 'trades',
         BYBIT: 'trade',
-        FTX: 'trades',
-        FTX_US: 'trades',
         BITTREX: 'trade_{}',
         BITCOINCOM: 'subscribeTrades',
         ASCENDEX: "trades:",
@@ -139,15 +135,9 @@ _feed_to_exchange_map = {
         BINANCE_US: 'bookTicker',
         BINANCE_FUTURES: 'bookTicker',
         BINANCE_DELIVERY: 'bookTicker',
-        BLOCKCHAIN: UNSUPPORTED,
-        HUOBI: UNSUPPORTED,
-        HUOBI_DM: UNSUPPORTED,
         OKCOIN: '{}/ticker',
         OKEX: 'tickers',
         DERIBIT: "ticker",
-        BYBIT: UNSUPPORTED,
-        FTX: "ticker",
-        FTX_US: "ticker",
         BITTREX: 'ticker_{}',
         BITCOINCOM: 'subscribeTicker',
         ASCENDEX: UNSUPPORTED,
@@ -165,7 +155,6 @@ _feed_to_exchange_map = {
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: 'funding-rate',
-        FTX: 'funding',
         HUOBI_SWAP: 'funding'
     },
     OPEN_INTEREST: {
@@ -173,7 +162,6 @@ _feed_to_exchange_map = {
         BITMEX: 'instrument',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
-        FTX: 'open_interest',
         BINANCE_FUTURES: 'open_interest',
         BINANCE_DELIVERY: 'open_interest',
         BYBIT: 'instrument_info.100ms'
@@ -182,7 +170,6 @@ _feed_to_exchange_map = {
         BITMEX: 'liquidation',
         BINANCE_FUTURES: 'forceOrder',
         BINANCE_DELIVERY: 'forceOrder',
-        FTX: 'trades',
         DERIBIT: 'trades',
         OKEX: LIQUIDATIONS,
     },
@@ -191,7 +178,6 @@ _feed_to_exchange_map = {
     },
     ORDER_INFO: {
         OKEX: ORDER_INFO,
-        FTX: 'orders',
         BEQUANT: 'subscribeReports',
         BITCOINCOM: 'subscribeReports',
         HITBTC: 'subscribeReports',
@@ -200,7 +186,6 @@ _feed_to_exchange_map = {
 
     },
     USER_FILLS: {
-        FTX: 'fills',
         BYBIT: 'execution',
         DERIBIT: 'user.trades',
     },

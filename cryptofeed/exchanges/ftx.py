@@ -10,7 +10,6 @@ from collections import defaultdict
 import logging
 from decimal import Decimal
 import hmac
-import os
 from time import time
 import zlib
 from typing import Dict, Iterable, Tuple
@@ -26,14 +25,30 @@ from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.ftx_rest import FTXRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class FTX(Feed):
+class FTX(Feed, FTXRestMixin):
     id = FTX_id
     symbol_endpoint = "https://ftx.com/api/markets"
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
+    request_limit = 30
+
+    @classmethod
+    def timestamp_normalize(cls, ts):
+        return ts.timestamp()
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:

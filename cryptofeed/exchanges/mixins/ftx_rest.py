@@ -5,37 +5,32 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from decimal import Decimal
+import logging
 import hmac
 from time import sleep, time
 from typing import Any, Dict, List, Optional
+from datetime import datetime as dt
 
-import pandas as pd
+from yapic import json
 import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 import urllib.parse
 
-from cryptofeed.defines import BID, ASK, BUY, DELETE, GET, LIMIT, POST
-from cryptofeed.defines import FTX as FTX_ID
+from cryptofeed.defines import BID, ASK, BUY, CANCEL_ORDER, DELETE, FUNDING, GET, L2_BOOK, LIMIT, ORDER_INFO, ORDER_STATUS, PLACE_ORDER, POST, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.defines import SELL
-from cryptofeed.exchanges import FTX as FTXEx
-from cryptofeed.rest import RestAPI, request_retry
+from cryptofeed.exchange import RestExchange
+from cryptofeed.connection import request_retry
 
 
-self.log = logging.getLogger('cryptofeed.rest')
-RATE_LIMIT_SLEEP = 0.2
+LOG = logging.getLogger('cryptofeed.rest')
 
 
-class FTX(RestAPI):
-    id = FTX_ID
-    info = FTXEx()
-    api = "https://ftx.com/api"
+class FTXRestMixin(RestExchange):
     session = requests.Session()
-
-    def __init__(self, subaccount=None, **kwargs):
-        super().__init__(**kwargs)
-        self.subaccount = subaccount
-        self.key_id = self.config[self.subaccount].key_id if self.subaccount else self.config.key_id
-        self.key_secret = self.config[self.subaccount].key_secret if self.subaccount else self.config.key_secret
+    api = "https://ftx.com/api"
+    rest_channels = (
+        TRADES, TICKER, L2_BOOK, FUNDING, ORDER_INFO, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, TRADE_HISTORY
+    )
 
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
         return self._send_request(endpoint, GET, params=params, retry=retry, retry_wait=retry_wait, auth=auth)
@@ -54,7 +49,7 @@ class FTX(RestAPI):
                 self._sign_request(request)
             r = self.session.send(request.prepare())
             self._handle_error(r)
-            return r.json()['result']
+            return json.loads(r.text, parse_float=Decimal)['result']
         return helper()
 
     def _sign_request(self, request: requests.Request) -> None:
@@ -71,7 +66,7 @@ class FTX(RestAPI):
             request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote(self.subaccount)
 
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}", retry=retry, retry_wait=retry_wait)
 
         return {'symbol': symbol,
@@ -81,7 +76,7 @@ class FTX(RestAPI):
                 }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}/orderbook", params={'depth': 100}, retry=retry, retry_wait=retry_wait)
         return {
             BID: sd({
@@ -95,26 +90,21 @@ class FTX(RestAPI):
         }
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def funding(self, symbol: str, start_date=None, end_date=None, retry=None, retry_wait=10):
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
-        start = None
-        end = None
+    def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        sym = self.std_symbol_to_exchange_symbol(symbol)
 
-        if end_date and not start_date:
-            start_date = '2019-01-01'
+        if start or end:
+            if end and not start:
+                start = '2019-01-01'
+            elif start and not end:
+                end = dt.now().timestamp()
+            start = int(self._datetime_normalize(start))
+            end = int(self._datetime_normalize(end))
 
-        if start_date:
-            if not end_date:
-                end_date = pd.Timestamp.utcnow()
-            start = self._timestamp(start_date)
-            end = self._timestamp(end_date)
-
-            start = int(start.timestamp())
-            end = int(end.timestamp())
 
         @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
@@ -127,29 +117,29 @@ class FTX(RestAPI):
             r = helper(start, end)
 
             if r.status_code == 429:
-                sleep(RATE_LIMIT_SLEEP)
+                sleep(1 / self.request_limit)
                 continue
             elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
+                LOG.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
                 self._handle_error(r)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                sleep(1 / self.request_limit)
 
-            data = r.json()['result']
+            data = json.loads(r.text, parse_float=Decimal)['result']
             if data == []:
-                self.log.warning("%s: No data for range %d - %d", self.id, start, end)
+                LOG.warning("%s: No data for range %d - %d", self.id, start, end)
             else:
-                end = int(self._timestamp(data[-1]["time"]).timestamp()) + 1
+                end = int(data[-1]["time"].timestamp() + 1)
 
             data = [self._funding_normalization(x, symbol) for x in data]
             return data
 
     def place_order(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str = LIMIT,
                     reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         return self._post('/orders', params={
             'market': sym,
             'side': side,
@@ -166,7 +156,7 @@ class FTX(RestAPI):
         return self._delete(f'/orders/{order_id}', auth=True)
 
     def orders(self, symbol: str) -> List[dict]:
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         return self._get('/orders', params={'market': sym}, auth=True)
 
     def positions(self, show_avg_price: bool = False) -> List[dict]:
@@ -188,27 +178,21 @@ class FTX(RestAPI):
 
         return ret
 
-    def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
+    def _get_trades_hist(self, symbol, start, end, retry, retry_wait):
         last = []
-        start = None
-        end = None
 
-        if end_date and not start_date:
-            start_date = '2019-01-01'
-
-        if start_date:
-            if not end_date:
-                end_date = pd.Timestamp.utcnow()
-            start = self._timestamp(start_date)
-            end = self._timestamp(end_date)
-
-            start = int(start.timestamp())
-            end = int(end.timestamp())
+        if start or end:
+            if end and not start:
+                start = '2019-01-01'
+            elif start and not end:
+                end = dt.now().timestamp()
+            start = int(self._datetime_normalize(start))
+            end = int(self._datetime_normalize(end))
 
         @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
-                return requests.get(f"{self.api}/markets/{symbol}/trades?limit=100&start_time={start}&end_time={end}")
+                return requests.get(f"{self.api}/markets/{symbol}/trades?start_time={start}&end_time={end}")
             else:
                 return requests.get(f"{self.api}/markets/{symbol}/trades")
 
@@ -216,23 +200,18 @@ class FTX(RestAPI):
             r = helper(start, end)
 
             if r.status_code == 429:
-                sleep(RATE_LIMIT_SLEEP)
+                sleep(30)
                 continue
             elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
+                LOG.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
                 sleep(retry_wait)
                 continue
             elif r.status_code != 200:
                 self._handle_error(r)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                sleep(1 / self.request_limit)
 
-            data = r.json()['result']
-            if data == []:
-                self.log.warning("%s: No data for range %d - %d", self.id, start, end)
-            else:
-                end = int(self._timestamp(data[-1]["time"]).timestamp()) + 1
-
+            data = json.loads(r.text, parse_float=Decimal)['result']            
             orig_data = list(data)
             data = self._dedupe(data, last)
             last = list(orig_data)
@@ -240,13 +219,14 @@ class FTX(RestAPI):
             data = [self._trade_normalization(x, symbol) for x in data]
             yield data
 
-            if len(orig_data) < 100:
+            if len(orig_data) < 5000:
                 break
+            end = int(data[-1]['timestamp'])
 
     def _trade_normalization(self, trade: dict, symbol: str) -> dict:
         return {
-            'timestamp': self._timestamp(trade['time']).timestamp(),
-            'symbol': symbol,
+            'timestamp': trade['time'].timestamp(),
+            'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['id'],
             'feed': self.id,
             'side': SELL if trade['side'] == 'sell' else BUY,
@@ -256,8 +236,8 @@ class FTX(RestAPI):
 
     def _funding_normalization(self, funding: dict, symbol: str) -> dict:
         return {
-            'timestamp': self._timestamp(funding['time']).timestamp(),
-            'symbol': self.info.exchange_symbol_to_std_symbol(funding['future']),
+            'timestamp': funding['time'].timestamp(),
+            'symbol': self.exchange_symbol_to_std_symbol(funding['future']),
             'feed': self.id,
             'rate': funding['rate']
         }
