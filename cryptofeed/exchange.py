@@ -147,9 +147,9 @@ class RestExchange:
 
     def _handle_error(self, resp):
         if resp.status_code != 200:
-            self.log.error("%s: Status code %d for URL %s", self.id, resp.status_code, resp.url)
-            self.log.error("%s: Headers: %s", self.id, resp.headers)
-            self.log.error("%s: Resp: %s", self.id, resp.text)
+            LOG.error("%s: Status code %d for URL %s", self.id, resp.status_code, resp.url)
+            LOG.error("%s: Headers: %s", self.id, resp.headers)
+            LOG.error("%s: Resp: %s", self.id, resp.text)
             resp.raise_for_status()
 
     # public / non account specific

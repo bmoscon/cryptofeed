@@ -8,12 +8,13 @@ import logging
 
 from cryptofeed.defines import FTX_US
 from cryptofeed.exchanges.ftx import FTX
+from cryptofeed.exchanges.mixins.ftx_rest_us import FTXUSRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class FTXUS(FTX):
+class FTXUS(FTX, FTXUSRestMixin):
     id = FTX_US
     symbol_endpoint = 'https://ftx.us/api/markets'
 

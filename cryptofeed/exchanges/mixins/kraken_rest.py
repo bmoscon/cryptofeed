@@ -7,6 +7,7 @@ associated with this software.
 import base64
 import hashlib
 import hmac
+import logging
 import time
 import urllib
 from decimal import Decimal
@@ -19,6 +20,9 @@ from yapic import json
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, L2_BOOK, LIMIT, MAKER_OR_CANCEL, MARKET, OPEN, ORDERS, ORDER_STATUS, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.connection import request_retry
 from cryptofeed.exchange import RestExchange
+
+
+LOG = logging.getLogger('feedhandler')
 
 
 class KrakenRestMixin(RestExchange):
@@ -346,6 +350,6 @@ class KrakenRestMixin(RestExchange):
             elif symlen == 4:
                 cleansym = sym[1:]
         except Exception as ex:
-            self.log.error(f"Couldnt convert private api symbol {sym} for {self.id}", ex)
+            LOG.error(f"Couldnt convert private api symbol {sym} for {self.id}", ex)
             pass
         return cleansym
