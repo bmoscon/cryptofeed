@@ -19,16 +19,24 @@ from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TI
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.util.split import list_by_max_items
+from cryptofeed.exchanges.mixins.kraken_rest import KrakenRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Kraken(Feed):
+class Kraken(Feed, KrakenRestMixin):
     id = KRAKEN
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '15d'}
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
+    websocket_channels = {
+        L2_BOOK: 'book',
+        TRADES: 'trade',
+        TICKER: 'ticker',
+        CANDLES: 'ohlc'
+    }
+    request_limit = 10
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:

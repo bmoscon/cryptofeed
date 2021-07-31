@@ -1,7 +1,7 @@
 import pytest
 
-from cryptofeed.defines import BID
-from cryptofeed.exchanges.kraken.kraken import Kraken
+from cryptofeed.defines import ASK, BID, KRAKEN
+from cryptofeed.exchanges.kraken import Kraken
 
 
 kraken = Kraken(config='config.yaml')
@@ -13,8 +13,30 @@ def test_get_order_book():
 
 
 def test_get_recent_trades():
-    trades = list(kraken.trades('BTC-USD'))
+    trades = list(kraken.trades('BTC-USD'))[0]
     assert len(trades) > 0
+    assert trades[0]['feed'] == KRAKEN
+    assert trades[0]['symbol'] == 'BTC-USD'
+
+
+def test_ticker():
+    t = kraken.ticker('BTC-USD')
+    assert t['symbol'] == 'BTC-USD'
+    assert t['feed'] == KRAKEN
+    assert BID in t
+    assert ASK in t
+
+
+def test_historical_trades():
+    trades = []
+    for t in kraken.trades('BTC-USD', start='2021-01-01 00:00:01', end='2021-01-01 00:00:05'):
+        trades.extend(t)
+    assert len(trades) == 13
+
+    trades = []
+    for t in kraken.trades('BTC-USD', start='2021-01-01 00:00:01', end='2021-01-01 01:00:00'):
+        trades.extend(t)
+    assert len(trades) == 2074
 
 
 @pytest.mark.skipif(not kraken.key_id or not kraken.key_secret, reason="No api key provided")

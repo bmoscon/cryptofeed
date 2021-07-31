@@ -45,7 +45,7 @@ class Exchange:
     @classmethod
     def timestamp_normalize(cls, ts: Any):
         raise NotImplementedError
-    
+
     @classmethod
     def normalize_order_options(cls, option: str):
         if option not in cls.order_options:

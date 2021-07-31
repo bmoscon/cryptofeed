@@ -60,7 +60,6 @@ _feed_to_exchange_map = {
         COINBASE: 'level2',
         BITMEX: 'orderBookL2',
         BITSTAMP: 'diff_order_book',
-        KRAKEN: 'book',
         KRAKEN_FUTURES: 'book',
         BINANCE: 'depth',
         BINANCE_US: 'depth',
@@ -87,33 +86,10 @@ _feed_to_exchange_map = {
         PHEMEX: 'orderbook.subscribe'
     },
     L3_BOOK: {
-        BEQUANT: UNSUPPORTED,
-        BITTREX: UNSUPPORTED,
         BITFINEX: 'book-R0-F0-100',
-        BITHUMB: UNSUPPORTED,
         BITSTAMP: 'detail_order_book',
-        HITBTC: UNSUPPORTED,
         COINBASE: 'full',
-        BITMEX: UNSUPPORTED,
-        KRAKEN: UNSUPPORTED,
-        KRAKEN_FUTURES: UNSUPPORTED,
-        BINANCE: UNSUPPORTED,
-        BINANCE_US: UNSUPPORTED,
-        BINANCE_FUTURES: UNSUPPORTED,
-        BINANCE_DELIVERY: UNSUPPORTED,
         BLOCKCHAIN: 'l3',
-        EXX: UNSUPPORTED,
-        HUOBI: UNSUPPORTED,
-        HUOBI_DM: UNSUPPORTED,
-        OKCOIN: UNSUPPORTED,
-        OKEX: UNSUPPORTED,
-        BYBIT: UNSUPPORTED,
-        FTX: UNSUPPORTED,
-        FTX_US: UNSUPPORTED,
-        BITCOINCOM: UNSUPPORTED,
-        ASCENDEX: UNSUPPORTED,
-        UPBIT: UNSUPPORTED,
-        PROBIT: UNSUPPORTED
     },
     TRADES: {
         DYDX: 'v3_trades',
@@ -125,7 +101,6 @@ _feed_to_exchange_map = {
         BITHUMB: 'transaction',
         COINBASE: 'matches',
         BITMEX: 'trade',
-        KRAKEN: 'trade',
         KRAKEN_FUTURES: 'trade',
         BINANCE: 'aggTrade',
         BINANCE_US: 'aggTrade',
@@ -159,7 +134,6 @@ _feed_to_exchange_map = {
         COINBASE: 'ticker',
         BITMEX: 'quote',
         BITFLYER: 'lightning_ticker_{}',
-        KRAKEN: TICKER,
         KRAKEN_FUTURES: 'ticker_lite',
         BINANCE: 'bookTicker',
         BINANCE_US: 'bookTicker',
@@ -241,7 +215,6 @@ _feed_to_exchange_map = {
         HUOBI: 'kline',
         GATEIO: 'spot.candlesticks',
         KUCOIN: '/market/candles',
-        KRAKEN: 'ohlc',
         BITTREX: 'candle_{}_{}',
         PHEMEX: 'kline.subscribe'
     },
@@ -270,34 +243,29 @@ _exchange_options = {
         BEQUANT: 'limit',
         BITCOINCOM: 'limit',
         HITBTC: 'limit',
-        KRAKEN: 'limit',
         BLOCKCHAIN: 'limit',
     },
     MARKET: {
         BEQUANT: 'market',
         BITCOINCOM: 'market',
         HITBTC: 'market',
-        KRAKEN: 'market',
         BLOCKCHAIN: 'market',
     },
     FILL_OR_KILL: {
         BEQUANT: {'timeInForce': 'FOK'},
         BITCOINCOM: {'timeInForce': 'FOK'},
         HITBTC: {'timeInForce': 'FOK'},
-        KRAKEN: UNSUPPORTED,
         BLOCKCHAIN: 'FOK'
     },
     IMMEDIATE_OR_CANCEL: {
         BEQUANT: {'timeInForce': 'IOC'},
         BITCOINCOM: {'timeInForce': 'IOC'},
         HITBTC: {'timeInForce': 'IOC'},
-        KRAKEN: UNSUPPORTED,
         BLOCKCHAIN: 'IOC'
     },
     MAKER_OR_CANCEL: {
         BEQUANT: {'postOnly': 1},
         BITCOINCOM: {'postOnly': 1},
         HITBTC: {'postOnly': 1},
-        KRAKEN: 'post'
     }
 }

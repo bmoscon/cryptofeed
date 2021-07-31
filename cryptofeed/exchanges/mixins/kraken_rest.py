@@ -5,64 +5,32 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import base64
-from cryptofeed.exceptions import UnsupportedSymbol
 import hashlib
 import hmac
 import time
-from typing import Dict
 import urllib
 from decimal import Decimal
+from datetime import datetime as dt
 
-import pandas as pd
 import requests
 from sortedcontainers.sorteddict import SortedDict as sd
+from yapic import json
 
-from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FILLED, KRAKEN, LIMIT, MARKET, OPEN, SELL
-from cryptofeed.exchanges import Kraken as KrakenEx
-from cryptofeed.rest import RestAPI, request_retry
-from cryptofeed.standards import normalize_trading_options
-
-RATE_LIMIT_SLEEP = 1
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, L2_BOOK, LIMIT, MAKER_OR_CANCEL, MARKET, OPEN, ORDERS, ORDER_STATUS, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
+from cryptofeed.connection import request_retry
+from cryptofeed.exchange import RestExchange
 
 
-def kraken_rest_symbols() -> Dict[str, str]:
-    return {normalized: exchange.replace("/", "") for normalized, exchange in KrakenEx.symbol_mapping().items()}
-
-
-class Kraken(RestAPI):
-    id = KRAKEN
+class KrakenRestMixin(RestExchange):
     api = "https://api.kraken.com/0"
-    _normalized_symbol_mapping = kraken_rest_symbols()
-    _exchange_symbol_mapping = {value: key for key, value in _normalized_symbol_mapping.items()}
-
-    def exchange_symbol_to_std_symbol(self, symbol: str) -> str:
-        try:
-            return self._exchange_symbol_mapping[symbol]
-        except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
-
-    def std_symbol_to_exchange_symbol(self, symbol: str) -> str:
-        try:
-            return self._normalized_symbol_mapping[symbol]
-        except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
-
-    @staticmethod
-    def _fix_currencies(currency: str):
-        cur_map = {
-            'XXBT': 'BTC',
-            'XXDG': 'DOGE',
-            'XXLM': 'XLM',
-            'XXMR': 'XMR',
-            'XXRP': 'XRP',
-            'ZUSD': 'USD',
-            'ZCAD': 'CAD',
-            'ZGBP': 'GBP',
-            'ZJPY': 'JPY'
-        }
-        if currency in cur_map:
-            return cur_map[currency]
-        return currency
+    rest_channels = (
+        TRADES, TICKER, L2_BOOK, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS, TRADE_HISTORY
+    )
+    rest_options = {
+        LIMIT: 'limit',
+        MARKET: 'market',        
+        MAKER_OR_CANCEL: 'post'
+    }
 
     def _order_status(self, order_id: str, order: dict):
         if order['status'] == 'canceled':
@@ -92,7 +60,7 @@ class Kraken(RestAPI):
         def helper():
             resp = requests.post(url, data={} if not payload else payload)
             self._handle_error(resp)
-            return resp.json()
+            return json.loads(resp.text, parse_float=Decimal)
 
         return helper()
 
@@ -123,11 +91,11 @@ class Kraken(RestAPI):
         resp = requests.post(f"{self.api}{command}", data=payload, headers=headers)
         self._handle_error(resp)
 
-        return resp.json()
+        return json.loads(resp.text, parse_float=Decimal)
 
     # public API
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = self.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", '')
         data = self._post_public("/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
         data = data['result']
@@ -139,7 +107,7 @@ class Kraken(RestAPI):
                     }
 
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        sym = self.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
         data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
         for _, val in data['result'].items():
             return {
@@ -156,26 +124,30 @@ class Kraken(RestAPI):
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         if start:
             if not end:
-                end = pd.Timestamp.utcnow()
+                end = dt.now().timestamp()
+            end = self._datetime_normalize(end)
             for data in self._historical_trades(symbol, start, end, retry, retry_wait):
-                yield list(map(lambda x: self._trade_normalization(x, symbol), data['result'][next(iter(data['result']))]))
+                data = data['result']
+                data = data[list(data.keys())[0]]
+                data = [self._trade_normalization(d, symbol) for d in data]
+                yield [d for d in data if d['timestamp'] <= end]
         else:
-            sym = self.std_symbol_to_exchange_symbol(symbol)
+            sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
             data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
             data = data['result']
             data = data[list(data.keys())[0]]
             yield [self._trade_normalization(d, symbol) for d in data]
 
     def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
-        symbol = self.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
 
         @request_retry(self.id, retry, retry_wait)
         def helper(start_date):
-            endpoint = f"{self.api}/public/Trades?symbol={symbol}&since={start_date}"
+            endpoint = f"{self.api}/public/Trades?pair={symbol}&since={start_date}"
             return requests.get(endpoint)
 
-        start_date = self._timestamp(start_date).timestamp() * 1000000000
-        end_date = self._timestamp(end_date).timestamp() * 1000000000
+        start_date = int(self._datetime_normalize(start_date))
+        end_date = self._datetime_normalize(end_date)
 
         while start_date < end_date:
             r = helper(start_date)
@@ -187,9 +159,9 @@ class Kraken(RestAPI):
             elif r.status_code != 200:
                 self._handle_error(r)
             else:
-                time.sleep(RATE_LIMIT_SLEEP)
+                time.sleep(1 / self.request_limit)
 
-            data = r.json()
+            data = json.loads(r.text, parse_float=Decimal)
             if 'error' in data and data['error']:
                 if data['error'] == ['EAPI:Rate limit exceeded']:
                     time.sleep(5)
@@ -198,21 +170,20 @@ class Kraken(RestAPI):
                     raise Exception(f"Error processing URL {r.url}: {data['error']}")
 
             yield data
-
-            start_date = int(data['result']['last'])
+            start_date = int(int(data['result']['last']) / 1_000_000_000)
 
     def _trade_normalization(self, trade: list, symbol: str) -> dict:
         """
         ['976.00000', '1.34379010', 1483270225.7744, 's', 'l', '']
         """
         return {
-            'timestamp': trade[2],
+            'timestamp': float(trade[2]),
             'symbol': symbol,
             'id': None,
             'feed': self.id,
             'side': SELL if trade[3] == 's' else BUY,
-            'amount': trade[1],
-            'price': trade[0]
+            'amount': Decimal(trade[1]),
+            'price': Decimal(trade[0])
         }
 
     # Private API
@@ -220,8 +191,19 @@ class Kraken(RestAPI):
         data = self._post_private('/private/Balance')
         if len(data['error']) != 0:
             return data
+        cur_map = {
+            'XXBT': 'BTC',
+            'XXDG': 'DOGE',
+            'XXLM': 'XLM',
+            'XXMR': 'XMR',
+            'XXRP': 'XRP',
+            'ZUSD': 'USD',
+            'ZCAD': 'CAD',
+            'ZGBP': 'GBP',
+            'ZJPY': 'JPY'
+        }
         return {
-            Kraken._fix_currencies(currency): {
+            cur_map.get(currency, currency): {
                 'available': Decimal(value),
                 'total': Decimal(value)
             }
@@ -248,10 +230,10 @@ class Kraken(RestAPI):
             return self._order_status(order_id, order)
 
     def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
-        ot = normalize_trading_options(self.id, order_type)
+        ot = self.normalize_order_options(self.id, order_type)
 
         parameters = {
-            'pair': self.std_symbol_to_exchange_symbol(symbol),
+            'pair': self.std_symbol_to_exchange_symbol(symbol).replace("/", ''),
             'type': 'buy' if side == BUY else 'sell',
             'volume': str(amount),
             'ordertype': ot
@@ -261,7 +243,7 @@ class Kraken(RestAPI):
             parameters['price'] = str(price)
 
         if options:
-            parameters['oflags'] = ','.join([normalize_trading_options(self.id, o) for o in options])
+            parameters['oflags'] = ','.join([self.normalize_order_options(self.id, o) for o in options])
 
         data = self._post_private('/private/AddOrder', parameters)
         if len(data['error']) != 0:
