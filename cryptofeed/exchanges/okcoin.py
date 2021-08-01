@@ -40,7 +40,6 @@ class OKCoin(Feed):
         OPEN_INTEREST: 'open_interest',
         LIQUIDATIONS: 'trades',
         ORDER_INFO: 'orders',
-        USER_FILLS: 'fills',
     }
 
     @classmethod

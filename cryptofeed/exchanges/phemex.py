@@ -31,14 +31,11 @@ class Phemex(Feed):
     price_scale = {}
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
     websocket_channels = {
-        L2_BOOK: 'orderbook',
-        TRADES: 'trades',
-        TICKER: 'ticker',
-        FUNDING: 'funding',
-        OPEN_INTEREST: 'open_interest',
-        LIQUIDATIONS: 'trades',
-        ORDER_INFO: 'orders',
-        USER_FILLS: 'fills',
+        LAST_PRICE: 'tick.subscribe',
+        USER_DATA: 'aop.subscribe',
+        L2_BOOK: 'orderbook.subscribe',
+        TRADES: 'trade.subscribe',
+        CANDLES: 'kline.subscribe',
     }
 
     @classmethod

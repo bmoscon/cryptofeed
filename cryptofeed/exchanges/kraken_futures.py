@@ -31,9 +31,6 @@ class KrakenFutures(Feed):
         TICKER: 'ticker',
         FUNDING: 'funding',
         OPEN_INTEREST: 'open_interest',
-        LIQUIDATIONS: 'trades',
-        ORDER_INFO: 'orders',
-        USER_FILLS: 'fills',
     }
 
     @classmethod

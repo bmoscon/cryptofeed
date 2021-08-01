@@ -8,32 +8,23 @@ import decimal
 import hashlib
 import hmac
 import time
-import zlib
-from datetime import datetime as dt
-from datetime import timedelta
 from time import sleep
 from urllib.parse import urlparse
 
 from yapic import json
-import pandas as pd
 import requests
 from sortedcontainers import SortedDict as sd
 
-from cryptofeed.defines import BID, ASK, BITMEX, BUY, SELL
-from cryptofeed.exchanges import Bitmex as BitmexEx
-from cryptofeed.rest import RestAPI, request_retry
+from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.exchange import RestExchange
+from cryptofeed.connection import request_retry
 
 
-S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/{}/{}.csv.gz'
-RATE_LIMIT_SLEEP = 2
-API_MAX = 500
-API_REFRESH = 300
-
-
-class Bitmex(RestAPI):
-    id = BITMEX
+class BitmexRestMixin(RestExchange):
     api = 'https://www.bitmex.com'
-    info = BitmexEx()
+    rest_channels = (
+        TRADES, TICKER, L2_BOOK, FUNDING
+    )
 
     def _generate_signature(self, verb: str, url: str, data='') -> dict:
         """
@@ -60,83 +51,56 @@ class Bitmex(RestAPI):
             "api-signature": signature
         }
 
-    def _get(self, ep, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
-        dates = [None]
-        if start_date:
-            if not end_date:
-                end_date = pd.Timestamp.utcnow()
-            dates = pd.interval_range(self._timestamp(start_date), self._timestamp(end_date), freq=freq).tolist()
-            if len(dates) == 0:
-                dates.append(pd.Interval(left=self._timestamp(start_date), right=self._timestamp(end_date)))
-            elif dates[-1].right < self._timestamp(end_date):
-                dates.append(pd.Interval(dates[-1].right, self._timestamp(end_date)))
-
+    def _get(self, ep, symbol, retry, retry_wait, freq='6H'):
         @request_retry(self.id, retry, retry_wait)
-        def helper(start, start_date, end_date):
-            if start_date and end_date:
-                endpoint = f'/api/v1/{ep}?symbol={symbol}&count={API_MAX}&reverse=false&start={start}&startTime={start_date}&endTime={end_date}'
-            else:
-                endpoint = f'/api/v1/{ep}?symbol={symbol}&reverse=true'
+        def helper():
+            endpoint = f'/api/v1/{ep}?symbol={symbol}&reverse=true'
             header = {}
-            if self.config.key_id and self.config.key_secret:
+            if self.key_id and self.key_secret:
                 header = self._generate_signature("GET", endpoint)
             header['Accept'] = 'application/json'
             return requests.get('{}{}'.format(self.api, endpoint), headers=header)
 
-        for interval in dates:
-            start = 0
-            if interval is not None:
-                end = interval.right
-                end -= pd.Timedelta(nanoseconds=1)
+        while True:
+            r = helper()
 
-                start_date = str(interval.left).replace(" ", "T") + "Z"
-                end_date = str(end).replace(" ", "T") + "Z"
+            if r.status_code in {502, 504}:
+                self.log.warning("%s: %d for URL %s - %s", self.id, r.status_code, r.url, r.text)
+                sleep(retry_wait)
+                continue
+            elif r.status_code == 429:
+                sleep(300)
+                continue
+            elif r.status_code != 200:
+                self._handle_error(r)
 
-            while True:
-                r = helper(start, start_date, end_date)
-
-                if r.status_code in {502, 504}:
-                    self.log.warning("%s: %d for URL %s - %s", self.id, r.status_code, r.url, r.text)
-                    sleep(retry_wait)
-                    continue
-                elif r.status_code == 429:
-                    sleep(API_REFRESH)
-                    continue
-                elif r.status_code != 200:
-                    self._handle_error(r)
-                else:
-                    sleep(RATE_LIMIT_SLEEP)
-
-                limit = int(r.headers['X-RateLimit-Remaining'])
-                data = json.loads(r.text, parse_float=decimal.Decimal)
-
-                yield data
-
-                if len(data) != API_MAX:
-                    break
-
-                if limit < 1:
-                    sleep(API_REFRESH)
-
-                start += len(data)
+            yield json.loads(r.text, parse_float=decimal.Decimal)
+            break
 
     def _trade_normalization(self, trade: dict) -> dict:
         return {
             'timestamp': self.timestamp_normalize(trade['timestamp']),
-            'symbol': self.info.exchange_symbol_to_std_symbol(trade['symbol']),
+            'symbol': self.exchange_symbol_to_std_symbol(trade['symbol']),
             'id': trade['trdMatchID'],
             'feed': self.id,
             'side': BUY if trade['side'] == 'Buy' else SELL,
-            'amount': trade['size'],
-            'price': trade['price']
+            'amount': decimal.Decimal(trade['size']),
+            'price': decimal.Decimal(trade['price'])
         }
 
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
-        # return list(self._get('quote', symbol, start, end, retry, retry_wait))
-        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
+        ret = list(self._get('quote', symbol, retry, retry_wait))[0]
+        return [self._ticker_normalization(d) for d in ret]
 
-        for data in self._scrape_s3(symbol, 'quote', start, end):
-            yield data
+    def _ticker_normalization(self, data: dict) -> dict:
+        return {
+            'bid': decimal.Decimal(data['bidPrice']),
+            'ask': decimal.Decimal(data['askPrice']),
+            'symbol': self.exchange_symbol_to_std_symbol(data['symbol']),
+            'feed': self.id,
+            'timestamp': data['timestamp'].timestamp()
+        }
 
     def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         """
@@ -155,36 +119,14 @@ class Bitmex(RestAPI):
             'foreignNotional': 1900
         }
         """
-        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
-
-        d = dt.utcnow().date()
-        d -= timedelta(days=1)
-        rest_end_date = pd.Timestamp(dt(d.year, d.month, d.day))
-        start = self._timestamp(start) if start else start
-        end = self._timestamp(end) if end else end
-        rest_start = start
-        s3_scrape = False
-
-        if start:
-            if rest_end_date - pd.Timedelta(microseconds=1) > start:
-                rest_start = rest_end_date
-                s3_scrape = True
-
-        if s3_scrape:
-            rest_end_date -= pd.Timedelta(microseconds=1)
-            if self._timestamp(end) < rest_end_date:
-                rest_end_date = end
-            for data in self._scrape_s3(symbol, 'trade', start, rest_end_date):
-                yield list(map(self._s3_data_normalization, data))
-
-        if end is None or end > rest_end_date:
-            for data in self._get('trade', symbol, rest_start, end, retry, retry_wait):
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
+        for data in self._get('trade', symbol, retry, retry_wait):
                 yield list(map(self._trade_normalization, data))
 
     def _funding_normalization(self, funding: dict) -> dict:
         return {
             'timestamp': funding['timestamp'],
-            'symbol': self.info.exchange_symbol_to_std_symbol(funding['symbol']),
+            'symbol': self.exchange_symbol_to_std_symbol(funding['symbol']),
             'feed': self.id,
             'interval': funding['fundingInterval'],
             'rate': funding['fundingRate'],
@@ -205,44 +147,9 @@ class Bitmex(RestAPI):
             yield list(map(self._funding_normalization, data))
 
     def l2_book(self, symbol: str, retry=None, retry_wait=10):
-        ret = {symbol: {BID: sd(), ASK: sd()}}
-        data = next(self._get('orderBook/L2', self.info.std_symbol_to_exchange_symbol(symbol), None, None, retry, retry_wait))
+        ret = {BID: sd(), ASK: sd()}
+        data = next(self._get('orderBook/L2', self.std_symbol_to_exchange_symbol(symbol), retry, retry_wait))
         for update in data:
             side = ASK if update['side'] == 'Sell' else BID
-            ret[symbol][side][update['price']] = update['size']
+            ret[side][update['price']] = update['size']
         return ret
-
-    def _s3_data_normalization(self, data):
-        vals = data.split(",")
-        return {
-            'timestamp': pd.Timestamp(vals[0].replace("D", "T")).timestamp(),
-            'symbol': self.info.exchange_symbol_to_std_symbol(vals[1]),
-            'id': vals[6],
-            'feed': self.id,
-            'side': BUY if vals[2] == 'Buy' else SELL,
-            'amount': vals[3],
-            'price': vals[4]
-        }
-
-    def _scrape_s3(self, symbol: str, dtype: str, start_date, end_date):
-        date = dt(end_date.year, end_date.month, end_date.day)
-        end = dt(start_date.year, start_date.month, start_date.day)
-
-        while date >= end:
-            date_str = date.strftime('%Y%m%d')
-            count = 0
-            while True:
-                r = requests.get(S3_ENDPOINT.format(dtype, date_str))
-                if r.status_code == 200:
-                    break
-                else:
-                    count += 1
-                    if count == 10:
-                        r.raise_for_status()
-                    self.log.warning("%s: Error processing %s: %s - %s, trying again", self.id, symbol, date, r.status_code)
-                    time.sleep(10)
-
-            data = zlib.decompress(r.content, zlib.MAX_WBITS | 32)
-            yield filter(lambda x: len(x) and x.split(",")[1] == symbol and end_date >= pd.Timestamp(x.split(",")[0].replace("D", "T")) >= start_date, data.decode().split("\n")[1:])
-
-            date -= timedelta(days=1)

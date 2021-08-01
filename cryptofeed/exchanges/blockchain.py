@@ -25,10 +25,9 @@ class Blockchain(Feed):
     id = BLOCKCHAIN
     symbol_endpoint = "https://api.blockchain.com/mercury-gateway/v1/instruments"
     websocket_channels = {
+        L3_BOOK: 'l3',
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
     }
 
     @classmethod

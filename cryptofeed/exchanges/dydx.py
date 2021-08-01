@@ -25,10 +25,8 @@ class dYdX(Feed):
     id = DYDX
     symbol_endpoint = 'https://api.dydx.exchange/v3/markets'
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        L2_BOOK: 'v3_orderbook',
+        TRADES: 'v3_trades',
     }
 
     @classmethod

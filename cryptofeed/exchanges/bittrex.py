@@ -27,7 +27,7 @@ class Bittrex(Feed):
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
         TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        CANDLES: 'candle_{}_{}'
     }
 
     @classmethod

@@ -41,10 +41,8 @@ class Bithumb(Feed):
         ('https://api.bithumb.com/public/ticker/ALL_KRW', 'KRW')
     ]
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        L2_BOOK: 'orderbookdepth',
+        TRADES: 'transaction',
     }
 
     @classmethod

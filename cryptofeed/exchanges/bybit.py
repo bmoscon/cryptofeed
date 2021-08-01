@@ -29,10 +29,12 @@ class Bybit(Feed):
     id = BYBIT
     symbol_endpoint = ['https://api.bybit.com/v2/public/symbols', 'https://api.bybit.com/spot/v1/symbols']
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        L2_BOOK: 'orderBookL2_25',
+        TRADES: 'trade',
+        USER_FILLS: 'execution',
+        ORDER_INFO: 'order',
+        FUTURES_INDEX: 'instrument_info.100ms',
+        OPEN_INTEREST: 'instrument_info.100ms'
     }
 
     @classmethod

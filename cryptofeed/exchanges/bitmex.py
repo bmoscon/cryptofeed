@@ -4,13 +4,10 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.symbols import Symbol
 from typing import Dict, Tuple
-from cryptofeed.connection import AsyncConnection
 import hashlib
 import hmac
 import logging
-import os
 import time
 from collections import defaultdict
 from datetime import datetime as dt
@@ -21,21 +18,26 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
+from cryptofeed.symbols import Symbol
+from cryptofeed.connection import AsyncConnection
+from cryptofeed.exchanges.mixins.bitmex_rest import BitmexRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Bitmex(Feed):
+class Bitmex(Feed, BitmexRestMixin):
     id = BITMEX
-    api = 'https://www.bitmex.com/api/v1/'
     symbol_endpoint = "https://www.bitmex.com/api/v1/instrument/active"
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        L2_BOOK: 'orderBookL2',
+        TRADES: 'trade',
+        TICKER: 'quote',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'instrument',
+        LIQUIDATIONS: 'liquidation'
     }
+    request_limit = 0.5
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -531,14 +533,9 @@ class Bitmex(Feed):
         """Send API Key with signed message."""
         # Docs: https://www.bitmex.com/app/apiKeys
         # https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py
-        config = self.config[self.id.lower()]
-        key_id = os.environ.get('CF_BITMEX_KEY_ID') or config.key_id
-        key_secret = os.environ.get('CF_BITMEX_KEY_SECRET') or config.key_secret
-        if key_id and key_secret:
+        if self.key_id and self.key_secret:
             LOG.info('%s: Authenticate with signature', conn.uuid)
             expires = int(time.time()) + 365 * 24 * 3600  # One year
             msg = f'GET/realtime{expires}'.encode('utf-8')
-            signature = hmac.new(key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
-            await conn.write(json.dumps({'op': 'authKeyExpires', 'args': [key_id, expires, signature]}))
-        else:
-            LOG.info('%s: No authentication. Enable it using config or env. vars: CF_BITMEX_KEY_ID and CF_BITMEX_KEY_SECRET', conn.uuid)
+            signature = hmac.new(self.key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
+            await conn.write(json.dumps({'op': 'authKeyExpires', 'args': [self.key_id, expires, signature]}))

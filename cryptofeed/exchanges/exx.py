@@ -28,8 +28,6 @@ class EXX(Feed):
     websocket_channels = {
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
     }
 
     @classmethod

@@ -43,9 +43,11 @@ class Bitfinex(Feed):
     id = BITFINEX
     symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
+        L3_BOOK: 'book-R0-F0-100',
+        L2_BOOK: 'book-P0-F0-100',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'trades',
     }
 
     @classmethod

@@ -31,11 +31,7 @@ class KuCoin(Feed):
         L2_BOOK: 'orderbook',
         TRADES: 'trades',
         TICKER: 'ticker',
-        FUNDING: 'funding',
-        OPEN_INTEREST: 'open_interest',
-        LIQUIDATIONS: 'trades',
-        ORDER_INFO: 'orders',
-        USER_FILLS: 'fills',
+        CANDLES: '/market/candles'
     }
 
     @classmethod

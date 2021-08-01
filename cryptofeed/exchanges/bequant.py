@@ -32,10 +32,13 @@ class Bequant(Feed):
     symbol_endpoint = 'https://api.bequant.io/api/2/public/symbol'
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '7d', '1M'}
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        BALANCES: 'subscribeBalance',
+        TRANSACTIONS: 'subscribeTransactions',
+        ORDER_INFO: 'subscribeReports',
+        L2_BOOK: 'subscribeOrderbook',
+        TRADES: 'subscribeTrades',
+        TICKER: 'subscribeTicker',
+        CANDLES: 'subscribeCandles'
     }
 
     @classmethod
@@ -250,7 +253,7 @@ class Bequant(Feed):
             'order_id': msg["id"],
             'side': SELL if msg["side"] == 'sell' else BUY,
             'order_type': type_lookup[msg["type"]],
-            'timestamp': timestamp_normalize(id, msg["updatedAt"]) if msg["updatedAt"] else timestamp_normalize(id, msg["createdAt"]),
+            'timestamp': self.timestamp_normalize(msg["updatedAt"]) if msg["updatedAt"] else self.timestamp_normalize(msg["createdAt"]),
             'receipt_timestamp': ts,
             'report_type': msg['reportType'],
             'client_order_id': msg["clientOrderId"],
@@ -281,7 +284,7 @@ class Bequant(Feed):
 
         decimalize = ['amount', 'fee']
         ts_normalize = ['createdAt', 'updatedAt']
-        transaction = {k: Decimal(msg[k]) if k in decimalize else timestamp_normalize(msg[k]) if k in ts_normalize else k for k in keys if k in msg}
+        transaction = {k: Decimal(msg[k]) if k in decimalize else self.timestamp_normalize(msg[k]) if k in ts_normalize else k for k in keys if k in msg}
 
         transaction['receipt_timestamp'] = ts
         # transaction = {

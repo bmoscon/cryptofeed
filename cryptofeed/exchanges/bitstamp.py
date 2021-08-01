@@ -26,10 +26,9 @@ class Bitstamp(Feed):
     symbol_endpoint = "https://www.bitstamp.net/api/v2/trading-pairs-info/"
     # API documentation: https://www.bitstamp.net/websocket/v2/
     websocket_channels = {
+        L3_BOOK: 'detail_order_book',
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
     }
 
     @classmethod

@@ -7,7 +7,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, FILLED
+from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, FILLED, USER_DATA
 from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -25,10 +25,17 @@ class Deribit(Feed):
     id = DERIBIT
     symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH']
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        L1_BOOK: 'quote',
+        L2_BOOK: 'book',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'ticker',
+        OPEN_INTEREST: 'ticker',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'user.orders',
+        USER_FILLS: 'user.trades',
+        BALANCES: 'user.portfolio',
+        USER_DATA: 'user.changes'
     }
 
     @classmethod

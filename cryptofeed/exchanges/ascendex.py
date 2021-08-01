@@ -26,10 +26,8 @@ class AscendEX(Feed):
     id = ASCENDEX
     symbol_endpoint = 'https://ascendex.com/api/pro/v1/products'
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        L2_BOOK: 'depth:',
+        TRADES: 'trades:',
     }
 
     @classmethod

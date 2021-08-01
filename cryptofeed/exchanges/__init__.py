@@ -9,7 +9,10 @@ from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str
 from .phemex import Phemex
 from .ascendex import AscendEX
 from .bequant import Bequant
-from .binance import Binance, BinanceDelivery, BinanceFutures, BinanceUS
+from .binance import Binance
+from .binance_delivery import BinanceDelivery
+from .binance_futures import BinanceFutures
+from .binance_us import BinanceUS
 from .bitcoincom import BitcoinCom
 from .bitfinex import Bitfinex
 from .bitflyer import Bitflyer

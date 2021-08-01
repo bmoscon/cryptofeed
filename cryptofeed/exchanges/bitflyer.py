@@ -25,10 +25,9 @@ class Bitflyer(Feed):
     id = BITFLYER
     symbol_endpoint = endpoints = ['https://api.bitflyer.com/v1/getmarkets/eu', 'https://api.bitflyer.com/v1/getmarkets/usa', 'https://api.bitflyer.com/v1/getmarkets']
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        L2_BOOK: 'lightning_board_{}',
+        TRADES: 'lightning_executions_{}',
+        TICKER: 'lightning_ticker_{}'
     }
 
     @classmethod
