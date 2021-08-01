@@ -19,7 +19,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET, MAKER_OR_CANCEL
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
@@ -32,6 +31,12 @@ class Bequant(Feed):
     id = BEQUANT
     symbol_endpoint = 'https://api.bequant.io/api/2/public/symbol'
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '7d', '1M'}
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -95,7 +100,7 @@ class Bequant(Feed):
                             bid=Decimal(msg['bid']),
                             ask=Decimal(msg['ask']),
                             receipt_timestamp=ts,
-                            timestamp=timestamp_normalize(self.id, msg['timestamp']))
+                            timestamp=self.timestamp_normalize(msg['timestamp']))
 
     async def _book_snapshot(self, msg: dict, conn: AsyncConnection, ts: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
@@ -107,7 +112,7 @@ class Bequant(Feed):
                 Decimal(ask['price']): Decimal(ask['size']) for ask in msg['ask']
             })
         }
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, msg['timestamp']), ts)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(msg['timestamp']), ts)
 
     async def _book_update(self, msg: dict, conn: AsyncConnection, ts: float):
         delta = {BID: [], ASK: []}
@@ -123,7 +128,7 @@ class Bequant(Feed):
                 else:
                     delta[s].append((price, amount))
                     self.__l2_book[pair][s][price] = amount
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, msg['timestamp']), ts)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(msg['timestamp']), ts)
 
     async def _trades(self, msg: dict, conn: AsyncConnection, ts: float):
         """
@@ -148,7 +153,7 @@ class Bequant(Feed):
                                 amount=Decimal(update['quantity']),
                                 price=Decimal(update['price']),
                                 order_id=update['id'],
-                                timestamp=timestamp_normalize(self.id, update['timestamp']),
+                                timestamp=self.timestamp_normalize(update['timestamp']),
                                 receipt_timestamp=ts)
 
     async def _candles(self, msg: dict, conn: AsyncConnection, ts: float):
@@ -177,7 +182,7 @@ class Bequant(Feed):
         interval = str(self.normalize_interval[msg['period']])
 
         for candle in msg['data']:
-            start = timestamp_normalize(self.id, candle['timestamp'])
+            start = self.timestamp_normalize(candle['timestamp'])
             end = start + timedelta_str_to_sec(interval) - 1
             await self.callback(CANDLES,
                                 feed=self.id,

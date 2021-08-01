@@ -16,7 +16,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DYDX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,6 +24,12 @@ LOG = logging.getLogger('feedhandler')
 class dYdX(Feed):
     id = DYDX
     symbol_endpoint = 'https://api.dydx.exchange/v3/markets'
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -139,7 +144,7 @@ class dYdX(Feed):
                                 side=BUY if trade['side'] == 'BUY' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['createdAt']),
+                                timestamp=self.timestamp_normalize(trade['createdAt']),
                                 receipt_timestamp=timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):

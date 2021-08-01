@@ -23,7 +23,6 @@ from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.ftx_rest import FTXRestMixin
 
@@ -45,10 +44,6 @@ class FTX(Feed, FTXRestMixin):
         USER_FILLS: 'fills',
     }
     request_limit = 30
-
-    @classmethod
-    def timestamp_normalize(cls, ts):
-        return ts.timestamp()
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -234,7 +229,7 @@ class FTX(Feed, FTXRestMixin):
                 await self.callback(FUNDING, feed=self.id,
                                     symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
                                     rate=data['result'][0]['rate'],
-                                    timestamp=timestamp_normalize(self.id, data['result'][0]['time']),
+                                    timestamp=self.timestamp_normalize(data['result'][0]['time']),
                                     receipt_timestamp=time()
                                     )
                 await asyncio.sleep(0.1)
@@ -254,7 +249,7 @@ class FTX(Feed, FTXRestMixin):
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
                                 order_id=trade['id'],
-                                timestamp=float(timestamp_normalize(self.id, trade['time'])),
+                                timestamp=float(self.timestamp_normalize(trade['time'])),
                                 receipt_timestamp=timestamp)
             if bool(trade['liquidation']):
                 await self.callback(LIQUIDATIONS,
@@ -265,7 +260,7 @@ class FTX(Feed, FTXRestMixin):
                                     price=Decimal(trade['price']),
                                     order_id=trade['id'],
                                     status=FILLED,
-                                    timestamp=float(timestamp_normalize(self.id, trade['time'])),
+                                    timestamp=float(self.timestamp_normalize(trade['time'])),
                                     receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
@@ -360,7 +355,7 @@ class FTX(Feed, FTXRestMixin):
                             liquidity=fill['liquidity'],
                             order_id=fill['orderId'],
                             trade_id=fill['tradeId'],
-                            timestamp=float(timestamp_normalize(self.id, fill['time'])),
+                            timestamp=float(self.timestamp_normalize(fill['time'])),
                             receipt_timestamp=timestamp)
 
     async def _order(self, msg: dict, timestamp: float):

@@ -17,7 +17,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -90,7 +89,7 @@ class HuobiDM(Feed):
                 self.previous_book[pair] = self.__l2_book[pair]
             self.__l2_book[pair] = update
 
-            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
+            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, self.timestamp_normalize(msg['ts']), timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -111,7 +110,7 @@ class HuobiDM(Feed):
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['ts']),
+                                timestamp=self.timestamp_normalize(trade['ts']),
                                 receipt_timestamp=timestamp
                                 )
 

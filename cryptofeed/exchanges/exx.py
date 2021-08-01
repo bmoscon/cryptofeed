@@ -25,6 +25,12 @@ LOG = logging.getLogger('feedhandler')
 class EXX(Feed):
     id = EXX_id
     symbol_endpoint = "https://api.exx.com/data/v1/tickers"
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:

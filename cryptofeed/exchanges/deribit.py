@@ -11,7 +11,6 @@ from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, FUTURES, L2_BOOK
 from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 # For auth
 import hashlib
@@ -25,6 +24,16 @@ LOG = logging.getLogger('feedhandler')
 class Deribit(Feed):
     id = DERIBIT
     symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH']
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
@@ -95,7 +104,7 @@ class Deribit(Feed):
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                timestamp=self.timestamp_normalize(trade['timestamp']),
                                 receipt_timestamp=timestamp,
                                 )
             if 'liquidation' in trade:
@@ -107,7 +116,7 @@ class Deribit(Feed):
                                     price=Decimal(trade['price']),
                                     order_id=trade['trade_id'],
                                     status=FILLED,
-                                    timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                    timestamp=self.timestamp_normalize(trade['timestamp']),
                                     receipt_timestamp=timestamp
                                     )
 
@@ -144,7 +153,7 @@ class Deribit(Feed):
             "jsonrpc" : "2.0"}
         '''
         pair = self.exchange_symbol_to_std_symbol(msg['params']['data']['instrument_name'])
-        ts = timestamp_normalize(self.id, msg['params']['data']['timestamp'])
+        ts = self.timestamp_normalize(msg['params']['data']['timestamp'])
         await self.callback(TICKER, feed=self.id,
                             symbol=pair,
                             bid=Decimal(msg["params"]["data"]['best_bid_price']),
@@ -179,7 +188,7 @@ class Deribit(Feed):
                             ask_price=Decimal(quote['best_ask_price']),
                             bid_amount=Decimal(quote['best_bid_amount']),
                             ask_amount=Decimal(quote['best_ask_amount']),
-                            timestamp=timestamp_normalize(self.id, quote['timestamp']),
+                            timestamp=self.timestamp_normalize(quote['timestamp']),
                             receipt_timestamp=timestamp,
                             )
 
@@ -250,7 +259,7 @@ class Deribit(Feed):
 
         self.seq_no[pair] = msg["params"]["data"]["change_id"]
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(ts), timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
         ts = msg["params"]["data"]["timestamp"]
@@ -282,7 +291,7 @@ class Deribit(Feed):
             else:
                 del bidask[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(ts), timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

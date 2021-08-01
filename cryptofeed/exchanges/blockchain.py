@@ -15,7 +15,6 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -25,6 +24,12 @@ LOG = logging.getLogger('feedhandler')
 class Blockchain(Feed):
     id = BLOCKCHAIN
     symbol_endpoint = "https://api.blockchain.com/mercury-gateway/v1/instruments"
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -151,7 +156,7 @@ class Blockchain(Feed):
                             amount=msg['qty'],
                             price=msg['price'],
                             order_id=msg['trade_id'],
-                            timestamp=timestamp_normalize(self.id, msg['timestamp']),
+                            timestamp=self.timestamp_normalize(msg['timestamp']),
                             receipt_timestamp=timestamp)
 
     async def _handle_trade_msg(self, msg: str, timestamp: float):

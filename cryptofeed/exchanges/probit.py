@@ -14,7 +14,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -24,6 +23,16 @@ LOG = logging.getLogger('feedhandler')
 class Probit(Feed):
     id = PROBIT
     symbol_endpoint = 'https://api.probit.com/api/exchange/v1/market'
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -92,7 +101,7 @@ class Probit(Feed):
             quantity = Decimal(update['quantity'])
             side = BUY if update['side'] == 'buy' else SELL
             order_id = update['id']
-            timestamp = timestamp_normalize(self.id, update['time'])
+            timestamp = self.timestamp_normalize(update['time'])
             await self.callback(TRADES, feed=self.id,
                                 symbol=pair,
                                 side=side,

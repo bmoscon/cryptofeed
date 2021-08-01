@@ -17,7 +17,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -27,6 +26,20 @@ class Huobi(Feed):
     id = HUOBI
     symbol_endpoint = 'https://api.huobi.pro/v1/common/symbols'
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'}
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -75,7 +88,7 @@ class Huobi(Feed):
             self.previous_book[pair] = self.__l2_book[pair]
         self.__l2_book[pair] = update
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, timestamp_normalize(self.id, msg['ts']), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, self.timestamp_normalize(msg['ts']), timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -106,7 +119,7 @@ class Huobi(Feed):
                                 side=BUY if trade['direction'] == 'buy' else SELL,
                                 amount=Decimal(trade['amount']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['ts']),
+                                timestamp=self.timestamp_normalize(trade['ts']),
                                 receipt_timestamp=timestamp)
 
     async def _candles(self, msg: dict, symbol: str, interval: str, timestamp: float):
@@ -132,7 +145,7 @@ class Huobi(Feed):
         await self.callback(CANDLES,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(symbol),
-                            timestamp=timestamp_normalize(self.id, msg['ts']),
+                            timestamp=self.timestamp_normalize(msg['ts']),
                             receipt_timestamp=timestamp,
                             start=start,
                             stop=end,

@@ -23,7 +23,6 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, SPOT, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.util import split
 
 
@@ -33,6 +32,20 @@ LOG = logging.getLogger('feedhandler')
 class OKCoin(Feed):
     id = OKCOIN
     symbol_endpoint = 'https://www.okcoin.com/api/spot/v3/instruments'
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -121,7 +134,7 @@ class OKCoin(Feed):
         """
         for update in msg['data']:
             pair = update['instrument_id']
-            update_timestamp = timestamp_normalize(self.id, update['timestamp'])
+            update_timestamp = self.timestamp_normalize(update['timestamp'])
             await self.callback(TICKER, feed=self.id,
                                 symbol=pair,
                                 bid=Decimal(update['best_bid']) if update['best_bid'] else Decimal(0),
@@ -151,7 +164,7 @@ class OKCoin(Feed):
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade[amount_sym]),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, trade['timestamp']),
+                                timestamp=self.timestamp_normalize(trade['timestamp']),
                                 receipt_timestamp=timestamp
                                 )
 
@@ -160,11 +173,11 @@ class OKCoin(Feed):
             await self.callback(FUNDING,
                                 feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(update['instrument_id']),
-                                timestamp=timestamp_normalize(self.id, update['funding_time']),
+                                timestamp=self.timestamp_normalize(update['funding_time']),
                                 receipt_timestamp=timestamp,
                                 rate=update['funding_rate'],
                                 estimated_rate=update['estimated_rate'],
-                                settlement_time=timestamp_normalize(self.id, update['settlement_time']))
+                                settlement_time=self.timestamp_normalize(update['settlement_time']))
 
     async def _book(self, msg: dict, timestamp: float):
         if msg['action'] == 'partial':
@@ -182,7 +195,7 @@ class OKCoin(Feed):
 
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, update['timestamp']), timestamp)
+                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(update['timestamp']), timestamp)
         else:
             # update
             for update in msg['data']:
@@ -202,7 +215,7 @@ class OKCoin(Feed):
                             self.__l2_book[pair][s][price] = amount
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, update['timestamp']), timestamp)
+                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(update['timestamp']), timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
         if msg['data'][0]['status'] == "open":

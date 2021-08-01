@@ -37,10 +37,6 @@ class Coinbase(Feed, CoinbaseRestMixin):
     request_limit = 10
 
     @classmethod
-    def timestamp_normalize(cls, ts: dt) -> float:
-        return ts.timestamp()
-
-    @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)

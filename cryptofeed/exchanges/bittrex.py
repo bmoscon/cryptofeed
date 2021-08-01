@@ -12,7 +12,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 from cryptofeed.exceptions import MissingSequenceNumber
 
@@ -24,6 +23,12 @@ class Bittrex(Feed):
     id = BITTREX
     symbol_endpoint = 'https://api.bittrex.com/v3/markets'
     valid_candle_intervals = {'1m', '5m', '1h', '1d'}
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -175,7 +180,7 @@ class Bittrex(Feed):
                                 side=BUY if trade['takerSide'] == 'BUY' else SELL,
                                 amount=Decimal(trade['quantity']),
                                 price=Decimal(trade['rate']),
-                                timestamp=timestamp_normalize(self.id, trade['executedAt']),
+                                timestamp=self.timestamp_normalize(trade['executedAt']),
                                 receipt_timestamp=timestamp)
 
     async def candle(self, msg: dict, timestamp: float):
@@ -196,7 +201,7 @@ class Bittrex(Feed):
             'candleType': 'TRADE'
         }
         """
-        start = timestamp_normalize(self.id, msg['delta']['startsAt'])
+        start = self.timestamp_normalize(msg['delta']['startsAt'])
         offset = 0
         if self.candle_interval == '1m':
             offset = 60

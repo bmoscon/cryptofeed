@@ -18,7 +18,6 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL
 from cryptofeed.exchanges.huobi_dm import HuobiDM
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -53,7 +52,7 @@ class HuobiSwap(HuobiDM):
                 data = await self.http_conn.read(f'https://api.hbdm.com/swap-api/v1/swap_funding_rate?contract_code={pair}')
                 data = json.loads(data, parse_float=Decimal)
                 received = time.time()
-                update = (data['data']['funding_rate'], timestamp_normalize(self.id, int(data['data']['next_funding_time'])))
+                update = (data['data']['funding_rate'], self.timestamp_normalize(int(data['data']['next_funding_time'])))
                 if pair in self.funding_updates and self.funding_updates[pair] == update:
                     await asyncio.sleep(1)
                     continue
@@ -61,7 +60,7 @@ class HuobiSwap(HuobiDM):
                 await self.callback(FUNDING,
                                     feed=self.id,
                                     symbol=pair,
-                                    timestamp=timestamp_normalize(self.id, data['ts']),
+                                    timestamp=self.timestamp_normalize(data['ts']),
                                     receipt_timestamp=received,
                                     rate=Decimal(update[0]),
                                     next_funding_time=update[1]

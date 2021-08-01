@@ -16,7 +16,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 LOG = logging.getLogger('feedhandler')
@@ -29,6 +28,17 @@ class Binance(Feed):
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
     valid_depth_intervals = {'100ms', '1000ms'}
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
+    request_limit = 20
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -157,7 +167,7 @@ class Binance(Feed):
                             side=SELL if msg['m'] else BUY,
                             amount=amount,
                             price=price,
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=self.timestamp_normalize(msg['E']),
                             receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
@@ -177,7 +187,7 @@ class Binance(Feed):
 
         # Binance does not have a timestamp in this update, but the two futures APIs do
         if 'E' in msg:
-            ts = timestamp_normalize(self.id, msg['E'])
+            ts = self.timestamp_normalize(msg['E'])
         else:
             ts = timestamp
 
@@ -217,7 +227,7 @@ class Binance(Feed):
                             price=Decimal(msg['o']['p']),
                             order_id=None,
                             status=FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=self.timestamp_normalize(msg['E']),
                             receipt_timestamp=timestamp)
 
     def _check_update_id(self, std_pair: str, msg: dict) -> Tuple[bool, bool, bool]:
@@ -272,7 +282,7 @@ class Binance(Feed):
         skip_update, forced, current_match = self._check_update_id(std_pair, msg)
         if current_match:
             # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
-            return await self.book_callback(self.__l2_book[std_pair], L2_BOOK, std_pair, forced, self.__l2_book[std_pair], timestamp_normalize(self.id, msg['E']), timestamp)
+            return await self.book_callback(self.__l2_book[std_pair], L2_BOOK, std_pair, forced, self.__l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
 
         if skip_update:
             return
@@ -292,7 +302,7 @@ class Binance(Feed):
                 else:
                     self.__l2_book[std_pair][side][price] = amount
                     delta[side].append((price, amount))
-        await self.book_callback(self.__l2_book[std_pair], L2_BOOK, std_pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.__l2_book[std_pair], L2_BOOK, std_pair, forced, delta, self.timestamp_normalize(ts), timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float) -> None:
         """
@@ -361,11 +371,11 @@ class Binance(Feed):
         await self.callback(FUNDING,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=self.timestamp_normalize(msg['E']),
                             receipt_timestamp=timestamp,
                             mark_price=msg['p'],
                             rate=msg['r'],
-                            next_funding_time=timestamp_normalize(self.id, msg['T']),
+                            next_funding_time=self.timestamp_normalize(msg['T']),
                             )
 
     async def _candle(self, msg: dict, timestamp: float):
@@ -401,7 +411,7 @@ class Binance(Feed):
         await self.callback(CANDLES,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=self.timestamp_normalize(msg['E']),
                             receipt_timestamp=timestamp,
                             start=msg['k']['t'] / 1000,
                             stop=msg['k']['T'] / 1000,

@@ -16,7 +16,6 @@ from yapic import json
 from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -26,6 +25,16 @@ LOG = logging.getLogger('feedhandler')
 class AscendEX(Feed):
     id = ASCENDEX
     symbol_endpoint = 'https://ascendex.com/api/pro/v1/products'
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -71,7 +80,7 @@ class AscendEX(Feed):
                                 amount=Decimal(trade['q']),
                                 price=Decimal(trade['p']),
                                 order_id=None,
-                                timestamp=timestamp_normalize(self.id, trade['ts']),
+                                timestamp=self.timestamp_normalize(trade['ts']),
                                 receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
@@ -105,7 +114,7 @@ class AscendEX(Feed):
                     delta[s].append((price, size))
                     self.__l2_book[pair][s][price] = size
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, msg['data']['ts']), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(msg['data']['ts']), timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

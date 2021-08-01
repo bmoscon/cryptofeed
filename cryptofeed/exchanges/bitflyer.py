@@ -15,7 +15,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, FUTURES, TICKER, L2_BOOK, SELL, TRADES, FX
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -25,6 +24,12 @@ LOG = logging.getLogger('feedhandler')
 class Bitflyer(Feed):
     id = BITFLYER
     symbol_endpoint = endpoints = ['https://api.bitflyer.com/v1/getmarkets/eu', 'https://api.bitflyer.com/v1/getmarkets/usa', 'https://api.bitflyer.com/v1/getmarkets']
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
@@ -88,7 +93,7 @@ class Bitflyer(Feed):
                             symbol=pair,
                             bid=bid,
                             ask=ask,
-                            timestamp=timestamp_normalize(self.id, msg['params']['message']['timestamp']),
+                            timestamp=self.timestamp_normalize(msg['params']['message']['timestamp']),
                             receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -121,7 +126,7 @@ class Bitflyer(Feed):
                                 side=BUY if update['side'] == 'BUY' else SELL,
                                 amount=update['size'],
                                 price=update['price'],
-                                timestamp=timestamp_normalize(self.id, update['exec_date']),
+                                timestamp=self.timestamp_normalize(update['exec_date']),
                                 receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):

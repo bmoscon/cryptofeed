@@ -13,7 +13,6 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.defines import BID, ASK, BUY, DERIBIT, SELL
 from cryptofeed.exchanges import Deribit as DeribitEx
 from cryptofeed.rest import RestAPI, request_retry
-from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 1000
@@ -87,7 +86,7 @@ class Deribit(RestAPI):
     def _trade_normalization(self, trade: list) -> dict:
 
         ret = {
-            'timestamp': timestamp_normalize(self.id, trade["timestamp"]),
+            'timestamp': self.timestamp_normalize(trade["timestamp"]),
             'symbol': trade["instrument_name"],
             'id': int(trade["trade_id"]),
             'feed': self.id,

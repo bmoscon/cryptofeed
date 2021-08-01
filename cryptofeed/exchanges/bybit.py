@@ -9,7 +9,8 @@ from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from functools import partial
-from typing import Dict, List, Callable, Tuple
+from typing import Dict, List, Callable, Tuple, Union
+from datetime import datetime as dt
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -17,7 +18,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL, SPOT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 # For auth
 import hmac
 import time
@@ -28,6 +28,19 @@ LOG = logging.getLogger('feedhandler')
 class Bybit(Feed):
     id = BYBIT
     symbol_endpoint = ['https://api.bybit.com/v2/public/symbols', 'https://api.bybit.com/spot/v1/symbols']
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: Union[int, dt]) -> float:
+        if isinstance(ts, int):
+            return ts / 1000.0
+        else:
+            return ts.timestamp()
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -235,7 +248,7 @@ class Bybit(Feed):
             if 'updated_at_e9' in info:
                 ts = info['updated_at_e9'] / 1e9
             elif 'updated_at' in info:
-                ts = timestamp_normalize(self.id, info['updated_at'])
+                ts = self.timestamp_normalize(info['updated_at'])
             else:
                 continue
 
@@ -281,7 +294,7 @@ class Bybit(Feed):
                                 side=BUY if trade['side'] == 'Buy' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
-                                timestamp=timestamp_normalize(self.id, ts),
+                                timestamp=self.timestamp_normalize(ts),
                                 receipt_timestamp=timestamp
                                 )
 

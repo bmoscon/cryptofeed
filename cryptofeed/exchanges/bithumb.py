@@ -9,6 +9,8 @@ from decimal import Decimal
 from typing import Tuple, Dict
 from collections import defaultdict
 import copy
+from datetime import datetime as dt
+from datetime import timedelta
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
@@ -17,7 +19,6 @@ from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITHUMB, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -39,6 +40,17 @@ class Bithumb(Feed):
         ('https://api.bithumb.com/public/ticker/ALL_BTC', 'BTC'),
         ('https://api.bithumb.com/public/ticker/ALL_KRW', 'KRW')
     ]
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: dt) -> float:
+        return (ts - timedelta(hours=9)).timestamp()
+
 
     # Override symbol_mapping class method, because this bithumb is a very special case.
     # There is no actual page in the API for reference info.
@@ -109,7 +121,7 @@ class Bithumb(Feed):
         for trade in trades:
             # API ref list uses '-', but market data returns '_'
             symbol = self.exchange_symbol_to_std_symbol(trade['symbol'])
-            timestamp = timestamp_normalize(self.id, trade['contDtm'])
+            timestamp = self.timestamp_normalize(trade['contDtm'])
             price = Decimal(trade['contPrice'])
             quantity = Decimal(trade['contQty'])
             side = BUY if trade['buySellGb'] == '2' else SELL

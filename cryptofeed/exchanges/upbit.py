@@ -9,7 +9,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -20,6 +19,20 @@ class Upbit(Feed):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
     symbol_endpoint = 'https://api.upbit.com/v1/market/all'
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
+    
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -65,7 +78,7 @@ class Upbit(Feed):
                             side=BUY if msg['ab'] == 'BID' else SELL,
                             amount=amount,
                             price=price,
-                            timestamp=timestamp_normalize(self.id, msg['ttms']),
+                            timestamp=self.timestamp_normalize(msg['ttms']),
                             receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
@@ -99,7 +112,7 @@ class Upbit(Feed):
         }
         """
         pair = self.exchange_symbol_to_std_symbol(msg['cd'])
-        orderbook_timestamp = timestamp_normalize(self.id, msg['tms'])
+        orderbook_timestamp = self.timestamp_normalize(msg['tms'])
         forced = pair not in self.__l2_book
 
         update = {

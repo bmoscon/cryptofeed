@@ -21,7 +21,6 @@ from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import CALL, FUTURES, OKEX, LIQUIDATIONS, BUY, OPTION, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.util import split
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
@@ -37,6 +36,20 @@ class OKEx(Feed):
     id = OKEX
     api = 'https://www.okex.com/api/'
     symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
@@ -184,7 +197,7 @@ class OKEx(Feed):
         """
         for update in msg['data']:
             pair = msg['arg']['instId']
-            update_timestamp = timestamp_normalize(self.id, int(update['ts']))
+            update_timestamp = self.timestamp_normalize(int(update['ts']))
             await self.callback(TICKER,
                                 feed=self.id,
                                 symbol=pair,
@@ -211,7 +224,7 @@ class OKEx(Feed):
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade['sz']),
                                 price=Decimal(trade['px']),
-                                timestamp=timestamp_normalize(self.id, int(trade['ts'])),
+                                timestamp=self.timestamp_normalize(int(trade['ts'])),
                                 receipt_timestamp=timestamp
                                 )
 
@@ -220,11 +233,11 @@ class OKEx(Feed):
             await self.callback(FUNDING,
                                 feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(update['instId']),
-                                timestamp=timestamp_normalize(self.id, int(update['fundingTime'])),
+                                timestamp=self.timestamp_normalize(int(update['fundingTime'])),
                                 receipt_timestamp=timestamp,
                                 rate=update['fundingRate'],
                                 estimated_rate=update['nextFundingRate'],
-                                settlement_time=timestamp_normalize(self.id, int(update['fundingTime'])))
+                                settlement_time=self.timestamp_normalize(int(update['fundingTime'])))
 
     async def _book(self, msg: dict, timestamp: float):
         if msg['action'] == 'snapshot':
@@ -242,7 +255,7 @@ class OKEx(Feed):
 
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp_normalize(self.id, int(update['ts'])), timestamp)
+                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(int(update['ts'])), timestamp)
         else:
             # update
             pair = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
@@ -263,7 +276,7 @@ class OKEx(Feed):
                             self.__l2_book[pair][s][price] = amount
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp_normalize(self.id, int(update['ts'])), timestamp)
+                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(int(update['ts'])), timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
 

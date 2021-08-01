@@ -17,7 +17,6 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 
 
@@ -43,6 +42,15 @@ CHECKSUM = 131072
 class Bitfinex(Feed):
     id = BITFINEX
     symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
@@ -112,7 +120,7 @@ class Bitfinex(Feed):
                                 amount=abs(amount),
                                 price=Decimal(price),
                                 order_id=order_id,
-                                timestamp=timestamp_normalize(self.id, ts),
+                                timestamp=self.timestamp_normalize(ts),
                                 receipt_timestamp=timestamp,
                                 period=period)
 
@@ -136,7 +144,7 @@ class Bitfinex(Feed):
                                 amount=abs(amount),
                                 price=Decimal(price),
                                 order_id=order_id,
-                                timestamp=timestamp_normalize(self.id, ts),
+                                timestamp=self.timestamp_normalize(ts),
                                 receipt_timestamp=timestamp)
 
         if isinstance(msg[1], list):

@@ -18,7 +18,6 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, USER_DATA, LAST_PRICE
 from cryptofeed.feed import Feed
 
-from cryptofeed.standards import timestamp_normalize
 import hmac
 import time
 
@@ -31,6 +30,20 @@ class Phemex(Feed):
     symbol_endpoint = 'https://api.phemex.com/exchange/public/cfg/v2/products'
     price_scale = {}
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1_000_000_000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -89,7 +102,7 @@ class Phemex(Feed):
         }
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        ts = timestamp_normalize(self.id, msg['timestamp'])
+        ts = self.timestamp_normalize(msg['timestamp'])
         forced = False
         delta = {BID: [], ASK: []}
 
@@ -134,7 +147,7 @@ class Phemex(Feed):
                                 side=BUY if side == 'Buy' else SELL,
                                 amount=Decimal(amount),
                                 price=Decimal(price / self.price_scale[symbol]),
-                                timestamp=timestamp_normalize(self.id, ts),
+                                timestamp=self.timestamp_normalize(ts),
                                 receipt_timestamp=timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):

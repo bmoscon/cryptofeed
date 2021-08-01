@@ -16,7 +16,6 @@ from cryptofeed.auth.gemini import generate_token
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.gemini_rest import GeminiRestMixin
 
@@ -95,7 +94,7 @@ class Gemini(Feed, GeminiRestMixin):
                             side=side,
                             amount=amount,
                             price=price,
-                            timestamp=timestamp_normalize(self.id, msg['timestamp']),
+                            timestamp=self.timestamp_normalize(msg['timestamp']),
                             receipt_timestamp=timestamp)
 
     async def _order(self, msg: dict, timestamp: float):

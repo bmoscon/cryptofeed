@@ -9,28 +9,27 @@ import hmac
 import logging
 import time
 from time import sleep
+from datetime import datetime as dt
 
-import pandas as pd
 import requests
 from yapic import json
 
-from cryptofeed.exchanges import BinanceFutures, BinanceDelivery
-from cryptofeed.defines import BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
-from cryptofeed.rest import RestAPI, request_retry
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.defines import BUY, SELL, TRADES
+from cryptofeed.connection import request_retry
+from cryptofeed.exchange import RestExchange
 
-REQUEST_LIMIT = 1000
-RATE_LIMIT_SLEEP = 3
+
 LOG = logging.getLogger('cryptofeed.rest')
 
 
-class BinanceDelivery(RestAPI):
-    id = BINANCE_DELIVERY
+class BinanceDeliveryRestMixin(RestExchange):
     api = "https://dapi.binance.com/dapi/v1/"
-    info = BinanceDelivery()
+    rest_channels = (
+        TRADES
+    )
 
     def _get(self, endpoint, retry, retry_wait):
-        @request_retry(self.id, retry, retry_wait, LOG)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
             self._handle_error(r)
@@ -55,8 +54,8 @@ class BinanceDelivery(RestAPI):
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
-            'timestamp': timestamp_normalize(self.id, trade['T']),
-            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
+            'timestamp': self.self.timestamp_normalize(trade['T']),
+            'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.id,
             'side': BUY if trade['m'] is True else SELL,
@@ -72,17 +71,17 @@ class BinanceDelivery(RestAPI):
 
         if start_date:
             if not end_date:
-                end_date = pd.Timestamp.utcnow()
-            start = self._timestamp(start_date)
-            end = self._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+                end_date = dt.now().timestamp()
+            start = self._datetime_normalize(start_date)
+            end = self._datetime_normalize(end_date)
 
-            start = int(start.timestamp() * 1000)
-            end = int(end.timestamp() * 1000)
+            start = int(start * 1000)
+            end = int(end * 1000)
 
-        @request_retry(self.id, retry, retry_wait, LOG)
+        @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
-                return requests.get(f"{self.api}aggTrades?symbol={symbol}&limit={REQUEST_LIMIT}&startTime={start}&endTime={end}")
+                return requests.get(f"{self.api}aggTrades?symbol={symbol}&limit=1000&startTime={start}&endTime={end}")
             else:
                 return requests.get(f"{self.api}aggTrades?symbol={symbol}")
 
@@ -99,7 +98,7 @@ class BinanceDelivery(RestAPI):
             elif r.status_code != 200:
                 self._handle_error(r)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                sleep(1 / self.request_limit)
 
             data = r.json()
             if data == []:
@@ -114,7 +113,7 @@ class BinanceDelivery(RestAPI):
             data = list(map(lambda x: self._trade_normalization(symbol, x), data))
             yield data
 
-            if len(data) < REQUEST_LIMIT:
+            if len(data) < 1000:
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
@@ -123,13 +122,14 @@ class BinanceDelivery(RestAPI):
             yield data
 
 
-class BinanceFutures(RestAPI):
-    id = BINANCE_FUTURES
+class BinanceFuturesRestMixin(RestExchange):
     api = "https://fapi.binance.com/fapi/v1/"
-    info = BinanceFutures()
+    rest_channels = (
+        TRADES
+    )
 
     def _get(self, endpoint, retry, retry_wait):
-        @request_retry(self.id, retry, retry_wait, LOG)
+        @request_retry(self.id, retry, retry_wait)
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
             self._handle_error(r)
@@ -154,8 +154,8 @@ class BinanceFutures(RestAPI):
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
-            'timestamp': timestamp_normalize(self.id, trade['T']),
-            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
+            'timestamp': self.self.timestamp_normalize(trade['T']),
+            'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.id,
             'side': BUY if trade['m'] else SELL,
@@ -171,18 +171,18 @@ class BinanceFutures(RestAPI):
 
         if start_date:
             if not end_date:
-                end_date = pd.Timestamp.utcnow()
-            start = self._timestamp(start_date)
-            end = self._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+                end_date = dt.now().timestamp()
+            start = self._datetime_normalize(start_date)
+            end = self._datetime_normalize(end_date)
 
-            start = int(start.timestamp() * 1000)
-            end = int(end.timestamp() * 1000)
+            start = int(start * 1000)
+            end = int(end * 1000)
 
-        @request_retry(self.id, retry, retry_wait, LOG)
+        @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
                 return requests.get(
-                    f"{self.api}aggTrades?symbol={symbol}&limit={REQUEST_LIMIT}&startTime={start}&endTime={end}")
+                    f"{self.api}aggTrades?symbol={symbol}&limit=1000&startTime={start}&endTime={end}")
             else:
                 return requests.get(f"{self.api}aggTrades?symbol={symbol}")
 
@@ -199,7 +199,7 @@ class BinanceFutures(RestAPI):
             elif r.status_code != 200:
                 self._handle_error(r)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                sleep(1 / self.request_limit)
 
             data = r.json()
             if data == []:
@@ -216,10 +216,10 @@ class BinanceFutures(RestAPI):
             data = list(map(lambda x: self._trade_normalization(symbol, x), data))
             yield data
 
-            if len(data) < REQUEST_LIMIT:
+            if len(data) < 1000:
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data

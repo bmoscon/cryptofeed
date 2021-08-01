@@ -22,7 +22,6 @@ from sortedcontainers import SortedDict as sd
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, SELL
 from cryptofeed.exchanges import Bitmex as BitmexEx
 from cryptofeed.rest import RestAPI, request_retry
-from cryptofeed.standards import timestamp_normalize
 
 
 S3_ENDPOINT = 'https://s3-eu-west-1.amazonaws.com/public.bitmex.com/data/{}/{}.csv.gz'
@@ -123,7 +122,7 @@ class Bitmex(RestAPI):
 
     def _trade_normalization(self, trade: dict) -> dict:
         return {
-            'timestamp': timestamp_normalize(self.id, trade['timestamp']),
+            'timestamp': self.timestamp_normalize(trade['timestamp']),
             'symbol': self.info.exchange_symbol_to_std_symbol(trade['symbol']),
             'id': trade['trdMatchID'],
             'feed': self.id,

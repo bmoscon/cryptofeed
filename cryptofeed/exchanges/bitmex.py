@@ -21,7 +21,6 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -31,6 +30,12 @@ class Bitmex(Feed):
     id = BITMEX
     api = 'https://www.bitmex.com/api/v1/'
     symbol_endpoint = "https://www.bitmex.com/api/v1/instrument/active"
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -82,7 +87,7 @@ class Bitmex(Feed):
         }
         """
         for data in msg['data']:
-            ts = timestamp_normalize(self.id, data['timestamp'])
+            ts = self.timestamp_normalize(data['timestamp'])
             await self.callback(TRADES, feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
                                 side=BUY if data['side'] == 'Buy' else SELL,
@@ -165,7 +170,7 @@ class Bitmex(Feed):
                                 symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
                                 bid=Decimal(data['bidPrice']),
                                 ask=Decimal(data['askPrice']),
-                                timestamp=timestamp_normalize(self.id, data['timestamp']),
+                                timestamp=self.timestamp_normalize(data['timestamp']),
                                 receipt_timestamp=timestamp)
 
     async def _funding(self, msg: dict, timestamp: float):
@@ -198,7 +203,7 @@ class Bitmex(Feed):
         }
         """
         for data in msg['data']:
-            ts = timestamp_normalize(self.id, data['timestamp'])
+            ts = self.timestamp_normalize(data['timestamp'])
             interval = data['fundingInterval']
             interval = int((interval - dt(interval.year, interval.month, interval.day, tzinfo=interval.tzinfo)).total_seconds())
             await self.callback(FUNDING, feed=self.id,
@@ -447,7 +452,7 @@ class Bitmex(Feed):
         """
         for data in msg['data']:
             if 'openInterest' in data:
-                ts = timestamp_normalize(self.id, data['timestamp'])
+                ts = self.timestamp_normalize(data['timestamp'])
                 await self.callback(OPEN_INTEREST, feed=self.id,
                                     symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
                                     open_interest=data['openInterest'],

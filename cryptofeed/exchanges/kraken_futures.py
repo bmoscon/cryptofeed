@@ -17,7 +17,6 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -26,6 +25,20 @@ LOG = logging.getLogger('feedhandler')
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
     symbol_endpoint = 'https://futures.kraken.com/derivatives/api/v3/instruments'
+    websocket_channels = {
+        L2_BOOK: 'orderbook',
+        TRADES: 'trades',
+        TICKER: 'ticker',
+        FUNDING: 'funding',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'trades',
+        ORDER_INFO: 'orders',
+        USER_FILLS: 'fills',
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -103,7 +116,7 @@ class KrakenFutures(Feed):
                             amount=Decimal(msg['qty']),
                             price=Decimal(msg['price']),
                             order_id=msg['uid'],
-                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            timestamp=self.timestamp_normalize(msg['time']),
                             receipt_timestamp=timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
@@ -190,23 +203,23 @@ class KrakenFutures(Feed):
             await self.callback(FUNDING,
                                 feed=self.id,
                                 symbol=pair,
-                                timestamp=timestamp_normalize(self.id, msg['time']),
+                                timestamp=self.timestamp_normalize(msg['time']),
                                 receipt_timestamp=timestamp,
                                 tag=msg['tag'],
                                 rate=msg['funding_rate'],
                                 rate_prediction=msg.get('funding_rate_prediction', None),
                                 relative_rate=msg['relative_funding_rate'],
                                 relative_rate_prediction=msg.get('relative_funding_rate_prediction', None),
-                                next_rate_timestamp=timestamp_normalize(self.id, msg['next_funding_rate_time']))
+                                next_rate_timestamp=self.timestamp_normalize(msg['next_funding_rate_time']))
         else:
             await self.callback(FUNDING,
                                 feed=self.id,
                                 symbol=pair,
-                                timestamp=timestamp_normalize(self.id, msg['time']),
+                                timestamp=self.timestamp_normalize(msg['time']),
                                 receipt_timestamp=timestamp,
                                 tag=msg['tag'],
                                 premium=msg['premium'],
-                                maturity_timestamp=timestamp_normalize(self.id, msg['maturityTime']))
+                                maturity_timestamp=self.timestamp_normalize(msg['maturityTime']))
 
         oi = msg['openInterest']
         if pair in self.open_interest and oi == self.open_interest[pair]:
@@ -216,7 +229,7 @@ class KrakenFutures(Feed):
                             feed=self.id,
                             symbol=pair,
                             open_interest=msg['openInterest'],
-                            timestamp=timestamp_normalize(self.id, msg['time']),
+                            timestamp=self.timestamp_normalize(msg['time']),
                             receipt_timestamp=timestamp
                             )
 

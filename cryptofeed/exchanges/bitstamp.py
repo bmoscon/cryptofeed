@@ -16,7 +16,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.standards import timestamp_normalize
 
 
 LOG = logging.getLogger('feedhandler')
@@ -26,6 +25,16 @@ class Bitstamp(Feed):
     id = BITSTAMP
     symbol_endpoint = "https://www.bitstamp.net/api/v2/trading-pairs-info/"
     # API documentation: https://www.bitstamp.net/websocket/v2/
+    websocket_channels = {
+        L2_BOOK: 'depth',
+        TRADES: 'aggTrade',
+        TICKER: 'bookTicker',
+        CANDLES: 'kline_'
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1_000_000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -74,7 +83,7 @@ class Bitstamp(Feed):
                     self.__l2_book[pair][side][price] = size
                     delta[side].append((price, size))
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(ts), timestamp)
 
     async def _l3_book(self, msg: dict, timestamp: float):
         data = msg['data']
@@ -89,7 +98,7 @@ class Bitstamp(Feed):
                 size = Decimal(size)
                 book[side].get(price, sd())[order_id] = size
         self.__l3_book[pair] = book
-        await self.book_callback(self.__l3_book[pair], L3_BOOK, pair, False, False, timestamp_normalize(self.id, ts), timestamp)
+        await self.book_callback(self.__l3_book[pair], L3_BOOK, pair, False, False, self.timestamp_normalize(ts), timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         """
@@ -124,7 +133,7 @@ class Bitstamp(Feed):
                             side=side,
                             amount=amount,
                             price=price,
-                            timestamp=timestamp_normalize(self.id, ts),
+                            timestamp=self.timestamp_normalize(ts),
                             receipt_timestamp=timestamp,
                             order_id=order_id)
 

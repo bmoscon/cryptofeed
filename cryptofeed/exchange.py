@@ -7,7 +7,7 @@ associated with this software.
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
-from typing import Any, Dict, Union
+from typing import Dict, Union
 
 from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
@@ -43,8 +43,8 @@ class Exchange:
         self.exchange_symbol_mapping = {value: key for key, value in self.normalized_symbol_mapping.items()}
 
     @classmethod
-    def timestamp_normalize(cls, ts: Any):
-        raise NotImplementedError
+    def timestamp_normalize(cls, ts: dt) -> float:
+        return ts.timestamp()
 
     @classmethod
     def normalize_order_options(cls, option: str):

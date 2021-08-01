@@ -10,14 +10,15 @@ from typing import Tuple
 
 from yapic import json
 
-from cryptofeed.defines import BINANCE_DELIVERY
+from cryptofeed.defines import BINANCE_DELIVERY, FUNDING, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.exchanges.binance import Binance
+from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class BinanceDelivery(Binance):
+class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     id = BINANCE_DELIVERY
     symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
@@ -29,6 +30,11 @@ class BinanceDelivery(Binance):
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
         self.address = self._address()
+        self.websocket_channels.update({
+            FUNDING: 'markPrice',
+            OPEN_INTEREST: 'open_interest',
+            LIQUIDATIONS: 'forceOrder'
+        })
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False

@@ -12,10 +12,10 @@ data channel names
 import logging
 import datetime as dt
 
-from cryptofeed.defines import (BEQUANT, BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BINANCE_US, BITCOINCOM, BITFLYER, BITFINEX,
+from cryptofeed.defines import (BEQUANT, BITCOINCOM, BITFLYER, BITFINEX,
                                 BITHUMB, ASCENDEX, BITMEX, PHEMEX, BITSTAMP, BITTREX, BLOCKCHAIN, BYBIT, CANDLES, COINBASE,
                                 DERIBIT, DYDX, EXX, GATEIO, HITBTC, HUOBI, HUOBI_DM, HUOBI_SWAP,
-                                KRAKEN, KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, PROBIT, UPBIT)
+                                KRAKEN_FUTURES, KUCOIN, OKCOIN, OKEX, PROBIT, UPBIT)
 from cryptofeed.defines import (FILL_OR_KILL, IMMEDIATE_OR_CANCEL, LIMIT, MAKER_OR_CANCEL, MARKET, UNSUPPORTED)
 from cryptofeed.defines import (BALANCES, TRANSACTIONS, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST,
                                 TICKER, TRADES, ORDER_INFO, L1_BOOK, USER_FILLS, USER_DATA, LAST_PRICE)
@@ -23,27 +23,6 @@ from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedTradingOption
 
 
 LOG = logging.getLogger('feedhandler')
-
-
-def timestamp_normalize(exchange, ts):
-    if exchange == BYBIT:
-        if isinstance(ts, int):
-            return ts / 1000
-        else:
-            return ts.timestamp()
-
-    if exchange in {BITFLYER, BLOCKCHAIN, BITMEX, HITBTC, OKCOIN, BITCOINCOM, PROBIT, BITTREX, DYDX, BEQUANT}:
-        return ts.timestamp()
-    elif exchange in {OKEX, HUOBI, HUOBI_DM, HUOBI_SWAP, BITFINEX, DERIBIT, BINANCE, BINANCE_US, BINANCE_FUTURES,
-                      BINANCE_DELIVERY, ASCENDEX, KRAKEN_FUTURES, UPBIT}:
-
-        return ts / 1000.0
-    elif exchange in {BITSTAMP}:
-        return ts / 1_000_000.0
-    elif exchange == PHEMEX:
-        return ts / 1_000_000_000.0
-    elif exchange in {BITHUMB}:
-        return (ts - dt.timedelta(hours=9)).timestamp()
 
 
 _feed_to_exchange_map = {
@@ -61,10 +40,6 @@ _feed_to_exchange_map = {
         BITMEX: 'orderBookL2',
         BITSTAMP: 'diff_order_book',
         KRAKEN_FUTURES: 'book',
-        BINANCE: 'depth',
-        BINANCE_US: 'depth',
-        BINANCE_FUTURES: 'depth',
-        BINANCE_DELIVERY: 'depth',
         BLOCKCHAIN: 'l2',
         EXX: 'ENTRUST_ADD',
         HUOBI: 'depth.step0',
@@ -100,10 +75,6 @@ _feed_to_exchange_map = {
         COINBASE: 'matches',
         BITMEX: 'trade',
         KRAKEN_FUTURES: 'trade',
-        BINANCE: 'aggTrade',
-        BINANCE_US: 'aggTrade',
-        BINANCE_FUTURES: 'aggTrade',
-        BINANCE_DELIVERY: 'aggTrade',
         BLOCKCHAIN: 'trades',
         EXX: 'TRADE',
         HUOBI: 'trade.detail',
@@ -131,10 +102,6 @@ _feed_to_exchange_map = {
         BITMEX: 'quote',
         BITFLYER: 'lightning_ticker_{}',
         KRAKEN_FUTURES: 'ticker_lite',
-        BINANCE: 'bookTicker',
-        BINANCE_US: 'bookTicker',
-        BINANCE_FUTURES: 'bookTicker',
-        BINANCE_DELIVERY: 'bookTicker',
         OKCOIN: '{}/ticker',
         OKEX: 'tickers',
         DERIBIT: "ticker",
@@ -150,8 +117,6 @@ _feed_to_exchange_map = {
     FUNDING: {
         BITMEX: 'funding',
         BITFINEX: 'trades',
-        BINANCE_FUTURES: 'markPrice',
-        BINANCE_DELIVERY: 'markPrice',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
         OKEX: 'funding-rate',
@@ -162,14 +127,11 @@ _feed_to_exchange_map = {
         BITMEX: 'instrument',
         KRAKEN_FUTURES: 'ticker',
         DERIBIT: 'ticker',
-        BINANCE_FUTURES: 'open_interest',
-        BINANCE_DELIVERY: 'open_interest',
         BYBIT: 'instrument_info.100ms'
     },
     LIQUIDATIONS: {
         BITMEX: 'liquidation',
-        BINANCE_FUTURES: 'forceOrder',
-        BINANCE_DELIVERY: 'forceOrder',
+        
         DERIBIT: 'trades',
         OKEX: LIQUIDATIONS,
     },
@@ -191,10 +153,6 @@ _feed_to_exchange_map = {
     },
     CANDLES: {
         BEQUANT: 'subscribeCandles',
-        BINANCE: 'kline_',
-        BINANCE_US: 'kline_',
-        BINANCE_FUTURES: 'kline_',
-        BINANCE_DELIVERY: 'kline_',
         BITCOINCOM: 'subscribeCandles',
         HITBTC: 'subscribeCandles',
         HUOBI: 'kline',

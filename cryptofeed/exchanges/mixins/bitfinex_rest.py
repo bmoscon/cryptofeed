@@ -18,7 +18,6 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, SELL
 from cryptofeed.exchanges import Bitfinex as BitfinexEx
 from cryptofeed.rest import RestAPI, request_retry
-from cryptofeed.standards import timestamp_normalize
 
 
 REQUEST_LIMIT = 5000
@@ -63,7 +62,7 @@ class Bitfinex(RestAPI):
             period = None
 
         ret = {
-            'timestamp': timestamp_normalize(self.id, timestamp),
+            'timestamp': self.timestamp_normalize(timestamp),
             'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
             'id': trade_id,
             'feed': self.id,

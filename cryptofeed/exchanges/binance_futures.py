@@ -13,14 +13,14 @@ from typing import List, Tuple, Callable, Dict
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
-from cryptofeed.defines import BINANCE_FUTURES, OPEN_INTEREST
+from cryptofeed.defines import BINANCE_FUTURES, FUNDING, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.exchanges.binance import Binance
-from cryptofeed.standards import timestamp_normalize
+from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
 
 LOG = logging.getLogger('feedhandler')
 
 
-class BinanceFutures(Binance):
+class BinanceFutures(Binance, BinanceFuturesRestMixin):
     id = BINANCE_FUTURES
     symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
@@ -43,6 +43,11 @@ class BinanceFutures(Binance):
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
+        self.websocket_channels.update({
+            FUNDING: 'markPrice',
+            OPEN_INTEREST: 'open_interest',
+            LIQUIDATIONS: 'forceOrder'
+        })
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
@@ -76,7 +81,7 @@ class BinanceFutures(Binance):
                                 feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(pair),
                                 open_interest=oi,
-                                timestamp=timestamp_normalize(self.id, msg['time']),
+                                timestamp=self.self.timestamp_normalize(msg['time']),
                                 receipt_timestamp=time.time()
                                 )
             self.open_interest[pair] = oi
