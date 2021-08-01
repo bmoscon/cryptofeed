@@ -36,9 +36,10 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             LIQUIDATIONS: 'forceOrder'
         })
 
-    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
+    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         skip_update = False
         forced = not self.forced[pair]
+        current_match = self.last_update_id[pair] == msg['u']
 
         if forced and msg['u'] < self.last_update_id[pair]:
             skip_update = True
@@ -51,7 +52,7 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
-        return skip_update, forced
+        return skip_update, forced, current_match
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

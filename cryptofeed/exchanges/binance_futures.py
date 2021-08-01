@@ -49,9 +49,10 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             LIQUIDATIONS: 'forceOrder'
         })
 
-    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
+    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         skip_update = False
         forced = not self.forced[pair]
+        current_match = self.last_update_id[pair] == msg['u']
 
         if forced and msg['u'] < self.last_update_id[pair]:
             skip_update = True
@@ -64,7 +65,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
-        return skip_update, forced
+        return skip_update, forced, current_match
 
     async def _open_interest(self, msg: dict, timestamp: float):
         """

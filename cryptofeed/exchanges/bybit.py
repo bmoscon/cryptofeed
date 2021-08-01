@@ -16,7 +16,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL, SPOT
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
 # For auth
 import hmac
@@ -27,7 +27,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Bybit(Feed):
     id = BYBIT
-    symbol_endpoint = ['https://api.bybit.com/v2/public/symbols', 'https://api.bybit.com/spot/v1/symbols']
+    symbol_endpoint = 'https://api.bybit.com/v2/public/symbols'
     websocket_channels = {
         L2_BOOK: 'orderBookL2_25',
         TRADES: 'trade',
@@ -50,7 +50,7 @@ class Bybit(Feed):
         info = defaultdict(dict)
 
         # PERPETUAL & FUTURES
-        for symbol in data[0]['result']:
+        for symbol in data['result']:
             base = symbol['base_currency']
             quote = symbol['quote_currency']
 
@@ -65,18 +65,6 @@ class Bybit(Feed):
 
             ret[s.normalized] = symbol['name']
             info['tick_size'][s.normalized] = symbol['price_filter']['tick_size']
-            info['instrument_type'][s.normalized] = stype
-
-        # SPOT (not implemented for subscripton for now)
-        for symbol in data[1]['result']:
-            base = symbol['baseCurrency']
-            quote = symbol['quoteCurrency']
-            stype = SPOT
-
-            s = Symbol(base, quote, type=stype)
-
-            ret[s.normalized] = symbol['name']
-            info['tick_size'][s.normalized] = symbol['minPricePrecision']
             info['instrument_type'][s.normalized] = stype
 
         return ret, info
