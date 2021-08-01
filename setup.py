@@ -80,7 +80,7 @@ setup(
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
         "rabbit": ["aio_pika", "pika"],
-        "redis": ["hiredis", "aioredis>=2.0.0a1"],
+        "redis": ["hiredis", "aioredis>=2.0.0"],
         "zmq": ["pyzmq"],
         "all": [
             "arctic",
@@ -92,7 +92,7 @@ setup(
             "aio_pika",
             "pika",
             "hiredis",
-            "aioredis>=2.0.0a1",
+            "aioredis>=2.0.0",
             "pyzmq",
         ],
     },

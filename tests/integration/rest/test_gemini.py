@@ -1,15 +1,11 @@
-import pathlib
-
 import pytest
 
 from cryptofeed.defines import BID, ASK, LIMIT, BUY, CANCELLED
-from cryptofeed.rest import Rest
+from cryptofeed.exchanges import Gemini
 
 
-CFG = str(pathlib.Path().absolute()) + "/config.yaml"
-
-public = Rest().Gemini
-sandbox = Rest(config=CFG, sandbox=True).Gemini
+public = Gemini(config='config.yaml')
+sandbox = Gemini(sandbox=True, config='config.yaml')
 
 
 def test_ticker():
@@ -32,7 +28,7 @@ def test_trade_history():
     assert len(trade_history) > 0
 
 
-@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
 def test_place_order_and_cancel():
     order_resp = sandbox.place_order(
         symbol='BTC-USD',
@@ -49,7 +45,7 @@ def test_place_order_and_cancel():
     assert cancel_resp['order_status'] == CANCELLED
 
 
-@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
 def test_order_status():
     order_resp = sandbox.place_order(
         symbol='BTC-USD',
@@ -66,7 +62,7 @@ def test_order_status():
     assert status['side'] == BUY
 
 
-@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
+@pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
 def test_get_orders():
     orders = sandbox.orders()
     for order in orders:
@@ -76,8 +72,8 @@ def test_get_orders():
     assert len(orders) == 0
 
 
-@pytest.mark.skipif(not sandbox.config.key_id or not sandbox.config.key_secret, reason="No api key provided")
-def test_get_available_balances():
+@pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
+def test_balances():
     balances = sandbox.balances()
 
     assert len(balances) > 0

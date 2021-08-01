@@ -5,32 +5,27 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from cryptofeed.exchange import Exchange
 from functools import partial
 import logging
-import os
-from typing import Dict, Tuple, Callable, Union, List
+from typing import Tuple, Callable, Union, List
+
 from aiohttp.typedefs import StrOrURL
 
-from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.callback import Callback
-from cryptofeed.config import Config
-from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPSync, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
-from cryptofeed.defines import (ASK, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, ACC_TRANSACTIONS, USER_FILLS, ACC_BALANCES)
-from cryptofeed.exceptions import BidAskOverlapping, UnsupportedDataFeed, UnsupportedSymbol
-from cryptofeed.standards import feed_to_exchange, is_authenticated_channel
+from cryptofeed.defines import (ASK, BALANCES, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, USER_FILLS)
+from cryptofeed.exceptions import BidAskOverlapping
 from cryptofeed.util.book import book_delta, depth
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Feed:
-    id = 'NotImplemented'
-    http_sync = HTTPSync()
-
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, config: Union[Config, dict, str] = None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, sandbox=False, delay_start=0, http_proxy: StrOrURL = None):
+class Feed(Exchange):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -68,26 +63,13 @@ class Feed:
             on FeedHandler, specifically the `exception_handler` keyword argument.
         log_message_on_error: bool
             If an exception is encountered in the connection handler, log the raw message
-        sandbox: bool
-            enable sandbox mode for exchanges that support this
         delay_start: int, float
             a delay before starting the feed/connection to the exchange. If you are subscribing to a large number of feeds
             on a single exchange, you may encounter 429s. You can use this to stagger the starts.
         http_proxy: str
-            Passed to HTTPPoll and HTTPAsyncConn. Only used for GET requests.
+            URL of proxy server. Passed to HTTPPoll and HTTPAsyncConn. Only used for HTTP GET requests.
         """
-        if isinstance(config, Config):
-            LOG.info('%s: reuse object Config containing the following main keys: %s', self.id, ", ".join(config.config.keys()))
-            self.config = config
-        elif config is None:
-            LOG.info('%s: no Config provided, using default config', self.id)
-            self.config = Config(config)
-        else:
-            LOG.info('%s: create Config from type: %r', self.id, type(config))
-            self.config = Config(config)
-
-        self.sandbox = sandbox
-
+        super().__init__(**kwargs)
         self.log_on_error = log_message_on_error
         self.retries = retries
         self.exceptions = exceptions
@@ -107,27 +89,19 @@ class Feed:
         self.origin = origin
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
-        self.load_keys()
         self.requires_authentication = False
         self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
         self.http_proxy = http_proxy
         self.start_delay = delay_start
 
-        symbols_cache = Symbols
-        if not symbols_cache.populated(self.id):
-            self.symbol_mapping()
-
-        self.normalized_symbol_mapping, self.exchange_info = symbols_cache.get(self.id)
-        self.exchange_symbol_mapping = {value: key for key, value in self.normalized_symbol_mapping.items()}
-
         if subscription is not None and (symbols is not None or channels is not None):
             raise ValueError("Use subscription, or channels and symbols, not both")
 
         if subscription is not None:
             for channel in subscription:
-                chan = feed_to_exchange(self.id, channel)
-                if is_authenticated_channel(channel):
+                chan = self.std_channel_to_exchange(channel)
+                if self.is_authenticated_channel(channel):
                     if not self.key_id or not self.key_secret:
                         raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
                     self.requires_authentication = True
@@ -136,7 +110,7 @@ class Feed:
                 self._feed_config[channel].extend(self.normalized_symbols)
 
         if symbols and channels:
-            if any(is_authenticated_channel(chan) for chan in channels):
+            if any(self.is_authenticated_channel(chan) for chan in channels):
                 if not self.key_id or not self.key_secret:
                     raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
                 self.requires_authentication = True
@@ -146,13 +120,13 @@ class Feed:
             self.normalized_symbols = symbols
 
             symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in symbols]
-            channels = list(set([feed_to_exchange(self.id, chan) for chan in channels]))
+            channels = list(set([self.std_channel_to_exchange(chan) for chan in channels]))
             self.subscription = {chan: symbols for chan in channels}
 
         self._feed_config = dict(self._feed_config)
 
-        self.l3_book = {}
-        self.l2_book = {}
+        self._l3_book = {}
+        self._l2_book = {}
         self.callbacks = {FUNDING: Callback(None),
                           FUTURES_INDEX: Callback(None),
                           L2_BOOK: Callback(None),
@@ -164,6 +138,7 @@ class Feed:
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None),
                           USER_FILLS: Callback(None),
+                          BALANCES: Callback(None)
                           }
 
         if callbacks:
@@ -175,11 +150,6 @@ class Feed:
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
-
-    def load_keys(self):
-        self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or self.config[self.id.lower()].key_id
-        self.key_secret = os.environ.get(f'CF_{self.id}_KEY_SECRET') or self.config[self.id.lower()].key_secret
-        self.key_passphrase = os.environ.get(f'CF_{self.id}_KEY_PASSWORD') or self.config[self.id.lower()].key_passphrase
 
     def _connect_builder(self, address: str, options: list, header=None, sub=None, handler=None, auth=None):
         """
@@ -211,58 +181,6 @@ class Feed:
         for _, addr in self.address.items():
             ret.append((WSAsyncConn(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
-
-    @classmethod
-    def info(cls) -> dict:
-        """
-        Return information about the Exchange - what trading symbols are supported, what data channels, etc
-
-        key_id: str
-            API key to query the feed, required when requesting supported coins/symbols.
-        """
-        symbols = cls.symbol_mapping()
-        data = Symbols.get(cls.id)[1]
-        data['symbols'] = list(symbols.keys())
-        data['channels'] = []
-        for channel in (FUNDING, FUTURES_INDEX, LIQUIDATIONS, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, CANDLES, USER_FILLS, ORDER_INFO, ACC_TRANSACTIONS, ACC_BALANCES):
-            try:
-                feed_to_exchange(cls.id, channel, silent=True)
-                data['channels'].append(channel)
-            except UnsupportedDataFeed:
-                pass
-
-        return data
-
-    @classmethod
-    def symbols(cls, refresh=False) -> dict:
-        if refresh:
-            cls.symbol_mapping(refresh=True)
-        return cls.info()['symbols']
-
-    @classmethod
-    def symbol_mapping(cls, refresh=False) -> Dict:
-        if Symbols.populated(cls.id) and not refresh:
-            return Symbols.get(cls.id)[0]
-        try:
-            LOG.debug("%s: reading symbol information from %s", cls.id, cls.symbol_endpoint)
-            if isinstance(cls.symbol_endpoint, list):
-                data = []
-                for ep in cls.symbol_endpoint:
-                    data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
-            elif isinstance(cls.symbol_endpoint, dict):
-                data = []
-                for input, output in cls.symbol_endpoint.items():
-                    for d in cls.http_sync.read(input, json=True, uuid=cls.id):
-                        data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
-            else:
-                data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
-
-            syms, info = cls._parse_symbol_data(data)
-            Symbols.set(cls.id, syms, info)
-            return syms
-        except Exception as e:
-            LOG.error("%s: Failed to parse symbol information: %s", cls.id, str(e), exc_info=True)
-            raise
 
     async def book_callback(self, book: dict, book_type: str, symbol: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
         """
@@ -387,17 +305,3 @@ class Feed:
                     LOG.info('%s: starting backend task %s', self.id, cb_name)
                     # Backends start tasks to write messages
                     callback.start(loop)
-
-    def exchange_symbol_to_std_symbol(self, symbol: str) -> str:
-        try:
-            return self.exchange_symbol_mapping[symbol]
-        except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
-
-    def std_symbol_to_exchange_symbol(self, symbol: Union[str, Symbol]) -> str:
-        if isinstance(symbol, Symbol):
-            symbol = symbol.normalized
-        try:
-            return self.normalized_symbol_mapping[symbol]
-        except KeyError:
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')

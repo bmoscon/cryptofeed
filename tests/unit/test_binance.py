@@ -7,12 +7,11 @@ associated with this software.
 import random
 
 from cryptofeed.exchanges import Binance
-from cryptofeed.standards import feed_to_exchange
 
 
 def test_binance_address_generation():
     symbols = Binance.symbols()
-    channels = Binance.info()['channels']
+    channels = Binance.info()['channels']['websocket']
     for length in (10, 20, 30, 40, 50, 100, 200, 500, len(symbols)):
         syms = []
         chans = []

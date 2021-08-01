@@ -2,8 +2,8 @@ from time import time
 
 from cryptofeed import FeedHandler
 from cryptofeed.defines import L2_BOOK
-from cryptofeed.exchange.binance import Binance
-from cryptofeed.exchange.binance_futures import BinanceFutures
+from cryptofeed.exchanges.binance import Binance
+from cryptofeed.exchanges.binance_futures import BinanceFutures
 from cryptofeed.exchanges import BinanceDelivery
 
 

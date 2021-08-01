@@ -117,8 +117,9 @@ Cryptofeed supports the following channels from exchanges:
 ### Authenticated Data Channels
 
 * ORDER_INFO - Order status updates
-* ACC_TRANSACTIONS - Real-time updates on account deposits and withdrawals
-* ACC_BALANCES - Updates on wallet funds
+* TRANSACTIONS - Real-time updates on account deposits and withdrawals
+* BALANCES - Updates on wallet funds
+* USER_FILLS - Executed user trades
 
 
 ## Backends
@@ -168,7 +169,7 @@ See more options, explanations and Pipenv usage in [INSTALL.md](https://github.c
 
 ## Rest API
 
-Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [rest](https://github.com/bmoscon/cryptofeed/tree/master/cryptofeed/rest) package.
+Cryptofeed supports some REST interfaces for retrieving historical data. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange.
 
 
 ## Future Work

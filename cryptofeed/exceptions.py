@@ -50,5 +50,9 @@ class ConnectionClosed(Exception):
     pass
 
 
+class UnexpectedMessage(Exception):
+    pass
+
+
 class ConnectionExists(Exception):
     pass
