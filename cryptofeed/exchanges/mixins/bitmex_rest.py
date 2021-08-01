@@ -121,7 +121,7 @@ class BitmexRestMixin(RestExchange):
         """
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get('trade', symbol, retry, retry_wait):
-                yield list(map(self._trade_normalization, data))
+            yield list(map(self._trade_normalization, data))
 
     def l2_book(self, symbol: str, retry=None, retry_wait=10):
         ret = {BID: sd(), ASK: sd()}

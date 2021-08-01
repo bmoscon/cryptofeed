@@ -4,22 +4,19 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 from collections import defaultdict
 from cryptofeed.symbols import Symbol
 
 from decimal import Decimal
 from itertools import islice
-from functools import partial
 import logging
 import zlib
-from typing import Dict, List, Tuple, Callable
+from typing import Dict, Tuple
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.okcoin import generate_token
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import ASK, BID, BUY, L2_BOOK, OKCOIN, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed

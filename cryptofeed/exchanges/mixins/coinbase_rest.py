@@ -10,7 +10,7 @@ import hashlib
 from decimal import Decimal
 import logging
 import time
-from datetime import datetime as dt, timezone
+from datetime import datetime as dt
 from typing import Optional, Union
 
 import requests
@@ -39,7 +39,7 @@ class CoinbaseRestMixin(RestExchange):
         IMMEDIATE_OR_CANCEL: {'time_in_force': 'IOC'},
         MAKER_OR_CANCEL: {'post_only': 1},
     }
-    
+
     def _order_status(self, data: dict):
         if 'status' not in data:
             raise UnexpectedMessage(f"Message from exchange: {data}")

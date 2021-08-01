@@ -88,7 +88,7 @@ class DeribitRestMixin(RestExchange):
 
         ret = {
             'timestamp': self.timestamp_normalize(trade["timestamp"]),
-            'symbol':  self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
+            'symbol': self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
             'id': int(trade["trade_id"]),
             'feed': self.id,
             'side': BUY if trade["direction"] == 'buy' else SELL,

@@ -29,7 +29,7 @@ class AttrDict(dict):
 
     def __missing__(self, key):
         return AttrDict()
-    
+
     def __repr__(self) -> str:
         return super().__repr__()
 
@@ -73,6 +73,6 @@ class Config:
 
     def __contains__(self, item):
         return item in self.config
-    
+
     def __repr__(self) -> str:
         return self.config.__repr__()

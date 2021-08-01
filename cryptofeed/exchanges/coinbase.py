@@ -7,7 +7,6 @@ associated with this software.
 import asyncio
 import logging
 import time
-from datetime import datetime as dt
 from decimal import Decimal
 from typing import Dict, Tuple
 from collections import defaultdict

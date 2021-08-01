@@ -105,7 +105,6 @@ class FTXRestMixin(RestExchange):
             start = int(self._datetime_normalize(start))
             end = int(self._datetime_normalize(end))
 
-
         @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
@@ -211,7 +210,7 @@ class FTXRestMixin(RestExchange):
             else:
                 sleep(1 / self.request_limit)
 
-            data = json.loads(r.text, parse_float=Decimal)['result']            
+            data = json.loads(r.text, parse_float=Decimal)['result']
             orig_data = list(data)
             data = self._dedupe(data, last)
             last = list(orig_data)

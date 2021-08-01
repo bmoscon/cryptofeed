@@ -49,7 +49,6 @@ class Bithumb(Feed):
     def timestamp_normalize(cls, ts: dt) -> float:
         return (ts - timedelta(hours=9)).timestamp()
 
-
     # Override symbol_mapping class method, because this bithumb is a very special case.
     # There is no actual page in the API for reference info.
     # Need to query the ticker endpoint by quote currency for that info

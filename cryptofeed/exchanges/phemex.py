@@ -224,7 +224,7 @@ class Phemex(Feed):
         if 'id' in msg and msg['id'] == 100:
             if not msg['error']:
                 LOG.info("%s: Auth request result: %s", conn.uuid, msg['result']['status'])
-                msg = json.dumps({"id": 101, "method": feed_to_exchange(self.id, USER_DATA), "params": []})
+                msg = json.dumps({"id": 101, "method": self.std_channel_to_exchange(USER_DATA), "params": []})
                 LOG.debug(f"{conn.uuid}: Subscribing to authenticated channels: {msg}")
                 await conn.write(msg)
             else:

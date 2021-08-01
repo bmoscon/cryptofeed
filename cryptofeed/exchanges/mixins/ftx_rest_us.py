@@ -13,6 +13,6 @@ class FTXUSRestMixin(FTXRestMixin):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, ORDER_INFO, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, TRADE_HISTORY
     )
-    
+
     def funding(self, symbol: str, **kwargs):
         raise NotImplementedError

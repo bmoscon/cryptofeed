@@ -32,7 +32,7 @@ class KrakenRestMixin(RestExchange):
     )
     rest_options = {
         LIMIT: 'limit',
-        MARKET: 'market',        
+        MARKET: 'market',
         MAKER_OR_CANCEL: 'post'
     }
 

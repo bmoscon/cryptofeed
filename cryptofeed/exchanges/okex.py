@@ -177,7 +177,7 @@ class OKEx(Feed):
         """
         combos = []
         for chan in self.subscription:
-            if not is_authenticated_channel(chan):
+            if not self.is_authenticated_channel(chan):
                 if chan == LIQUIDATIONS:
                     continue
                 for symbol in self.subscription[chan]:

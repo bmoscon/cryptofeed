@@ -127,10 +127,10 @@ class Bybit(Feed):
         '''
         ret = []
         if any(pair.split('-')[1] == 'USDT' for pair in self.normalized_symbols):
-            if any(is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
+            if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
                 ret.append((WSAsyncConn(self.address['USDTP'], self.id, **self.ws_defaults),
                             partial(self.subscribe, quote='USDTP'), self.message_handler, self.authenticate))
-            if any(not is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
+            if any(not self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
                 ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults),
                             partial(self.subscribe, quote='USDT'), self.message_handler, self.__no_auth))
         if any(pair.split('-')[1] == 'USD' for pair in self.normalized_symbols):
@@ -155,7 +155,7 @@ class Bybit(Feed):
         self.__reset(quote=quote)
 
         for chan in self.subscription:
-            if not is_authenticated_channel(self.exchange_channel_to_std(chan)):
+            if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 for pair in self.subscription[chan]:
                     # Bybit uses separate addresses for difference quote currencies
                     if 'USDT' not in pair and quote == 'USDT':
@@ -351,7 +351,7 @@ class Bybit(Feed):
             await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
 
     async def authenticate(self, conn: AsyncConnection):
-        if any(is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
+        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
             auth = self._auth(self.key_id, self.key_secret)
             LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
             await conn.write(auth)

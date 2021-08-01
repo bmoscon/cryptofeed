@@ -8,14 +8,11 @@ from collections import defaultdict
 from cryptofeed.exchange import Exchange
 from functools import partial
 import logging
-import os
 from typing import Tuple, Callable, Union, List
 
 from aiohttp.typedefs import StrOrURL
 
-from cryptofeed.symbols import Symbols
 from cryptofeed.callback import Callback
-from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BALANCES, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
@@ -96,7 +93,7 @@ class Feed(Exchange):
         self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
         self.http_proxy = http_proxy
-        self.start_delay = delay_start        
+        self.start_delay = delay_start
 
         if subscription is not None and (symbols is not None or channels is not None):
             raise ValueError("Use subscription, or channels and symbols, not both")

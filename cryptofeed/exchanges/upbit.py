@@ -23,7 +23,7 @@ class Upbit(Feed):
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
     }
-    
+
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
         return ts / 1000.0

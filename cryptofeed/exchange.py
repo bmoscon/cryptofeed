@@ -39,7 +39,7 @@ class Exchange:
 
         if not Symbols.populated(self.id):
             self.symbol_mapping()
-        self.normalized_symbol_mapping, _= Symbols.get(self.id)
+        self.normalized_symbol_mapping, _ = Symbols.get(self.id)
         self.exchange_symbol_mapping = {value: key for key, value in self.normalized_symbol_mapping.items()}
 
     @classmethod

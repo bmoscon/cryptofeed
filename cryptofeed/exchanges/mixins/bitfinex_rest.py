@@ -173,7 +173,6 @@ class BitfinexRestMixin(RestExchange):
 
     def _rest_book(self, symbol: str, l3=False, retry=0, retry_wait=0):
         ret = {}
-        sym = symbol
         funding = False
 
         symbol = self.std_symbol_to_exchange_symbol(symbol)
