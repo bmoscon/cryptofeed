@@ -15,11 +15,11 @@ def test_rest_bitmex():
 
 def test_ticker():
     ret = Bitmex().ticker('BTC-USD-PERP')
-    assert len(ret) > 0
-    assert ret[0]['feed'] == 'BITMEX'
-    assert ret[0]['symbol'] == 'BTC-USD-PERP'
-    assert ret[0]['bid'] > 0
-    assert ret[0]['ask'] > 0
+    assert isinstance(ret, dict)
+    assert ret['feed'] == 'BITMEX'
+    assert ret['symbol'] == 'BTC-USD-PERP'
+    assert ret['bid'] > 0
+    assert ret['ask'] > 0
 
 
 def test_book():

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -21,7 +22,7 @@ from datetime import datetime
 LOG = logging.getLogger('feedhandler')
 
 
-class Deribit(Feed):
+class Deribit(Feed, DeribitRestMixin):
     id = DERIBIT
     symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH']
     websocket_channels = {
@@ -37,6 +38,7 @@ class Deribit(Feed):
         BALANCES: 'user.portfolio',
         USER_DATA: 'user.changes'
     }
+    request_limit = 20
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:

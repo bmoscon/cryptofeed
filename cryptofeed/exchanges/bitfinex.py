@@ -18,6 +18,7 @@ from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BO
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.bitfinex_rest import BitfinexRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
@@ -39,7 +40,7 @@ SEQ_ALL = 65536
 CHECKSUM = 131072
 
 
-class Bitfinex(Feed):
+class Bitfinex(Feed, BitfinexRestMixin):
     id = BITFINEX
     symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
     websocket_channels = {
@@ -49,6 +50,7 @@ class Bitfinex(Feed):
         TICKER: 'ticker',
         FUNDING: 'trades',
     }
+    request_limit = 1
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:

@@ -90,8 +90,8 @@ class BitmexRestMixin(RestExchange):
 
     def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
-        ret = list(self._get('quote', symbol, retry, retry_wait))[0]
-        return [self._ticker_normalization(d) for d in ret]
+        ret = list(self._get('quote', symbol, retry, retry_wait))[0][0]
+        return self._ticker_normalization(ret)
 
     def _ticker_normalization(self, data: dict) -> dict:
         return {

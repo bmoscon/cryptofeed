@@ -9,32 +9,29 @@ import hmac
 import time
 from decimal import Decimal
 from time import sleep
+from datetime import datetime as dt
 
-import pandas as pd
 import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITFINEX, BUY, SELL
-from cryptofeed.exchanges import Bitfinex as BitfinexEx
-from cryptofeed.rest import RestAPI, request_retry
+from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.connection import request_retry
+from cryptofeed.exchange import RestExchange
 
 
-REQUEST_LIMIT = 5000
-RATE_LIMIT_SLEEP = 3
-
-
-class Bitfinex(RestAPI):
-    id = BITFINEX
+class BitfinexRestMixin(RestExchange):
     api = "https://api-pub.bitfinex.com/v2/"
-    info = BitfinexEx()
+    rest_channels = (
+        TRADES, TICKER, L2_BOOK, L3_BOOK, FUNDING
+    )
 
     def _get(self, endpoint, retry, retry_wait):
         @request_retry(self.id, retry, retry_wait)
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
             self._handle_error(r)
-            return r.json()
+            return json.loads(r.text, parse_float=Decimal)
         return helper()
 
     def _nonce(self):
@@ -63,12 +60,12 @@ class Bitfinex(RestAPI):
 
         ret = {
             'timestamp': self.timestamp_normalize(timestamp),
-            'symbol': self.info.exchange_symbol_to_std_symbol(symbol),
+            'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade_id,
             'feed': self.id,
             'side': SELL if amount < 0 else BUY,
-            'amount': abs(amount),
-            'price': price,
+            'amount': Decimal(abs(amount)),
+            'price': Decimal(price),
         }
 
         if period:
@@ -101,17 +98,17 @@ class Bitfinex(RestAPI):
 
         if start_date:
             if not end_date:
-                end_date = pd.Timestamp.utcnow()
-            start = self._timestamp(start_date)
-            end = self._timestamp(end_date) - pd.Timedelta(nanoseconds=1)
+                end_date = dt.now().timestamp()
+            start = self._datetime_normalize(start_date)
+            end = self._datetime_normalize(end_date)
 
-            start = int(start.timestamp() * 1000)
-            end = int(end.timestamp() * 1000)
+            start = int(start * 1000)
+            end = int(end * 1000)
 
         @request_retry(self.id, retry, retry_wait)
         def helper(start, end):
             if start and end:
-                return requests.get(f"{self.api}trades/{symbol}/hist?limit={REQUEST_LIMIT}&start={start}&end={end}&sort=1")
+                return requests.get(f"{self.api}trades/{symbol}/hist?limit=5000&start={start}&end={end}&sort=1")
             else:
                 return requests.get(f"{self.api}trades/{symbol}/hist")
 
@@ -128,9 +125,9 @@ class Bitfinex(RestAPI):
             elif r.status_code != 200:
                 self._handle_error(r)
             else:
-                sleep(RATE_LIMIT_SLEEP)
+                sleep(1 / self.request_limit)
 
-            data = r.json()
+            data = json.loads(r.text, parse_float=Decimal)
             if data == []:
                 self.log.warning("%s: No data for range %d - %d", self.id, start, end)
             else:
@@ -147,16 +144,16 @@ class Bitfinex(RestAPI):
             data = list(map(lambda x: self._trade_normalization(symbol, x), data))
             yield data
 
-            if len(orig_data) < REQUEST_LIMIT:
+            if len(orig_data) < 5000:
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
     def ticker(self, symbol: str, retry=None, retry_wait=0):
-        sym = self.info.std_symbol_to_exchange_symbol(symbol)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"ticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
                 'feed': self.id,
@@ -165,29 +162,23 @@ class Bitfinex(RestAPI):
                 }
 
     def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = f"f{symbol}"
         for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
             yield data
 
     def l2_book(self, symbol: str, retry=0, retry_wait=0):
-        return self._book(symbol, retry=retry, retry_wait=retry_wait)
+        return self._rest_book(symbol, l3=False, retry=retry, retry_wait=retry_wait)
 
     def l3_book(self, symbol: str, retry=0, retry_wait=0):
-        return self._book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
+        return self._rest_book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
 
-    def _book(self, symbol: str, l3=False, retry=0, retry_wait=0):
+    def _rest_book(self, symbol: str, l3=False, retry=0, retry_wait=0):
         ret = {}
         sym = symbol
         funding = False
 
-        if '-' not in symbol:
-            ret[symbol] = {BID: sd(), ASK: sd()}
-            symbol = f"f{symbol}"
-            funding = True
-        else:
-            symbol = self.info.std_symbol_to_exchange_symbol(symbol)
-            ret[symbol] = {BID: sd(), ASK: sd()}
-            sym = symbol
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
+        ret = {BID: sd(), ASK: sd()}
+        funding == 'f' in symbol
 
         @request_retry(self.id, retry, retry_wait)
         def helper():
@@ -209,7 +200,7 @@ class Bitfinex(RestAPI):
             elif r.status_code != 200:
                 self._handle_error(r)
 
-            data = r.json()
+            data = json.loads(r.text, parse_float=Decimal)
             break
 
         if l3:
@@ -220,11 +211,13 @@ class Bitfinex(RestAPI):
                 else:
                     order_id, price, amount = entry
                     update = abs(amount)
+                amount = Decimal(amount)
+                price = Decimal(price)
                 side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
-                if price not in ret[sym][side]:
-                    ret[sym][side][price] = {order_id: update}
+                if price not in ret[side]:
+                    ret[side][price] = {order_id: update}
                 else:
-                    ret[sym][side][price][order_id] = update
+                    ret[side][price][order_id] = update
         else:
             for entry in data:
                 if funding:
@@ -233,6 +226,8 @@ class Bitfinex(RestAPI):
                 else:
                     price, _, amount = entry
                     update = abs(amount)
+                price = Decimal(price)
+                amount = Decimal(amount)
                 side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
-                ret[sym][side][price] = update
+                ret[side][price] = update
         return ret
