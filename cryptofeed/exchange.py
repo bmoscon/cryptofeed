@@ -68,7 +68,7 @@ class Exchange:
 
     @classmethod
     def symbols(cls, refresh=False) -> Dict:
-        return cls.symbol_mapping(refresh=refresh)
+        return list(cls.symbol_mapping(refresh=refresh).keys())
 
     @classmethod
     def symbol_mapping(cls, refresh=False) -> Dict:
@@ -110,7 +110,7 @@ class Exchange:
         raise ValueError(f'Unable to normalize channel {cls.id}')
 
     @classmethod
-    def is_authenticated_channel(channel: str) -> bool:
+    def is_authenticated_channel(cls, channel: str) -> bool:
         return channel in (ORDER_INFO, USER_FILLS, TRANSACTIONS, BALANCES)
 
     def exchange_symbol_to_std_symbol(self, symbol: str) -> str:
