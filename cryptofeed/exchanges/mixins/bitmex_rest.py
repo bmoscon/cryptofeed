@@ -15,7 +15,7 @@ from yapic import json
 import requests
 from sortedcontainers import SortedDict as sd
 
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
 from cryptofeed.connection import request_retry
 
@@ -23,7 +23,7 @@ from cryptofeed.connection import request_retry
 class BitmexRestMixin(RestExchange):
     api = 'https://www.bitmex.com'
     rest_channels = (
-        TRADES, TICKER, L2_BOOK, FUNDING
+        TRADES, TICKER, L2_BOOK
     )
 
     def _generate_signature(self, verb: str, url: str, data='') -> dict:
@@ -51,7 +51,7 @@ class BitmexRestMixin(RestExchange):
             "api-signature": signature
         }
 
-    def _get(self, ep, symbol, retry, retry_wait, freq='6H'):
+    def _get(self, ep, symbol, retry, retry_wait):
         @request_retry(self.id, retry, retry_wait)
         def helper():
             endpoint = f'/api/v1/{ep}?symbol={symbol}&reverse=true'
@@ -122,29 +122,6 @@ class BitmexRestMixin(RestExchange):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get('trade', symbol, retry, retry_wait):
                 yield list(map(self._trade_normalization, data))
-
-    def _funding_normalization(self, funding: dict) -> dict:
-        return {
-            'timestamp': funding['timestamp'],
-            'symbol': self.exchange_symbol_to_std_symbol(funding['symbol']),
-            'feed': self.id,
-            'interval': funding['fundingInterval'],
-            'rate': funding['fundingRate'],
-            'rate_daily': funding['fundingRateDaily']
-        }
-
-    def funding(self, symbol, start=None, end=None, retry=None, retry_wait=10):
-        """
-        {
-            'timestamp': '2017-01-05T12:00:00.000Z',
-            'symbol': 'XBTUSD',
-            'fundingInterval': '2000-01-01T08:00:00.000Z',
-            'fundingRate': 0.00375,
-            'fundingRateDaily': 0.01125
-        }
-        """
-        for data in self._get('funding', symbol, start, end, retry, retry_wait, freq='2W'):
-            yield list(map(self._funding_normalization, data))
 
     def l2_book(self, symbol: str, retry=None, retry_wait=10):
         ret = {BID: sd(), ASK: sd()}
