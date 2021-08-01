@@ -49,8 +49,8 @@ class Blockchain(Feed):
 
     def __reset(self):
         self.seq_no = None
-        self.__l2_book = {}
-        self.__l3_book = {}
+        self._l2_book = {}
+        self._l3_book = {}
 
     async def _pair_l2_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -58,9 +58,9 @@ class Blockchain(Feed):
         forced = False
         if msg['event'] == 'snapshot':
             # Reset the book
-            self.__l2_book[pair] = {BID: sd(), ASK: sd()}
+            self._l2_book[pair] = {BID: sd(), ASK: sd()}
             forced = True
-        book = self.__l2_book[pair]
+        book = self._l2_book[pair]
 
         for side in (BID, ASK):
             for update in msg[side + 's']:
@@ -71,9 +71,9 @@ class Blockchain(Feed):
                     del book[side][price]
                 delta[side].append((price, qty))
 
-        self.__l2_book[pair] = book
+        self._l2_book[pair] = book
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _handle_l2_msg(self, msg: str, timestamp: float):
         """
@@ -100,9 +100,9 @@ class Blockchain(Feed):
 
         if msg['event'] == 'snapshot':
             # Reset the book
-            self.__l3_book[pair] = {BID: sd(), ASK: sd()}
+            self._l3_book[pair] = {BID: sd(), ASK: sd()}
 
-        book = self.__l3_book[pair]
+        book = self._l3_book[pair]
 
         for side in (BID, ASK):
             for update in msg[side + 's']:
@@ -121,9 +121,9 @@ class Blockchain(Feed):
 
                 delta[side].append((order_id, price, qty))
 
-        self.__l3_book[pair] = book
+        self._l3_book[pair] = book
 
-        await self.book_callback(self.__l3_book[pair], L3_BOOK, pair, False, delta, timestamp, timestamp)
+        await self.book_callback(self._l3_book[pair], L3_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def _handle_l3_msg(self, msg: str, timestamp: float):
         if msg['event'] == 'subscribed':

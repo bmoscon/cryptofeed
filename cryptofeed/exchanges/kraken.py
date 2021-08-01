@@ -65,15 +65,15 @@ class Kraken(Feed, KrakenRestMixin):
         super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
 
     def __calc_checksum(self, pair):
-        bid_prices = list(reversed(self.__l2_book[pair][BID].keys()))[:10]
-        ask_prices = list(self.__l2_book[pair][ASK].keys())[:10]
+        bid_prices = list(reversed(self._l2_book[pair][BID].keys()))[:10]
+        ask_prices = list(self._l2_book[pair][ASK].keys())[:10]
 
         combined = ""
         for data, side in ((ask_prices, ASK), (bid_prices, BID)):
-            sizes = [str(self.__l2_book[pair][side][price]).replace('.', '').lstrip('0') for price in data]
+            sizes = [str(self._l2_book[pair][side][price]).replace('.', '').lstrip('0') for price in data]
             prices = [str(price).replace('.', '').lstrip('0') for price in data]
             combined += ''.join([b for a in zip(prices, sizes) for b in a])
 
@@ -159,12 +159,12 @@ class Kraken(Feed, KrakenRestMixin):
 
         if 'as' in msg[0]:
             # Snapshot
-            self.__l2_book[pair] = {BID: sd({
+            self._l2_book[pair] = {BID: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg[0]['bs']
             }), ASK: sd({
                 Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']
             })}
-            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, delta, timestamp, timestamp)
+            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, delta, timestamp, timestamp)
         else:
             for m in msg:
                 for s, updates in m.items():
@@ -182,21 +182,21 @@ class Kraken(Feed, KrakenRestMixin):
                                 # Per Kraken's technical support
                                 # they deliver erroneous deletion messages
                                 # periodically which should be ignored
-                                if price in self.__l2_book[pair][side]:
-                                    del self.__l2_book[pair][side][price]
+                                if price in self._l2_book[pair][side]:
+                                    del self._l2_book[pair][side][price]
                                     delta[side].append((price, 0))
                             else:
                                 delta[side].append((price, size))
-                                self.__l2_book[pair][side][price] = size
+                                self._l2_book[pair][side][price] = size
             for side in (BID, ASK):
-                while len(self.__l2_book[pair][side]) > self.max_depth:
-                    del_price = self.__l2_book[pair][side].items()[0 if side == BID else -1][0]
-                    del self.__l2_book[pair][side][del_price]
+                while len(self._l2_book[pair][side]) > self.max_depth:
+                    del_price = self._l2_book[pair][side].items()[0 if side == BID else -1][0]
+                    del self._l2_book[pair][side][del_price]
                     delta[side].append((del_price, 0))
 
             if self.checksum_validation and 'c' in msg[0] and self.__calc_checksum(pair) != msg[0]['c']:
                 raise BadChecksum("Checksum validation on orderbook failed")
-            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
+            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
 
     async def _candle(self, msg: list, pair: str, timestamp: float):
         """

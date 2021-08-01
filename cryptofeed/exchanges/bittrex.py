@@ -60,7 +60,7 @@ class Bittrex(Feed):
         self.candle_interval = candle_interval
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
         self.seq_no = {}
 
     async def ticker(self, msg: dict, timestamp: float):
@@ -117,7 +117,7 @@ class Bittrex(Feed):
         forced = False
         delta = {BID: [], ASK: []}
 
-        if pair not in self.__l2_book:
+        if pair not in self._l2_book:
             forced = True
             await self._snapshot(pair, seq_no)
         else:
@@ -133,13 +133,13 @@ class Bittrex(Feed):
                     size = Decimal(update['quantity'])
                     if size == 0:
                         delta[side].append((price, 0))
-                        if price in self.__l2_book[pair][side]:
-                            del self.__l2_book[pair][side][price]
+                        if price in self._l2_book[pair][side]:
+                            del self._l2_book[pair][side][price]
                     else:
-                        self.__l2_book[pair][side][price] = size
+                        self._l2_book[pair][side][price] = size
                         delta[side].append((price, size))
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def _snapshot(self, symbol: str, sequence_number: int):
         while True:
@@ -151,9 +151,9 @@ class Bittrex(Feed):
 
         self.seq_no[symbol] = seq
         data = json.loads(ret, parse_float=Decimal)
-        self.__l2_book[symbol] = {BID: {}, ASK: {}}
+        self._l2_book[symbol] = {BID: {}, ASK: {}}
         for side, entries in data.items():
-            self.__l2_book[symbol][side] = sd({Decimal(e['rate']): Decimal(e['quantity']) for e in entries})
+            self._l2_book[symbol][side] = sd({Decimal(e['rate']): Decimal(e['quantity']) for e in entries})
 
     async def trades(self, msg: dict, timestamp: float):
         """

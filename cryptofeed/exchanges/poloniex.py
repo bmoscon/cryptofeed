@@ -50,7 +50,7 @@ class Poloniex(Feed, PoloniexRestMixin):
         self.__reset()
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
         self.seq_no = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
@@ -86,18 +86,18 @@ class Poloniex(Feed, PoloniexRestMixin):
             forced = True
             pair = msg[0][1]['currencyPair']
             pair = self.exchange_symbol_to_std_symbol(pair)
-            self.__l2_book[pair] = {BID: sd(), ASK: sd()}
+            self._l2_book[pair] = {BID: sd(), ASK: sd()}
             # 0 is asks, 1 is bids
             order_book = msg[0][1]['orderBook']
             for key in order_book[0]:
                 amount = Decimal(order_book[0][key])
                 price = Decimal(key)
-                self.__l2_book[pair][ASK][price] = amount
+                self._l2_book[pair][ASK][price] = amount
 
             for key in order_book[1]:
                 amount = Decimal(order_book[1][key])
                 price = Decimal(key)
-                self.__l2_book[pair][BID][price] = amount
+                self._l2_book[pair][BID][price] = amount
         else:
             pair = self._channel_map[chan_id]
             pair = self.exchange_symbol_to_std_symbol(pair)
@@ -110,10 +110,10 @@ class Poloniex(Feed, PoloniexRestMixin):
                     amount = Decimal(update[3])
                     if amount == 0:
                         delta[side].append((price, 0))
-                        del self.__l2_book[pair][side][price]
+                        del self._l2_book[pair][side][price]
                     else:
                         delta[side].append((price, amount))
-                        self.__l2_book[pair][side][price] = amount
+                        self._l2_book[pair][side][price] = amount
                 elif msg_type == 't':
                     # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp, 6 is timestamp ms
                     _, order_id, _, price, amount, server_ts, _ = update
@@ -131,7 +131,7 @@ class Poloniex(Feed, PoloniexRestMixin):
                 else:
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

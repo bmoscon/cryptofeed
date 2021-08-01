@@ -175,7 +175,7 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
       async def _book(self, msg):
           symbol = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
           data = msg['tick']
-          self.__l2_book[symbol] = {
+          self._l2_book[symbol] = {
               BID: sd({
                   Decimal(price): Decimal(amount)
                   for price, amount in data['bids']

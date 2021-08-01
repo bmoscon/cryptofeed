@@ -54,7 +54,7 @@ class Bitstamp(Feed):
     def __init__(self, **kwargs):
         super().__init__('wss://ws.bitstamp.net/', **kwargs)
 
-    async def _l2_book(self, msg: dict, timestamp: float):
+    async def _process_l2_book(self, msg: dict, timestamp: float):
         data = msg['data']
         chan = msg['channel']
         ts = int(data['microtimestamp'])
@@ -75,16 +75,16 @@ class Bitstamp(Feed):
                 size = Decimal(update[1])
 
                 if size == 0:
-                    if price in self.__l2_book[pair][side]:
-                        del self.__l2_book[pair][side][price]
+                    if price in self._l2_book[pair][side]:
+                        del self._l2_book[pair][side][price]
                         delta[side].append((price, size))
                 else:
-                    self.__l2_book[pair][side][price] = size
+                    self._l2_book[pair][side][price] = size
                     delta[side].append((price, size))
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(ts), timestamp)
 
-    async def _l3_book(self, msg: dict, timestamp: float):
+    async def _process_l3_book(self, msg: dict, timestamp: float):
         data = msg['data']
         chan = msg['channel']
         ts = int(data['microtimestamp'])
@@ -96,8 +96,8 @@ class Bitstamp(Feed):
                 price = Decimal(price)
                 size = Decimal(size)
                 book[side].get(price, sd())[order_id] = size
-        self.__l3_book[pair] = book
-        await self.book_callback(self.__l3_book[pair], L3_BOOK, pair, False, False, self.timestamp_normalize(ts), timestamp)
+        self._l3_book[pair] = book
+        await self.book_callback(self._l3_book[pair], L3_BOOK, pair, False, False, self.timestamp_normalize(ts), timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         """
@@ -150,9 +150,9 @@ class Bitstamp(Feed):
             await self._trades(msg, timestamp)
         elif msg['event'] == 'data':
             if msg['channel'].startswith('diff_order_book'):
-                await self.__l2_book(msg, timestamp)
+                await self._process_l2_book(msg, timestamp)
             if msg['channel'].startswith('detail_order_book'):
-                await self.__l3_book(msg, timestamp)
+                await self._process_l3_book(msg, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
@@ -165,12 +165,12 @@ class Bitstamp(Feed):
         for r, pair in zip(results, pairs):
             std_pair = self.exchange_symbol_to_std_symbol(pair) if pair else 'BTC-USD'
             self.last_update_id[std_pair] = r['timestamp']
-            self.__l2_book[std_pair] = {BID: sd(), ASK: sd()}
+            self._l2_book[std_pair] = {BID: sd(), ASK: sd()}
             for s, side in (('bids', BID), ('asks', ASK)):
                 for update in r[s]:
                     price = Decimal(update[0])
                     amount = Decimal(update[1])
-                    self.__l2_book[std_pair][side][price] = amount
+                    self._l2_book[std_pair][side][price] = amount
 
     async def subscribe(self, conn: AsyncConnection):
         snaps = []

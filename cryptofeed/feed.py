@@ -125,8 +125,8 @@ class Feed(Exchange):
 
         self._feed_config = dict(self._feed_config)
 
-        self.__l3_book = {}
-        self.__l2_book = {}
+        self._l3_book = {}
+        self._l2_book = {}
         self.callbacks = {FUNDING: Callback(None),
                           FUTURES_INDEX: Callback(None),
                           L2_BOOK: Callback(None),

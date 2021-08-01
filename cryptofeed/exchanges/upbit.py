@@ -107,7 +107,7 @@ class Upbit(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['cd'])
         orderbook_timestamp = self.timestamp_normalize(msg['tms'])
-        forced = pair not in self.__l2_book
+        forced = pair not in self._l2_book
 
         update = {
             BID: sd({
@@ -121,10 +121,10 @@ class Upbit(Feed):
         }
 
         if not forced:
-            self.previous_book[pair] = self.__l2_book[pair]
-        self.__l2_book[pair] = update
+            self.previous_book[pair] = self._l2_book[pair]
+        self._l2_book[pair] = update
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, orderbook_timestamp, timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, False, orderbook_timestamp, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

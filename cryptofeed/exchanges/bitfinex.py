@@ -96,8 +96,8 @@ class Bitfinex(Feed, BitfinexRestMixin):
         self.__reset()
 
     def __reset(self):
-        self.__l2_book = defaultdict(dict)
-        self.__l3_book = defaultdict(dict)
+        self._l2_book = defaultdict(dict)
+        self._l3_book = defaultdict(dict)
         self.handlers = {}  # maps a channel id (int) to a function
         self.order_map = defaultdict(dict)
         self.seq_no = defaultdict(int)
@@ -341,12 +341,12 @@ class Bitfinex(Feed, BitfinexRestMixin):
                 handler = partial(self._trades, pair)
         elif msg['channel'] == 'book':
             if msg['prec'] == 'R0':
-                handler = partial(self._raw_book, pair, self.__l3_book[pair], self.order_map[pair])
+                handler = partial(self._raw_book, pair, self._l3_book[pair], self.order_map[pair])
             elif is_funding:
                 LOG.warning('%s %s: Book funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
                 handler = self._do_nothing
             else:
-                handler = partial(self._book, pair, self.__l2_book[pair])
+                handler = partial(self._book, pair, self._l2_book[pair])
         else:
             LOG.warning('%s %s: Unexpected message %s', conn.uuid, pair, msg)
             return

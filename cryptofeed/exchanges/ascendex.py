@@ -54,7 +54,7 @@ class AscendEX(Feed):
         self.__reset()
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
         self.seq_no = defaultdict(lambda: None)
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -90,7 +90,7 @@ class AscendEX(Feed):
         if msg['m'] == 'depth-snapshot':
             forced = True
             self.seq_no[pair] = sequence_number
-            self.__l2_book[pair] = {BID: sd(), ASK: sd()}
+            self._l2_book[pair] = {BID: sd(), ASK: sd()}
         else:
             # ignore messages while we wait for the snapshot
             if self.seq_no[pair] is None:
@@ -106,13 +106,13 @@ class AscendEX(Feed):
                 size = Decimal(amount)
                 if size == 0:
                     delta[s].append((price, 0))
-                    if price in self.__l2_book[pair][s]:
-                        del self.__l2_book[pair][s][price]
+                    if price in self._l2_book[pair][s]:
+                        del self._l2_book[pair][s][price]
                 else:
                     delta[s].append((price, size))
-                    self.__l2_book[pair][s][price] = size
+                    self._l2_book[pair][s][price] = size
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(msg['data']['ts']), timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(msg['data']['ts']), timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

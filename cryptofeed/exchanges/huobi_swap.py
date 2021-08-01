@@ -42,7 +42,8 @@ class HuobiSwap(HuobiDM):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__(self, 'wss://api.hbdm.com/swap-ws', **kwargs)
+        super().__init__(**kwargs)
+        self.address = 'wss://api.hbdm.com/swap-ws'
         self.funding_updates = {}
         self.websocket_channels[FUNDING] = 'funding'
 

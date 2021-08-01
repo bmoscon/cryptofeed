@@ -25,6 +25,14 @@ LOG = logging.getLogger('feedhandler')
 class HuobiDM(Feed):
     id = HUOBI_DM
     symbol_endpoint = 'https://www.hbdm.com/api/v1/contract_contract_info'
+    websocket_channels = {
+        L2_BOOK: 'depth.step0',
+        TRADES: 'trade.detail',
+    }
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -44,7 +52,7 @@ class HuobiDM(Feed):
         super().__init__('wss://www.hbdm.com/ws', **kwargs)
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -68,7 +76,7 @@ class HuobiDM(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
         data = msg['tick']
-        forced = pair not in self.__l2_book
+        forced = pair not in self._l2_book
 
         # When Huobi Delists pairs, empty updates still sent:
         # {'ch': 'market.AKRO-USD.depth.step0', 'ts': 1606951241196, 'tick': {'mrid': 50651100044, 'id': 1606951241, 'ts': 1606951241195, 'version': 1606951241, 'ch': 'market.AKRO-USD.depth.step0'}}
@@ -86,10 +94,10 @@ class HuobiDM(Feed):
             }
 
             if not forced:
-                self.previous_book[pair] = self.__l2_book[pair]
-            self.__l2_book[pair] = update
+                self.previous_book[pair] = self._l2_book[pair]
+            self._l2_book[pair] = update
 
-            await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, self.timestamp_normalize(msg['ts']), timestamp)
+            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, False, self.timestamp_normalize(msg['ts']), timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

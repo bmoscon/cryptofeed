@@ -77,7 +77,7 @@ class Deribit(Feed, DeribitRestMixin):
 
     def __reset(self):
         self.open_interest = {}
-        self.__l2_book = {}
+        self._l2_book = {}
         self.seq_no = {}
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -254,7 +254,7 @@ class Deribit(Feed, DeribitRestMixin):
         """
         ts = msg["params"]["data"]["timestamp"]
         pair = self.exchange_symbol_to_std_symbol(msg["params"]["data"]["instrument_name"])
-        self.__l2_book[pair] = {
+        self._l2_book[pair] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
                 # _ is always 'new' for snapshot
@@ -268,7 +268,7 @@ class Deribit(Feed, DeribitRestMixin):
 
         self.seq_no[pair] = msg["params"]["data"]["change_id"]
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(ts), timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
         ts = msg["params"]["data"]["timestamp"]
@@ -284,7 +284,7 @@ class Deribit(Feed, DeribitRestMixin):
         delta = {BID: [], ASK: []}
 
         for action, price, amount in msg["params"]["data"]["bids"]:
-            bidask = self.__l2_book[pair][BID]
+            bidask = self._l2_book[pair][BID]
             if action != "delete":
                 bidask[price] = Decimal(amount)
                 delta[BID].append((Decimal(price), Decimal(amount)))
@@ -293,14 +293,14 @@ class Deribit(Feed, DeribitRestMixin):
                 delta[BID].append((Decimal(price), Decimal(amount)))
 
         for action, price, amount in msg["params"]["data"]["asks"]:
-            bidask = self.__l2_book[pair][ASK]
+            bidask = self._l2_book[pair][ASK]
             if action != "delete":
                 bidask[price] = amount
                 delta[ASK].append((Decimal(price), Decimal(amount)))
             else:
                 del bidask[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(ts), timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

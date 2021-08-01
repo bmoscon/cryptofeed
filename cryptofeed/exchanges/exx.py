@@ -48,7 +48,7 @@ class EXX(Feed):
         self.__reset()
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
 
     async def _book_update(self, msg: dict, timestamp: float):
         """
@@ -111,7 +111,7 @@ class EXX(Feed):
             ts = msg[3]
             asks = msg[4]['asks'] if 'asks' in msg[4] else msg[5]['asks']
             bids = msg[5]['bids'] if 'bids' in msg[5] else msg[4]['bids']
-            self.__l2_book[pair] = {
+            self._l2_book[pair] = {
                 BID: sd({
                     Decimal(price): Decimal(amount)
                     for price, amount in bids
@@ -130,14 +130,14 @@ class EXX(Feed):
             amount = Decimal(msg[6])
 
             if amount == 0:
-                if price in self.__l2_book[pair][side]:
-                    del self.__l2_book[pair][side][price]
+                if price in self._l2_book[pair][side]:
+                    del self._l2_book[pair][side][price]
                     delta[side].append((price, 0))
             else:
-                self.__l2_book[pair][side][price] = amount
+                self._l2_book[pair][side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, delta, ts, timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, ts, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

@@ -62,8 +62,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
             self.seq_no[symbol] = None
             self.order_map.pop(symbol, None)
             self.order_type_map.pop(symbol, None)
-            self.__l3_book.pop(symbol, None)
-            self.__l2_book.pop(symbol, None)
+            self._l3_book.pop(symbol, None)
+            self._l2_book.pop(symbol, None)
         else:
             self.order_map = {}
             self.order_type_map = {}
@@ -73,8 +73,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
             if chan in self.subscription:
                 pairs = self.subscription[chan]
                 self.seq_no = {pair: None for pair in pairs}
-            self.__l3_book = {}
-            self.__l2_book = {}
+            self._l3_book = {}
+            self._l2_book = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''
@@ -148,15 +148,15 @@ class Coinbase(Feed, CoinbaseRestMixin):
                 del self.order_map[maker_order_id]
                 self.order_type_map.pop(maker_order_id, None)
                 delta[side].append((maker_order_id, price, 0))
-                del self.__l3_book[pair][side][price][maker_order_id]
-                if len(self.__l3_book[pair][side][price]) == 0:
-                    del self.__l3_book[pair][side][price]
+                del self._l3_book[pair][side][price][maker_order_id]
+                if len(self._l3_book[pair][side][price]) == 0:
+                    del self._l3_book[pair][side][price]
             else:
                 self.order_map[maker_order_id] = (price, new_size)
-                self.__l3_book[pair][side][price][maker_order_id] = new_size
+                self._l3_book[pair][side][price][maker_order_id] = new_size
                 delta[side].append((maker_order_id, price, new_size))
 
-            await self.book_callback(self.__l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
+            await self.book_callback(self._l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
         order_type = self.order_type_map.get(msg['taker_order_id'])
         await self.callback(TRADES,
@@ -173,7 +173,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
-        self.__l2_book[pair] = {
+        self._l2_book[pair] = {
             BID: sd({
                 Decimal(price): Decimal(amount)
                 for price, amount in msg['bids']
@@ -184,7 +184,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
             })
         }
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
 
     async def _pair_level2_update(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
@@ -194,7 +194,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
             side = BID if side == 'buy' else ASK
             price = Decimal(price)
             amount = Decimal(amount)
-            bidask = self.__l2_book[pair][side]
+            bidask = self._l2_book[pair][side]
 
             if amount == 0:
                 del bidask[price]
@@ -203,7 +203,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
                 bidask[price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, ts, timestamp)
+        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, ts, timestamp)
 
     async def _book_snapshot(self, pairs: list):
         # Coinbase needs some time to send messages to us
@@ -226,18 +226,18 @@ class Coinbase(Feed, CoinbaseRestMixin):
         for res, pair in zip(results, pairs):
             orders = json.loads(res, parse_float=Decimal)
             npair = self.exchange_symbol_to_std_symbol(pair)
-            self.__l3_book[npair] = {BID: sd(), ASK: sd()}
+            self._l3_book[npair] = {BID: sd(), ASK: sd()}
             self.seq_no[npair] = orders['sequence']
             for side in (BID, ASK):
                 for price, size, order_id in orders[side + 's']:
                     price = Decimal(price)
                     size = Decimal(size)
-                    if price in self.__l3_book[npair][side]:
-                        self.__l3_book[npair][side][price][order_id] = size
+                    if price in self._l3_book[npair][side]:
+                        self._l3_book[npair][side][price][order_id] = size
                     else:
-                        self.__l3_book[npair][side][price] = {order_id: size}
+                        self._l3_book[npair][side][price] = {order_id: size}
                     self.order_map[order_id] = (price, size)
-            await self.book_callback(self.__l3_book[npair], L3_BOOK, npair, True, None, timestamp, timestamp)
+            await self.book_callback(self._l3_book[npair], L3_BOOK, npair, True, None, timestamp, timestamp)
 
     async def _open(self, msg: dict, timestamp: float):
         if not self.keep_l3_book:
@@ -250,15 +250,15 @@ class Coinbase(Feed, CoinbaseRestMixin):
         order_id = msg['order_id']
         ts = self.timestamp_normalize(msg['time'])
 
-        if price in self.__l3_book[pair][side]:
-            self.__l3_book[pair][side][price][order_id] = size
+        if price in self._l3_book[pair][side]:
+            self._l3_book[pair][side][price][order_id] = size
         else:
-            self.__l3_book[pair][side][price] = {order_id: size}
+            self._l3_book[pair][side][price] = {order_id: size}
         self.order_map[order_id] = (price, size)
 
         delta[side].append((order_id, price, size))
 
-        await self.book_callback(self.__l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
+        await self.book_callback(self._l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
     async def _done(self, msg: dict, timestamp: float):
         """
@@ -285,12 +285,12 @@ class Coinbase(Feed, CoinbaseRestMixin):
             pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
             ts = self.timestamp_normalize(msg['time'])
 
-            del self.__l3_book[pair][side][price][order_id]
-            if len(self.__l3_book[pair][side][price]) == 0:
-                del self.__l3_book[pair][side][price]
+            del self._l3_book[pair][side][price][order_id]
+            if len(self._l3_book[pair][side][price]) == 0:
+                del self._l3_book[pair][side][price]
             delta[side].append((order_id, price, 0))
 
-            await self.book_callback(self.__l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
+            await self.book_callback(self._l3_book[pair], L3_BOOK, pair, False, delta, ts, timestamp)
 
     async def _received(self, msg: dict, timestamp: float):
         """
@@ -331,12 +331,12 @@ class Coinbase(Feed, CoinbaseRestMixin):
         new_size = Decimal(msg['new_size'])
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
 
-        self.__l3_book[pair][side][price][order_id] = new_size
+        self._l3_book[pair][side][price][order_id] = new_size
         self.order_map[order_id] = (price, new_size)
 
         delta[side].append((order_id, price, new_size))
 
-        await self.book_callback(self.__l3_book, L3_BOOK, pair, False, delta, ts, timestamp)
+        await self.book_callback(self._l3_book, L3_BOOK, pair, False, delta, ts, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         # PERF perf_start(self.id, 'msg')

@@ -36,8 +36,8 @@ class OKCoin(Feed):
     }
 
     @classmethod
-    def timestamp_normalize(cls, ts: float) -> float:
-        return ts / 1000.0
+    def timestamp_normalize(cls, ts) -> float:
+        return ts.timestamp()
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -55,16 +55,16 @@ class OKCoin(Feed):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
         self.open_interest = {}
 
     def __calc_checksum(self, pair):
-        bid_it = reversed(self.__l2_book[pair][BID])
-        ask_it = iter(self.__l2_book[pair][ASK])
+        bid_it = reversed(self._l2_book[pair][BID])
+        ask_it = iter(self._l2_book[pair][ASK])
 
-        bids = (f"{bid}:{self.__l2_book[pair][BID][bid]}" for bid in bid_it)
+        bids = (f"{bid}:{self._l2_book[pair][BID][bid]}" for bid in bid_it)
         bids = list(islice(bids, 25))
-        asks = (f"{ask}:{self.__l2_book[pair][ASK][ask]}" for ask in ask_it)
+        asks = (f"{ask}:{self._l2_book[pair][ASK][ask]}" for ask in ask_it)
         asks = list(islice(asks, 25))
 
         if len(bids) == len(asks):
@@ -144,7 +144,7 @@ class OKCoin(Feed):
             # snapshot
             for update in msg['data']:
                 pair = self.exchange_symbol_to_std_symbol(update['instrument_id'])
-                self.__l2_book[pair] = {
+                self._l2_book[pair] = {
                     BID: sd({
                         Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']
                     }),
@@ -155,7 +155,7 @@ class OKCoin(Feed):
 
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(update['timestamp']), timestamp)
+                await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(update['timestamp']), timestamp)
         else:
             # update
             for update in msg['data']:
@@ -167,15 +167,15 @@ class OKCoin(Feed):
                         price = Decimal(price)
                         amount = Decimal(amount)
                         if amount == 0:
-                            if price in self.__l2_book[pair][s]:
+                            if price in self._l2_book[pair][s]:
                                 delta[s].append((price, 0))
-                                del self.__l2_book[pair][s][price]
+                                del self._l2_book[pair][s][price]
                         else:
                             delta[s].append((price, amount))
-                            self.__l2_book[pair][s][price] = amount
+                            self._l2_book[pair][s][price] = amount
                 if self.checksum_validation and self.__calc_checksum(pair) != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum
-                await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(update['timestamp']), timestamp)
+                await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(update['timestamp']), timestamp)
 
     async def _login(self, msg: dict, timestamp: float):
         LOG.info('%s: Websocket logged in? %s', self.id, msg['success'])

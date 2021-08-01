@@ -135,7 +135,7 @@ class Binance(Feed):
 
     def _reset(self):
         self.forced = defaultdict(bool)
-        self.__l2_book = {}
+        self._l2_book = {}
         self.last_update_id = {}
         self.open_interest = {}
 
@@ -267,12 +267,12 @@ class Binance(Feed):
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
-        self.__l2_book[std_pair] = {BID: sd(), ASK: sd()}
+        self._l2_book[std_pair] = {BID: sd(), ASK: sd()}
         for s, side in (('bids', BID), ('asks', ASK)):
             for update in resp[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
-                self.__l2_book[std_pair][side][price] = amount
+                self._l2_book[std_pair][side][price] = amount
 
     async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
         """
@@ -282,7 +282,7 @@ class Binance(Feed):
         skip_update, forced, current_match = self._check_update_id(std_pair, msg)
         if current_match:
             # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
-            return await self.book_callback(self.__l2_book[std_pair], L2_BOOK, std_pair, forced, self.__l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
+            return await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, self._l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
 
         if skip_update:
             return
@@ -296,13 +296,13 @@ class Binance(Feed):
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self.__l2_book[std_pair][side]:
-                        del self.__l2_book[std_pair][side][price]
+                    if price in self._l2_book[std_pair][side]:
+                        del self._l2_book[std_pair][side][price]
                         delta[side].append((price, amount))
                 else:
-                    self.__l2_book[std_pair][side][price] = amount
+                    self._l2_book[std_pair][side][price] = amount
                     delta[side].append((price, amount))
-        await self.book_callback(self.__l2_book[std_pair], L2_BOOK, std_pair, forced, delta, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, delta, self.timestamp_normalize(ts), timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float) -> None:
         """
@@ -331,16 +331,16 @@ class Binance(Feed):
 
         if not self.concurrent_http:
             # handle snapshot (a)synchronously
-            if std_pair not in self.__l2_book:
+            if std_pair not in self._l2_book:
                 await self._snapshot(pair)
 
             return await self._handle_book_msg(*book_args)
 
         if std_pair in self._book_buffer:
-            # snapshot is currently being fetched. std_pair will exist in self.__l2_book after snapshot, but we need to continue buffering until all previous buffered messages have been processed.
+            # snapshot is currently being fetched. std_pair will exist in self._l2_book after snapshot, but we need to continue buffering until all previous buffered messages have been processed.
             return self._book_buffer[std_pair].append(book_args)
 
-        elif std_pair in self.__l2_book:
+        elif std_pair in self._l2_book:
             # snapshot exists
             return await self._handle_book_msg(*book_args)
 

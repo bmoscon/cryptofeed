@@ -80,7 +80,7 @@ class Phemex(Feed):
         self.__reset()
 
     def __reset(self):
-        self.__l2_book = {}
+        self._l2_book = {}
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -105,7 +105,7 @@ class Phemex(Feed):
 
         if msg['type'] == 'snapshot':
             forced = True
-            self.__l2_book[symbol] = {
+            self._l2_book[symbol] = {
                 BID: sd({Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['bids']}),
                 ASK: sd({Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['asks']})
             }
@@ -117,12 +117,12 @@ class Phemex(Feed):
                     delta[side].append((price, amount))
                     if amount == 0:
                         # for some unknown reason deletes can be repeated in book updates
-                        if price in self.__l2_book[symbol][side]:
-                            del self.__l2_book[symbol][side][price]
+                        if price in self._l2_book[symbol][side]:
+                            del self._l2_book[symbol][side][price]
                     else:
-                        self.__l2_book[symbol][side][price] = amount
+                        self._l2_book[symbol][side][price] = amount
 
-        await self.book_callback(self.__l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
+        await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -198,8 +198,8 @@ class Phemex(Feed):
         ret = []
         sub_pair = []
 
-        if self.exchange_channel_to_std(USER_DATA) in self.subscription:
-            sub_pair.append([self.exchange_channel_to_std(USER_DATA), USER_DATA])
+        if self.std_channel_to_exchange(USER_DATA) in self.subscription:
+            sub_pair.append([self.std_channel_to_exchange(USER_DATA), USER_DATA])
 
         for chan, symbols in self.subscription.items():
             if self.exchange_channel_to_std(chan) == USER_DATA:
@@ -261,7 +261,7 @@ class Phemex(Feed):
         for chan, symbol in subs:
             if not self.exchange_channel_to_std(chan) == USER_DATA:
                 msg = {"id": 1, "method": chan, "params": [symbol]}
-                if self.exchange_channel_to_std(self.id, chan) == CANDLES:
+                if self.exchange_channel_to_std(chan) == CANDLES:
                     msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
                 elif self.exchange_channel_to_std(chan) == LAST_PRICE:
                     base = self.exchange_symbol_to_std_symbol(symbol).split('-')[0]
