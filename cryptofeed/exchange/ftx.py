@@ -177,7 +177,7 @@ class FTX(Feed):
                 if '/' in pair:
                     continue
                 end_point = f"https://ftx.com/api/futures/{pair}/stats"
-                data = await self.http_conn.get(end_point)
+                data = await self.http_conn.read(end_point)
                 data = json.loads(data, parse_float=Decimal)
                 if 'result' in data:
                     oi = data['result']['openInterest']
@@ -210,7 +210,7 @@ class FTX(Feed):
             for pair in pairs:
                 if '-PERP' not in pair:
                     continue
-                data = await self.http_conn.get(f"https://ftx.com/api/funding_rates?future={pair}")
+                data = await self.http_conn.read(f"https://ftx.com/api/funding_rates?future={pair}")
                 data = json.loads(data, parse_float=Decimal)
 
                 last_update = self.funding.get(pair, None)
