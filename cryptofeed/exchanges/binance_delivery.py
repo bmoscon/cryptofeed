@@ -25,16 +25,16 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # overwrite values previously set by the super class Binance
-        self.ws_endpoint = 'wss://dstream.binance.com'
-        self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
-        self.address = self._address()
         self.websocket_channels.update({
             FUNDING: 'markPrice',
             OPEN_INTEREST: 'open_interest',
             LIQUIDATIONS: 'forceOrder'
         })
+        super().__init__(**kwargs)
+        # overwrite values previously set by the super class Binance
+        self.ws_endpoint = 'wss://dstream.binance.com'
+        self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
+        self.address = self._address()
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         skip_update = False
