@@ -13,7 +13,8 @@
   * Bugfix: Use order id in FTX fill channel callback
   * Feature: Add ability to use the Symbols class to identify all exchanges that support a given instrument
   * Feature: Allow user to specify 'http_proxy' in feeds.
-  * Feature: Add support for 'concurrent_http' requests in Binance feeds. 
+  * Feature: Add support for 'concurrent_http' requests in Binance feeds.
+  * Bugfix: funding and open interest data not being collected
 
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
