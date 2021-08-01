@@ -24,9 +24,9 @@ class Bittrex(Feed):
     symbol_endpoint = 'https://api.bittrex.com/v3/markets'
     valid_candle_intervals = {'1m', '5m', '1h', '1d'}
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
+        L2_BOOK: 'orderbook_{}_{}',
+        TRADES: 'trade_{}',
+        TICKER: 'ticker_{}',
         CANDLES: 'candle_{}_{}'
     }
 

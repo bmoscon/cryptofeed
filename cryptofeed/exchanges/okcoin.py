@@ -20,7 +20,7 @@ from yapic import json
 
 from cryptofeed.auth.okcoin import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import ASK, BID, BUY, FUNDING, L2_BOOK, OKCOIN, OPEN_INTEREST, SELL, SPOT, TICKER, TRADES, LIQUIDATIONS, ORDER_INFO
+from cryptofeed.defines import ASK, BID, BUY, L2_BOOK, OKCOIN, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.util import split
@@ -33,13 +33,9 @@ class OKCoin(Feed):
     id = OKCOIN
     symbol_endpoint = 'https://www.okcoin.com/api/spot/v3/instruments'
     websocket_channels = {
-        L2_BOOK: 'orderbook',
-        TRADES: 'trades',
-        TICKER: 'ticker',
-        FUNDING: 'funding',
-        OPEN_INTEREST: 'open_interest',
-        LIQUIDATIONS: 'trades',
-        ORDER_INFO: 'orders',
+        L2_BOOK: 'spot/depth_l2_tbt',
+        TRADES: 'spot/trade',
+        TICKER: '{}/ticker',
     }
 
     @classmethod
@@ -60,16 +56,6 @@ class OKCoin(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
-
-        for chan in self.subscription:
-            if chan != LIQUIDATIONS:
-                continue
-            for symbol in self.subscription[chan]:
-                instrument_type = self.instrument_type(symbol)
-                if instrument_type == SPOT:
-                    raise ValueError("LIQUIDATIONS only supports futures and swap trading pairs")
-
-        self.open_interest = {}
 
     def __reset(self):
         self.__l2_book = {}
@@ -118,14 +104,9 @@ class OKCoin(Feed):
 
     def get_channel_symbol_combinations(self):
         for chan in self.subscription:
-            if not is_authenticated_channel(chan):
-                if chan == LIQUIDATIONS:
-                    continue
-                for symbol in self.subscription[chan]:
-                    instrument_type = self.instrument_type(symbol)
-                    if instrument_type != 'swap' and 'funding' in chan:
-                        continue  # No funding for spot, futures and options
-                    yield f"{chan.format(instrument_type)}:{symbol}"
+            for symbol in self.subscription[chan]:
+                instrument_type = self.instrument_type(symbol)
+                yield f"{chan.format(instrument_type)}:{symbol}"
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -140,12 +121,6 @@ class OKCoin(Feed):
                                 ask=Decimal(update['best_ask']) if update['best_ask'] else Decimal(0),
                                 timestamp=update_timestamp,
                                 receipt_timestamp=timestamp)
-            if 'open_interest' in update:
-                oi = update['open_interest']
-                if pair in self.open_interest and oi == self.open_interest[pair]:
-                    continue
-                self.open_interest[pair] = oi
-                await self.callback(OPEN_INTEREST, feed=self.id, symbol=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -166,17 +141,6 @@ class OKCoin(Feed):
                                 timestamp=self.timestamp_normalize(trade['timestamp']),
                                 receipt_timestamp=timestamp
                                 )
-
-    async def _funding(self, msg: dict, timestamp: float):
-        for update in msg['data']:
-            await self.callback(FUNDING,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(update['instrument_id']),
-                                timestamp=self.timestamp_normalize(update['funding_time']),
-                                receipt_timestamp=timestamp,
-                                rate=update['funding_rate'],
-                                estimated_rate=update['estimated_rate'],
-                                settlement_time=self.timestamp_normalize(update['settlement_time']))
 
     async def _book(self, msg: dict, timestamp: float):
         if msg['action'] == 'partial':
@@ -216,26 +180,6 @@ class OKCoin(Feed):
                     raise BadChecksum
                 await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(update['timestamp']), timestamp)
 
-    async def _order(self, msg: dict, timestamp: float):
-        if msg['data'][0]['status'] == "open":
-            status = "active"
-        else:
-            status = msg['data'][0]['status']
-
-        keys = ('filled_size', 'size', 'filled_notional')
-        data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
-
-        await self.callback(ORDER_INFO, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instrument_id'].upper()),  # This uses the REST endpoint format (lower case)
-                            status=status,
-                            order_id=msg['data'][0]['order_id'],
-                            side=BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
-                            order_type=msg['data'][0]['type'],
-                            timestamp=msg['data'][0]['timestamp'].timestamp(),
-                            receipt_timestamp=timestamp,
-                            **data
-                            )
-
     async def _login(self, msg: dict, timestamp: float):
         LOG.info('%s: Websocket logged in? %s', self.id, msg['success'])
 
@@ -261,33 +205,9 @@ class OKCoin(Feed):
                 await self._trade(msg, timestamp)
             elif 'depth_l2_tbt' in msg['table']:
                 await self._book(msg, timestamp)
-            elif 'swap/funding_rate' in msg['table']:
-                await self._funding(msg, timestamp)
             elif 'spot/order' in msg['table']:
                 await self._order(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message %s", self.id, msg)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
-
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-        for channel in self.subscription:
-            if self.is_authenticated_channel(channel):
-                for s in self.subscription[channel]:
-                    ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler, self.authenticate))
-            else:
-                ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
-
-        return ret
-
-    async def user_order_subscribe(self, conn: AsyncConnection, symbol=None):
-        self.__reset()
-        timestamp, sign = generate_token(self.key_id, self.key_secret)
-        login_param = {"op": "login", "args": [self.key_id, self.config.okex.key_passphrase, timestamp, sign.decode("utf-8")]}
-        login_str = json.dumps(login_param)
-        await conn.write(login_str)
-        await asyncio.sleep(5)
-        sub_param = {"op": "subscribe", "args": ["spot/order:{}".format(symbol)]}
-        sub_str = json.dumps(sub_param)
-        await conn.write(sub_str)

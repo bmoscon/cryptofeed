@@ -7,7 +7,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES, UPBIT
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 
@@ -20,9 +20,8 @@ class Upbit(Feed):
     api = 'https://api.upbit.com/v1/'
     symbol_endpoint = 'https://api.upbit.com/v1/market/all'
     websocket_channels = {
-        L2_BOOK: 'orderbook',
-        TRADES: 'trades',
-        TICKER: 'ticker'
+        L2_BOOK: L2_BOOK,
+        TRADES: TRADES,
     }
     
     @classmethod
@@ -127,54 +126,6 @@ class Upbit(Feed):
 
         await self.book_callback(self.__l2_book[pair], L2_BOOK, pair, forced, False, orderbook_timestamp, timestamp)
 
-    async def _ticker(self, msg: dict, timestamp: float):
-        """
-        Doc : https://docs.upbit.com/v1.0.7/reference#시세-ticker-조회
-
-        {
-            'ty': 'ticker'                // Event type
-            'cd': 'KRW-BTC',              // Symbol
-            'hp': 6904000.0,              // High price
-            'lp': 6660000.0,              // Low price
-            'cp': 81000.0,                // Change price
-            'tp': 6742000.0,              // Trade price
-            'tv': 0.022112,               // Trade volume(amount)
-            'op': 6823000.0,              // Opening price
-            'pcp': 6823000.0,             // Previous closing price
-            'st': 'REALTIME',             // 'SNAPSHOT' or 'REALTIME'
-            'tms': 1584261867032,         // Receipt timestamp
-            'ttms': 1584261866000,        // Trade timestamp
-            'ab': 'ASK',                  // 'BID' or 'ASK'
-            'aav': 1223.62809015,
-            'abv': 1273.40780697,
-            'atp': 16904032846.03822,
-            'atp24h': 60900534403.85303,
-            'atv': 2497.03589712,
-            'atv24h': 8916.84161476,
-            'c': 'FALL',                 // Change - 'FALL' / 'RISE' / 'EVEN'
-            'cr': 0.0118716107,
-            'dd': None,
-            'h52wdt': '2019-06-26',
-            'h52wp': 16840000.0,
-            'its': False,
-            'l52wdt': '2019-03-17',
-            'l52wp': 4384000.0,
-            'ms': 'ACTIVE',              // Market Status 'ACTIVE' or
-            'msfi': None,
-            'mw': 'NONE',                // Market warning 'NONE' or
-            'scp': -81000.0,
-            'scr': -0.0118716107,
-            'tdt': '20200315',
-            'ts': None,
-            'ttm': '084426',
-        }
-
-        """
-
-        # Currently, Upbit ticker api does not support best_ask and best_bid price.
-        # Only way for tracking best_ask and best_bid price is looking at the orderbook directly.
-        raise NotImplementedError
-
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg = json.loads(msg, parse_float=Decimal)
@@ -183,8 +134,6 @@ class Upbit(Feed):
             await self._trade(msg, timestamp)
         elif msg['ty'] == "orderbook":
             await self._book(msg, timestamp)
-        elif msg['ty'] == "ticker":
-            await self._ticker(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
@@ -221,7 +170,5 @@ class Upbit(Feed):
                 chans.append({"type": "orderbook", "codes": codes, 'isOnlyRealtime': True})
             if chan == TRADES:
                 chans.append({"type": "trade", "codes": codes, 'isOnlyRealtime': True})
-            if chan == TICKER:
-                chans.append({"type": "ticker", "codes": codes, 'isOnlyRealtime': True})
 
         await conn.write(json.dumps(chans))

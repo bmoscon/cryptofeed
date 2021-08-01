@@ -26,11 +26,11 @@ class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
     symbol_endpoint = 'https://futures.kraken.com/derivatives/api/v3/instruments'
     websocket_channels = {
-        L2_BOOK: 'orderbook',
-        TRADES: 'trades',
-        TICKER: 'ticker',
-        FUNDING: 'funding',
-        OPEN_INTEREST: 'open_interest',
+        L2_BOOK: 'book',
+        TRADES: 'trade',
+        TICKER: 'ticker_lite',
+        FUNDING: 'ticker',
+        OPEN_INTEREST: 'ticker',
     }
 
     @classmethod

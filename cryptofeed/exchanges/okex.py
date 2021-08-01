@@ -37,13 +37,13 @@ class OKEx(Feed):
     api = 'https://www.okex.com/api/'
     symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
     websocket_channels = {
-        L2_BOOK: 'orderbook',
+        L2_BOOK: 'books-l2-tbt',
         TRADES: 'trades',
-        TICKER: 'ticker',
-        FUNDING: 'funding',
-        OPEN_INTEREST: 'open_interest',
-        LIQUIDATIONS: 'trades',
-        ORDER_INFO: 'orders',
+        TICKER: 'tickers',
+        FUNDING: 'funding-rate',
+        OPEN_INTEREST: 'tickers',
+        LIQUIDATIONS: LIQUIDATIONS,
+        ORDER_INFO: ORDER_INFO,
     }
 
     @classmethod

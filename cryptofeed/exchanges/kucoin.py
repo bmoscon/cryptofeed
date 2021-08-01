@@ -28,9 +28,9 @@ class KuCoin(Feed):
     symbol_endpoint = 'https://api.kucoin.com/api/v1/symbols'
     valid_candle_intervals = {'1m', '3m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w'}
     websocket_channels = {
-        L2_BOOK: 'orderbook',
-        TRADES: 'trades',
-        TICKER: 'ticker',
+        L2_BOOK: '/market/level2',
+        TRADES: '/market/match',
+        TICKER: '/market/ticker',
         CANDLES: '/market/candles'
     }
 

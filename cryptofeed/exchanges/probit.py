@@ -24,8 +24,8 @@ class Probit(Feed):
     id = PROBIT
     symbol_endpoint = 'https://api.probit.com/api/exchange/v1/market'
     websocket_channels = {
-        L2_BOOK: 'orderbook',
-        TRADES: 'trades',
+        L2_BOOK: 'order_books',
+        TRADES: 'recent_trades',
     }
 
     @classmethod

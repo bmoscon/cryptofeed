@@ -27,8 +27,8 @@ class Bitstamp(Feed):
     # API documentation: https://www.bitstamp.net/websocket/v2/
     websocket_channels = {
         L3_BOOK: 'detail_order_book',
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
+        L2_BOOK: 'diff_order_book',
+        TRADES: 'live_trades',
     }
 
     @classmethod

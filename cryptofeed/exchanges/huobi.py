@@ -27,8 +27,8 @@ class Huobi(Feed):
     symbol_endpoint = 'https://api.huobi.pro/v1/common/symbols'
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'}
     websocket_channels = {
-        L2_BOOK: 'orderbook',
-        TRADES: 'trades',
+        L2_BOOK: 'depth.step0',
+        TRADES: 'trade.detail',
         CANDLES: 'kline',
     }
 

@@ -26,8 +26,8 @@ class EXX(Feed):
     id = EXX_id
     symbol_endpoint = "https://api.exx.com/data/v1/tickers"
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
+        L2_BOOK: 'ENTRUST_ADD',
+        TRADES: 'TRADE',
     }
 
     @classmethod
