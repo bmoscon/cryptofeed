@@ -15,7 +15,6 @@ The raw callbacks are defined [here](../cryptofeed/callback.py), along with thei
 * Open Interest
 * Funding
 * Liquidation
-* Volume
 
 Its important to note that if your choose to use the raw callbacks, and your user defined callbacks match these function signatures *and* are async functions, you do not need to use these wrappers (like is commonly shown in the example code). You can use your callback functions without wrapping them in `TradeCallback`, `TickerCallback`, etc.
 
