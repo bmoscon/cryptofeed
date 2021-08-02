@@ -47,7 +47,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 <sup>1</sup> Coinbase sequence number validation only works when L3 books are enabled for a symbol
 <br/>
 <br/>
-<sup>1</sup> dYdX uses offsets that monotonically increase to help ensure updates are applied in order. They are not quite the same as sequence numbers, strictly speaking
+<sup>2</sup> dYdX uses offsets that monotonically increase to help ensure updates are applied in order. They are not quite the same as sequence numbers, strictly speaking
 <br/>
 <br/>
 
