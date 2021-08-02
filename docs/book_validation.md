@@ -30,8 +30,10 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Huobi Swap    |               |                  |  x             |
 | Kraken        |    x          |                  |                |
 | Kraken Futures|               | x                |                |
+| KuCoin        |               | x                |                |
 | OKCoin        |  x            |                  |                |
 | OKEX          |  x            |                  |                |
+| Phemex.       |               |                  |                |
 | Poloniex      |               | x                |                |
 | Upbit         |               |                  |     x          |
 
