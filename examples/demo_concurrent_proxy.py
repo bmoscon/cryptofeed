@@ -19,7 +19,6 @@ from cryptofeed.exchanges.binance_futures import BinanceFutures
 from cryptofeed.exchanges.binance import Binance
 
 
-
 class Counter:
     """Helper class to keep track and display callback times"""
 

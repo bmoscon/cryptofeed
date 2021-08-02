@@ -16,7 +16,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUNDING, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
 # For auth
 import hmac
@@ -34,7 +34,8 @@ class Bybit(Feed):
         USER_FILLS: 'execution',
         ORDER_INFO: 'order',
         FUTURES_INDEX: 'instrument_info.100ms',
-        OPEN_INTEREST: 'instrument_info.100ms'
+        OPEN_INTEREST: 'instrument_info.100ms',
+        FUNDING: 'instrument_info.100ms'
     }
 
     @classmethod
@@ -73,6 +74,7 @@ class Bybit(Feed):
         super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public', 'USDTP': 'wss://stream.bybit.com/realtime_private'}, **kwargs)
 
     def __reset(self, quote=None):
+        self._instrument_info_cache = {}
         if quote is None:
             self._l2_book = {}
         else:
@@ -235,6 +237,11 @@ class Bybit(Feed):
             updates = msg['data']['update']
 
         for info in updates:
+            if msg['topic'] in self._instrument_info_cache and self._instrument_info_cache[msg['topic']] == updates:
+                continue
+            else:
+                self._instrument_info_cache[msg['topic']] = updates
+
             if 'updated_at_e9' in info:
                 ts = info['updated_at_e9'] / 1e9
             elif 'updated_at' in info:
@@ -252,7 +259,16 @@ class Bybit(Feed):
             if 'index_price_e4' in info:
                 await self.callback(FUTURES_INDEX, feed=self.id,
                                     symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
-                                    futures_index=Decimal(info['index_price_e4']) * Decimal(1e-4),
+                                    futures_index=Decimal(info['index_price_e4']) * Decimal('1e-4'),
+                                    timestamp=ts,
+                                    receipt_timestamp=timestamp)
+
+            if 'funding_rate_e6' in info:
+                await self.callback(FUNDING, feed=self.id,
+                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
+                                    rate=Decimal(info['funding_rate_e6']) * Decimal('1e-6'),
+                                    predicted_rate=Decimal(info['predicted_funding_rate_e6']) * Decimal('1e-6'),
+                                    next_funding_time=info['next_funding_time'].timestamp(),
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
 
