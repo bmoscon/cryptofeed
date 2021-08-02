@@ -15,8 +15,9 @@ from time import time
 
 from cryptofeed import FeedHandler
 from cryptofeed.defines import L2_BOOK, OPEN_INTEREST, BINANCE, BINANCE_FUTURES
-from cryptofeed.exchange.binance_futures import BinanceFutures
-from cryptofeed.exchanges import Binance
+from cryptofeed.exchanges.binance_futures import BinanceFutures
+from cryptofeed.exchanges.binance import Binance
+
 
 
 class Counter:
