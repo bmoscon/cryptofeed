@@ -8,6 +8,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Exchange      | Checksum      | Sequence Numbers | Snapshots only |
 | ------------- |:-------------:| :---------------:|:--------------:|
 | AscendEX      |               | x                |                |
+| Bequant       |               | x                |                |
 | Bitcoin.com   |               | x                |                |
 | Bitfinex      |               | x                |                |
 | Bitstamp      |               |                  | x              |
@@ -16,9 +17,12 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Bybit         |               |                  |   x            |
 | Binance       |               |   x              |                |
 | BinanceUS     |               | x                |                |
+| Bitflyer      |               |                  |                |
+| Bithumb       |               |                  |                |
 | BitMEX        |               |                  |                |
 | Coinbase      |               |  x <sup>1</sup>  |                |
 | Deribit       |               | x                |                |
+| dYdX          |               | x <sup>2</sup>   |                |
 | EXX           |               |                  |                |
 | FTX           | x             |                  |                |
 | FTX US        | x             |                  |                |
@@ -33,13 +37,17 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | KuCoin        |               | x                |                |
 | OKCoin        |  x            |                  |                |
 | OKEX          |  x            |                  |                |
-| Phemex.       |               |                  |                |
+| Phemex        |               |                  |                |
 | Poloniex      |               | x                |                |
+| Probit        |               |                  |                |
 | Upbit         |               |                  |     x          |
 
 
 <br/>
 <sup>1</sup> Coinbase sequence number validation only works when L3 books are enabled for a symbol
+<br/>
+<br/>
+<sup>1</sup> dYdX uses offsets that monotonically increase to help ensure updates are applied in order. They are not quite the same as sequence numbers, strictly speaking
 <br/>
 <br/>
 
