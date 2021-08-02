@@ -16,6 +16,7 @@
   * Feature: Add support for 'concurrent_http' requests in Binance feeds.
   * Bugfix: funding and open interest data not being collected
   * Breaking Change: Rework how REST endpoints are integrated into exchange classes. Rest module has been removed. REST methods are part of exchanges classes.
+  * Feature: Add support for funding data in Bybit
 
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
