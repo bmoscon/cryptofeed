@@ -1,4 +1,4 @@
-* Note this is somewhat out of date and will be updated at a later time *
+# *** Note this is somewhat out of date and will be updated at a later time ***
 
 
 # Adding a new exchange
