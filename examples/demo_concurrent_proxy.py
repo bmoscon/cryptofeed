@@ -105,9 +105,7 @@ def main(proxy):
                               concurrent_http=True,
                               symbols=futures_symbols,
                               channels=[OPEN_INTEREST],
-                              callbacks={
-                                  OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, True),
-                              }))
+                              callbacks={OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, True)}))
 
     f.run()
 

@@ -124,7 +124,7 @@ class Binance(Feed):
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
 
-        if len(subs) < 200:
+        if 0 < len(subs) < 200:
             return address + '/'.join(subs)
         else:
             def split_list(_list: list, n: int):
