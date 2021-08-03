@@ -97,11 +97,13 @@ def main(proxy):
                        channels=[L2_BOOK],
                        callbacks={L2_BOOK: counter.callback(BINANCE, L2_BOOK, book_symbols, True)}))
     f.add_feed(BinanceFutures(http_proxy=proxy,
+                              open_interest_interval=1.0,
                               concurrent_http=False,
                               symbols=futures_symbols,
                               channels=[OPEN_INTEREST],
                               callbacks={OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, False)}))
     f.add_feed(BinanceFutures(http_proxy=proxy,
+                              open_interest_interval=1.0,
                               concurrent_http=True,
                               symbols=futures_symbols,
                               channels=[OPEN_INTEREST],
