@@ -14,7 +14,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, VOLUME, USER_BALANCE, FILLED, UNFILLED
+from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, VOLUME, USER_BALANCE, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.standards import is_authenticated_channel
 from cryptofeed.symbols import Symbol
