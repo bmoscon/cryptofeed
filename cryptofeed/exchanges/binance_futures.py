@@ -13,10 +13,9 @@ from typing import List, Tuple, Callable, Dict
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
-from cryptofeed.defines import BINANCE_FUTURES, FUNDING, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, FUTURE, PREMIUM_INDEX
+from cryptofeed.defines import BINANCE_FUTURES, FUNDING, FUTURES, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, PREMIUM_INDEX
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
-from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
@@ -35,7 +34,7 @@ class BinanceFuturesInstrument():
         elif len(instrument_properties) == 1:
             self.instrument_type = PERPETUAL
         else:
-            self.instrument_type = FUTURE
+            self.instrument_type = FUTURES
             self.expiry_date_str = instrument_properties[1]
 
 

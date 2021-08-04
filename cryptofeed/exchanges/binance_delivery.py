@@ -11,7 +11,7 @@ from typing import Tuple, Dict
 
 from yapic import json
 
-from cryptofeed.defines import FUTURES_INDEX, BINANCE_DELIVERY, USER_BALANCE, USER_POSITION, PERPETUAL, FUTURE, SPOT
+from cryptofeed.defines import FUNDING, FUTURES_INDEX, BINANCE_DELIVERY, LIQUIDATIONS, OPEN_INTEREST, USER_BALANCE, USER_POSITION, PERPETUAL, FUTURE, SPOT
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
 from cryptofeed.standards import timestamp_normalize
