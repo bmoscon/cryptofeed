@@ -10,11 +10,10 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendFuturesIndexCallback, BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback,
-                                         DeribitBackendBookCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback,
+                                         BackendLiquidationsCallback, DeribitBackendBookCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback,
                                          BackendVolumeCallback, BackendUserBalanceCallback, BackendUserPositionCallback,
                                          BackendUserFillCallback, BackendUserOrderCallback)
-from cryptofeed.defines import FUTURES_INDEX, TICKER, TRADES, USER_FILLS, VOLUME, USER_BALANCE, ORDER_INFO, USER_POSITION
+from cryptofeed.defines import FUTURES_INDEX, TRADES, USER_FILLS, VOLUME, USER_BALANCE, ORDER_INFO, USER_POSITION
 
 
 class ZMQCallback(BackendQueue):
@@ -79,10 +78,6 @@ class LiquidationsZMQ(ZMQCallback, BackendLiquidationsCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoZMQ(ZMQCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
 class FuturesIndexZMQ(ZMQCallback, BackendFuturesIndexCallback):
     default_key = FUTURES_INDEX
 
@@ -90,17 +85,22 @@ class FuturesIndexZMQ(ZMQCallback, BackendFuturesIndexCallback):
 class VolumeZMQ(ZMQCallback, BackendVolumeCallback):
     default_key = VOLUME
 
+
 class CandlesZMQ(ZMQCallback, BackendCandlesCallback):
     default_key = 'candles'
+
 
 class UserBalanceZMQ(ZMQCallback, BackendUserBalanceCallback):
     default_key = USER_BALANCE
 
+
 class UserPositionZMQ(ZMQCallback, BackendUserPositionCallback):
     default_key = USER_POSITION
 
+
 class UserFillZMQ(ZMQCallback, BackendUserFillCallback):
     default_key = USER_FILLS
+
 
 class OrderInfoZMQ(ZMQCallback, BackendUserOrderCallback):
     default_key = ORDER_INFO

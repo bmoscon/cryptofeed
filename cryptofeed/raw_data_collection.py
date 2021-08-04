@@ -9,8 +9,8 @@ import atexit
 from collections import defaultdict
 import functools
 import ast
-import json
 
+from yapic import json
 from aiofile import AIOFile
 
 from cryptofeed.defines import HUOBI, UPBIT, OKEX, OKCOIN

@@ -42,15 +42,18 @@ The exchange objects are supplied with the following arguments:
 
 The supported data channels are:
 
+* L1_BOOK - Top of book
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES - Note this reports the taker's side, even for exchanges that report the maker side
 * TICKER - Traditional ticker updates
+* LIQUIDATIONS
+* OPEN_INTEREST
 * FUNDING - Exchange specific funding data / updates
 * BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects. Not all exchanges support, as some exchanges send complete books on every update.
 
 
-Trading symbols follow the following scheme BASE-QUOTE. As an example, Bitcoin denominated by US Dollars would be BTC-USD. Many exchanges do not internally use this format, but cryptofeed handles trading symbol normalization and all symbols should be subscribed to in this format and will be reported in this format. 
+For spot markets, trading symbols follow the following scheme BASE-QUOTE. As an example, Bitcoin denominated by US Dollars would be BTC-USD. Many exchanges do not internally use this format, but cryptofeed handles trading symbol normalization and all symbols should be subscribed to in this format and will be reported in this format. For futures markets, symbols follow the BASE-QUOTE-EXPIRY format. The expiry is comprised of the last 2 digits of the year, followed by the month code, followed by the day. As an example a BTC-USDT contract with an expiry date of Jan 14, 2021 would be BTC-USDT-21F14. Perpetual contracts, are listed as BASE-QUOTE-PERP. Options follow a scheme similar to futures contracts, except the name includes the strike price as well as if the option is put or a call: BASE-QUOTE-STRIKE-EXPIRY-TYPE.
 
 If you use `channels` and `symbols` you cannot use `subscription`, likewise if `subscription` is supplied you cannot use `channels` and `symbols`. `subscription` is supplied in a dictionary format, in the following manner: {CHANNEL: [symbols], ... }. As an example:
 
@@ -60,7 +63,7 @@ If you use `channels` and `symbols` you cannot use `subscription`, likewise if `
 
 ### Normalization
 
-Cryptofeed normalizes various parts of the data - primarily timestamps and symbols, to ensure they are consistent across all exchanges. Pairs take the format BASE-QUOTE (as previously mentioned) and timestamps are all converted to seconds since the epoch (traditional UNIX timestamps), in floating point. 
+Cryptofeed normalizes various parts of the data - primarily timestamps and symbols, to ensure they are consistent across all exchanges. Pairs take the format BASE-QUOTE (for spot, other instrument types have different formats, as previously mentioned) and timestamps are all converted to seconds since the epoch (traditional UNIX timestamps), in floating point. Most numeric data is returned as a `decimal.Decimal` object.
 
 ### Callbacks
 

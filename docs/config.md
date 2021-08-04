@@ -17,12 +17,11 @@ The configuration will be automatically passed to exchange objects that the feed
 
 The following are valid settings for the configuration of Cryptofeed.
 
-* rest
-  - This section contains settings for the REST library under cryptofeed/rest/
-  * log
-    - logging settings for the REST endpoints. Valid entries are `filename` and `level` (corresponding to log filename and level).
+
 * log
   - logging settings. Valid entries are `filename` and `level` (corresponding to log filename and level).
+* uvloop
+  - default is True. This boolean can enable or disable uvloop support.
 * exchange config. 
   - A lowercase exchange name. Valid entries here will vary by exchange, but normally will contain `key_id` and `key_secret`. For exchanges that use different, or more, secrets, those entries will be here as well.
 
