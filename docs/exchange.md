@@ -1,3 +1,6 @@
+# *** Note this is somewhat out of date and will be updated at a later time ***
+
+
 # Adding a new exchange
 
 <br><br>
@@ -99,7 +102,7 @@ This also mean we'll need to add support for the various channel mappings in `st
 
 * `exchanges.py`
     - ```python
-      from cryptofeed.exchange.huobi import Huobi
+      from cryptofeed.exchanges.huobi import Huobi
       ```
     - An entry is also needed in the `EXCHANGE_MAP` to map the string `'HUOBI'` to the class `Huobi`.
 
@@ -175,7 +178,7 @@ Like we did with for the trades channel, we'll need to add a handler for the boo
       async def _book(self, msg):
           symbol = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
           data = msg['tick']
-          self.l2_book[symbol] = {
+          self._l2_book[symbol] = {
               BID: sd({
                   Decimal(price): Decimal(amount)
                   for price, amount in data['bids']

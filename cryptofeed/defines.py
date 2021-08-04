@@ -9,6 +9,8 @@ Defines contains all constant string definitions for Cryptofeed,
 as well as some documentation (in comment form) regarding
 the book definitions and structure
 '''
+ASCENDEX = 'ASCENDEX'
+BEQUANT = 'BEQUANT'
 BITFINEX = 'BITFINEX'
 BITHUMB = 'BITHUMB'
 BITMEX = 'BITMEX'
@@ -38,16 +40,15 @@ KRAKEN_FUTURES = 'KRAKEN_FUTURES'
 KUCOIN = 'KUCOIN'
 OKCOIN = 'OKCOIN'
 OKEX = 'OKEX'
+PHEMEX = 'PHEMEX'
 POLONIEX = 'POLONIEX'
 PROBIT = 'PROBIT'
 BITCOINCOM = 'BITCOINCOM'
-BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
-
-COINGECKO = 'COINGECKO'
 
 
 # Market Data
+L1_BOOK = 'l1_book'
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
 BOOK_DELTA = 'book_delta'
@@ -59,8 +60,8 @@ OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
-MARKET_INFO = 'market_info'
 CANDLES = 'candles'
+LAST_PRICE = 'last_price'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
@@ -68,7 +69,14 @@ USER_BALANCE = 'user_balance'
 USER_FILLS = 'user_fills'
 USER_POSITION = 'user_position'
 USER_TRADES = 'user_trades'
-
+TRANSACTIONS = 'transactions'
+BALANCES = 'balances'
+PLACE_ORDER = 'place_order'
+CANCEL_ORDER = 'cancel_order'
+ORDERS = 'orders'
+ORDER_STATUS = 'order_status'
+TRADE_HISTORY = 'trade_history'
+USER_DATA = 'user_data'
 
 BUY = 'buy'
 SELL = 'sell'
@@ -78,6 +86,8 @@ UND = 'undefined'
 
 LIMIT = 'limit'
 MARKET = 'market'
+STOP_LIMIT = 'stop-limit'
+STOP_MARKET = 'stop-market'
 MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
@@ -88,14 +98,17 @@ FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
 UNFILLED = 'unfilled'
+EXPIRED = 'expired'
+SUSPENDED = 'suspended'
 
 # Currency
 BTC = 'BTC'
 ETH = 'ETH'
 
 # Instrument Definitions
-FUTURE = 'future'
 SWAP = 'swap'
+CURRENCY = 'currency'
+FUTURES = 'futures'
 PERPETUAL = 'perpetual'
 OPTION = 'option'
 SPOT = 'spot'
@@ -103,12 +116,12 @@ ANY = 'any'
 PREMIUM_INDEX = 'pindex'
 CALL = 'call'
 PUT = 'put'
+FX = 'fx'
 
 
 # HTTP methods
 GET = 'GET'
 DELETE = 'DELETE'
-PUT = 'PUT'
 POST = 'POST'
 
 

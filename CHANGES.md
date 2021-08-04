@@ -1,6 +1,25 @@
 ## Changelog
 
-### 1.9.2
+### 1.9.3
+  * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
+  * Feature: Add support for private channels USER_FILLS, ORDER_INFO, BALANCES on Deribit
+  * Feature: Add support for public channel L1_BOOK on Deribit
+  * Feature: Add support for private channels USER_FILLS and ORDER_INFO on Bybit
+  * Bugfix: Fix demo.py
+  * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
+  * Update: Support Okex v5
+  * Breaking Change: Update symbol standardization. Now uses standard names across all exchanges for futures, swaps, and options.
+  * Feature: Allow user to specify depth_interval for Binance L2_BOOK.
+  * Bugfix: Use order id in FTX fill channel callback
+  * Feature: Add ability to use the Symbols class to identify all exchanges that support a given instrument
+  * Feature: Allow user to specify 'http_proxy' in feeds.
+  * Feature: Add support for 'concurrent_http' requests in Binance feeds.
+  * Bugfix: funding and open interest data not being collected
+  * Breaking Change: Rework how REST endpoints are integrated into exchange classes. Rest module has been removed. REST methods are part of exchanges classes.
+  * Feature: Add support for funding data in Bybit
+  * Update: Correct and update sections of the documentation.
+
+### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method
   * Update: changed KuCoin authentication to match new signing method
   * Bugfix: #518 - fix aggregator example code
@@ -17,7 +36,16 @@
   * Bugfix: Issue #531 - Gemini symbol generation included closed symbols
   * Feature: Allow user to override the score used in Redis ZSETs
   * Update: Get information about size increment from FTX symbol data
-
+  * Bugfix: Fix trades write for Arctic backend
+  * Feature: new exchange: Bequant. Supports ticker, L2 book, trades, candles, plus authenticated channels: order info, account transactions and account balances
+  * Update: BitMax renamed AscendEX
+  * Bugfix: Feed level timeout and timeout interval not being set properly
+  * Exchange: Phemex exchange support
+  * Features: added support for candles, order info, account transactions and account balances to HitBTC & Bitcoin.com, plus authentication where required to access these channels
+  * Update: previous HitBTC & Bitcoin.com websocket endpoints deprecated. Now using separate Market, Trading and Account endpoints
+  * Bugfix: max_depth on Binance and Kraken was not properly used when querying the snapshot
+  * Bugfix: Handle 429s in HTTP connections (by waiting and retrying).
+  
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
   * Bugfix: Fix inverted Poloniex symbols

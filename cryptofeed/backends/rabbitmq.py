@@ -11,7 +11,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
+                                         BackendLiquidationsCallback)
 
 
 class RabbitCallback:
@@ -50,7 +50,7 @@ class RabbitCallback:
             else:
                 connection = await aio_pika.connect_robust(f"amqp://{self.host}", loop=asyncio.get_running_loop())
                 self.conn = await connection.channel()
-                await self.conn.declare_queue(self.queue_name, auto_delete=False)
+                await self.conn.declare_queue(self.queue_name, auto_delete=False, durable=True)
 
     async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
         await self.connect()
@@ -98,10 +98,6 @@ class OpenInterestRabbit(RabbitCallback, BackendOpenInterestCallback):
 
 
 class LiquidationsRabbit(RabbitCallback, BackendLiquidationsCallback):
-    pass
-
-
-class MarketInfoRabbit(RabbitCallback, BackendMarketInfoCallback):
     pass
 
 

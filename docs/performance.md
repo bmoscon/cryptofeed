@@ -7,8 +7,8 @@ Cryptofeed uses asyncio to optimize performance in a single threaded environment
 In general, these performance considerations only apply when dealing with book data. Other data channels are low volume (relatively) and are unlikely to suffer from latency/performance issues.
 
 
-* Book channels are typically very message intensive. If subscribing to book data with many symbols consider breaking those up into multiple calls to `add_feed`. Each call to `add_Feed` creates a new asyncio `task`.
+* Book channels are typically very message intensive. If subscribing to book data with many symbols consider breaking those up into multiple calls to `add_feed`. Each call to `add_Feed` creates at least one new asyncio `task`.
 * There is a limit to how much data can be processed on a single process. If your needs are great (book data for 100s of symbols) you will need to multiprocess.
-* Enforcing a max_depth on a book increases processing time.
-* Using deltas on exchanges that do not support it (Huobi) increases processing time.
+* Enforcing a `max_depth` on a book increases processing time.
+* Using deltas on exchanges that do not support it (eg. Huobi) increases processing time.
 * Handling callbacks increases latency. Callbacks should be as lightweight as possible, and use asyncio if possible/applicable.
