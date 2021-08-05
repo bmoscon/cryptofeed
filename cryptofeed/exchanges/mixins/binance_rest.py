@@ -154,7 +154,7 @@ class BinanceFuturesRestMixin(RestExchange):
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
-            'timestamp': self.self.timestamp_normalize(trade['T']),
+            'timestamp': self.timestamp_normalize(trade['T']),
             'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.id,
