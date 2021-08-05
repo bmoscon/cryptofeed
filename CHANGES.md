@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.9.3
+### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
   * Feature: Add support for private channels USER_FILLS, ORDER_INFO, BALANCES on Deribit
   * Feature: Add support for public channel L1_BOOK on Deribit
