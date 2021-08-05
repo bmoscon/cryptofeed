@@ -17,7 +17,7 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade
+from cryptofeed.types import Trade, Ticker
 
 
 LOG = logging.getLogger('feedhandler')
@@ -192,12 +192,8 @@ class Binance(Feed):
         else:
             ts = timestamp
 
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=bid,
-                            ask=ask,
-                            timestamp=ts,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, bid, ask, ts)
+        await self.callback(TICKER, t, timestamp)
 
     async def _liquidations(self, msg: dict, timestamp: float):
         """
