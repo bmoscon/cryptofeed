@@ -17,6 +17,8 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import Trade
+
 
 LOG = logging.getLogger('feedhandler')
 
@@ -158,17 +160,16 @@ class Binance(Feed):
             "m": true,        // Is the buyer the market maker?
             "M": true         // Ignore
         }
-        """
-        price = Decimal(msg['p'])
-        amount = Decimal(msg['q'])
-        await self.callback(TRADES, feed=self.id,
-                            order_id=msg['a'],
-                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            side=SELL if msg['m'] else BUY,
-                            amount=amount,
-                            price=price,
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp)
+        """ 
+        t = Trade(self.id, 
+                  self.exchange_symbol_to_std_symbol(msg['s']),
+                  SELL if msg['m'] else BUY,
+                  Decimal(msg['q']),
+                  Decimal(msg['p']),
+                  self.timestamp_normalize(msg['E']),
+                  id=str(msg['a'])
+        )
+        await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """

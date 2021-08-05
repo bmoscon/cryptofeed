@@ -13,10 +13,8 @@ from cryptofeed.backends.backend import (BackendQueue, BackendBookCallback, Back
 
 
 def trades_none_to_str(data):
-    if data['order_type'] is None:
-        data['order_type'] = 'None'
-    if data['id'] is None:
-        data['id'] = 'None'
+    data['order_type'] = str(data['order_type'])
+    data['id'] = str(data['id'])
 
 
 class RedisCallback(BackendQueue):
@@ -46,10 +44,10 @@ class RedisZSetCallback(RedisCallback):
         self.score_key = score_key
         super().__init__(host=host, port=port, socket=socket, key=key, numeric_type=numeric_type, **kwargs)
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict, receipt_timestamp: float):
         score = data[self.score_key]
         data = json.dumps(data)
-        await self.queue.put({'feed': feed, 'symbol': symbol, 'score': score, 'data': data})
+        await self.queue.put({'score': score, 'data': data, 'receipt_timestamp': receipt_timestamp})
 
     async def writer(self):
         while True:
@@ -59,11 +57,11 @@ class RedisZSetCallback(RedisCallback):
                 async with self.read_many_queue(count) as updates:
                     async with self.redis.pipeline(transaction=False) as pipe:
                         for update in updates:
-                            pipe = pipe.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", {update['data']: update['score']}, nx=True)
+                            pipe = pipe.zadd(f"{self.key}-{update['data']['feed']}-{update['data']['symbol']}", {update['data']: update['score']}, nx=True)
                         await pipe.execute()
             else:
                 async with self.read_queue() as update:
-                    await self.redis.zadd(f"{self.key}-{update['feed']}-{update['symbol']}", {update['data']: update['score']}, nx=True)
+                    await self.redis.zadd(f"{self.key}-{update['data']['feed']}-{update['data']['symbol']}", {update['data']: update['score']}, nx=True)
 
 
 class RedisStreamCallback(RedisCallback):

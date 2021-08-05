@@ -244,9 +244,9 @@ class Feed(Exchange):
             if best_bid >= best_ask:
                 raise BidAskOverlapping(f"{self.id} {symbol} best bid {best_bid} >= best ask {best_ask}")
 
-    async def callback(self, data_type, **kwargs):
+    async def callback(self, data_type, obj, receipt_timestamp):
         for cb in self.callbacks[data_type]:
-            await cb(**kwargs)
+            await cb(obj, receipt_timestamp)
 
     async def apply_depth(self, book: dict, do_delta: bool, symbol: str):
         ret = depth(book, self.max_depth)

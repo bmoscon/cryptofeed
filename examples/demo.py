@@ -29,12 +29,12 @@ async def delta(feed, symbol, delta, timestamp, receipt_timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} Delta Bid Size is {len(delta[BID])} Delta Ask Size is {len(delta[ASK])}')
 
 
-async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_timestamp):
-    assert isinstance(timestamp, float)
-    assert isinstance(side, str)
-    assert isinstance(amount, Decimal)
-    assert isinstance(price, Decimal)
-    print(f"Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Symbol: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
+async def trade(t, receipt_timestamp):
+    assert isinstance(t.timestamp, float)
+    assert isinstance(t.side, str)
+    assert isinstance(t.amount, Decimal)
+    assert isinstance(t.price, Decimal)
+    print(f"Trade received at {receipt_timestamp}: {t}")
 
 
 async def book(feed, symbol, book, timestamp, receipt_timestamp):
@@ -70,10 +70,11 @@ def main():
     # from cryptofeed.exchanges import EXX
     # f.add_feed(EXX(symbols=['BTC-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
     # *** Kucoin requires an API key for L2 book data! ***
-    f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK, ], callbacks={L2_BOOK: book, BOOK_DELTA: delta, CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
-    f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker, BOOK_DELTA: delta}))
+    #f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK, ], callbacks={L2_BOOK: book, BOOK_DELTA: delta, CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
+    #f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker, BOOK_DELTA: delta}))
     pairs = Binance.symbols()
     f.add_feed(Binance(symbols=pairs, channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
+    """
     pairs = BinanceUS.symbols()
     f.add_feed(BinanceUS(symbols=pairs, channels=[CANDLES], callbacks={CANDLES: candle_callback}))
     f.add_feed(COINBASE, symbols=['BTC-USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)})
@@ -115,7 +116,7 @@ def main():
     f.add_feed(dYdX(symbols=dYdX.symbols(), channels=[L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, BOOK_DELTA: delta}))
     symbol = Symbol('BTC', 'USD', type=PERPETUAL)
     f.add_feed(Phemex(symbols=[symbol], channels=[CANDLES, TRADES], callbacks={TRADES: trade, L2_BOOK: book, CANDLES: candle_callback}))
-
+    """
     f.run()
 
 
