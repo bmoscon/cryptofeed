@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from decimal import Decimal
 import hashlib
 import hmac
 import logging
@@ -33,7 +34,8 @@ class BinanceDeliveryRestMixin(RestExchange):
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
             self._handle_error(r)
-            return r.json()
+            return json.loads(r.text, parse_float=Decimal)
+
         return helper()
 
     def _nonce(self):
@@ -53,13 +55,13 @@ class BinanceDeliveryRestMixin(RestExchange):
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
-            'timestamp': self.self.timestamp_normalize(trade['T']),
+            'timestamp': self.timestamp_normalize(trade['T']),
             'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.id,
             'side': BUY if trade['m'] is True else SELL,
-            'amount': abs(float(trade['q'])),
-            'price': float(trade['p']),
+            'amount': abs(Decimal(trade['q'])),
+            'price': Decimal(trade['p']),
         }
 
         return ret
@@ -99,7 +101,7 @@ class BinanceDeliveryRestMixin(RestExchange):
             else:
                 sleep(1 / self.request_limit)
 
-            data = r.json()
+            data = json.loads(r.text, parse_float=Decimal)
             if data == []:
                 LOG.warning("%s: No data for range %d - %d", self.id, start, end)
             else:
@@ -116,7 +118,7 @@ class BinanceDeliveryRestMixin(RestExchange):
                 break
 
     def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        symbol = self.info.std_symbol_to_exchange_symbol(symbol)
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
@@ -132,7 +134,7 @@ class BinanceFuturesRestMixin(RestExchange):
         def helper():
             r = requests.get(f"{self.api}{endpoint}")
             self._handle_error(r)
-            return r.json()
+            return json.loads(r.text, parse_float=Decimal)
 
         return helper()
 
@@ -153,13 +155,13 @@ class BinanceFuturesRestMixin(RestExchange):
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
-            'timestamp': self.self.timestamp_normalize(trade['T']),
+            'timestamp': self.timestamp_normalize(trade['T']),
             'symbol': self.exchange_symbol_to_std_symbol(symbol),
             'id': trade['a'],
             'feed': self.id,
             'side': BUY if trade['m'] else SELL,
-            'amount': abs(float(trade['q'])),
-            'price': float(trade['p']),
+            'amount': abs(Decimal(trade['q'])),
+            'price': Decimal(trade['p']),
         }
 
         return ret
@@ -200,7 +202,7 @@ class BinanceFuturesRestMixin(RestExchange):
             else:
                 sleep(1 / self.request_limit)
 
-            data = r.json()
+            data = json.loads(r.text, parse_float=Decimal)
             if data == []:
                 LOG.warning("%s: No data for range %d - %d", self.id, start, end)
             else:
