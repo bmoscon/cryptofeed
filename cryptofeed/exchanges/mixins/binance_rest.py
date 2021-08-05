@@ -39,10 +39,17 @@ class BinanceDeliveryRestMixin(RestExchange):
     def _nonce(self):
         return str(int(time.time() * 1000))
 
-    def _generate_signature(self, query_string: str):
-        print("api key", self.config.key_id)
-        h = hmac.new(self.config.key_secret.encode('utf8'), query_string.encode('utf8'), hashlib.sha256)
-        return h.hexdigest()
+    def _generate_signature(self, url: str, body=json.dumps({})):
+        nonce = self._nonce()
+        signature = "/api/" + url + nonce + body
+        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        signature = h.hexdigest()
+
+        return {
+            "X-MBX-APIKEY": self.config.key_id,
+            "signature": signature,
+            "content-type": "application/json"
+        }
 
     def _trade_normalization(self, symbol: str, trade: list) -> dict:
         ret = {
