@@ -11,10 +11,9 @@ from typing import Tuple, Dict
 
 from yapic import json
 
-from cryptofeed.defines import FUNDING, FUTURES_INDEX, BINANCE_DELIVERY, LIQUIDATIONS, OPEN_INTEREST, USER_BALANCE, USER_POSITION, PERPETUAL, FUTURE, SPOT
+from cryptofeed.defines import FUNDING, FUTURES, FUTURES_INDEX, BINANCE_DELIVERY, LIQUIDATIONS, OPEN_INTEREST, USER_BALANCE, USER_POSITION, PERPETUAL, SPOT
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
-from cryptofeed.standards import timestamp_normalize
 
 LOG = logging.getLogger('feedhandler')
 
@@ -34,10 +33,11 @@ class BinanceDeliveryInstrument():
         elif instrument_properties[1] == 'PERP':
             self.instrument_type = PERPETUAL
         else:
-            self.instrument_type = FUTURE
+            self.instrument_type = FUTURES
             self.expiry_date_str = instrument_properties[1]
             self.expiry_date = datetime.strptime(self.expiry_date_str, "%y%m%d")
             self.expiry_date = self.expiry_date.replace(hour=8)
+
 
 class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     id = BINANCE_DELIVERY
@@ -109,11 +109,11 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         await self.callback(FUTURES_INDEX,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(msg['i']),
-                            timestamp=timestamp_normalize(self.id, msg['E']),
+                            timestamp=self.timestamp_normalize(self.id, msg['E']),
                             receipt_timestamp=timestamp,
                             futures_index=Decimal(msg['p']),
                             )
-    
+
     async def _account_update(self, msg: dict, timestamp: float):
         """
         {
@@ -175,14 +175,14 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             await self.callback(USER_BALANCE,
                                 feed=self.id,
                                 symbol=balance['a'],
-                                timestamp=timestamp_normalize(self.id, msg['E']),
+                                timestamp=self.timestamp_normalize(self.id, msg['E']),
                                 receipt_timestamp=timestamp,
                                 wallet_balance=Decimal(balance['wb']))
         for position in msg['a']['P']:
             await self.callback(USER_POSITION,
                                 feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(position['s']),
-                                timestamp=timestamp_normalize(self.id, msg['E']),
+                                timestamp=self.timestamp_normalize(self.id, msg['E']),
                                 receipt_timestamp=timestamp,
                                 position_amount=Decimal(position['pa']),
                                 entry_price=Decimal(position['ep']),

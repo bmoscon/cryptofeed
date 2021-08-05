@@ -16,7 +16,6 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, VOLUME, USER_BALANCE, FILLED, UNFILLED
 from cryptofeed.feed import Feed
-from cryptofeed.standards import is_authenticated_channel
 from cryptofeed.symbols import Symbol
 
 
@@ -117,8 +116,8 @@ class Binance(Feed):
             address = self.ws_endpoint + '/stream?streams='
         subs = []
 
-        is_any_private = any(is_authenticated_channel(chan) for chan in self.subscription)
-        is_any_public = any(not is_authenticated_channel(chan) for chan in self.subscription)
+        is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)
+        is_any_public = any(not self.is_authenticated_channel(chan) for chan in self.subscription)
         if is_any_private and is_any_public:
             raise ValueError("Private and public channels should be subscribed to in separate feeds")
 
@@ -126,7 +125,7 @@ class Binance(Feed):
             normalized_chan = self.exchange_channel_to_std(chan)
             if self.exchange_channel_to_std(chan) == OPEN_INTEREST:
                 continue
-            if is_authenticated_channel(normalized_chan):
+            if self.is_authenticated_channel(normalized_chan):
                 continue
 
             stream = chan

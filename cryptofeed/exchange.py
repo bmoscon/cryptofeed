@@ -30,6 +30,7 @@ class Exchange:
     def __init__(self, config=None, sandbox=False, subaccount=None, **kwargs):
         self.config = Config(config=config)
         self.sandbox = sandbox
+        self.subaccount = subaccount
 
         keys = self.config[self.id.lower()] if subaccount is None else self.config[self.id.lower()][subaccount]
         self.key_id = keys.key_id
