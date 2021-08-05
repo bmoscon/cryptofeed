@@ -88,8 +88,7 @@ class FTX(Feed, FTXRestMixin):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, subaccount=None, **kwargs):
-        self.subaccount = subaccount
+    def __init__(self, **kwargs):
         super().__init__('wss://ftexchange.com/ws/', **kwargs)
 
     def __reset(self):
