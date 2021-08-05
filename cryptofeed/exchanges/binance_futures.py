@@ -82,7 +82,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
                                 feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(pair),
                                 open_interest=oi,
-                                timestamp=self.self.timestamp_normalize(msg['time']),
+                                timestamp=self.timestamp_normalize(msg['time']),
                                 receipt_timestamp=time.time()
                                 )
             self.open_interest[pair] = oi
