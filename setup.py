@@ -9,6 +9,7 @@ import sys
 from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
+from Cython.Build import cythonize
 
 
 def get_long_description():
@@ -32,6 +33,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
+    ext_modules = cythonize("cryptofeed/types.pyx", language_level=3),
     version="1.9.3",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
