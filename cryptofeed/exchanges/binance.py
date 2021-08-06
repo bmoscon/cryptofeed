@@ -17,11 +17,13 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
+
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Binance(Feed):
+class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
