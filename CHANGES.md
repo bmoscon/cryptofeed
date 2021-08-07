@@ -2,6 +2,7 @@
 
 ### 2.0.0
  * Feature: Binance REST support
+ * Feature: Add next funding rate data to FTX funding data
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
