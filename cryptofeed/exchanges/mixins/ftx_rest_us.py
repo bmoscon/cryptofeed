@@ -14,5 +14,8 @@ class FTXUSRestMixin(FTXRestMixin):
         TRADES, TICKER, L2_BOOK, ORDER_INFO, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, TRADE_HISTORY
     )
 
-    def funding(self, symbol: str, **kwargs):
+    def funding_sync(self, symbol: str, **kwargs):
+        raise NotImplementedError
+
+    async def funding(self, symbol: str, **kwargs):
         raise NotImplementedError

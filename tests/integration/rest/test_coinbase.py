@@ -11,21 +11,28 @@ sandbox = Coinbase(sandbox=True, config='config.yaml')
 
 
 def test_ticker():
-    ticker = public.ticker('BTC-USD')
+    ticker = public.ticker_sync('BTC-USD')
 
     assert BID in ticker
     assert ASK in ticker
 
 
 def test_order_book():
-    current_order_book = public.l2_book('BTC-USD')
+    current_order_book = public.l2_book_sync('BTC-USD')
+
+    assert BID in current_order_book
+    assert len(current_order_book[BID]) > 0
+
+
+def test_order_book_l3():
+    current_order_book = public.l3_book_sync('BTC-USD')
 
     assert BID in current_order_book
     assert len(current_order_book[BID]) > 0
 
 
 def test_trade_history():
-    trade_history = list(public.trades('BTC-USD'))
+    trade_history = list(public.trades_sync('BTC-USD'))
     assert len(trade_history) > 0
 
 
@@ -38,7 +45,7 @@ def test_trade_history_specific_time():
                 'amount': Decimal('0.00514473'),
                 'price': Decimal('3580.07')}
     ret = []
-    for data in public.trades('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
+    for data in public.trades_sync('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
         ret.extend(data)
 
     assert len(ret) == 1
@@ -46,7 +53,7 @@ def test_trade_history_specific_time():
 
 
 def test_candle_history():
-    candle_history = list(public.candles('BTC-USD'))
+    candle_history = list(public.candles_sync('BTC-USD'))
     assert len(candle_history) > 0
 
 
@@ -74,7 +81,7 @@ def test_candle_history_specific_time():
     e = '2020-01-11 10:00:00'
     granularity = 3600
     candle_history = []
-    for entry in public.candles('BTC-USD', start=s, end=e, granularity=granularity):
+    for entry in public.candles_sync('BTC-USD', start=s, end=e, interval=granularity):
         candle_history.extend(entry)
 
     assert len(candle_history) == 2

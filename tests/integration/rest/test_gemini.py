@@ -9,21 +9,21 @@ sandbox = Gemini(sandbox=True, config='config.yaml')
 
 
 def test_ticker():
-    ticker = public.ticker('BTC-USD')
+    ticker = public.ticker_sync('BTC-USD')
 
     assert BID in ticker
     assert ASK in ticker
 
 
 def test_order_book():
-    current_order_book = public.l2_book('BTC-USD')
+    current_order_book = public.l2_book_sync('BTC-USD')
 
     assert BID in current_order_book
     assert len(current_order_book[BID]) > 0
 
 
 def test_trade_history():
-    trade_history = list(public.trades('BTC-USD'))
+    trade_history = list(public.trades_sync('BTC-USD'))
 
     assert len(trade_history) > 0
 

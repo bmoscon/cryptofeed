@@ -8,19 +8,19 @@ kraken = Kraken(config='config.yaml')
 
 
 def test_get_order_book():
-    book = kraken.l2_book('BTC-USD')
+    book = kraken.l2_book_sync('BTC-USD')
     assert len(book[BID]) > 0
 
 
 def test_get_recent_trades():
-    trades = list(kraken.trades('BTC-USD'))[0]
+    trades = list(kraken.trades_sync('BTC-USD'))[0]
     assert len(trades) > 0
     assert trades[0]['feed'] == KRAKEN
     assert trades[0]['symbol'] == 'BTC-USD'
 
 
 def test_ticker():
-    t = kraken.ticker('BTC-USD')
+    t = kraken.ticker_sync('BTC-USD')
     assert t['symbol'] == 'BTC-USD'
     assert t['feed'] == KRAKEN
     assert BID in t
@@ -29,12 +29,12 @@ def test_ticker():
 
 def test_historical_trades():
     trades = []
-    for t in kraken.trades('BTC-USD', start='2021-01-01 00:00:01', end='2021-01-01 00:00:05'):
+    for t in kraken.trades_sync('BTC-USD', start='2021-01-01 00:00:01', end='2021-01-01 00:00:05'):
         trades.extend(t)
     assert len(trades) == 13
 
     trades = []
-    for t in kraken.trades('BTC-USD', start='2021-01-01 00:00:01', end='2021-01-01 01:00:00'):
+    for t in kraken.trades_sync('BTC-USD', start='2021-01-01 00:00:01', end='2021-01-01 01:00:00'):
         trades.extend(t)
     assert len(trades) == 2074
 

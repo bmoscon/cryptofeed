@@ -53,7 +53,7 @@ class BinanceRestMixin(RestExchange):
 
         return helper()
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data

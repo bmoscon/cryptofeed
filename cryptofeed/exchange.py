@@ -9,7 +9,7 @@ import logging
 from datetime import datetime as dt, timezone
 from typing import Dict, Union
 
-from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
@@ -154,22 +154,46 @@ class RestExchange:
             resp.raise_for_status()
 
     # public / non account specific
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+    
+    async def ticker(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+    
+    def candles_sync(self, symbol: str, start=None, end=None, interval=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
+    async def candles(self, symbol: str, start=None, end=None, interval=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def funding(self, symbol: str, retry=None, retry_wait=0):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def open_interest(self, symbol: str, retry=None, retry_wait=0):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    def funding_sync(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def l3_book(self, symbol: str, retry=None, retry_wait=0):
+    async def funding(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def open_interest_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    async def open_interest(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def l3_book_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    async def l3_book(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
     # account specific
@@ -205,13 +229,15 @@ class RestExchange:
 
     def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         """
-        Executed trade history
+        History history
         """
         raise NotImplementedError
 
     def __getitem__(self, key):
         if key == TRADES:
             return self.trades
+        elif key == CANDLES:
+            return self.candles
         elif key == FUNDING:
             return self.funding
         elif key == L2_BOOK:

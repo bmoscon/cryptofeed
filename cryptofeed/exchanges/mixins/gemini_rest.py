@@ -83,7 +83,7 @@ class GeminiRestMixin(RestExchange):
         return json.loads(resp.text, parse_float=Decimal)
 
     # Public Routes
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
@@ -92,7 +92,7 @@ class GeminiRestMixin(RestExchange):
                 'ask': Decimal(data['ask'])
                 }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/book/{sym}", retry, retry_wait)
         return {
@@ -106,7 +106,7 @@ class GeminiRestMixin(RestExchange):
             })
         }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         params = {'limit_trades': 500}
         if start:
@@ -143,7 +143,7 @@ class GeminiRestMixin(RestExchange):
             sleep(1 / self.request_limit)
 
     # Trading APIs
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
+    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
         if not price:
             raise ValueError('Gemini only supports limit orders, must specify price')
         ot = self.order_options(order_type)
@@ -164,19 +164,19 @@ class GeminiRestMixin(RestExchange):
         data = self._post("/v1/order/new", parameters)
         return self._order_status(data)
 
-    def cancel_order(self, order_id: str):
+    def cancel_order_sync(self, order_id: str):
         data = self._post("/v1/order/cancel", {'order_id': int(order_id)})
         return self._order_status(data)
 
-    def order_status(self, order_id: str):
+    def order_status_sync(self, order_id: str):
         data = self._post("/v1/order/status", {'order_id': int(order_id)})
         return self._order_status(data)
 
-    def orders(self):
+    def orders_sync(self):
         data = self._post("/v1/orders")
         return [self._order_status(d) for d in data]
 
-    def trade_history(self, symbol: str, start=None, end=None):
+    def trade_history_sync(self, symbol: str, start=None, end=None):
         sym = self.std_symbol_to_exchange_symbol(symbol)
 
         params = {
@@ -201,7 +201,7 @@ class GeminiRestMixin(RestExchange):
             for trade in data
         ]
 
-    def balances(self):
+    def balances_sync(self):
         data = self._post("/v1/balances")
         return {
             entry['currency']: {

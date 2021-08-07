@@ -147,12 +147,12 @@ class BitfinexRestMixin(RestExchange):
             if len(orig_data) < 5000:
                 break
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"ticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
@@ -161,14 +161,14 @@ class BitfinexRestMixin(RestExchange):
                 'ask': Decimal(data[2])
                 }
 
-    def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        for data in self.trades(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
+    def funding_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+        for data in self.trades_sync(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
             yield data
 
-    def l2_book(self, symbol: str, retry=0, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry=0, retry_wait=0):
         return self._rest_book(symbol, l3=False, retry=retry, retry_wait=retry_wait)
 
-    def l3_book(self, symbol: str, retry=0, retry_wait=0):
+    def l3_book_sync(self, symbol: str, retry=0, retry_wait=0):
         return self._rest_book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
 
     def _rest_book(self, symbol: str, l3=False, retry=0, retry_wait=0):

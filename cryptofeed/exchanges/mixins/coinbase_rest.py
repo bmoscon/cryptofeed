@@ -153,7 +153,7 @@ class CoinbaseRestMixin(RestExchange):
             'price': Decimal(data['price']),
         }
 
-    def trades(self, symbol: Union[str, dt, float], start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: Union[str, dt, float], start=None, end=None, retry=None, retry_wait=10):
         if end and not start:
             start = '2014-12-01 00:00:00'
         if start:
@@ -194,7 +194,7 @@ class CoinbaseRestMixin(RestExchange):
             data = json.loads(data.text, parse_float=Decimal)
             yield [self._trade_normalize(symbol, d) for d in data]
 
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=10):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
         self._handle_error(data)
         data = json.loads(data.text, parse_float=Decimal)
@@ -208,7 +208,7 @@ class CoinbaseRestMixin(RestExchange):
         data = self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait)
         return json.loads(data.text, parse_float=Decimal)
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=10):
+    def l2_book_sync(self, symbol: str, retry=None, retry_wait=10):
         data = self._book(symbol, 2, retry, retry_wait)
         return {
             BID: sd({
@@ -221,7 +221,7 @@ class CoinbaseRestMixin(RestExchange):
             })
         }
 
-    def l3_book(self, symbol: str, retry=None, retry_wait=10):
+    def l3_book_sync(self, symbol: str, retry=None, retry_wait=10):
         orders = self._book(symbol, 3, retry, retry_wait)
         ret = {BID: sd({}), ASK: sd({})}
         for side in (BID, ASK):
@@ -234,7 +234,7 @@ class CoinbaseRestMixin(RestExchange):
                     ret[side][price] = {order_id: size}
         return ret
 
-    def balances(self):
+    def balances_sync(self):
         resp = self._request('GET', "/accounts", auth=True)
         self._handle_error(resp)
         return {
@@ -245,19 +245,19 @@ class CoinbaseRestMixin(RestExchange):
             for entry in json.loads(resp.text, parse_float=Decimal)
         }
 
-    def orders(self):
+    def orders_sync(self):
         endpoint = "/orders"
         data = self._request("GET", endpoint, auth=True)
         data = json.loads(data.text, parse_float=Decimal)
         return [self._order_status(order) for order in data]
 
-    def order_status(self, order_id: str):
+    def order_status_sync(self, order_id: str):
         endpoint = f"/orders/{order_id}"
         order = self._request("GET", endpoint, auth=True)
         order = json.loads(order.text, parse_float=Decimal)
         return self._order_status(order)
 
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
+    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
         ot = self.normalize_order_options(order_type)
         if ot == MARKET and price:
             raise ValueError('Cannot specify price on a market order')
@@ -280,7 +280,7 @@ class CoinbaseRestMixin(RestExchange):
         resp = self._request('POST', '/orders', auth=True, body=body)
         return self._order_status(json.loads(resp.text, parse_float=Decimal))
 
-    def cancel_order(self, order_id: str):
+    def cancel_order_sync(self, order_id: str):
         endpoint = f"/orders/{order_id}"
         order = self.order_status(order_id)
         data = self._request("DELETE", endpoint, auth=True)
@@ -290,7 +290,7 @@ class CoinbaseRestMixin(RestExchange):
             return order
         return data
 
-    def trade_history(self, symbol: str, start=None, end=None):
+    def trade_history_sync(self, symbol: str, start=None, end=None):
         endpoint = f"/orders?product_id={symbol}&status=done"
         data = self._request("GET", endpoint, auth=True)
         data = json.loads(data.text, parse_float=Decimal)
@@ -323,7 +323,7 @@ class CoinbaseRestMixin(RestExchange):
         """
         return dt.utcfromtimestamp(timestamp).isoformat()
 
-    def candles(self, symbol: str, start: Optional[Union[str, dt, float]] = None, end: Optional[Union[str, dt, float]] = None, granularity: Optional[Union[int]] = 3600, retry=None, retry_wait=10):
+    def candles_sync(self, symbol: str, start: Optional[Union[str, dt, float]] = None, end: Optional[Union[str, dt, float]] = None, interval: Optional[Union[int]] = 3600, retry=None, retry_wait=10):
         """
         Historic rate OHLC candles
         [
@@ -347,7 +347,7 @@ class CoinbaseRestMixin(RestExchange):
         requests with new start/end ranges
         """
         limit = 300  # return max of 300 rows per request
-        assert granularity in {60, 300, 900, 3600, 21600, 86400}, 'Granularity must be in {60, 300, 900, 3600, 21600, 86400} as per https://docs.pro.coinbase.com/#get-historic-rates'
+        assert interval in {60, 300, 900, 3600, 21600, 86400}, 'Granularity must be in {60, 300, 900, 3600, 21600, 86400} as per https://docs.pro.coinbase.com/#get-historic-rates'
 
         if end and not start:
             start = '2014-12-01 00:00:00'
@@ -360,13 +360,13 @@ class CoinbaseRestMixin(RestExchange):
             LOG.info(f"candles - stepping through {symbol} ({start}, {end})")
             while True:
 
-                end_id = start_id + (limit - 1) * granularity
+                end_id = start_id + (limit - 1) * interval
                 if end_id > end_id_max:
                     end_id = end_id_max
                 if start_id > end_id_max:
                     break
 
-                url = f'/products/{symbol}/candles?granularity={granularity}&start={self._to_isoformat(start_id)}&end={self._to_isoformat(end_id)}'
+                url = f'/products/{symbol}/candles?granularity={interval}&start={self._to_isoformat(start_id)}&end={self._to_isoformat(end_id)}'
                 r = self._request('GET', url, retry=retry, retry_wait=retry_wait)
                 if r.status_code == 429:
                     time.sleep(10)
@@ -386,7 +386,7 @@ class CoinbaseRestMixin(RestExchange):
                     continue
                 yield list(map(lambda x: self._candle_normalize(symbol, x), data))
                 time.sleep(1 / self.request_limit)
-                start_id = end_id + granularity
+                start_id = end_id + interval
         else:
             data = self._request('GET', f"/products/{symbol}/candles", retry=retry, retry_wait=retry_wait)
             data = json.loads(data.text, parse_float=Decimal)

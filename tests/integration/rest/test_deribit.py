@@ -7,7 +7,7 @@ from cryptofeed.exchanges import Deribit
 
 def test_trade():
     ret = []
-    for data in Deribit().trades('BTC-USD-PERP'):
+    for data in Deribit().trades_sync('BTC-USD-PERP'):
         ret.extend(data)
     assert len(ret) > 1
 
@@ -17,7 +17,7 @@ def test_trades():
     start = dt.now() - timedelta(days=5)
     end = dt.now() - timedelta(days=4, hours=19)
 
-    for data in Deribit().trades('BTC-USD-PERP', start=start, end=end):
+    for data in Deribit().trades_sync('BTC-USD-PERP', start=start, end=end):
         ret.extend(data)
     assert len(ret) > 1000
     assert ret[0]['symbol'] == 'BTC-USD-PERP'
@@ -26,7 +26,7 @@ def test_trades():
 
 
 def test_l2_book():
-    ret = Deribit().l2_book('BTC-USD-PERP')
+    ret = Deribit().l2_book_sync('BTC-USD-PERP')
     assert BID in ret
     assert ASK in ret
     assert len(ret[BID]) > 0
