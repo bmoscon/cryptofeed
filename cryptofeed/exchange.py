@@ -197,28 +197,52 @@ class RestExchange:
         raise NotImplementedError
 
     # account specific
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
+    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
-    def cancel_order(self, order_id: str):
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
-    def orders(self, sumbol: str = None):
+    def cancel_order_sync(self, order_id: str):
         raise NotImplementedError
 
-    def order_status(self, order_id: str):
+    async def cancel_order(self, order_id: str):
         raise NotImplementedError
 
-    def trade_history(self, symbol: str = None, start=None, end=None):
+    def orders_sync(self, sumbol: str = None):
         raise NotImplementedError
 
-    def balances(self):
+    async def orders(self, sumbol: str = None):
         raise NotImplementedError
 
-    def positions(self, **kwargs):
+    def order_status_sync(self, order_id: str):
         raise NotImplementedError
 
-    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+    async def order_status(self, order_id: str):
+        raise NotImplementedError
+
+    def trade_history_sync(self, symbol: str = None, start=None, end=None):
+        raise NotImplementedError
+
+    async def trade_history(self, symbol: str = None, start=None, end=None):
+        raise NotImplementedError
+
+    def balances_sync(self):
+        raise NotImplementedError
+
+    async def balances(self):
+        raise NotImplementedError
+
+    def positions_sync(self, **kwargs):
+        raise NotImplementedError
+
+    async def positions(self, **kwargs):
+        raise NotImplementedError
+
+    def ledger_sync(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+        raise NotImplementedError
+
+    async def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         raise NotImplementedError
 
     def __getitem__(self, key):

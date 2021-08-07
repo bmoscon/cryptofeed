@@ -30,7 +30,7 @@ def test_trade_history():
 
 @pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
 def test_place_order_and_cancel():
-    order_resp = sandbox.place_order(
+    order_resp = sandbox.place_order_sync(
         symbol='BTC-USD',
         side=BUY,
         order_type=LIMIT,
@@ -41,13 +41,13 @@ def test_place_order_and_cancel():
 
     assert 'order_id' in order_resp
     assert order_resp['order_status'] != CANCELLED
-    cancel_resp = sandbox.cancel_order(order_resp['order_id'])
+    cancel_resp = sandbox.cancel_order_sync(order_resp['order_id'])
     assert cancel_resp['order_status'] == CANCELLED
 
 
 @pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
 def test_order_status():
-    order_resp = sandbox.place_order(
+    order_resp = sandbox.place_order_sync(
         symbol='BTC-USD',
         side=BUY,
         order_type=LIMIT,
@@ -55,8 +55,8 @@ def test_order_status():
         price='1.13',
         client_order_id='1'
     )
-    status = sandbox.order_status(order_resp['order_id'])
-    sandbox.cancel_order(order_resp['order_id'])
+    status = sandbox.order_status_sync(order_resp['order_id'])
+    sandbox.cancel_order_sync(order_resp['order_id'])
 
     assert status['symbol'] == 'BTC-USD'
     assert status['side'] == BUY
@@ -64,16 +64,16 @@ def test_order_status():
 
 @pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
 def test_get_orders():
-    orders = sandbox.orders()
+    orders = sandbox.orders_sync()
     for order in orders:
-        sandbox.cancel_order(order['order_id'])
+        sandbox.cancel_order_sync(order['order_id'])
 
-    orders = sandbox.orders()
+    orders = sandbox.orders_sync()
     assert len(orders) == 0
 
 
 @pytest.mark.skipif(not sandbox.key_id or not sandbox.key_secret, reason="No api key provided")
 def test_balances():
-    balances = sandbox.balances()
+    balances = sandbox.balances_sync()
 
     assert len(balances) > 0
