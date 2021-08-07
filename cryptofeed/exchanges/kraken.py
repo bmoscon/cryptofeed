@@ -4,7 +4,6 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.symbols import Symbol
 from decimal import Decimal
 from functools import partial
 import logging
@@ -18,6 +17,7 @@ from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
+from cryptofeed.symbols import Symbol
 from cryptofeed.util.split import list_by_max_items
 from cryptofeed.exchanges.mixins.kraken_rest import KrakenRestMixin
 
@@ -41,7 +41,7 @@ class Kraken(Feed, KrakenRestMixin):
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
-        info = {'instrument_type': {}}
+        info = defaultDi
 
         for symbol in data['result']:
             if 'wsname' not in data['result'][symbol] or '.d' in symbol:
