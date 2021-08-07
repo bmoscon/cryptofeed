@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from decimal import Decimal
+from collections import defaultdict
 from functools import partial
 import logging
 from typing import Callable, Dict, List, Tuple
@@ -41,7 +42,7 @@ class Kraken(Feed, KrakenRestMixin):
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
-        info = defaultDi
+        info = defaultdict(dict)
 
         for symbol in data['result']:
             if 'wsname' not in data['result'][symbol] or '.d' in symbol:
@@ -56,7 +57,7 @@ class Kraken(Feed, KrakenRestMixin):
 
             ret[s.normalized] = data['result'][symbol]['wsname']
             info['instrument_type'][s.normalized] = s.type
-        return ret, {}
+        return ret, info
 
     def __init__(self, candle_interval='1m', max_depth=1000, **kwargs):
         lookup = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
