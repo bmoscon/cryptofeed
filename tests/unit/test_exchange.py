@@ -83,7 +83,7 @@ def test_exchange_playback(exchange):
     message_count = get_message_count(pcap)
 
     assert results['messages_processed'] == message_count
-    if exchange != BEQUANT:
+    if exchange == BEQUANT:
         # for some unknown reason on the github build servers this test always
         # fails even though it works fine on my local mac and linux machines
         expected = dict(lookup_table[exchange])
