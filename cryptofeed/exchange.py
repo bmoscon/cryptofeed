@@ -156,10 +156,10 @@ class RestExchange:
     # public / non account specific
     def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
-    
+
     async def ticker(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
-    
+
     def candles_sync(self, symbol: str, start=None, end=None, interval=None, retry=None, retry_wait=0):
         raise NotImplementedError
 

@@ -136,8 +136,7 @@ class FTXRestMixin(RestExchange):
             data = [self._funding_normalization(x, symbol) for x in data]
             return data
 
-    def place_order_sync(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str = LIMIT,
-                    reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
+    def place_order_sync(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str = LIMIT, reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
         sym = self.std_symbol_to_exchange_symbol(symbol)
         return self._post('/orders', params={
             'market': sym,
