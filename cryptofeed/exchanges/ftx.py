@@ -88,14 +88,13 @@ class FTX(Feed, FTXRestMixin):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, subaccount=None, **kwargs):
-        self.subaccount = subaccount
+    def __init__(self, **kwargs):
         super().__init__('wss://ftexchange.com/ws/', **kwargs)
 
     def __reset(self):
         self._l2_book = {}
-        self.funding = {}
-        self.open_interest = {}
+        self._funding_cache = {}
+        self._open_interest_cache = {}
 
     async def generate_token(self, conn: AsyncConnection):
         ts = int(time() * 1000)
@@ -187,7 +186,7 @@ class FTX(Feed, FTXRestMixin):
                 data = json.loads(data, parse_float=Decimal)
                 if 'result' in data:
                     oi = data['result']['openInterest']
-                    if oi != self.open_interest.get(pair, None):
+                    if oi != self._open_interest_cache.get(pair, None):
                         await self.callback(OPEN_INTEREST,
                                             feed=self.id,
                                             symbol=pair,
@@ -195,7 +194,7 @@ class FTX(Feed, FTXRestMixin):
                                             timestamp=time(),
                                             receipt_timestamp=time()
                                             )
-                        self.open_interest[pair] = oi
+                        self._open_interest_cache[pair] = oi
                         await asyncio.sleep(1)
             await asyncio.sleep(60)
 
@@ -218,17 +217,21 @@ class FTX(Feed, FTXRestMixin):
                     continue
                 data = await self.http_conn.read(f"https://ftx.com/api/funding_rates?future={pair}")
                 data = json.loads(data, parse_float=Decimal)
+                data2 = await self.http_conn.read(f"https://ftx.com/api/futures/{pair}/stats")
+                data2 = json.loads(data2, parse_float=Decimal)
+                data['predicted_rate'] = Decimal(data2['result']['nextFundingRate'])
 
-                last_update = self.funding.get(pair, None)
-                update = str(data['result'][0]['rate']) + str(data['result'][0]['time'])
+                last_update = self._funding_cache.get(pair, None)
+                update = str(data['result'][0]['rate']) + str(data['result'][0]['time']) + str(data['predicted_rate'])
                 if last_update and last_update == update:
                     continue
                 else:
-                    self.funding[pair] = update
+                    self._funding_cache[pair] = update
 
                 await self.callback(FUNDING, feed=self.id,
                                     symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
                                     rate=data['result'][0]['rate'],
+                                    predicted_rate=data['predicted_rate'],
                                     timestamp=self.timestamp_normalize(data['result'][0]['time']),
                                     receipt_timestamp=time()
                                     )

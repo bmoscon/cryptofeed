@@ -33,8 +33,12 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
+<<<<<<< HEAD
     ext_modules = cythonize("cryptofeed/types.pyx", language_level=3),
     version="1.9.3",
+=======
+    version="2.0.0",
+>>>>>>> master
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",

@@ -9,7 +9,7 @@ import logging
 from datetime import datetime as dt, timezone
 from typing import Dict, Union
 
-from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
@@ -30,8 +30,9 @@ class Exchange:
     def __init__(self, config=None, sandbox=False, subaccount=None, **kwargs):
         self.config = Config(config=config)
         self.sandbox = sandbox
+        self.subaccount = subaccount
 
-        keys = self.config[self.id.lower()] if subaccount is None else self.config[self.id.lower()][subaccount]
+        keys = self.config[self.id.lower()] if self.subaccount is None else self.config[self.id.lower()][self.subaccount]
         self.key_id = keys.key_id
         self.key_secret = keys.key_secret
         self.key_passphrase = keys.key_passphrase
@@ -162,6 +163,9 @@ class RestExchange:
     def funding(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
+    def open_interest(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
     def l2_book(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
@@ -216,3 +220,5 @@ class RestExchange:
             return self.l3_book
         elif key == TICKER:
             return self.ticker
+        elif key == OPEN_INTEREST:
+            return self.open_interest

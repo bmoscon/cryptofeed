@@ -145,7 +145,7 @@ class OKEx(Feed):
 
     def __reset(self):
         self._l2_book = {}
-        self.open_interest = {}
+        self._open_interest_cache = {}
 
     def __calc_checksum(self, pair):
         bid_it = reversed(self._l2_book[pair][BID])
@@ -206,9 +206,9 @@ class OKEx(Feed):
                                 receipt_timestamp=timestamp)
             if 'open_interest' in update:
                 oi = update['open_interest']
-                if pair in self.open_interest and oi == self.open_interest[pair]:
+                if pair in self._open_interest_cache and oi == self._open_interest_cache[pair]:
                     continue
-                self.open_interest[pair] = oi
+                self._open_interest_cache[pair] = oi
                 await self.callback(OPEN_INTEREST, feed=self.id, symbol=pair, open_interest=oi, timestamp=update_timestamp, receipt_timestamp=timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):

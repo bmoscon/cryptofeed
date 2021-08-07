@@ -23,13 +23,14 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
+    websocket_channels = {
+        **Binance.websocket_channels,
+        FUNDING: 'markPrice',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'forceOrder'
+    }
 
     def __init__(self, **kwargs):
-        self.websocket_channels.update({
-            FUNDING: 'markPrice',
-            OPEN_INTEREST: 'open_interest',
-            LIQUIDATIONS: 'forceOrder'
-        })
         super().__init__(**kwargs)
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
