@@ -204,21 +204,12 @@ class RestExchange:
         raise NotImplementedError
 
     def orders(self, sumbol: str = None):
-        """
-        Return outstanding orders
-        """
         raise NotImplementedError
 
     def order_status(self, order_id: str):
-        """
-        Look up status of an order by id
-        """
         raise NotImplementedError
 
     def trade_history(self, symbol: str = None, start=None, end=None):
-        """
-        Executed trade history
-        """
         raise NotImplementedError
 
     def balances(self):
@@ -228,9 +219,6 @@ class RestExchange:
         raise NotImplementedError
 
     def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
-        """
-        History history
-        """
         raise NotImplementedError
 
     def __getitem__(self, key):
