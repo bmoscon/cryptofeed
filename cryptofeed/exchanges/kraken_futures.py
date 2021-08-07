@@ -78,7 +78,7 @@ class KrakenFutures(Feed):
         self.__reset()
 
     def __reset(self):
-        self.open_interest = {}
+        self._open_interest_cache = {}
         self._l2_book = {}
         self.seq_no = {}
 
@@ -219,9 +219,9 @@ class KrakenFutures(Feed):
                                 maturity_timestamp=self.timestamp_normalize(msg['maturityTime']))
 
         oi = msg['openInterest']
-        if pair in self.open_interest and oi == self.open_interest[pair]:
+        if pair in self._open_interest_cache and oi == self._open_interest_cache[pair]:
             return
-        self.open_interest[pair] = oi
+        self._open_interest_cache[pair] = oi
         await self.callback(OPEN_INTEREST,
                             feed=self.id,
                             symbol=pair,

@@ -139,7 +139,7 @@ class Binance(Feed, BinanceRestMixin):
         self.forced = defaultdict(bool)
         self._l2_book = {}
         self.last_update_id = {}
-        self.open_interest = {}
+        self._open_interest_cache = {}
 
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched

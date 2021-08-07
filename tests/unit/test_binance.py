@@ -18,6 +18,7 @@ def test_binance_address_generation():
 
         sub = random.sample(symbols, length)
         addr = Binance(symbols=sub, channels=channels)._address()
+
         if length * len(channels) < 200:
             assert isinstance(addr, str)
             value = addr.split("=", 1)[1]
