@@ -65,7 +65,7 @@ class FTXRestMixin(RestExchange):
         if self.subaccount:
             request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote(self.subaccount)
 
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}", retry=retry, retry_wait=retry_wait)
 
@@ -75,7 +75,7 @@ class FTXRestMixin(RestExchange):
                 'ask': data['ask']
                 }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}/orderbook", params={'depth': 100}, retry=retry, retry_wait=retry_wait)
         return {
@@ -89,12 +89,12 @@ class FTXRestMixin(RestExchange):
             })
         }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def funding(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def funding_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         sym = self.std_symbol_to_exchange_symbol(symbol)
 
         if start or end:
@@ -136,8 +136,7 @@ class FTXRestMixin(RestExchange):
             data = [self._funding_normalization(x, symbol) for x in data]
             return data
 
-    def place_order(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str = LIMIT,
-                    reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
+    def place_order_sync(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str = LIMIT, reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
         sym = self.std_symbol_to_exchange_symbol(symbol)
         return self._post('/orders', params={
             'market': sym,
@@ -151,14 +150,14 @@ class FTXRestMixin(RestExchange):
             'clientId': client_id,
         }, auth=True)
 
-    def cancel_order(self, order_id: str) -> dict:
+    def cancel_order_sync(self, order_id: str) -> dict:
         return self._delete(f'/orders/{order_id}', auth=True)
 
-    def orders(self, symbol: str) -> List[dict]:
+    def orders_sync(self, symbol: str) -> List[dict]:
         sym = self.std_symbol_to_exchange_symbol(symbol)
         return self._get('/orders', params={'market': sym}, auth=True)
 
-    def positions(self, show_avg_price: bool = False) -> List[dict]:
+    def positions_sync(self, show_avg_price: bool = False) -> List[dict]:
         return self._get('/positions', params={'showAvgPrice': show_avg_price}, auth=True)
 
     @staticmethod

@@ -14,7 +14,7 @@ def test_trade():
                 'price': Decimal('966.61')}
 
     ret = []
-    for data in Bitfinex().trades('BTC-USD', start='2017-01-01 00:00:00', end='2017-01-01 0:00:13'):
+    for data in Bitfinex().trades_sync('BTC-USD', start='2017-01-01 00:00:00', end='2017-01-01 0:00:13'):
         ret.extend(data)
 
     assert len(ret) == 1
@@ -23,7 +23,7 @@ def test_trade():
 
 def test_trades():
     ret = []
-    for data in Bitfinex().trades('BTC-USD', start='2019-01-01 00:00:00', end='2019-01-01 8:00:13'):
+    for data in Bitfinex().trades_sync('BTC-USD', start='2019-01-01 00:00:00', end='2019-01-01 8:00:13'):
         ret.extend(data)
 
     assert len(ret) == 8320
@@ -32,7 +32,7 @@ def test_trades():
 
 
 def test_ticker():
-    ret = Bitfinex().ticker('BTC-USD')
+    ret = Bitfinex().ticker_sync('BTC-USD')
     assert isinstance(ret, dict)
     assert ret['feed'] == 'BITFINEX'
     assert ret['symbol'] == 'BTC-USD'
@@ -42,20 +42,20 @@ def test_ticker():
 
 def test_funding():
     f = []
-    for funding in Bitfinex().funding('BTC'):
+    for funding in Bitfinex().funding_sync('BTC'):
         f.extend(funding)
     assert len(f) > 0
 
 
 def test_l2_book():
-    ret = Bitfinex().l2_book('BTC-USD')
+    ret = Bitfinex().l2_book_sync('BTC-USD')
     assert BID in ret
     assert ASK in ret
     assert len(ret[BID]) > 0
     assert len(ret[ASK]) > 0
 
 def test_l3_book():
-    ret = Bitfinex().l3_book('BTC-USD')
+    ret = Bitfinex().l3_book_sync('BTC-USD')
     assert BID in ret
     assert ASK in ret
     assert len(ret[BID]) > 0

@@ -126,7 +126,7 @@ class PoloniexRestMixin(RestExchange):
         return resp.json()
 
     # Public API Routes
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=10):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get("returnTicker", retry=retry, retry_wait=retry_wait)
         return {'symbol': symbol,
@@ -135,7 +135,7 @@ class PoloniexRestMixin(RestExchange):
                 'ask': Decimal(data[sym]['highestBid'])
                 }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get("returnOrderBook", {'currencyPair': sym}, retry=retry, retry_wait=retry_wait)
         return {
@@ -160,7 +160,7 @@ class PoloniexRestMixin(RestExchange):
             'price': Decimal(trade['rate'])
         }
 
-    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
 
         @request_retry(self.id, retry, retry_wait)
@@ -192,7 +192,7 @@ class PoloniexRestMixin(RestExchange):
                     break
 
     # Trading API Routes
-    def balances(self):
+    def balances_sync(self):
         data = self._post("returnCompleteBalances")
         return {
             coin: {
@@ -200,7 +200,7 @@ class PoloniexRestMixin(RestExchange):
                 'available': Decimal(data[coin]['available'])
             } for coin in data}
 
-    def orders(self):
+    def orders_sync(self):
         payload = {"currencyPair": "all"}
         data = self._post("returnOpenOrders", payload)
         if isinstance(data, dict):
@@ -214,7 +214,7 @@ class PoloniexRestMixin(RestExchange):
                 ret.append(self._order_status(order, symbol=symbol))
         return ret
 
-    def trade_history(self, symbol: str, start=None, end=None):
+    def trade_history_sync(self, symbol: str, start=None, end=None):
         payload = {'currencyPair': self.std_symbol_to_exchange_symbol(symbol)}
 
         if start:
@@ -238,7 +238,7 @@ class PoloniexRestMixin(RestExchange):
             })
         return ret
 
-    def order_status(self, order_id: str):
+    def order_status_sync(self, order_id: str):
         data = self._post("returnOrderStatus", {'orderNumber': order_id})
         if 'error' in data:
             return {'error': data['error']}
@@ -246,7 +246,7 @@ class PoloniexRestMixin(RestExchange):
             return {'error': data['result']['error']}
         return self._order_status(data['result'])
 
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
+    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
         if not price:
             raise ValueError('Poloniex only supports limit orders, must specify price')
         # Poloniex only supports limit orders, so check the order type
@@ -276,7 +276,7 @@ class PoloniexRestMixin(RestExchange):
                 return self._trade_status(data['resultingTrades'], symbol, data['orderNumber'], amount)
         return data
 
-    def cancel_order(self, order_id: str):
+    def cancel_order_sync(self, order_id: str):
         order = self.order_status(order_id)
         data = self._post("cancelOrder", {"orderNumber": int(order_id)})
         if 'error' in data:

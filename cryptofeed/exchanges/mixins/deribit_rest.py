@@ -26,7 +26,7 @@ class DeribitRestMixin(RestExchange):
     sandbox_api = 'https://test.deribit.com/api/v2/public/'
     rest_channels = (TRADES, L2_BOOK)
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades(symbol, start, end, retry, retry_wait):
             yield data
@@ -97,7 +97,7 @@ class DeribitRestMixin(RestExchange):
         }
         return ret
 
-    def l2_book(self, symbol: str, retry=0, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry=0, retry_wait=0):
         return self._book(symbol, retry=retry, retry_wait=retry_wait)
 
     def _book(self, symbol: str, retry=0, retry_wait=0):

@@ -98,7 +98,7 @@ class KrakenRestMixin(RestExchange):
         return json.loads(resp.text, parse_float=Decimal)
 
     # public API
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", '')
         data = self._post_public("/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
@@ -110,7 +110,7 @@ class KrakenRestMixin(RestExchange):
                     'ask': Decimal(val['a'][0])
                     }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
         sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
         data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
         for _, val in data['result'].items():
@@ -125,7 +125,7 @@ class KrakenRestMixin(RestExchange):
                 })
             }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
         if start:
             if not end:
                 end = dt.now().timestamp()
@@ -191,7 +191,7 @@ class KrakenRestMixin(RestExchange):
         }
 
     # Private API
-    def balances(self):
+    def balances_sync(self):
         data = self._post_private('/private/Balance')
         if len(data['error']) != 0:
             return data
@@ -214,7 +214,7 @@ class KrakenRestMixin(RestExchange):
             for currency, value in data['result'].items()
         }
 
-    def orders(self):
+    def orders_sync(self):
         data = self._post_private('/private/OpenOrders', None)
         if len(data['error']) != 0:
             return data
@@ -225,7 +225,7 @@ class KrakenRestMixin(RestExchange):
                 ret.append(self._order_status(order_id, order))
         return ret
 
-    def order_status(self, order_id: str):
+    def order_status_sync(self, order_id: str):
         data = self._post_private('/private/QueryOrders', {'txid': order_id})
         if len(data['error']) != 0:
             return data
@@ -233,7 +233,7 @@ class KrakenRestMixin(RestExchange):
         for order_id, order in data['result'].items():
             return self._order_status(order_id, order)
 
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
+    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
         ot = self.normalize_order_options(self.id, order_type)
 
         parameters = {
@@ -258,14 +258,14 @@ class KrakenRestMixin(RestExchange):
             else:
                 return [self.order_status(tx) for tx in data['result']['txid']]
 
-    def cancel_order(self, order_id: str):
+    def cancel_order_sync(self, order_id: str):
         data = self._post_private('/private/CancelOrder', {'txid': order_id})
         if len(data['error']) != 0:
             return data
         else:
             return self.order_status(order_id)
 
-    def trade_history(self, symbol: str = None, start=None, end=None):
+    def trade_history_sync(self, symbol: str = None, start=None, end=None):
         params = {}
 
         if start:
@@ -298,7 +298,7 @@ class KrakenRestMixin(RestExchange):
             }
         return ret
 
-    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+    def ledger_sync(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
 
         params = {}
         if start:

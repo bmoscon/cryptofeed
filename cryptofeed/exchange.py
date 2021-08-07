@@ -9,7 +9,7 @@ import logging
 from datetime import datetime as dt, timezone
 from typing import Dict, Union
 
-from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
@@ -154,64 +154,102 @@ class RestExchange:
             resp.raise_for_status()
 
     # public / non account specific
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
+    async def ticker(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def funding(self, symbol: str, retry=None, retry_wait=0):
+    def candles_sync(self, symbol: str, start=None, end=None, interval=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def open_interest(self, symbol: str, retry=None, retry_wait=0):
+    async def candles(self, symbol: str, start=None, end=None, interval=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
         raise NotImplementedError
 
-    def l3_book(self, symbol: str, retry=None, retry_wait=0):
+    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def funding_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    async def funding(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def open_interest_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    async def open_interest(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    def l3_book_sync(self, symbol: str, retry=None, retry_wait=0):
+        raise NotImplementedError
+
+    async def l3_book(self, symbol: str, retry=None, retry_wait=0):
         raise NotImplementedError
 
     # account specific
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
+    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
-    def cancel_order(self, order_id: str):
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
-    def orders(self, sumbol: str = None):
-        """
-        Return outstanding orders
-        """
+    def cancel_order_sync(self, order_id: str):
         raise NotImplementedError
 
-    def order_status(self, order_id: str):
-        """
-        Look up status of an order by id
-        """
+    async def cancel_order(self, order_id: str):
         raise NotImplementedError
 
-    def trade_history(self, symbol: str = None, start=None, end=None):
-        """
-        Executed trade history
-        """
+    def orders_sync(self, sumbol: str = None):
         raise NotImplementedError
 
-    def balances(self):
+    async def orders(self, sumbol: str = None):
         raise NotImplementedError
 
-    def positions(self, **kwargs):
+    def order_status_sync(self, order_id: str):
         raise NotImplementedError
 
-    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
-        """
-        Executed trade history
-        """
+    async def order_status(self, order_id: str):
+        raise NotImplementedError
+
+    def trade_history_sync(self, symbol: str = None, start=None, end=None):
+        raise NotImplementedError
+
+    async def trade_history(self, symbol: str = None, start=None, end=None):
+        raise NotImplementedError
+
+    def balances_sync(self):
+        raise NotImplementedError
+
+    async def balances(self):
+        raise NotImplementedError
+
+    def positions_sync(self, **kwargs):
+        raise NotImplementedError
+
+    async def positions(self, **kwargs):
+        raise NotImplementedError
+
+    def ledger_sync(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+        raise NotImplementedError
+
+    async def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         raise NotImplementedError
 
     def __getitem__(self, key):
         if key == TRADES:
             return self.trades
+        elif key == CANDLES:
+            return self.candles
         elif key == FUNDING:
             return self.funding
         elif key == L2_BOOK:

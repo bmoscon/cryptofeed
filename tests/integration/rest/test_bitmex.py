@@ -5,7 +5,7 @@ from cryptofeed.exchanges import Bitmex
 def test_rest_bitmex():
     ret = []
 
-    for data in Bitmex().trades('BTC-USD-PERP'):
+    for data in Bitmex().trades_sync('BTC-USD-PERP'):
         ret.extend(data)
 
     assert len(ret) > 0
@@ -14,7 +14,7 @@ def test_rest_bitmex():
 
 
 def test_ticker():
-    ret = Bitmex().ticker('BTC-USD-PERP')
+    ret = Bitmex().ticker_sync('BTC-USD-PERP')
     assert isinstance(ret, dict)
     assert ret['feed'] == 'BITMEX'
     assert ret['symbol'] == 'BTC-USD-PERP'
@@ -23,7 +23,7 @@ def test_ticker():
 
 
 def test_book():
-    ret = Bitmex().l2_book('BTC-USD-PERP')
+    ret = Bitmex().l2_book_sync('BTC-USD-PERP')
     assert BID in ret
     assert ASK in ret
     assert len(ret[BID]) > 0
