@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
+
 def timedelta_str_to_sec(td: str):
     if td == '1m':
         return 60
