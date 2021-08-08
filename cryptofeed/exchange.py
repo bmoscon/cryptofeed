@@ -165,7 +165,7 @@ class RestExchange:
 
     # public / non account specific
     def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        asyncio.get_event_loop().run_until_complete(self.ticker(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        return asyncio.get_event_loop().run_until_complete(self.ticker(symbol, retry_count=retry_count, retry_delay=retry_delay))
 
     async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
@@ -197,25 +197,25 @@ class RestExchange:
         raise NotImplementedError
 
     def funding_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        asyncio.get_event_loop().run_until_complete(self.funding(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        return asyncio.get_event_loop().run_until_complete(self.funding(symbol, retry_count=retry_count, retry_delay=retry_delay))
 
     async def funding(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def open_interest_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        asyncio.get_event_loop().run_until_complete(self.open_interest(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        return asyncio.get_event_loop().run_until_complete(self.open_interest(symbol, retry_count=retry_count, retry_delay=retry_delay))
 
     async def open_interest(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def l2_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        asyncio.get_event_loop().run_until_complete(self.l2_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        return asyncio.get_event_loop().run_until_complete(self.l2_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def l3_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        asyncio.get_event_loop().run_until_complete(self.l3_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        return asyncio.get_event_loop().run_until_complete(self.l3_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
 
     async def l3_book(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError

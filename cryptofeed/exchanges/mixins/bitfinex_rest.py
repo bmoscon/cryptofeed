@@ -4,34 +4,24 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import hashlib
 import hmac
 import time
 from decimal import Decimal
-from time import sleep
-from datetime import datetime as dt
 
-import requests
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
 
 
 class BitfinexRestMixin(RestExchange):
     api = "https://api-pub.bitfinex.com/v2/"
     rest_channels = (
-        TRADES, TICKER, L2_BOOK, L3_BOOK, FUNDING
+        TRADES, TICKER, L2_BOOK, L3_BOOK
     )
-
-    def _get(self, endpoint, retry, retry_wait):
-        @request_retry(self.id, retry, retry_wait)
-        def helper():
-            r = requests.get(f"{self.api}{endpoint}")
-            self._handle_error(r)
-            return json.loads(r.text, parse_float=Decimal)
-        return helper()
 
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
@@ -90,46 +80,22 @@ class BitfinexRestMixin(RestExchange):
 
         return ret
 
-    def _get_trades_hist(self, symbol, start_date, end_date, retry, retry_wait):
+    async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
+        symbol = self.std_symbol_to_exchange_symbol(symbol)
+        start, end = self._interval_normalize(start, end)
+        start = int(start * 1000)
+        end = int(end * 1000)
         last = []
-        start = None
-        end = None
-
-        if start_date:
-            if not end_date:
-                end_date = dt.now().timestamp()
-            start = self._datetime_normalize(start_date)
-            end = self._datetime_normalize(end_date)
-
-            start = int(start * 1000)
-            end = int(end * 1000)
-
-        @request_retry(self.id, retry, retry_wait)
-        def helper(start, end):
-            if start and end:
-                return requests.get(f"{self.api}trades/{symbol}/hist?limit=5000&start={start}&end={end}&sort=1")
-            else:
-                return requests.get(f"{self.api}trades/{symbol}/hist")
 
         while True:
-            r = helper(start, end)
+            endpoint = f"{self.api}trades/{symbol}/hist"
+            if start and end:
+                endpoint = f"{self.api}trades/{symbol}/hist?limit=5000&start={start}&end={end}&sort=1"
 
-            if r.status_code == 429:
-                sleep(int(r.headers['Retry-After']))
-                continue
-            elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
-                sleep(retry_wait)
-                continue
-            elif r.status_code != 200:
-                self._handle_error(r)
-            else:
-                sleep(1 / self.request_limit)
+            r = await self.http_conn.read(endpoint, retry_count=retry_count, retry_delay=retry_delay)
+            data = json.loads(r, parse_float=Decimal)
 
-            data = json.loads(r.text, parse_float=Decimal)
-            if data == []:
-                self.log.warning("%s: No data for range %d - %d", self.id, start, end)
-            else:
+            if data:
                 if data[-1][1] == start:
                     self.log.warning("%s: number of trades exceeds exchange time window, some data will not be retrieved for time %d", self.id, start)
                     start += 1
@@ -140,66 +106,37 @@ class BitfinexRestMixin(RestExchange):
             data = self._dedupe(data, last)
             last = list(orig_data)
 
-            data = list(map(lambda x: self._trade_normalization(symbol, x), data))
-            yield data
+            yield [self._trade_normalization(symbol, x) for x in data]
 
             if len(orig_data) < 5000:
                 break
+            await asyncio.sleep(1 / self.request_limit)
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
-        symbol = self.std_symbol_to_exchange_symbol(symbol)
-        for data in self._get_trades_hist(symbol, start, end, retry_count, retry_wait):
-            yield data
-
-    def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
+    async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        data = self._get(f"ticker/{sym}", retry_count, retry_wait)
-        return {'symbol': symbol,
-                'feed': self.id,
-                'bid': Decimal(data[0]),
-                'ask': Decimal(data[2])
-                }
+        r = await self.http_conn.read(f"{self.api}ticker/{sym}", retry_count=retry_count, retry_delay=retry_delay)
+        data = json.loads(r, parse_float=Decimal)
+        return {
+            'symbol': symbol,
+            'feed': self.id,
+            'bid': Decimal(data[0]),
+            'ask': Decimal(data[2])
+        }
 
-    def funding_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
-        for data in self.trades_sync(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
-            yield data
+    async def l2_book(self, symbol: str, retry_count=0, retry_delay=60):
+        return await self._rest_book(symbol, l3=False, retry_count=retry_count, retry_delay=retry_delay)
 
-    def l2_book_sync(self, symbol: str, retry=0, retry_delay=60):
-        return self._rest_book(symbol, l3=False, retry=retry, retry_wait=retry_wait)
+    async def l3_book(self, symbol: str, retry_count=0, retry_delay=60):
+        return await self._rest_book(symbol, l3=True, retry_count=retry_count, retry_delay=retry_delay)
 
-    def l3_book_sync(self, symbol: str, retry=0, retry_delay=60):
-        return self._rest_book(symbol, l3=True, retry=retry, retry_wait=retry_wait)
-
-    def _rest_book(self, symbol: str, l3=False, retry=0, retry_delay=60):
-        ret = {}
-        funding = False
-
+    async def _rest_book(self, symbol: str, l3=False, retry_count=0, retry_delay=60):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         ret = {BID: sd(), ASK: sd()}
-        funding == 'f' in symbol
+        funding = 'f' in symbol
 
-        @request_retry(self.id, retry, retry_wait)
-        def helper():
-            precision = 'R0' if l3 is True else 'P0'
-            return requests.get(f"{self.api}/book/{symbol}/{precision}?len=100")
-
-        while True:
-            r = helper()
-
-            if r.status_code == 429:
-                sleep(int(r.headers['Retry-After']))
-                continue
-            elif r.status_code == 500:
-                self.log.warning("%s: 500 for URL %s - %s", self.id, r.url, r.text)
-                sleep(retry_wait)
-                if retry == 0:
-                    break
-                continue
-            elif r.status_code != 200:
-                self._handle_error(r)
-
-            data = json.loads(r.text, parse_float=Decimal)
-            break
+        precision = 'R0' if l3 is True else 'P0'
+        r = await self.http_conn.read(f"{self.api}/book/{symbol}/{precision}?len=100", retry_delay=retry_delay, retry_count=retry_count)
+        data = json.loads(r, parse_float=Decimal)
 
         if l3:
             for entry in data:
@@ -228,4 +165,5 @@ class BitfinexRestMixin(RestExchange):
                 amount = Decimal(amount)
                 side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
                 ret[side][price] = update
+
         return ret

@@ -40,19 +40,13 @@ def test_ticker():
     assert ret['ask'] > 0
 
 
-def test_funding():
-    f = []
-    for funding in Bitfinex().funding_sync('BTC'):
-        f.extend(funding)
-    assert len(f) > 0
-
-
 def test_l2_book():
     ret = Bitfinex().l2_book_sync('BTC-USD')
     assert BID in ret
     assert ASK in ret
     assert len(ret[BID]) > 0
     assert len(ret[ASK]) > 0
+
 
 def test_l3_book():
     ret = Bitfinex().l3_book_sync('BTC-USD')

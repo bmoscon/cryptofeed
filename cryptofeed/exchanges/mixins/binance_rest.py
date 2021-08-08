@@ -47,7 +47,7 @@ class BinanceRestMixin(RestExchange):
         if start and end:
             start = int(start * 1000)
             end = int(end * 1000)
-        
+
         while True:
             if start and end:
                 endpoint = f"{self.api}aggTrades?symbol={symbol}&limit=1000&startTime={start}&endTime={end}"
