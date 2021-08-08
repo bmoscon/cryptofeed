@@ -215,49 +215,49 @@ class RestExchange:
 
     # account specific
     def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
-        raise NotImplementedError
+        return asyncio.get_event_loop().run_until_complete(self.place_order(symbol, side, order_type, amount, price, **kwargs))
 
     async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
     def cancel_order_sync(self, order_id: str):
-        raise NotImplementedError
+        return asyncio.get_event_loop().run_until_complete(self.cancel_order(order_id))
 
     async def cancel_order(self, order_id: str):
         raise NotImplementedError
 
-    def orders_sync(self, sumbol: str = None):
-        raise NotImplementedError
+    def orders_sync(self, symbol: str = None):
+        return asyncio.get_event_loop().run_until_complete(self.orders(symbol))
 
-    async def orders(self, sumbol: str = None):
+    async def orders(self, symbol: str = None):
         raise NotImplementedError
 
     def order_status_sync(self, order_id: str):
-        raise NotImplementedError
+        return asyncio.get_event_loop().run_until_complete(self.order_status(order_id))
 
     async def order_status(self, order_id: str):
         raise NotImplementedError
 
     def trade_history_sync(self, symbol: str = None, start=None, end=None):
-        raise NotImplementedError
+        return asyncio.get_event_loop().run_until_complete(self.trade_history(symbol, start, end))
 
     async def trade_history(self, symbol: str = None, start=None, end=None):
         raise NotImplementedError
 
     def balances_sync(self):
-        raise NotImplementedError
+        return asyncio.get_event_loop().run_until_complete(self.balances())
 
     async def balances(self):
         raise NotImplementedError
 
     def positions_sync(self, **kwargs):
-        raise NotImplementedError
+        return asyncio.get_event_loop().run_until_complete(self.positions(**kwargs))
 
     async def positions(self, **kwargs):
         raise NotImplementedError
 
     def ledger_sync(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
-        raise NotImplementedError
+        return asyncio.get_event_loop().run_until_complete(self.ledger(aclass, asset, ledger_type, start, end))
 
     async def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         raise NotImplementedError

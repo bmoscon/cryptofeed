@@ -24,7 +24,6 @@ def test_order_book():
 
 def test_trade_history():
     trade_history = list(public.trades_sync('BTC-USD'))
-
     assert len(trade_history) > 0
 
 
