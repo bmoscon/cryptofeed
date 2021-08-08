@@ -93,9 +93,9 @@ class PoloniexRestMixin(RestExchange):
             'order_status': FILLED
         }
 
-    async def _get(self, command: str, params=None, retry_count=1, retry_delay=60):
-        base_url = f"{self.api}/public?command={command}"
-        resp = await self.http_conn.read(base_url, params=params, retry_count=retry_count, retry_delay=retry_delay)
+    async def _get(self, command: str, params='', retry_count=1, retry_delay=60):
+        base_url = f"{self.api}/public?command={command}{params}"
+        resp = await self.http_conn.read(base_url, retry_count=retry_count, retry_delay=retry_delay)
         return json.loads(resp, parse_float=Decimal)
 
     async def _post(self, command: str, payload=None):
@@ -128,7 +128,7 @@ class PoloniexRestMixin(RestExchange):
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        data = await self._get("returnOrderBook", params={'currencyPair': sym}, retry_count=retry_count, retry_delay=retry_delay)
+        data = await self._get("returnOrderBook", params=f"&currencyPair={sym}", retry_count=retry_count, retry_delay=retry_delay)
         return {
             BID: sd({
                     Decimal(u[0]): Decimal(u[1])
@@ -156,7 +156,7 @@ class PoloniexRestMixin(RestExchange):
         start, end = self._interval_normalize(start, end)
 
         if not start and not end:
-            data = await self._get("returnTradeHistory", params={'currencyPair': symbol, 'start': start, 'end': end}, retry_count=retry_count, retry_delay=retry_delay)
+            data = await self._get("returnTradeHistory", params=f"&currencyPair={symbol}", retry_count=retry_count, retry_delay=retry_delay)
             data.reverse()
             yield [self._trade_normalize(x, symbol) for x in data]
 
@@ -167,10 +167,8 @@ class PoloniexRestMixin(RestExchange):
                 if e > end:
                     e = end
 
-                data = await self._get("returnTradeHistory", params={'currencyPair': symbol, 'start': int(e), 'end': int(e)}, retry_count=retry_count, retry_delay=retry_delay)
-                print(data)
+                data = await self._get("returnTradeHistory", params=f"&currencyPair={symbol}&start={start}&end={end}", retry_count=retry_count, retry_delay=retry_delay)
                 data.reverse()
-                print(data)
                 yield list(map(lambda x: self._trade_normalize(x, symbol), data))
 
                 s = e

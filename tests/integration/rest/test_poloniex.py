@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from cryptofeed.defines import BID, ASK
@@ -22,7 +23,16 @@ def test_order_book():
 
 def test_trade_history():
     trade_history = []
-    for trade in poloniex.trades_sync('ETH-BTC', start='2021-04-30 00:00:00', end='2021-05-31 00:00:00'):
-        trade_history.append(trade)
-    assert len(trade_history) > 0
-    assert float(trade_history[0]['amount']) > 0
+    for trade in poloniex.trades_sync('ETH-BTC', start='2020-12-30 00:00:00', end='2020-12-31 00:00:00'):
+        trade_history.extend(trade)
+    assert len(trade_history) == 4000
+    assert trade_history[0]['amount'] == Decimal('0.00001152')
+    assert trade_history[0]['symbol'] == 'ETH-BTC'
+
+
+def test_trades():
+    trade_history = []
+    for trade in poloniex.trades_sync('BTC-USDT'):
+        trade_history.extend(trade)
+    assert len(trade_history) == 200
+    assert trade_history[0]['amount'] > 0
