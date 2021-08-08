@@ -8,16 +8,9 @@ f = FTX(config='config.yaml')
 
 
 def test_funding():
-    expected = {'timestamp': 1607691600.0,
-                'symbol': 'BTC-USD-PERP',
-                'feed': 'FTX',
-                'rate': Decimal('0.000019')}
+    data = f.funding_sync('BTC-USD-PERP')
 
-    ret = []
-    data = f.funding_sync('BTC-USD-PERP', start='2020-12-10 12:59:10', end='2020-12-11 13:01:33')
-    ret.extend(data)
-
-    assert ret[0] == expected
+    assert data[0]['symbol'] == 'BTC-USD-PERP'
 
 
 def test_ticker():
