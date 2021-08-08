@@ -83,7 +83,7 @@ class GeminiRestMixin(RestExchange):
         return json.loads(resp.text, parse_float=Decimal)
 
     # Public Routes
-    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
+    def ticker_sync(self, symbol: str, retry_count=None, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
@@ -92,7 +92,7 @@ class GeminiRestMixin(RestExchange):
                 'ask': Decimal(data['ask'])
                 }
 
-    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry_count=None, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/book/{sym}", retry, retry_wait)
         return {
@@ -106,7 +106,7 @@ class GeminiRestMixin(RestExchange):
             })
         }
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         params = {'limit_trades': 500}
         if start:

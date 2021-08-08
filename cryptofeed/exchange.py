@@ -4,10 +4,11 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
-from typing import Dict, Union
+from typing import Dict, Optional, Tuple, Union
 
 from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
@@ -135,7 +136,7 @@ class RestExchange:
     rest_channels = NotImplemented
     order_options = NotImplemented
 
-    def _datetime_normalize(self, timestamp: Union[str, float, dt]):
+    def _datetime_normalize(self, timestamp: Union[str, float, dt]) -> float:
         if isinstance(timestamp, float):
             return timestamp
         if isinstance(timestamp, dt):
@@ -146,6 +147,15 @@ class RestExchange:
             except ValueError:
                 return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
 
+    def _interval_normalize(self, start, end) -> Tuple[Optional[float], Optional[float]]:
+        if start:
+            start = self._datetime_normalize(start)
+            if not end:
+                end = dt.now()
+        if end:
+            end = self._datetime_normalize(end)
+        return start, end if start else None
+
     def _handle_error(self, resp):
         if resp.status_code != 200:
             LOG.error("%s: Status code %d for URL %s", self.id, resp.status_code, resp.url)
@@ -154,46 +164,60 @@ class RestExchange:
             resp.raise_for_status()
 
     # public / non account specific
-    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
+    def ticker_sync(self, symbol: str, retry_count=None, retry_delay=60):
+        asyncio.get_event_loop().run_until_complete(self.ticker(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def ticker(self, symbol: str, retry_count=None, retry_delay=60):
         raise NotImplementedError
 
-    async def ticker(self, symbol: str, retry=None, retry_wait=0):
+    def candles_sync(self, symbol: str, start=None, end=None, interval=None, retry_count=None, retry_delay=60):
+        gen = self.candles(symbol, start=start, end=end, retry_count=retry_count, retry_delay=retry_delay)
+        try:
+            loop = asyncio.get_event_loop()
+
+            while True:
+                yield loop.run_until_complete(gen.__anext__())
+        except StopAsyncIteration:
+            return
+
+    async def candles(self, symbol: str, start=None, end=None, interval=None, retry_count=None, retry_delay=60):
         raise NotImplementedError
 
-    def candles_sync(self, symbol: str, start=None, end=None, interval=None, retry=None, retry_wait=0):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_delay=60):
+        gen = self.trades(symbol, start=start, end=end, retry_count=retry_count, retry_delay=retry_delay)
+        try:
+            loop = asyncio.get_event_loop()
+
+            while True:
+                yield loop.run_until_complete(gen.__anext__())
+        except StopAsyncIteration:
+            return
+
+    async def trades(self, symbol: str, start=None, end=None, retry_count=None, retry_delay=60):
         raise NotImplementedError
 
-    async def candles(self, symbol: str, start=None, end=None, interval=None, retry=None, retry_wait=0):
+    def funding_sync(self, symbol: str, retry_count=None, retry_delay=60):
+        asyncio.get_event_loop().run_until_complete(self.funding(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def funding(self, symbol: str, retry_count=None, retry_delay=60):
         raise NotImplementedError
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
+    def open_interest_sync(self, symbol: str, retry_count=None, retry_delay=60):
+        asyncio.get_event_loop().run_until_complete(self.open_interest(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def open_interest(self, symbol: str, retry_count=None, retry_delay=60):
         raise NotImplementedError
 
-    async def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry_count=None, retry_delay=60):
+        asyncio.get_event_loop().run_until_complete(self.l2_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def l2_book(self, symbol: str, retry_count=None, retry_delay=60):
         raise NotImplementedError
 
-    def funding_sync(self, symbol: str, retry=None, retry_wait=0):
-        raise NotImplementedError
+    def l3_book_sync(self, symbol: str, retry_count=None, retry_delay=60):
+        asyncio.get_event_loop().run_until_complete(self.l3_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
 
-    async def funding(self, symbol: str, retry=None, retry_wait=0):
-        raise NotImplementedError
-
-    def open_interest_sync(self, symbol: str, retry=None, retry_wait=0):
-        raise NotImplementedError
-
-    async def open_interest(self, symbol: str, retry=None, retry_wait=0):
-        raise NotImplementedError
-
-    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
-        raise NotImplementedError
-
-    async def l2_book(self, symbol: str, retry=None, retry_wait=0):
-        raise NotImplementedError
-
-    def l3_book_sync(self, symbol: str, retry=None, retry_wait=0):
-        raise NotImplementedError
-
-    async def l3_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l3_book(self, symbol: str, retry_count=None, retry_delay=60):
         raise NotImplementedError
 
     # account specific

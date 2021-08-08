@@ -12,6 +12,7 @@ from asyncio import Queue, create_task
 from contextlib import asynccontextmanager
 from typing import List, Union, AsyncIterable, Optional
 from decimal import Decimal
+import atexit
 
 import requests
 import websockets
@@ -104,6 +105,10 @@ class AsyncConnection(Connection):
         self.sent: int = 0
         self.last_message = None
         self.conn: Union[websockets.WebSocketClientProtocol, aiohttp.ClientSession] = None
+        atexit.register(self.__del__)
+
+    def __del__(self):
+        asyncio.ensure_future(self.close())
 
     @property
     def uuid(self):
@@ -156,7 +161,7 @@ class HTTPAsyncConn(AsyncConnection):
             self.sent = 0
             self.received = 0
 
-    async def read(self, address: str, header=None, return_headers=False) -> bytes:
+    async def read(self, address: str, header=None, return_headers=False, retry_delay=60, retry_count=None) -> bytes:
         if not self.is_open:
             await self._open()
 
@@ -170,7 +175,11 @@ class HTTPAsyncConn(AsyncConnection):
                     await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None if return_headers is False else dict(response.headers))
                 if response.status == 429:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
-                    await asyncio.sleep(60)
+                    if retry_count:
+                        retry_count -= 1
+                        if retry_count < 0:
+                            response.raise_for_status()
+                    await asyncio.sleep(retry_delay)
                     continue
                 response.raise_for_status()
                 if return_headers:
