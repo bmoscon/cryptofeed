@@ -24,7 +24,7 @@ class dYdXRestMixin(RestExchange):
     sandbox_api = "https://api.stage.dydx.exchange"
     rest_channels = (
         TRADES, L2_BOOK
-    )   
+    )
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
@@ -37,7 +37,7 @@ class dYdXRestMixin(RestExchange):
             ASK: sd({
                 Decimal(entry['price']): Decimal(entry['size']) for entry in data['asks']
             })
-        }        
+        }
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)

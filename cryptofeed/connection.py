@@ -127,13 +127,13 @@ class HTTPAsyncConn(AsyncConnection):
             self.sent = 0
             self.received = 0
 
-    async def read(self, address: str, header=None, return_headers=False, retry_count=0, retry_delay=60) -> bytes:
+    async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> bytes:
         if not self.is_open:
             await self._open()
 
         LOG.debug("%s: requesting data from %s", self.id, address)
         while True:
-            async with self.conn.get(address, headers=header, proxy=self.proxy) as response:
+            async with self.conn.get(address, headers=header, params=params, proxy=self.proxy) as response:
                 data = await response.text()
                 self.last_message = time.time()
                 self.received += 1

@@ -82,6 +82,7 @@ class BinanceRestMixin(RestExchange):
         }
         return ret
 
+
 class BinanceFuturesRestMixin(BinanceRestMixin):
     api = "https://fapi.binance.com/fapi/v1/"
     rest_channels = (

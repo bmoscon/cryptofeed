@@ -21,6 +21,8 @@ def test_order_book():
 
 
 def test_trade_history():
-    trade_history = list(next(poloniex.trades_sync('ETH-BTC', start='2020-12-30 00:00:00', end='2020-12-31 00:00:00')))
+    trade_history = []
+    for trade in poloniex.trades_sync('ETH-BTC', start='2021-04-30 00:00:00', end='2021-05-31 00:00:00'):
+        trade_history.append(trade)
     assert len(trade_history) > 0
     assert float(trade_history[0]['amount']) > 0

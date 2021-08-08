@@ -156,13 +156,6 @@ class RestExchange:
             end = self._datetime_normalize(end)
         return start, end if start else None
 
-    def _handle_error(self, resp):
-        if resp.status_code != 200:
-            LOG.error("%s: Status code %d for URL %s", self.id, resp.status_code, resp.url)
-            LOG.error("%s: Headers: %s", self.id, resp.headers)
-            LOG.error("%s: Resp: %s", self.id, resp.text)
-            resp.raise_for_status()
-
     # public / non account specific
     def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
         return asyncio.get_event_loop().run_until_complete(self.ticker(symbol, retry_count=retry_count, retry_delay=retry_delay))
