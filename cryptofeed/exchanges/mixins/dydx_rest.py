@@ -26,7 +26,7 @@ class dYdXRestMixin(RestExchange):
         TRADES, L2_BOOK
     )   
 
-    async def l2_book(self, symbol: str, retry_count=None, retry_delay=60):
+    async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = await self.http_conn.read(f"{self.api}/v3/orderbook/{sym}", retry_count=retry_count, retry_delay=retry_delay)
         data = json.loads(data, parse_float=Decimal)
@@ -39,7 +39,7 @@ class dYdXRestMixin(RestExchange):
             })
         }        
 
-    async def trades(self, symbol: str, start=None, end=None, retry_count=None, retry_delay=60):
+    async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         start, end = self._interval_normalize(start, end)
 
@@ -65,12 +65,12 @@ class dYdXRestMixin(RestExchange):
     def _trade_normalization(self, symbol: str, data: dict):
         def norm(entry):
             return {
-            'timestamp': entry['createdAt'].timestamp(),
-            'symbol': symbol,
-            'id': None,
-            'feed': self.id,
-            'side': SELL if entry['side'] == 'SELL' else BUY,
-            'amount': Decimal(entry['size']),
-            'price': Decimal(entry['price']),
-        }
+                'timestamp': entry['createdAt'].timestamp(),
+                'symbol': symbol,
+                'id': None,
+                'feed': self.id,
+                'side': SELL if entry['side'] == 'SELL' else BUY,
+                'amount': Decimal(entry['size']),
+                'price': Decimal(entry['price']),
+            }
         return list(map(norm, data['trades']))

@@ -18,7 +18,6 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
-from cryptofeed.connection import request_retry
 
 
 LOG = logging.getLogger('feedhandler')
@@ -95,7 +94,7 @@ class PoloniexRestMixin(RestExchange):
             'order_status': FILLED
         }
 
-    def _get(self, command: str, options=None, retry_count=None, retry_delay=60):
+    def _get(self, command: str, options=None, retry_count=1, retry_delay=60):
         base_url = f"{self.api}/public?command={command}"
 
         @request_retry(self.id, retry, retry_wait)
@@ -126,7 +125,7 @@ class PoloniexRestMixin(RestExchange):
         return resp.json()
 
     # Public API Routes
-    def ticker_sync(self, symbol: str, retry_count=None, retry_wait=10):
+    def ticker_sync(self, symbol: str, retry_count=1, retry_wait=10):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get("returnTicker", retry=retry, retry_wait=retry_wait)
         return {'symbol': symbol,
@@ -135,7 +134,7 @@ class PoloniexRestMixin(RestExchange):
                 'ask': Decimal(data[sym]['highestBid'])
                 }
 
-    def l2_book_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def l2_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get("returnOrderBook", {'currencyPair': sym}, retry=retry, retry_wait=retry_wait)
         return {
@@ -160,7 +159,7 @@ class PoloniexRestMixin(RestExchange):
             'price': Decimal(trade['rate'])
         }
 
-    def trades_sync(self, symbol, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol, start=None, end=None, retry_count=1, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
 
         @request_retry(self.id, retry, retry_wait)

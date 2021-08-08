@@ -17,7 +17,6 @@ from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
-from cryptofeed.connection import request_retry
 
 
 class BitmexRestMixin(RestExchange):
@@ -88,7 +87,7 @@ class BitmexRestMixin(RestExchange):
             'price': decimal.Decimal(trade['price'])
         }
 
-    def ticker_sync(self, symbol, start=None, end=None, retry_count=None, retry_wait=10):
+    def ticker_sync(self, symbol, start=None, end=None, retry_count=1, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         ret = list(self._get('quote', symbol, retry, retry_wait))[0][0]
         return self._ticker_normalization(ret)
@@ -102,7 +101,7 @@ class BitmexRestMixin(RestExchange):
             'timestamp': data['timestamp'].timestamp()
         }
 
-    def trades_sync(self, symbol, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol, start=None, end=None, retry_count=1, retry_wait=10):
         """
         data format
 
@@ -123,7 +122,7 @@ class BitmexRestMixin(RestExchange):
         for data in self._get('trade', symbol, retry, retry_wait):
             yield list(map(self._trade_normalization, data))
 
-    def l2_book_sync(self, symbol: str, retry_count=None, retry_wait=10):
+    def l2_book_sync(self, symbol: str, retry_count=1, retry_wait=10):
         ret = {BID: sd(), ASK: sd()}
         data = next(self._get('orderBook/L2', self.std_symbol_to_exchange_symbol(symbol), retry, retry_wait))
         for update in data:

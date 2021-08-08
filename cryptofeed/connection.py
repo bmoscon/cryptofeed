@@ -26,39 +26,6 @@ from cryptofeed.exceptions import ConnectionClosed, ConnectionExists
 LOG = logging.getLogger('feedhandler')
 
 
-def request_retry(exchange, retry, retry_wait):
-    """
-    decorator to retry request
-    """
-    def wrap(f):
-        @wraps(f)
-        def wrapped_f(*args, **kwargs):
-            retry_count = retry
-            while True:
-                try:
-                    return f(*args, **kwargs)
-                except TimeoutError as e:
-                    LOG.warning("%s: Timeout - %s", exchange, e)
-                    if retry_count is not None:
-                        if retry_count == 0:
-                            raise
-                        else:
-                            retry_count -= 1
-                    time.sleep(retry_wait)
-                    continue
-                except requests.exceptions.ConnectionError as e:
-                    LOG.warning("%s: Connection error - %s", exchange, e)
-                    if retry_count is not None:
-                        if retry_count == 0:
-                            raise
-                        else:
-                            retry_count -= 1
-                    time.sleep(retry_wait)
-                    continue
-        return wrapped_f
-    return wrap
-
-
 class Connection:
     raw_data_callback = None
 
@@ -161,7 +128,7 @@ class HTTPAsyncConn(AsyncConnection):
             self.sent = 0
             self.received = 0
 
-    async def read(self, address: str, header=None, return_headers=False, retry_delay=60, retry_count=None) -> bytes:
+    async def read(self, address: str, header=None, return_headers=False, retry_count=0, retry_delay=60) -> bytes:
         if not self.is_open:
             await self._open()
 

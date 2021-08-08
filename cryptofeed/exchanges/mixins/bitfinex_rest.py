@@ -16,7 +16,6 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
-from cryptofeed.connection import request_retry
 from cryptofeed.exchange import RestExchange
 
 
@@ -147,21 +146,21 @@ class BitfinexRestMixin(RestExchange):
             if len(orig_data) < 5000:
                 break
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
-        for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
+        for data in self._get_trades_hist(symbol, start, end, retry_count, retry_wait):
             yield data
 
-    def ticker_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        data = self._get(f"ticker/{sym}", retry, retry_wait)
+        data = self._get(f"ticker/{sym}", retry_count, retry_wait)
         return {'symbol': symbol,
                 'feed': self.id,
                 'bid': Decimal(data[0]),
                 'ask': Decimal(data[2])
                 }
 
-    def funding_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def funding_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         for data in self.trades_sync(symbol, start=start, end=end, retry=retry, retry_wait=retry_wait):
             yield data
 

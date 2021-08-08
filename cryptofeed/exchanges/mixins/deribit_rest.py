@@ -14,7 +14,6 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TRADES
-from cryptofeed.connection import request_retry
 from cryptofeed.exchange import RestExchange
 
 
@@ -26,7 +25,7 @@ class DeribitRestMixin(RestExchange):
     sandbox_api = 'https://test.deribit.com/api/v2/public/'
     rest_channels = (TRADES, L2_BOOK)
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades(symbol, start, end, retry, retry_wait):
             yield data

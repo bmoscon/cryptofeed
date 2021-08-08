@@ -19,7 +19,6 @@ from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import ASK, BID, BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
 from cryptofeed.exceptions import UnexpectedMessage
-from cryptofeed.connection import request_retry
 from cryptofeed.exchange import RestExchange
 
 
@@ -88,7 +87,7 @@ class CoinbaseRestMixin(RestExchange):
             'Content-Type': 'Application/JSON',
         }
 
-    def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry_count=None, retry_delay=60):
+    def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry_count=1, retry_delay=60):
         api = self.sandbox_api if self.sandbox else self.api
 
         @request_retry(self.id, retry, retry_wait)
@@ -153,7 +152,7 @@ class CoinbaseRestMixin(RestExchange):
             'price': Decimal(data['price']),
         }
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         if end and not start:
             start = '2014-12-01 00:00:00'
         if start:
@@ -194,7 +193,7 @@ class CoinbaseRestMixin(RestExchange):
             data = json.loads(data.text, parse_float=Decimal)
             yield [self._trade_normalize(symbol, d) for d in data]
 
-    def ticker_sync(self, symbol: str, retry_count=None, retry_wait=10):
+    def ticker_sync(self, symbol: str, retry_count=1, retry_wait=10):
         data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
         self._handle_error(data)
         data = json.loads(data.text, parse_float=Decimal)
@@ -208,7 +207,7 @@ class CoinbaseRestMixin(RestExchange):
         data = self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait)
         return json.loads(data.text, parse_float=Decimal)
 
-    def l2_book_sync(self, symbol: str, retry_count=None, retry_wait=10):
+    def l2_book_sync(self, symbol: str, retry_count=1, retry_wait=10):
         data = self._book(symbol, 2, retry, retry_wait)
         return {
             BID: sd({
@@ -221,7 +220,7 @@ class CoinbaseRestMixin(RestExchange):
             })
         }
 
-    def l3_book_sync(self, symbol: str, retry_count=None, retry_wait=10):
+    def l3_book_sync(self, symbol: str, retry_count=1, retry_wait=10):
         orders = self._book(symbol, 3, retry, retry_wait)
         ret = {BID: sd({}), ASK: sd({})}
         for side in (BID, ASK):
@@ -323,7 +322,7 @@ class CoinbaseRestMixin(RestExchange):
         """
         return dt.utcfromtimestamp(timestamp).isoformat()
 
-    def candles_sync(self, symbol: str, start: Optional[Union[str, dt, float]] = None, end: Optional[Union[str, dt, float]] = None, interval: Optional[Union[int]] = 3600, retry_count=None, retry_wait=10):
+    def candles_sync(self, symbol: str, start: Optional[Union[str, dt, float]] = None, end: Optional[Union[str, dt, float]] = None, interval: Optional[Union[int]] = 3600, retry_count=1, retry_wait=10):
         """
         Historic rate OHLC candles
         [

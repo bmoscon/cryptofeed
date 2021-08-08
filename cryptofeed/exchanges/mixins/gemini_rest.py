@@ -15,7 +15,6 @@ from yapic import json
 from cryptofeed.auth.gemini import generate_token
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
-from cryptofeed.connection import request_retry
 
 
 LOG = logging.getLogger('feedhandler')
@@ -83,7 +82,7 @@ class GeminiRestMixin(RestExchange):
         return json.loads(resp.text, parse_float=Decimal)
 
     # Public Routes
-    def ticker_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
         return {'symbol': symbol,
@@ -92,7 +91,7 @@ class GeminiRestMixin(RestExchange):
                 'ask': Decimal(data['ask'])
                 }
 
-    def l2_book_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def l2_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/v1/book/{sym}", retry, retry_wait)
         return {
@@ -106,7 +105,7 @@ class GeminiRestMixin(RestExchange):
             })
         }
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         params = {'limit_trades': 500}
         if start:

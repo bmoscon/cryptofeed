@@ -18,7 +18,6 @@ from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, L2_BOOK, LIMIT, MAKER_OR_CANCEL, MARKET, OPEN, ORDERS, ORDER_STATUS, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
-from cryptofeed.connection import request_retry
 from cryptofeed.exchange import RestExchange
 
 
@@ -57,7 +56,7 @@ class KrakenRestMixin(RestExchange):
             'order_status': status
         }
 
-    def _post_public(self, command: str, payload=None, retry_count=None, retry_delay=60):
+    def _post_public(self, command: str, payload=None, retry_count=1, retry_delay=60):
         url = f"{self.api}{command}"
 
         @request_retry(self.id, retry, retry_wait)
@@ -98,7 +97,7 @@ class KrakenRestMixin(RestExchange):
         return json.loads(resp.text, parse_float=Decimal)
 
     # public API
-    def ticker_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", '')
         data = self._post_public("/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
 
@@ -110,7 +109,7 @@ class KrakenRestMixin(RestExchange):
                     'ask': Decimal(val['a'][0])
                     }
 
-    def l2_book_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def l2_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
         data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
         for _, val in data['result'].items():
@@ -125,7 +124,7 @@ class KrakenRestMixin(RestExchange):
                 })
             }
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         if start:
             if not end:
                 end = dt.now().timestamp()

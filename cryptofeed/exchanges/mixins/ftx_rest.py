@@ -19,7 +19,6 @@ import urllib.parse
 from cryptofeed.defines import BID, ASK, BUY, CANCEL_ORDER, DELETE, FUNDING, GET, L2_BOOK, LIMIT, ORDER_INFO, ORDER_STATUS, PLACE_ORDER, POST, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.defines import SELL
 from cryptofeed.exchange import RestExchange
-from cryptofeed.connection import request_retry
 
 
 LOG = logging.getLogger('cryptofeed.rest')
@@ -32,16 +31,16 @@ class FTXRestMixin(RestExchange):
         TRADES, TICKER, L2_BOOK, FUNDING, ORDER_INFO, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, TRADE_HISTORY
     )
 
-    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry_count=None, retry_delay=60, auth=False):
+    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry_count=1, retry_delay=60, auth=False):
         return self._send_request(endpoint, GET, params=params, retry=retry, retry_wait=retry_wait, auth=auth)
 
-    def _post(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry_count=None, retry_delay=60, auth=False):
+    def _post(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry_count=1, retry_delay=60, auth=False):
         return self._send_request(endpoint, POST, json=params, retry=retry, retry_wait=retry_wait, auth=auth)
 
-    def _delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry_count=None, retry_delay=60, auth=False):
+    def _delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry_count=1, retry_delay=60, auth=False):
         return self._send_request(endpoint, DELETE, json=params, retry=retry, retry_wait=retry_wait, auth=auth)
 
-    def _send_request(self, endpoint: str, http_method=GET, retry_count=None, retry_delay=60, auth=False, **kwargs):
+    def _send_request(self, endpoint: str, http_method=GET, retry_count=1, retry_delay=60, auth=False, **kwargs):
         @request_retry(self.id, retry, retry_wait)
         def helper():
             request = requests.Request(method=http_method, url=self.api + endpoint, **kwargs)
@@ -65,7 +64,7 @@ class FTXRestMixin(RestExchange):
         if self.subaccount:
             request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote(self.subaccount)
 
-    def ticker_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}", retry=retry, retry_wait=retry_wait)
 
@@ -75,7 +74,7 @@ class FTXRestMixin(RestExchange):
                 'ask': data['ask']
                 }
 
-    def l2_book_sync(self, symbol: str, retry_count=None, retry_delay=60):
+    def l2_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = self._get(f"/markets/{sym}/orderbook", params={'depth': 100}, retry=retry, retry_wait=retry_wait)
         return {
@@ -89,12 +88,12 @@ class FTXRestMixin(RestExchange):
             })
         }
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
         for data in self._get_trades_hist(symbol, start, end, retry, retry_wait):
             yield data
 
-    def funding_sync(self, symbol: str, start=None, end=None, retry_count=None, retry_wait=10):
+    def funding_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
         sym = self.std_symbol_to_exchange_symbol(symbol)
 
         if start or end:
