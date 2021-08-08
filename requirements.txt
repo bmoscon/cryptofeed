@@ -1,7 +1,6 @@
 requests>=2.18.4
 websockets>=7.0
 sortedcontainers>=1.5.9
-pandas
 pyyaml
 aiohttp==3.7.4
 aiofile>=2.0.0
