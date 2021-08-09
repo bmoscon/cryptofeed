@@ -4,16 +4,16 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import base64
 import hmac
 import hashlib
+from datetime import datetime as dt
 from decimal import Decimal
 import logging
 import time
-from datetime import datetime as dt
 from typing import Optional, Union
 
-import requests
 from yapic import json
 from sortedcontainers.sorteddict import SortedDict as sd
 
@@ -87,43 +87,31 @@ class CoinbaseRestMixin(RestExchange):
             'Content-Type': 'Application/JSON',
         }
 
-    def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry_count=1, retry_delay=60):
+    async def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry_count=1, retry_delay=60):
         api = self.sandbox_api if self.sandbox else self.api
+        header = None
+        if auth:
+            header = self._generate_signature(endpoint, method, body=json.dumps(body) if body else '')
 
-        @request_retry(self.id, retry, retry_wait)
-        def helper(verb, api, endpoint, body, auth):
-            header = None
-            if auth:
-                header = self._generate_signature(endpoint, verb, body=json.dumps(body) if body else '')
+        if method == "GET":
+            data = await self.http_conn.read(f'{api}{endpoint}', header=header)
+        elif method == 'POST':
+            data = await self.http_conn.write(f'{api}{endpoint}', msg=body, header=header)
+        elif method == 'DELETE':
+            data = await self.http_conn.delete(f'{api}{endpoint}', header=header)
+        return json.loads(data, parse_float=Decimal)
 
-            if method == "GET":
-                return requests.get(f'{api}{endpoint}', headers=header)
-            elif method == 'POST':
-                return requests.post(f'{api}{endpoint}', json=body, headers=header)
-            elif method == 'DELETE':
-                return requests.delete(f'{api}{endpoint}', headers=header)
-
-        return helper(method, api, endpoint, body, auth)
-
-    def _date_to_trade(self, symbol: str, timestamp: float) -> int:
+    async def _date_to_trade(self, symbol: str, timestamp: float) -> int:
         """
         Coinbase uses trade ids to query historical trades, so
         need to search for the start date
         """
-        upper = self._request('GET', f'/products/{symbol}/trades')
-        upper = json.loads(upper.text, parse_float=Decimal)[0]['trade_id']
+        upper = await self._request('GET', f'/products/{symbol}/trades')
+        upper = upper[0]['trade_id']
         lower = 0
         bound = (upper - lower) // 2
         while True:
-            r = self._request('GET', f'/products/{symbol}/trades?after={bound}')
-            if r.status_code == 429:
-                time.sleep(10)
-                continue
-            elif r.status_code != 200:
-                LOG.warning("Error %s: %s", r.status_code, r.text)
-                time.sleep(60)
-                continue
-            data = json.loads(r.text, parse_float=Decimal)
+            data = await self._request('GET', f'/products/{symbol}/trades?after={bound}')
             data = list(reversed(data))
             if len(data) == 0:
                 return bound
@@ -139,7 +127,7 @@ class CoinbaseRestMixin(RestExchange):
                 else:
                     upper = bound
                     bound = (upper + lower) // 2
-            time.sleep(1 / self.request_limit)
+            await asyncio.sleep(1 / self.request_limit)
 
     def _trade_normalize(self, symbol: str, data: dict) -> dict:
         return {
@@ -152,63 +140,41 @@ class CoinbaseRestMixin(RestExchange):
             'price': Decimal(data['price']),
         }
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_wait=10):
-        if end and not start:
-            start = '2014-12-01 00:00:00'
+    async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
+        start, end = self._interval_normalize(start, end)
         if start:
-            if not end:
-                end = dt.now().timestamp()
-            start_id = self._date_to_trade(symbol, self._datetime_normalize(start))
-            end_id = self._date_to_trade(symbol, self._datetime_normalize(end))
+            start_id = await self._date_to_trade(symbol, start)
+            end_id = await self._date_to_trade(symbol, end)
             while True:
                 limit = 100
                 start_id += 100
+                data = []
+
                 if start_id > end_id:
                     limit = 100 - (start_id - end_id)
                     start_id = end_id
                 if limit > 0:
-                    r = self._request('GET', f'/products/{symbol}/trades?after={start_id}&limit={limit}', retry=retry, retry_wait=retry_wait)
-                    if r.status_code == 429:
-                        time.sleep(10)
-                        continue
-                    elif r.status_code != 200:
-                        LOG.warning("Error %s: %s", r.status_code, r.text)
-                        time.sleep(60)
-                        continue
-                    data = json.loads(r.text, parse_float=Decimal)
-                    try:
-                        data = list(reversed(data))
-                    except Exception:
-                        LOG.warning("Error %s: %s", r.status_code, r.text)
-                        time.sleep(60)
-                        continue
-                else:
-                    break
+                    data = await self._request('GET', f'/products/{symbol}/trades?after={start_id}&limit={limit}', retry_count=retry_count, retry_delay=retry_delay)
+                    data = list(reversed(data))
 
                 yield list(map(lambda x: self._trade_normalize(symbol, x), data))
                 if start_id >= end_id:
                     break
+                await asyncio.sleep(1 / self.request_limit)
         else:
-            data = self._request('GET', f"/products/{symbol}/trades", retry=retry, retry_wait=retry_wait)
-            data = json.loads(data.text, parse_float=Decimal)
+            data = await self._request('GET', f"/products/{symbol}/trades", retry_count=retry_count, retry_delay=retry_delay)
             yield [self._trade_normalize(symbol, d) for d in data]
 
-    def ticker_sync(self, symbol: str, retry_count=1, retry_wait=10):
-        data = self._request('GET', f'/products/{symbol}/ticker', retry=retry, retry_wait=retry_wait)
-        self._handle_error(data)
-        data = json.loads(data.text, parse_float=Decimal)
+    async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
+        data = await self._request('GET', f'/products/{symbol}/ticker', retry_count=retry_count, retry_delay=retry_delay)
         return {'symbol': symbol,
                 'feed': self.id,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
                 }
 
-    def _book(self, symbol: str, level: int, retry, retry_wait):
-        data = self._request('GET', f'/products/{symbol}/book?level={level}', retry=retry, retry_wait=retry_wait)
-        return json.loads(data.text, parse_float=Decimal)
-
-    def l2_book_sync(self, symbol: str, retry_count=1, retry_wait=10):
-        data = self._book(symbol, 2, retry, retry_wait)
+    async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
+        data = await self._request('GET', f'/products/{symbol}/book?level=2', retry_count=retry_count, retry_delay=retry_delay)
         return {
             BID: sd({
                 Decimal(u[0]): Decimal(u[1])
@@ -220,11 +186,12 @@ class CoinbaseRestMixin(RestExchange):
             })
         }
 
-    def l3_book_sync(self, symbol: str, retry_count=1, retry_wait=10):
-        orders = self._book(symbol, 3, retry, retry_wait)
+    async def l3_book(self, symbol: str, retry_count=1, retry_delay=60):
+        data = await self._request('GET', f'/products/{symbol}/book?level=3', retry_count=retry_count, retry_delay=retry_delay)
         ret = {BID: sd({}), ASK: sd({})}
+
         for side in (BID, ASK):
-            for price, size, order_id in orders[side + 's']:
+            for price, size, order_id in data[side + 's']:
                 price = Decimal(price)
                 size = Decimal(size)
                 if price in ret[side]:
@@ -233,30 +200,25 @@ class CoinbaseRestMixin(RestExchange):
                     ret[side][price] = {order_id: size}
         return ret
 
-    def balances_sync(self):
-        resp = self._request('GET', "/accounts", auth=True)
-        self._handle_error(resp)
+    async def balances(self):
+        data = await self._request('GET', "/accounts", auth=True)
         return {
             entry['currency']: {
                 'total': Decimal(entry['balance']),
                 'available': Decimal(entry['available'])
             }
-            for entry in json.loads(resp.text, parse_float=Decimal)
+            for entry in data
         }
 
-    def orders_sync(self):
-        endpoint = "/orders"
-        data = self._request("GET", endpoint, auth=True)
-        data = json.loads(data.text, parse_float=Decimal)
+    async def orders(self):
+        data = await self._request("GET", "/orders", auth=True)
         return [self._order_status(order) for order in data]
 
-    def order_status_sync(self, order_id: str):
-        endpoint = f"/orders/{order_id}"
-        order = self._request("GET", endpoint, auth=True)
-        order = json.loads(order.text, parse_float=Decimal)
+    async def order_status(self, order_id: str):
+        order = await self._request("GET", f"/orders/{order_id}", auth=True)
         return self._order_status(order)
 
-    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
         ot = self.normalize_order_options(order_type)
         if ot == MARKET and price:
             raise ValueError('Cannot specify price on a market order')
@@ -276,23 +238,19 @@ class CoinbaseRestMixin(RestExchange):
             body['client_oid'] = client_order_id
         if options:
             _ = [body.update(self.normalize_order_options(o)) for o in options]
-        resp = self._request('POST', '/orders', auth=True, body=body)
-        return self._order_status(json.loads(resp.text, parse_float=Decimal))
+        data = await self._request('POST', '/orders', auth=True, body=body)
+        return self._order_status(data)
 
-    def cancel_order_sync(self, order_id: str):
-        endpoint = f"/orders/{order_id}"
-        order = self.order_status(order_id)
-        data = self._request("DELETE", endpoint, auth=True)
-        data = json.loads(data.text, parse_float=Decimal)
+    async def cancel_order(self, order_id: str):
+        order = await self.order_status(order_id)
+        data = await self._request("DELETE", f"/orders/{order_id}", auth=True)
         if data[0] == order['order_id']:
             order['status'] = CANCELLED
             return order
         return data
 
-    def trade_history_sync(self, symbol: str, start=None, end=None):
-        endpoint = f"/orders?product_id={symbol}&status=done"
-        data = self._request("GET", endpoint, auth=True)
-        data = json.loads(data.text, parse_float=Decimal)
+    async def trade_history(self, symbol: str, start=None, end=None):
+        data = await self._request("GET", f"/orders?product_id={symbol}&status=done", auth=True)
         return [
             {
                 'order_id': order['id'],
@@ -322,7 +280,7 @@ class CoinbaseRestMixin(RestExchange):
         """
         return dt.utcfromtimestamp(timestamp).isoformat()
 
-    def candles_sync(self, symbol: str, start: Optional[Union[str, dt, float]] = None, end: Optional[Union[str, dt, float]] = None, interval: Optional[Union[int]] = 3600, retry_count=1, retry_wait=10):
+    async def candles(self, symbol: str, start: Optional[Union[str, dt, float]] = None, end: Optional[Union[str, dt, float]] = None, interval: Optional[Union[int]] = 3600, retry_count=1, retry_delay=60):
         """
         Historic rate OHLC candles
         [
@@ -348,17 +306,13 @@ class CoinbaseRestMixin(RestExchange):
         limit = 300  # return max of 300 rows per request
         assert interval in {60, 300, 900, 3600, 21600, 86400}, 'Granularity must be in {60, 300, 900, 3600, 21600, 86400} as per https://docs.pro.coinbase.com/#get-historic-rates'
 
-        if end and not start:
-            start = '2014-12-01 00:00:00'
+        start, end = self._interval_normalize(start, end)
         if start:
-            if not end:
-                end = dt.now().timestamp()
-            start_id = self._datetime_normalize(start)
-            end_id_max = self._datetime_normalize(end)
+            start_id = start
+            end_id_max = end
 
             LOG.info(f"candles - stepping through {symbol} ({start}, {end})")
             while True:
-
                 end_id = start_id + (limit - 1) * interval
                 if end_id > end_id_max:
                     end_id = end_id_max
@@ -366,27 +320,11 @@ class CoinbaseRestMixin(RestExchange):
                     break
 
                 url = f'/products/{symbol}/candles?granularity={interval}&start={self._to_isoformat(start_id)}&end={self._to_isoformat(end_id)}'
-                r = self._request('GET', url, retry=retry, retry_wait=retry_wait)
-                if r.status_code == 429:
-                    time.sleep(10)
-                    continue
-                elif r.status_code != 200:
-                    LOG.warning("Error %s: %s", r.status_code, r.text)
-                    time.sleep(60)
-                    continue
-
-                data = json.loads(r.text, parse_float=Decimal)
-
-                try:
-                    data = list(reversed(data))
-                except Exception:
-                    LOG.warning("Error %s: %s", r.status_code, r.text)
-                    time.sleep(60)
-                    continue
+                data = await self._request('GET', url, retry_count=retry_count, retry_delay=retry_delay)
+                data = list(reversed(data))
                 yield list(map(lambda x: self._candle_normalize(symbol, x), data))
-                time.sleep(1 / self.request_limit)
+                await asyncio.sleep(1 / self.request_limit)
                 start_id = end_id + interval
         else:
-            data = self._request('GET', f"/products/{symbol}/candles", retry=retry, retry_wait=retry_wait)
-            data = json.loads(data.text, parse_float=Decimal)
+            data = await self._request('GET', f"/products/{symbol}/candles", retry_count=retry_count, retry_delay=retry_delay)
             yield [self._candle_normalize(symbol, d) for d in data]

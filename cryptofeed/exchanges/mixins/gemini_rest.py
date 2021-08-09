@@ -70,7 +70,7 @@ class GeminiRestMixin(RestExchange):
         api = self.api if not self.sandbox else self.sandbox_api
         api = f"{api}{command}"
 
-        resp = await self.http_conn.write(api, headers=headers)
+        resp = await self.http_conn.write(api, header=headers)
         return json.loads(resp, parse_float=Decimal)
 
     # Public Routes

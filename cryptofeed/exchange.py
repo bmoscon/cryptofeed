@@ -136,8 +136,8 @@ class RestExchange:
     rest_channels = NotImplemented
     order_options = NotImplemented
 
-    def _datetime_normalize(self, timestamp: Union[str, float, dt]) -> float:
-        if isinstance(timestamp, float):
+    def _datetime_normalize(self, timestamp: Union[str, int, float, dt]) -> float:
+        if isinstance(timestamp, (float, int)):
             return timestamp
         if isinstance(timestamp, dt):
             return timestamp.replace(tzinfo=timezone.utc).timestamp()

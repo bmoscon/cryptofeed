@@ -113,7 +113,7 @@ class PoloniexRestMixin(RestExchange):
             "Sign": sign,
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        resp = await self.http_conn.write(f"{self.api}tradingApi?command={command}", headers=headers, msg=paybytes)
+        resp = await self.http_conn.write(f"{self.api}tradingApi?command={command}", header=headers, msg=paybytes)
         return json.loads(resp, parse_float=Decimal)
 
     # Public API Routes

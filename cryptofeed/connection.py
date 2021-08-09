@@ -171,6 +171,26 @@ class HTTPAsyncConn(AsyncConnection):
                 response.raise_for_status()
                 return data
 
+    async def delete(self, address: str, header=None, retry_count=0, retry_delay=60) -> str:
+        if not self.is_open:
+            await self._open()
+
+        while True:
+            async with self.conn.delete(address, headers=header) as response:
+                self.sent += 1
+                data = await response.read()
+                if self.raw_data_callback:
+                    await self.raw_data_callback(data, time.time(), self.id, send=address)
+                if response.status == 429 and retry_count:
+                    LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
+                    retry_count -= 1
+                    if retry_count < 0:
+                        response.raise_for_status()
+                    await asyncio.sleep(retry_delay)
+                    continue
+                response.raise_for_status()
+                return data
+
 
 class HTTPPoll(HTTPAsyncConn):
     def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1, proxy: StrOrURL = None):

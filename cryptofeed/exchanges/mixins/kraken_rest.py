@@ -84,7 +84,7 @@ class KrakenRestMixin(RestExchange):
             'API-Sign': sigdigest.decode()
         }
 
-        resp = await self.http_conn.write(f"{self.api}{command}", msg=payload, headers=headers)
+        resp = await self.http_conn.write(f"{self.api}{command}", msg=payload, header=headers)
         return json.loads(resp.text, parse_float=Decimal)
 
     # public API
