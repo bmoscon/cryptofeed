@@ -11,7 +11,7 @@ from cryptofeed.exchanges import Binance
 
 def test_binance_address_generation():
     symbols = Binance.symbols()
-    channels = Binance.info()['channels']['websocket']
+    channels = [channel for channel in Binance.info()['channels']['websocket'] if not Binance.is_authenticated_channel(channel)]
     for length in (10, 20, 30, 40, 50, 100, 200, 500, len(symbols)):
         syms = []
         chans = []
