@@ -6,6 +6,8 @@
  * Bugfix: Kraken info dict returning empty
  * Breaking Change: Rename REST endpoints. Sync endpoints end with `_sync`, non-sync endpoints are now async. Clean up and remove old/unused test cases
  * Feature: Remove pandas dependency
+ * Breaking Change: Rewrite all rest endpoints to support sync and async versions of the endpoint.
+ * Feature: Add dYdX REST endpoints
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
