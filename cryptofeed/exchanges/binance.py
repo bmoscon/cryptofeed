@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from asyncio.events import AbstractEventLoop
 import logging
 from asyncio import create_task
 from collections import defaultdict, deque
@@ -13,8 +14,9 @@ from typing import Dict, Union, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.auth.binance import BinanceAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
@@ -34,7 +36,8 @@ class Binance(Feed, BinanceRestMixin):
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
         TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        CANDLES: 'kline_',
+        BALANCES: BALANCES
     }
     request_limit = 20
 
@@ -88,6 +91,7 @@ class Binance(Feed, BinanceRestMixin):
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
+        self.auth = BinanceAuth(self.key_id)
         self.address = self._address()
         self.concurrent_http = concurrent_http
 
@@ -103,12 +107,23 @@ class Binance(Feed, BinanceRestMixin):
         The generic connect method supplied by Feed will take care of creating the
         correct connection objects from the addresses.
         """
-        address = self.ws_endpoint + '/stream?streams='
+        if self.requires_authentication:
+            listen_key = self.auth.generate_token()
+            address = self.ws_endpoint + '/ws/' + listen_key
+        else:
+            address = self.ws_endpoint + '/stream?streams='
         subs = []
+
+        is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)
+        is_any_public = any(not self.is_authenticated_channel(chan) for chan in self.subscription)
+        if is_any_private and is_any_public:
+            raise ValueError("Private and public channels should be subscribed to in separate feeds")
 
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
-            if self.exchange_channel_to_std(chan) == OPEN_INTEREST:
+            if normalized_chan == OPEN_INTEREST:
+                continue
+            if self.is_authenticated_channel(normalized_chan):
                 continue
 
             stream = chan
@@ -426,9 +441,38 @@ class Binance(Feed, BinanceRestMixin):
                             volume=Decimal(msg['k']['v']),
                             closed=msg['k']['x'])
 
+    async def _account_update(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "outboundAccountPosition", //Event type
+            "E": 1564034571105,             //Event Time
+            "u": 1564034571073,             //Time of last account update
+            "B": [                          //Balances Array
+                {
+                "a": "ETH",                 //Asset
+                "f": "10000.000000",        //Free
+                "l": "0.000000"             //Locked
+                }
+            ]
+        }
+        """
+        for balance in msg['B']:
+            await self.callback(BALANCES,
+                                feed=self.id,
+                                symbol=balance['a'],
+                                timestamp=self.timestamp_normalize(msg['E']),
+                                receipt_timestamp=timestamp,
+                                wallet_balance=Decimal(balance['f']))
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
+        # Handle account updates from User Data Stream
+        if self.requires_authentication:
+            msg_type = msg['e']
+            if msg_type == 'outboundAccountPosition':
+                await self._account_update(msg, timestamp)
+            return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
         pair, _ = msg['stream'].split('@', 1)
@@ -458,3 +502,8 @@ class Binance(Feed, BinanceRestMixin):
         # connection endpoint
         if not isinstance(conn, HTTPPoll):
             self._reset()
+
+    def start(self, loop: AbstractEventLoop):
+        super().start(loop)
+        if self.requires_authentication:
+            loop.create_task(self.auth.refresh_token())
