@@ -16,18 +16,20 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DYDX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.exchanges.mixins.dydx_rest import dYdXRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class dYdX(Feed):
+class dYdX(Feed, dYdXRestMixin):
     id = DYDX
     symbol_endpoint = 'https://api.dydx.exchange/v3/markets'
     websocket_channels = {
         L2_BOOK: 'v3_orderbook',
         TRADES: 'v3_trades',
     }
+    request_limit = 10
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:

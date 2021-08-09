@@ -4,18 +4,16 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from decimal import Decimal
-from time import sleep
 import logging
 
-import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
 from cryptofeed.auth.gemini import generate_token
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
-from cryptofeed.connection import request_retry
 
 
 LOG = logging.getLogger('feedhandler')
@@ -57,17 +55,12 @@ class GeminiRestMixin(RestExchange):
             'order_status': status
         }
 
-    def _get(self, command: str, retry, retry_wait, params=None):
+    async def _get(self, command: str, retry_count, retry_delay, params=''):
         api = self.api if not self.sandbox else self.sandbox_api
+        resp = await self.http_conn.read(f"{api}{command}{params}", retry_count=retry_count, retry_delay=retry_delay)
+        return json.loads(resp, parse_float=Decimal)
 
-        @request_retry(self.id, retry, retry_wait)
-        def helper():
-            resp = requests.get(f"{api}{command}", params=params)
-            self._handle_error(resp)
-            return json.loads(resp.text, parse_float=Decimal)
-        return helper()
-
-    def _post(self, command: str, payload=None):
+    async def _post(self, command: str, payload=None):
         headers = generate_token(self.config.key_id, self.config.key_secret, command, account_name=self.config.account_name, payload=payload)
 
         headers['Content-Type'] = "text/plain"
@@ -77,24 +70,22 @@ class GeminiRestMixin(RestExchange):
         api = self.api if not self.sandbox else self.sandbox_api
         api = f"{api}{command}"
 
-        resp = requests.post(api, headers=headers)
-        self._handle_error(resp)
-
-        return json.loads(resp.text, parse_float=Decimal)
+        resp = await self.http_conn.write(api, header=headers)
+        return json.loads(resp, parse_float=Decimal)
 
     # Public Routes
-    def ticker_sync(self, symbol: str, retry=None, retry_wait=0):
+    async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        data = self._get(f"/v1/pubticker/{sym}", retry, retry_wait)
+        data = await self._get(f"/v1/pubticker/{sym}", retry_count, retry_delay)
         return {'symbol': symbol,
                 'feed': self.id,
                 'bid': Decimal(data['bid']),
                 'ask': Decimal(data['ask'])
                 }
 
-    def l2_book_sync(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        data = self._get(f"/v1/book/{sym}", retry, retry_wait)
+        data = await self._get(f"/v1/book/{sym}", retry_count, retry_delay)
         return {
             BID: sd({
                 Decimal(u['price']): Decimal(u['amount'])
@@ -106,13 +97,13 @@ class GeminiRestMixin(RestExchange):
             })
         }
 
-    def trades_sync(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        params = {'limit_trades': 500}
+        start, end = self._interval_normalize(start, end)
+        params = "&limit_trades=500"
         if start:
-            params['since'] = int(self._datetime_normalize(start) * 1000)
-        if end:
-            end_ts = int(self._datetime_normalize(start) * 1000)
+            end_ts = int(end * 1000)
+            params += f"&since={int(start * 1000)}"
 
         def _trade_normalize(trade):
             return {
@@ -126,7 +117,7 @@ class GeminiRestMixin(RestExchange):
             }
 
         while True:
-            data = reversed(self._get(f"/v1/trades/{sym}?", retry, retry_wait, params=params))
+            data = reversed(await self._get(f"/v1/trades/{sym}?", retry_count, retry_delay, params=params))
             if end:
                 data = [_trade_normalize(d) for d in data if d['timestampms'] <= end_ts]
             else:
@@ -135,15 +126,12 @@ class GeminiRestMixin(RestExchange):
 
             if start:
                 params['since'] = int(data[-1]['timestamp'] * 1000) + 1
-            if len(data) < 500:
+            if len(data) < 500 or not start:
                 break
-            if not start and not end:
-                break
-            # GEMINI rate limits to 120 requests a minute
-            sleep(1 / self.request_limit)
+            await asyncio.sleep(1 / self.request_limit)
 
     # Trading APIs
-    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
         if not price:
             raise ValueError('Gemini only supports limit orders, must specify price')
         ot = self.order_options(order_type)
@@ -161,22 +149,22 @@ class GeminiRestMixin(RestExchange):
         if client_order_id:
             parameters['client_order_id'] = client_order_id
 
-        data = self._post("/v1/order/new", parameters)
-        return self._order_status(data)
+        data = await self._post("/v1/order/new", parameters)
+        return await self._order_status(data)
 
-    def cancel_order_sync(self, order_id: str):
-        data = self._post("/v1/order/cancel", {'order_id': int(order_id)})
-        return self._order_status(data)
+    async def cancel_order(self, order_id: str):
+        data = await self._post("/v1/order/cancel", {'order_id': int(order_id)})
+        return await self._order_status(data)
 
-    def order_status_sync(self, order_id: str):
-        data = self._post("/v1/order/status", {'order_id': int(order_id)})
-        return self._order_status(data)
+    async def order_status(self, order_id: str):
+        data = await self._post("/v1/order/status", {'order_id': int(order_id)})
+        return await self._order_status(data)
 
-    def orders_sync(self):
-        data = self._post("/v1/orders")
-        return [self._order_status(d) for d in data]
+    async def orders(self):
+        data = await self._post("/v1/orders")
+        return [await self._order_status(d) for d in data]
 
-    def trade_history_sync(self, symbol: str, start=None, end=None):
+    async def trade_history(self, symbol: str, start=None, end=None):
         sym = self.std_symbol_to_exchange_symbol(symbol)
 
         params = {
@@ -184,9 +172,9 @@ class GeminiRestMixin(RestExchange):
             'limit_trades': 500
         }
         if start:
-            params['timestamp'] = self._datetime_normalize(start)
+            params['timestamp'] = self._datetime_normalize(start) * 1000
 
-        data = self._post("/v1/mytrades", params)
+        data = await self._post("/v1/mytrades", params)
         return [
             {
                 'price': Decimal(trade['price']),
@@ -201,8 +189,8 @@ class GeminiRestMixin(RestExchange):
             for trade in data
         ]
 
-    def balances_sync(self):
-        data = self._post("/v1/balances")
+    async def balances(self):
+        data = await self._post("/v1/balances")
         return {
             entry['currency']: {
                 'total': Decimal(entry['amount']),

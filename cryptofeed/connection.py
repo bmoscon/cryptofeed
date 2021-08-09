@@ -6,12 +6,12 @@ associated with this software.
 '''
 import logging
 import time
-from functools import wraps
 import asyncio
 from asyncio import Queue, create_task
 from contextlib import asynccontextmanager
 from typing import List, Union, AsyncIterable, Optional
 from decimal import Decimal
+import atexit
 
 import requests
 import websockets
@@ -23,39 +23,6 @@ from cryptofeed.exceptions import ConnectionClosed, ConnectionExists
 
 
 LOG = logging.getLogger('feedhandler')
-
-
-def request_retry(exchange, retry, retry_wait):
-    """
-    decorator to retry request
-    """
-    def wrap(f):
-        @wraps(f)
-        def wrapped_f(*args, **kwargs):
-            retry_count = retry
-            while True:
-                try:
-                    return f(*args, **kwargs)
-                except TimeoutError as e:
-                    LOG.warning("%s: Timeout - %s", exchange, e)
-                    if retry_count is not None:
-                        if retry_count == 0:
-                            raise
-                        else:
-                            retry_count -= 1
-                    time.sleep(retry_wait)
-                    continue
-                except requests.exceptions.ConnectionError as e:
-                    LOG.warning("%s: Connection error - %s", exchange, e)
-                    if retry_count is not None:
-                        if retry_count == 0:
-                            raise
-                        else:
-                            retry_count -= 1
-                    time.sleep(retry_wait)
-                    continue
-        return wrapped_f
-    return wrap
 
 
 class Connection:
@@ -104,6 +71,10 @@ class AsyncConnection(Connection):
         self.sent: int = 0
         self.last_message = None
         self.conn: Union[websockets.WebSocketClientProtocol, aiohttp.ClientSession] = None
+        atexit.register(self.__del__)
+
+    def __del__(self):
+        asyncio.ensure_future(self.close())
 
     @property
     def uuid(self):
@@ -156,38 +127,69 @@ class HTTPAsyncConn(AsyncConnection):
             self.sent = 0
             self.received = 0
 
-    async def read(self, address: str, header=None, return_headers=False) -> bytes:
+    async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:
             await self._open()
 
         LOG.debug("%s: requesting data from %s", self.id, address)
         while True:
-            async with self.conn.get(address, headers=header, proxy=self.proxy) as response:
+            async with self.conn.get(address, headers=header, params=params, proxy=self.proxy) as response:
                 data = await response.text()
                 self.last_message = time.time()
                 self.received += 1
                 if self.raw_data_callback:
                     await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None if return_headers is False else dict(response.headers))
-                if response.status == 429:
+                if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
-                    await asyncio.sleep(60)
+                    retry_count -= 1
+                    if retry_count < 0:
+                        response.raise_for_status()
+                    await asyncio.sleep(retry_delay)
                     continue
                 response.raise_for_status()
                 if return_headers:
                     return data, response.headers
                 return data
 
-    async def write(self, address: str, msg: str, header=None):
+    async def write(self, address: str, msg: str, header=None, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:
             await self._open()
 
-        async with self.conn.post(address, data=msg, headers=header) as response:
-            self.sent += 1
-            data = await response.read()
-            if self.raw_data_callback:
-                await self.raw_data_callback(data, time.time(), self.id, send=address)
-            response.raise_for_status()
-            return data
+        while True:
+            async with self.conn.post(address, data=msg, headers=header) as response:
+                self.sent += 1
+                data = await response.read()
+                if self.raw_data_callback:
+                    await self.raw_data_callback(data, time.time(), self.id, send=address)
+                if response.status == 429 and retry_count:
+                    LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
+                    retry_count -= 1
+                    if retry_count < 0:
+                        response.raise_for_status()
+                    await asyncio.sleep(retry_delay)
+                    continue
+                response.raise_for_status()
+                return data
+
+    async def delete(self, address: str, header=None, retry_count=0, retry_delay=60) -> str:
+        if not self.is_open:
+            await self._open()
+
+        while True:
+            async with self.conn.delete(address, headers=header) as response:
+                self.sent += 1
+                data = await response.read()
+                if self.raw_data_callback:
+                    await self.raw_data_callback(data, time.time(), self.id, send=address)
+                if response.status == 429 and retry_count:
+                    LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
+                    retry_count -= 1
+                    if retry_count < 0:
+                        response.raise_for_status()
+                    await asyncio.sleep(retry_delay)
+                    continue
+                response.raise_for_status()
+                return data
 
 
 class HTTPPoll(HTTPAsyncConn):

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from cryptofeed.defines import ASK, BID
 from cryptofeed.exchanges import Bitmex
 
@@ -28,3 +30,6 @@ def test_book():
     assert ASK in ret
     assert len(ret[BID]) > 0
     assert len(ret[ASK]) > 0
+    for price, size in ret[ASK].items():
+        assert isinstance(price, Decimal)
+        assert isinstance(size, Decimal)
