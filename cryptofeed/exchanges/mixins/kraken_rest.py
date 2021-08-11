@@ -28,7 +28,7 @@ class KrakenRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS, TRADE_HISTORY
     )
-    rest_options = {
+    order_options = {
         LIMIT: 'limit',
         MARKET: 'market',
         MAKER_OR_CANCEL: 'post'
