@@ -25,7 +25,7 @@ class GeminiRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY
     )
-    rest_options = {
+    order_options = {
         LIMIT: 'exchange limit',
         FILL_OR_KILL: 'fill-or-kill',
         IMMEDIATE_OR_CANCEL: 'immediate-or-cancel',
@@ -134,7 +134,7 @@ class GeminiRestMixin(RestExchange):
     async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, client_order_id=None, options=None):
         if not price:
             raise ValueError('Gemini only supports limit orders, must specify price')
-        ot = self.order_options(order_type)
+        ot = self.normalize_order_options(order_type)
         sym = self.std_symbol_to_exchange_symbol(symbol)
 
         parameters = {
@@ -143,7 +143,7 @@ class GeminiRestMixin(RestExchange):
             'side': side,
             'amount': str(amount),
             'price': str(price),
-            'options': [self.order_options(o) for o in options] if options else []
+            'options': [self.normalize_order_options(o) for o in options] if options else []
         }
 
         if client_order_id:
