@@ -220,10 +220,10 @@ class RestExchange:
     async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
-    def cancel_order_sync(self, order_id: str):
-        return asyncio.get_event_loop().run_until_complete(self.cancel_order(order_id))
+    def cancel_order_sync(self, order_id: str, **kwargs):
+        return asyncio.get_event_loop().run_until_complete(self.cancel_order(order_id, **kwargs))
 
-    async def cancel_order(self, order_id: str):
+    async def cancel_order(self, order_id: str, **kwargs):
         raise NotImplementedError
 
     def orders_sync(self, symbol: str = None):

@@ -10,10 +10,11 @@ import hashlib
 import hmac
 import logging
 import time
+from urllib.parse import urlencode
 
 from yapic import json
 
-from cryptofeed.defines import BUY, SELL, TRADES
+from cryptofeed.defines import BALANCES, BUY, CANCEL_ORDER, DELETE, FILL_OR_KILL, GET, GOOD_TIL_CANCELED, IMMEDIATE_OR_CANCEL, LIMIT, MARKET, ORDERS, ORDER_STATUS, PLACE_ORDER, POSITIONS, POST, SELL, TRADES
 from cryptofeed.exchange import RestExchange
 
 
@@ -23,23 +24,49 @@ LOG = logging.getLogger('cryptofeed.rest')
 class BinanceRestMixin(RestExchange):
     api = "https://api.binance.com/api/v3/"
     rest_channels = (
-        TRADES
+        TRADES, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS
     )
+    order_options = {
+        LIMIT: 'LIMIT',
+        MARKET: 'MARKET',
+        FILL_OR_KILL: 'FOK',
+        IMMEDIATE_OR_CANCEL: 'IOC',
+        GOOD_TIL_CANCELED: 'GTC',
+    }
 
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
 
-    def _generate_signature(self, url: str, body=json.dumps({})):
-        nonce = self._nonce()
-        signature = "/api/" + url + nonce + body
-        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
-        signature = h.hexdigest()
+    def _generate_signature(self, query_string: str):
+        h = hmac.new(self.key_secret.encode('utf8'), query_string.encode('utf8'), hashlib.sha256)
+        return h.hexdigest()
 
-        return {
-            "X-MBX-APIKEY": self.config.key_id,
-            "signature": signature,
-            "content-type": "application/json"
-        }
+    async def _request(self, method: str, endpoint: str, auth: bool = False, payload={}, api=None):
+        query_string = urlencode(payload)
+        if auth:
+            if query_string:
+                query_string = '{}&timestamp={}'.format(query_string, self._nonce())
+            else:
+                query_string = 'timestamp={}'.format(self._nonce())
+
+        if not api:
+            api = self.api
+
+        url = f'{api}{endpoint}?{query_string}'
+        header = {}
+        if auth:
+            signature = self._generate_signature(query_string)
+            url += f'&signature={signature}'
+            header = {
+                "X-MBX-APIKEY": self.key_id,
+            }
+        if method == GET:
+            data = await self.http_conn.read(url, header=header)
+        elif method == POST:
+            data = await self.http_conn.write(url, msg=None, header=header)
+        elif method == DELETE:
+            data = await self.http_conn.delete(url, header=header)
+        return json.loads(data, parse_float=Decimal)
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
@@ -82,16 +109,82 @@ class BinanceRestMixin(RestExchange):
         }
         return ret
 
+    # Trading APIs
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, time_in_force=None, test=False):
+        if order_type == MARKET and price:
+            raise ValueError('Cannot specify price on a market order')
+        if order_type == LIMIT:
+            if not price:
+                raise ValueError('Must specify price on a limit order')
+            if not time_in_force:
+                raise ValueError('Must specify time in force on a limit order')
+        ot = self.normalize_order_options(order_type)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        parameters = {
+            'symbol': sym,
+            'side': 'BUY' if side is BUY else 'SELL',
+            'type': ot,
+            'quantity': str(amount),
+        }
+        if price:
+            parameters['price'] = str(price)
+        if time_in_force:
+            parameters['timeInForce'] = self.normalize_order_options(time_in_force)
+
+        data = await self._request(POST, 'test' if test else 'order', auth=True, payload=parameters)
+        return data
+
+    async def cancel_order(self, order_id: str, symbol: str):
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        data = await self._request(DELETE, 'order', auth=True, payload={'symbol': sym, 'orderId': order_id})
+        return data
+
+    async def balances(self):
+        data = await self._request(GET, 'account', auth=True)
+        return data['balances']
+
+    async def orders(self, symbol: str = None):
+        data = await self._request(GET, 'openOrders', auth=True, payload={'symbol': self.std_symbol_to_exchange_symbol(symbol)} if symbol else {})
+        return data
+
+    async def order_status(self, order_id: str):
+        data = await self._request(GET, 'order', auth=True, payload={'orderId': order_id})
+        return data
+
 
 class BinanceFuturesRestMixin(BinanceRestMixin):
-    api = "https://fapi.binance.com/fapi/v1/"
+    api = 'https://fapi.binance.com/fapi/v1/'
     rest_channels = (
-        TRADES
+        TRADES, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS, POSITIONS
     )
+
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, time_in_force=None):
+        data = await super().place_order(symbol, side, order_type, amount, price=price, time_in_force=time_in_force, test=False)
+        return data
+
+    async def balances(self):
+        data = await self._request(GET, 'account', auth=True, api='https://fapi.binance.com/fapi/v2/')
+        return data['assets']
+
+    async def positions(self):
+        data = await self._request(GET, 'account', auth=True, api='https://fapi.binance.com/fapi/v2/')
+        return data['positions']
 
 
 class BinanceDeliveryRestMixin(BinanceRestMixin):
-    api = "https://dapi.binance.com/dapi/v1/"
+    api = 'https://dapi.binance.com/dapi/v1/'
     rest_channels = (
-        TRADES
+        TRADES, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS, POSITIONS
     )
+
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, time_in_force=None):
+        data = await super().place_order(symbol, side, order_type, amount, price=price, time_in_force=time_in_force, test=False)
+        return data
+
+    async def balances(self):
+        data = await self._request(GET, 'account', auth=True)
+        return data['assets']
+
+    async def positions(self):
+        data = await self._request(GET, 'account', auth=True)
+        return data['positions']

@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from typing import List, Union, AsyncIterable, Optional
 from decimal import Decimal
 import atexit
+from aiohttp.client_reqrep import ClientResponse
 
 import requests
 import websockets
@@ -118,6 +119,13 @@ class HTTPAsyncConn(AsyncConnection):
     def is_open(self) -> bool:
         return self.conn and not self.conn.closed
 
+    def _handle_error(self, resp: ClientResponse, data: bytes):
+        if resp.status != 200:
+            LOG.error("%s: Status code %d for URL %s", self.id, resp.status, resp.url)
+            LOG.error("%s: Headers: %s", self.id, resp.headers)
+            LOG.error("%s: Resp: %s", self.id, data.decode('UTF-8'))
+            resp.raise_for_status()
+
     async def _open(self):
         if self.is_open:
             LOG.warning('%s: HTTP session already created', self.id)
@@ -143,10 +151,10 @@ class HTTPAsyncConn(AsyncConnection):
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
                     if retry_count < 0:
-                        response.raise_for_status()
+                        self._handle_error(response, data)
                     await asyncio.sleep(retry_delay)
                     continue
-                response.raise_for_status()
+                self._handle_error(response, data)
                 if return_headers:
                     return data, response.headers
                 return data
@@ -165,10 +173,10 @@ class HTTPAsyncConn(AsyncConnection):
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
                     if retry_count < 0:
-                        response.raise_for_status()
+                        self._handle_error(response, data)
                     await asyncio.sleep(retry_delay)
                     continue
-                response.raise_for_status()
+                self._handle_error(response, data)
                 return data
 
     async def delete(self, address: str, header=None, retry_count=0, retry_delay=60) -> str:
