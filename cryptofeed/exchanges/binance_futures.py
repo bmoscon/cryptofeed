@@ -43,6 +43,12 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
     symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
+    websocket_channels = {
+        **Binance.websocket_channels,
+        FUNDING: 'markPrice',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'forceOrder'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -56,11 +62,6 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         return base, info
 
     def __init__(self, **kwargs):
-        self.websocket_channels.update({
-            FUNDING: 'markPrice',
-            OPEN_INTEREST: 'open_interest',
-            LIQUIDATIONS: 'forceOrder'
-        })
         super().__init__(**kwargs)
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://fstream.binance.com'
@@ -104,15 +105,15 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         """
         pair = msg['symbol']
         oi = msg['openInterest']
-        if oi != self.open_interest.get(pair, None):
+        if oi != self._open_interest_cache.get(pair, None):
             await self.callback(OPEN_INTEREST,
                                 feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(pair),
                                 open_interest=oi,
-                                timestamp=self.self.timestamp_normalize(msg['time']),
+                                timestamp=self.timestamp_normalize(msg['time']),
                                 receipt_timestamp=time.time()
                                 )
-            self.open_interest[pair] = oi
+            self._open_interest_cache[pair] = oi
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []

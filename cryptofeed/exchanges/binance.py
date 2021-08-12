@@ -17,12 +17,14 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, VOLUME, USER_BALANCE, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
+
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Binance(Feed):
+class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
@@ -160,7 +162,7 @@ class Binance(Feed):
         self.forced = defaultdict(bool)
         self._l2_book = {}
         self.last_update_id = {}
-        self.open_interest = {}
+        self._open_interest_cache = {}
 
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched

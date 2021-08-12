@@ -32,7 +32,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
-    version="1.9.3",
+    version="2.0.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
@@ -63,7 +63,6 @@ setup(
         "requests>=2.18.4",
         "websockets>=7.0",
         "sortedcontainers>=1.5.9",
-        "pandas",
         "pyyaml",
         "aiohttp>=3.7.1, < 4.0.0",
         "aiofile>=2.0.0",
@@ -74,7 +73,7 @@ setup(
         "cchardet",     # cchardet is a faster replacement for chardet
     ],
     extras_require={
-        "arctic": ["arctic"],
+        "arctic": ["arctic", "pandas"],
         "gcp_pubsub": ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"],
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],

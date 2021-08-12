@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -11,14 +12,11 @@ import logging
 import time
 import urllib
 from decimal import Decimal
-from datetime import datetime as dt
 
-import requests
 from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, L2_BOOK, LIMIT, MAKER_OR_CANCEL, MARKET, OPEN, ORDERS, ORDER_STATUS, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
-from cryptofeed.connection import request_retry
 from cryptofeed.exchange import RestExchange
 
 
@@ -30,7 +28,7 @@ class KrakenRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS, TRADE_HISTORY
     )
-    rest_options = {
+    order_options = {
         LIMIT: 'limit',
         MARKET: 'market',
         MAKER_OR_CANCEL: 'post'
@@ -57,18 +55,12 @@ class KrakenRestMixin(RestExchange):
             'order_status': status
         }
 
-    def _post_public(self, command: str, payload=None, retry=None, retry_wait=0):
+    async def _post_public(self, command: str, payload=None, retry_count=1, retry_delay=60):
         url = f"{self.api}{command}"
+        resp = await self.http_conn.write(url, msg={} if not payload else payload, retry_count=retry_count, retry_delay=retry_delay)
+        return json.loads(resp, parse_float=Decimal)
 
-        @request_retry(self.id, retry, retry_wait)
-        def helper():
-            resp = requests.post(url, data={} if not payload else payload)
-            self._handle_error(resp)
-            return json.loads(resp.text, parse_float=Decimal)
-
-        return helper()
-
-    def _post_private(self, command: str, payload=None):
+    async def _post_private(self, command: str, payload=None):
         # API-Key = API key
         # API-Sign = Message signature using HMAC-SHA512 of (URI path + SHA256(nonce + POST data)) and base64 decoded secret API key
         if payload is None:
@@ -92,15 +84,13 @@ class KrakenRestMixin(RestExchange):
             'API-Sign': sigdigest.decode()
         }
 
-        resp = requests.post(f"{self.api}{command}", data=payload, headers=headers)
-        self._handle_error(resp)
-
+        resp = await self.http_conn.write(f"{self.api}{command}", msg=payload, header=headers)
         return json.loads(resp.text, parse_float=Decimal)
 
     # public API
-    def ticker(self, symbol: str, retry=None, retry_wait=0):
+    async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", '')
-        data = self._post_public("/public/Ticker", payload={'pair': sym}, retry=retry, retry_wait=retry_wait)
+        data = await self._post_public("/public/Ticker", payload={'pair': sym}, retry_count=retry_count, retry_delay=retry_delay)
 
         data = data['result']
         for _, val in data.items():
@@ -110,9 +100,9 @@ class KrakenRestMixin(RestExchange):
                     'ask': Decimal(val['a'][0])
                     }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
-        data = self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry=retry, retry_wait=retry_wait)
+        data = await self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry_count=retry_count, retry_delay=retry_delay)
         for _, val in data['result'].items():
             return {
                 BID: sd({
@@ -125,56 +115,34 @@ class KrakenRestMixin(RestExchange):
                 })
             }
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=10):
-        if start:
-            if not end:
-                end = dt.now().timestamp()
-            end = self._datetime_normalize(end)
-            for data in self._historical_trades(symbol, start, end, retry, retry_wait):
+    async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
+        start, end = self._interval_normalize(start, end)
+        if start and end:
+            async for data in self._historical_trades(symbol, start, end, retry_count, retry_delay):
                 data = data['result']
                 data = data[list(data.keys())[0]]
                 data = [self._trade_normalization(d, symbol) for d in data]
                 yield [d for d in data if d['timestamp'] <= end]
         else:
             sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
-            data = self._post_public("/public/Trades", {'pair': sym}, retry=retry, retry_wait=retry_wait)
+            data = await self._post_public("/public/Trades", {'pair': sym}, retry_count=retry_count, retry_delay=retry_delay)
             data = data['result']
             data = data[list(data.keys())[0]]
             yield [self._trade_normalization(d, symbol) for d in data]
 
-    def _historical_trades(self, symbol, start_date, end_date, retry, retry_wait, freq='6H'):
+    async def _historical_trades(self, symbol, start_date, end_date, retry_count, retry_delay):
         symbol = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
-
-        @request_retry(self.id, retry, retry_wait)
-        def helper(start_date):
-            endpoint = f"{self.api}/public/Trades?pair={symbol}&since={start_date}"
-            return requests.get(endpoint)
-
         start_date = int(self._datetime_normalize(start_date))
         end_date = self._datetime_normalize(end_date)
 
         while start_date < end_date:
-            r = helper(start_date)
-
-            if r.status_code == 504 or r.status_code == 520:
-                # cloudflare gateway timeout or other error
-                time.sleep(60)
-                continue
-            elif r.status_code != 200:
-                self._handle_error(r)
-            else:
-                time.sleep(1 / self.request_limit)
-
-            data = json.loads(r.text, parse_float=Decimal)
-            if 'error' in data and data['error']:
-                if data['error'] == ['EAPI:Rate limit exceeded']:
-                    time.sleep(5)
-                    continue
-                else:
-                    raise Exception(f"Error processing URL {r.url}: {data['error']}")
-
+            endpoint = f"{self.api}/public/Trades?pair={symbol}&since={start_date}"
+            r = await self.http_conn.read(endpoint, retry_count=retry_count, retry_delay=retry_delay)
+            data = json.loads(r, parse_float=Decimal)
             yield data
+
             start_date = int(int(data['result']['last']) / 1_000_000_000)
+            await asyncio.sleep(1 / self.request_limit)
 
     def _trade_normalization(self, trade: list, symbol: str) -> dict:
         """
@@ -191,8 +159,8 @@ class KrakenRestMixin(RestExchange):
         }
 
     # Private API
-    def balances(self):
-        data = self._post_private('/private/Balance')
+    async def balances(self):
+        data = await self._post_private('/private/Balance')
         if len(data['error']) != 0:
             return data
         cur_map = {
@@ -214,8 +182,8 @@ class KrakenRestMixin(RestExchange):
             for currency, value in data['result'].items()
         }
 
-    def orders(self):
-        data = self._post_private('/private/OpenOrders', None)
+    async def orders(self):
+        data = await self._post_private('/private/OpenOrders', None)
         if len(data['error']) != 0:
             return data
 
@@ -225,15 +193,15 @@ class KrakenRestMixin(RestExchange):
                 ret.append(self._order_status(order_id, order))
         return ret
 
-    def order_status(self, order_id: str):
-        data = self._post_private('/private/QueryOrders', {'txid': order_id})
+    async def order_status(self, order_id: str):
+        data = await self._post_private('/private/QueryOrders', {'txid': order_id})
         if len(data['error']) != 0:
             return data
 
         for order_id, order in data['result'].items():
             return self._order_status(order_id, order)
 
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
         ot = self.normalize_order_options(self.id, order_type)
 
         parameters = {
@@ -249,23 +217,23 @@ class KrakenRestMixin(RestExchange):
         if options:
             parameters['oflags'] = ','.join([self.normalize_order_options(self.id, o) for o in options])
 
-        data = self._post_private('/private/AddOrder', parameters)
+        data = await self._post_private('/private/AddOrder', parameters)
         if len(data['error']) != 0:
             return data
         else:
             if len(data['result']['txid']) == 1:
-                return self.order_status(data['result']['txid'][0])
+                return await self.order_status(data['result']['txid'][0])
             else:
-                return [self.order_status(tx) for tx in data['result']['txid']]
+                return [await self.order_status(tx) for tx in data['result']['txid']]
 
-    def cancel_order(self, order_id: str):
-        data = self._post_private('/private/CancelOrder', {'txid': order_id})
+    async def cancel_order(self, order_id: str):
+        data = await self._post_private('/private/CancelOrder', {'txid': order_id})
         if len(data['error']) != 0:
             return data
         else:
-            return self.order_status(order_id)
+            return await self.order_status(order_id)
 
-    def trade_history(self, symbol: str = None, start=None, end=None):
+    async def trade_history(self, symbol: str = None, start=None, end=None):
         params = {}
 
         if start:
@@ -273,7 +241,7 @@ class KrakenRestMixin(RestExchange):
         if end:
             params['end'] = self._timestamp(end).timestamp()
 
-        data = self._post_private('/private/TradesHistory', params)
+        data = await self._post_private('/private/TradesHistory', params)
         if len(data['error']) != 0:
             return data
 
@@ -298,13 +266,12 @@ class KrakenRestMixin(RestExchange):
             }
         return ret
 
-    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
-
+    async def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         params = {}
         if start:
-            params['start'] = self._timestamp(start).timestamp()
+            params['start'] = self._datetime_normalize(start)
         if end:
-            params['end'] = self._timestamp(end).timestamp()
+            params['end'] = self._datetime_normalize(end)
         if aclass:
             params['aclass'] = aclass
         if asset:
@@ -312,7 +279,7 @@ class KrakenRestMixin(RestExchange):
         if ledger_type:
             params['type'] = ledger_type
 
-        data = self._post_private('/private/Ledgers', params)
+        data = await self._post_private('/private/Ledgers', params)
         if len(data['error']) != 0:
             return data
 

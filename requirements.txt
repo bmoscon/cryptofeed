@@ -1,0 +1,10 @@
+requests>=2.18.4
+websockets>=7.0
+sortedcontainers>=1.5.9
+pyyaml
+aiohttp==3.7.4
+aiofile>=2.0.0
+yapic.json>=1.6.3
+aiodns>=1.1  # aiodns speeds up DNS resolving
+cchardet
+uvloop

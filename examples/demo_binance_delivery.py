@@ -9,7 +9,7 @@ from yapic import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.zmq import CandlesZMQ, FundingZMQ, FuturesIndexZMQ, TickerZMQ, TradeZMQ, VolumeZMQ, UserBalanceZMQ, UserPositionZMQ
-from cryptofeed.defines import CANDLES, FUTURES_INDEX, L2_BOOK, FUNDING, TICKER, PERPETUAL, FUTURE, TRADES, VOLUME, USER_BALANCE, USER_POSITION
+from cryptofeed.defines import CANDLES, FUTURES_INDEX, L2_BOOK, FUNDING, TICKER, PERPETUAL, FUTURES, TRADES, VOLUME, USER_BALANCE, USER_POSITION
 from cryptofeed.exchanges import BinanceFutures, BinanceDelivery, Binance
 
 binance_delivery_data_info = BinanceDelivery.info()
@@ -109,7 +109,7 @@ def main():
             TRADES: TradeZMQ(port=5682), 
             FUTURES_INDEX: FuturesIndexZMQ(port=5684),
             VOLUME: VolumeZMQ(port=5685)}))
-        feeds.append(BinanceDelivery(candle_interval='1d', symbols=binance_delivery_symbols[FUTURE], channels=[FUTURES_INDEX, TICKER, TRADES, VOLUME], callbacks={
+        feeds.append(BinanceDelivery(candle_interval='1d', symbols=binance_delivery_symbols[FUTURES], channels=[FUTURES_INDEX, TICKER, TRADES, VOLUME], callbacks={
             TICKER: TickerZMQ(port=5687), 
             TRADES: TradeZMQ(port=5688), 
             FUTURES_INDEX: FuturesIndexZMQ(port=5689),
