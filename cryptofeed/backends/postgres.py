@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from datetime import datetime as dt
+from decimal import Decimal
 from typing import Tuple
 
 import asyncpg
@@ -12,6 +13,8 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendQueue, BackendTickerCallback, BackendTradeCallback,
+                                         BackendLiquidationsCallback, BackendFuturesIndexCallback,
+                                         DeribitBackendTickerCallback, DeribitBackendTradeCallback, DeribitBackendBookCallback,
                                          BackendLiquidationsCallback, BackendFuturesIndexCallback)
 from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, FUTURES_INDEX
 
@@ -107,6 +110,14 @@ class TradePostgres(PostgresCallback, BackendTradeCallback):
         return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{data['side']}',{data['amount']},{data['price']},{data['id']},{data['order_type']})"
 
 
+class DeribitTradePostgres(PostgresCallback, DeribitBackendTradeCallback):
+    default_table = TRADES
+
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        d = ','.join('NULL' if val is None else str(val) if type(val) == self.numeric_type else f'\'{val}\'' for val in data.values())
+        await super().write(feed, symbol, timestamp, receipt_timestamp, d)
+
+
 class FundingPostgres(PostgresCallback, BackendFundingCallback):
     default_table = FUNDING
 
@@ -122,6 +133,14 @@ class TickerPostgres(PostgresCallback, BackendTickerCallback):
         data = data[4]
 
         return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}',{data['bid']},{data['ask']})"
+
+
+class DeribitTickerPostgres(PostgresCallback, DeribitBackendTickerCallback):
+    default_table = 'tickers'
+
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        d = ','.join('NULL' if val is None else str(val) if type(val) == self.numeric_type else f'\'{val}\'' for val in data.values())
+        await super().write(feed, symbol, timestamp, receipt_timestamp, d)
 
 
 class OpenInterestPostgres(PostgresCallback, BackendOpenInterestCallback):
@@ -146,6 +165,13 @@ class LiquidationsPostgres(PostgresCallback, BackendLiquidationsCallback):
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
     default_table = 'book'
+
+
+class DeribitBookPostgres(PostgresCallback, DeribitBackendBookCallback):
+    default_table = 'books'
+
+    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+        await super().write(feed, symbol, timestamp, receipt_timestamp, f"'{json.dumps(data)}'")
 
 
 class BookDeltaPostgres(PostgresCallback, BackendBookDeltaCallback):

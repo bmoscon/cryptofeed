@@ -6,12 +6,17 @@ associated with this software.
 '''
 import asyncio
 from decimal import Decimal
+import hmac
 import logging
+import requests
+from time import time
+from typing import Any, Dict, List, Optional
+import urllib.parse
 
 from yapic import json
 from sortedcontainers.sorteddict import SortedDict as sd
 
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, DELETE, FUNDING, GET, L2_BOOK, LIMIT, POST, TICKER, TRADES
 from cryptofeed.defines import SELL
 from cryptofeed.exchange import RestExchange
 
@@ -24,6 +29,38 @@ class FTXRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, FUNDING
     )
+
+    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
+        return self._send_request(endpoint, GET, params=params, retry=retry, retry_wait=retry_wait, auth=auth)
+
+    def _post(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
+        return self._send_request(endpoint, POST, json=params, retry=retry, retry_wait=retry_wait, auth=auth)
+
+    def _delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
+        return self._send_request(endpoint, DELETE, json=params, retry=retry, retry_wait=retry_wait, auth=auth)
+
+    def _send_request(self, endpoint: str, http_method=GET, retry=None, retry_wait=0, auth=False, **kwargs):
+        def helper():
+            request = requests.Request(method=http_method, url=self.api + endpoint, **kwargs)
+            if auth:
+                self._sign_request(request)
+            r = self.session.send(request.prepare())
+            self._handle_error(r)
+            return json.loads(r.text, parse_float=Decimal)['result']
+        return helper()
+
+    def _sign_request(self, request: requests.Request) -> None:
+        ts = int(time() * 1000)
+        prepared = request.prepare()
+        signature_payload = f'{ts}{prepared.method}{prepared.path_url}'.encode()
+        if prepared.body:
+            signature_payload += prepared.body
+        signature = hmac.new(self.key_secret.encode(), signature_payload, 'sha256').hexdigest()
+        request.headers['FTX-KEY'] = self.key_id
+        request.headers['FTX-SIGN'] = signature
+        request.headers['FTX-TS'] = str(ts)
+        if self.subaccount:
+            request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote(self.subaccount)
 
     async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
@@ -84,6 +121,31 @@ class FTXRestMixin(RestExchange):
         data = json.loads(r, parse_float=Decimal)['result']
         data = [self._funding_normalization(x) for x in data]
         return data
+
+    def place_order(self, symbol: str, side: str, amount: Decimal, price: Decimal, order_type: str = LIMIT,
+                    reduce_only: bool = False, ioc: bool = False, post_only: bool = False, client_id: str = None) -> dict:
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        return self._post('/orders', params={
+            'market': sym,
+            'side': side,
+            'price': str(price),
+            'size': str(amount),
+            'type': order_type,
+            'reduceOnly': reduce_only,
+            'ioc': ioc,
+            'postOnly': post_only,
+            'clientId': client_id,
+        }, auth=True)
+
+    def cancel_order(self, order_id: str) -> dict:
+        return self._delete(f'/orders/{order_id}', auth=True)
+
+    def orders(self, symbol: str) -> List[dict]:
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        return self._get('/orders', params={'market': sym}, auth=True)
+
+    def positions(self, show_avg_price: bool = False) -> List[dict]:
+        return self._get('/positions', params={'showAvgPrice': show_avg_price}, auth=True)
 
     @staticmethod
     def _dedupe(data, last):

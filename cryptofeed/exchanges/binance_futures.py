@@ -14,11 +14,29 @@ from yapic import json
 
 from cryptofeed.auth.binance import BinanceFuturesAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
-from cryptofeed.defines import BALANCES, BINANCE_FUTURES, FUNDING, LIQUIDATIONS, OPEN_INTEREST, POSITIONS
+from cryptofeed.defines import BALANCES, BINANCE_FUTURES, FUNDING, FUTURES, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, POSITIONS, PREMIUM_INDEX
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
 
 LOG = logging.getLogger('feedhandler')
+
+
+class BinanceFuturesInstrument():
+    def __init__(self, instrument_name):
+        self.instrument_name = instrument_name
+        instrument_properties = instrument_name.split('_')
+        self.pair = instrument_properties[0]
+        pair_arr = instrument_properties[0].split('-')
+        self.base = pair_arr[0]
+        self.quote = pair_arr[1]
+
+        if len(pair_arr) == 3 and pair_arr[2].lower() == PREMIUM_INDEX:
+            self.instrument_type = PREMIUM_INDEX
+        elif len(instrument_properties) == 1:
+            self.instrument_type = PERPETUAL
+        else:
+            self.instrument_type = FUTURES
+            self.expiry_date_str = instrument_properties[1]
 
 
 class BinanceFutures(Binance, BinanceFuturesRestMixin):
@@ -52,6 +70,15 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.auth = BinanceFuturesAuth(self.key_id)
         self.address = self._address()
+
+    @staticmethod
+    def get_instrument_objects():
+        instruments = BinanceFutures.get_instruments()
+        return [BinanceFuturesInstrument(instrument) for instrument in instruments]
+
+    @staticmethod
+    def convert_to_instrument_object(instrument_name):
+        return BinanceFuturesInstrument(instrument_name)
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         skip_update = False
@@ -212,6 +239,8 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg_type == '24hrMiniTicker':
+            await self._volume(msg, timestamp)
         elif msg['e'] == 'kline':
             await self._candle(msg, timestamp)
         else:

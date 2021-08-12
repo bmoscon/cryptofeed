@@ -4,19 +4,40 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from datetime import datetime
 from decimal import Decimal
 import logging
-from typing import Tuple
+from typing import Tuple, Dict
 
 from yapic import json
 
 from cryptofeed.auth.binance import BinanceDeliveryAuth
-from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, FUNDING, LIQUIDATIONS, OPEN_INTEREST, POSITIONS
+from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, FUNDING, FUTURES, FUTURES_INDEX, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, POSITIONS, SPOT
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
 
-
 LOG = logging.getLogger('feedhandler')
+
+
+class BinanceDeliveryInstrument():
+    def __init__(self, instrument_name):
+        self.instrument_name = instrument_name
+        instrument_properties = instrument_name.split('_')
+        self.pair = instrument_properties[0]
+        pair_arr = instrument_properties[0].split('-')
+        self.base = pair_arr[0]
+        self.quote = pair_arr[1]
+        self.usd_spot = f'{self.base}-USD'
+        self.usdt_spot = f'{self.base}-USDT'
+        if len(instrument_properties) == 1:
+            self.instrument_type = SPOT
+        elif instrument_properties[1] == 'PERP':
+            self.instrument_type = PERPETUAL
+        else:
+            self.instrument_type = FUTURES
+            self.expiry_date_str = instrument_properties[1]
+            self.expiry_date = datetime.strptime(self.expiry_date_str, "%y%m%d")
+            self.expiry_date = self.expiry_date.replace(hour=8)
 
 
 class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
@@ -32,13 +53,33 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         POSITIONS: POSITIONS
     }
 
+    @classmethod
+    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
+        base, info = super()._parse_symbol_data(data, symbol_separator)
+        add = {}
+        for symbol, orig in base.items():
+            add[symbol.split("_")[0]] = orig.split("_")[0]
+        base.update(add)
+        return base, info
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def setup(self):
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
         self.auth = BinanceDeliveryAuth(self.key_id)
         self.address = self._address()
+
+    @staticmethod
+    def get_instrument_objects():
+        instruments = BinanceDelivery.get_instruments()
+        return [BinanceDeliveryInstrument(instrument) for instrument in instruments]
+
+    @staticmethod
+    def convert_to_instrument_object(instrument_name):
+        return BinanceDeliveryInstrument(instrument_name)
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         skip_update = False
@@ -57,6 +98,23 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
         return skip_update, forced, current_match
+
+    async def _futures_index(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "indexPriceUpdate",  // Event type
+            "E": 1591261236000,       // Event time
+            "i": "BTCUSD",            // Pair
+            "p": "9636.57860000",     // Index Price
+        }
+        """
+        await self.callback(FUTURES_INDEX,
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['i']),
+                            timestamp=self.timestamp_normalize(self.id, msg['E']),
+                            receipt_timestamp=timestamp,
+                            futures_index=Decimal(msg['p']),
+                            )
 
     async def _account_update(self, msg: dict, timestamp: float):
         """
@@ -143,9 +201,14 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
+        if self.requires_authentication:
+            msg_type = msg.get('e')
+            if msg_type == 'ACCOUNT_UPDATE':
+                await self._account_update(msg, timestamp)
+            return
+
         pair, _ = msg['stream'].split('@', 1)
         msg = msg['data']
-
         pair = pair.upper()
 
         msg_type = msg.get('e')
@@ -159,6 +222,10 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             await self._liquidations(msg, timestamp)
         elif msg_type == 'markPriceUpdate':
             await self._funding(msg, timestamp)
+        elif msg_type == 'indexPriceUpdate':
+            await self._futures_index(msg, timestamp)
+        elif msg_type == '24hrMiniTicker':
+            await self._volume(msg, timestamp)
         elif msg_type == 'kline':
             await self._candle(msg, timestamp)
         else:

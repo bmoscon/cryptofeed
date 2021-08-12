@@ -8,6 +8,9 @@ import asyncio
 import inspect
 from decimal import Decimal
 
+from cryptofeed.util.instrument import get_instrument_type
+from cryptofeed.defines import PERPETUAL, OPTION
+
 
 class Callback:
     def __init__(self, callback):
@@ -47,6 +50,44 @@ class TradeCallback(Callback):
 class TickerCallback(Callback):
     async def __call__(self, *, feed: str, symbol: str, bid: Decimal, ask: Decimal, timestamp: float, receipt_timestamp: float):
         await super().__call__(feed, symbol, bid, ask, timestamp, receipt_timestamp)
+
+
+class DeribitTickerCallback():
+    def __init__(self, callbacks):
+        self.callbacks = callbacks
+
+    async def __call__(
+        self,
+        *,
+        feed: str,
+        symbol: str,
+        bid: Decimal,
+        bid_amount: Decimal,
+        ask: Decimal,
+        ask_amount: Decimal,
+        timestamp: float,
+        receipt_timestamp: float,
+        bid_iv: Decimal = None,
+        ask_iv: Decimal = None,
+        delta: Decimal = None,
+        gamma: Decimal = None,
+        rho: Decimal = None,
+        theta: Decimal = None,
+        vega: Decimal = None,
+        mark_price: Decimal = None,
+        mark_iv: Decimal = None,
+        underlying_index: str = None,
+        underlying_price: Decimal = None
+    ):
+        instrument_type = get_instrument_type(symbol)
+        if instrument_type not in self.callbacks:
+            return
+        if instrument_type == PERPETUAL:
+            await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp)
+        elif instrument_type == OPTION:
+            await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp, bid_iv, ask_iv, delta, gamma, rho, theta, vega, mark_price, mark_iv, underlying_index, underlying_price)
+        else:
+            await self.callbacks[instrument_type](feed, symbol, bid, bid_amount, ask, ask_amount, timestamp, receipt_timestamp)
 
 
 class BookCallback(Callback):

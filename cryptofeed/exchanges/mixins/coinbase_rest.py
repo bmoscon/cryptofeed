@@ -31,7 +31,7 @@ class CoinbaseRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY
     )
-    rest_options = {
+    order_options = {
         LIMIT: 'limit',
         MARKET: 'market',
         FILL_OR_KILL: {'time_in_force': 'FOK'},

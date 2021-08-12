@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 
 from cryptofeed.backends._util import book_convert, book_delta_convert
-from cryptofeed.defines import BID, ASK
+from cryptofeed.defines import BID, ASK, BUY, SELL
 
 
 class BackendQueue:
@@ -53,6 +53,13 @@ class BackendBookCallback:
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
+class DeribitBackendBookCallback:
+    async def __call__(self, *, feed: str, symbol: str, book: dict, timestamp: float, receipt_timestamp: float):
+        data = {BID: {}, ASK: {}}
+        book_convert(book, data, convert=self.numeric_type)
+        await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+
 class BackendBookDeltaCallback:
     async def __call__(self, *, feed: str, symbol: str, delta: dict, timestamp: float, receipt_timestamp: float):
         data = {'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp, 'delta': True, BID: {}, ASK: {}}
@@ -61,10 +68,43 @@ class BackendBookDeltaCallback:
 
 
 class BackendTradeCallback:
-    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, order_id: str = None, timestamp: float, receipt_timestamp: float, order_type: str = None):
+    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, timestamp: float, receipt_timestamp: float, order_id: str = None, order_type: str = None):
         data = {'feed': feed, 'symbol': symbol, 'timestamp': timestamp, 'receipt_timestamp': receipt_timestamp,
                 'side': side, 'amount': self.numeric_type(amount), 'price': self.numeric_type(price), 'order_type': order_type, 'id': order_id}
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+
+class DeribitBackendTradeCallback:
+    async def __call__(
+        self, 
+        *, 
+        feed: str, 
+        symbol: str, 
+        side: str, 
+        amount: Decimal, 
+        price: Decimal, 
+        timestamp: float, 
+        receipt_timestamp: float, 
+        trade_seq: Decimal,
+        mark_price: Decimal,
+        index_price: Decimal,
+        order_id = None,
+        iv: Decimal = None
+        ):
+        data = {
+            'trade_id': order_id,
+            'trade_seq': self.numeric_type(trade_seq),
+            'amount': self.numeric_type(amount), 
+            'is_buy': 'true' if side == BUY else 'false',
+            'price': self.numeric_type(price),
+            'mark_price': self.numeric_type(mark_price),
+            'index_price': self.numeric_type(index_price),
+            'iv': self.convert_to_numeric_type(iv)
+        }
+        await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+    
+    def convert_to_numeric_type(self, val):
+        return None if val is None else self.numeric_type(val)
 
 
 class BackendFundingCallback:
@@ -81,9 +121,63 @@ class BackendFundingCallback:
 
 
 class BackendTickerCallback:
-    async def __call__(self, *, feed: str, symbol: str, bid: Decimal, ask: Decimal, timestamp: float, receipt_timestamp: float):
-        data = {'feed': feed, 'symbol': symbol, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
+    async def __call__(self, *, feed: str, symbol: str, **kwargs):
+        # data = {'feed': feed, 'symbol': symbol, 'bid': self.numeric_type(bid), 'ask': self.numeric_type(ask), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
+
+
+class DeribitBackendTickerCallback():
+    async def __call__(
+        self,
+        *,
+        feed: str,
+        symbol: str,
+        bid: Decimal,
+        bid_amount: Decimal,
+        ask: Decimal,
+        ask_amount: Decimal,
+        timestamp: float,
+        receipt_timestamp: float,
+        bid_iv: Decimal = None,
+        ask_iv: Decimal = None,
+        delta: Decimal = None,
+        gamma: Decimal = None,
+        rho: Decimal = None,
+        theta: Decimal = None,
+        vega: Decimal = None,
+        mark_price: Decimal = None,
+        mark_iv: Decimal = None,
+        underlying_index: str = None,
+        underlying_price: Decimal = None
+    ):
+        data = {
+            'bid': self.numeric_type(bid), 
+            'bid_amount': self.numeric_type(bid_amount), 
+            'ask': self.numeric_type(ask),
+            'ask_amount': self.numeric_type(ask_amount),
+            'bid_iv': self.convert_to_numeric_type(bid_iv),
+            'ask_iv': self.convert_to_numeric_type(ask_iv),
+            'delta': self.convert_to_numeric_type(delta),
+            'gamma': self.convert_to_numeric_type(gamma),
+            'rho': self.convert_to_numeric_type(rho),
+            'theta': self.convert_to_numeric_type(theta),
+            'vega': self.convert_to_numeric_type(vega),
+            'mark_price': self.convert_to_numeric_type(mark_price),
+            'mark_iv': self.convert_to_numeric_type(mark_iv),
+            'underlying_index': underlying_index,
+            'underlying_price': self.convert_to_numeric_type(underlying_price)
+        }
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+    def convert_to_numeric_type(self, val):
+        return None if val is None else self.numeric_type(val)
 
 
 class BackendOpenInterestCallback:
@@ -102,6 +196,19 @@ class BackendLiquidationsCallback:
     async def __call__(self, *, feed: str, symbol: str, side: str, leaves_qty: Decimal, price: Decimal, order_id: str, status: str, timestamp: float, receipt_timestamp: float):
         data = {'feed': feed, 'symbol': symbol, 'side': side, 'leaves_qty': self.numeric_type(leaves_qty), 'price': self.numeric_type(price), 'order_id': order_id if order_id else "None", 'status': status, 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
+
+
+class BackendVolumeCallback:
+    async def __call__(self, *, feed, symbol, **kwargs):
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
 
 
 class BackendCandlesCallback:
@@ -127,6 +234,30 @@ class BackendBalancesCallback:
 
 
 class BackendPositionsCallback:
+    async def __call__(self, *, feed, symbol, **kwargs):
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
+
+
+class BackendUserFillCallback:
+    async def __call__(self, *, feed, symbol, **kwargs):
+        for key in kwargs:
+            if isinstance(kwargs[key], Decimal):
+                kwargs[key] = self.numeric_type(kwargs[key])
+        kwargs['feed'] = feed
+        kwargs['symbol'] = symbol
+        timestamp = kwargs.get('timestamp')
+        receipt_timestamp = kwargs.get('receipt_timestamp')
+        await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
+
+
+class BackendUserOrderCallback:
     async def __call__(self, *, feed, symbol, **kwargs):
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):

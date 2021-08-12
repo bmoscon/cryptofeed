@@ -127,7 +127,7 @@ class FeedHandler:
         for feed in feeds:
             self.add_feed(feed(channels=[L2_BOOK], symbols=symbols, callbacks={L2_BOOK: cb}, config=config))
 
-    def run(self, start_loop: bool = True, install_signal_handlers: bool = True, exception_handler=None):
+    def run(self, start_loop: bool = True, install_signal_handlers: bool = True, tasks = [], exception_handler=None):
         """
         start_loop: bool, default True
             if false, will not start the event loop.
@@ -153,6 +153,9 @@ class FeedHandler:
 
         for feed in self.feeds:
             feed.start(loop)
+
+        for task in tasks:
+            loop.create_task(task)
 
         if not start_loop:
             return

@@ -17,7 +17,7 @@ from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BALANCES, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, ORDER_INFO, POSITIONS, TICKER, TRADES, USER_FILLS)
+                                OPEN_INTEREST, ORDER_INFO, POSITIONS, TICKER, TRADES, USER_FILLS, USER_TRADES, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping
 from cryptofeed.util.book import book_delta, depth
 
@@ -78,6 +78,7 @@ class Feed(Exchange):
         self.timeout = timeout
         self.timeout_interval = timeout_interval
         self.subscription = defaultdict(set)
+        self.authenticated_subscription = defaultdict(set)
         self.address = address
         self.book_update_interval = book_interval
         self.snapshot_interval = snapshot_interval
@@ -91,6 +92,7 @@ class Feed(Exchange):
         self.checksum_validation = checksum_validation
         self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
         self.requires_authentication = False
+        self.is_authenticated = False
         self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
         self.http_proxy = http_proxy
@@ -105,9 +107,12 @@ class Feed(Exchange):
                 if self.is_authenticated_channel(channel):
                     if not self.key_id or not self.key_secret:
                         raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
+                    self.authenticated_subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol, self.id) for symbol in subscription[channel]])
+                    self.normalized_symbols.extend(self.authenticated_subscription[chan])
                     self.requires_authentication = True
-                self.normalized_symbols.extend(subscription[channel])
-                self.subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol) for symbol in subscription[channel]])
+                else:
+                    self.subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol, self.id) for symbol in subscription[channel]])
+                    self.normalized_symbols.extend(self.subscription[chan])
                 self._feed_config[channel].extend(self.normalized_symbols)
 
         if symbols and channels:
@@ -136,11 +141,13 @@ class Feed(Exchange):
                           OPEN_INTEREST: Callback(None),
                           TICKER: Callback(None),
                           TRADES: Callback(None),
+                          VOLUME: Callback(None),
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None),
                           USER_FILLS: Callback(None),
                           BALANCES: Callback(None),
-                          POSITIONS: Callback(None)
+                          POSITIONS: Callback(None),
+                          USER_TRADES: Callback(None),
                           }
 
         if callbacks:

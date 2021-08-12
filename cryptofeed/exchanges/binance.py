@@ -16,7 +16,7 @@ from yapic import json
 
 from cryptofeed.auth.binance import BinanceAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED, VOLUME
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
@@ -50,7 +50,8 @@ class Binance(Feed, BinanceRestMixin):
         ret = {}
         info = defaultdict(dict)
         for symbol in data['symbols']:
-            if symbol.get('status', 'TRADING') != "TRADING":
+            if symbol.get('status', 'TRADING') not in ["TRADING", "BREAK"]:
+                # TODO: is "break" an acceptable status for the symbols?
                 continue
             if symbol.get('contractStatus', 'TRADING') != "TRADING":
                 continue
@@ -86,16 +87,22 @@ class Binance(Feed, BinanceRestMixin):
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
 
         super().__init__({}, **kwargs)
-        self.ws_endpoint = 'wss://stream.binance.com:9443'
-        self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
         self.auth = BinanceAuth(self.key_id)
         self.address = self._address()
         self.concurrent_http = concurrent_http
+        self.setup()
 
         self._reset()
+
+    def setup(self):
+        self.ws_endpoint = 'wss://stream.binance.com:9443'
+        self.rest_endpoint = 'https://www.binance.com/api/v1'
+        from cryptofeed.auth.binance import BinanceAuth
+        self.auth = BinanceAuth(self.config)
+        self.address = self._address()
 
     def _address(self) -> Union[str, Dict]:
         """
@@ -125,6 +132,8 @@ class Binance(Feed, BinanceRestMixin):
                 continue
             if self.is_authenticated_channel(normalized_chan):
                 continue
+            if self.is_authenticated_channel(normalized_chan):
+                continue
 
             stream = chan
             if normalized_chan == CANDLES:
@@ -139,7 +148,11 @@ class Binance(Feed, BinanceRestMixin):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-                subs.append(f"{pair}@{stream}")
+                sub = f"{pair}@{stream}"
+                if normalized_chan == FUTURES_INDEX:
+                    pair = pair.split('_')[0]
+                    sub = f"{pair}@{stream}@1s"
+                subs.append(sub)
 
         if len(subs) < 200:
             return address + '/'.join(subs)
@@ -159,6 +172,10 @@ class Binance(Feed, BinanceRestMixin):
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched
             self._book_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
+
+    @classmethod
+    def get_instruments(cls):
+        return cls.info()['symbols']
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -211,7 +228,9 @@ class Binance(Feed, BinanceRestMixin):
         await self.callback(TICKER, feed=self.id,
                             symbol=pair,
                             bid=bid,
+                            bid_size=Decimal(msg['B']),
                             ask=ask,
+                            ask_size=Decimal(msg['A']),
                             timestamp=ts,
                             receipt_timestamp=timestamp)
 
@@ -385,13 +404,15 @@ class Binance(Feed, BinanceRestMixin):
             "T": 1562306400000       // Next funding time
         }
         """
+        if not msg['r']:
+            return
         await self.callback(FUNDING,
                             feed=self.id,
                             symbol=self.exchange_symbol_to_std_symbol(msg['s']),
                             timestamp=self.timestamp_normalize(msg['E']),
                             receipt_timestamp=timestamp,
-                            mark_price=msg['p'],
-                            rate=msg['r'],
+                            mark_price=Decimal(msg['p']),
+                            rate=Decimal(msg['r']),
                             next_funding_time=self.timestamp_normalize(msg['T']),
                             )
 
@@ -441,6 +462,28 @@ class Binance(Feed, BinanceRestMixin):
                             volume=Decimal(msg['k']['v']),
                             closed=msg['k']['x'])
 
+    async def _volume(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "24hrMiniTicker",  // Event type
+            "E": 123456789,         // Event time
+            "s": "BNBBTC",          // Symbol
+            "c": "0.0025",          // Close price
+            "o": "0.0010",          // Open price
+            "h": "0.0025",          // High price
+            "l": "0.0010",          // Low price
+            "v": "10000",           // Total traded base asset volume
+            "q": "18"               // Total traded quote asset volume
+        }
+        """
+        await self.callback(VOLUME,
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
+                            timestamp=self.timestamp_normalize(msg['E']),
+                            receipt_timestamp=timestamp,
+                            base_volume=Decimal(msg['v']),
+                            quote_volume=Decimal(msg['q']))
+
     async def _account_update(self, msg: dict, timestamp: float):
         """
         {
@@ -475,6 +518,11 @@ class Binance(Feed, BinanceRestMixin):
             return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
+        if self.requires_authentication:
+            msg_type = msg.get('e')
+            if msg_type == 'outboundAccountPosition':
+                await self._account_update(msg, timestamp)
+            return
         pair, _ = msg['stream'].split('@', 1)
         msg = msg['data']
         pair = pair.upper()
@@ -487,6 +535,8 @@ class Binance(Feed, BinanceRestMixin):
                 await self._liquidations(msg, timestamp)
             elif msg['e'] == 'markPriceUpdate':
                 await self._funding(msg, timestamp)
+            elif msg['e'] == '24hrMiniTicker':
+                await self._volume(msg, timestamp)
             elif msg['e'] == 'kline':
                 await self._candle(msg, timestamp)
             else:
