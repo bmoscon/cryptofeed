@@ -11,7 +11,8 @@ from typing import Tuple, Dict
 
 from yapic import json
 
-from cryptofeed.defines import FUNDING, FUTURES, FUTURES_INDEX, BINANCE_DELIVERY, LIQUIDATIONS, OPEN_INTEREST, USER_BALANCE, USER_POSITION, PERPETUAL, SPOT
+from cryptofeed.auth.binance import BinanceDeliveryAuth
+from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, FUNDING, FUTURES, FUTURES_INDEX, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, POSITIONS, SPOT
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
 
@@ -48,7 +49,8 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         **Binance.websocket_channels,
         FUNDING: 'markPrice',
         OPEN_INTEREST: 'open_interest',
-        LIQUIDATIONS: 'forceOrder'
+        LIQUIDATIONS: 'forceOrder',
+        POSITIONS: POSITIONS
     }
 
     @classmethod
@@ -67,8 +69,7 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
-        from cryptofeed.auth.binance_delivery import BinanceDeliveryAuth
-        self.auth = BinanceDeliveryAuth(self.config)
+        self.auth = BinanceDeliveryAuth(self.key_id)
         self.address = self._address()
 
     @staticmethod
@@ -132,9 +133,9 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
                 "cw":"100.12345678"       // Cross Wallet Balance
                 },
                 {
-                "a":"ETH",           
+                "a":"ETH",
                 "wb":"1.00000000",
-                "cw":"0.00000000"         
+                "cw":"0.00000000"
                 }
             ],
             "P":[
@@ -173,17 +174,17 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         }
         """
         for balance in msg['a']['B']:
-            await self.callback(USER_BALANCE,
+            await self.callback(BALANCES,
                                 feed=self.id,
                                 symbol=balance['a'],
-                                timestamp=self.timestamp_normalize(self.id, msg['E']),
+                                timestamp=self.timestamp_normalize(msg['E']),
                                 receipt_timestamp=timestamp,
                                 wallet_balance=Decimal(balance['wb']))
         for position in msg['a']['P']:
-            await self.callback(USER_POSITION,
+            await self.callback(POSITIONS,
                                 feed=self.id,
                                 symbol=self.exchange_symbol_to_std_symbol(position['s']),
-                                timestamp=self.timestamp_normalize(self.id, msg['E']),
+                                timestamp=self.timestamp_normalize(msg['E']),
                                 receipt_timestamp=timestamp,
                                 position_amount=Decimal(position['pa']),
                                 entry_price=Decimal(position['ep']),
@@ -192,6 +193,12 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
+        # Handle account updates from User Data Stream
+        if self.requires_authentication:
+            msg_type = msg.get('e')
+            if msg_type == 'ACCOUNT_UPDATE':
+                await self._account_update(msg, timestamp)
+            return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
         if self.requires_authentication:

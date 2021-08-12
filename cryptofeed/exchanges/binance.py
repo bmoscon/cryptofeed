@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from asyncio.events import AbstractEventLoop
 import logging
 from asyncio import create_task
 from collections import defaultdict, deque
@@ -13,12 +14,12 @@ from typing import Dict, Union, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
+from cryptofeed.auth.binance import BinanceAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, VOLUME, USER_BALANCE, FILLED, UNFILLED
+from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, FUTURES_INDEX, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED, VOLUME
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
-
 
 
 LOG = logging.getLogger('feedhandler')
@@ -35,7 +36,8 @@ class Binance(Feed, BinanceRestMixin):
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
         TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        CANDLES: 'kline_',
+        BALANCES: BALANCES
     }
     request_limit = 20
 
@@ -88,6 +90,7 @@ class Binance(Feed, BinanceRestMixin):
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
+        self.auth = BinanceAuth(self.key_id)
         self.address = self._address()
         self.concurrent_http = concurrent_http
         self.setup()
@@ -125,7 +128,9 @@ class Binance(Feed, BinanceRestMixin):
 
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
-            if self.exchange_channel_to_std(chan) == OPEN_INTEREST:
+            if normalized_chan == OPEN_INTEREST:
+                continue
+            if self.is_authenticated_channel(normalized_chan):
                 continue
             if self.is_authenticated_channel(normalized_chan):
                 continue
@@ -495,7 +500,7 @@ class Binance(Feed, BinanceRestMixin):
         }
         """
         for balance in msg['B']:
-            await self.callback(USER_BALANCE,
+            await self.callback(BALANCES,
                                 feed=self.id,
                                 symbol=balance['a'],
                                 timestamp=self.timestamp_normalize(msg['E']),
@@ -505,6 +510,12 @@ class Binance(Feed, BinanceRestMixin):
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
+        # Handle account updates from User Data Stream
+        if self.requires_authentication:
+            msg_type = msg['e']
+            if msg_type == 'outboundAccountPosition':
+                await self._account_update(msg, timestamp)
+            return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
         if self.requires_authentication:
@@ -541,3 +552,8 @@ class Binance(Feed, BinanceRestMixin):
         # connection endpoint
         if not isinstance(conn, HTTPPoll):
             self._reset()
+
+    def start(self, loop: AbstractEventLoop):
+        super().start(loop)
+        if self.requires_authentication:
+            loop.create_task(self.auth.refresh_token())

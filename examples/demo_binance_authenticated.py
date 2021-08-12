@@ -1,32 +1,40 @@
 from cryptofeed import FeedHandler
-from cryptofeed.auth.binance import BinanceAuth
-from cryptofeed.auth.binance_delivery import BinanceDeliveryAuth
+from cryptofeed.auth.binance import BinanceAuth, BinanceDeliveryAuth, BinanceFuturesAuth
 from cryptofeed.config import Config
-from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, USER_BALANCE, USER_POSITION
-from cryptofeed.exchanges import BinanceDelivery
-from cryptofeed.rest.binance_futures import Binance as BinanceRest, BinanceDelivery as BinanceDeliveryRest
+from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BALANCES, POSITIONS
+from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 
-async def user_balance(**kwargs):
-    print(f"User balance update: {kwargs}")
 
-async def user_position(**kwargs):
-    print(f"User position update: {kwargs}")
+async def balance(**kwargs):
+    print(f"Balance: {kwargs}")
+
+
+async def position(**kwargs):
+    print(f"Position: {kwargs}")
+
 
 def main():
-    config = Config(config='config.yaml')
-    auth = BinanceAuth(config)
-    print(auth.generate_token())
-    print(auth.refresh_token())
-    
-    auth = BinanceDeliveryAuth(config)
-    print(auth.generate_token())
-    print(auth.refresh_token())
-    
-    # rest = BinanceDeliveryRest(config=config[BINANCE_DELIVERY.lower()])
-    # print(rest._send_request('account', None, 0, auth=True))
+    path_to_config = 'config.yaml'
 
-    # rest = BinanceRest(config=config[BINANCE.lower()])
-    # print(rest._send_request('account', None, 0, auth=True))
+    config = Config(config=path_to_config)
+    auth = BinanceAuth(config[BINANCE.lower()].key_id)
+    print(auth.generate_token())
+
+    auth = BinanceFuturesAuth(config[BINANCE_FUTURES.lower()].key_id)
+    print(auth.generate_token())
+
+    auth = BinanceDeliveryAuth(config[BINANCE_DELIVERY.lower()].key_id)
+    print(auth.generate_token())
+
+    f = FeedHandler()
+    f.add_feed(Binance(config=path_to_config, subscription={BALANCES: []}, timeout=-1,
+                       callbacks={BALANCES: balance}))
+    f.add_feed(BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1,
+                               callbacks={BALANCES: balance, POSITIONS: position}))
+    f.add_feed(BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1,
+                              callbacks={BALANCES: balance, POSITIONS: position}))
+    f.run()
+
 
 if __name__ == '__main__':
     main()

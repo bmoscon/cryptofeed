@@ -221,7 +221,7 @@ class BackendCandlesCallback:
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
-class BackendUserBalanceCallback:
+class BackendBalancesCallback:
     async def __call__(self, *, feed, symbol, **kwargs):
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):
@@ -233,7 +233,7 @@ class BackendUserBalanceCallback:
         await self.write(feed, symbol, timestamp, receipt_timestamp, kwargs)
 
 
-class BackendUserPositionCallback:
+class BackendPositionsCallback:
     async def __call__(self, *, feed, symbol, **kwargs):
         for key in kwargs:
             if isinstance(kwargs[key], Decimal):

@@ -1,25 +1,42 @@
-from cryptofeed.rest.rest import Rest
+import asyncio
+import requests
+from urllib.parse import urlencode
+
 
 class BinanceAuth():
+    api = 'https://api.binance.com/api/v3/'
     listen_key_endpoint = 'userDataStream'
     token = None
 
-    def __init__(self, config):
-        self.create_rest_api(config)
-        self.token = None
-
-    def create_rest_api(self, config):
-        self.rest_api = Rest(config=config).binance
+    def __init__(self, key_id: str):
+        self.key_id = key_id
 
     async def refresh_token(self):
-        if self.token is None:
-            return self.generate_token()
-        return self.rest_api._send_request(self.listen_key_endpoint, None, 0, http_method='PUT', payload={'listenKey': self.token}) 
+        while True:
+            await asyncio.sleep(30 * 60)
+            if self.token is None:
+                raise ValueError('There is no token to refresh')
+            payload = {'listenKey': self.token}
+            r = requests.put(f'{self.api}{self.listen_key_endpoint}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
+            r.raise_for_status()
 
     def generate_token(self) -> str:
-        response = self.rest_api._send_request(self.listen_key_endpoint, None, 0, http_method='POST')
+        url = self.api + self.listen_key_endpoint
+        r = requests.post(url, headers={'X-MBX-APIKEY': self.key_id})
+        r.raise_for_status()
+        response = r.json()
         if 'listenKey' in response:
             self.token = response['listenKey']
             return self.token
         else:
-            raise ValueError(response)
+            raise ValueError(f'Unable to retrieve listenKey token from {url}')
+
+
+class BinanceFuturesAuth(BinanceAuth):
+    api = 'https://fapi.binance.com/fapi/v1/'
+    listen_key_endpoint = 'listenKey'
+
+
+class BinanceDeliveryAuth(BinanceAuth):
+    api = 'https://dapi.binance.com/dapi/v1/'
+    listen_key_endpoint = 'listenKey'

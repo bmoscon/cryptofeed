@@ -11,9 +11,8 @@ from yapic import json
 from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendFuturesIndexCallback, BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
                                          BackendLiquidationsCallback, DeribitBackendBookCallback, DeribitBackendTickerCallback, DeribitBackendTradeCallback,
-                                         BackendVolumeCallback, BackendUserBalanceCallback, BackendUserPositionCallback,
-                                         BackendUserFillCallback, BackendUserOrderCallback)
-from cryptofeed.defines import FUTURES_INDEX, TRADES, USER_FILLS, VOLUME, USER_BALANCE, ORDER_INFO, USER_POSITION
+                                         BackendVolumeCallback, BackendBalancesCallback, BackendPositionsCallback, BackendUserFillCallback, BackendUserOrderCallback)
+from cryptofeed.defines import FUTURES_INDEX, TRADES, USER_FILLS, VOLUME, ORDER_INFO
 
 
 class ZMQCallback(BackendQueue):
@@ -90,12 +89,12 @@ class CandlesZMQ(ZMQCallback, BackendCandlesCallback):
     default_key = 'candles'
 
 
-class UserBalanceZMQ(ZMQCallback, BackendUserBalanceCallback):
-    default_key = USER_BALANCE
+class BalancesZMQ(ZMQCallback, BackendBalancesCallback):
+    default_key = 'balances'
 
 
-class UserPositionZMQ(ZMQCallback, BackendUserPositionCallback):
-    default_key = USER_POSITION
+class PositionsZMQ(ZMQCallback, BackendPositionsCallback):
+    default_key = 'positions'
 
 
 class UserFillZMQ(ZMQCallback, BackendUserFillCallback):

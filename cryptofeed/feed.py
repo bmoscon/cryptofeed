@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from collections import defaultdict
 from cryptofeed.exchange import Exchange
 from functools import partial
@@ -16,7 +17,7 @@ from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BALANCES, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, USER_BALANCE, USER_FILLS, USER_POSITION, USER_TRADES, VOLUME)
+                                OPEN_INTEREST, ORDER_INFO, POSITIONS, TICKER, TRADES, USER_FILLS, USER_TRADES, VOLUME)
 from cryptofeed.exceptions import BidAskOverlapping
 from cryptofeed.util.book import book_delta, depth
 
@@ -143,11 +144,10 @@ class Feed(Exchange):
                           VOLUME: Callback(None),
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None),
-                          USER_BALANCE: Callback(None),
                           USER_FILLS: Callback(None),
-                          USER_POSITION: Callback(None),
+                          BALANCES: Callback(None),
+                          POSITIONS: Callback(None),
                           USER_TRADES: Callback(None),
-                          BALANCES: Callback(None)
                           }
 
         if callbacks:
@@ -299,7 +299,7 @@ class Feed(Exchange):
         for c in self.connection_handlers:
             c.running = False
 
-    def start(self, loop):
+    def start(self, loop: asyncio.AbstractEventLoop):
         """
         Create tasks for exchange interfaces and backends
         """
