@@ -8,20 +8,13 @@ f = FTX(config='config.yaml')
 
 
 def test_funding():
-    expected = {'timestamp': 1607691600.0,
-                'symbol': 'BTC-USD-PERP',
-                'feed': 'FTX',
-                'rate': Decimal('0.000019')}
+    data = f.funding_sync('BTC-USD-PERP')
 
-    ret = []
-    data = f.funding('BTC-USD-PERP', start='2020-12-10 12:59:10', end='2020-12-11 13:01:33')
-    ret.extend(data)
-
-    assert ret[0] == expected
+    assert data[0]['symbol'] == 'BTC-USD-PERP'
 
 
 def test_ticker():
-    ret = f.ticker('BTC-USD-PERP')
+    ret = f.ticker_sync('BTC-USD-PERP')
     assert ret['feed'] == 'FTX'
     assert ret['symbol'] == 'BTC-USD-PERP'
     assert BID in ret
@@ -29,7 +22,7 @@ def test_ticker():
 
 
 def test_book():
-    ret = f.l2_book('BTC-USD-PERP')
+    ret = f.l2_book_sync('BTC-USD-PERP')
 
     assert BID in ret
     assert ASK in ret
@@ -40,7 +33,7 @@ def test_book():
 def test_trades():
     trades = []
 
-    for t in f.trades('BTC-USD-PERP'):
+    for t in f.trades_sync('BTC-USD-PERP'):
         trades.extend(t)
 
     assert len(trades) > 0
@@ -51,7 +44,7 @@ def test_trades():
 def test_trades_history():
     trades = []
 
-    for t in f.trades('BTC-USD-PERP', start='2021-01-01 00:00:00', end='2021-01-01 02:00:00'):
+    for t in f.trades_sync('BTC-USD-PERP', start='2021-01-01 00:00:00', end='2021-01-01 02:00:00'):
         trades.extend(t)
     trades.reverse()
 

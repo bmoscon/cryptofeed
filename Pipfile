@@ -13,7 +13,6 @@ verify_ssl = true
 [packages]
 pyyaml = "*"
 aiohttp = ">=3.6.2"
-pandas = "*"
 requests = ">=2.18.4"
 sortedcontainers = ">=1.5.9"
 websockets = ">=7.0"
@@ -28,6 +27,7 @@ aiokafka = "*"              # pip install cryptofeed[kafka]
 hiredis = "*"               # pip install cryptofeed[redis]
 aioredis = ">=2.0.0a1"      # pip install cryptofeed[redis]
 arctic = "*"                # pip install cryptofeed[arctic]
+pandas = "*"                # pip install cryptofeed[arctic]
 asyncpg = "*"               # pip install cryptofeed[postgres]
 motor = "*"                 # pip install cryptofeed[mongo]
 aio_pika = "*"              # pip install cryptofeed[rabbit]

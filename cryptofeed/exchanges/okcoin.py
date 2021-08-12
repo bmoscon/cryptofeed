@@ -56,7 +56,6 @@ class OKCoin(Feed):
 
     def __reset(self):
         self._l2_book = {}
-        self.open_interest = {}
 
     def __calc_checksum(self, pair):
         bid_it = reversed(self._l2_book[pair][BID])

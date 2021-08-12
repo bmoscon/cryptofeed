@@ -44,6 +44,12 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
+    websocket_channels = {
+        **Binance.websocket_channels,
+        FUNDING: 'markPrice',
+        OPEN_INTEREST: 'open_interest',
+        LIQUIDATIONS: 'forceOrder'
+    }
 
     @classmethod
     def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
@@ -55,11 +61,6 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         return base, info
 
     def __init__(self, **kwargs):
-        self.websocket_channels.update({
-            FUNDING: 'markPrice',
-            OPEN_INTEREST: 'open_interest',
-            LIQUIDATIONS: 'forceOrder'
-        })
         super().__init__(**kwargs)
 
     def setup(self):
