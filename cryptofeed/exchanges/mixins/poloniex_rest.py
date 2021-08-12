@@ -29,7 +29,7 @@ class PoloniexRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, ORDER_INFO, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY
     )
-    rest_options = {
+    order_options = {
         LIMIT: 'limit',
         FILL_OR_KILL: 'fillOrKill',
         IMMEDIATE_OR_CANCEL: 'immediateOrCancel',
