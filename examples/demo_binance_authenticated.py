@@ -4,7 +4,7 @@ from pathlib import Path
 from cryptofeed import FeedHandler
 from cryptofeed.auth.binance import BinanceAuth, BinanceDeliveryAuth, BinanceFuturesAuth
 from cryptofeed.config import Config
-from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BALANCES, POSITIONS
+from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BALANCES, ORDER_INFO, POSITIONS
 from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 
 
@@ -14,6 +14,10 @@ async def balance(**kwargs):
 
 async def position(**kwargs):
     print(f"Position: {kwargs}")
+
+
+async def order_info(**kwargs):
+    print(f"Order info: {kwargs}")
 
 
 def main():
@@ -31,11 +35,11 @@ def main():
 
     f = FeedHandler()
     f.add_feed(Binance(config=path_to_config, subscription={BALANCES: []}, timeout=-1,
-                       callbacks={BALANCES: balance}))
+                       callbacks={BALANCES: balance, ORDER_INFO: order_info}))
     f.add_feed(BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1,
-                               callbacks={BALANCES: balance, POSITIONS: position}))
+                               callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info}))
     f.add_feed(BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1,
-                              callbacks={BALANCES: balance, POSITIONS: position}))
+                              callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info}))
     f.run()
 
 

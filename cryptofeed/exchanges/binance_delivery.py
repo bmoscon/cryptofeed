@@ -12,7 +12,7 @@ from typing import Tuple, Dict
 from yapic import json
 
 from cryptofeed.auth.binance import BinanceDeliveryAuth
-from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, FUNDING, FUTURES, FUTURES_INDEX, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, POSITIONS, SPOT
+from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, BUY, FUNDING, FUTURES, FUTURES_INDEX, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, PERPETUAL, POSITIONS, SELL, SPOT
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
 
@@ -179,6 +179,68 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
                                 entry_price=Decimal(position['ep']),
                                 unrealised_pnl=Decimal(position['up']))
 
+    async def _order_update(self, msg: dict, timestamp: float):
+        """
+        {
+            "e":"ORDER_TRADE_UPDATE",     // Event Type
+            "E":1591274595442,            // Event Time
+            "T":1591274595453,            // Transaction Time
+            "i":"SfsR",                   // Account Alias
+            "o":
+            {
+                "s":"BTCUSD_200925",        // Symbol
+                "c":"TEST",                 // Client Order Id
+                // special client order id:
+                // starts with "autoclose-": liquidation order
+                // "adl_autoclose": ADL auto close order
+                "S":"SELL",                 // Side
+                "o":"TRAILING_STOP_MARKET", // Order Type
+                "f":"GTC",                  // Time in Force
+                "q":"2",                    // Original Quantity
+                "p":"0",                    // Original Price
+                "ap":"0",                   // Average Price
+                "sp":"9103.1",              // Stop Price. Please ignore with TRAILING_STOP_MARKET order
+                "x":"NEW",                  // Execution Type
+                "X":"NEW",                  // Order Status
+                "i":8888888,                // Order Id
+                "l":"0",                    // Order Last Filled Quantity
+                "z":"0",                    // Order Filled Accumulated Quantity
+                "L":"0",                    // Last Filled Price
+                "ma": "BTC",                // Margin Asset
+                "N":"BTC",                  // Commission Asset of the trade, will not push if no commission
+                "n":"0",                    // Commission of the trade, will not push if no commission
+                "T":1591274595442,          // Order Trade Time
+                "t":0,                      // Trade Id
+                "rp": "0",                  // Realized Profit of the trade
+                "b":"0",                    // Bid quantity of base asset
+                "a":"0",                    // Ask quantity of base asset
+                "m":false,                  // Is this trade the maker side?
+                "R":false,                  // Is this reduce only
+                "wt":"CONTRACT_PRICE",      // Stop Price Working Type
+                "ot":"TRAILING_STOP_MARKET",// Original Order Type
+                "ps":"LONG",                // Position Side
+                "cp":false,                 // If Close-All, pushed with conditional order
+                "AP":"9476.8",              // Activation Price, only puhed with TRAILING_STOP_MARKET order
+                "cr":"5.0",                 // Callback Rate, only puhed with TRAILING_STOP_MARKET order
+                "pP": false                 // If conditional order trigger is protected
+            }
+        }
+        """
+        await self.callback(ORDER_INFO,
+                            feed=self.id,
+                            symbol=self.exchange_symbol_to_std_symbol(msg['o']['s']),
+                            status=msg['o']['x'],
+                            order_id=msg['o']['i'],
+                            side=BUY if msg['o']['S'].lower() == 'buy' else SELL,
+                            order_type=LIMIT if msg['o']['o'].lower() == 'limit' else MARKET if msg['o']['o'].lower() == 'market' else None,
+                            avg_fill_price=Decimal(msg['o']['ap']) if not Decimal.is_zero(Decimal(msg['o']['ap'])) else None,
+                            filled_size=Decimal(msg['o']['z']),
+                            remaining_size=Decimal(msg['o']['q']) - Decimal(msg['o']['z']),
+                            amount=Decimal(msg['o']['q']),
+                            timestamp=self.timestamp_normalize(msg['E']),
+                            receipt_timestamp=timestamp
+                            )
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -194,6 +256,8 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             msg_type = msg.get('e')
             if msg_type == 'ACCOUNT_UPDATE':
                 await self._account_update(msg, timestamp)
+            elif msg_type == 'ORDER_TRADE_UPDATE':
+                await self._order_update(msg, timestamp)
             return
 
         pair, _ = msg['stream'].split('@', 1)
