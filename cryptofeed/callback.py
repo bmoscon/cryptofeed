@@ -99,17 +99,29 @@ class FuturesIndexCallback(Callback):
     pass
 
 
-class MarketInfoCallback(Callback):
-    pass
-
-
 class OrderInfoCallback(Callback):
     pass
 
 
-class AccBalancesCallback(Callback):
+class BalancesCallback(Callback):
     pass
 
 
-class AccTransactionsCallback(Callback):
+class TransactionsCallback(Callback):
+    pass
+
+
+class UserFillsCallback(Callback):
+    pass
+
+
+class L1BookCallback(Callback):
+    pass
+
+
+class UserDataCallback(Callback):
+    pass
+
+
+class LastPriceCallback(Callback):
     pass

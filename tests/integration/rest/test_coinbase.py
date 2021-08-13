@@ -1,30 +1,38 @@
 from decimal import Decimal
-import pandas as pd
 
-from cryptofeed.defines import BID, ASK
-from cryptofeed.rest import Rest
+import pytest
+
+from cryptofeed.defines import BID, ASK, BUY, LIMIT
+from cryptofeed.exchanges import Coinbase
 
 
-public = Rest().Coinbase
-sandbox = Rest(sandbox=True).Coinbase
+public = Coinbase(config='config.yaml')
+sandbox = Coinbase(sandbox=True, config='config.yaml')
 
 
 def test_ticker():
-    ticker = public.ticker('BTC-USD')
+    ticker = public.ticker_sync('BTC-USD')
 
     assert BID in ticker
     assert ASK in ticker
 
 
 def test_order_book():
-    current_order_book = public.l2_book('BTC-USD')
+    current_order_book = public.l2_book_sync('BTC-USD')
+
+    assert BID in current_order_book
+    assert len(current_order_book[BID]) > 0
+
+
+def test_order_book_l3():
+    current_order_book = public.l3_book_sync('BTC-USD')
 
     assert BID in current_order_book
     assert len(current_order_book[BID]) > 0
 
 
 def test_trade_history():
-    trade_history = list(public.trades('BTC-USD'))
+    trade_history = list(public.trades_sync('BTC-USD'))
     assert len(trade_history) > 0
 
 
@@ -37,14 +45,15 @@ def test_trade_history_specific_time():
                 'amount': Decimal('0.00514473'),
                 'price': Decimal('3580.07')}
     ret = []
-    for data in public.trades('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
+    for data in public.trades_sync('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
         ret.extend(data)
+
     assert len(ret) == 1
     assert ret[0] == expected
 
 
 def test_candle_history():
-    candle_history = list(public.candles('BTC-USD'))
+    candle_history = list(public.candles_sync('BTC-USD'))
     assert len(candle_history) > 0
 
 
@@ -68,93 +77,51 @@ def test_candle_history_specific_time():
             'volume': Decimal('71.11516828')
         }
     ]
-    s = pd.Timestamp('2020-01-11 04:00:00-0500', tz='US/Eastern')
-    e = pd.Timestamp('2020-01-11 05:00:00-0500', tz='US/Eastern')
+    s = '2020-01-11 09:00:00'
+    e = '2020-01-11 10:00:00'
     granularity = 3600
-    candle_history = list(public.candles('BTC-USD', start=s, end=e, granularity=granularity))[0]
+    candle_history = []
+    for entry in public.candles_sync('BTC-USD', start=s, end=e, interval=granularity):
+        candle_history.extend(entry)
+
     assert len(candle_history) == 2
     assert candle_history == expected
 
 
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_heartbeat():
-#     result = sandbox.heartbeat()
-#     assert result['result'] == 'ok'
-#
-#
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_place_order_and_cancel():
-#     order_resp = sandbox.place_order(
-#         symbol='btcusd',
-#         side='buy',
-#         order_type='LIMIT',
-#         amount='1.0',
-#         price='622.13',
-#         client_order_id='1'
-#     )
-#     assert 'order_id' in order_resp
-#     cancel_resp = sandbox.cancel_order({'order_id': order_resp['order_id']})
-#     assert 'order_id' in cancel_resp
+@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+def test_place_order_and_cancel():
+    order_resp = sandbox.place_order_sync(
+        symbol='BTC-USD',
+        side=BUY,
+        order_type=LIMIT,
+        amount='1.0',
+        price='622.13',
+        client_order_id='1'
+    )
+    assert 'order_id' in order_resp
+    cancel_resp = sandbox.cancel_order_sync({'order_id': order_resp['order_id']})
+    assert 'order_id' in cancel_resp
 
 
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_cancel_all_session_orders():
-#     cancel_all = sandbox.cancel_all_session_orders()
-#     assert cancel_all['result'] == 'ok'
+@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+def test_order_status():
+    order_resp = sandbox.place_order_sync(
+        symbol='btcusd',
+        side='buy',
+        type='LIMIT',
+        amount='1.0',
+        price='1.13',
+        client_order_id='1'
+    )
+    status = sandbox.order_status({'order_id': order_resp['order_id']})
+
+    assert status['symbol'] == 'btcusd'
+    assert status['side'] == 'buy'
+    sandbox.cancel_order_sync({'order_id': order_resp['order_id']})
 
 
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_cancel_all_active_orders():
-#     cancel_all = sandbox.cancel_all_active_orders()
-#     assert cancel_all['result'] == 'ok'
+@pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
+def test_balances():
+    balances = sandbox.balances_sync()
 
-
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_order_status():
-#     order_resp = sandbox.place_order(
-#         symbol='btcusd',
-#         side='buy',
-#         type='LIMIT',
-#         amount='1.0',
-#         price='1.13',
-#         client_order_id='1'
-#     )
-#     status = sandbox.order_status({'order_id': order_resp['order_id']})
-#     sandbox.cancel_all_active_orders()
-
-#     assert status['symbol'] == 'btcusd'
-#     assert status['side'] == 'buy'
-
-
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_get_active_orders():
-#     active = sandbox.get_active_orders()
-
-#     assert len(active) == 0
-
-
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_get_past_trades():
-#     trades = sandbox.get_past_trades({'symbol': 'btcusd'})
-#     assert len(trades) == 0
-
-
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_get_notional_volume():
-#     volume = sandbox.get_notional_volume()
-
-#     assert volume['maker_fee_bps'] == 25
-
-
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_get_trade_volume():
-#     volume = sandbox.get_trade_volume()
-
-#     assert len(volume) == 1
-
-
-# @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
-# def test_get_available_balances():
-#     balances = sandbox.get_available_balances()
-
-#     assert len(balances) > 0
+    assert len(balances) > 0

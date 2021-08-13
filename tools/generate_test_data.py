@@ -13,7 +13,7 @@ import uvloop
 from cryptofeed.feedhandler import FeedHandler
 from cryptofeed.exchanges import EXCHANGE_MAP
 from cryptofeed.raw_data_collection import AsyncFileCallback
-from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, COINGECKO, L2_BOOK, TRADES, TICKER, CANDLES, EXX
+from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, L2_BOOK, TRADES, TICKER, CANDLES, EXX
 from check_raw_dump import main as check_dump
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -25,7 +25,7 @@ def stop():
 
 
 def main(only_exchange=None):
-    skip = [COINGECKO, EXX]
+    skip = [EXX]
     files = glob.glob('*')
     for f in files:
         for e in EXCHANGE_MAP.keys():

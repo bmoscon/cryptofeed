@@ -1,8 +1,35 @@
 ## Changelog
 
-### 1.9.3
+### 2.0.0
+ * Feature: Binance REST support
+ * Feature: Add next funding rate data to FTX funding data
+ * Bugfix: Kraken info dict returning empty
+ * Breaking Change: Rename REST endpoints. Sync endpoints end with `_sync`, non-sync endpoints are now async. Clean up and remove old/unused test cases
+ * Feature: Remove pandas dependency
+ * Breaking Change: Rewrite all rest endpoints to support sync and async versions of the endpoint.
+ * Feature: Add dYdX REST endpoints
+ * Feature: Add support for Binance trading REST API
+ * Bugfix: Fix typo by renaming rest_options to order_options
+
+### 1.9.3 (2021-08-05)
+  * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
+  * Feature: Add support for private channels USER_FILLS, ORDER_INFO, BALANCES on Deribit
+  * Feature: Add support for public channel L1_BOOK on Deribit
+  * Feature: Add support for private channels USER_FILLS and ORDER_INFO on Bybit
   * Bugfix: Fix demo.py
   * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
+  * Update: Support Okex v5
+  * Breaking Change: Update symbol standardization. Now uses standard names across all exchanges for futures, swaps, and options.
+  * Feature: Allow user to specify depth_interval for Binance L2_BOOK.
+  * Bugfix: Use order id in FTX fill channel callback
+  * Feature: Add ability to use the Symbols class to identify all exchanges that support a given instrument
+  * Feature: Allow user to specify 'http_proxy' in feeds.
+  * Feature: Add support for 'concurrent_http' requests in Binance feeds.
+  * Bugfix: funding and open interest data not being collected
+  * Breaking Change: Rework how REST endpoints are integrated into exchange classes. Rest module has been removed. REST methods are part of exchanges classes.
+  * Feature: Add support for funding data in Bybit
+  * Update: Correct and update sections of the documentation.
+  * Bugfix: Fix subaccounts impl in FTX
 
 ### 1.9.2 (2021-07-14)
   * Bugfix: add config kwarg to add_nbbo method

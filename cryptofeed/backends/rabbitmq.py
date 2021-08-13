@@ -11,7 +11,7 @@ from yapic import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
+                                         BackendLiquidationsCallback)
 
 
 class RabbitCallback:
@@ -98,10 +98,6 @@ class OpenInterestRabbit(RabbitCallback, BackendOpenInterestCallback):
 
 
 class LiquidationsRabbit(RabbitCallback, BackendLiquidationsCallback):
-    pass
-
-
-class MarketInfoRabbit(RabbitCallback, BackendMarketInfoCallback):
     pass
 
 

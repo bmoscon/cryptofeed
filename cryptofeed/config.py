@@ -9,7 +9,7 @@ import os
 import yaml
 
 
-_default_config = {'uvloop': True, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}, 'rest': {'log': {'filename': 'rest.log', 'level': 'WARNING'}}}
+_default_config = {'uvloop': True, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}}
 
 
 class AttrDict(dict):
@@ -30,6 +30,9 @@ class AttrDict(dict):
     def __missing__(self, key):
         return AttrDict()
 
+    def __repr__(self) -> str:
+        return super().__repr__()
+
     __setattr__ = __setitem__
 
 
@@ -48,6 +51,9 @@ class Config:
         elif isinstance(config, dict):
             self.config = AttrDict(config)
             self.log_msg = f'Config: use dict containing the following main keys: {", ".join(self.config.keys())}'
+        elif isinstance(config, Config):
+            self.config = AttrDict(config.config)
+            self.log_msg = f'Config: using Config containing the following main keys: {", ".join(self.config.keys())}'
         elif os.environ.get('CRYPTOFEED_CONFIG') and os.path.exists(os.environ.get('CRYPTOFEED_CONFIG')):
             config = os.environ.get('CRYPTOFEED_CONFIG')
             with open(config) as fp:
@@ -67,3 +73,6 @@ class Config:
 
     def __contains__(self, item):
         return item in self.config
+
+    def __repr__(self) -> str:
+        return self.config.__repr__()

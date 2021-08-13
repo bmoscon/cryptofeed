@@ -46,10 +46,9 @@ PROBIT = 'PROBIT'
 BITCOINCOM = 'BITCOINCOM'
 UPBIT = 'UPBIT'
 
-COINGECKO = 'COINGECKO'
-
 
 # Market Data
+L1_BOOK = 'l1_book'
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
 BOOK_DELTA = 'book_delta'
@@ -60,15 +59,21 @@ OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
 FUTURES_INDEX = 'futures_index'
 UNSUPPORTED = 'unsupported'
-MARKET_INFO = 'market_info'
 CANDLES = 'candles'
+LAST_PRICE = 'last_price'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
 USER_FILLS = 'user_fills'
-ACC_TRANSACTIONS = 'transactions'
-ACC_BALANCES = 'balances'
-
+TRANSACTIONS = 'transactions'
+BALANCES = 'balances'
+PLACE_ORDER = 'place_order'
+CANCEL_ORDER = 'cancel_order'
+ORDERS = 'orders'
+ORDER_STATUS = 'order_status'
+TRADE_HISTORY = 'trade_history'
+USER_DATA = 'user_data'
+POSITIONS = 'positions'
 
 BUY = 'buy'
 SELL = 'sell'
@@ -83,6 +88,7 @@ STOP_MARKET = 'stop-market'
 MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
+GOOD_TIL_CANCELED = 'good-til-canceled'
 
 OPEN = 'open'
 PENDING = 'pending'
@@ -95,19 +101,19 @@ SUSPENDED = 'suspended'
 
 # Instrument Definitions
 
+CURRENCY = 'currency'
 FUTURES = 'futures'
-SWAP = 'swap'
 PERPETUAL = 'perpetual'
 OPTION = 'option'
 SPOT = 'spot'
 CALL = 'call'
 PUT = 'put'
+FX = 'fx'
 
 
 # HTTP methods
 GET = 'GET'
 DELETE = 'DELETE'
-PUT = 'PUT'
 POST = 'POST'
 
 

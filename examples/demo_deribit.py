@@ -1,6 +1,6 @@
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
-from cryptofeed.defines import BID, ASK, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES
+from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback, L1BookCallback
+from cryptofeed.defines import BID, ASK, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, L1_BOOK, DERIBIT
 from cryptofeed.exchanges import Deribit
 
 
@@ -24,15 +24,20 @@ async def oi(feed, symbol, open_interest, timestamp, receipt_timestamp):
     print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} open interest: {open_interest}')
 
 
+async def quote(feed, symbol, bid_price, ask_price, bid_amount, ask_amount, timestamp, receipt_timestamp):
+    print(f"{feed}: {symbol} Best price (amount): bid: {bid_price} ({bid_amount}) ask: {ask_price} ({ask_amount}) timestamp: {timestamp}")
+
+
 def main():
     f = FeedHandler()
 
     # Deribit can't handle 400+ simultaneous requests, so if all
     # instruments are needed they should be fed in the different calls
 
-    sub = {TRADES: ["BTC-USD-PERPETUAL"], TICKER: ['ETH-USD-PERPETUAL'], FUNDING: ['ETH-USD-PERPETUAL'], OPEN_INTEREST: ['ETH-USD-PERPETUAL']}
+    sub = {TRADES: ["BTC-USD-PERP"], TICKER: ['ETH-USD-PERP'], FUNDING: ['ETH-USD-PERP'], OPEN_INTEREST: ['ETH-USD-PERP']}
     f.add_feed(Deribit(subscription=sub, callbacks={OPEN_INTEREST: oi, FUNDING: funding, TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
-    f.add_feed(Deribit(symbols=['BTC-USD-PERPETUAL'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Deribit(symbols=['BTC-USD-PERP'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(DERIBIT, channels=[L1_BOOK], symbols=["BTC-USD-22M24", "BTC-50000-22M24-call"], callbacks={L1_BOOK: L1BookCallback(quote)})
 
     f.run()
 

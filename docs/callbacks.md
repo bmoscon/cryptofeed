@@ -15,7 +15,6 @@ The raw callbacks are defined [here](../cryptofeed/callback.py), along with thei
 * Open Interest
 * Funding
 * Liquidation
-* Volume
 
 Its important to note that if your choose to use the raw callbacks, and your user defined callbacks match these function signatures *and* are async functions, you do not need to use these wrappers (like is commonly shown in the example code). You can use your callback functions without wrapping them in `TradeCallback`, `TickerCallback`, etc.
 
@@ -26,6 +25,7 @@ The backends are defined [here](../cryptofeed/backends/). Currently the followin
 
 * Arctic
 * ElasticSearch
+* GCP Pub/Sub
 * InfluxDB
 * Kafka
 * MongoDB
@@ -34,10 +34,11 @@ The backends are defined [here](../cryptofeed/backends/). Currently the followin
 * Redis
 * Redis Streams
 * TCP/UDP/UDS sockets
+* VictoriaMetrics
 * ZMQ
 
 There are also a handful of wrappers defined [here](../cryptofeed/backends/aggregate.py) that can be used in conjunction with these and raw callbacks to convert data to OHLCV, throttle data, etc. 
 
 ### Performance Considerations
 
-Do not do anything computationally intensive in your callbacks or this will greatly impact the performance of cryptofeed. Data should be quickly processed and passed along to another process/application/etc or a backend callback should be used to forward the data elsewhere. 
+Do not do anything computationally intensive in your callbacks or this will greatly impact the performance of cryptofeed. Data should be quickly processed and passed along to another process/application/etc or a backend callback should be used to forward the data elsewhere. If possible, use async libraries in your callbacks!

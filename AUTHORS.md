@@ -9,3 +9,6 @@ Cryptofeed was originally created by Bryant Moscon, but many others have contrib
 * [Yoh Plala](https://github.com/yohplala) - <yoh.plala@gmail.com>
 * [Alex](https://github.com/globophobe)
 * [Michael Zhao](https://github.com/dynamikey) - <mr_michaelzhao@hotmail.com>
+* [Tim Meggs](https://github.com/twmeggs) - <twmeggs@gmail.com>
+* [James Lee](https://github.com/jinusean) - <atjameslee@gmail.com>
+* [O. Janche](https://github.com/toyan) - <toyan@yandex.ru>

@@ -56,12 +56,12 @@ class ConnectionHandler:
         while (retries <= self.retries or self.retries == -1) and self.running:
             try:
                 async with self.conn.connect() as connection:
+                    await self.authenticate(connection)
+                    await self.subscribe(connection)
                     # connection was successful, reset retry count and delay
                     retries = 0
                     rate_limited = 0
                     delay = 1
-                    await self.authenticate(connection)
-                    await self.subscribe(connection)
                     if self.timeout != -1:
                         loop = asyncio.get_running_loop()
                         loop.create_task(self._watcher())
