@@ -37,7 +37,8 @@ class Binance(Feed, BinanceRestMixin):
         TRADES: 'aggTrade',
         TICKER: 'bookTicker',
         CANDLES: 'kline_',
-        BALANCES: BALANCES
+        BALANCES: BALANCES,
+        ORDER_INFO: ORDER_INFO
     }
     request_limit = 20
 
