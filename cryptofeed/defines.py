@@ -85,6 +85,8 @@ SELL = 'sell'
 BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
+LONG = 'long'
+SHORT = 'short'
 
 LIMIT = 'limit'
 MARKET = 'market'
