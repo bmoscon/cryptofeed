@@ -53,19 +53,8 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         POSITIONS: POSITIONS
     }
 
-    @classmethod
-    def _parse_symbol_data(cls, data: dict, symbol_separator: str) -> Tuple[Dict, Dict]:
-        base, info = super()._parse_symbol_data(data, symbol_separator)
-        add = {}
-        for symbol, orig in base.items():
-            add[symbol.split("_")[0]] = orig.split("_")[0]
-        base.update(add)
-        return base, info
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-    def setup(self):
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'

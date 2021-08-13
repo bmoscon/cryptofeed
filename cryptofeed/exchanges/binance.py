@@ -85,24 +85,17 @@ class Binance(Feed, BinanceRestMixin):
             raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
-
         super().__init__({}, **kwargs)
+        self.ws_endpoint = 'wss://stream.binance.com:9443'
+        self.rest_endpoint = 'https://www.binance.com/api/v1'
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
         self.auth = BinanceAuth(self.key_id)
         self.address = self._address()
         self.concurrent_http = concurrent_http
-        self.setup()
 
         self._reset()
-
-    def setup(self):
-        self.ws_endpoint = 'wss://stream.binance.com:9443'
-        self.rest_endpoint = 'https://www.binance.com/api/v1'
-        from cryptofeed.auth.binance import BinanceAuth
-        self.auth = BinanceAuth(self.config)
-        self.address = self._address()
 
     def _address(self) -> Union[str, Dict]:
         """
@@ -110,7 +103,6 @@ class Binance(Feed, BinanceRestMixin):
         down into multiple connections if necessary. Because the key is currently not used
         for the address dict, we can just set it to the last used stream, since this will be
         unique.
-
         The generic connect method supplied by Feed will take care of creating the
         correct connection objects from the addresses.
         """
@@ -132,15 +124,12 @@ class Binance(Feed, BinanceRestMixin):
                 continue
             if self.is_authenticated_channel(normalized_chan):
                 continue
-            if self.is_authenticated_channel(normalized_chan):
-                continue
 
             stream = chan
             if normalized_chan == CANDLES:
                 stream = f"{chan}{self.candle_interval}"
             elif normalized_chan == L2_BOOK:
                 stream = f"{chan}@{self.depth_interval}"
-
             for pair in self.subscription[chan]:
                 # for everything but premium index the symbols need to be lowercase.
                 if pair.startswith("p"):
@@ -148,19 +137,13 @@ class Binance(Feed, BinanceRestMixin):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-                sub = f"{pair}@{stream}"
-                if normalized_chan == FUTURES_INDEX:
-                    pair = pair.split('_')[0]
-                    sub = f"{pair}@{stream}@1s"
-                subs.append(sub)
-
+                subs.append(f"{pair}@{stream}")
         if len(subs) < 200:
             return address + '/'.join(subs)
         else:
             def split_list(_list: list, n: int):
                 for i in range(0, len(_list), n):
                     yield _list[i:i + n]
-
             return {chunk[0]: address + '/'.join(chunk) for chunk in split_list(subs, 200)}
 
     def _reset(self):
@@ -168,7 +151,6 @@ class Binance(Feed, BinanceRestMixin):
         self._l2_book = {}
         self.last_update_id = {}
         self._open_interest_cache = {}
-
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched
             self._book_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}

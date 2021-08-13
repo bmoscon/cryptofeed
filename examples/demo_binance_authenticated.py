@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from cryptofeed import FeedHandler
 from cryptofeed.auth.binance import BinanceAuth, BinanceDeliveryAuth, BinanceFuturesAuth
 from cryptofeed.config import Config
@@ -14,7 +17,7 @@ async def position(**kwargs):
 
 
 def main():
-    path_to_config = 'config.yaml'
+    path_to_config = os.path.join(Path.home(), 'config.yaml')
 
     config = Config(config=path_to_config)
     auth = BinanceAuth(config[BINANCE.lower()].key_id)
