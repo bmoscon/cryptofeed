@@ -55,7 +55,7 @@ def main():
     symbols = [s for s in BinanceFutures.info()['symbols'] if 'PINDEX' not in s]
     f.add_feed(BinanceFutures(symbols=symbols, channels=[OPEN_INTEREST, LIQUIDATIONS], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), LIQUIDATIONS: LiquidationCallback(liquidations)}))
 
-    f.add_feed(Deribit(symbols=['BTC-USD-PERPETUAL', 'ETH-USD-PERPETUAL'], channels=[LIQUIDATIONS, OPEN_INTEREST],
+    f.add_feed(Deribit(symbols=['BTC-USD-PERP', 'ETH-USD-PERP'], channels=[LIQUIDATIONS, OPEN_INTEREST],
                        callbacks={OPEN_INTEREST: OpenInterestCallback(oi),
                                   LIQUIDATIONS: LiquidationCallback(liquidations)}))
 

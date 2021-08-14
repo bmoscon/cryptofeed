@@ -75,7 +75,12 @@ class AsyncConnection(Connection):
         atexit.register(self.__del__)
 
     def __del__(self):
-        asyncio.ensure_future(self.close())
+        try:
+            if self.is_open:
+                asyncio.ensure_future(self.close())
+        except (RuntimeError, RuntimeWarning):
+            # no event loop, ignore error
+            pass
 
     @property
     def uuid(self):
