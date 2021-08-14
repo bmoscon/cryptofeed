@@ -11,6 +11,7 @@
  * Feature: Add support for Binance trading REST API
  * Bugfix: Fix typo by renaming rest_options to order_options
  * Bugfix: Use correct max depth for Binance (and its child classes).
+ * Bugfix: Fix test data generation, fix Binance test cases, clean up and fix issues in various code samples in example/
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
