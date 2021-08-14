@@ -11,7 +11,6 @@ from asyncio import Queue, create_task
 from contextlib import asynccontextmanager
 from typing import List, Union, AsyncIterable, Optional
 from decimal import Decimal
-import atexit
 from aiohttp.client_reqrep import ClientResponse
 
 import requests
@@ -72,15 +71,6 @@ class AsyncConnection(Connection):
         self.sent: int = 0
         self.last_message = None
         self.conn: Union[websockets.WebSocketClientProtocol, aiohttp.ClientSession] = None
-        atexit.register(self.__del__)
-
-    def __del__(self):
-        try:
-            if self.is_open:
-                asyncio.ensure_future(self.close())
-        except (RuntimeError, RuntimeWarning):
-            # no event loop, ignore error
-            pass
 
     @property
     def uuid(self):
@@ -128,21 +118,27 @@ class HTTPAsyncConn(AsyncConnection):
         if resp.status != 200:
             LOG.error("%s: Status code %d for URL %s", self.id, resp.status, resp.url)
             LOG.error("%s: Headers: %s", self.id, resp.headers)
-            LOG.error("%s: Resp: %s", self.id, data.decode('UTF-8'))
+            LOG.error("%s: Resp: %s", self.id, data)
             resp.raise_for_status()
 
     async def _open(self):
-        if self.is_open:
-            LOG.warning('%s: HTTP session already created', self.id)
-        else:
-            LOG.debug('%s: create HTTP session', self.id)
-            self.conn = aiohttp.ClientSession()
-            self.sent = 0
-            self.received = 0
+        try:
+            if self.is_open:
+                LOG.warning('%s: HTTP session already created', self.id)
+                yield
+            else:
+                LOG.debug('%s: create HTTP session', self.id)
+                self.conn = aiohttp.ClientSession()
+                self.sent = 0
+                self.received = 0
+                yield
+        finally:
+            await self.close()
 
     async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:
-            await self._open()
+            agen = self._open()
+            await agen.__anext__()
 
         LOG.debug("%s: requesting data from %s", self.id, address)
         while True:
