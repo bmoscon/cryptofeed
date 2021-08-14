@@ -4,21 +4,19 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import hashlib
 import hmac
 import urllib
 from decimal import Decimal
 import time
 import logging
-from datetime import datetime as dt
 
-import requests
 from yapic import json
 from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
-from cryptofeed.connection import request_retry
 
 
 LOG = logging.getLogger('feedhandler')
@@ -31,7 +29,7 @@ class PoloniexRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, ORDER_INFO, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY
     )
-    rest_options = {
+    order_options = {
         LIMIT: 'limit',
         FILL_OR_KILL: 'fillOrKill',
         IMMEDIATE_OR_CANCEL: 'immediateOrCancel',
@@ -95,17 +93,12 @@ class PoloniexRestMixin(RestExchange):
             'order_status': FILLED
         }
 
-    def _get(self, command: str, options=None, retry=None, retry_wait=0):
-        base_url = f"{self.api}/public?command={command}"
+    async def _get(self, command: str, params='', retry_count=1, retry_delay=60):
+        base_url = f"{self.api}/public?command={command}{params}"
+        resp = await self.http_conn.read(base_url, retry_count=retry_count, retry_delay=retry_delay)
+        return json.loads(resp, parse_float=Decimal)
 
-        @request_retry(self.id, retry, retry_wait)
-        def helper():
-            resp = requests.get(base_url, params=options)
-            self._handle_error(resp)
-            return json.loads(resp.text, parse_float=Decimal)
-        return helper()
-
-    def _post(self, command: str, payload=None):
+    async def _post(self, command: str, payload=None):
         if not payload:
             payload = {}
         # need to sign the payload, referenced https://stackoverflow.com/questions/43559332/python-3-hash-hmac-sha512
@@ -120,24 +113,22 @@ class PoloniexRestMixin(RestExchange):
             "Sign": sign,
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        resp = requests.post(f"{self.api}tradingApi?command={command}", headers=headers, data=paybytes)
-        self._handle_error(resp)
-
-        return resp.json()
+        resp = await self.http_conn.write(f"{self.api}tradingApi?command={command}", header=headers, msg=paybytes)
+        return json.loads(resp, parse_float=Decimal)
 
     # Public API Routes
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        data = self._get("returnTicker", retry=retry, retry_wait=retry_wait)
+        data = await self._get("returnTicker", retry_count=retry_count, retry_delay=retry_delay)
         return {'symbol': symbol,
                 'feed': self.id,
                 'bid': Decimal(data[sym]['lowestAsk']),
                 'ask': Decimal(data[sym]['highestBid'])
                 }
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)
-        data = self._get("returnOrderBook", {'currencyPair': sym}, retry=retry, retry_wait=retry_wait)
+        data = await self._get("returnOrderBook", params=f"&currencyPair={sym}", retry_count=retry_count, retry_delay=retry_delay)
         return {
             BID: sd({
                     Decimal(u[0]): Decimal(u[1])
@@ -160,49 +151,44 @@ class PoloniexRestMixin(RestExchange):
             'price': Decimal(trade['rate'])
         }
 
-    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol, start=None, end=None, retry_count=1, retry_delay=60):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
+        start, end = self._interval_normalize(start, end)
 
-        @request_retry(self.id, retry, retry_wait)
-        def helper(s=None, e=None):
-            data = self._get("returnTradeHistory", {'currencyPair': symbol, 'start': s, 'end': e})
+        if not start and not end:
+            data = await self._get("returnTradeHistory", params=f"&currencyPair={symbol}", retry_count=retry_count, retry_delay=retry_delay)
             data.reverse()
-            return data
-
-        if not start:
-            yield list(map(lambda x: self._trade_normalize(x, symbol), helper()))
+            yield [self._trade_normalize(x, symbol) for x in data]
 
         else:
-            if not end:
-                end = dt.now().timestamp()
-            start = int(self._datetime_normalize(start))
-            end = int(self._datetime_normalize(end))
-
             s = start
             e = start + 21600
             while True:
                 if e > end:
                     e = end
 
-                yield list(map(lambda x: self._trade_normalize(x, symbol), helper(s=s, e=e)))
+                data = await self._get("returnTradeHistory", params=f"&currencyPair={symbol}&start={start}&end={end}", retry_count=retry_count, retry_delay=retry_delay)
+                data.reverse()
+                yield list(map(lambda x: self._trade_normalize(x, symbol), data))
 
                 s = e
                 e += 21600
                 if s >= end:
                     break
+                await asyncio.sleep(1 / self.request_limit)
 
     # Trading API Routes
-    def balances(self):
-        data = self._post("returnCompleteBalances")
+    async def balances(self):
+        data = await self._post("returnCompleteBalances")
         return {
             coin: {
                 'total': Decimal(data[coin]['available']) + Decimal(data[coin]['onOrders']),
                 'available': Decimal(data[coin]['available'])
             } for coin in data}
 
-    def orders(self):
+    async def orders(self):
         payload = {"currencyPair": "all"}
-        data = self._post("returnOpenOrders", payload)
+        data = await self._post("returnOpenOrders", payload)
         if isinstance(data, dict):
             data = {self.exchange_symbol_to_std_symbol(key): val for key, val in data.items()}
 
@@ -214,7 +200,7 @@ class PoloniexRestMixin(RestExchange):
                 ret.append(self._order_status(order, symbol=symbol))
         return ret
 
-    def trade_history(self, symbol: str, start=None, end=None):
+    async def trade_history(self, symbol: str, start=None, end=None):
         payload = {'currencyPair': self.std_symbol_to_exchange_symbol(symbol)}
 
         if start:
@@ -238,15 +224,15 @@ class PoloniexRestMixin(RestExchange):
             })
         return ret
 
-    def order_status(self, order_id: str):
-        data = self._post("returnOrderStatus", {'orderNumber': order_id})
+    async def order_status(self, order_id: str):
+        data = await self._post("returnOrderStatus", {'orderNumber': order_id})
         if 'error' in data:
             return {'error': data['error']}
         elif 'error' in data['result']:
             return {'error': data['result']['error']}
         return self._order_status(data['result'])
 
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, options=None):
         if not price:
             raise ValueError('Poloniex only supports limit orders, must specify price')
         # Poloniex only supports limit orders, so check the order type
@@ -266,8 +252,8 @@ class PoloniexRestMixin(RestExchange):
         elif side == SELL:
             endpoint = 'sell'
 
-        data = self._post(endpoint, parameters)
-        order = self.order_status(data['orderNumber'])
+        data = await self._post(endpoint, parameters)
+        order = await self.order_status(data['orderNumber'])
 
         if 'error' not in order:
             if len(data['resultingTrades']) == 0:
@@ -276,9 +262,9 @@ class PoloniexRestMixin(RestExchange):
                 return self._trade_status(data['resultingTrades'], symbol, data['orderNumber'], amount)
         return data
 
-    def cancel_order(self, order_id: str):
-        order = self.order_status(order_id)
-        data = self._post("cancelOrder", {"orderNumber": int(order_id)})
+    async def cancel_order(self, order_id: str):
+        order = await self.order_status(order_id)
+        data = await self._post("cancelOrder", {"orderNumber": int(order_id)})
         if 'error' in data:
             return {'error': data['error']}
         if 'message' in data and 'canceled' in data['message']:

@@ -4,12 +4,13 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
-from typing import Dict, Union
+from typing import Dict, Optional, Tuple, Union
 
-from cryptofeed.defines import FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, USER_FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
@@ -135,8 +136,8 @@ class RestExchange:
     rest_channels = NotImplemented
     order_options = NotImplemented
 
-    def _datetime_normalize(self, timestamp: Union[str, float, dt]):
-        if isinstance(timestamp, float):
+    def _datetime_normalize(self, timestamp: Union[str, int, float, dt]) -> float:
+        if isinstance(timestamp, (float, int)):
             return timestamp
         if isinstance(timestamp, dt):
             return timestamp.replace(tzinfo=timezone.utc).timestamp()
@@ -146,72 +147,126 @@ class RestExchange:
             except ValueError:
                 return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
 
-    def _handle_error(self, resp):
-        if resp.status_code != 200:
-            LOG.error("%s: Status code %d for URL %s", self.id, resp.status_code, resp.url)
-            LOG.error("%s: Headers: %s", self.id, resp.headers)
-            LOG.error("%s: Resp: %s", self.id, resp.text)
-            resp.raise_for_status()
+    def _interval_normalize(self, start, end) -> Tuple[Optional[float], Optional[float]]:
+        if start:
+            start = self._datetime_normalize(start)
+            if not end:
+                end = dt.now()
+        if end:
+            end = self._datetime_normalize(end)
+        return start, end if start else None
 
     # public / non account specific
-    def ticker(self, symbol: str, retry=None, retry_wait=10):
+    def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
+        return asyncio.get_event_loop().run_until_complete(self.ticker(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
-    def trades(self, symbol: str, start=None, end=None, retry=None, retry_wait=0):
+    def candles_sync(self, symbol: str, start=None, end=None, interval=None, retry_count=1, retry_delay=60):
+        gen = self.candles(symbol, start=start, end=end, retry_count=retry_count, retry_delay=retry_delay)
+        try:
+            loop = asyncio.get_event_loop()
+
+            while True:
+                yield loop.run_until_complete(gen.__anext__())
+        except StopAsyncIteration:
+            return
+
+    async def candles(self, symbol: str, start=None, end=None, interval=None, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
-    def funding(self, symbol: str, retry=None, retry_wait=0):
+    def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
+        gen = self.trades(symbol, start=start, end=end, retry_count=retry_count, retry_delay=retry_delay)
+        try:
+            loop = asyncio.get_event_loop()
+
+            while True:
+                yield loop.run_until_complete(gen.__anext__())
+        except StopAsyncIteration:
+            return
+
+    async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
-    def open_interest(self, symbol: str, retry=None, retry_wait=0):
+    def funding_sync(self, symbol: str, retry_count=1, retry_delay=60):
+        return asyncio.get_event_loop().run_until_complete(self.funding(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def funding(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=0):
+    def open_interest_sync(self, symbol: str, retry_count=1, retry_delay=60):
+        return asyncio.get_event_loop().run_until_complete(self.open_interest(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def open_interest(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
-    def l3_book(self, symbol: str, retry=None, retry_wait=0):
+    def l2_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
+        return asyncio.get_event_loop().run_until_complete(self.l2_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
+        raise NotImplementedError
+
+    def l3_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
+        return asyncio.get_event_loop().run_until_complete(self.l3_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
+
+    async def l3_book(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     # account specific
-    def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
+    def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
+        return asyncio.get_event_loop().run_until_complete(self.place_order(symbol, side, order_type, amount, price, **kwargs))
+
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
-    def cancel_order(self, order_id: str):
+    def cancel_order_sync(self, order_id: str, **kwargs):
+        return asyncio.get_event_loop().run_until_complete(self.cancel_order(order_id, **kwargs))
+
+    async def cancel_order(self, order_id: str, **kwargs):
         raise NotImplementedError
 
-    def orders(self, sumbol: str = None):
-        """
-        Return outstanding orders
-        """
+    def orders_sync(self, symbol: str = None):
+        return asyncio.get_event_loop().run_until_complete(self.orders(symbol))
+
+    async def orders(self, symbol: str = None):
         raise NotImplementedError
 
-    def order_status(self, order_id: str):
-        """
-        Look up status of an order by id
-        """
+    def order_status_sync(self, order_id: str):
+        return asyncio.get_event_loop().run_until_complete(self.order_status(order_id))
+
+    async def order_status(self, order_id: str):
         raise NotImplementedError
 
-    def trade_history(self, symbol: str = None, start=None, end=None):
-        """
-        Executed trade history
-        """
+    def trade_history_sync(self, symbol: str = None, start=None, end=None):
+        return asyncio.get_event_loop().run_until_complete(self.trade_history(symbol, start, end))
+
+    async def trade_history(self, symbol: str = None, start=None, end=None):
         raise NotImplementedError
 
-    def balances(self):
+    def balances_sync(self):
+        return asyncio.get_event_loop().run_until_complete(self.balances())
+
+    async def balances(self):
         raise NotImplementedError
 
-    def positions(self, **kwargs):
+    def positions_sync(self, **kwargs):
+        return asyncio.get_event_loop().run_until_complete(self.positions(**kwargs))
+
+    async def positions(self, **kwargs):
         raise NotImplementedError
 
-    def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
-        """
-        Executed trade history
-        """
+    def ledger_sync(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
+        return asyncio.get_event_loop().run_until_complete(self.ledger(aclass, asset, ledger_type, start, end))
+
+    async def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         raise NotImplementedError
 
     def __getitem__(self, key):
         if key == TRADES:
             return self.trades
+        elif key == CANDLES:
+            return self.candles
         elif key == FUNDING:
             return self.funding
         elif key == L2_BOOK:

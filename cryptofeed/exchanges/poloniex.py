@@ -31,6 +31,7 @@ class Poloniex(Feed, PoloniexRestMixin):
         TRADES: TRADES,
         TICKER: 1002,
     }
+    request_limit = 6
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
