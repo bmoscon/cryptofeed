@@ -264,6 +264,21 @@ class FTX(Feed):
         {"channel": "orderbook", "market": "BTC/USD", "type": "update", "data": {"time": 1564834587.1299787,
         "checksum": 3115602423, "bids": [], "asks": [[10719.0, 14.7461]], "action": "update"}}
         """
+        pair = self.exchange_symbol_to_std_symbol(msg['market'])
+        if(self.do_deltas):
+            delta = {
+                BID: msg['data']['bids'],
+                ASK: msg['data']['asks']
+                }
+            await self.callback(
+                BOOK_DELTA,
+                feed=self.id,
+                symbol=pair,
+                delta = delta,
+                timestamp=float(msg['data']['time']),
+                receipt_timestamp=timestamp)
+            return
+            
         check = msg['data']['checksum']
         if msg['type'] == 'partial':
             # snapshot
