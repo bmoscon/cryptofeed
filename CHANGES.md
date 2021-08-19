@@ -1,6 +1,20 @@
 ## Changelog
 
-### 1.9.3
+### 2.0.0
+ * Feature: Binance REST support
+ * Feature: Add next funding rate data to FTX funding data
+ * Bugfix: Kraken info dict returning empty
+ * Breaking Change: Rename REST endpoints. Sync endpoints end with `_sync`, non-sync endpoints are now async. Clean up and remove old/unused test cases
+ * Feature: Remove pandas dependency
+ * Breaking Change: Rewrite all rest endpoints to support sync and async versions of the endpoint.
+ * Feature: Add dYdX REST endpoints
+ * Feature: Add support for Binance trading REST API
+ * Bugfix: Fix typo by renaming rest_options to order_options
+ * Bugfix: Use correct max depth for Binance (and its child classes).
+ * Bugfix: Fix test data generation, fix Binance test cases, clean up and fix issues in various code samples in example/
+ * Feature: BinanceUS rest mixin
+
+### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
   * Feature: Add support for private channels USER_FILLS, ORDER_INFO, BALANCES on Deribit
   * Feature: Add support for public channel L1_BOOK on Deribit

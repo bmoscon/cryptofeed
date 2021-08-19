@@ -170,7 +170,7 @@ See more options, explanations and Pipenv usage in [INSTALL.md](https://github.c
 
 ## Rest API
 
-Cryptofeed supports some REST interfaces for retrieving historical data. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange.
+Cryptofeed supports some REST interfaces for retrieving real-time and historical data. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange.
 
 
 ## Future Work

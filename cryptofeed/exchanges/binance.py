@@ -17,11 +17,13 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
+
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Binance(Feed):
+class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
@@ -89,7 +91,7 @@ class Binance(Feed):
         self.address = self._address()
         self.concurrent_http = concurrent_http
 
-        self.open_interest = {}
+        self.open_interest_cache = {}
         self._reset()
 
     def _address(self) -> Union[str, Dict]:
@@ -254,7 +256,7 @@ class Binance(Feed):
         return skip_update, forced, current_match
 
     async def _snapshot(self, pair: str) -> None:
-        max_depth = self.max_depth if self.max_depth else 1000
+        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         if max_depth not in self.valid_depths:
             for d in self.valid_depths:
                 if d > max_depth:
@@ -455,6 +457,6 @@ class Binance(Feed):
         # subscription information is included in the
         # connection endpoint
         if isinstance(conn, (HTTPPoll, HTTPConcurrentPoll)):
-            self.open_interest = {}
+            self.open_interest_cache = {}
         else:
             self._reset()

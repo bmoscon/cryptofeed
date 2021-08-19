@@ -8,16 +8,13 @@ import decimal
 import hashlib
 import hmac
 import time
-from time import sleep
 from urllib.parse import urlparse
 
 from yapic import json
-import requests
 from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
-from cryptofeed.connection import request_retry
 
 
 class BitmexRestMixin(RestExchange):
@@ -51,32 +48,6 @@ class BitmexRestMixin(RestExchange):
             "api-signature": signature
         }
 
-    def _get(self, ep, symbol, retry, retry_wait):
-        @request_retry(self.id, retry, retry_wait)
-        def helper():
-            endpoint = f'/api/v1/{ep}?symbol={symbol}&reverse=true'
-            header = {}
-            if self.key_id and self.key_secret:
-                header = self._generate_signature("GET", endpoint)
-            header['Accept'] = 'application/json'
-            return requests.get('{}{}'.format(self.api, endpoint), headers=header)
-
-        while True:
-            r = helper()
-
-            if r.status_code in {502, 504}:
-                self.log.warning("%s: %d for URL %s - %s", self.id, r.status_code, r.url, r.text)
-                sleep(retry_wait)
-                continue
-            elif r.status_code == 429:
-                sleep(300)
-                continue
-            elif r.status_code != 200:
-                self._handle_error(r)
-
-            yield json.loads(r.text, parse_float=decimal.Decimal)
-            break
-
     def _trade_normalization(self, trade: dict) -> dict:
         return {
             'timestamp': self.timestamp_normalize(trade['timestamp']),
@@ -88,10 +59,20 @@ class BitmexRestMixin(RestExchange):
             'price': decimal.Decimal(trade['price'])
         }
 
-    def ticker(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    async def _get(self, endpoint, symbol, retry_count, retry_delay):
+        endpoint = f'/api/v1/{endpoint}?symbol={symbol}&reverse=true'
+        header = {}
+
+        if self.key_id and self.key_secret:
+            header = self._generate_signature("GET", endpoint)
+        header['Accept'] = 'application/json'
+        data = await self.http_conn.read(f'{self.api}{endpoint}', header=header, retry_count=retry_count, retry_delay=retry_delay)
+        return json.loads(data, parse_float=decimal.Decimal)
+
+    async def ticker(self, symbol, start=None, end=None, retry_count=1, retry_delay=60):
         symbol = self.std_symbol_to_exchange_symbol(symbol)
-        ret = list(self._get('quote', symbol, retry, retry_wait))[0][0]
-        return self._ticker_normalization(ret)
+        ret = await self._get('quote', symbol, retry_count, retry_delay)
+        return self._ticker_normalization(ret[0])
 
     def _ticker_normalization(self, data: dict) -> dict:
         return {
@@ -102,7 +83,7 @@ class BitmexRestMixin(RestExchange):
             'timestamp': data['timestamp'].timestamp()
         }
 
-    def trades(self, symbol, start=None, end=None, retry=None, retry_wait=10):
+    async def trades(self, symbol, start=None, end=None, retry_count=1, retry_delay=60):
         """
         data format
 
@@ -120,13 +101,15 @@ class BitmexRestMixin(RestExchange):
         }
         """
         symbol = self.std_symbol_to_exchange_symbol(symbol)
-        for data in self._get('trade', symbol, retry, retry_wait):
-            yield list(map(self._trade_normalization, data))
+        start, end = self._interval_normalize(start, end)
 
-    def l2_book(self, symbol: str, retry=None, retry_wait=10):
+        data = await self._get('trade', symbol, retry_count, retry_delay)
+        yield list(map(self._trade_normalization, data))
+
+    async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         ret = {BID: sd(), ASK: sd()}
-        data = next(self._get('orderBook/L2', self.std_symbol_to_exchange_symbol(symbol), retry, retry_wait))
+        data = await self._get('orderBook/L2', self.std_symbol_to_exchange_symbol(symbol), retry_count, retry_delay)
         for update in data:
             side = ASK if update['side'] == 'Sell' else BID
-            ret[side][update['price']] = update['size']
+            ret[side][decimal.Decimal(update['price'])] = decimal.Decimal(update['size'])
         return ret
