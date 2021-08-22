@@ -13,7 +13,7 @@ from typing import Dict, Union, Tuple
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -91,6 +91,7 @@ class Binance(Feed, BinanceRestMixin):
         self.address = self._address()
         self.concurrent_http = concurrent_http
 
+        self.open_interest_cache = {}
         self._reset()
 
     def _address(self) -> Union[str, Dict]:
@@ -108,7 +109,7 @@ class Binance(Feed, BinanceRestMixin):
 
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
-            if self.exchange_channel_to_std(chan) == OPEN_INTEREST:
+            if normalized_chan == OPEN_INTEREST:
                 continue
 
             stream = chan
@@ -126,7 +127,7 @@ class Binance(Feed, BinanceRestMixin):
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
 
-        if len(subs) < 200:
+        if 0 < len(subs) < 200:
             return address + '/'.join(subs)
         else:
             def split_list(_list: list, n: int):
@@ -139,7 +140,6 @@ class Binance(Feed, BinanceRestMixin):
         self.forced = defaultdict(bool)
         self._l2_book = {}
         self.last_update_id = {}
-        self._open_interest_cache = {}
 
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched
@@ -456,5 +456,7 @@ class Binance(Feed, BinanceRestMixin):
         # Binance does not have a separate subscribe message, the
         # subscription information is included in the
         # connection endpoint
-        if not isinstance(conn, HTTPPoll):
+        if isinstance(conn, (HTTPPoll, HTTPConcurrentPoll)):
+            self.open_interest_cache = {}
+        else:
             self._reset()
