@@ -8,11 +8,14 @@ from collections import defaultdict
 import logging
 from decimal import Decimal
 from typing import Dict, List, Tuple, Callable
+import base64
+import hashlib
+import hmac
+import time
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.gemini import generate_token
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
@@ -58,6 +61,24 @@ class Gemini(Feed, GeminiRestMixin):
     def __reset(self, pairs):
         for pair in pairs:
             self._l2_book[self.exchange_symbol_to_std_symbol(pair)] = {BID: sd(), ASK: sd()}
+
+    def generate_token(self, request: str, payload=None) -> dict:
+        if not payload:
+            payload = {}
+        payload['request'] = request
+        payload['nonce'] = int(time.time() * 1000)
+
+        if self.account_name:
+            payload['account'] = self.account_name
+
+        b64_payload = base64.b64encode(json.dumps(payload).encode('utf-8'))
+        signature = hmac.new(self.key_secret.encode('utf-8'), b64_payload, hashlib.sha384).hexdigest()
+
+        return {
+            'X-GEMINI-PAYLOAD': b64_payload.decode(),
+            'X-GEMINI-APIKEY': self.key_id,
+            'X-GEMINI-SIGNATURE': signature
+        }
 
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
@@ -159,7 +180,7 @@ class Gemini(Feed, GeminiRestMixin):
                 public.extend(self.subscription.get(channel))
 
         if authenticated:
-            header = generate_token(self.key_id, self.key_secret, "/v1/order/events", self.config.gemini.account_name)
+            header = self.generate_token("/v1/order/events")
             symbols = '&'.join([f"symbolFilter={s.lower()}" for s in authenticated])  # needs to match REST format (lower case)
 
             ret.append(self._connect_builder(f"{self.address['auth']}?{symbols}", None, header=header, sub=self._empty_subscribe, handler=self.message_handler_orders))
