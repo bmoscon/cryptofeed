@@ -188,3 +188,10 @@ class BinanceDeliveryRestMixin(BinanceRestMixin):
     async def positions(self):
         data = await self._request(GET, 'account', auth=True)
         return data['positions']
+
+
+class BinanceUSRestMixin(BinanceRestMixin):
+    api = 'https://api.binance.us/api/v3/'
+    rest_channels = (
+        TRADES
+    )

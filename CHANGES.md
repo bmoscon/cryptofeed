@@ -10,6 +10,10 @@
  * Feature: Add dYdX REST endpoints
  * Feature: Add support for Binance trading REST API
  * Bugfix: Fix typo by renaming rest_options to order_options
+ * Bugfix: Use correct max depth for Binance (and its child classes).
+ * Bugfix: Fix test data generation, fix Binance test cases, clean up and fix issues in various code samples in example/
+ * Feature: BinanceUS rest mixin
+ * Update: add feed/exchange cleanup to integration tests
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
@@ -29,6 +33,7 @@
   * Breaking Change: Rework how REST endpoints are integrated into exchange classes. Rest module has been removed. REST methods are part of exchanges classes.
   * Feature: Add support for funding data in Bybit
   * Update: Correct and update sections of the documentation.
+  * Feature: Add support for open_interest_interval in Binance Futures.
   * Bugfix: Fix subaccounts impl in FTX
 
 ### 1.9.2 (2021-07-14)

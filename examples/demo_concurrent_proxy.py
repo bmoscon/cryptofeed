@@ -15,8 +15,7 @@ from time import time
 
 from cryptofeed import FeedHandler
 from cryptofeed.defines import L2_BOOK, OPEN_INTEREST, BINANCE, BINANCE_FUTURES
-from cryptofeed.exchanges.binance_futures import BinanceFutures
-from cryptofeed.exchanges.binance import Binance
+from cryptofeed.exchanges import Binance, BinanceFutures
 
 
 class Counter:
@@ -98,17 +97,17 @@ def main(proxy):
                        channels=[L2_BOOK],
                        callbacks={L2_BOOK: counter.callback(BINANCE, L2_BOOK, book_symbols, True)}))
     f.add_feed(BinanceFutures(http_proxy=proxy,
+                              open_interest_interval=1.0,
                               concurrent_http=False,
                               symbols=futures_symbols,
                               channels=[OPEN_INTEREST],
                               callbacks={OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, False)}))
     f.add_feed(BinanceFutures(http_proxy=proxy,
+                              open_interest_interval=1.0,
                               concurrent_http=True,
                               symbols=futures_symbols,
                               channels=[OPEN_INTEREST],
-                              callbacks={
-                                  OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, True),
-                              }))
+                              callbacks={OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, True)}))
 
     f.run()
 

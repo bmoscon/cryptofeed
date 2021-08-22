@@ -122,6 +122,8 @@ async def _playback(feed: str, filenames: list):
                     await handler(message, ws, timestamp)
                 except Exception:
                     print("Playback failed on message:", message)
+                    feed.stop()
+                    await feed.shutdown()
                     raise
     feed.stop()
     await feed.shutdown()
