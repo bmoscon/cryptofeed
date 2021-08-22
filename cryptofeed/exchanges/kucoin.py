@@ -4,20 +4,24 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.connection import AsyncConnection
 from decimal import Decimal
 import logging
 import time
 from typing import Dict, Tuple
+import time
+import hmac
+import base64
+import hashlib
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.kucoin import generate_token
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
+from cryptofeed.connection import AsyncConnection
+
 
 
 LOG = logging.getLogger('feedhandler')
@@ -151,10 +155,30 @@ class KuCoin(Feed):
                             receipt_timestamp=timestamp,
                             order_id=msg['data']['tradeId'])
 
+    def generate_token(self, str_to_sign: str) -> dict:
+        # https://docs.kucoin.com/#authentication
+
+        # Now required to pass timestamp with string to sign. Timestamp should exactly match header timestamp
+        now = str(int(time.time() * 1000))
+        str_to_sign = now + str_to_sign
+        signature = base64.b64encode(hmac.new(self.key_secret.encode('utf-8'), str_to_sign.encode('utf-8'), hashlib.sha256).digest())
+        # Passphrase must now be encrypted by key_secret
+        passphrase = base64.b64encode(hmac.new(self.key_secret.encode('utf-8'), self.key_passphrase.encode('utf-8'), hashlib.sha256).digest())
+
+        # API key version is currently 2 (whereas API version is anywhere from 1-3 ¯\_(ツ)_/¯)
+        header = {
+            "KC-API-KEY": self.key_id,
+            "KC-API-SIGN": signature.decode(),
+            "KC-API-TIMESTAMP": now,
+            "KC-API-PASSPHRASE": passphrase.decode(),
+            "KC-API-KEY-VERSION": "2"
+        }
+        return header
+
     async def _snapshot(self, symbol: str):
         url = f"https://api.kucoin.com/api/v3/market/orderbook/level2?symbol={symbol}"
         str_to_sign = "GET" + f"/api/v3/market/orderbook/level2?symbol={symbol}"
-        headers = generate_token(self.key_id, self.key_secret, self.key_passphrase, str_to_sign)
+        headers = self.generate_token(str_to_sign)
         data = await self.http_conn.read(url, header=headers)
         data = json.loads(data, parse_float=Decimal)
         data = data['data']
