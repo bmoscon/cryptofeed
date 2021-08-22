@@ -8,7 +8,6 @@ from decimal import Decimal
 import logging
 import time
 from typing import Dict, Tuple
-import time
 import hmac
 import base64
 import hashlib
@@ -21,7 +20,6 @@ from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection
-
 
 
 LOG = logging.getLogger('feedhandler')

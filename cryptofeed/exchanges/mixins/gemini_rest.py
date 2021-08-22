@@ -11,7 +11,6 @@ import logging
 from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.gemini import generate_token
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
 
@@ -61,7 +60,7 @@ class GeminiRestMixin(RestExchange):
         return json.loads(resp, parse_float=Decimal)
 
     async def _post(self, command: str, payload=None):
-        headers = generate_token(self.config.key_id, self.config.key_secret, command, account_name=self.config.account_name, payload=payload)
+        headers = self.generate_token(command, payload=payload)
 
         headers['Content-Type'] = "text/plain"
         headers['Content-Length'] = "0"
