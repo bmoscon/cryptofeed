@@ -75,8 +75,12 @@ class AsyncConnection(Connection):
         atexit.register(self.__del__)
 
     def __del__(self):
+        # best effort clean up. Shutdown should be called on Feed/Exchange classes
+        # and any user of the Async connection should use a context manager (via connect)
+        # or call close manually. If not, we *might* be able to clean up the connection on exit
         try:
-            asyncio.ensure_future(self.close())
+            if self.is_open:
+                asyncio.ensure_future(self.close())
         except (RuntimeError, RuntimeWarning):
             # no event loop, ignore error
             pass
