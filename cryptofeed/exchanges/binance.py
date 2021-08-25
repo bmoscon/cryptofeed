@@ -224,7 +224,7 @@ class Binance(Feed, BinanceRestMixin):
         await self.callback(LIQUIDATIONS,
                             feed=self.id,
                             symbol=pair,
-                            side=msg['o']['S'],
+                            side=SELL if msg['o']['S'] == 'SELL' else BUY,
                             leaves_qty=Decimal(msg['o']['q']),
                             price=Decimal(msg['o']['p']),
                             order_id=None,

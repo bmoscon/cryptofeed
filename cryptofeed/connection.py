@@ -304,6 +304,7 @@ class WSAsyncConn(AsyncConnection):
             self.conn = await websockets.connect(self.address, **self.ws_kwargs)
         self.sent = 0
         self.received = 0
+        self.last_message = None
 
     async def read(self) -> AsyncIterable:
         if not self.is_open:

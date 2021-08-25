@@ -1,7 +1,6 @@
 from cryptofeed import FeedHandler
-from cryptofeed.callback import LiquidationCallback
 from cryptofeed.defines import LIQUIDATIONS
-from cryptofeed.exchanges import Bitmex
+from cryptofeed.exchanges import EXCHANGE_MAP
 
 
 async def liquidations(feed, symbol, side, leaves_qty, price, order_id, status, timestamp, receipt_timestamp):
@@ -9,10 +8,16 @@ async def liquidations(feed, symbol, side, leaves_qty, price, order_id, status, 
 
 
 def main():
-
     f = FeedHandler()
-    # Liquidations happen not frequently, disable feed timeout
-    f.add_feed(Bitmex(channels=[LIQUIDATIONS], symbols=['BTC-USD-PERP'], callbacks={LIQUIDATIONS: LiquidationCallback(liquidations)}, timeout=-1))
+    configured = []
+
+    print("Querying exchange metadata")
+    for exchange_string, exchange_class in EXCHANGE_MAP.items():
+        if LIQUIDATIONS in exchange_class.info()['channels']['websocket']:
+            configured.append(exchange_string)
+            symbols = [sym for sym in exchange_class.symbols() if 'PINDEX' not in sym]
+            f.add_feed(exchange_class(subscription={LIQUIDATIONS: symbols}, callbacks={LIQUIDATIONS: liquidations}))
+    print("Starting feedhandler for exchanges:", ', '.join(configured))
     f.run()
 
 
