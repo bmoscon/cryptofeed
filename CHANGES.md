@@ -14,6 +14,8 @@
  * Bugfix: Fix test data generation, fix Binance test cases, clean up and fix issues in various code samples in example/
  * Feature: BinanceUS rest mixin
  * Update: add feed/exchange cleanup to integration tests
+ * Bugfix: Last message received not being correctly set on websocket connection, causing multiple restarts when an exchange encounters a timeout
+ * Bugfix: Binance Futures not correctly formatting the side on liquidations
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
