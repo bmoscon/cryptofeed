@@ -21,8 +21,12 @@ from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfi
 # Handlers can be normal methods/functions or async. The feedhandler is paused
 # while the callbacks are being handled (unless they in turn await other functions or I/O)
 # so they should be as lightweight as possible
-async def ticker(feed, symbol, bid, ask, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} Bid: {bid} Ask: {ask}')
+async def ticker(t, receipt_timestamp):
+    assert isinstance(t.timestamp, float)
+    assert isinstance(t.exchange, str)
+    assert isinstance(t.bid, Decimal)
+    assert isinstance(t.ask, Decimal)
+    print(f'Ticker received at {receipt_timestamp}: {t}')
 
 
 async def delta(feed, symbol, delta, timestamp, receipt_timestamp):
@@ -34,6 +38,7 @@ async def trade(t, receipt_timestamp):
     assert isinstance(t.side, str)
     assert isinstance(t.amount, Decimal)
     assert isinstance(t.price, Decimal)
+    assert isinstance(t.exchange, str)
     print(f"Trade received at {receipt_timestamp}: {t}")
 
 
@@ -72,8 +77,11 @@ def main():
     # *** Kucoin requires an API key for L2 book data! ***
     #f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK, ], callbacks={L2_BOOK: book, BOOK_DELTA: delta, CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
     #f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker, BOOK_DELTA: delta}))
-    pairs = Binance.symbols()
-    f.add_feed(Binance(symbols=pairs, channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
+    f.add_feed(AscendEX(symbols=['XRP-USDT', 'BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade}))
+    
+    pairs = Binance.symbols()[:10]
+    f.add_feed(Binance(symbols=pairs, channels=[TRADES, TICKER], callbacks={TRADES: trade, TICKER: ticker}))
+
     """
     pairs = BinanceUS.symbols()
     f.add_feed(BinanceUS(symbols=pairs, channels=[CANDLES], callbacks={CANDLES: candle_callback}))
@@ -109,7 +117,6 @@ def main():
     f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[FUTURES_INDEX, FUNDING, OPEN_INTEREST], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), FUTURES_INDEX: FuturesIndexCallback(futures_index), FUNDING: funding}))
     f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[L2_BOOK, TRADES], callbacks={TRADES: trade, L2_BOOK: book}))
     f.add_feed(BLOCKCHAIN, symbols=['BTC-USD', 'ETH-USD'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: BookCallback(book), TRADES: trade})
-    f.add_feed(AscendEX(symbols=['XRP-USDT', 'BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade, L2_BOOK: book}))
     f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[L2_BOOK, TRADES, TICKER], callbacks={L2_BOOK: book, BOOK_DELTA: delta, TICKER: ticker, TRADES: trade}))
     f.add_feed(BinanceFutures(symbols=['BTC-USDT-PERP'], channels=[TICKER], callbacks={TICKER: ticker}))
     f.add_feed(BinanceFutures(subscription={TRADES: ['BTC-USDT-PERP'], CANDLES: ['BTC-USDT-PERP', 'BTC-USDT-PINDEX']}, callbacks={CANDLES: candle_callback, TRADES: trade}))

@@ -17,6 +17,7 @@ from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import Trade
 
 
 LOG = logging.getLogger('feedhandler')
@@ -72,14 +73,15 @@ class AscendEX(Feed):
         }
         """
         for trade in msg['data']:
-            await self.callback(TRADES, feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
-                                side=SELL if trade['bm'] else BUY,
-                                amount=Decimal(trade['q']),
-                                price=Decimal(trade['p']),
-                                order_id=None,
-                                timestamp=self.timestamp_normalize(trade['ts']),
-                                receipt_timestamp=timestamp)
+            t = Trade(self.id, 
+                  self.exchange_symbol_to_std_symbol(msg['symbol']),
+                  SELL if trade['bm'] else BUY,
+                  Decimal(trade['q']),
+                  Decimal(trade['p']),
+                  self.timestamp_normalize(trade['ts']),
+                  raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         sequence_number = msg['data']['seqnum']
