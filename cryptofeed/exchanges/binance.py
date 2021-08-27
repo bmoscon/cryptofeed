@@ -18,7 +18,7 @@ from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
-from cryptofeed.types import Trade, Ticker
+from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding
 
 
 LOG = logging.getLogger('feedhandler')
@@ -218,16 +218,17 @@ class Binance(Feed, BinanceRestMixin):
         }
         """
         pair = self.exchange_symbol_to_std_symbol(msg['o']['s'])
-        await self.callback(LIQUIDATIONS,
-                            feed=self.id,
-                            symbol=pair,
-                            side=SELL if msg['o']['S'] == 'SELL' else BUY,
-                            leaves_qty=Decimal(msg['o']['q']),
-                            price=Decimal(msg['o']['p']),
-                            order_id=None,
-                            status=FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp)
+        l = Liquidation(self.id,
+                        pair,
+                        SELL if msg['o']['S'] == 'SELL' else BUY,
+                        Decimal(msg['o']['q']),
+                        Decimal(msg['o']['p']),
+                        None,
+                        FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
+                        self.timestamp_normalize(msg['E']),
+                        raw=msg
+        )
+        await self.callback(LIQUIDATIONS, l, receipt_timestamp=timestamp)
 
     def _check_update_id(self, std_pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         """
@@ -367,15 +368,15 @@ class Binance(Feed, BinanceRestMixin):
             "T": 1562306400000       // Next funding time
         }
         """
-        await self.callback(FUNDING,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp,
-                            mark_price=msg['p'],
-                            rate=msg['r'],
-                            next_funding_time=self.timestamp_normalize(msg['T']),
-                            )
+        f = Funding(self.id,
+                    self.exchange_symbol_to_std_symbol(msg['s']),
+                    msg['p'],
+                    msg['r'],
+                    self.timestamp_normalize(msg['T']),
+                    self.timestamp_normalize(msg['E']),
+                    raw=msg
+        )
+        await self.callback(FUNDING, f, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
         """
@@ -406,22 +407,22 @@ class Binance(Feed, BinanceRestMixin):
         """
         if self.candle_closed_only and not msg['k']['x']:
             return
-
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp,
-                            start=msg['k']['t'] / 1000,
-                            stop=msg['k']['T'] / 1000,
-                            interval=msg['k']['i'],
-                            trades=msg['k']['n'],
-                            open_price=Decimal(msg['k']['o']),
-                            close_price=Decimal(msg['k']['c']),
-                            high_price=Decimal(msg['k']['h']),
-                            low_price=Decimal(msg['k']['l']),
-                            volume=Decimal(msg['k']['v']),
-                            closed=msg['k']['x'])
+        c = Candle(self.id,
+                   self.exchange_symbol_to_std_symbol(msg['s']),
+                   msg['k']['t'] / 1000,
+                   msg['k']['T'] / 1000,
+                   msg['k']['i'],
+                   msg['k']['n'],
+                   Decimal(msg['k']['o']),
+                   Decimal(msg['k']['c']),
+                   Decimal(msg['k']['h']),
+                   Decimal(msg['k']['l']),
+                   Decimal(msg['k']['v']),
+                   msg['k']['x'],
+                   self.timestamp_normalize(msg['E']),
+                   raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
