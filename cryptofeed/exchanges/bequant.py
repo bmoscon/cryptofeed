@@ -22,6 +22,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import Trade, Ticker, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -83,7 +84,7 @@ class Bequant(Feed):
         self._l2_book = {}
         self.seq_no = {}
 
-    async def _ticker(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _ticker(self, msg: dict, timestamp: float):
         """
         {
             "ask": "0.054464", <- best ask
@@ -98,14 +99,10 @@ class Bequant(Feed):
             "symbol": "ETHBTC"
         }
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
-                            bid=Decimal(msg['bid']),
-                            ask=Decimal(msg['ask']),
-                            receipt_timestamp=ts,
-                            timestamp=self.timestamp_normalize(msg['timestamp']))
+        t = Ticker(self.id, self.exchange_symbol_to_std_symbol(msg['symbol']), Decimal(msg['bid']), Decimal(msg['ask']), self.timestamp_normalize(msg['timestamp']), raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
-    async def _book_snapshot(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _book_snapshot(self, msg: dict, ts: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         self._l2_book[pair] = {
             BID: sd({
@@ -117,7 +114,7 @@ class Bequant(Feed):
         }
         await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(msg['timestamp']), ts)
 
-    async def _book_update(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _book_update(self, msg: dict, ts: float):
         delta = {BID: [], ASK: []}
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for side in ('bid', 'ask'):
@@ -133,7 +130,7 @@ class Bequant(Feed):
                     self._l2_book[pair][s][price] = amount
         await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(msg['timestamp']), ts)
 
-    async def _trades(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _trades(self, msg: dict, timestamp: float):
         """
         "params": {
             "data": [
@@ -150,16 +147,17 @@ class Bequant(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for update in msg['data']:
-            await self.callback(TRADES, feed=self.id,
-                                symbol=pair,
-                                side=BUY if update['side'] == 'buy' else SELL,
-                                amount=Decimal(update['quantity']),
-                                price=Decimal(update['price']),
-                                order_id=update['id'],
-                                timestamp=self.timestamp_normalize(update['timestamp']),
-                                receipt_timestamp=ts)
+            t = Trade(self.id,
+                      pair,
+                      BUY if update['side'] == 'buy' else SELL,
+                      Decimal(update['quantity']),
+                      Decimal(update['price']),
+                      self.timestamp_normalize(update['timestamp']),
+                      id=str(update['id']),
+                      raw=update)
+            await self.callback(TRADES, t, timestamp)
 
-    async def _candles(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _candles(self, msg: dict, timestamp: float):
         """
         {
             "jsonrpc": "2.0",
@@ -187,21 +185,23 @@ class Bequant(Feed):
         for candle in msg['data']:
             start = self.timestamp_normalize(candle['timestamp'])
             end = start + timedelta_str_to_sec(interval) - 1
-            await self.callback(CANDLES,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
-                                timestamp=ts,  # no timestamp provided by exchange
-                                receipt_timestamp=ts,
-                                start=start,
-                                stop=end,
-                                interval=interval,
-                                trades=None,
-                                open_price=Decimal(candle['open']),
-                                close_price=Decimal(candle['close']),
-                                high_price=Decimal(candle['max']),
-                                low_price=Decimal(candle['min']),
-                                volume=Decimal(candle['volume']),
-                                closed=None)
+            c = Candle(
+                self.id,
+                self.exchange_symbol_to_std_symbol(msg['symbol']),
+                start,
+                end,
+                interval,
+                None,
+                Decimal(candle['open']),
+                Decimal(candle['close']),
+                Decimal(candle['max']),
+                Decimal(candle['min']),
+                Decimal(candle['volume']),
+                None,
+                None,
+                raw=candle
+            )
+            await self.callback(CANDLES, c, timestamp)
 
     async def _order_status(self, msg: str, conn: AsyncConnection, ts: float):
         status_lookup = {
@@ -330,15 +330,15 @@ class Bequant(Feed):
             m = msg['method']
             params = msg['params']
             if m == 'ticker':
-                await self._ticker(params, conn, ts)
+                await self._ticker(params, ts)
             elif m == 'snapshotOrderbook':
-                await self._book_snapshot(params, conn, ts)
+                await self._book_snapshot(params, ts)
             elif m == 'updateOrderbook':
-                await self._book_update(params, conn, ts)
+                await self._book_update(params, ts)
             elif m in ('updateTrades', 'snapshotTrades'):
-                await self._trades(params, conn, ts)
+                await self._trades(params, ts)
             elif m in ('snapshotCandles', 'updateCandles'):
-                await self._candles(params, conn, ts)
+                await self._candles(params, ts)
             elif m in ('activeOrders', 'report'):
                 if isinstance(params, list):
                     for entry in params:
@@ -362,8 +362,6 @@ class Bequant(Feed):
         else:
             if 'error' in msg:
                 LOG.error(f"{self.id}: Received error on {conn.uuid}: {msg['error']}")
-            elif 'result' in msg:
-                LOG.info(f"{self.id}: Received result on {conn.uuid}: {msg}")
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []

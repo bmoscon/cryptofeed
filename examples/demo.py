@@ -13,7 +13,7 @@ from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, FundingCallback, LiquidationCallback, TickerCallback, TradeCallback, IndexCallback, OpenInterestCallback
 from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, TICKER, TRADES, INDEX, BOOK_DELTA
 from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
-                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit, KuCoin)
+                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit, KuCoin, Bequant)
 
 
 # Examples of some handlers for different updates. These currently don't do much.
@@ -50,16 +50,16 @@ async def funding(f, receipt_timestamp):
     print(f"Funding update received at {receipt_timestamp}: {f}")
 
 
-async def oi(feed, symbol, open_interest, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} open interest: {open_interest}')
+async def oi(update, receipt_timestamp):
+    print(f"Open Interest update received at {receipt_timestamp}: {update}")
 
 
-async def index(**kwargs):
-    print(f"Index: {kwargs}")
+async def index(i, receipt_timestamp):
+    print(f"Index received at {receipt_timestamp}: {i}")
 
 
 async def candle_callback(c, receipt_timestamp):
-    print(f"Candle recevied at {receipt_timestamp}: {c}")
+    print(f"Candle received at {receipt_timestamp}: {c}")
 
 
 async def liquidations(liquidation, receipt_timestamp):
@@ -76,12 +76,14 @@ def main():
     # *** Kucoin requires an API key for L2 book data! ***
     #f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK, ], callbacks={L2_BOOK: book, BOOK_DELTA: delta, CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
     #f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker, BOOK_DELTA: delta}))
-    #f.add_feed(AscendEX(symbols=['XRP-USDT', 'BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade}))
     
-    pairs = Binance.symbols()[:10]
-    f.add_feed(Binance(symbols=pairs, channels=[TRADES, TICKER, CANDLES], callbacks={CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
+    f.add_feed(AscendEX(symbols=['XRP-USDT', 'BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade}))
+    f.add_feed(Bequant(symbols=['BTC-USDT'], channels=[TRADES, TICKER, CANDLES], callbacks={TRADES: trade, TICKER: ticker, CANDLES: candle_callback}))
+
+    #pairs = Binance.symbols()[:10]
+    #f.add_feed(Binance(symbols=pairs, channels=[TRADES, TICKER, CANDLES], callbacks={CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
     pairs = BinanceFutures.symbols()[:30]
-    f.add_feed(BinanceFutures(symbols=pairs, channels=[FUNDING, LIQUIDATIONS], callbacks={FUNDING: funding, LIQUIDATIONS: liquidations}))
+    f.add_feed(BinanceFutures(symbols=pairs, channels=[OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
 
     """
     pairs = BinanceUS.symbols()

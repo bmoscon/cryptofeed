@@ -92,7 +92,7 @@ class Binance(Feed, BinanceRestMixin):
         self.address = self._address()
         self.concurrent_http = concurrent_http
 
-        self.open_interest_cache = {}
+        self._open_interest_cache = {}
         self._reset()
 
     def _address(self) -> Union[str, Dict]:
@@ -451,6 +451,6 @@ class Binance(Feed, BinanceRestMixin):
         # subscription information is included in the
         # connection endpoint
         if isinstance(conn, (HTTPPoll, HTTPConcurrentPoll)):
-            self.open_interest_cache = {}
+            self._open_interest_cache = {}
         else:
             self._reset()

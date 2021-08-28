@@ -109,14 +109,14 @@ cdef class Candle:
     cdef readonly double start
     cdef readonly double stop
     cdef readonly str interval
-    cdef readonly unsigned int trades
+    cdef readonly object trades # None or int
     cdef readonly object open
     cdef readonly object close
     cdef readonly object high
     cdef readonly object low
     cdef readonly object volume
     cdef readonly bint closed
-    cdef readonly double timestamp
+    cdef readonly object timestamp # None or float
     cdef readonly dict raw
 
     def __init__(self, exchange, symbol, start, stop, interval, trades, open, close, high, low, volume, closed, timestamp, raw=None):
@@ -161,3 +161,24 @@ cdef class Index:
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} price: {self.price} timestamp: {self.timestamp}"
+
+
+cdef class OpenInterest:
+    cdef readonly str exchange
+    cdef readonly str symbol
+    cdef readonly object open_interest
+    cdef readonly double timestamp
+    cdef readonly dict raw
+
+    def __init__(self, exchange, symbol, open_interest, timestamp, raw=None):
+        self.exchange = exchange
+        self.symbol = symbol
+        self.open_interest = open_interest
+        self.timestamp = timestamp
+        self.raw = raw
+
+    cpdef dict to_dict(self):
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': self.open_interest, 'timestamp': self.timestamp}
+
+    def __repr__(self):
+        return f"exchange: {self.exchange} symbol: {self.symbol} open_interest: {self.open_interest} timestamp: {self.timestamp}"
