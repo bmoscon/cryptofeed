@@ -161,16 +161,15 @@ class Binance(Feed, BinanceRestMixin):
             "m": true,        // Is the buyer the market maker?
             "M": true         // Ignore
         }
-        """ 
-        t = Trade(self.id, 
+        """
+        t = Trade(self.id,
                   self.exchange_symbol_to_std_symbol(msg['s']),
                   SELL if msg['m'] else BUY,
                   Decimal(msg['q']),
                   Decimal(msg['p']),
                   self.timestamp_normalize(msg['E']),
                   id=str(msg['a']),
-                  raw=msg
-        )
+                  raw=msg)
         await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
@@ -218,17 +217,16 @@ class Binance(Feed, BinanceRestMixin):
         }
         """
         pair = self.exchange_symbol_to_std_symbol(msg['o']['s'])
-        l = Liquidation(self.id,
-                        pair,
-                        SELL if msg['o']['S'] == 'SELL' else BUY,
-                        Decimal(msg['o']['q']),
-                        Decimal(msg['o']['p']),
-                        None,
-                        FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
-                        self.timestamp_normalize(msg['E']),
-                        raw=msg
-        )
-        await self.callback(LIQUIDATIONS, l, receipt_timestamp=timestamp)
+        liq = Liquidation(self.id,
+                          pair,
+                          SELL if msg['o']['S'] == 'SELL' else BUY,
+                          Decimal(msg['o']['q']),
+                          Decimal(msg['o']['p']),
+                          None,
+                          FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
+                          self.timestamp_normalize(msg['E']),
+                          raw=msg)
+        await self.callback(LIQUIDATIONS, liq, receipt_timestamp=timestamp)
 
     def _check_update_id(self, std_pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         """
@@ -374,8 +372,7 @@ class Binance(Feed, BinanceRestMixin):
                     msg['r'],
                     self.timestamp_normalize(msg['T']),
                     self.timestamp_normalize(msg['E']),
-                    raw=msg
-        )
+                    raw=msg)
         await self.callback(FUNDING, f, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
@@ -420,8 +417,7 @@ class Binance(Feed, BinanceRestMixin):
                    Decimal(msg['k']['v']),
                    msg['k']['x'],
                    self.timestamp_normalize(msg['E']),
-                   raw=msg
-        )
+                   raw=msg)
         await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):

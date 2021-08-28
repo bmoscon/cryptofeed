@@ -15,7 +15,7 @@ from aiohttp.typedefs import StrOrURL
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
-from cryptofeed.defines import (ASK, BALANCES, BID, BOOK_DELTA, CANDLES, FUNDING, FUTURES_INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+from cryptofeed.defines import (ASK, BALANCES, BID, BOOK_DELTA, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, USER_FILLS)
 from cryptofeed.exceptions import BidAskOverlapping
 from cryptofeed.util.book import book_delta, depth
@@ -128,7 +128,7 @@ class Feed(Exchange):
         self._l3_book = {}
         self._l2_book = {}
         self.callbacks = {FUNDING: Callback(None),
-                          FUTURES_INDEX: Callback(None),
+                          INDEX: Callback(None),
                           L2_BOOK: Callback(None),
                           L3_BOOK: Callback(None),
                           LIQUIDATIONS: Callback(None),

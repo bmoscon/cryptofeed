@@ -16,7 +16,7 @@ from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUNDING, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUNDING, L2_BOOK, SELL, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
 # For auth
 import hmac
@@ -33,7 +33,7 @@ class Bybit(Feed):
         TRADES: 'trade',
         USER_FILLS: 'execution',
         ORDER_INFO: 'order',
-        FUTURES_INDEX: 'instrument_info.100ms',
+        INDEX: 'instrument_info.100ms',
         OPEN_INTEREST: 'instrument_info.100ms',
         FUNDING: 'instrument_info.100ms'
     }
@@ -257,9 +257,9 @@ class Bybit(Feed):
                                     receipt_timestamp=timestamp)
 
             if 'index_price_e4' in info:
-                await self.callback(FUTURES_INDEX, feed=self.id,
+                await self.callback(INDEX, feed=self.id,
                                     symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
-                                    futures_index=Decimal(info['index_price_e4']) * Decimal('1e-4'),
+                                    price=Decimal(info['index_price_e4']) * Decimal('1e-4'),
                                     timestamp=ts,
                                     receipt_timestamp=timestamp)
 

@@ -30,13 +30,18 @@ class TradeCallback(Callback):
 class TickerCallback(Callback):
     pass
 
+
 class BookCallback(Callback):
     pass
 
+
 class BookUpdateCallback(Callback):
     pass
+
+
 class CandleCallback(Callback):
     pass
+
 
 class LiquidationCallback(Callback):
     pass
@@ -46,15 +51,11 @@ class OpenInterestCallback(Callback):
     pass
 
 
-class VolumeCallback(Callback):
-    pass
-
-
 class FundingCallback(Callback):
     pass
 
 
-class FuturesIndexCallback(Callback):
+class IndexCallback(Callback):
     pass
 
 

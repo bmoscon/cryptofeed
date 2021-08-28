@@ -94,9 +94,9 @@ class BackendOpenInterestCallback:
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 
-class BackendFuturesIndexCallback:
-    async def __call__(self, *, feed: str, symbol: str, futures_index: Decimal, timestamp: float, receipt_timestamp: float):
-        data = {'feed': feed, 'symbol': symbol, 'futures_index': self.numeric_type(futures_index), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
+class BackendIndexCallback:
+    async def __call__(self, *, feed: str, symbol: str, price: Decimal, timestamp: float, receipt_timestamp: float):
+        data = {'feed': feed, 'symbol': symbol, 'index': self.numeric_type(price), 'receipt_timestamp': receipt_timestamp, 'timestamp': timestamp}
         await self.write(feed, symbol, timestamp, receipt_timestamp, data)
 
 

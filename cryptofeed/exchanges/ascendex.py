@@ -73,14 +73,13 @@ class AscendEX(Feed):
         }
         """
         for trade in msg['data']:
-            t = Trade(self.id, 
-                  self.exchange_symbol_to_std_symbol(msg['symbol']),
-                  SELL if trade['bm'] else BUY,
-                  Decimal(trade['q']),
-                  Decimal(trade['p']),
-                  self.timestamp_normalize(trade['ts']),
-                  raw=trade
-            )
+            t = Trade(self.id,
+                      self.exchange_symbol_to_std_symbol(msg['symbol']),
+                      SELL if trade['bm'] else BUY,
+                      Decimal(trade['q']),
+                      Decimal(trade['p']),
+                      self.timestamp_normalize(trade['ts']),
+                      raw=trade)
             await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):

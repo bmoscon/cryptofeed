@@ -140,3 +140,24 @@ cdef class Candle:
 
     def __repr__(self):
         return f"'exchange: {self.exchange} symbol: {self.symbol} start: {self.start} stop: {self.stop} interval: {self.interval} trades: {self.trades} open: {self.open} close: {self.close} high: {self.high} low: {self.low} volume: {self.volume} closed: {self.closed} timestamp: {self.timestamp}"
+
+
+cdef class Index:
+    cdef readonly str exchange
+    cdef readonly str symbol
+    cdef readonly object price
+    cdef readonly double timestamp
+    cdef readonly dict raw
+
+    def __init__(self, exchange, symbol, price, timestamp, raw=None):
+        self.exchange = exchange
+        self.symbol = symbol
+        self.price = price
+        self.timestamp = timestamp
+        self.raw = raw
+
+    cpdef dict to_dict(self):
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'price': self.price, 'timestamp': self.timestamp}
+
+    def __repr__(self):
+        return f"exchange: {self.exchange} symbol: {self.symbol} price: {self.price} timestamp: {self.timestamp}"
