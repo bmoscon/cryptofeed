@@ -31,8 +31,8 @@ cdef class Ticker:
     cdef readonly str symbol
     cdef readonly object bid
     cdef readonly object ask
-    cdef readonly double timestamp
-    cdef readonly dict raw
+    cdef readonly object timestamp
+    cdef readonly object raw
 
     def __init__(self, exchange, symbol, bid, ask, timestamp, raw=None):
         self.exchange = exchange
@@ -182,3 +182,30 @@ cdef class OpenInterest:
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} open_interest: {self.open_interest} timestamp: {self.timestamp}"
+
+
+cdef class OrderBook:
+    cdef readonly str exchange
+    cdef readonly str symbol
+    cdef readonly object book
+    cdef readonly dict delta
+    cdef readonly object timestamp
+
+    def __init__(self, exchange, symbol, book, delta=None, timestamp=None):
+        self.exchange = exchange
+        self.symbol = symbol
+        self.book = book
+        self.delta = delta
+        self.timestamp = timestamp
+    
+    def _update_timestamp(self, timestamp):
+        self.timestamp = timestamp
+    
+    def _update_delta(self, delta):
+        self.delta = delta
+
+    cpdef dict to_dict(self):
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'book': self.book, 'timestamp': self.timestamp}
+
+    def __repr__(self):
+        return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {self.timestamp}"

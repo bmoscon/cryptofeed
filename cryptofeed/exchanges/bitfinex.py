@@ -19,6 +19,7 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.bitfinex_rest import BitfinexRestMixin
+from cryptofeed.types import Ticker, Trade, Funding
 
 
 LOG = logging.getLogger('feedhandler')
@@ -108,12 +109,8 @@ class Bitfinex(Feed, BitfinexRestMixin):
         # bid, bid_size, ask, ask_size, daily_change, daily_change_percent,
         # last_price, volume, high, low
         bid, _, ask, _, _, _, _, _, _, _ = msg[1]
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=bid,
-                            ask=ask,
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _funding(self, pair: str, msg: dict, timestamp: float):
         async def _funding_update(funding: list, timestamp: float):
@@ -142,14 +139,16 @@ class Bitfinex(Feed, BitfinexRestMixin):
     async def _trades(self, pair: str, msg: dict, timestamp: float):
         async def _trade_update(trade: list, timestamp: float):
             order_id, ts, amount, price = trade
-            await self.callback(TRADES, feed=self.id,
-                                symbol=pair,
-                                side=SELL if amount < 0 else BUY,
-                                amount=abs(amount),
-                                price=Decimal(price),
-                                order_id=order_id,
-                                timestamp=self.timestamp_normalize(ts),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                pair,
+                SELL if amount < 0 else BUY,
+                Decimal(abs(Decimal(amount))),
+                Decimal(price),
+                self.timestamp_normalize(ts),
+                id=str(order_id),
+            )
+            await self.callback(TRADES, t, timestamp)
 
         if isinstance(msg[1], list):
             # snapshot
@@ -317,7 +316,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
         elif msg['event'] == 'error':
             LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
         elif msg['event'] in ('info', 'conf'):
-            LOG.info('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
+            LOG.debug('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
         elif 'chanId' in msg and 'symbol' in msg:
             self.register_channel_handler(msg, conn)
         else:
@@ -330,7 +329,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
 
         if msg['channel'] == 'ticker':
             if is_funding:
-                LOG.warning('%s %s: Ticker funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                LOG.warning('%s %s: Ticker funding not implemented - ignoring for %s', conn.uuid, pair, msg)
                 handler = self._do_nothing
             else:
                 handler = partial(self._ticker, pair)
@@ -343,7 +342,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
             if msg['prec'] == 'R0':
                 handler = partial(self._raw_book, pair, self._l3_book[pair], self.order_map[pair])
             elif is_funding:
-                LOG.warning('%s %s: Book funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                LOG.warning('%s %s: Book funding not implemented - ignoring for %s', conn.uuid, pair, msg)
                 handler = self._do_nothing
             else:
                 handler = partial(self._book, pair, self._l2_book[pair])
@@ -360,7 +359,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
         Bitfinex only supports 25 pair/channel combinations per websocket, so
         if we require more we need to create more connections
 
-        Furthermore, the sequence numbers bitinex provides are per-connection
+        Furthermore, the sequence numbers bitfinex provides are per-connection
         so we need to bind our connection id to the message handler
         so we know to which connextion the sequence number belongs.
         """

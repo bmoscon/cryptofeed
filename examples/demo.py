@@ -22,7 +22,8 @@ from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfi
 # while the callbacks are being handled (unless they in turn await other functions or I/O)
 # so they should be as lightweight as possible
 async def ticker(t, receipt_timestamp):
-    assert isinstance(t.timestamp, float)
+    if t.timestamp is not None:
+        assert isinstance(t.timestamp, float)
     assert isinstance(t.exchange, str)
     assert isinstance(t.bid, Decimal)
     assert isinstance(t.ask, Decimal)
@@ -77,13 +78,15 @@ def main():
     #f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK, ], callbacks={L2_BOOK: book, BOOK_DELTA: delta, CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
     #f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker, BOOK_DELTA: delta}))
     
-    f.add_feed(AscendEX(symbols=['XRP-USDT', 'BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade}))
-    f.add_feed(Bequant(symbols=['BTC-USDT'], channels=[TRADES, TICKER, CANDLES], callbacks={TRADES: trade, TICKER: ticker, CANDLES: candle_callback}))
+    #f.add_feed(AscendEX(symbols=['XRP-USDT', 'BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade}))
+    #f.add_feed(Bequant(symbols=['BTC-USDT'], channels=[TRADES, TICKER, CANDLES], callbacks={TRADES: trade, TICKER: ticker, CANDLES: candle_callback}))
 
     #pairs = Binance.symbols()[:10]
     #f.add_feed(Binance(symbols=pairs, channels=[TRADES, TICKER, CANDLES], callbacks={CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
-    pairs = BinanceFutures.symbols()[:30]
-    f.add_feed(BinanceFutures(symbols=pairs, channels=[OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
+    #pairs = BinanceFutures.symbols()[:30]
+    #f.add_feed(BinanceFutures(symbols=pairs, channels=[OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
+    f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[TICKER, TRADES], callbacks={TICKER: ticker, TRADES: trade}))
+
 
     """
     pairs = BinanceUS.symbols()
