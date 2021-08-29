@@ -163,8 +163,8 @@ class RestExchange:
     async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
-    def candles_sync(self, symbol: str, start=None, end=None, interval=None, retry_count=1, retry_delay=60):
-        gen = self.candles(symbol, start=start, end=end, retry_count=retry_count, retry_delay=retry_delay)
+    def candles_sync(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
+        gen = self.candles(symbol, start=start, end=end, interval=interval, retry_count=retry_count, retry_delay=retry_delay)
         try:
             loop = asyncio.get_event_loop()
 
