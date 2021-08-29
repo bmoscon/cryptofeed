@@ -10,7 +10,7 @@ cdef class Trade:
     cdef readonly str id
     cdef readonly str order_type
     cdef readonly double timestamp
-    cdef readonly dict raw
+    cdef readonly object raw # can be dict or list
 
     def __init__(self, exchange, symbol, side, amount, price, timestamp, id=None, order_type=None, raw=None):
         self.price = price
@@ -195,7 +195,7 @@ cdef class OrderBook:
     cdef public object sequence_number
     cdef public object checksum
     cdef public object timestamp
-    cdef public dict raw
+    cdef public object raw  # Can be dict or list
 
     def __init__(self, exchange, symbol, bids=None, asks=None, max_depth=0):
         self.exchange = exchange
