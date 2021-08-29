@@ -4,6 +4,8 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import hmac
+import time
 from collections import defaultdict
 from cryptofeed.symbols import Symbol
 from functools import partial
@@ -16,10 +18,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, USER_DATA, LAST_PRICE
 from cryptofeed.feed import Feed
-
-import hmac
-import time
-
+from cryptofeed.types import OrderBook, Trade, Candle
 
 LOG = logging.getLogger('feedhandler')
 
@@ -99,15 +98,11 @@ class Phemex(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         ts = self.timestamp_normalize(msg['timestamp'])
-        forced = False
         delta = {BID: [], ASK: []}
 
         if msg['type'] == 'snapshot':
-            forced = True
-            self._l2_book[symbol] = {
-                BID: sd({Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['bids']}),
-                ASK: sd({Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['asks']})
-            }
+            delta = None
+            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids={Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['bids']}, asks={Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['asks']})
         else:
             for key, side in (('asks', ASK), ('bids', BID)):
                 for price, amount in msg['book'][key]:
@@ -116,12 +111,12 @@ class Phemex(Feed):
                     delta[side].append((price, amount))
                     if amount == 0:
                         # for some unknown reason deletes can be repeated in book updates
-                        if price in self._l2_book[symbol][side]:
-                            del self._l2_book[symbol][side][price]
+                        if price in self._l2_book[symbol].book[side]:
+                            del self._l2_book[symbol].book[side][price]
                     else:
-                        self._l2_book[symbol][side][price] = amount
+                        self._l2_book[symbol].book[side][price] = amount
 
-        await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, timestamp=ts, delta=delta)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -136,15 +131,16 @@ class Phemex(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for ts, side, price, amount in msg['trades']:
-            await self.callback(TRADES,
-                                feed=self.id,
-                                order_id=None,
-                                symbol=symbol,
-                                side=BUY if side == 'Buy' else SELL,
-                                amount=Decimal(amount),
-                                price=Decimal(price / self.price_scale[symbol]),
-                                timestamp=self.timestamp_normalize(ts),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                symbol,
+                BUY if side == 'Buy' else SELL,
+                Decimal(amount),
+                Decimal(price / self.price_scale[symbol]),
+                self.timestamp_normalize(ts),
+                raw=msg
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
         """
@@ -161,22 +157,22 @@ class Phemex(Feed):
 
         for entry in msg['kline']:
             ts, _, _, open, high, low, close, _, volume = entry
-
-            await self.callback(CANDLES,
-                                feed=self.id,
-                                symbol=symbol,
-                                timestamp=timestamp,
-                                receipt_timestamp=timestamp,
-                                start=ts,
-                                stop=ts + self.candle_interval_map[self.candle_interval],
-                                interval=self.candle_interval,
-                                trades=None,
-                                open_price=Decimal(open / self.price_scale[symbol]),
-                                close_price=Decimal(close / self.price_scale[symbol]),
-                                high_price=Decimal(high / self.price_scale[symbol]),
-                                low_price=Decimal(low / self.price_scale[symbol]),
-                                volume=Decimal(volume),
-                                closed=None)
+            c = Candle(
+                self.id,
+                symbol,
+                ts,
+                ts + self.candle_interval_map[self.candle_interval],
+                self.candle_interval,
+                None,
+                Decimal(open / self.price_scale[symbol]),
+                Decimal(close / self.price_scale[symbol]),
+                Decimal(high / self.price_scale[symbol]),
+                Decimal(low / self.price_scale[symbol]),
+                Decimal(volume),
+                None,
+                None
+            )
+            await self.callback(CANDLES, c, timestamp)
 
     async def _last_price(self, msg: dict, timestamp: float):
         for s in self.normalized_symbols:
