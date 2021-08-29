@@ -10,7 +10,6 @@ from collections import defaultdict, deque
 from decimal import Decimal
 from typing import Dict, Union, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
@@ -18,7 +17,7 @@ from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
-from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding
+from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -249,7 +248,7 @@ class Binance(Feed, BinanceRestMixin):
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
 
-        return skip_update, forced, current_match
+        return skip_update, current_match
 
     async def _snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
@@ -258,49 +257,45 @@ class Binance(Feed, BinanceRestMixin):
                 if d > max_depth:
                     max_depth = d
                     break
-
+        print(max_depth)
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
         resp = await self.http_conn.read(url)
         resp = json.loads(resp, parse_float=Decimal)
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
-        self._l2_book[std_pair] = {BID: sd(), ASK: sd()}
-        for s, side in (('bids', BID), ('asks', ASK)):
-            for update in resp[s]:
-                price = Decimal(update[0])
-                amount = Decimal(update[1])
-                self._l2_book[std_pair][side][price] = amount
+        self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
+        self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
+        self._l2_book[std_pair].raw = resp
 
     async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
         """
         Processes 'depthUpdate' update book msg. This method should only be called if pair's l2_book exists.
         """
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        skip_update, forced, current_match = self._check_update_id(std_pair, msg)
+        skip_update, current_match = self._check_update_id(std_pair, msg)
         if current_match:
             # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
-            return await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, self._l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
+            return await self.book_callback(L2_BOOK, self._l2_book[std_pair], timestamp, raw=msg, sequence_number=self.last_update_id[std_pair], timestamp=self.timestamp_normalize(msg['E']))
 
         if skip_update:
             return
 
         delta = {BID: [], ASK: []}
-        ts = msg['E']
-
         for s, side in (('b', BID), ('a', ASK)):
             for update in msg[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self._l2_book[std_pair][side]:
-                        del self._l2_book[std_pair][side][price]
+                    if price in self._l2_book[std_pair].book[side]:
+                        del self._l2_book[std_pair].book[side][price]
                         delta[side].append((price, amount))
                 else:
-                    self._l2_book[std_pair][side][price] = amount
+                    self._l2_book[std_pair].book[side][price] = amount
                     delta[side].append((price, amount))
-        await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, delta, self.timestamp_normalize(ts), timestamp)
+
+        await self.book_callback(L2_BOOK, self._l2_book[std_pair], timestamp, timestamp=self.timestamp_normalize(msg['E']), raw=msg, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     async def _book(self, msg: dict, pair: str, timestamp: float) -> None:
         """

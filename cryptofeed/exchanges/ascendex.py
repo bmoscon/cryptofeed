@@ -110,12 +110,7 @@ class AscendEX(Feed):
                     delta[s].append((price, size))
                     self._l2_book[pair].book[s][price] = size
 
-        self._l2_book[pair].timestamp = self.timestamp_normalize(msg['data']['ts'])
-        self._l2_book[pair].raw = msg
-        self._l2_book[pair].delta = delta
-        self._l2_book[pair].sequence_number = sequence_number
-
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['data']['ts']), raw=msg, delta=delta, sequence_number=sequence_number)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

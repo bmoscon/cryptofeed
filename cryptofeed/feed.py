@@ -170,10 +170,15 @@ class Feed(Exchange):
             ret.append((WSAsyncConn(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
-    async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float):
+    async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float, timestamp=None, raw=None, sequence_number=None, checksum=None, delta=None):
         if self.cross_check:
             self.check_bid_ask_overlapping(book)
 
+        book.timestamp = timestamp
+        book.raw = raw
+        book.sequence_number = sequence_number
+        book.delta = delta
+        book.checksum = checksum
         await self.callback(book_type, book, receipt_timestamp)
 
     def check_bid_ask_overlapping(self, book):
