@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.exchanges.bithumb import Bithumb
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.phemex import Phemex
 from cryptofeed.exchanges.dydx import dYdX
@@ -85,8 +86,8 @@ def main():
     #pairs = BinanceFutures.symbols()[:30]
     #f.add_feed(BinanceFutures(symbols=pairs, channels=[OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
     #f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[L3_BOOK], callbacks={L3_BOOK: book, TICKER: ticker, TRADES: trade}))
-    f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[TICKER, TRADES, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
-
+    #f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[TICKER, TRADES, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
+    f.add_feed(Bithumb(symbols=['BTC-KRW'], channels=[TRADES], callbacks={TRADES: trade}))
 
     """
     pairs = BinanceUS.symbols()
