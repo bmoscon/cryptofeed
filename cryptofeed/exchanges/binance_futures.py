@@ -72,7 +72,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
-        return skip_update, forced, current_match
+        return skip_update, current_match
 
     async def _open_interest(self, msg: dict, timestamp: float):
         """
