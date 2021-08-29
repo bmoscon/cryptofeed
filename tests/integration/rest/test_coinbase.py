@@ -86,9 +86,8 @@ class TestCoinbaseRest:
         ]
         s = '2020-01-11 09:00:00'
         e = '2020-01-11 10:00:00'
-        granularity = 3600
         candle_history = []
-        for entry in public.candles_sync('BTC-USD', start=s, end=e, interval=granularity):
+        for entry in public.candles_sync('BTC-USD', start=s, end=e, interval='1h'):
             candle_history.extend(entry)
 
         assert len(candle_history) == 2
