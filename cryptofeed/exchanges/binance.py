@@ -257,7 +257,7 @@ class Binance(Feed, BinanceRestMixin):
                 if d > max_depth:
                     max_depth = d
                     break
-        print(max_depth)
+
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
         resp = await self.http_conn.read(url)
         resp = json.loads(resp, parse_float=Decimal)
