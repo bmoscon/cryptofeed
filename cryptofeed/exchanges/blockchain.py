@@ -69,7 +69,7 @@ class Blockchain(Feed):
                     del self._l2_book[pair].book[side][price]
                 delta[side].append((price, qty))
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta, sequence_number=msg['seqnum'])
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta if msg['event'] != 'snapshot' else None, sequence_number=msg['seqnum'])
 
     async def _handle_l2_msg(self, msg: str, timestamp: float):
         """
@@ -115,7 +115,7 @@ class Blockchain(Feed):
 
                 delta[side].append((order_id, price, qty))
 
-        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, raw=msg, delta=delta, sequence_number=msg['seqnum'])
+        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, raw=msg, delta=delta if msg['event'] != 'snapshot' else None, sequence_number=msg['seqnum'])
 
     async def _handle_l3_msg(self, msg: str, timestamp: float):
         if msg['event'] == 'subscribed':

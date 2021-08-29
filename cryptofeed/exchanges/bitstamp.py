@@ -9,6 +9,7 @@ from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
+import time
 
 from yapic import json
 
@@ -166,6 +167,7 @@ class Bitstamp(Feed):
             std_pair = self.exchange_symbol_to_std_symbol(pair) if pair else 'BTC-USD'
             self.last_update_id[std_pair] = r['timestamp']
             self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, asks={Decimal(u[0]): Decimal(u[1]) for u in r['asks']}, bids={Decimal(u[0]): Decimal(u[1]) for u in r['bids']})
+            await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), timestamp=float(r['timestamp']), raw=r)
 
     async def subscribe(self, conn: AsyncConnection):
         snaps = []

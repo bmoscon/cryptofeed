@@ -321,6 +321,7 @@ class Bybit(Feed):
         delta = {BID: [], ASK: []}
 
         if update_type == 'snapshot':
+            delta = None
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             # the USDT perpetual data is under the order_book key
             if 'order_book' in data:

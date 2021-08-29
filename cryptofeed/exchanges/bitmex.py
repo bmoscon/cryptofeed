@@ -107,7 +107,7 @@ class Bitmex(Feed, BitmexRestMixin):
         """
         # PERF perf_start(self.id, 'book_msg')
 
-        delta = {BID: [], ASK: []}
+        delta = None
         # if we reset the book, force a full update
         pair = self.exchange_symbol_to_std_symbol(msg['data'][0]['symbol'])
 
@@ -128,6 +128,7 @@ class Bitmex(Feed, BitmexRestMixin):
                 self._l2_book[pair].book[side][price] = size
                 self.order_id[pair][side][order_id] = price
         elif msg['action'] == 'insert':
+            delta = {BID: [], ASK: []}
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 price = Decimal(data['price'])
@@ -138,6 +139,7 @@ class Bitmex(Feed, BitmexRestMixin):
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, size))
         elif msg['action'] == 'update':
+            delta = {BID: [], ASK: []}
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 update_size = Decimal(data['size'])
@@ -149,6 +151,7 @@ class Bitmex(Feed, BitmexRestMixin):
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, update_size))
         elif msg['action'] == 'delete':
+            delta = {BID: [], ASK: []}
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 order_id = data['id']

@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+from time import time
 from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
@@ -158,6 +159,7 @@ class Bittrex(Feed):
         self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
         for side, entries in data.items():
             self._l2_book[symbol].book[side] = {Decimal(e['rate']): Decimal(e['quantity']) for e in entries}
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], time.time(), raw=data, sequence_number=seq)
 
     async def trades(self, msg: dict, timestamp: float):
         """

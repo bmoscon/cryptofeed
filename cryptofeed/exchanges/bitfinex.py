@@ -168,8 +168,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
                 LOG.warning('%s: Unexpected book L2 msg %s', self.id, msg)
             return
 
-        delta = {BID: [], ASK: []}
-
+        delta = None
         if isinstance(msg[1][0], list):
             # snapshot so clear book
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
@@ -186,6 +185,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
                 self._l2_book[pair].book[side][price] = amount
         else:
             # book update
+            delta = {BID: [], ASK: []}
             price, count, amount = msg[1]
             price = Decimal(price)
             amount = Decimal(amount)
