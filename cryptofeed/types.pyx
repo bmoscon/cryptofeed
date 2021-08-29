@@ -87,23 +87,25 @@ cdef class Funding:
     cdef readonly object mark_price
     cdef readonly object rate
     cdef readonly double next_funding_time
+    cdef readonly object predicted_rate
     cdef readonly double timestamp
     cdef readonly dict raw
 
-    def __init__(self, exchange, symbol, mark_price, rate, next_funding_time, timestamp, raw=None):
+    def __init__(self, exchange, symbol, mark_price, rate, next_funding_time, timestamp, predicted_rate=None, raw=None):
         self.exchange = exchange
         self.symbol = symbol
         self.mark_price = mark_price
         self.rate = rate
+        self.predicted_rate = predicted_rate
         self.next_funding_time = next_funding_time
         self.timestamp = timestamp
         self.raw = raw
 
     cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
 
     def __repr__(self):
-        return f"'exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} timestamp: {self.timestamp}"
+        return f"'exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
 
 
 cdef class Candle:

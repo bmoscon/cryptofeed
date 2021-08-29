@@ -93,8 +93,9 @@ def main():
     #f.add_feed(Bitmex(timeout=5000, symbols=Bitmex.symbols(), channels=[LIQUIDATIONS], callbacks={LIQUIDATIONS: liquidations, OPEN_INTEREST: oi, FUNDING: funding}))
     #f.add_feed(Bitstamp(channels=[L2_BOOK, TRADES], symbols=['BTC-USD'], callbacks={L2_BOOK: book, TRADES: trade}))
     #f.add_feed(Bittrex(subscription={L2_BOOK: ['BTC-USDT'], CANDLES: ['BTC-USDT', 'ETH-USDT'], TRADES: ['ETH-USDT', 'BTC-USDT'], TICKER: ['ETH-USDT']}, callbacks={CANDLES: candle_callback, L2_BOOK: BookCallback(book), TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
-    f.add_feed(BLOCKCHAIN, subscription={L2_BOOK: ['BTC-USD'], TRADES: Blockchain.symbols()}, callbacks={L2_BOOK: book, TRADES: trade})
-
+    #f.add_feed(BLOCKCHAIN, subscription={L2_BOOK: ['BTC-USD'], TRADES: Blockchain.symbols()}, callbacks={L2_BOOK: book, TRADES: trade})
+    f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[INDEX, FUNDING, OPEN_INTEREST], callbacks={OPEN_INTEREST: oi, INDEX: index, FUNDING: funding}))
+    f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[L2_BOOK, TRADES], callbacks={TRADES: trade, L2_BOOK: book}))
     """
     pairs = BinanceUS.symbols()
     f.add_feed(BinanceUS(symbols=pairs, channels=[CANDLES], callbacks={CANDLES: candle_callback}))
@@ -125,8 +126,6 @@ def main():
     f.add_feed(OKCoin(symbols=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.add_feed(OKEx(symbols=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(FTX(symbols=['ADA-USD-PERP', 'ALGO-USD-PERP', 'ALT-USD-PERP', 'ATOM-USD-PERP', 'BCH-USD-PERP'], channels=[TICKER], callbacks={TICKER: ticker, TRADES: TradeCallback(trade)}))
-    f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[INDEX, FUNDING, OPEN_INTEREST], callbacks={OPEN_INTEREST: OpenInterestCallback(oi), INDEX: IndexCallback(index), FUNDING: funding}))
-    f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[L2_BOOK, TRADES], callbacks={TRADES: trade, L2_BOOK: book}))
     f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[L2_BOOK, TRADES, TICKER], callbacks={L2_BOOK: book, BOOK_DELTA: delta, TICKER: ticker, TRADES: trade}))
     f.add_feed(BinanceFutures(symbols=['BTC-USDT-PERP'], channels=[TICKER], callbacks={TICKER: ticker}))
     f.add_feed(BinanceFutures(subscription={TRADES: ['BTC-USDT-PERP'], CANDLES: ['BTC-USDT-PERP', 'BTC-USDT-PINDEX']}, callbacks={CANDLES: candle_callback, TRADES: trade}))

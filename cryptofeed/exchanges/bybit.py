@@ -4,6 +4,8 @@ Copyright (C) 2018-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import hmac
+import time
 from collections import defaultdict
 from cryptofeed.symbols import Symbol
 import logging
@@ -12,15 +14,13 @@ from functools import partial
 from typing import Dict, List, Callable, Tuple, Union
 from datetime import datetime as dt
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUNDING, L2_BOOK, SELL, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
-# For auth
-import hmac
-import time
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding
+
 
 LOG = logging.getLogger('feedhandler')
 
@@ -89,9 +89,9 @@ class Bybit(Feed):
         if "success" in msg:
             if msg['success']:
                 if msg['request']['op'] == 'auth':
-                    LOG.info("%s: Authenticated successful", conn.uuid)
+                    LOG.debug("%s: Authenticated successful", conn.uuid)
                 elif msg['request']['op'] == 'subscribe':
-                    LOG.info("%s: Subscribed to channels: %s", conn.uuid, msg['request']['args'])
+                    LOG.debug("%s: Subscribed to channels: %s", conn.uuid, msg['request']['args'])
                 else:
                     LOG.warning("%s: Unhandled 'successs' message received", conn.uuid)
             else:
@@ -129,7 +129,6 @@ class Bybit(Feed):
         return ret
 
     async def subscribe(self, connection: AsyncConnection, quote: str = None):
-
         if quote == 'USD' or quote == 'USDTP':
             channels = []
             for chan in self.subscription:
@@ -250,27 +249,37 @@ class Bybit(Feed):
                 continue
 
             if 'open_interest' in info:
-                await self.callback(OPEN_INTEREST, feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
-                                    open_interest=Decimal(info['open_interest']),
-                                    timestamp=ts,
-                                    receipt_timestamp=timestamp)
+                oi = OpenInterest(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(info['symbol']),
+                    Decimal(info['open_interest']),
+                    ts,
+                    raw=info
+                )
+                await self.callback(OPEN_INTEREST, oi, timestamp)
 
             if 'index_price_e4' in info:
-                await self.callback(INDEX, feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
-                                    price=Decimal(info['index_price_e4']) * Decimal('1e-4'),
-                                    timestamp=ts,
-                                    receipt_timestamp=timestamp)
+                i = Index(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(info['symbol']),
+                    Decimal(info['index_price_e4']) * Decimal('1e-4'),
+                    ts,
+                    raw=info
+                )
+                await self.callback(INDEX, i, timestamp)
 
             if 'funding_rate_e6' in info:
-                await self.callback(FUNDING, feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(info['symbol']),
-                                    rate=Decimal(info['funding_rate_e6']) * Decimal('1e-6'),
-                                    predicted_rate=Decimal(info['predicted_funding_rate_e6']) * Decimal('1e-6'),
-                                    next_funding_time=info['next_funding_time'].timestamp(),
-                                    timestamp=ts,
-                                    receipt_timestamp=timestamp)
+                f = Funding(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(info['symbol']),
+                    None,
+                    Decimal(info['funding_rate_e6']) * Decimal('1e-6'),
+                    info['next_funding_time'].timestamp(),
+                    ts,
+                    predicted_rate=Decimal(info['predicted_funding_rate_e6']) * Decimal('1e-6'),
+                    raw=info
+                )
+                await self.callback(FUNDING, f, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -293,40 +302,39 @@ class Bybit(Feed):
             else:
                 ts = trade['trade_time_ms']
 
-            await self.callback(TRADES,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(trade['symbol']),
-                                order_id=trade['trade_id'],
-                                side=BUY if trade['side'] == 'Buy' else SELL,
-                                amount=Decimal(trade['size']),
-                                price=Decimal(trade['price']),
-                                timestamp=self.timestamp_normalize(ts),
-                                receipt_timestamp=timestamp
-                                )
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(trade['symbol']),
+                BUY if trade['side'] == 'Buy' else SELL,
+                Decimal(trade['size']),
+                Decimal(trade['price']),
+                self.timestamp_normalize(ts),
+                id=trade['trade_id'],
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[1])
         update_type = msg['type']
         data = msg['data']
-        forced = False
         delta = {BID: [], ASK: []}
 
         if update_type == 'snapshot':
-            self._l2_book[pair] = {BID: sd({}), ASK: sd({})}
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             # the USDT perpetual data is under the order_book key
             if 'order_book' in data:
                 data = data['order_book']
 
             for update in data:
                 side = BID if update['side'] == 'Buy' else ASK
-                self._l2_book[pair][side][Decimal(update['price'])] = Decimal(update['size'])
-            forced = True
+                self._l2_book[pair].book[side][Decimal(update['price'])] = Decimal(update['size'])
         else:
             for delete in data['delete']:
                 side = BID if delete['side'] == 'Buy' else ASK
                 price = Decimal(delete['price'])
                 delta[side].append((price, 0))
-                del self._l2_book[pair][side][price]
+                del self._l2_book[pair].book[side][price]
 
             for utype in ('update', 'insert'):
                 for update in data[utype]:
@@ -334,13 +342,13 @@ class Bybit(Feed):
                     price = Decimal(update['price'])
                     amount = Decimal(update['size'])
                     delta[side].append((price, amount))
-                    self._l2_book[pair][side][price] = amount
+                    self._l2_book[pair].book[side][price] = amount
 
         # timestamp is in microseconds
         ts = msg['timestamp_e6']
         if isinstance(ts, str):
             ts = int(ts)
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, ts / 1000000, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts / 1000000, raw=msg, delta=delta)
 
     async def _order(self, msg: dict, timestamp: float):
         for i in range(len(msg['data'])):
