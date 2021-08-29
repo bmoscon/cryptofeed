@@ -14,7 +14,6 @@ from time import time
 import zlib
 from typing import Dict, Iterable, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection

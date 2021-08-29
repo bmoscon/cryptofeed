@@ -10,7 +10,6 @@ import hmac
 import time
 from decimal import Decimal
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES

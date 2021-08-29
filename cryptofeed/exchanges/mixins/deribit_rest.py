@@ -8,7 +8,6 @@ import asyncio
 from decimal import Decimal
 import logging
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TRADES

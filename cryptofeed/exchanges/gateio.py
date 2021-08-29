@@ -10,7 +10,6 @@ from decimal import Decimal
 import time
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection

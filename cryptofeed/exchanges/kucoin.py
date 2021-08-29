@@ -12,7 +12,6 @@ import hmac
 import base64
 import hashlib
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES

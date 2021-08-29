@@ -9,7 +9,6 @@ from decimal import Decimal
 import logging
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, TICKER, TRADES
 from cryptofeed.defines import SELL

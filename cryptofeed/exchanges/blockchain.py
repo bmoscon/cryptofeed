@@ -8,7 +8,6 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
@@ -104,12 +103,14 @@ class Blockchain(Feed):
                 qty = update['qty']
                 order_id = update['id']
 
-                p_orders = self._l3_book[pair].book[side].get(price, sd())
-                p_orders[order_id] = qty
                 if qty <= 0:
-                    del p_orders[order_id]
+                    del self._l3_book[pair].book[side][price][order_id]
+                else:
+                    if price in self._l3_book[pair].book[side]:
+                        self._l3_book[pair].book[side][price][order_id] = qty
+                    else:
+                        self._l3_book[pair].book[side][price] = {order_id: qty}
 
-                self._l3_book[pair].book[side][price] = p_orders
                 if len(self._l3_book[pair].book[side][price]) == 0:
                     del self._l3_book[pair].book[side][price]
 

@@ -13,7 +13,6 @@ import time
 import logging
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange

@@ -11,7 +11,6 @@ from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection

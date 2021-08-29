@@ -13,7 +13,6 @@ import hashlib
 import hmac
 import time
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection

@@ -8,7 +8,6 @@ from decimal import Decimal
 import logging
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.exchange import RestExchange
 from cryptofeed.defines import ASK, BID, BUY, SELL, TRADES, L2_BOOK

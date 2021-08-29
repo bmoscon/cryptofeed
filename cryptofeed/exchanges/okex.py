@@ -14,7 +14,6 @@ import time
 from itertools import islice
 from typing import Dict, List, Tuple, Callable
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.auth.okex import generate_token

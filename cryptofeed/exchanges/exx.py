@@ -9,7 +9,6 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection

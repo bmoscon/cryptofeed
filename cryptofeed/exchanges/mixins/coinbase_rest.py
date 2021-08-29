@@ -15,7 +15,6 @@ import time
 from typing import Optional, Union
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.defines import ASK, BID, BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
 from cryptofeed.exceptions import UnexpectedMessage
