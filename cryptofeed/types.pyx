@@ -1,3 +1,6 @@
+from order_book import OrderBook as _OrderBook
+
+
 cdef class Trade:
     cdef readonly str exchange
     cdef readonly str symbol
@@ -188,21 +191,25 @@ cdef class OrderBook:
     cdef readonly str exchange
     cdef readonly str symbol
     cdef readonly object book
-    cdef readonly dict delta
-    cdef readonly object timestamp
+    cdef public dict delta
+    cdef public object sequence_number
+    cdef public object checksum
+    cdef public object timestamp
+    cdef public dict raw
 
-    def __init__(self, exchange, symbol, book, delta=None, timestamp=None):
+    def __init__(self, exchange, symbol, bids=None, asks=None, max_depth=0):
         self.exchange = exchange
         self.symbol = symbol
-        self.book = book
-        self.delta = delta
-        self.timestamp = timestamp
-    
-    def _update_timestamp(self, timestamp):
-        self.timestamp = timestamp
-    
-    def _update_delta(self, delta):
-        self.delta = delta
+        self.book = _OrderBook(max_depth=max_depth)
+        if bids:
+            self.book.bids = bids
+        if asks:
+            self.book.asks = asks
+        self.delta = None
+        self.timestamp = None
+        self.sequence_number = None
+        self.checksum = None
+        self.raw = None
 
     cpdef dict to_dict(self):
         return {'exchange': self.exchange, 'symbol': self.symbol, 'book': self.book, 'timestamp': self.timestamp}

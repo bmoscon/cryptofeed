@@ -10,14 +10,13 @@ from cryptofeed.connection import AsyncConnection
 import logging
 from decimal import Decimal
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade
+from cryptofeed.types import Trade, OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -86,12 +85,10 @@ class AscendEX(Feed):
         sequence_number = msg['data']['seqnum']
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         delta = {BID: [], ASK: []}
-        forced = False
 
         if msg['m'] == 'depth-snapshot':
-            forced = True
             self.seq_no[pair] = sequence_number
-            self._l2_book[pair] = {BID: sd(), ASK: sd()}
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
         else:
             # ignore messages while we wait for the snapshot
             if self.seq_no[pair] is None:
@@ -107,13 +104,18 @@ class AscendEX(Feed):
                 size = Decimal(amount)
                 if size == 0:
                     delta[s].append((price, 0))
-                    if price in self._l2_book[pair][s]:
-                        del self._l2_book[pair][s][price]
+                    if price in self._l2_book[pair].book[s]:
+                        del self._l2_book[pair].book[s][price]
                 else:
                     delta[s].append((price, size))
-                    self._l2_book[pair][s][price] = size
+                    self._l2_book[pair].book[s][price] = size
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(msg['data']['ts']), timestamp)
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg['data']['ts'])
+        self._l2_book[pair].raw = msg
+        self._l2_book[pair].delta = delta
+        self._l2_book[pair].sequence_number = sequence_number
+
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

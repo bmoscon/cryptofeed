@@ -15,17 +15,17 @@ from aiohttp.typedefs import StrOrURL
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
-from cryptofeed.defines import (ASK, BALANCES, BID, BOOK_DELTA, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
+from cryptofeed.defines import (ASK, BALANCES, BID, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
                                 OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, USER_FILLS)
 from cryptofeed.exceptions import BidAskOverlapping
-from cryptofeed.util.book import book_delta, depth
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=None, book_interval=1000, snapshot_interval=False, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -41,15 +41,9 @@ class Feed(Exchange):
         symbols: list of str, Symbol
             A list of instrument symbols. Symbols must be of type str or Symbol
         max_depth: int
-            Maximum number of levels per side to return in book updates
-        book_interval: int
-            Number of updates between snapshots. Only applicable when book deltas are enabled.
-            Book deltas are enabled by subscribing to the book delta callback.
+            Maximum number of levels per side to return in book updates. 0 is the default, and indicates no trimming of levels should be performed.
         candle_interval: str
             Length of time between a candle's Open and Close. Valid on exchanges with support for candles
-        snapshot_interval: bool/int
-            Number of updates between snapshots. Only applicable when book delta is not enabled.
-            Updates between snapshots are not delivered to the client
         checksum_validation: bool
             Toggle checksum validation, when supported by an exchange.
         cross_check: bool
@@ -78,11 +72,7 @@ class Feed(Exchange):
         self.timeout_interval = timeout_interval
         self.subscription = defaultdict(set)
         self.address = address
-        self.book_update_interval = book_interval
-        self.snapshot_interval = snapshot_interval
         self.cross_check = cross_check
-        self.updates = defaultdict(int)
-        self.do_deltas = False
         self.normalized_symbols = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
@@ -144,8 +134,6 @@ class Feed(Exchange):
         if callbacks:
             for cb_type, cb_func in callbacks.items():
                 self.callbacks[cb_type] = cb_func
-                if cb_type == BOOK_DELTA:
-                    self.do_deltas = True
 
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
@@ -182,82 +170,22 @@ class Feed(Exchange):
             ret.append((WSAsyncConn(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
-    async def book_callback(self, book: dict, book_type: str, symbol: str, forced: bool, delta: dict, timestamp: float, receipt_timestamp: float):
-        """
-        Three cases we need to handle here
-
-        1.  Book deltas are enabled (application of max depth here is trivial)
-        1a. Book deltas are enabled, max depth is not, and exchange does not support deltas. Rare
-        2.  Book deltas not enabled, but max depth is enabled
-        3.  Neither deltas nor max depth enabled
-        4.  Book deltas disabled and snapshot intervals enabled (with/without max depth)
-
-        2 and 3 can be combined into a single block as long as application of depth modification
-        happens first
-
-        For 1, need to handle separate cases where a full book is returned vs a delta
-        """
-        if self.do_deltas:
-            if not forced and self.updates[symbol] < self.book_update_interval:
-                if self.max_depth:
-                    delta, book = await self.apply_depth(book, True, symbol)
-                    if not (delta[BID] or delta[ASK]):
-                        return
-                elif not delta:
-                    # this will only happen in cases where an exchange does not support deltas and max depth is not enabled.
-                    # this is an uncommon situation. Exchanges that do not support deltas will need
-                    # to populate self.previous internally to avoid the unncesessary book copy on all other exchanges
-                    delta = book_delta(self.previous_book[symbol], book, book_type=book_type)
-                    if not (delta[BID] or delta[ASK]):
-                        return
-                self.updates[symbol] += 1
-                if self.cross_check:
-                    self.check_bid_ask_overlapping(book, symbol)
-                await self.callback(BOOK_DELTA, feed=self.id, symbol=symbol, delta=delta, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
-                if self.updates[symbol] != self.book_update_interval:
-                    return
-            elif forced and self.max_depth:
-                # We want to send a full book update but need to apply max depth first
-                _, book = await self.apply_depth(book, False, symbol)
-        elif self.max_depth:
-            if not self.snapshot_interval or (self.snapshot_interval and self.updates[symbol] >= self.snapshot_interval):
-                changed, book = await self.apply_depth(book, False, symbol)
-                if not changed:
-                    return
-        # case 4 - increment skipped update, and exit
-        if self.snapshot_interval and self.updates[symbol] < self.snapshot_interval:
-            self.updates[symbol] += 1
-            return
-
+    async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float):
         if self.cross_check:
-            self.check_bid_ask_overlapping(book, symbol)
-        if book_type == L2_BOOK:
-            await self.callback(L2_BOOK, feed=self.id, symbol=symbol, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
-        else:
-            await self.callback(L3_BOOK, feed=self.id, symbol=symbol, book=book, timestamp=timestamp, receipt_timestamp=receipt_timestamp)
-        self.updates[symbol] = 0
+            self.check_bid_ask_overlapping(book)
 
-    def check_bid_ask_overlapping(self, book, symbol):
+        await self.callback(book_type, book, receipt_timestamp)
+
+    def check_bid_ask_overlapping(self, book):
         bid, ask = book[BID], book[ASK]
         if len(bid) > 0 and len(ask) > 0:
             best_bid, best_ask = bid.keys()[-1], ask.keys()[0]
             if best_bid >= best_ask:
-                raise BidAskOverlapping(f"{self.id} {symbol} best bid {best_bid} >= best ask {best_ask}")
+                raise BidAskOverlapping(f"{self.id} - {book.symbol}: best bid {best_bid} >= best ask {best_ask}")
 
     async def callback(self, data_type, obj, receipt_timestamp):
         for cb in self.callbacks[data_type]:
             await cb(obj, receipt_timestamp)
-
-    async def apply_depth(self, book: dict, do_delta: bool, symbol: str):
-        ret = depth(book, self.max_depth)
-        if not do_delta:
-            delta = self.previous_book[symbol] != ret
-            self.previous_book[symbol] = ret
-            return delta, ret
-
-        delta = book_delta(self.previous_book[symbol], ret)
-        self.previous_book[symbol] = ret
-        return delta, ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         raise NotImplementedError

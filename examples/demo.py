@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback, FundingCallback, LiquidationCallback, TickerCallback, TradeCallback, IndexCallback, OpenInterestCallback
-from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, TICKER, TRADES, INDEX, BOOK_DELTA
+from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, COINBASE, FUNDING, GEMINI, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, TICKER, TRADES, INDEX
 from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
                                   HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit, KuCoin, Bequant)
 
@@ -30,10 +30,6 @@ async def ticker(t, receipt_timestamp):
     print(f'Ticker received at {receipt_timestamp}: {t}')
 
 
-async def delta(feed, symbol, delta, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Symbol: {symbol} Delta Bid Size is {len(delta[BID])} Delta Ask Size is {len(delta[ASK])}')
-
-
 async def trade(t, receipt_timestamp):
     assert isinstance(t.timestamp, float)
     assert isinstance(t.side, str)
@@ -43,9 +39,10 @@ async def trade(t, receipt_timestamp):
     print(f"Trade received at {receipt_timestamp}: {t}")
 
 
-async def book(feed, symbol, book, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Symbol: {symbol} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
-
+async def book(book, receipt_timestamp):
+    print(f'Book received at {receipt_timestamp} for {book.exchange} - {book.symbol}, with {len(book.book)} entries. Top of book prices: {book.book.asks.index(0)[0]} - {book.book.bids.index(0)[0]}')
+    if book.delta:
+        print(f"Delta from last book contains {len(book.delta[BID]) + len(book.delta[ASK])} entries.")
 
 async def funding(f, receipt_timestamp):
     print(f"Funding update received at {receipt_timestamp}: {f}")
@@ -78,14 +75,14 @@ def main():
     #f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK, ], callbacks={L2_BOOK: book, BOOK_DELTA: delta, CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
     #f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker, BOOK_DELTA: delta}))
     
-    #f.add_feed(AscendEX(symbols=['XRP-USDT', 'BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade}))
-    #f.add_feed(Bequant(symbols=['BTC-USDT'], channels=[TRADES, TICKER, CANDLES], callbacks={TRADES: trade, TICKER: ticker, CANDLES: candle_callback}))
+    #f.add_feed(AscendEX(symbols=['XRP-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: book, TRADES: trade}))
+    f.add_feed(Bequant(symbols=['BTC-USDT'], channels=[L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker, CANDLES: candle_callback}))
 
     #pairs = Binance.symbols()[:10]
     #f.add_feed(Binance(symbols=pairs, channels=[TRADES, TICKER, CANDLES], callbacks={CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
     #pairs = BinanceFutures.symbols()[:30]
     #f.add_feed(BinanceFutures(symbols=pairs, channels=[OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
-    f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[TICKER, TRADES], callbacks={TICKER: ticker, TRADES: trade}))
+    #f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[TICKER, TRADES], callbacks={TICKER: ticker, TRADES: trade}))
 
 
     """

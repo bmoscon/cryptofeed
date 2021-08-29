@@ -13,7 +13,6 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple, Callable, List
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
@@ -22,7 +21,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade, Ticker, Candle
+from cryptofeed.types import Trade, Ticker, Candle, OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -104,15 +103,10 @@ class Bequant(Feed):
 
     async def _book_snapshot(self, msg: dict, ts: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        self._l2_book[pair] = {
-            BID: sd({
-                Decimal(bid['price']): Decimal(bid['size']) for bid in msg['bid']
-            }),
-            ASK: sd({
-                Decimal(ask['price']): Decimal(ask['size']) for ask in msg['ask']
-            })
-        }
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(msg['timestamp']), ts)
+        self._l2_book[pair] = OrderBook(self.id, pair, bids={Decimal(bid['price']): Decimal(bid['size']) for bid in msg['bid']}, asks={Decimal(ask['price']): Decimal(ask['size']) for ask in msg['ask']})
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg['timestamp'])
+        self._l2_book[pair].raw = msg
+        await self.book_callback(L2_BOOK, self._l2_book[pair], ts)
 
     async def _book_update(self, msg: dict, ts: float):
         delta = {BID: [], ASK: []}
@@ -124,11 +118,16 @@ class Bequant(Feed):
                 amount = Decimal(entry['size'])
                 if amount == 0:
                     delta[s].append((price, 0))
-                    del self._l2_book[pair][s][price]
+                    del self._l2_book[pair].book[s][price]
                 else:
                     delta[s].append((price, amount))
-                    self._l2_book[pair][s][price] = amount
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(msg['timestamp']), ts)
+                    self._l2_book[pair].book[s][price] = amount
+
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg['timestamp'])
+        self._l2_book[pair].raw = msg
+        self._l2_book[pair].sequence_number = self.seq_no[msg['symbol']]
+        self._l2_book[pair].delta = delta
+        await self.book_callback(L2_BOOK, self._l2_book[pair], ts)
 
     async def _trades(self, msg: dict, timestamp: float):
         """
