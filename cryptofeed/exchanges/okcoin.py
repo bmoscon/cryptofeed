@@ -6,7 +6,6 @@ associated with this software.
 '''
 from collections import defaultdict
 from decimal import Decimal
-from itertools import islice
 import logging
 import zlib
 from typing import Dict, Tuple
@@ -17,7 +16,6 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import ASK, BID, BUY, L2_BOOK, OKCOIN, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
-from cryptofeed.util import split
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker
 

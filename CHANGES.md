@@ -148,8 +148,10 @@
   * Update: Poloniex changed signaure of ticker data
   * Feature: Candles for Binance Futures
   * Feature: Premium Index Candle support for Binance Futures
-  * Feature: Update Gateio to use new v4 websocket api. Adds support for candles 
-
+  * Feature: Update Gateio to use new v4 websocket api. Adds support for candles
+  * Bugfix: Fix open interest on OKEx
+  * Bugfix: OKEx was duplicating subscriptions
+  * Breaking Change: Core callbacks (trade, candle, books, ticker, open interest, funding, liquidations, index) now use custom objects
 
 ### 1.7.0 (2021-02-15)
   * Feature: Use UVLoop if installed (not available on windows)

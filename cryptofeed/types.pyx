@@ -92,7 +92,7 @@ cdef class Funding:
     cdef readonly str symbol
     cdef readonly object mark_price
     cdef readonly object rate
-    cdef readonly double next_funding_time
+    cdef readonly object next_funding_time  # can be missing/None
     cdef readonly object predicted_rate
     cdef readonly double timestamp
     cdef readonly dict raw
@@ -111,7 +111,7 @@ cdef class Funding:
         return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
 
     def __repr__(self):
-        return f"'exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
+        return f"exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
 
 
 cdef class Candle:
