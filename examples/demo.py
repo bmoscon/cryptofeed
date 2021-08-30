@@ -87,6 +87,7 @@ def main():
     #f.add_feed(Binance(symbols=pairs, channels=[L2_BOOK], callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
     #pairs = BinanceFutures.symbols()[:30]
     #f.add_feed(BinanceFutures(symbols=pairs, channels=[OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
+    #f.add_feed(BinanceUS(symbols=BinanceUS.symbols(), channels=[TRADES], callbacks={TRADES: trade}))
     #f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[L3_BOOK], callbacks={L3_BOOK: book, TICKER: ticker, TRADES: trade}))
     #f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[TICKER, TRADES, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
     #f.add_feed(Bithumb(symbols=['BTC-KRW'], channels=[TRADES], callbacks={TRADES: trade}))
@@ -110,10 +111,6 @@ def main():
     #f.add_feed(Probit(subscription={TRADES: ['BTC-USDT'], L2_BOOK: ['BTC-USDT']}, callbacks={TRADES: trade, L2_BOOK: book}))
     #f.add_feed(Upbit(subscription={TRADES: ['BTC-USDT'], L2_BOOK: ['BTC-USDT']}, callbacks={TRADES: trade, L2_BOOK: book}))
     """
-    pairs = BinanceUS.symbols()
-    f.add_feed(BinanceUS(symbols=pairs, channels=[CANDLES], callbacks={CANDLES: candle_callback}))
-    f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
-    f.add_feed(Bitfinex(symbols=['BTC'], channels=[FUNDING], callbacks={FUNDING: FundingCallback(funding)}))
     f.add_feed(GEMINI, subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)})
     f.add_feed(HitBTC(channels=[TRADES], symbols=['BTC-USDT'], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(HitBTC(channels=[L2_BOOK], symbols=['BTC-USDT'], callbacks={L2_BOOK: BookCallback(book)}))    

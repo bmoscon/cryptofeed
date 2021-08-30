@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import logging
-from time import time
+import time
 from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
