@@ -205,10 +205,10 @@ cdef class OrderBook:
     cdef public object timestamp
     cdef public object raw  # Can be dict or list
 
-    def __init__(self, exchange, symbol, bids=None, asks=None, max_depth=0):
+    def __init__(self, exchange, symbol, bids=None, asks=None, max_depth=0, checksum_format=None):
         self.exchange = exchange
         self.symbol = symbol
-        self.book = _OrderBook(max_depth=max_depth)
+        self.book = _OrderBook(max_depth=max_depth, checksum_format=checksum_format)
         if bids:
             self.book.bids = bids
         if asks:

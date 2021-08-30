@@ -29,9 +29,6 @@ LOG = logging.getLogger("feedhandler")
 
 
 class OKEx(Feed):
-    """
-    OKEx has the same api as OKCoin, just a different websocket endpoint
-    """
     id = OKEX
     api = 'https://www.okex.com/api/'
     symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
