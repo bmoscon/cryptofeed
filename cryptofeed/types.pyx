@@ -128,7 +128,7 @@ cdef class Candle:
     cdef readonly object volume
     cdef readonly bint closed
     cdef readonly object timestamp # None or float
-    cdef readonly dict raw
+    cdef readonly object raw # dict or list
 
     def __init__(self, exchange, symbol, start, stop, interval, trades, open, close, high, low, volume, closed, timestamp, raw=None):
         self.exchange = exchange

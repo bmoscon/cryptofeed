@@ -108,8 +108,8 @@ class OKEx(Feed):
                         if pair in last_update:
                             if entry == last_update[pair].get(status):
                                 break
-                        
-                        l = Liquidation(
+
+                        liq = Liquidation(
                             self.id,
                             pair,
                             BUY if entry['side'] == 'buy' else SELL,
@@ -119,7 +119,7 @@ class OKEx(Feed):
                             None,
                             raw=data
                         )
-                        await self.callback(LIQUIDATIONS, l, timestamp)
+                        await self.callback(LIQUIDATIONS, liq, timestamp)
                     last_update[pair][status] = data['data'][0]['details'][0]
                 await asyncio.sleep(0.1)
             await asyncio.sleep(60)

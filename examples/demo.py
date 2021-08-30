@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.exchanges.kraken_futures import KrakenFutures
 from cryptofeed.exchanges.blockchain import Blockchain
 from cryptofeed import callback
 from cryptofeed.exchanges.bithumb import Bithumb
@@ -96,7 +97,9 @@ def main():
     #f.add_feed(BLOCKCHAIN, subscription={L2_BOOK: ['BTC-USD'], TRADES: Blockchain.symbols()}, callbacks={L2_BOOK: book, TRADES: trade})
     #f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[INDEX, FUNDING, OPEN_INTEREST], callbacks={OPEN_INTEREST: oi, INDEX: index, FUNDING: funding}))
     #f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[L2_BOOK, TRADES], callbacks={TRADES: trade, L2_BOOK: book}))
-    
+
+    f.add_feed(KrakenFutures(symbols=KrakenFutures.symbols(), channels=[L2_BOOK, TICKER, TRADES, OPEN_INTEREST, FUNDING], callbacks={L2_BOOK: book, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade, TICKER: ticker}))
+    #f.add_feed(Kraken(checksum_validation=True, subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], CANDLES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
     #f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[TICKER, TRADES, CANDLES], callbacks={CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
     #f.add_feed(OKEx(checksum_validation=True, symbols=['BTC-USDT-PERP', 'BTC-USD-21U03'], channels=[TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, LIQUIDATIONS: liquidations, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade}))
     #f.add_feed(OKCoin(checksum_validation=True, symbols=['BTC-USD'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
@@ -117,7 +120,6 @@ def main():
     f.add_feed(GEMINI, subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)})
     f.add_feed(HitBTC(channels=[TRADES], symbols=['BTC-USDT'], callbacks={TRADES: TradeCallback(trade)}))
     f.add_feed(HitBTC(channels=[L2_BOOK], symbols=['BTC-USDT'], callbacks={L2_BOOK: BookCallback(book)}))    
-    f.add_feed(Kraken(checksum_validation=True, subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], CANDLES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
     sub = {TRADES: ['BTC-USDT', 'ETH-USDT'], L2_BOOK: ['BTC-USDT']}
     f.add_feed(Huobi(subscription=sub, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
     f.add_feed(Huobi(symbols=['BTC-USDT'], channels=[CANDLES], callbacks={CANDLES: candle_callback}))
