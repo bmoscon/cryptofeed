@@ -12,13 +12,13 @@ from contextlib import asynccontextmanager, suppress
 from typing import List, Union, AsyncIterable
 from decimal import Decimal
 import atexit
-from aiohttp.client_reqrep import ClientResponse
 
 import requests
 import websockets
-import aiohttp
-from aiohttp.typedefs import StrOrURL
 from yapic import json as json_parser
+import aiohttp
+from aiohttp.client_reqrep import ClientResponse
+from aiohttp.typedefs import StrOrURL
 
 from cryptofeed.exceptions import ConnectionClosed
 

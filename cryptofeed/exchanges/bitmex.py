@@ -16,7 +16,7 @@ from decimal import Decimal
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
+from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED, ORDER_INFO
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection
@@ -35,7 +35,8 @@ class Bitmex(Feed, BitmexRestMixin):
         TICKER: 'quote',
         FUNDING: 'funding',
         OPEN_INTEREST: 'instrument',
-        LIQUIDATIONS: 'liquidation'
+        LIQUIDATIONS: 'liquidation',
+        ORDER_INFO: 'order'
     }
     request_limit = 0.5
 
@@ -58,6 +59,45 @@ class Bitmex(Feed, BitmexRestMixin):
             info['instrument_type'][s.normalized] = stype
 
         return ret, info
+
+    def parse_order(self, data):
+        timestamp = self.timestamp_normalize(data['timestamp'])
+        order = {
+            'order_id': data['orderID'],
+            'timestamp': timestamp
+        }
+        if data.get('side'):
+            order['side'] = BUY if data['side'] == 'Buy' else SELL
+        if data.get('ordStatus'):
+            order['status'] = Bitmex.parse_order_status(data['ordStatus'])
+
+        # 0 should be True at `if` statement.
+        if data.get('orderQty') is not None:
+            order['qty'] = data['orderQty']
+        if data.get('cumQty') is not None:
+            order['cum_exec_qty'] = data['cumQty']
+        if data.get('leavesQty') is not None:
+            order['leaves_qty'] = data['leavesQty']
+        if data.get('price') is not None:
+            order['price'] = data['price']
+        if (data.get('avgPrice') is not None) or (data.get('avgPx') is not None):
+            order['average'] = (data.get('avgPrice') or data.get('avgPx') or 0)
+
+        return order
+
+    @staticmethod
+    def parse_order_status(status):
+        statuses = {
+            'PendingNew': 'open',
+            'New': 'open',
+            'PartiallyFilled': 'open',
+            'Filled': 'closed',
+            'Canceled': 'canceled',
+            'Rejected': 'rejected',
+        }
+
+        ret = statuses.get(status, None)
+        return ret
 
     def __init__(self, sandbox=False, **kwargs):
         auth_api = 'wss://www.bitmex.com/realtime' if not sandbox else 'wss://testnet.bitmex.com/realtime'
@@ -484,6 +524,40 @@ class Bitmex(Feed, BitmexRestMixin):
                                     status=UNFILLED,
                                     timestamp=timestamp,
                                     receipt_timestamp=timestamp)
+    async def _order(self, msg: dict, timestamp: float):
+        """
+        Example:
+        BYBIT: BTC-USD-PERP: Order update: {'order_id': '3bf16772-e855-436c-a94d-fb5840e9f445', 
+        'order_link_id': '', 
+        'symbol': 'BTCUSD', 
+        'side': 'Buy', 
+        'order_type': 'Limit', 
+        'price': '48181', 
+        'qty': 1, 
+        'time_in_force': 'GoodTillCancel', 
+        'create_type': 'CreateByUser', 
+        'cancel_type': 'CancelByUser', 
+        'order_status': 'Cancelled', 
+        'leaves_qty': 0, 
+        'cum_exec_qty': 0, 
+        'cum_exec_value': '0', 
+        'cum_exec_fee': '0', 
+        'timestamp': datetime.datetime(2021, 8, 25, 2, 51, 40, 891000, tzinfo=datetime.timezone.utc), 
+        'take_profit': '0', 
+        'stop_loss': '0', 
+        'trailing_stop': '0', 
+        'last_exec_price': '0', 
+        'reduce_only': False, 
+        'close_on_trigger': False}
+        """
+
+        LOG.info("Handling order msg")
+        
+        for data in msg['data']:
+            if data.get('ordStatus'):
+                new_info = self.parse_order(data)
+                symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
+                await self.callback(ORDER_INFO, feed=self.id, symbol=symbol, **new_info)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -500,6 +574,8 @@ class Bitmex(Feed, BitmexRestMixin):
                 await self._ticker(msg, timestamp)
             elif msg['table'] == 'liquidation':
                 await self._liquidation(msg, timestamp)
+            elif msg['table'] == 'order':
+                await self._order(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled table=%r in %r", conn.uuid, msg['table'], msg)
         elif 'info' in msg:
