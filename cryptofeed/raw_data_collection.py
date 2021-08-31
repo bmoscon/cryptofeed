@@ -37,7 +37,7 @@ async def _playback(feed: str, filenames: list):
 
             for filename in filenames:
                 if 'http' in filename:
-                    with open(filename, 'r') as fp:
+                    with open(filename, 'r', encoding='utf-8') as fp:
                         for line in fp.readlines():
                             if line.startswith('http'):
                                 file_url, data = line.split(' -> ')
@@ -62,7 +62,7 @@ async def _playback(feed: str, filenames: list):
         if 'ws' not in f and 'http' not in f:
             exchange = f.rsplit("/", 1)[1]
             exchange = exchange.split(".", 1)[0]
-            with open(f, 'r') as fp:
+            with open(f, 'r', encoding='utf-8') as fp:
                 for line in fp.readlines():
                     if 'configuration' in line:
                         sub = json.loads(line.split(": ", 1)[1])
