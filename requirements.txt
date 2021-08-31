@@ -7,4 +7,5 @@ yapic.json>=1.6.3
 aiodns>=1.1  # aiodns speeds up DNS resolving
 cchardet
 uvloop
+cython
 order_book==0.3.0

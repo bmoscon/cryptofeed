@@ -14,8 +14,9 @@ from decimal import Decimal
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.types import OrderBook, Trade, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -65,24 +66,13 @@ class Huobi(Feed):
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
         data = msg['tick']
-        forced = pair not in self._l2_book
+        if pair not in self._l2_book:
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
-        update = {
-            BID: sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in data['bids']
-            }),
-            ASK: sd({
-                Decimal(price): Decimal(amount)
-                for price, amount in data['asks']
-            })
-        }
+        self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+        self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
 
-        if not forced:
-            self.previous_book[pair] = self._l2_book[pair]
-        self._l2_book[pair] = update
-
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, False, self.timestamp_normalize(msg['ts']), timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['ts']), raw=msg)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -106,15 +96,17 @@ class Huobi(Feed):
         }
         """
         for trade in msg['tick']['data']:
-            await self.callback(TRADES,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
-                                order_id=trade['tradeId'],
-                                side=BUY if trade['direction'] == 'buy' else SELL,
-                                amount=Decimal(trade['amount']),
-                                price=Decimal(trade['price']),
-                                timestamp=self.timestamp_normalize(trade['ts']),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
+                BUY if trade['direction'] == 'buy' else SELL,
+                Decimal(trade['amount']),
+                Decimal(trade['price']),
+                self.timestamp_normalize(trade['ts']),
+                id=str(trade['tradeId']),
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _candles(self, msg: dict, symbol: str, interval: str, timestamp: float):
         """
@@ -136,21 +128,23 @@ class Huobi(Feed):
         interval = self.normalize_interval[interval]
         start = int(msg['tick']['id'])
         end = start + timedelta_str_to_sec(interval) - 1
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(symbol),
-                            timestamp=self.timestamp_normalize(msg['ts']),
-                            receipt_timestamp=timestamp,
-                            start=start,
-                            stop=end,
-                            interval=interval,
-                            trades=msg['tick']['count'],
-                            open_price=Decimal(msg['tick']['open']),
-                            close_price=Decimal(msg['tick']['close']),
-                            high_price=Decimal(msg['tick']['high']),
-                            low_price=Decimal(msg['tick']['low']),
-                            volume=Decimal(msg['tick']['amount']),
-                            closed=None)
+        c = Candle(
+            self.id,
+            self.exchange_symbol_to_std_symbol(symbol),
+            start,
+            end,
+            interval,
+            msg['tick']['count'],
+            Decimal(msg['tick']['open']),
+            Decimal(msg['tick']['close']),
+            Decimal(msg['tick']['high']),
+            Decimal(msg['tick']['low']),
+            Decimal(msg['tick']['amount']),
+            None,
+            self.timestamp_normalize(msg['ts']),
+            raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         # unzip message
