@@ -10,7 +10,7 @@ import hmac
 import logging
 import time
 from collections import defaultdict
-from datetime import datetime as dt, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from yapic import json
@@ -477,10 +477,9 @@ class Bitmex(Feed, BitmexRestMixin):
             'leavesQty': 2020
         }
         """
-        print(msg)
         if msg['action'] == 'insert':
             for data in msg['data']:
-                l = Liquidation(
+                liq = Liquidation(
                     self.id,
                     self.exchange_symbol_to_std_symbol(data['symbol']),
                     BUY if data['side'] == 'Buy' else SELL,
@@ -491,7 +490,7 @@ class Bitmex(Feed, BitmexRestMixin):
                     None,
                     raw=data
                 )
-                await self.callback(LIQUIDATIONS, l, timestamp)
+                await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

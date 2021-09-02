@@ -51,15 +51,11 @@ class TestBitfinexRest:
 
     def test_l2_book(self):
         ret = b.l2_book_sync('BTC-USD')
-        assert BID in ret
-        assert ASK in ret
-        assert len(ret[BID]) > 0
-        assert len(ret[ASK]) > 0
+        assert len(ret.book[BID]) > 0
+        assert len(ret.book[ASK]) > 0
 
 
     def test_l3_book(self):
         ret = b.l3_book_sync('BTC-USD')
-        assert BID in ret
-        assert ASK in ret
-        assert len(ret[BID]) > 0
-        assert len(ret[ASK]) > 0
+        assert len(ret.book[BID]) > 0
+        assert len(ret.book[ASK]) > 0

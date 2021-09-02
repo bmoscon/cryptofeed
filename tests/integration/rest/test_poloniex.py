@@ -22,9 +22,7 @@ class TestPoloniexRest:
     def test_order_book(self):
         order_book = poloniex.l2_book_sync('ETH-BTC')
 
-        assert BID in order_book
-        assert ASK in order_book
-        assert len(order_book[BID]) > 0
+        assert len(order_book.book[BID]) > 0
 
 
     def test_trade_history(self):

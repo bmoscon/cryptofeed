@@ -29,11 +29,8 @@ class TestFTXRest:
 
     def test_book(self):
         ret = f.l2_book_sync('BTC-USD-PERP')
-
-        assert BID in ret
-        assert ASK in ret
-        assert len(ret[BID]) > 1
-        assert len(ret[ASK]) > 1
+        assert len(ret.book[BID]) > 1
+        assert len(ret.book[ASK]) > 1
 
 
     def test_trades(self):

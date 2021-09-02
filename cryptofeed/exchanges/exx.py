@@ -102,7 +102,6 @@ class EXX(Feed):
 
         ['E', '1', '1547942636', 'BTC_USDT', 'ASK', '3674.91740000', '0.02600000']
         """
-        forced = False
         delta = {BID: [], ASK: []}
         if msg[0] == 'AE':
             # snapshot

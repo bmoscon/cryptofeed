@@ -73,7 +73,7 @@ class Upbit(Feed):
             amount,
             price,
             self.timestamp_normalize(msg['ttms']),
-            id=msg['sid'],
+            id=str(msg['sid']),
             raw=msg
         )
         await self.callback(TRADES, t, timestamp)

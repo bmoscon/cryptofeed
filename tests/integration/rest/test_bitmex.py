@@ -35,10 +35,8 @@ class TestBitmexRest:
 
     def test_book(self):
         ret = b.l2_book_sync('BTC-USD-PERP')
-        assert BID in ret
-        assert ASK in ret
-        assert len(ret[BID]) > 0
-        assert len(ret[ASK]) > 0
-        for price, size in ret[ASK].items():
+        assert len(ret.book[BID]) > 0
+        assert len(ret.book[ASK]) > 0
+        for price in ret.book[ASK]:
             assert isinstance(price, Decimal)
-            assert isinstance(size, Decimal)
+            assert isinstance(ret.book.asks[price], Decimal)

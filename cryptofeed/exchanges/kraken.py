@@ -174,12 +174,8 @@ class Kraken(Feed, KrakenRestMixin):
                                 self._l2_book[pair].book[side][price] = size
 
             if self.checksum_validation and 'c' in msg[0] and self._l2_book[pair].book.checksum() != int(msg[0]['c']):
-                print(msg[0]['c'])
-                print(self._l2_book[pair].book.checksum())
-                print(type(msg[0]['c']))
-                print(type(self._l2_book[pair].book.checksum()))
                 raise BadChecksum("Checksum validation on orderbook failed")
-            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg, checksum=int(msg[0]['c']))
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg, checksum=int(msg[0]['c']) if 'c' in msg[0] else None)
 
     async def _candle(self, msg: list, pair: str, timestamp: float):
         """

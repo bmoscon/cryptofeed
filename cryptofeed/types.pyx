@@ -66,7 +66,7 @@ cdef class Liquidation:
     cdef readonly object price
     cdef readonly str id
     cdef readonly str status
-    cdef readonly double timestamp
+    cdef readonly object timestamp
     cdef readonly dict raw
 
     def __init__(self, exchange, symbol, side, leaves_qty, price, id, status, timestamp, raw=None):

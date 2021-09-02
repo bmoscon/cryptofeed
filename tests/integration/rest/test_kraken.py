@@ -15,7 +15,7 @@ def teardown_module(module):
 class TestKrakenRest:
     def test_get_order_book(self):
         book = kraken.l2_book_sync('BTC-USD')
-        assert len(book[BID]) > 0
+        assert len(book.book[BID]) > 0
 
 
     def test_get_recent_trades(self):
