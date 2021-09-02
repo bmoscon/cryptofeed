@@ -1,8 +1,10 @@
 from collections import defaultdict
-from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
+import hashlib
+import hmac
+from datetime import datetime
 
 from yapic import json
 
@@ -12,11 +14,8 @@ from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BO
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.symbols import Symbol
-# For auth
-import hashlib
-import hmac
-from datetime import datetime
-
+from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation
 
 LOG = logging.getLogger('feedhandler')
 
@@ -105,28 +104,31 @@ class Deribit(Feed, DeribitRestMixin):
         }
         """
         for trade in msg["params"]["data"]:
-            await self.callback(TRADES,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
-                                order_id=trade['trade_id'],
-                                side=BUY if trade['direction'] == 'buy' else SELL,
-                                amount=Decimal(trade['amount']),
-                                price=Decimal(trade['price']),
-                                timestamp=self.timestamp_normalize(trade['timestamp']),
-                                receipt_timestamp=timestamp,
-                                )
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
+                BUY if trade['direction'] == 'buy' else SELL,
+                Decimal(trade['amount']),
+                Decimal(trade['price']),
+                self.timestamp_normalize(trade['timestamp']),
+                id=trade['trade_id'],
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
+
             if 'liquidation' in trade:
-                await self.callback(LIQUIDATIONS,
-                                    feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
-                                    side=BUY if trade['direction'] == 'buy' else SELL,
-                                    leaves_qty=Decimal(trade['amount']),
-                                    price=Decimal(trade['price']),
-                                    order_id=trade['trade_id'],
-                                    status=FILLED,
-                                    timestamp=self.timestamp_normalize(trade['timestamp']),
-                                    receipt_timestamp=timestamp
-                                    )
+                liq = Liquidation(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
+                    BUY if trade['direction'] == 'buy' else SELL,
+                    Decimal(trade['amount']),
+                    Decimal(trade['price']),
+                    trade['trade_id'],
+                    FILLED,
+                    self.timestamp_normalize(trade['timestamp']),
+                    raw=trade
+                )
+                await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''
@@ -162,31 +164,40 @@ class Deribit(Feed, DeribitRestMixin):
         '''
         pair = self.exchange_symbol_to_std_symbol(msg['params']['data']['instrument_name'])
         ts = self.timestamp_normalize(msg['params']['data']['timestamp'])
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=Decimal(msg["params"]["data"]['best_bid_price']),
-                            ask=Decimal(msg["params"]["data"]['best_ask_price']),
-                            timestamp=ts,
-                            receipt_timestamp=timestamp)
+        t = Ticker(
+            self.id,
+            pair,
+            Decimal(msg["params"]["data"]['best_bid_price']),
+            Decimal(msg["params"]["data"]['best_ask_price']),
+            ts,
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
 
         if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
-            await self.callback(FUNDING, feed=self.id,
-                                symbol=pair,
-                                timestamp=ts,
-                                receipt_timestamp=timestamp,
-                                rate=msg["params"]["data"]["current_funding"],
-                                rate_8h=msg["params"]["data"]["funding_8h"])
+            f = Funding(
+                self.id,
+                pair,
+                Decimal(msg['params']['data']['mark_price']),
+                Decimal(msg["params"]["data"]["current_funding"]),
+                None,
+                ts,
+                raw=msg
+            )
+            await self.callback(FUNDING, f, timestamp)
+
         oi = msg['params']['data']['open_interest']
         if pair in self._open_interest_cache and oi == self._open_interest_cache[pair]:
             return
         self._open_interest_cache[pair] = oi
-        await self.callback(OPEN_INTEREST,
-                            feed=self.id,
-                            symbol=pair,
-                            open_interest=oi,
-                            timestamp=ts,
-                            receipt_timestamp=timestamp
-                            )
+        o = OpenInterest(
+            self.id,
+            pair,
+            Decimal(oi),
+            ts,
+            raw=msg
+        )
+        await self.callback(OPEN_INTEREST, o, timestamp)
 
     async def _quote(self, quote: dict, timestamp: float):
         await self.callback(L1_BOOK,
@@ -253,21 +264,12 @@ class Deribit(Feed, DeribitRestMixin):
         """
         ts = msg["params"]["data"]["timestamp"]
         pair = self.exchange_symbol_to_std_symbol(msg["params"]["data"]["instrument_name"])
-        self._l2_book[pair] = {
-            BID: sd({
-                Decimal(price): Decimal(amount)
-                # _ is always 'new' for snapshot
-                for _, price, amount in msg["params"]["data"]["bids"]
-            }),
-            ASK: sd({
-                Decimal(price): Decimal(amount)
-                for _, price, amount in msg["params"]["data"]["asks"]
-            })
-        }
-
+        self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+        self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["bids"]}
+        self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["asks"]}
         self.seq_no[pair] = msg["params"]["data"]["change_id"]
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), sequence_number=msg["params"]["data"]["change_id"], raw=msg)
 
     async def _book_update(self, msg: dict, timestamp: float):
         ts = msg["params"]["data"]["timestamp"]
@@ -283,23 +285,21 @@ class Deribit(Feed, DeribitRestMixin):
         delta = {BID: [], ASK: []}
 
         for action, price, amount in msg["params"]["data"]["bids"]:
-            bidask = self._l2_book[pair][BID]
             if action != "delete":
-                bidask[price] = Decimal(amount)
+                self._l2_book[pair].book.bids[price] = Decimal(amount)
                 delta[BID].append((Decimal(price), Decimal(amount)))
             else:
-                del bidask[price]
+                del self._l2_book[pair].book.bids[price]
                 delta[BID].append((Decimal(price), Decimal(amount)))
 
         for action, price, amount in msg["params"]["data"]["asks"]:
-            bidask = self._l2_book[pair][ASK]
             if action != "delete":
-                bidask[price] = amount
+                self._l2_book[pair].book.asks[price] = amount
                 delta[ASK].append((Decimal(price), Decimal(amount)))
             else:
-                del bidask[price]
+                del self._l2_book[pair].book.asks[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg, delta=delta, sequence_number=msg['params']['data']['change_id'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

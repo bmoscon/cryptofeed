@@ -95,7 +95,7 @@ cdef class Funding:
     cdef readonly object next_funding_time  # can be missing/None
     cdef readonly object predicted_rate
     cdef readonly double timestamp
-    cdef readonly dict raw
+    cdef readonly object raw
 
     def __init__(self, exchange, symbol, mark_price, rate, next_funding_time, timestamp, predicted_rate=None, raw=None):
         self.exchange = exchange
@@ -178,7 +178,7 @@ cdef class OpenInterest:
     cdef readonly str exchange
     cdef readonly str symbol
     cdef readonly object open_interest
-    cdef readonly double timestamp
+    cdef readonly object timestamp
     cdef readonly dict raw
 
     def __init__(self, exchange, symbol, open_interest, timestamp, raw=None):
