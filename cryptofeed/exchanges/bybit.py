@@ -17,7 +17,7 @@ from datetime import datetime as dt
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUNDING, L2_BOOK, SELL, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUNDING, L2_BOOK, SELL, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL, BALANCES
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding
 
@@ -35,7 +35,8 @@ class Bybit(Feed):
         ORDER_INFO: 'order',
         INDEX: 'instrument_info.100ms',
         OPEN_INTEREST: 'instrument_info.100ms',
-        FUNDING: 'instrument_info.100ms'
+        FUNDING: 'instrument_info.100ms',
+        BALANCES: 'position'
     }
 
     @classmethod
@@ -106,6 +107,8 @@ class Bybit(Feed):
             await self._order(msg, timestamp)
         elif "execution" in msg["topic"]:
             await self._execution(msg, timestamp)
+        elif "position" in msg["topic"]:
+            await self._balances(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message type %s", conn.uuid, msg)
 
@@ -362,6 +365,12 @@ class Bybit(Feed):
             data = msg['data'][i]
             symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
             await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+
+    async def _balances(self, msg: dict, timestamp: float):
+        for i in range(len(msg['data'])):
+            data = msg['data'][i]
+            symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
+            await self.callback(BALANCES, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
 
     async def authenticate(self, conn: AsyncConnection):
         if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
