@@ -19,6 +19,10 @@
  * Bugfix: Interval from candle_sync was not being passed correctly to async candle interface in REST mixins.
  * Update: Cleanup Coinbase candle REST interface, use standard string interval
  * Feature: Add balances to Bybit
+ * Bugfix: Kraken valid depths incorrect
+ * Feature: Add support for gracefully stopping Redis backends and writing queued message
+ * Bugfix: OKEx incorrect creating multiple connections
+ * Breaking Change: Data types for majority of callbacks have changed to Objects (previously was a dict)
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
