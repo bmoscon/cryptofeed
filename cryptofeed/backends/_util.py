@@ -9,46 +9,6 @@ from typing import Any, Dict, List, Union
 from cryptofeed.defines import BID, ASK
 
 
-def book_delta_convert(delta: dict, data: dict, convert=str):
-    for side in (BID, ASK):
-        for entry in delta[side]:
-            if len(entry) == 2:
-                # level 2 updates
-                price, amount = entry
-                data[side][convert(price)] = convert(amount)
-            else:
-                order_id, price, amount = entry
-                price = convert(price)
-                if price in data[side]:
-                    data[side][price][order_id] = convert(amount)
-                else:
-                    data[side][price] = {order_id: convert(amount)}
-
-
-def book_convert(book: dict, data: dict, convert=str):
-    """
-    Converting decimal.Decimal to str. Book will remain unmodified,
-    data will be modified
-    """
-    for level in book[ASK]:
-        _level = convert(level)
-        if isinstance(book[ASK][level], dict):
-            data[ASK][_level] = book[ASK][level]
-            for order in data[ASK][_level]:
-                data[ASK][_level][order] = convert(data[ASK][_level][order])
-        else:
-            data[ASK][_level] = convert(book[ASK][level])
-
-    for level in reversed(book[BID]):
-        _level = convert(level)
-        if isinstance(book[BID][level], dict):
-            data[BID][_level] = book[BID][level]
-            for order in data[BID][convert(level)]:
-                data[BID][_level][order] = convert(data[BID][_level][order])
-        else:
-            data[BID][_level] = convert(book[BID][level])
-
-
 def book_flatten(feed: str, symbol: str, book: dict, timestamp: float, delta: str) -> List[Dict[str, Union[Union[str, float], Any]]]:
     """
     takes book and returns a list of dict, where each element in the list

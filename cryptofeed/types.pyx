@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from cryptofeed.defines import BID, ASK
 from order_book import OrderBook as _OrderBook
 
 
@@ -28,8 +29,10 @@ cdef class Trade:
         self.exchange = exchange
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'id': self.id, 'order_type': self.order_type, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'id': self.id, 'order_type': self.order_type, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': as_type(self.amount), 'price': as_type(self.price), 'id': self.id, 'order_type': self.order_type, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} amount: {self.amount} price: {self.price} id: {self.id} order_type: {self.order_type} timestamp: {self.timestamp}"
@@ -51,8 +54,11 @@ cdef class Ticker:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': self.bid, 'ask': self.ask, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': self.bid, 'ask': self.ask, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': as_type(self.bid), 'ask': as_type(self.ask), 'timestamp': self.timestamp}
+        
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} bid: {self.bid} ask: {self.ask} timestamp: {self.timestamp}"
@@ -80,8 +86,10 @@ cdef class Liquidation:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'leaves_qty': self.leaves_qty, 'price': self.price, 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'leaves_qty': self.leaves_qty, 'price': self.price, 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'leaves_qty': as_type(self.leaves_qty), 'price': as_type(self.price), 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} leaves_qty: {self.leaves_qty} price: {self.price} id: {self.id} status: {self.status} timestamp: {self.timestamp}"
@@ -107,8 +115,10 @@ cdef class Funding:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': as_type(self.mark_price) if self.mark_price else None, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': as_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
@@ -146,8 +156,11 @@ cdef class Candle:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': self.open, 'close': self.close, 'high': self.high, 'low': self.low, 'volume' : self.volume, 'closed': self.closed, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': self.open, 'close': self.close, 'high': self.high, 'low': self.low, 'volume' : self.volume, 'closed': self.closed, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': as_type(self.open), 'close': as_type(self.close), 'high': as_type(self.high), 'low': as_type(self.low), 'volume' : as_type(self.volume), 'closed': self.closed, 'timestamp': self.timestamp}
+
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} start: {self.start} stop: {self.stop} interval: {self.interval} trades: {self.trades} open: {self.open} close: {self.close} high: {self.high} low: {self.low} volume: {self.volume} closed: {self.closed} timestamp: {self.timestamp}"
@@ -167,8 +180,10 @@ cdef class Index:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'price': self.price, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'price': self.price, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'price': as_type(self.price), 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} price: {self.price} timestamp: {self.timestamp}"
@@ -188,8 +203,11 @@ cdef class OpenInterest:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': self.open_interest, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': self.open_interest, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': as_type(self.open_interest), 'timestamp': self.timestamp}
+
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} open_interest: {self.open_interest} timestamp: {self.timestamp}"
@@ -219,8 +237,18 @@ cdef class OrderBook:
         self.checksum = None
         self.raw = None
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'book': self.book, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, delta=False, as_type=None):
+        if delta:
+            if as_type is None:
+                return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self.delta, 'timestamp': self.timestamp}
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]], ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]} if self.delta else None, 'timestamp': self.timestamp}
+
+        book_dict = self.book.to_dict()
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self.delta, 'timestamp': self.timestamp}
+        ret = {BID: {as_type(price): as_type(size) for price, size in book_dict[BID].items()}, ASK: {as_type(price): as_type(size) for price, size in book_dict[ASK].items()}}
+        delta = {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]], ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]} if self.delta else None
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'book': ret, 'delta': delta, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {self.timestamp}"
