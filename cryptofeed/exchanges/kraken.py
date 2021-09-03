@@ -28,7 +28,7 @@ LOG = logging.getLogger('feedhandler')
 class Kraken(Feed, KrakenRestMixin):
     id = KRAKEN
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '15d'}
-    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
+    valid_depths = [10, 25, 100, 500, 1000]
     symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
     websocket_channels = {
         L2_BOOK: 'book',
