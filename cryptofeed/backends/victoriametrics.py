@@ -88,7 +88,8 @@ class VictoriaMetricsBookCallback(VictoriaMetricsCallback):
         receipt_timestamp = data['receipt_timestamp']
         ts = int(timestamp * 1000000000) if timestamp else int(receipt_timestamp * 1000000000)
         for side in (BID, ASK):
-            for price, val in data[side].items():
+            for price in data.book[side]:
+                val = data.book[side][price]
                 if isinstance(val, dict):
                     for order_id, amount in val.items():
                         msg.append(f'{start},side={side} id={order_id},receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
