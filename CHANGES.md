@@ -23,6 +23,7 @@
  * Feature: Add support for gracefully stopping Redis backends and writing queued message
  * Bugfix: OKEx incorrect creating multiple connections
  * Breaking Change: Data types for majority of callbacks have changed to Objects (previously was a dict)
+ * Update: Remove redundant example code
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
