@@ -21,7 +21,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade, Ticker, Candle, OrderBook, OrderInfo, Balance
+from cryptofeed.types import Trade, Ticker, Candle, OrderBook, OrderInfo, Balance, Transaction
 
 
 LOG = logging.getLogger('feedhandler')
@@ -254,38 +254,38 @@ class Bequant(Feed):
         )
         await self.callback(ORDER_INFO, oi, ts)
 
-    async def _transactions(self, msg: str, conn: AsyncConnection, ts: float):
+    async def _transactions(self, msg: str, ts: float):
 
-        """A transaction notification occurs each time the transaction has been changed, such as creating a transaction,
+        """
+        A transaction notification occurs each time the transaction has been changed, such as creating a transaction,
         updating the pending state (for example the hash assigned) or completing a transaction.
-        This is the easiest way to track deposits or develop real-time asset monitoring."""
+        This is the easiest way to track deposits or develop real-time asset monitoring.
 
-        keys = ['id', 'index', 'currency', 'amount', 'fee', 'address', 'paymentId', 'hash', 'status', 'type', 'subType', 'senders', 'offchainId', 'confirmations', 'publicComment', 'errorCode', 'createdAt', 'updatedAt']
-
-        decimalize = ['amount', 'fee']
-        ts_normalize = ['createdAt', 'updatedAt']
-        transaction = {k: Decimal(msg[k]) if k in decimalize else self.timestamp_normalize(msg[k]) if k in ts_normalize else k for k in keys if k in msg}
-
-        transaction['receipt_timestamp'] = ts
-        # transaction = {
-        #     'receipt_timestamp': ts,
-        #     'tx_id': msg['id'],
-        #     'exch_index': msg['index'],
-        #     'currency': msg['currency'],
-        #     'amount': Decimal(msg['amount']),
-        #     'fee': Decimal(msg['fee']),
-        #     'address': msg['address'],
-        #     'payment_id': msg['paymentId'],
-        #     'tx_hash': msg['hash'],
-        #     'status': msg['status'],
-        #     'tx_type': msg['type'],
-        #     'tx_subType': msg['subType'],
-        #     'senders': msg['senders'],
-        #     'off_chain_id': msg['offchainId'],
-        #     'confirmations': msg['confirmations'],
-        # }
-
-        await self.callback(TRANSACTIONS, feed=self.id, conn=conn, **transaction)
+        {
+            "jsonrpc": "2.0",
+            "method": "updateTransaction",
+            "params": {
+                "id": "76b70d1c-3dd7-423e-976e-902e516aae0e",
+                "index": 7173627250,
+                "type": "bankToExchange",
+                "status": "success",
+                "currency": "BTG",
+                "amount": "0.00001000",
+                "createdAt": "2021-01-31T08:19:33.892Z",
+                "updatedAt": "2021-01-31T08:19:33.967Z"
+            }
+        }
+        """
+        t = Transaction(
+            self.id,
+            msg['params']['currency'],
+            msg['params']['type'],
+            msg['params']['status'],
+            Decimal(msg['params']['amount']),
+            msg['params']['createdAt'].timestamp(),
+            raw=msg
+        )
+        await self.callback(TRANSACTIONS, t, ts)
 
     async def _balances(self, msg: str, ts: float):
         '''
@@ -348,10 +348,9 @@ class Bequant(Feed):
                     for entry in params:
                         await self._order_status(entry, ts)
                 else:
-                    await self._order_status(params, conn, ts)
+                    await self._order_status(params, ts)
             elif m == 'updateTransaction':
-                # Ditto for 'account' ws conn. (Same auth, different endpoint)
-                await self._transactions(params, conn, ts)
+                await self._transactions(params, ts)
             elif m == 'balance':
                 await self._balances(msg, conn, ts)
             else:

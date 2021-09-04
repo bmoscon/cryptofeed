@@ -329,7 +329,33 @@ cdef class L1Book:
         self.raw = raw
 
     cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.currency, 'bid_price': self.bid_price, 'bid_size': self.bid_size, 'ask_price': self.ask_price, 'ask_size': self.ask_size, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': self.bid_price, 'bid_size': self.bid_size, 'ask_price': self.ask_price, 'ask_size': self.ask_size, 'timestamp': self.timestamp}
 
     def __repr__(self):
-        return f'exchange: {self.exchange} symbol: {self.currency} bid_price: {self.bid_price} bid_size: {self.bid_size}, ask_price: {self.ask_price} ask_size: {self.ask_size} timestamp: {self.timestamp}'
+        return f'exchange: {self.exchange} symbol: {self.symbol} bid_price: {self.bid_price} bid_size: {self.bid_size}, ask_price: {self.ask_price} ask_size: {self.ask_size} timestamp: {self.timestamp}'
+
+
+cdef class Transaction:
+    cdef readonly str exchange
+    cdef readonly str currency
+    cdef readonly str type
+    cdef readonly str status
+    cdef readonly object amount
+    cdef readonly object fee
+    cdef readonly double timestamp
+    cdef readonly dict raw
+
+    def __init__(self, exchange, currency, type, status, amount, timestamp, raw=None):
+        self.exchange = exchange
+        self.currency = currency
+        self.type = type
+        self.status = status
+        self.amount = amount
+        self.timestamp = timestamp
+        self.raw = raw
+
+    cpdef dict to_dict(self):
+        return {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': self.amount, 'timestamp': self.timestamp}
+
+    def __repr__(self):
+        return f'exchange: {self.exchange} currency: {self.currency} type: {self.type} status: {self.status} amount: {self.amount} timestamp {self.timestamp}'
