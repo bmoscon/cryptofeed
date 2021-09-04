@@ -16,11 +16,11 @@ import time
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORDER_INFO
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FAILED, FILLED, GEMINI, L2_BOOK, LIMIT, OPEN, SELL, STOP_LIMIT, SUBMITTING, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.gemini_rest import GeminiRestMixin
-from cryptofeed.types import OrderBook, Trade
+from cryptofeed.types import OrderBook, Trade, OrderInfo
 
 
 LOG = logging.getLogger('feedhandler')
@@ -113,26 +113,33 @@ class Gemini(Feed, GeminiRestMixin):
         await self.callback(TRADES, t, timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
-        if msg['type'] == "initial" or msg['type'] == "booked":
-            status = "active"
+        if msg['type'] == "initial" or msg['type'] == "accepted":
+            status = SUBMITTING
         elif msg['type'] == "fill":
-            status = 'filled'
+            status = FILLED
+        elif msg['type'] == 'booked':
+            status = OPEN
+        elif msg['type'] == 'rejected':
+            status = FAILED
+        elif msg['type'] == 'cancelled':
+            status = CANCELLED
         else:
             status = msg['type']
 
-        keys = ('executed_amount', 'remaining_amount', 'original_amount', 'price', 'avg_execution_price', 'total_spend')
-        data = {k: Decimal(msg[k]) for k in keys if k in msg}
-
-        await self.callback(ORDER_INFO, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['symbol'].upper()),  # This uses the REST endpoint format (lower case)
-                            status=status,
-                            order_id=msg['order_id'],
-                            side=BUY if msg['side'].lower() == 'buy' else SELL,
-                            order_type=msg['order_type'],
-                            timestamp=msg['timestampms'] / 1000.0,
-                            receipt_timestamp=timestamp,
-                            **data
-                            )
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['symbol'].upper()),
+            msg['order_id'],
+            BUY if msg['side'].lower() == 'buy' else SELL,
+            status,
+            LIMIT if msg['order_type'] == 'exchange limit' else STOP_LIMIT,
+            Decimal(msg['price']),
+            Decimal(msg['executed_amount']),
+            Decimal(msg['remaining_amount']),
+            msg['timestampms'] / 1000.0,
+            raw=msg
+        )
+        await self.callback(ORDER_INFO, oi, timestamp)
 
     async def message_handler_orders(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

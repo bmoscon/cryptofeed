@@ -16,11 +16,11 @@ from yapic import json
 
 from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import CALL, FUTURES, OKEX, LIQUIDATIONS, BUY, OPTION, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED
+from cryptofeed.defines import CALL, CANCELLED, CANCELLING, FAILED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, SUBMITTING, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo
 
 
 LOG = logging.getLogger("feedhandler")
@@ -272,24 +272,45 @@ class OKEx(Feed):
                 await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(update['ts'])), raw=msg, delta=delta, checksum=update['checksum'] & 0xFFFFFFFF)
 
     async def _order(self, msg: dict, timestamp: float):
-
         status = msg['data'][0]['state']
-        keys = ('fillSz', 'sz')
-        data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
-        data.update({'clOrdId': msg['data'][0]['clOrdId']})
-        data.update({'fillPx': msg['data'][0]['fillPx']})
+        if status == -1:
+            status = FAILED
+        elif status == -1:
+            status == CANCELLED
+        elif status == 0:
+            status == OPEN
+        elif status == 1:
+            status = PARTIAL
+        elif status == 2:
+            status = FILLED
+        elif status == 3:
+            status = SUBMITTING
+        elif status == 4:
+            status = CANCELLING
 
-        await self.callback(ORDER_INFO,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instId'].upper()),  # This uses the REST endpoint format (lower case)
-                            status=status,
-                            order_id=msg['data'][0]['ordId'],
-                            side=BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
-                            order_type=msg['data'][0]['ordType'],
-                            timestamp=msg['data'][0]['uTime'],
-                            receipt_timestamp=timestamp,
-                            **data
-                            )
+        o_type = msg['data'][0]['ordType']
+        if o_type == 0:
+            o_type = MARKET
+        elif o_type == 1:
+            o_type = MAKER_OR_CANCEL
+        elif o_type == 2:
+            o_type = FILL_OR_KILL
+        elif o_type == 3:
+            o_type = IMMEDIATE_OR_CANCEL
+
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['data'][0]['instId'].upper()),
+            msg['data'][0]['ordId'],
+            BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
+            status,
+            o_type,
+            Decimal(msg['data'][0]['filled_notional'] / msg['data'][0]['filled_size']),
+            Decimal(msg['data'][0]['filled_size']),
+            msg['data'][0]['uTime'].timestamp(),
+            raw=msg
+        )
+        await self.callback(ORDER_INFO, oi, timestamp)
 
     async def _swap_order(self, msg: dict, timestamp: float):
 

@@ -16,14 +16,14 @@ from typing import Dict, Iterable, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, FUTURES, ORDER_INFO, PERPETUAL, SPOT, USER_FILLS
+from cryptofeed.defines import BID, ASK, BUY, CLOSED, FUTURES, LIMIT, MARKET, OPEN, ORDER_INFO, PERPETUAL, SPOT, SUBMITTING, USER_FILLS
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.ftx_rest import FTXRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo
 
 
 LOG = logging.getLogger('feedhandler')
@@ -377,19 +377,28 @@ class FTX(Feed, FTXRestMixin):
         }
         """
         order = msg['data']
-        await self.callback(ORDER_INFO, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(order['market']),
-                            status=order['status'],
-                            order_id=order['id'],
-                            side=BUY if order['side'].lower() == 'buy' else SELL,
-                            order_type=order['type'],
-                            avg_fill_price=Decimal(order['avgFillPrice']) if order['avgFillPrice'] else None,
-                            filled_size=Decimal(order['filledSize']),
-                            remaining_size=Decimal(order['remainingSize']),
-                            amount=Decimal(order['size']),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp,
-                            )
+        status = order['status']
+        if status == 'new':
+            status = SUBMITTING
+        elif status == 'open':
+            status = OPEN
+        elif status == 'closed':
+            status = CLOSED
+
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(order['market']),
+            order['id'],
+            BUY if order['side'].lower() == 'buy' else SELL,
+            status,
+            LIMIT if order['type'] == 'limit' else MARKET,
+            Decimal(order['price']),
+            Decimal(order['filledSize']),
+            Decimal(order['remainingSize']),
+            None,
+            raw=msg
+        )
+        await self.callback(ORDER_INFO, oi, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

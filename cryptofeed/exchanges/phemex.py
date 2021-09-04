@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, USER_DATA, LAST_PRICE
+from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, USER_DATA
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Candle
 
@@ -29,7 +29,6 @@ class Phemex(Feed):
     price_scale = {}
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
     websocket_channels = {
-        LAST_PRICE: 'tick.subscribe',
         USER_DATA: 'aop.subscribe',
         L2_BOOK: 'orderbook.subscribe',
         TRADES: 'trade.subscribe',
@@ -174,16 +173,6 @@ class Phemex(Feed):
             )
             await self.callback(CANDLES, c, timestamp)
 
-    async def _last_price(self, msg: dict, timestamp: float):
-        for s in self.normalized_symbols:
-            if msg['symbol'][1:] in s:
-                symbol = s
-                break
-        await self.callback(LAST_PRICE, feed=self.id,
-                            symbol=symbol,
-                            last_price=msg["last"] / 10 ** msg["scale"],
-                            receipt_timestamp=timestamp)
-
     async def _user_data(self, msg: dict, timestamp: float):
         await self.callback(USER_DATA, feed=self.id, data=msg, receipt_timestamp=timestamp)
 
@@ -233,8 +222,6 @@ class Phemex(Feed):
             pass
         elif {'accounts', 'orders', 'positions'} <= set(msg) or 'position_info' in msg:
             await self._user_data(msg, timestamp)
-        elif 'tick' in msg:
-            await self._last_price(msg["tick"], timestamp)
         elif 'book' in msg:
             await self._book(msg, timestamp)
         elif 'trades' in msg:
@@ -258,9 +245,6 @@ class Phemex(Feed):
                 msg = {"id": 1, "method": chan, "params": [symbol]}
                 if self.exchange_channel_to_std(chan) == CANDLES:
                     msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
-                elif self.exchange_channel_to_std(chan) == LAST_PRICE:
-                    base = self.exchange_symbol_to_std_symbol(symbol).split('-')[0]
-                    msg['params'] = [f'.{base}']
                 LOG.debug(f"{conn.uuid}: Sending subscribe request to public channel: {msg}")
                 await conn.write(json.dumps(msg))
 

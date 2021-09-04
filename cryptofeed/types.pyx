@@ -252,3 +252,36 @@ cdef class OrderBook:
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {self.timestamp}"
+
+
+cdef class OrderInfo:
+    cdef readonly str exchange
+    cdef readonly str symbol
+    cdef readonly str id
+    cdef readonly str side
+    cdef readonly str status
+    cdef readonly str type
+    cdef readonly object price
+    cdef readonly object amount
+    cdef readonly object remaining
+    cdef readonly object timestamp
+    cdef public object raw  # Can be dict or list
+
+    def __init__(self, exchange, symbol, id, side, status, type, price, amount, remaining, timestamp, raw=None):
+        self.exchange = exchange
+        self.symbol = symbol
+        self.id = id
+        self.side = side
+        self.status = status
+        self.type = type
+        self.price = price
+        self.amount = amount
+        self.remaining = remaining
+        self.timestamp = timestamp
+        self.raw = raw
+
+    cpdef dict to_dict(self):
+        return {'exchange': self.exchange, 'symbol': self.symbol,  'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'timestamp': self.timestamp}
+    
+    def __repr__(self):
+        return f'exchange: {self.exchange} symbol: {self.symbol}  id: {self.id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} timestamp: {self.timestamp}'

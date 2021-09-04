@@ -59,7 +59,6 @@ LIQUIDATIONS = 'liquidations'
 INDEX = 'index'
 UNSUPPORTED = 'unsupported'
 CANDLES = 'candles'
-LAST_PRICE = 'last_price'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
@@ -97,6 +96,10 @@ CANCELLED = 'cancelled'
 UNFILLED = 'unfilled'
 EXPIRED = 'expired'
 SUSPENDED = 'suspended'
+FAILED = 'failed'
+SUBMITTING = 'submitting'
+CANCELLING = 'cancelling'
+CLOSED = 'closed'
 
 # Instrument Definitions
 
