@@ -16,12 +16,12 @@ from typing import Dict, Tuple, Callable, List
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET, MAKER_OR_CANCEL
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade, Ticker, Candle, OrderBook
+from cryptofeed.types import Trade, Ticker, Candle, OrderBook, OrderInfo
 
 
 LOG = logging.getLogger('feedhandler')
@@ -239,33 +239,20 @@ class Bequant(Feed):
             }
         }
         """
-        res = {
-            'symbol': msg["symbol"],
-            # 'symbol': self.exchange_symbol_to_std_symbol(msg["symbol"]),
-            'status': status_lookup[msg["status"]],
-            'order_id': msg["id"],
-            'side': SELL if msg["side"] == 'sell' else BUY,
-            'order_type': type_lookup[msg["type"]],
-            'timestamp': self.timestamp_normalize(msg["updatedAt"]) if msg["updatedAt"] else self.timestamp_normalize(msg["createdAt"]),
-            'receipt_timestamp': ts,
-            'report_type': msg['reportType'],
-            'client_order_id': msg["clientOrderId"],
-            'order_policy': msg["timeInForce"],
-            'order_quantity': Decimal(msg["quantity"]),
-            'price': Decimal(msg["price"]),
-            'cumulative_quant': Decimal(msg["cumQuantity"]),
-            MAKER_OR_CANCEL: bool(msg["postOnly"]),
-        }
-
-        if msg["reportType"] == 'trade':
-            res['trade_quantity'] = Decimal(msg["tradeQuantity"])
-            res['trade_price'] = Decimal(msg["tradePrice"])
-            res['trade_id'] = msg['tradeID']
-            res['trade_fee'] = Decimal(msg['tradeFee'])
-
-        # Conn passed up to callback as way of handing authenticated ws (with trading endpoint) to application
-        # Temporary solution until ws trading implemented
-        await self.callback(ORDER_INFO, feed=self.id, conn=conn, **res)
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg["symbol"]),
+            msg["id"],
+            SELL if msg["side"] == 'sell' else BUY,
+            status_lookup[msg["status"]],
+            type_lookup[msg["type"]],
+            Decimal(msg['price']),
+            Decimal(msg['cumQuantity']),
+            Decimal(msg['quantity']) - Decimal(msg['cumQuantity']),
+            self.timestamp_normalize(msg["updatedAt"]) if msg["updatedAt"] else self.timestamp_normalize(msg["createdAt"]),
+            raw=msg
+        )
+        await self.callback(ORDER_INFO, oi, ts)
 
     async def _transactions(self, msg: str, conn: AsyncConnection, ts: float):
 

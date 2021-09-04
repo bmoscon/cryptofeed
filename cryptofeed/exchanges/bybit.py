@@ -17,9 +17,9 @@ from datetime import datetime as dt
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, FUNDING, L2_BOOK, SELL, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL, BALANCES
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL, BALANCES
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo
 
 
 LOG = logging.getLogger('feedhandler')
@@ -355,10 +355,66 @@ class Bybit(Feed):
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts / 1000000, raw=msg, delta=delta)
 
     async def _order(self, msg: dict, timestamp: float):
+        """
+        {
+            "topic": "order",
+            "action": "",
+            "data": [
+                {
+                    "order_id": "xxxxxxxx-xxxx-xxxx-9a8f-4a973eb5c418",
+                    "order_link_id": "",
+                    "symbol": "BTCUSDT",
+                    "side": "Buy",
+                    "order_type": "Limit",
+                    "price": 11000,
+                    "qty": 0.001,
+                    "leaves_qty": 0.001,
+                    "last_exec_price": 0,
+                    "cum_exec_qty": 0,
+                    "cum_exec_value": 0,
+                    "cum_exec_fee": 0,
+                    "time_in_force": "GoodTillCancel",
+                    "create_type": "CreateByUser",
+                    "cancel_type": "UNKNOWN",
+                    "order_status": "New",
+                    "take_profit": 0,
+                    "stop_loss": 0,
+                    "trailing_stop": 0,
+                    "reduce_only": false,
+                    "close_on_trigger": false,
+                    "create_time": "2020-08-12T21:18:40.780039678Z",
+                    "update_time": "2020-08-12T21:18:40.787986415Z"
+                }
+            ]
+        }
+        """
+        order_status = {
+            'Created': SUBMITTING,
+            'Rejected': FAILED,
+            'New': OPEN,
+            'PartiallyFilled': PARTIAL,
+            'Filled': FILLED,
+            'Cancelled': CANCELLED,
+            'PendingCancel': CANCELLING
+        }
+
         for i in range(len(msg['data'])):
             data = msg['data'][i]
-            symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
-            await self.callback(ORDER_INFO, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+
+            oi = OrderInfo(
+                self.id,
+                self.exchange_symbol_to_std_symbol(data['symbol']),
+                data["order_id"],
+                BUY if msg["side"] == 'Buy' else SELL,
+                order_status[data["order_status"]],
+                LIMIT if data['order_type'] == 'Limit' else MARKET,
+                Decimal(data['price']),
+                Decimal(data['cumQuantity']),
+                Decimal(data['qty']) - Decimal(data['cumQuantity']),
+                self.timestamp_normalize(data["updateTime"]),
+                raw=data
+            )
+            await self.callback(ORDER_INFO, oi, timestamp)
 
     async def _execution(self, msg: dict, timestamp: float):
         for i in range(len(msg['data'])):

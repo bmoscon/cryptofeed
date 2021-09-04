@@ -9,13 +9,13 @@ from datetime import datetime
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, FILLED, USER_DATA
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, FILLED, USER_DATA
 from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo
 
 LOG = logging.getLogger('feedhandler')
 
@@ -396,6 +396,20 @@ class Deribit(Feed, DeribitRestMixin):
         return auth
 
     async def _user_channels(self, conn: AsyncConnection, msg: dict, timestamp: float, subchan: str):
+        order_status = {
+            "open": OPEN,
+            "filled": FILLED,
+            "rejected": FAILED,
+            "cancelled": CANCELLED,
+            "untriggered": OPEN
+        }
+        order_types = {
+            "limit": LIMIT,
+            "market": MARKET,
+            "stop_limit": STOP_LIMIT,
+            "stop_market": STOP_MARKET
+        }
+
         if 'data' in msg['params']:
             data = msg['params']['data']
 
@@ -404,8 +418,53 @@ class Deribit(Feed, DeribitRestMixin):
                 await self.callback(BALANCES, feed=self.id, currency=currency, data=data, receipt_timestamp=timestamp)
 
             elif subchan == 'orders':
-                symbol = self.exchange_symbol_to_std_symbol(data['instrument_name'])
-                await self.callback(ORDER_INFO, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+                '''
+                {
+                    "params" : {
+                        "data" : {
+                            "time_in_force" : "good_til_cancelled",
+                            "replaced" : false,
+                            "reduce_only" : false,
+                            "profit_loss" : 0,
+                            "price" : 10502.52,
+                            "post_only" : false,
+                            "original_order_type" : "market",
+                            "order_type" : "limit",
+                            "order_state" : "open",
+                            "order_id" : "5",
+                            "max_show" : 200,
+                            "last_update_timestamp" : 1581507423789,
+                            "label" : "",
+                            "is_liquidation" : false,
+                            "instrument_name" : "BTC-PERPETUAL",
+                            "filled_amount" : 0,
+                            "direction" : "buy",
+                            "creation_timestamp" : 1581507423789,
+                            "commission" : 0,
+                            "average_price" : 0,
+                            "api" : false,
+                            "amount" : 200
+                        },
+                        "channel" : "user.orders.BTC-PERPETUAL.raw"
+                    },
+                    "method" : "subscription",
+                    "jsonrpc" : "2.0"
+                }
+                '''
+                oi = OrderInfo(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(data['instrument_name']),
+                    data["order_id"],
+                    BUY if msg["side"] == 'Buy' else SELL,
+                    order_status[data["order_state"]],
+                    order_types[data['order_type']],
+                    Decimal(data['price']),
+                    Decimal(data['filled_amount']),
+                    Decimal(data['amount']) - Decimal(data['cumQuantity']),
+                    self.timestamp_normalize(data["last_update_timestamp"]),
+                    raw=data
+                )
+                await self.callback(ORDER_INFO, oi, timestamp)
 
             elif subchan == 'trades':
                 for i in range(len(data)):
