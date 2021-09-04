@@ -285,3 +285,18 @@ cdef class OrderInfo:
     
     def __repr__(self):
         return f'exchange: {self.exchange} symbol: {self.symbol}  id: {self.id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} timestamp: {self.timestamp}'
+
+
+cdef class Balance:
+    cdef readonly str exchange
+    cdef readonly str currency
+    cdef readonly object balance
+    cdef readonly object reserved
+    cdef public dict raw
+
+    def __init__(self, exchange, currency, balance, reserved, raw=None):
+        self.exchange = exchange
+        self.currency = currency
+        self.balance = balance
+        self.reserved = reserved
+        self.raw = raw

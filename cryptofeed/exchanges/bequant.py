@@ -21,7 +21,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade, Ticker, Candle, OrderBook, OrderInfo
+from cryptofeed.types import Trade, Ticker, Candle, OrderBook, OrderInfo, Balance
 
 
 LOG = logging.getLogger('feedhandler')
@@ -196,7 +196,7 @@ class Bequant(Feed):
             )
             await self.callback(CANDLES, c, timestamp)
 
-    async def _order_status(self, msg: str, conn: AsyncConnection, ts: float):
+    async def _order_status(self, msg: str, ts: float):
         status_lookup = {
             'new': OPEN,
             'partiallyFilled': PARTIAL,
@@ -287,10 +287,34 @@ class Bequant(Feed):
 
         await self.callback(TRANSACTIONS, feed=self.id, conn=conn, **transaction)
 
-    async def _balances(self, msg: str, conn: AsyncConnection, ts: float):
-        accounts = [{k: Decimal(v) if k in ['available', 'reserved'] else v for (k, v) in account.items()} for account in msg]
-
-        await self.callback(BALANCES, feed=self.id, conn=conn, accounts=accounts)
+    async def _balances(self, msg: str, ts: float):
+        '''
+        {
+            "jsonrpc": "2.0",
+            "method": "balance",
+            "params": [
+                {
+                    "currency": "BTC",
+                    "available": "0.00005821",
+                    "reserved": "0"
+                },
+                {
+                    "currency": "DOGE",
+                    "available": "11",
+                    "reserved": "0"
+                }
+            ]
+        }
+        '''
+        for entry in msg['params']:
+            b = Balance(
+                self.id,
+                entry['currency'],
+                Decimal(entry['available']),
+                Decimal(entry['reserved']),
+                raw=entry
+            )
+            await self.callback(BALANCES, b, ts)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, ts: float):
 
@@ -322,20 +346,14 @@ class Bequant(Feed):
             elif m in ('activeOrders', 'report'):
                 if isinstance(params, list):
                     for entry in params:
-                        # Conn passed up to callback as way of handing authenticated ws (with trading endpoint) to application
-                        # Temporary fix until ws trading implemented
-                        await self._order_status(entry, conn, ts)
+                        await self._order_status(entry, ts)
                 else:
                     await self._order_status(params, conn, ts)
             elif m == 'updateTransaction':
                 # Ditto for 'account' ws conn. (Same auth, different endpoint)
                 await self._transactions(params, conn, ts)
             elif m == 'balance':
-                if isinstance(params, list):
-                    for entry in params:
-                        await self._balances(entry, conn, ts)
-                else:
-                    await self._balances(params, conn, ts)
+                await self._balances(msg, conn, ts)
             else:
                 LOG.warning(f"{self.id}: Invalid message received on {conn.uuid}: {msg}")
 

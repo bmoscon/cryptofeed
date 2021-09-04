@@ -5,10 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-from decimal import Decimal
 
 from cryptofeed.callback import Callback
-from cryptofeed.defines import BID, ASK
 
 
 class NBBO(Callback):

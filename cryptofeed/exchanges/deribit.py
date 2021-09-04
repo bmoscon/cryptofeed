@@ -15,7 +15,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Balance
 
 LOG = logging.getLogger('feedhandler')
 
@@ -414,8 +414,53 @@ class Deribit(Feed, DeribitRestMixin):
             data = msg['params']['data']
 
             if subchan == 'portfolio':
-                currency = self.exchange_symbol_to_std_symbol(data['currency'])
-                await self.callback(BALANCES, feed=self.id, currency=currency, data=data, receipt_timestamp=timestamp)
+                '''
+                {
+                    "params" : {
+                        "data" : {
+                            "total_pl" : 0.00000425,
+                            "session_upl" : 0.00000425,
+                            "session_rpl" : -2e-8,
+                            "projected_maintenance_margin" : 0.00009141,
+                            "projected_initial_margin" : 0.00012542,
+                            "projected_delta_total" : 0.0043,
+                            "portfolio_margining_enabled" : false,
+                            "options_vega" : 0,
+                            "options_value" : 0,
+                            "options_theta" : 0,
+                            "options_session_upl" : 0,
+                            "options_session_rpl" : 0,
+                            "options_pl" : 0,
+                            "options_gamma" : 0,
+                            "options_delta" : 0,
+                            "margin_balance" : 0.2340038,
+                            "maintenance_margin" : 0.00009141,
+                            "initial_margin" : 0.00012542,
+                            "futures_session_upl" : 0.00000425,
+                            "futures_session_rpl" : -2e-8,
+                            "futures_pl" : 0.00000425,
+                            "estimated_liquidation_ratio" : 0.01822795,
+                            "equity" : 0.2340038,
+                            "delta_total" : 0.0043,
+                            "currency" : "BTC",
+                            "balance" : 0.23399957,
+                            "available_withdrawal_funds" : 0.23387415,
+                            "available_funds" : 0.23387838
+                        },
+                        "channel" : "user.portfolio.btc"
+                    },
+                    "method" : "subscription",
+                    "jsonrpc" : "2.0"
+                }
+                '''
+                b = Balance(
+                    self.id,
+                    data['currency'],
+                    Decimal(data['balance']),
+                    Decimal(data['balance']) - Decimal(data['available_withdrawal_funds']),
+                    raw=data
+                )
+                await self.callback(BALANCES, b, timestamp)
 
             elif subchan == 'orders':
                 '''
