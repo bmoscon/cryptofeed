@@ -7,7 +7,7 @@ associated with this software.
 from functools import partial
 
 from cryptofeed import FeedHandler
-from cryptofeed.defines import BOOK_DELTA, FUNDING, BITFINEX, L2_BOOK, L3_BOOK, TICKER, TRADES
+from cryptofeed.defines import FUNDING, BITFINEX, L2_BOOK, L3_BOOK, TICKER, TRADES
 
 
 async def print_all(*args, **kwargs):
@@ -25,7 +25,6 @@ def main():
         TICKER: partial(print_all, TICKER),
         L2_BOOK: partial(print_all, L2_BOOK),
         L3_BOOK: partial(print_all, L3_BOOK),
-        BOOK_DELTA: partial(print_all, BOOK_DELTA),
     }
 
     # OK

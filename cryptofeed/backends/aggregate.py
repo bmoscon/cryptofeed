@@ -60,7 +60,7 @@ class OHLCV(AggregateCallback):
             self.data[symbol]['low'] = price
         self.data[symbol]['vwap'] += price * amount
 
-    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
+    async def __call__(self, trade, receipt_timestamp: float):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
@@ -69,7 +69,7 @@ class OHLCV(AggregateCallback):
             await self.handler(data=self.data)
             self.data = {}
 
-        self._agg(symbol, amount, price)
+        self._agg(trade.symbol, trade.amount, trade.price)
 
 
 class RenkoFixed(AggregateCallback):
@@ -130,10 +130,10 @@ class RenkoFixed(AggregateCallback):
         else:
             self.new_brick = False
 
-    async def __call__(self, *, feed: str, symbol: str, side: str, amount: Decimal, price: Decimal, order_id=None, timestamp: float, receipt_timestamp: float, order_type=None):
+    async def __call__(self, trade, receipt_timestamp: float):
         if self.new_brick:
             await self.handler(data=self.data)
-        self._agg(symbol, price)
+        self._agg(trade.symbol, trade.price)
 
 
 class CustomAggregate(AggregateCallback):
@@ -153,11 +153,11 @@ class CustomAggregate(AggregateCallback):
         self.data = {}
         self.init(self.data)
 
-    async def __call__(self, **kwargs):
+    async def __call__(self, dtype, receipt_timestamp: float):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
             await self.handler(data=self.data)
             self.init(self.data)
 
-        self.agg(self.data, **kwargs)
+        self.agg(self.data, dtype, receipt_timestamp)

@@ -27,7 +27,7 @@ def book_flatten(feed: str, symbol: str, book: dict, timestamp: float, delta: st
             if isinstance(data, dict):
                 # L3 book
                 for order_id, size in data.items():
-                    ret.append({'feed': feed, 'symbol': symbol, 'side': side, 'price': price, 'size': size, 'order_id': order_id, 'timestamp': timestamp, 'delta': delta})
+                    ret.append({'exchange': feed, 'symbol': symbol, 'side': side, 'price': price, 'size': size, 'order_id': order_id, 'timestamp': timestamp, 'delta': delta})
             else:
-                ret.append({'feed': feed, 'symbol': symbol, 'side': side, 'price': price, 'size': data, 'timestamp': timestamp, 'delta': delta})
+                ret.append({'exchange': feed, 'symbol': symbol, 'side': side, 'price': price, 'size': data, 'timestamp': timestamp, 'delta': delta})
     return ret
