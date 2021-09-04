@@ -26,6 +26,8 @@
  * Update: Remove redundant example code
  * Breaking Change: OrderInfo now an object
  * Bugfix: NBBO updated to use new orderbook
+ * Breaking Change: Balance callback changed to return object
+ * Breaking Change: L1_Book callback returns object
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex

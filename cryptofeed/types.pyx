@@ -58,7 +58,7 @@ cdef class Ticker:
         if as_type is None:
             return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': self.bid, 'ask': self.ask, 'timestamp': self.timestamp}
         return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': as_type(self.bid), 'ask': as_type(self.ask), 'timestamp': self.timestamp}
-        
+
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} bid: {self.bid} ask: {self.ask} timestamp: {self.timestamp}"
@@ -265,7 +265,7 @@ cdef class OrderInfo:
     cdef readonly object amount
     cdef readonly object remaining
     cdef readonly object timestamp
-    cdef public object raw  # Can be dict or list
+    cdef readonly object raw  # Can be dict or list
 
     def __init__(self, exchange, symbol, id, side, status, type, price, amount, remaining, timestamp, raw=None):
         self.exchange = exchange
@@ -281,10 +281,10 @@ cdef class OrderInfo:
         self.raw = raw
 
     cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol,  'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'timestamp': self.timestamp}
-    
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'timestamp': self.timestamp}
+
     def __repr__(self):
-        return f'exchange: {self.exchange} symbol: {self.symbol}  id: {self.id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} timestamp: {self.timestamp}'
+        return f'exchange: {self.exchange} symbol: {self.symbol} id: {self.id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} timestamp: {self.timestamp}'
 
 
 cdef class Balance:
@@ -292,7 +292,7 @@ cdef class Balance:
     cdef readonly str currency
     cdef readonly object balance
     cdef readonly object reserved
-    cdef public dict raw
+    cdef readonly dict raw
 
     def __init__(self, exchange, currency, balance, reserved, raw=None):
         self.exchange = exchange
@@ -300,3 +300,36 @@ cdef class Balance:
         self.balance = balance
         self.reserved = reserved
         self.raw = raw
+
+    cpdef dict to_dict(self):
+        return {'exchange': self.exchange, 'currency': self.currency, 'reserved': self.reserved}
+
+    def __repr__(self):
+        return f'exchange: {self.exchange} currency: {self.currency} reserved: {self.reserved}'
+
+
+cdef class L1Book:
+    cdef readonly str exchange
+    cdef readonly str symbol
+    cdef readonly object bid_price
+    cdef readonly object bid_size
+    cdef readonly object ask_price
+    cdef readonly object ask_size
+    cdef readonly double timestamp
+    cdef readonly dict raw
+
+    def __init__(self, exchange, symbol, bid_price, bid_size, ask_price, ask_size, timestamp, raw=None):
+        self.exchange = exchange
+        self.symbol = symbol
+        self.bid_price = bid_price
+        self.bid_size = bid_size
+        self.ask_price = ask_price
+        self.ask_size = ask_size
+        self.timestamp = timestamp
+        self.raw = raw
+
+    cpdef dict to_dict(self):
+        return {'exchange': self.exchange, 'symbol': self.currency, 'bid_price': self.bid_price, 'bid_size': self.bid_size, 'ask_price': self.ask_price, 'ask_size': self.ask_size, 'timestamp': self.timestamp}
+
+    def __repr__(self):
+        return f'exchange: {self.exchange} symbol: {self.currency} bid_price: {self.bid_price} bid_size: {self.bid_size}, ask_price: {self.ask_price} ask_size: {self.ask_size} timestamp: {self.timestamp}'

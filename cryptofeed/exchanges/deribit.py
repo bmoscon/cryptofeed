@@ -15,7 +15,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Balance
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Balance, L1Book
 
 LOG = logging.getLogger('feedhandler')
 
@@ -200,16 +200,17 @@ class Deribit(Feed, DeribitRestMixin):
         await self.callback(OPEN_INTEREST, o, timestamp)
 
     async def _quote(self, quote: dict, timestamp: float):
-        await self.callback(L1_BOOK,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(quote['instrument_name']),
-                            bid_price=Decimal(quote['best_bid_price']),
-                            ask_price=Decimal(quote['best_ask_price']),
-                            bid_amount=Decimal(quote['best_bid_amount']),
-                            ask_amount=Decimal(quote['best_ask_amount']),
-                            timestamp=self.timestamp_normalize(quote['timestamp']),
-                            receipt_timestamp=timestamp,
-                            )
+        book = L1Book(
+            self.id,
+            self.exchange_symbol_to_std_symbol(quote['instrument_name']),
+            Decimal(quote['best_bid_price']),
+            Decimal(quote['best_bid_amount']),
+            Decimal(quote['best_ask_price']),
+            Decimal(quote['best_ask_amount']),
+            self.timestamp_normalize(quote['timestamp']),
+            raw=quote
+        )
+        await self.callback(L1_BOOK, book, timestamp)
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
