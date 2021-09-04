@@ -113,6 +113,25 @@ class Gemini(Feed, GeminiRestMixin):
         await self.callback(TRADES, t, timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
+        '''
+        [{
+            "type": "accepted",
+            "order_id": "109535951",
+            "event_id": "109535952",
+            "api_session": "UI",
+            "symbol": "btcusd",
+            "side": "buy",
+            "order_type": "exchange limit",
+            "timestamp": "1547742904",
+            "timestampms": 1547742904989,
+            "is_live": true,
+            "is_cancelled": false,
+            "is_hidden": false,
+            "original_amount": "1",
+            "price": "3592.00",
+            "socket_sequence": 13
+        }]
+        '''
         if msg['type'] == "initial" or msg['type'] == "accepted":
             status = SUBMITTING
         elif msg['type'] == "fill":
