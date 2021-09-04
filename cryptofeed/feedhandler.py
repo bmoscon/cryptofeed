@@ -141,7 +141,7 @@ class FeedHandler:
         """
         if len(self.feeds) == 0:
             txt = f'FH: No feed specified. Please specify at least one feed among {list(EXCHANGE_MAP.keys())}'
-            LOG.critical(txt)
+            LOG.error(txt)
             raise ValueError(txt)
 
         loop = asyncio.get_event_loop()

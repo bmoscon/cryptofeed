@@ -9,11 +9,11 @@ from decimal import Decimal
 import logging
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, L2_BOOK, TICKER, TRADES
+from cryptofeed.defines import BUY, FUNDING, L2_BOOK, TICKER, TRADES
 from cryptofeed.defines import SELL
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('cryptofeed.rest')
@@ -37,20 +37,13 @@ class FTXRestMixin(RestExchange):
                 }
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = await self.http_conn.read(f"{self.api}/markets/{sym}/orderbook?depth=100", retry_count=retry_count, retry_delay=retry_delay)
         data = json.loads(data, parse_float=Decimal)['result']
-
-        return {
-            BID: sd({
-                u[0]: u[1]
-                for u in data['bids']
-            }),
-            ASK: sd({
-                u[0]: u[1]
-                for u in data['asks']
-            })
-        }
+        ret.book.bids = {u[0]: u[1] for u in data['bids']}
+        ret.book.asks = {u[0]: u[1] for u in data['asks']}
+        return ret
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=10):
         symbol = self.std_symbol_to_exchange_symbol(symbol)

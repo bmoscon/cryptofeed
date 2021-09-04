@@ -15,11 +15,11 @@ import time
 from typing import Optional, Union
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
-from cryptofeed.defines import ASK, BID, BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
+from cryptofeed.defines import BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
 from cryptofeed.exceptions import UnexpectedMessage
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -175,29 +175,23 @@ class CoinbaseRestMixin(RestExchange):
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         data = await self._request('GET', f'/products/{symbol}/book?level=2', retry_count=retry_count, retry_delay=retry_delay)
-        return {
-            BID: sd({
-                Decimal(u[0]): Decimal(u[1])
-                for u in data['bids']
-            }),
-            ASK: sd({
-                Decimal(u[0]): Decimal(u[1])
-                for u in data['asks']
-            })
-        }
+        ret = OrderBook(self.id, symbol)
+        ret.book.bids = {Decimal(u[0]): Decimal(u[1]) for u in data['bids']}
+        ret.book.asks = {Decimal(u[0]): Decimal(u[1]) for u in data['asks']}
+        return ret
 
     async def l3_book(self, symbol: str, retry_count=1, retry_delay=60):
         data = await self._request('GET', f'/products/{symbol}/book?level=3', retry_count=retry_count, retry_delay=retry_delay)
-        ret = {BID: sd({}), ASK: sd({})}
+        ret = OrderBook(self.id, symbol)
 
-        for side in (BID, ASK):
-            for price, size, order_id in data[side + 's']:
+        for side in ('bids', 'asks'):
+            for price, size, order_id in data[side]:
                 price = Decimal(price)
                 size = Decimal(size)
-                if price in ret[side]:
-                    ret[side][price][order_id] = size
+                if price in ret.book[side]:
+                    ret.book[side][price][order_id] = size
                 else:
-                    ret[side][price] = {order_id: size}
+                    ret.book[side][price] = {order_id: size}
         return ret
 
     async def balances(self):

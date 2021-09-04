@@ -1,6 +1,6 @@
 name: cryptofeed tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest
+          pip install flake8 pytest cython
           python setup.py install
       - name: Test with pytest
         run: |

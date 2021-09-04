@@ -26,16 +26,12 @@ class TestCoinbaseRest:
 
     def test_order_book(self):
         current_order_book = public.l2_book_sync('BTC-USD')
-
-        assert BID in current_order_book
-        assert len(current_order_book[BID]) > 0
+        assert len(current_order_book.book.bids) > 0
 
 
     def test_order_book_l3(self):
         current_order_book = public.l3_book_sync('BTC-USD')
-
-        assert BID in current_order_book
-        assert len(current_order_book[BID]) > 0
+        assert len(current_order_book.book.bids) > 0
 
 
     def test_trade_history(self):

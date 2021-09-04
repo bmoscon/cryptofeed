@@ -9,6 +9,7 @@ import sys
 from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
+from Cython.Build import cythonize
 
 
 def get_long_description():
@@ -32,6 +33,7 @@ class Test(TestCommand):
 
 setup(
     name="cryptofeed",
+    ext_modules=cythonize("cryptofeed/types.pyx", language_level=3),
     version="2.0.0",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
@@ -62,7 +64,6 @@ setup(
     install_requires=[
         "requests>=2.18.4",
         "websockets>=7.0",
-        "sortedcontainers>=1.5.9",
         "pyyaml",
         "aiohttp>=3.7.1, < 4.0.0",
         "aiofile>=2.0.0",
@@ -71,6 +72,7 @@ setup(
         # Two (optional) dependencies that speed up Cryptofeed:
         "aiodns>=1.1",  # aiodns speeds up DNS resolving
         "cchardet",     # cchardet is a faster replacement for chardet
+        "order_book>=0.3.1"
     ],
     extras_require={
         "arctic": ["arctic", "pandas"],

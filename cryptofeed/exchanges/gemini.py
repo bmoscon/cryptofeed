@@ -13,7 +13,6 @@ import hashlib
 import hmac
 import time
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
@@ -21,6 +20,7 @@ from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES, ORD
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.gemini_rest import GeminiRestMixin
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
@@ -60,7 +60,7 @@ class Gemini(Feed, GeminiRestMixin):
 
     def __reset(self, pairs):
         for pair in pairs:
-            self._l2_book[self.exchange_symbol_to_std_symbol(pair)] = {BID: sd(), ASK: sd()}
+            self._l2_book[self.exchange_symbol_to_std_symbol(pair)] = OrderBook(self.id, self.exchange_symbol_to_std_symbol(pair), max_depth=self.max_depth)
 
     def generate_token(self, request: str, payload=None) -> dict:
         if not payload:
@@ -88,35 +88,29 @@ class Gemini(Feed, GeminiRestMixin):
             return
 
         data = msg['changes']
-        forced = not len(self._l2_book[pair][BID])
+        forced = not len(self._l2_book[pair].book.bids)
         delta = {BID: [], ASK: []}
         for entry in data:
             side = ASK if entry[0] == 'sell' else BID
             price = Decimal(entry[1])
             amount = Decimal(entry[2])
             if amount == 0:
-                if price in self._l2_book[pair][side]:
-                    del self._l2_book[pair][side][price]
+                if price in self._l2_book[pair].book[side]:
+                    del self._l2_book[pair].book[side][price]
                     delta[side].append((price, 0))
             else:
-                self._l2_book[pair][side][price] = amount
+                self._l2_book[pair].book[side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta if not forced else None, raw=msg)
 
     async def _trade(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         price = Decimal(msg['price'])
         side = SELL if msg['side'] == 'sell' else BUY
         amount = Decimal(msg['quantity'])
-        await self.callback(TRADES, feed=self.id,
-                            order_id=msg['event_id'],
-                            symbol=pair,
-                            side=side,
-                            amount=amount,
-                            price=price,
-                            timestamp=self.timestamp_normalize(msg['timestamp']),
-                            receipt_timestamp=timestamp)
+        t = Trade(self.id, pair, side, amount, price, self.timestamp_normalize(msg['timestamp']), id=str(msg['event_id']), raw=msg)
+        await self.callback(TRADES, t, timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
         if msg['type'] == "initial" or msg['type'] == "booked":

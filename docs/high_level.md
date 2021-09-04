@@ -50,7 +50,6 @@ The supported data channels are:
 * LIQUIDATIONS
 * OPEN_INTEREST
 * FUNDING - Exchange specific funding data / updates
-* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects. Not all exchanges support, as some exchanges send complete books on every update.
 
 
 For spot markets, trading symbols follow the following scheme BASE-QUOTE. As an example, Bitcoin denominated by US Dollars would be BTC-USD. Many exchanges do not internally use this format, but cryptofeed handles trading symbol normalization and all symbols should be subscribed to in this format and will be reported in this format. For futures markets, symbols follow the BASE-QUOTE-EXPIRY format. The expiry is comprised of the last 2 digits of the year, followed by the month code, followed by the day. As an example a BTC-USDT contract with an expiry date of Jan 14, 2021 would be BTC-USDT-21F14. Perpetual contracts, are listed as BASE-QUOTE-PERP. Options follow a scheme similar to futures contracts, except the name includes the strike price as well as if the option is put or a call: BASE-QUOTE-STRIKE-EXPIRY-TYPE.

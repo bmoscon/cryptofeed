@@ -36,7 +36,5 @@ class TestDeribitRest:
 
     def test_l2_book(self):
         ret = d.l2_book_sync('BTC-USD-PERP')
-        assert BID in ret
-        assert ASK in ret
-        assert len(ret[BID]) > 0
-        assert len(ret[ASK]) > 0
+        assert len(ret.book[BID]) > 0
+        assert len(ret.book[ASK]) > 0

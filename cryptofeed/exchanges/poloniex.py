@@ -8,7 +8,6 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
@@ -17,6 +16,7 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.poloniex_rest import PoloniexRestMixin
+from cryptofeed.types import OrderBook, Trade, Ticker
 
 
 LOG = logging.getLogger('feedhandler')
@@ -70,35 +70,26 @@ class Poloniex(Feed, PoloniexRestMixin):
             # Ignore new trading pairs that are added during long running sessions
             return
         pair = self.exchange_symbol_to_std_symbol(self._channel_map[pair_id])
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=Decimal(bid),
-                            ask=Decimal(ask),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _book(self, msg: dict, chan_id: int, timestamp: float):
         delta = {BID: [], ASK: []}
         msg_type = msg[0][0]
         pair = None
-        forced = False
         # initial update (i.e. snapshot)
         if msg_type == 'i':
-            forced = True
+            delta = None
             pair = msg[0][1]['currencyPair']
             pair = self.exchange_symbol_to_std_symbol(pair)
-            self._l2_book[pair] = {BID: sd(), ASK: sd()}
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             # 0 is asks, 1 is bids
             order_book = msg[0][1]['orderBook']
-            for key in order_book[0]:
-                amount = Decimal(order_book[0][key])
-                price = Decimal(key)
-                self._l2_book[pair][ASK][price] = amount
-
-            for key in order_book[1]:
-                amount = Decimal(order_book[1][key])
-                price = Decimal(key)
-                self._l2_book[pair][BID][price] = amount
+            for index, side in enumerate([ASK, BID]):
+                for key in order_book[index]:
+                    amount = Decimal(order_book[index][key])
+                    price = Decimal(key)
+                    self._l2_book[pair].book[side][price] = amount
         else:
             pair = self._channel_map[chan_id]
             pair = self.exchange_symbol_to_std_symbol(pair)
@@ -111,28 +102,30 @@ class Poloniex(Feed, PoloniexRestMixin):
                     amount = Decimal(update[3])
                     if amount == 0:
                         delta[side].append((price, 0))
-                        del self._l2_book[pair][side][price]
+                        del self._l2_book[pair].book[side][price]
                     else:
                         delta[side].append((price, amount))
-                        self._l2_book[pair][side][price] = amount
+                        self._l2_book[pair].book[side][price] = amount
                 elif msg_type == 't':
                     # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp, 6 is timestamp ms
                     _, order_id, _, price, amount, server_ts, _ = update
                     price = Decimal(price)
                     amount = Decimal(amount)
-                    side = BUY if update[2] == 1 else SELL
-                    await self.callback(TRADES, feed=self.id,
-                                        symbol=pair,
-                                        side=side,
-                                        amount=amount,
-                                        price=price,
-                                        timestamp=float(server_ts),
-                                        order_id=order_id,
-                                        receipt_timestamp=timestamp)
+                    t = Trade(
+                        self.id,
+                        pair,
+                        BUY if update[2] == 1 else SELL,
+                        amount,
+                        price,
+                        float(server_ts),
+                        id=order_id,
+                        raw=msg
+                    )
+                    await self.callback(TRADES, t, timestamp)
                 else:
                     LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

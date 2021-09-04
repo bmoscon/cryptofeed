@@ -12,7 +12,6 @@ import hmac
 import base64
 import hashlib
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
@@ -20,6 +19,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection
+from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -82,21 +82,23 @@ class KuCoin(Feed):
         interval = self.normalize_interval[interval]
         start, open, close, high, low, vol, _ = msg['data']['candles']
         end = int(start) + timedelta_str_to_sec(interval) - 1
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=symbol,
-                            timestamp=msg['data']['time'] / 1000000000,
-                            receipt_timestamp=timestamp,
-                            start=int(start),
-                            stop=end,
-                            interval=interval,
-                            trades=None,
-                            open_price=Decimal(open),
-                            close_price=Decimal(close),
-                            high_price=Decimal(high),
-                            low_price=Decimal(low),
-                            volume=Decimal(vol),
-                            closed=None)
+        c = Candle(
+            self.id,
+            symbol,
+            int(start),
+            end,
+            interval,
+            None,
+            Decimal(open),
+            Decimal(close),
+            Decimal(high),
+            Decimal(low),
+            Decimal(vol),
+            None,
+            msg['data']['time'] / 1000000000,
+            raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
 
     async def _ticker(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -116,12 +118,8 @@ class KuCoin(Feed):
             }
         }
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=symbol,
-                            bid=Decimal(msg['data']['bestBid']),
-                            ask=Decimal(msg['data']['bestAsk']),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, symbol, Decimal(msg['data']['bestBid']), Decimal(msg['data']['bestAsk']), None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _trades(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -144,14 +142,17 @@ class KuCoin(Feed):
             }
         }
         """
-        await self.callback(TRADES, feed=self.id,
-                            symbol=symbol,
-                            side=BUY if msg['data']['side'] == 'buy' else SELL,
-                            amount=Decimal(msg['data']['size']),
-                            price=Decimal(msg['data']['price']),
-                            timestamp=float(msg['data']['time']) / 1000000000,
-                            receipt_timestamp=timestamp,
-                            order_id=msg['data']['tradeId'])
+        t = Trade(
+            self.id,
+            symbol,
+            BUY if msg['data']['side'] == 'buy' else SELL,
+            Decimal(msg['data']['size']),
+            Decimal(msg['data']['price']),
+            float(msg['data']['time']) / 1000000000,
+            id=msg['data']['tradeId'],
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
     def generate_token(self, str_to_sign: str) -> dict:
         # https://docs.kucoin.com/#authentication
@@ -178,16 +179,15 @@ class KuCoin(Feed):
         str_to_sign = "GET" + f"/api/v3/market/orderbook/level2?symbol={symbol}"
         headers = self.generate_token(str_to_sign)
         data = await self.http_conn.read(url, header=headers)
+        timestamp = time.time()
         data = json.loads(data, parse_float=Decimal)
         data = data['data']
         self.seq_no[symbol] = int(data['sequence'])
-        self._l2_book[symbol] = {
-            BID: sd({Decimal(price): Decimal(amount) for price, amount in data['bids']}),
-            ASK: sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
-        }
+        bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+        asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
+        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
 
-        timestamp = time.time()
-        await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, True, None, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, raw=data, sequence_number=int(data['sequence']))
 
     async def _process_l2_book(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -206,14 +206,12 @@ class KuCoin(Feed):
             'type': 'message'
         }
         """
-        forced = False
         data = msg['data']
         sequence = data['sequenceStart']
         if symbol not in self._l2_book or sequence > self.seq_no[symbol] + 1:
             if symbol in self.seq_no and sequence > self.seq_no[symbol] + 1:
                 LOG.warning("%s: Missing book update detected, resetting book", self.id)
             await self._snapshot(symbol)
-            forced = True
 
         data = msg['data']
         if sequence < self.seq_no[symbol]:
@@ -228,14 +226,14 @@ class KuCoin(Feed):
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self._l2_book[symbol][side]:
-                        del self._l2_book[symbol][side][price]
+                    if price in self._l2_book[symbol].book[side]:
+                        del self._l2_book[symbol].book[side][price]
                         delta[side].append((price, amount))
                 else:
-                    self._l2_book[symbol][side][price] = amount
+                    self._l2_book[symbol].book[side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, raw=msg, sequence_number=data['sequenceEnd'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

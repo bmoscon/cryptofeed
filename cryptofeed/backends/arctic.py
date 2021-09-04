@@ -7,8 +7,7 @@ associated with this software.
 import arctic
 import pandas as pd
 
-from cryptofeed.backends.backend import (BackendFundingCallback, BackendCandlesCallback, BackendOpenInterestCallback,
-                                         BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback)
+from cryptofeed.backends.backend import BackendCallback
 from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS
 
 
@@ -38,7 +37,7 @@ class ArcticCallback:
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+    async def write(self, data):
         df = pd.DataFrame({key: [value] for key, value in data.items()})
         df['date'] = pd.to_datetime(df.timestamp, unit='s')
         df['receipt_timestamp'] = pd.to_datetime(df.receipt_timestamp, unit='s')
@@ -47,30 +46,25 @@ class ArcticCallback:
         self.lib.append(self.key, df, upsert=True)
 
 
-class TradeArctic(ArcticCallback, BackendTradeCallback):
+class TradeArctic(ArcticCallback, BackendCallback):
     default_key = TRADES
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        if 'order_type' in data:
-            data['order_type'] = str(data['order_type'])
-        await super().write(feed, symbol, timestamp, receipt_timestamp, data)
 
-
-class FundingArctic(ArcticCallback, BackendFundingCallback):
+class FundingArctic(ArcticCallback, BackendCallback):
     default_key = FUNDING
 
 
-class TickerArctic(ArcticCallback, BackendTickerCallback):
+class TickerArctic(ArcticCallback, BackendCallback):
     default_key = TICKER
 
 
-class OpenInterestArctic(ArcticCallback, BackendOpenInterestCallback):
+class OpenInterestArctic(ArcticCallback, BackendCallback):
     default_key = OPEN_INTEREST
 
 
-class LiquidationsArctic(ArcticCallback, BackendLiquidationsCallback):
+class LiquidationsArctic(ArcticCallback, BackendCallback):
     default_key = LIQUIDATIONS
 
 
-class CandlesArctic(ArcticCallback, BackendCandlesCallback):
+class CandlesArctic(ArcticCallback, BackendCallback):
     default_key = CANDLES

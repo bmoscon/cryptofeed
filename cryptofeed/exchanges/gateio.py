@@ -10,13 +10,14 @@ from decimal import Decimal
 import time
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import OrderBook, Trade, Ticker, Candle
+
 
 LOG = logging.getLogger('feedhandler')
 
@@ -76,12 +77,15 @@ class Gateio(Feed):
             }
         }
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
-                            bid=Decimal(msg['result']['highest_bid']),
-                            ask=Decimal(msg['result']['lowest_ask']),
-                            timestamp=float(msg['time']),
-                            receipt_timestamp=timestamp)
+        t = Ticker(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
+            Decimal(msg['result']['highest_bid']),
+            Decimal(msg['result']['lowest_ask']),
+            float(msg['time']),
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
 
     async def _trades(self, msg: dict, timestamp: float):
         """
@@ -100,14 +104,17 @@ class Gateio(Feed):
             }
         }
         """
-        await self.callback(TRADES, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
-                            side=SELL if msg['result']['side'] == 'sell' else BUY,
-                            amount=Decimal(msg['result']['amount']),
-                            price=Decimal(msg['result']['price']),
-                            timestamp=float(msg['result']['create_time_ms']) / 1000,
-                            receipt_timestamp=timestamp,
-                            order_id=msg['result']['id'])
+        t = Trade(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
+            SELL if msg['result']['side'] == 'sell' else BUY,
+            Decimal(msg['result']['amount']),
+            Decimal(msg['result']['price']),
+            float(msg['result']['create_time_ms']) / 1000,
+            id=str(msg['result']['id']),
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
     async def _snapshot(self, symbol: str):
         """
@@ -122,10 +129,11 @@ class Gateio(Feed):
         data = json.loads(ret, parse_float=Decimal)
 
         symbol = self.exchange_symbol_to_std_symbol(symbol)
-        self._l2_book[symbol] = {}
+        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
         self.last_update_id[symbol] = data['id']
-        self._l2_book[symbol][BID] = sd({Decimal(price): Decimal(amount) for price, amount in data['bids']})
-        self._l2_book[symbol][ASK] = sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
+        self._l2_book[symbol].book.bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+        self._l2_book[symbol].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], time.time(), raw=data, sequence_number=data['id'])
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
@@ -143,7 +151,7 @@ class Gateio(Feed):
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
 
-        return skip_update, forced
+        return skip_update
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
         """
@@ -167,7 +175,7 @@ class Gateio(Feed):
         if symbol not in self._l2_book:
             await self._snapshot(msg['result']['s'])
 
-        skip_update, forced = self._check_update_id(symbol, msg['result'])
+        skip_update = self._check_update_id(symbol, msg['result'])
         if skip_update:
             return
 
@@ -180,14 +188,14 @@ class Gateio(Feed):
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self._l2_book[symbol][side]:
-                        del self._l2_book[symbol][side][price]
+                    if price in self._l2_book[symbol].book[side]:
+                        del self._l2_book[symbol].book[side][price]
                         delta[side].append((price, amount))
                 else:
-                    self._l2_book[symbol][side][price] = amount
+                    self._l2_book[symbol].book[side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, forced, delta, ts, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, timestamp=ts, raw=msg)
 
     async def _candles(self, msg: dict, timestamp: float):
         """
@@ -209,21 +217,23 @@ class Gateio(Feed):
         interval, symbol = msg['result']['n'].split('_', 1)
         if interval == '7d':
             interval = '1w'
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(symbol),
-                            timestamp=float(msg['time']),
-                            receipt_timestamp=timestamp,
-                            start=float(msg['result']['t']),
-                            stop=float(msg['result']['t']) + 59,
-                            interval=interval,
-                            trades=None,
-                            open_price=Decimal(msg['result']['o']),
-                            close_price=Decimal(msg['result']['c']),
-                            high_price=Decimal(msg['result']['h']),
-                            low_price=Decimal(msg['result']['l']),
-                            volume=Decimal(msg['result']['v']),
-                            closed=None)
+        c = Candle(
+            self.id,
+            self.exchange_symbol_to_std_symbol(symbol),
+            float(msg['result']['t']),
+            float(msg['result']['t']) + 59,
+            interval,
+            None,
+            Decimal(msg['result']['o']),
+            Decimal(msg['result']['c']),
+            Decimal(msg['result']['h']),
+            Decimal(msg['result']['l']),
+            Decimal(msg['result']['v']),
+            None,
+            float(msg['time']),
+            raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

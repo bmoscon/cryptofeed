@@ -10,11 +10,11 @@ import hmac
 import time
 from decimal import Decimal
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 class BitfinexRestMixin(RestExchange):
@@ -130,8 +130,9 @@ class BitfinexRestMixin(RestExchange):
         return await self._rest_book(symbol, l3=True, retry_count=retry_count, retry_delay=retry_delay)
 
     async def _rest_book(self, symbol: str, l3=False, retry_count=0, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
+
         symbol = self.std_symbol_to_exchange_symbol(symbol)
-        ret = {BID: sd(), ASK: sd()}
         funding = 'f' in symbol
 
         precision = 'R0' if l3 is True else 'P0'
@@ -149,10 +150,10 @@ class BitfinexRestMixin(RestExchange):
                 amount = Decimal(amount)
                 price = Decimal(price)
                 side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
-                if price not in ret[side]:
-                    ret[side][price] = {order_id: update}
+                if price not in ret.book[side]:
+                    ret.book[side][price] = {order_id: update}
                 else:
-                    ret[side][price][order_id] = update
+                    ret.book[side][price][order_id] = update
         else:
             for entry in data:
                 if funding:
@@ -164,6 +165,6 @@ class BitfinexRestMixin(RestExchange):
                 price = Decimal(price)
                 amount = Decimal(amount)
                 side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
-                ret[side][price] = update
+                ret.book[side][price] = update
 
         return ret
