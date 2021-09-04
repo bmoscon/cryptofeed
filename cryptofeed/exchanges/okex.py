@@ -272,6 +272,34 @@ class OKEx(Feed):
                 await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(update['ts'])), raw=msg, delta=delta, checksum=update['checksum'] & 0xFFFFFFFF)
 
     async def _order(self, msg: dict, timestamp: float):
+        '''
+        {
+            "table":"spot/order",
+            "data":[
+                {
+                    "client_oid":"",
+                    "filled_notional":"0",
+                    "filled_size":"0",
+                    "instrument_id":"ETC-USDT",
+                    "last_fill_px":"0",
+                    "last_fill_qty":"0",
+                    "last_fill_time":"1970-01-01T00:00:00.000Z",
+                    "margin_trading":"1",
+                    "notional":"",
+                    "order_id":"3576398568830976",
+                    "order_type":"0",
+                    "price":"5.826",
+                    "side":"buy",
+                    "size":"0.1",
+                    "state":"0",
+                    "status":"open",
+                    "timestamp":"2019-09-24T06:45:11.394Z",
+                    "type":"limit",
+                    "created_at":"2019-09-24T06:45:11.394Z"
+                }
+            ]
+        }
+        '''
         status = msg['data'][0]['state']
         if status == -1:
             status = FAILED
