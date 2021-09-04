@@ -11,7 +11,7 @@ import numpy as np
 
 
 class AggregateCallback:
-    def __init__(self, handler, *args, **kwargs):
+    def __init__(self, handler):
         self.handler = handler
 
 
@@ -21,16 +21,16 @@ class Throttle(AggregateCallback):
     1 update per `window` interval; all others are dropped
     """
 
-    def __init__(self, *args, window=60, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, handler, window=60):
+        super().__init__(handler)
         self.window = window
         self.last_update = 0
 
-    async def __call__(self, **kwargs):
+    async def __call__(self, data):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
-            await self.handler(**kwargs)
+            await self.handler(data)
 
 
 class OHLCV(AggregateCallback):
@@ -41,8 +41,8 @@ class OHLCV(AggregateCallback):
     You should probably use the candle data channel (if the exchange supports that).
     """
 
-    def __init__(self, *args, window=300, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, window=300):
+        super().__init__(*args)
         self.window = window
         self.last_update = time.time()
         self.data = {}
@@ -66,7 +66,8 @@ class OHLCV(AggregateCallback):
             self.last_update = now
             for p in self.data:
                 self.data[p]['vwap'] /= self.data[p]['volume']
-            await self.handler(data=self.data)
+
+            await self.handler(self.data)
             self.data = {}
 
         self._agg(trade.symbol, trade.amount, trade.price)
@@ -132,7 +133,7 @@ class RenkoFixed(AggregateCallback):
 
     async def __call__(self, trade, receipt_timestamp: float):
         if self.new_brick:
-            await self.handler(data=self.data)
+            await self.handler(self.data)
         self._agg(trade.symbol, trade.price)
 
 
@@ -157,7 +158,7 @@ class CustomAggregate(AggregateCallback):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
-            await self.handler(data=self.data)
+            await self.handler(self.data)
             self.init(self.data)
 
         self.agg(self.data, dtype, receipt_timestamp)

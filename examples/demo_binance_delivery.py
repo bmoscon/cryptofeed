@@ -1,4 +1,11 @@
+'''
+Copyright (C) 2018-2021  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from datetime import datetime
+from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.defines import GOOD_TIL_CANCELED, L2_BOOK, LIMIT, SELL, TICKER, TRADES
@@ -8,16 +15,26 @@ from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 info = BinanceDelivery.info()
 
 
-async def abook(feed, symbol, book, timestamp, receipt_timestamp):
-    print(f'BOOK lag: {receipt_timestamp - timestamp} Timestamp: {datetime.fromtimestamp(timestamp)} Receipt Timestamp: {datetime.fromtimestamp(receipt_timestamp)} Feed: {feed} Pair: {symbol} Snapshot: {book}')
+async def abook(book, receipt_timestamp):
+    print(f'BOOK lag: {receipt_timestamp - book.timestamp} Timestamp: {datetime.fromtimestamp(book.timestamp)} Receipt Timestamp: {datetime.fromtimestamp(receipt_timestamp)}')
 
 
-async def ticker(**kwargs):
-    print(kwargs)
+async def ticker(t, receipt_timestamp):
+    if t.timestamp is not None:
+        assert isinstance(t.timestamp, float)
+    assert isinstance(t.exchange, str)
+    assert isinstance(t.bid, Decimal)
+    assert isinstance(t.ask, Decimal)
+    print(f'Ticker received at {receipt_timestamp}: {t}')
 
 
-async def trades(**kwargs):
-    print(kwargs)
+async def trades(t, receipt_timestamp):
+    assert isinstance(t.timestamp, float)
+    assert isinstance(t.side, str)
+    assert isinstance(t.amount, Decimal)
+    assert isinstance(t.price, Decimal)
+    assert isinstance(t.exchange, str)
+    print(f"Trade received at {receipt_timestamp}: {t}")
 
 
 def main():
