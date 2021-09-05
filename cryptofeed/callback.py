@@ -73,8 +73,3 @@ class UserFillsCallback(Callback):
 
 class L1BookCallback(Callback):
     pass
-
-
-class UserDataCallback(Callback):
-    pass
-

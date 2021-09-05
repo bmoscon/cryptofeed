@@ -413,7 +413,7 @@ class Phemex(Feed):
         }
 
         incremental update:
-              
+
         {
             "accounts":[
                 {
@@ -668,7 +668,7 @@ class Phemex(Feed):
         self.__reset()
 
         for chan, symbol in subs:
-            if not self.exchange_channel_to_std(chan) == USER_DATA:
+            if not self.exchange_channel_to_std(chan) == BALANCES:
                 msg = {"id": 1, "method": chan, "params": [symbol]}
                 if self.exchange_channel_to_std(chan) == CANDLES:
                     msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
