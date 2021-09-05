@@ -71,7 +71,7 @@ Callbacks are user defined functions that will be called on a data event, like w
 
 ### Data Types
 
-The data types that are returned by callbacks are defined in [types.pyx](../cryptofeed/types.pyx). The data members are all readable, but not writeable. Every object also provides two methods, `to_dict()` and a `__repr__` that allows it to be printed out in a useful format.
+The data types that are returned by callbacks are defined in [types.pyx](../cryptofeed/types.pyx). The data members are all readable, but not writeable. Every data type has a field, `raw` that contains the raw data that was used to construct the object. It will frequently have fields that are not part of the data type. These may or may not be useful to you, depending on your usecase. Every object also provides two methods, `to_dict()` and a `__repr__`. `to_dict()` returns the data in the object as a dictionary (omitting the raw data). `__repr__`  allows the class to be printed out in a useful format.
 
 ### Backends
 
