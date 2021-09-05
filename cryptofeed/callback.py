@@ -35,10 +35,6 @@ class BookCallback(Callback):
     pass
 
 
-class BookUpdateCallback(Callback):
-    pass
-
-
 class CandleCallback(Callback):
     pass
 
@@ -82,6 +78,3 @@ class L1BookCallback(Callback):
 class UserDataCallback(Callback):
     pass
 
-
-class LastPriceCallback(Callback):
-    pass
