@@ -29,7 +29,7 @@ class Bybit(Feed):
     id = BYBIT
     symbol_endpoint = 'https://api.bybit.com/v2/public/symbols'
     websocket_channels = {
-        L2_BOOK: 'orderBookL2_25',
+        L2_BOOK: 'orderBook_200.100ms',
         TRADES: 'trade',
         USER_FILLS: 'execution',
         ORDER_INFO: 'order',
@@ -99,7 +99,7 @@ class Bybit(Feed):
                 LOG.error("%s: Error from exchange %s", conn.uuid, msg)
         elif "trade" in msg["topic"]:
             await self._trade(msg, timestamp)
-        elif "orderBookL2" in msg["topic"]:
+        elif msg["topic"].startswith('orderBook'):
             await self._book(msg, timestamp)
         elif "instrument_info" in msg["topic"]:
             await self._instrument_info(msg, timestamp)
@@ -318,7 +318,7 @@ class Bybit(Feed):
             await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[1])
+        pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[-1])
         update_type = msg['type']
         data = msg['data']
         delta = {BID: [], ASK: []}
