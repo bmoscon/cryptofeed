@@ -16,9 +16,9 @@ from typing import Callable, Dict, List, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, USER_DATA
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Candle
+from cryptofeed.types import OrderBook, Trade, Candle, Balance
 
 LOG = logging.getLogger('feedhandler')
 
@@ -29,7 +29,7 @@ class Phemex(Feed):
     price_scale = {}
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
     websocket_channels = {
-        USER_DATA: 'aop.subscribe',
+        BALANCES: 'aop.subscribe',
         L2_BOOK: 'orderbook.subscribe',
         TRADES: 'trade.subscribe',
         CANDLES: 'kline.subscribe',
@@ -174,7 +174,434 @@ class Phemex(Feed):
             await self.callback(CANDLES, c, timestamp)
 
     async def _user_data(self, msg: dict, timestamp: float):
-        await self.callback(USER_DATA, feed=self.id, data=msg, receipt_timestamp=timestamp)
+        '''
+        snapshot:
+
+        {
+            "accounts":[
+                {
+                    "accountBalanceEv":100000024,
+                    "accountID":675340001,
+                    "bonusBalanceEv":0,
+                    "currency":"BTC",
+                    "totalUsedBalanceEv":1222,
+                    "userID":67534
+                }
+            ],
+            "orders":[
+                {
+                    "accountID":675340001,
+                    "action":"New",
+                    "actionBy":"ByUser",
+                    "actionTimeNs":1573711481897337000,
+                    "addedSeq":1110523,
+                    "bonusChangedAmountEv":0,
+                    "clOrdID":"uuid-1573711480091",
+                    "closedPnlEv":0,
+                    "closedSize":0,
+                    "code":0,
+                    "cumQty":2,
+                    "cumValueEv":23018,
+                    "curAccBalanceEv":100000005,
+                    "curAssignedPosBalanceEv":0,
+                    "curBonusBalanceEv":0,
+                    "curLeverageEr":0,
+                    "curPosSide":"Buy",
+                    "curPosSize":2,
+                    "curPosTerm":1,
+                    "curPosValueEv":23018,
+                    "curRiskLimitEv":10000000000,
+                    "currency":"BTC",
+                    "cxlRejReason":0,
+                    "displayQty":2,
+                    "execFeeEv":-5,
+                    "execID":"92301512-7a79-5138-b582-ac185223727d",
+                    "execPriceEp":86885000,
+                    "execQty":2,
+                    "execSeq":1131034,
+                    "execStatus":"MakerFill",
+                    "execValueEv":23018,
+                    "feeRateEr":-25000,
+                    "lastLiquidityInd":"AddedLiquidity",
+                    "leavesQty":0,
+                    "leavesValueEv":0,
+                    "message":"No error",
+                    "ordStatus":"Filled",
+                    "ordType":"Limit",
+                    "orderID":"e9a45803-0af8-41b7-9c63-9b7c417715d9",
+                    "orderQty":2,
+                    "pegOffsetValueEp":0,
+                    "priceEp":86885000,
+                    "relatedPosTerm":1,
+                    "relatedReqNum":2,
+                    "side":"Buy",
+                    "stopLossEp":0,
+                    "stopPxEp":0,
+                    "symbol":"BTCUSD",
+                    "takeProfitEp":0,
+                    "timeInForce":"GoodTillCancel",
+                    "tradeType":"Trade",
+                    "transactTimeNs":1573712555309040417,
+                    "userID":67534
+                },
+                {
+                    "accountID":675340001,
+                    "action":"New",
+                    "actionBy":"ByUser",
+                    "actionTimeNs":1573711490507067000,
+                    "addedSeq":1110980,
+                    "bonusChangedAmountEv":0,
+                    "clOrdID":"uuid-1573711488668",
+                    "closedPnlEv":0,
+                    "closedSize":0,
+                    "code":0,
+                    "cumQty":3,
+                    "cumValueEv":34530,
+                    "curAccBalanceEv":100000013,
+                    "curAssignedPosBalanceEv":0,
+                    "curBonusBalanceEv":0,
+                    "curLeverageEr":0,
+                    "curPosSide":"Buy",
+                    "curPosSize":5,
+                    "curPosTerm":1,
+                    "curPosValueEv":57548,
+                    "curRiskLimitEv":10000000000,
+                    "currency":"BTC",
+                    "cxlRejReason":0,
+                    "displayQty":3,
+                    "execFeeEv":-8,
+                    "execID":"80899855-5b95-55aa-b84e-8d1052f19886",
+                    "execPriceEp":86880000,
+                    "execQty":3,
+                    "execSeq":1131408,
+                    "execStatus":"MakerFill",
+                    "execValueEv":34530,
+                    "feeRateEr":-25000,
+                    "lastLiquidityInd":"AddedLiquidity",
+                    "leavesQty":0,
+                    "leavesValueEv":0,
+                    "message":"No error",
+                    "ordStatus":"Filled",
+                    "ordType":"Limit",
+                    "orderID":"7e03cd6b-e45e-48d9-8937-8c6628e7a79d",
+                    "orderQty":3,
+                    "pegOffsetValueEp":0,
+                    "priceEp":86880000,
+                    "relatedPosTerm":1,
+                    "relatedReqNum":3,
+                    "side":"Buy",
+                    "stopLossEp":0,
+                    "stopPxEp":0,
+                    "symbol":"BTCUSD",
+                    "takeProfitEp":0,
+                    "timeInForce":"GoodTillCancel",
+                    "tradeType":"Trade",
+                    "transactTimeNs":1573712559100655668,
+                    "userID":67534
+                },
+                {
+                    "accountID":675340001,
+                    "action":"New",
+                    "actionBy":"ByUser",
+                    "actionTimeNs":1573711499282604000,
+                    "addedSeq":1111025,
+                    "bonusChangedAmountEv":0,
+                    "clOrdID":"uuid-1573711497265",
+                    "closedPnlEv":0,
+                    "closedSize":0,
+                    "code":0,
+                    "cumQty":4,
+                    "cumValueEv":46048,
+                    "curAccBalanceEv":100000024,
+                    "curAssignedPosBalanceEv":0,
+                    "curBonusBalanceEv":0,
+                    "curLeverageEr":0,
+                    "curPosSide":"Buy",
+                    "curPosSize":9,
+                    "curPosTerm":1,
+                    "curPosValueEv":103596,
+                    "curRiskLimitEv":10000000000,
+                    "currency":"BTC",
+                    "cxlRejReason":0,
+                    "displayQty":4,
+                    "execFeeEv":-11,
+                    "execID":"0be06645-90b8-5abe-8eb0-dca8e852f82f",
+                    "execPriceEp":86865000,
+                    "execQty":4,
+                    "execSeq":1132422,
+                    "execStatus":"MakerFill",
+                    "execValueEv":46048,
+                    "feeRateEr":-25000,
+                    "lastLiquidityInd":"AddedLiquidity",
+                    "leavesQty":0,
+                    "leavesValueEv":0,
+                    "message":"No error",
+                    "ordStatus":"Filled",
+                    "ordType":"Limit",
+                    "orderID":"66753807-9204-443d-acf9-946d15d5bedb",
+                    "orderQty":4,
+                    "pegOffsetValueEp":0,
+                    "priceEp":86865000,
+                    "relatedPosTerm":1,
+                    "relatedReqNum":4,
+                    "side":"Buy",
+                    "stopLossEp":0,
+                    "stopPxEp":0,
+                    "symbol":"BTCUSD",
+                    "takeProfitEp":0,
+                    "timeInForce":"GoodTillCancel",
+                    "tradeType":"Trade",
+                    "transactTimeNs":1573712618104628671,
+                    "userID":67534
+                }
+            ],
+            "positions":[
+                {
+                    "accountID":675340001,
+                    "assignedPosBalanceEv":0,
+                    "avgEntryPriceEp":86875941,
+                    "bankruptCommEv":75022,
+                    "bankruptPriceEp":90000,
+                    "buyLeavesQty":0,
+                    "buyLeavesValueEv":0,
+                    "buyValueToCostEr":1150750,
+                    "createdAtNs":0,
+                    "crossSharedBalanceEv":99998802,
+                    "cumClosedPnlEv":0,
+                    "cumFundingFeeEv":0,
+                    "cumTransactFeeEv":-24,
+                    "currency":"BTC",
+                    "dataVer":4,
+                    "deleveragePercentileEr":0,
+                    "displayLeverageEr":1000000,
+                    "estimatedOrdLossEv":0,
+                    "execSeq":1132422,
+                    "freeCostEv":0,
+                    "freeQty":-9,
+                    "initMarginReqEr":1000000,
+                    "lastFundingTime":1573703858883133252,
+                    "lastTermEndTime":0,
+                    "leverageEr":0,
+                    "liquidationPriceEp":90000,
+                    "maintMarginReqEr":500000,
+                    "makerFeeRateEr":0,
+                    "markPriceEp":86786292,
+                    "orderCostEv":0,
+                    "posCostEv":1115,
+                    "positionMarginEv":99925002,
+                    "positionStatus":"Normal",
+                    "riskLimitEv":10000000000,
+                    "sellLeavesQty":0,
+                    "sellLeavesValueEv":0,
+                    "sellValueToCostEr":1149250,
+                    "side":"Buy",
+                    "size":9,
+                    "symbol":"BTCUSD",
+                    "takerFeeRateEr":0,
+                    "term":1,
+                    "transactTimeNs":1573712618104628671,
+                    "unrealisedPnlEv":-107,
+                    "updatedAtNs":0,
+                    "usedBalanceEv":1222,
+                    "userID":67534,
+                    "valueEv":103596
+                }
+            ],
+            "sequence":1310812,
+            "timestamp":1573716998131003833,
+            "type":"snapshot"
+        }
+
+        incremental update:
+              
+        {
+            "accounts":[
+                {
+                    "accountBalanceEv":99999989,
+                    "accountID":675340001,
+                    "bonusBalanceEv":0,
+                    "currency":"BTC",
+                    "totalUsedBalanceEv":1803,
+                    "userID":67534
+                }
+            ],
+            "orders":[
+                {
+                    "accountID":675340001,
+                    "action":"New",
+                    "actionBy":"ByUser",
+                    "actionTimeNs":1573717286765750000,
+                    "addedSeq":1192303,
+                    "bonusChangedAmountEv":0,
+                    "clOrdID":"uuid-1573717284329",
+                    "closedPnlEv":0,
+                    "closedSize":0,
+                    "code":0,
+                    "cumQty":0,
+                    "cumValueEv":0,
+                    "curAccBalanceEv":100000024,
+                    "curAssignedPosBalanceEv":0,
+                    "curBonusBalanceEv":0,
+                    "curLeverageEr":0,
+                    "curPosSide":"Buy",
+                    "curPosSize":9,
+                    "curPosTerm":1,
+                    "curPosValueEv":103596,
+                    "curRiskLimitEv":10000000000,
+                    "currency":"BTC",
+                    "cxlRejReason":0,
+                    "displayQty":4,
+                    "execFeeEv":0,
+                    "execID":"00000000-0000-0000-0000-000000000000",
+                    "execPriceEp":0,
+                    "execQty":0,
+                    "execSeq":1192303,
+                    "execStatus":"New",
+                    "execValueEv":0,
+                    "feeRateEr":0,
+                    "leavesQty":4,
+                    "leavesValueEv":46098,
+                    "message":"No error",
+                    "ordStatus":"New",
+                    "ordType":"Limit",
+                    "orderID":"e329ae87-ce80-439d-b0cf-ad65272ed44c",
+                    "orderQty":4,
+                    "pegOffsetValueEp":0,
+                    "priceEp":86770000,
+                    "relatedPosTerm":1,
+                    "relatedReqNum":5,
+                    "side":"Buy",
+                    "stopLossEp":0,
+                    "stopPxEp":0,
+                    "symbol":"BTCUSD",
+                    "takeProfitEp":0,
+                    "timeInForce":"GoodTillCancel",
+                    "transactTimeNs":1573717286765896560,
+                    "userID":67534
+                },
+                {
+                    "accountID":675340001,
+                    "action":"New",
+                    "actionBy":"ByUser",
+                    "actionTimeNs":1573717286765750000,
+                    "addedSeq":1192303,
+                    "bonusChangedAmountEv":0,
+                    "clOrdID":"uuid-1573717284329",
+                    "closedPnlEv":0,
+                    "closedSize":0,
+                    "code":0,
+                    "cumQty":4,
+                    "cumValueEv":46098,
+                    "curAccBalanceEv":99999989,
+                    "curAssignedPosBalanceEv":0,
+                    "curBonusBalanceEv":0,
+                    "curLeverageEr":0,
+                    "curPosSide":"Buy",
+                    "curPosSize":13,
+                    "curPosTerm":1,
+                    "curPosValueEv":149694,
+                    "curRiskLimitEv":10000000000,
+                    "currency":"BTC",
+                    "cxlRejReason":0,
+                    "displayQty":4,
+                    "execFeeEv":35,
+                    "execID":"8d1848a2-5faf-52dd-be71-9fecbc8926be",
+                    "execPriceEp":86770000,
+                    "execQty":4,
+                    "execSeq":1192303,
+                    "execStatus":"TakerFill",
+                    "execValueEv":46098,
+                    "feeRateEr":75000,
+                    "lastLiquidityInd":"RemovedLiquidity",
+                    "leavesQty":0,
+                    "leavesValueEv":0,
+                    "message":"No error",
+                    "ordStatus":"Filled",
+                    "ordType":"Limit",
+                    "orderID":"e329ae87-ce80-439d-b0cf-ad65272ed44c",
+                    "orderQty":4,
+                    "pegOffsetValueEp":0,
+                    "priceEp":86770000,
+                    "relatedPosTerm":1,
+                    "relatedReqNum":5,
+                    "side":"Buy",
+                    "stopLossEp":0,
+                    "stopPxEp":0,
+                    "symbol":"BTCUSD",
+                    "takeProfitEp":0,
+                    "timeInForce":"GoodTillCancel",
+                    "tradeType":"Trade",
+                    "transactTimeNs":1573717286765896560,
+                    "userID":67534
+                }
+            ],
+            "positions":[
+                {
+                    "accountID":675340001,
+                    "assignedPosBalanceEv":0,
+                    "avgEntryPriceEp":86843828,
+                    "bankruptCommEv":75056,
+                    "bankruptPriceEp":130000,
+                    "buyLeavesQty":0,
+                    "buyLeavesValueEv":0,
+                    "buyValueToCostEr":1150750,
+                    "createdAtNs":0,
+                    "crossSharedBalanceEv":99998186,
+                    "cumClosedPnlEv":0,
+                    "cumFundingFeeEv":0,
+                    "cumTransactFeeEv":11,
+                    "currency":"BTC",
+                    "dataVer":5,
+                    "deleveragePercentileEr":0,
+                    "displayLeverageEr":1000000,
+                    "estimatedOrdLossEv":0,
+                    "execSeq":1192303,
+                    "freeCostEv":0,
+                    "freeQty":-13,
+                    "initMarginReqEr":1000000,
+                    "lastFundingTime":1573703858883133252,
+                    "lastTermEndTime":0,
+                    "leverageEr":0,
+                    "liquidationPriceEp":130000,
+                    "maintMarginReqEr":500000,
+                    "makerFeeRateEr":0,
+                    "markPriceEp":86732335,
+                    "orderCostEv":0,
+                    "posCostEv":1611,
+                    "positionMarginEv":99924933,
+                    "positionStatus":"Normal",
+                    "riskLimitEv":10000000000,
+                    "sellLeavesQty":0,
+                    "sellLeavesValueEv":0,
+                    "sellValueToCostEr":1149250,
+                    "side":"Buy",
+                    "size":13,
+                    "symbol":"BTCUSD",
+                    "takerFeeRateEr":0,
+                    "term":1,
+                    "transactTimeNs":1573717286765896560,
+                    "unrealisedPnlEv":-192,
+                    "updatedAtNs":0,
+                    "usedBalanceEv":1803,
+                    "userID":67534,
+                    "valueEv":149694
+                }
+            ],
+            "sequence":1315725,
+            "timestamp":1573717286767188294,
+            "type":"incremental"
+        }
+        '''
+        for entry in msg['accounts']:
+            b = Balance(
+                self.id,
+                entry['currency'],
+                Decimal(entry['accountBalanceEv']),
+                Decimal(entry['totalUsedBalanceEv']),
+                self.timestamp_normalize(msg['timestamp']),
+                raw=entry
+            )
+            await self.callback(BALANCES, b, timestamp)
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         # Phemex only allows 5 connections, with 20 subscriptions per connection, so split the subscription into separate
@@ -182,11 +609,11 @@ class Phemex(Feed):
         ret = []
         sub_pair = []
 
-        if self.std_channel_to_exchange(USER_DATA) in self.subscription:
-            sub_pair.append([self.std_channel_to_exchange(USER_DATA), USER_DATA])
+        if self.std_channel_to_exchange(BALANCES) in self.subscription:
+            sub_pair.append([self.std_channel_to_exchange(BALANCES), BALANCES])
 
         for chan, symbols in self.subscription.items():
-            if self.exchange_channel_to_std(chan) == USER_DATA:
+            if self.exchange_channel_to_std(chan) == BALANCES:
                 continue
             for sym in symbols:
                 sub_pair.append([chan, sym])
@@ -208,7 +635,7 @@ class Phemex(Feed):
         if 'id' in msg and msg['id'] == 100:
             if not msg['error']:
                 LOG.info("%s: Auth request result: %s", conn.uuid, msg['result']['status'])
-                msg = json.dumps({"id": 101, "method": self.std_channel_to_exchange(USER_DATA), "params": []})
+                msg = json.dumps({"id": 101, "method": self.std_channel_to_exchange(BALANCES), "params": []})
                 LOG.debug(f"{conn.uuid}: Subscribing to authenticated channels: {msg}")
                 await conn.write(msg)
             else:
@@ -220,7 +647,7 @@ class Phemex(Feed):
                 LOG.warning(f"{conn.uuid}: Subscription unsuccessful: {msg}")
         elif 'id' in msg and msg['id'] == 1 and not msg['error']:
             pass
-        elif {'accounts', 'orders', 'positions'} <= set(msg) or 'position_info' in msg:
+        elif 'accounts' in msg:
             await self._user_data(msg, timestamp)
         elif 'book' in msg:
             await self._book(msg, timestamp)

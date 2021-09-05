@@ -9,7 +9,7 @@ from datetime import datetime
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, FILLED, USER_DATA
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, FILLED
 from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -34,7 +34,6 @@ class Deribit(Feed, DeribitRestMixin):
         ORDER_INFO: 'user.orders',
         USER_FILLS: 'user.trades',
         BALANCES: 'user.portfolio',
-        USER_DATA: 'user.changes'
     }
     request_limit = 20
 

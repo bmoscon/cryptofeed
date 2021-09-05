@@ -70,7 +70,6 @@ CANCEL_ORDER = 'cancel_order'
 ORDERS = 'orders'
 ORDER_STATUS = 'order_status'
 TRADE_HISTORY = 'trade_history'
-USER_DATA = 'user_data'
 POSITIONS = 'positions'
 
 BUY = 'buy'
