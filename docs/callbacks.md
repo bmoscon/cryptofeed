@@ -6,17 +6,25 @@ Cryptofeed is a library that uses asyncio to handle asyncronous events. When `fh
 
 There are two types of callbacks supported in cryptofeed, *raw* and *backend*. The raw callbacks deliver the data directly to the specified function. Backend callbacks take the data and do something else with it (typically store or send). Some examples of the backend callbacks are Redis, Postgres and TCP. You might use the Redis or Postgres callbacks to store the data, and you could use the TCP callback to send data to another application for processing.
 
-The raw callbacks are defined [here](../cryptofeed/callback.py), along with their required arguments/kwargs. They are:
+The raw callbacks are defined [here](../cryptofeed/callback.py). They are:
 
 * Trade
 * Ticker
 * Book
-* Book Update
 * Open Interest
 * Funding
 * Liquidation
+* Candles
+* Index
+* L1Book (aka Top of Book)
+* Order Info
+* User Fills
+* Transactions
+* Balances
 
-Its important to note that if your choose to use the raw callbacks, and your user defined callbacks match these function signatures *and* are async functions, you do not need to use these wrappers (like is commonly shown in the example code). You can use your callback functions without wrapping them in `TradeCallback`, `TickerCallback`, etc.
+Its important to note that if your choose to use the raw callbacks and your callbacks are async functions, you do not need to use these wrappers (like is commonly shown in the example code). You can use your callback functions without wrapping them in `TradeCallback`, `TickerCallback`, etc.
+
+Every callback has the same signature, two positional arguments, the data object and the receipt timestamp. The data object differs by data type. The data objects are defined in [types.pyx](../cryptofeed/types.pyx)
 
 
 ### Backends
