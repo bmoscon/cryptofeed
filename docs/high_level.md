@@ -66,8 +66,12 @@ Cryptofeed normalizes various parts of the data - primarily timestamps and symbo
 
 ### Callbacks
 
-Callbacks are user defined functions that will be called on a data event, like when a trade update is received. Their format is specified in the `callbacks.py` file, and user defined callbacks should mirror their interface. 
+Callbacks are user defined functions that will be called on a data event, like when a trade update is received. All callbacks have the same signature: two positional arguments, a data object and the receipt timestamp. The data object will vary based on the type of callback (i.e. a trade callback will have a Trade object, the ticker callback will have a Ticker object, etc). The receipt timestamp is the timestamp that the message was received by cryptofeed.
 
+
+### Data Types
+
+The data types that are returned by callbacks are defined in [types.pyx](../cryptofeed/types.pyx). The data members are all readable, but not writeable. Every object also provides two methods, `to_dict()` and a `__repr__` that allows it to be printed out in a useful format.
 
 ### Backends
 
@@ -79,23 +83,22 @@ Backends are supplied callbacks that do specific things, like write updates to a
 Setting up a simple feedhandler. Subscribing to Coinbase
 
 ```python
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import TRADES, TICKER
 
 
-async def ticker(feed, symbol, bid, ask, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} Bid: {bid} Ask: {ask}')
+async def ticker(t, receipt_timestamp):
+    print(t)
 
 
-async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_timestamp):
-    print(f"Timestamp: {timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
+async def trade(t, receipt_timestamp):
+    print(t)
 
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES, TICKER], callbacks={TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
+    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES, TICKER], callbacks={TICKER: ticker, TRADES: trade}))
 
     f.run()
 
