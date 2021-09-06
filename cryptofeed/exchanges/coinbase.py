@@ -162,7 +162,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
             Decimal(msg['price']),
             ts,
             id=str(msg['trade_id']),
-            order_type=order_type,
+            type=order_type,
             raw=msg
         )
         await self.callback(TRADES, t, timestamp)

@@ -62,7 +62,7 @@ CANDLES = 'candles'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
-USER_FILLS = 'user_fills'
+FILLS = 'fills'
 TRANSACTIONS = 'transactions'
 BALANCES = 'balances'
 PLACE_ORDER = 'place_order'
@@ -77,6 +77,8 @@ SELL = 'sell'
 BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
+MAKER = 'maker'
+TAKER = 'taker'
 
 LIMIT = 'limit'
 MARKET = 'market'

@@ -35,9 +35,9 @@
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
-  * Feature: Add support for private channels USER_FILLS, ORDER_INFO, BALANCES on Deribit
+  * Feature: Add support for private channels FILLS, ORDER_INFO, BALANCES on Deribit
   * Feature: Add support for public channel L1_BOOK on Deribit
-  * Feature: Add support for private channels USER_FILLS and ORDER_INFO on Bybit
+  * Feature: Add support for private channels FILLS and ORDER_INFO on Bybit
   * Bugfix: Fix demo.py
   * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
   * Update: Support Okex v5
@@ -60,7 +60,7 @@
   * Bugfix: #518 - fix aggregator example code
   * Update: Support Bittrex V3
   * Feature: Add support for candles on Bittrex
-  * Feature: Add support to authenticate private channels (e.g. USER_FILLS) on FTX
+  * Feature: Add support to authenticate private channels (e.g. FILLS) on FTX
   * Feature: Support private rest api commands for FTX
   * Update: Improve impl for FTX rest api
   * Bugfix: #528 - Fix standardisation of Deribit's symbols when passed to callbacks

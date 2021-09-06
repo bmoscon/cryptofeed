@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import TradeCallback
-from cryptofeed.defines import ORDER_INFO, TRADES, USER_FILLS
+from cryptofeed.defines import ORDER_INFO, TRADES, FILLS
 from cryptofeed.exchanges import FTX
 from cryptofeed.rest import Rest
 
@@ -39,7 +39,7 @@ def main():
     print(ftx.ticker('ETH-USD'))
     print(ftx.orders(symbol='USDT-USD'))
     f = FeedHandler(config="config.yaml")
-    f.add_feed(FTX(config="config.yaml", subaccount='subaccount', symbols=['BTC-USD', 'BCH-USD', 'USDT-USD'], channels=[TRADES, USER_FILLS, ORDER_INFO], callbacks={TRADES: TradeCallback(trade), USER_FILLS: fill, ORDER_INFO: order}))
+    f.add_feed(FTX(config="config.yaml", subaccount='subaccount', symbols=['BTC-USD', 'BCH-USD', 'USDT-USD'], channels=[TRADES, FILLS, ORDER_INFO], callbacks={TRADES: TradeCallback(trade), FILLS: fill, ORDER_INFO: order}))
     f.run()
 
 

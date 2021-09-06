@@ -16,7 +16,7 @@ from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import (ASK, BALANCES, BID, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, USER_FILLS)
+                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, FILLS)
 from cryptofeed.exceptions import BidAskOverlapping
 from cryptofeed.types import OrderBook
 
@@ -127,7 +127,7 @@ class Feed(Exchange):
                           TRADES: Callback(None),
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None),
-                          USER_FILLS: Callback(None),
+                          FILLS: Callback(None),
                           BALANCES: Callback(None)
                           }
 

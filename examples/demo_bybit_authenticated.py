@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from cryptofeed import FeedHandler
-from cryptofeed.defines import BYBIT, ORDER_INFO, USER_FILLS
+from cryptofeed.defines import BYBIT, ORDER_INFO, FILLS
 
 
 async def order(feed, symbol, data: dict, receipt_timestamp):
@@ -20,9 +20,9 @@ def main():
 
     f = FeedHandler(config="config.yaml")
     f.add_feed(BYBIT,
-               channels=[USER_FILLS, ORDER_INFO],
+               channels=[FILLS, ORDER_INFO],
                symbols=["ETH-USD-21Z31", "EOS-USD-PERP", "SOL-USDT-PERP"],
-               callbacks={USER_FILLS: fill, ORDER_INFO: order},
+               callbacks={FILLS: fill, ORDER_INFO: order},
                timeout=-1)
 
     f.run()

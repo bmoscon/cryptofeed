@@ -97,12 +97,12 @@ class TradePostgres(PostgresCallback, BackendCallback):
         else:
             data['id'] = f"'{data['id']}'"
 
-        if data['order_type'] is None:
-            data['order_type'] = 'NULL'
+        if data['type'] is None:
+            data['type'] = 'NULL'
         else:
-            data['order_type'] = f"'{data['order_type']}'"
+            data['type'] = f"'{data['type']}'"
 
-        return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{data['side']}',{data['amount']},{data['price']},{data['id']},{data['order_type']})"
+        return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{data['side']}',{data['amount']},{data['price']},{data['id']},{data['type']})"
 
 
 class FundingPostgres(PostgresCallback, BackendCallback):

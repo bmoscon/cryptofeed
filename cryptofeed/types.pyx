@@ -15,27 +15,28 @@ cdef class Trade:
     cdef readonly object amount
     cdef readonly str side
     cdef readonly str id
-    cdef readonly str order_type
+    cdef readonly str type
     cdef readonly double timestamp
     cdef readonly object raw  # can be dict or list
 
-    def __init__(self, exchange, symbol, side, amount, price, timestamp, id=None, order_type=None, raw=None):
-        self.price = price
-        self.amount = amount
+    def __init__(self, exchange, symbol, side, amount, price, timestamp, id=None, type=None, raw=None):
+        self.exchange = exchange
         self.symbol = symbol
         self.side = side
-        self.id = id
+        self.amount = amount
+        self.price = price
         self.timestamp = timestamp
-        self.exchange = exchange
+        self.id = id
+        self.type = type
         self.raw = raw
 
     cpdef dict to_dict(self, as_type=None):
         if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'id': self.id, 'order_type': self.order_type, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': as_type(self.amount), 'price': as_type(self.price), 'id': self.id, 'order_type': self.order_type, 'timestamp': self.timestamp}
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'id': self.id, 'type': self.type, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': as_type(self.amount), 'price': as_type(self.price), 'id': self.id, 'type': self.type, 'timestamp': self.timestamp}
 
     def __repr__(self):
-        return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} amount: {self.amount} price: {self.price} id: {self.id} order_type: {self.order_type} timestamp: {self.timestamp}"
+        return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} amount: {self.amount} price: {self.price} id: {self.id} type: {self.type} timestamp: {self.timestamp}"
 
     def __eq__(self, cmp):
         return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.price == cmp.price and self.amount == cmp.amount and self.side == cmp.side and self.id == cmp.id and self.timestamp == cmp.timestamp
@@ -434,6 +435,51 @@ cdef class Transaction:
 
     def __eq__(self, cmp):
         return self.exchange == cmp.exchange and self.currency == cmp.currency and self.type == cmp.type and self.status == cmp.status and self.amount == cmp.amount and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+
+
+
+cdef class Fill:
+    cdef readonly str exchange
+    cdef readonly str symbol
+    cdef readonly object price
+    cdef readonly object amount
+    cdef readonly str side
+    cdef readonly object fee
+    cdef readonly str id
+    cdef readonly str order_id
+    cdef readonly str liquidity
+    cdef readonly str type
+    cdef readonly double timestamp
+    cdef readonly object raw  # can be dict or list
+
+    def __init__(self, exchange, symbol, side, amount, price, fee, id, order_id, type, liquidity, timestamp, raw=None):
+        self.exchange = exchange
+        self.symbol = symbol
+        self.side = side
+        self.amount = amount
+        self.price = price
+        self.fee = fee
+        self.id = id
+        self.order_id = id
+        self.type = type
+        self.liquidity = liquidity
+        self.timestamp = timestamp
+        self.raw = raw
+
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'fee': self.fee, 'liquidity': self.liquidity, 'id': self.id, 'order_id': self.order_id, 'type': self.type, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': as_type(self.amount), 'price': as_type(self.price), 'fee': as_type(self.fee), 'liquidity': self.liquidity, 'id': self.id, 'order_id': self.order_id, 'type': self.type, 'timestamp': self.timestamp}
+
+    def __repr__(self):
+        return f'exchange: {self.exchange} symbol: {self.symbol} side: {self.side} amount: {self.amount} price: {self.price} fee: {self.fee} liquidity: {self.liquidity} id: {self.id} order_id: {self.order_id} type: {self.type} timestamp: {self.timestamp}'
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.price == cmp.price and self.amount == cmp.amount and self.side == cmp.side and self.id == cmp.id and self.timestamp == cmp.timestamp and self.fee == cmp.fee and self.liquidity == cmp.liquidity and self.order_id == cmp.order_id and self.type == cmp.type
 
     def __hash__(self):
         return hash(self.__repr__())

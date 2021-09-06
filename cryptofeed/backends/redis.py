@@ -12,7 +12,7 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, Ba
 
 
 def trades_none_to_str(data):
-    data['order_type'] = str(data['order_type'])
+    data['type'] = str(data['type'])
     data['id'] = str(data['id'])
 
 

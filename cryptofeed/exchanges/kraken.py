@@ -126,7 +126,7 @@ class Kraken(Feed, KrakenRestMixin):
                 Decimal(amount),
                 Decimal(price),
                 float(server_timestamp),
-                order_type=order_type,
+                type=order_type,
                 raw=trade
             )
             await self.callback(TRADES, t, timestamp)

@@ -17,9 +17,9 @@ from datetime import datetime as dt
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill
 
 
 LOG = logging.getLogger('feedhandler')
@@ -31,7 +31,7 @@ class Bybit(Feed):
     websocket_channels = {
         L2_BOOK: 'orderBook_200.100ms',
         TRADES: 'trade',
-        USER_FILLS: 'execution',
+        FILLS: 'execution',
         ORDER_INFO: 'order',
         INDEX: 'instrument_info.100ms',
         OPEN_INTEREST: 'instrument_info.100ms',
@@ -417,10 +417,45 @@ class Bybit(Feed):
             await self.callback(ORDER_INFO, oi, timestamp)
 
     async def _execution(self, msg: dict, timestamp: float):
-        for i in range(len(msg['data'])):
-            data = msg['data'][i]
-            symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
-            await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+        '''
+        {
+            "topic": "execution",
+            "data": [
+                {
+                    "symbol": "BTCUSD",
+                    "side": "Buy",
+                    "order_id": "xxxxxxxx-xxxx-xxxx-9a8f-4a973eb5c418",
+                    "exec_id": "xxxxxxxx-xxxx-xxxx-8b66-c3d2fcd352f6",
+                    "order_link_id": "",
+                    "price": "8300",
+                    "order_qty": 1,
+                    "exec_type": "Trade",
+                    "exec_qty": 1,
+                    "exec_fee": "0.00000009",
+                    "leaves_qty": 0,
+                    "is_maker": false,
+                    "trade_time": "2020-01-14T14:07:23.629Z" // trade time
+                }
+            ]
+        }
+        '''
+        for entry in msg['data']:
+            symbol = self.exchange_symbol_to_std_symbol(entry['symbol'])
+            f = Fill(
+                self.id,
+                symbol,
+                BUY if entry['side'] == 'Buy' else SELL,
+                Decimal(entry['exec_qty']),
+                Decimal(entry['price']),
+                Decimal(entry['exec_fee']),
+                entry['exec_id'],
+                entry['order_id'],
+                None,
+                MAKER if entry['is_maker'] else TAKER,
+                entry['trade_time'].timestamp(),
+                raw=entry
+            )
+            await self.callback(FILLS, f, timestamp)
 
     # async def _balances(self, msg: dict, timestamp: float):
     #    for i in range(len(msg['data'])):

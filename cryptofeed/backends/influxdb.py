@@ -82,7 +82,7 @@ class TradeInflux(InfluxCallback, BackendCallback):
     default_key = 'trades'
 
     def format(self, data):
-        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",order_type="{str(data["order_type"])}"'
+        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",type="{str(data["type"])}"'
 
 
 class FundingInflux(InfluxCallback, BackendCallback):

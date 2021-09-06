@@ -119,7 +119,7 @@ Cryptofeed supports the following channels from exchanges:
 * ORDER_INFO - Order status updates
 * TRANSACTIONS - Real-time updates on account deposits and withdrawals
 * BALANCES - Updates on wallet funds
-* USER_FILLS - Executed user trades
+* FILLS - User's executed trades
 
 
 ## Backends
