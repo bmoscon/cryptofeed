@@ -24,7 +24,7 @@ cchardet = "*"              # cchardet is a faster replacement for chardet
 aiofile = ">=2.0.0"         # used by util/async_file.py
 aiokafka = "*"              # pip install cryptofeed[kafka]
 hiredis = "*"               # pip install cryptofeed[redis]
-aioredis = ">=2.0.0a1"      # pip install cryptofeed[redis]
+aioredis = ">=2.0.0"        # pip install cryptofeed[redis]
 arctic = "*"                # pip install cryptofeed[arctic]
 pandas = "*"                # pip install cryptofeed[arctic]
 asyncpg = "*"               # pip install cryptofeed[postgres]
@@ -34,6 +34,7 @@ pika = "*"                  # used by demo_rabbitmq.py
 pyzmq = "*"                 # pip install cryptofeed[zmq]
 google_cloud_pubsub = "*"   # pip install cryptofeed[gcp_pubsub]
 gcloud_aio_pubsub = "*"     # pip install cryptofeed[gcp_pubsub]
+order_book = ">=0.3.2"
 
 [dev-packages]
 isort = {extras = ["pipfile"], version = "*"}
