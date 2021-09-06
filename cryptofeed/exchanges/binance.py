@@ -69,7 +69,7 @@ class Binance(Feed, BinanceRestMixin):
         return ret, info
 
     def _max_msgs_since_snapshot(self) -> int:
-        max_depth = self.max_depth if self.max_depth else 20
+        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         if self.depth_interval == '100ms':
             return max_depth / 2
         else:
@@ -262,7 +262,7 @@ class Binance(Feed, BinanceRestMixin):
         return skip_update, current_match
 
     async def _fetch_snapshot(self, pair: str) -> None:
-        max_depth = self.max_depth if self.max_depth else 20
+        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         if max_depth not in self.valid_depths:
             for d in self.valid_depths:
                 if d > max_depth:
@@ -277,7 +277,7 @@ class Binance(Feed, BinanceRestMixin):
     async def _snapshot(self, pair: str) -> None:
         resp = await self._fetch_snapshot(pair)
 
-        max_depth = self.max_depth if self.max_depth else 20
+        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
         self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
@@ -306,7 +306,7 @@ class Binance(Feed, BinanceRestMixin):
         
 
         # Construct a temporary book from snapshot
-        max_depth = self.max_depth if self.max_depth else 20
+        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         temp_book = OrderBook(self.id, std_pair, max_depth=max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
 
         # Apply buffered messages to temporary book
