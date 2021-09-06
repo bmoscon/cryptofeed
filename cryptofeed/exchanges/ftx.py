@@ -11,20 +11,19 @@ import logging
 from decimal import Decimal
 import hmac
 from time import time
-import zlib
 from typing import Dict, Iterable, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, FUTURES, ORDER_INFO, PERPETUAL, SPOT, USER_FILLS
+from cryptofeed.defines import BID, ASK, BUY, CLOSED, FUTURES, LIMIT, MARKET, OPEN, ORDER_INFO, PERPETUAL, SPOT, SUBMITTING, USER_FILLS
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.ftx_rest import FTXRestMixin
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo
 
 
 LOG = logging.getLogger('feedhandler')
@@ -120,10 +119,10 @@ class FTX(Feed, FTXRestMixin):
         for chan in self.subscription:
             symbols = self.subscription[chan]
             if chan == FUNDING:
-                asyncio.create_task(self._funding(symbols))  # TODO: use HTTPAsyncConn
+                asyncio.create_task(self._funding(symbols))
                 continue
             if chan == OPEN_INTEREST:
-                asyncio.create_task(self._open_interest(symbols))  # TODO: use HTTPAsyncConn
+                asyncio.create_task(self._open_interest(symbols))
                 continue
             if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 await conn.write(json.dumps(
@@ -141,25 +140,6 @@ class FTX(Feed, FTXRestMixin):
                         "op": "subscribe"
                     }
                 ))
-
-    def __calc_checksum(self, pair):
-        bid_it = reversed(self._l2_book[pair][BID])
-        ask_it = iter(self._l2_book[pair][ASK])
-
-        bids = [f"{bid}:{self._l2_book[pair][BID][bid]}" for bid in bid_it]
-        asks = [f"{ask}:{self._l2_book[pair][ASK][ask]}" for ask in ask_it]
-
-        if len(bids) == len(asks):
-            combined = [val for pair in zip(bids, asks) for val in pair]
-        elif len(bids) > len(asks):
-            combined = [val for pair in zip(bids[:len(asks)], asks) for val in pair]
-            combined += bids[len(asks):]
-        else:
-            combined = [val for pair in zip(bids, asks[:len(bids)]) for val in pair]
-            combined += asks[len(bids):]
-
-        computed = ":".join(combined).encode()
-        return zlib.crc32(computed)
 
     async def _open_interest(self, pairs: Iterable):
         """
@@ -183,17 +163,19 @@ class FTX(Feed, FTXRestMixin):
                     continue
                 end_point = f"https://ftx.com/api/futures/{pair}/stats"
                 data = await self.http_conn.read(end_point)
+                received = time()
                 data = json.loads(data, parse_float=Decimal)
                 if 'result' in data:
                     oi = data['result']['openInterest']
                     if oi != self._open_interest_cache.get(pair, None):
-                        await self.callback(OPEN_INTEREST,
-                                            feed=self.id,
-                                            symbol=pair,
-                                            open_interest=oi,
-                                            timestamp=time(),
-                                            receipt_timestamp=time()
-                                            )
+                        o = OpenInterest(
+                            self.id,
+                            pair,
+                            oi,
+                            None,
+                            raw=data
+                        )
+                        await self.callback(OPEN_INTEREST, o, received)
                         self._open_interest_cache[pair] = oi
                         await asyncio.sleep(1)
             await asyncio.sleep(60)
@@ -219,6 +201,7 @@ class FTX(Feed, FTXRestMixin):
                 data = json.loads(data, parse_float=Decimal)
                 data2 = await self.http_conn.read(f"https://ftx.com/api/futures/{pair}/stats")
                 data2 = json.loads(data2, parse_float=Decimal)
+                received = time()
                 data['predicted_rate'] = Decimal(data2['result']['nextFundingRate'])
 
                 last_update = self._funding_cache.get(pair, None)
@@ -228,13 +211,17 @@ class FTX(Feed, FTXRestMixin):
                 else:
                     self._funding_cache[pair] = update
 
-                await self.callback(FUNDING, feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
-                                    rate=data['result'][0]['rate'],
-                                    predicted_rate=data['predicted_rate'],
-                                    timestamp=self.timestamp_normalize(data['result'][0]['time']),
-                                    receipt_timestamp=time()
-                                    )
+                f = Funding(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(data['result'][0]['future']),
+                    None,
+                    data['result'][0]['rate'],
+                    self.timestamp_normalize(data2['result']['nextFundingTime']),
+                    self.timestamp_normalize(data['result'][0]['time']),
+                    predicted_rate=data['predicted_rate'],
+                    raw=[data, data2]
+                )
+                await self.callback(FUNDING, f, received)
                 await asyncio.sleep(0.1)
             await asyncio.sleep(60)
 
@@ -246,25 +233,30 @@ class FTX(Feed, FTXRestMixin):
         "size": 0.3616, "side": "buy", "liquidation": false, "time": "2019-08-03T12:20:19.170586+00:00"}]}
         """
         for trade in msg['data']:
-            await self.callback(TRADES, feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(msg['market']),
-                                side=BUY if trade['side'] == 'buy' else SELL,
-                                amount=Decimal(trade['size']),
-                                price=Decimal(trade['price']),
-                                order_id=trade['id'],
-                                timestamp=float(self.timestamp_normalize(trade['time'])),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(msg['market']),
+                BUY if trade['side'] == 'buy' else SELL,
+                Decimal(trade['size']),
+                Decimal(trade['price']),
+                float(self.timestamp_normalize(trade['time'])),
+                id=str(trade['id']),
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
             if bool(trade['liquidation']):
-                await self.callback(LIQUIDATIONS,
-                                    feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(msg['market']),
-                                    side=BUY if trade['side'] == 'buy' else SELL,
-                                    leaves_qty=Decimal(trade['size']),
-                                    price=Decimal(trade['price']),
-                                    order_id=trade['id'],
-                                    status=FILLED,
-                                    timestamp=float(self.timestamp_normalize(trade['time'])),
-                                    receipt_timestamp=timestamp)
+                liq = Liquidation(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(msg['market']),
+                    BUY if trade['side'] == 'buy' else SELL,
+                    Decimal(trade['size']),
+                    Decimal(trade['price']),
+                    trade['id'],
+                    FILLED,
+                    float(self.timestamp_normalize(trade['time'])),
+                    raw=trade
+                )
+                await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -273,12 +265,15 @@ class FTX(Feed, FTXRestMixin):
         {"channel": "ticker", "market": "BTC/USD", "type": "update", "data": {"bid": 10717.5, "ask": 10719.0,
         "last": 10719.0, "time": 1564834587.1299787}}
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['market']),
-                            bid=Decimal(msg['data']['bid'] if msg['data']['bid'] else 0.0),
-                            ask=Decimal(msg['data']['ask'] if msg['data']['ask'] else 0.0),
-                            timestamp=float(msg['data']['time']),
-                            receipt_timestamp=timestamp)
+        t = Ticker(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['market']),
+            Decimal(msg['data']['bid'] if msg['data']['bid'] else 0.0),
+            Decimal(msg['data']['ask'] if msg['data']['ask'] else 0.0),
+            float(msg['data']['time']),
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -296,17 +291,13 @@ class FTX(Feed, FTXRestMixin):
         if msg['type'] == 'partial':
             # snapshot
             pair = self.exchange_symbol_to_std_symbol(msg['market'])
-            self._l2_book[pair] = {
-                BID: sd({
-                    Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']
-                }),
-                ASK: sd({
-                    Decimal(price): Decimal(amount) for price, amount in msg['data']['asks']
-                })
-            }
-            if self.checksum_validation and self.__calc_checksum(pair) != check:
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, checksum_format='FTX')
+            self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']}
+            self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for price, amount in msg['data']['asks']}
+
+            if self.checksum_validation and self._l2_book[pair].book.checksum() != check:
                 raise BadChecksum
-            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, float(msg['data']['time']), timestamp)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=float(msg['data']['time']), raw=msg, checksum=check)
         else:
             # update
             delta = {BID: [], ASK: []}
@@ -318,13 +309,13 @@ class FTX(Feed, FTXRestMixin):
                     amount = Decimal(amount)
                     if amount == 0:
                         delta[s].append((price, 0))
-                        del self._l2_book[pair][s][price]
+                        del self._l2_book[pair].book[s][price]
                     else:
                         delta[s].append((price, amount))
-                        self._l2_book[pair][s][price] = amount
-            if self.checksum_validation and self.__calc_checksum(pair) != check:
+                        self._l2_book[pair].book[s][price] = amount
+            if self.checksum_validation and self._l2_book[pair].book.checksum() != check:
                 raise BadChecksum
-            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, float(msg['data']['time']), timestamp)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=float(msg['data']['time']), raw=msg, checksum=check, delta=delta)
 
     async def _fill(self, msg: dict, timestamp: float):
         """
@@ -386,19 +377,28 @@ class FTX(Feed, FTXRestMixin):
         }
         """
         order = msg['data']
-        await self.callback(ORDER_INFO, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(order['market']),
-                            status=order['status'],
-                            order_id=order['id'],
-                            side=BUY if order['side'].lower() == 'buy' else SELL,
-                            order_type=order['type'],
-                            avg_fill_price=Decimal(order['avgFillPrice']) if order['avgFillPrice'] else None,
-                            filled_size=Decimal(order['filledSize']),
-                            remaining_size=Decimal(order['remainingSize']),
-                            amount=Decimal(order['size']),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp,
-                            )
+        status = order['status']
+        if status == 'new':
+            status = SUBMITTING
+        elif status == 'open':
+            status = OPEN
+        elif status == 'closed':
+            status = CLOSED
+
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(order['market']),
+            str(order['id']),
+            BUY if order['side'].lower() == 'buy' else SELL,
+            status,
+            LIMIT if order['type'] == 'limit' else MARKET,
+            Decimal(order['price']),
+            Decimal(order['filledSize']),
+            Decimal(order['remainingSize']),
+            None,
+            raw=msg
+        )
+        await self.callback(ORDER_INFO, oi, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

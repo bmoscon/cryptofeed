@@ -8,10 +8,10 @@ from decimal import Decimal
 import logging
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
 from cryptofeed.exchange import RestExchange
-from cryptofeed.defines import ASK, BID, BUY, SELL, TRADES, L2_BOOK
+from cryptofeed.defines import BUY, SELL, TRADES, L2_BOOK
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -25,17 +25,13 @@ class dYdXRestMixin(RestExchange):
     )
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = await self.http_conn.read(f"{self.api}/v3/orderbook/{sym}", retry_count=retry_count, retry_delay=retry_delay)
         data = json.loads(data, parse_float=Decimal)
-        return {
-            BID: sd({
-                Decimal(entry['price']): Decimal(entry['size']) for entry in data['bids']
-            }),
-            ASK: sd({
-                Decimal(entry['price']): Decimal(entry['size']) for entry in data['asks']
-            })
-        }
+        ret.book.bids = {Decimal(entry['price']): Decimal(entry['size']) for entry in data['bids']}
+        ret.book.asks = {Decimal(entry['price']): Decimal(entry['size']) for entry in data['asks']}
+        return ret
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)

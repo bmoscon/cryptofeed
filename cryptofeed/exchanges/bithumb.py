@@ -7,18 +7,16 @@ associated with this software.
 import logging
 from decimal import Decimal
 from typing import Tuple, Dict
-from collections import defaultdict
-import copy
 from datetime import datetime as dt
 from datetime import timedelta
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, BITHUMB, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BUY, BITHUMB, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.types import Trade
 
 
 LOG = logging.getLogger('feedhandler')
@@ -41,7 +39,8 @@ class Bithumb(Feed):
         ('https://api.bithumb.com/public/ticker/ALL_KRW', 'KRW')
     ]
     websocket_channels = {
-        L2_BOOK: 'orderbookdepth',
+        # L2_BOOK: 'orderbookdepth', <-- technically the exchange supports orderbooks but it only provides orderbook deltas, there is
+        # no way to synchronize against a rest snapshot, nor request/obtain an orderbook via the websocket, so this isn't really useful
         TRADES: 'transaction',
     }
 
@@ -87,12 +86,8 @@ class Bithumb(Feed):
 
         return ret, info
 
-    def __init__(self, **kwargs):
-        super().__init__("wss://pubwss.bithumb.com/pub/ws", cross_check=True, **kwargs)
-        self.__reset()
-
-    def __reset(self):
-        self._l2_book = defaultdict(lambda: {ASK: sd(), BID: sd()})
+    def __init__(self, max_depth=30, **kwargs):
+        super().__init__("wss://pubwss.bithumb.com/pub/ws", max_depth=max_depth, **kwargs)
 
     async def _trades(self, msg: dict, rtimestamp: float):
         '''
@@ -123,72 +118,8 @@ class Bithumb(Feed):
             quantity = Decimal(trade['contQty'])
             side = BUY if trade['buySellGb'] == '2' else SELL
 
-            await self.callback(TRADES, feed=self.id,
-                                symbol=symbol,
-                                side=side,
-                                amount=quantity,
-                                price=price,
-                                order_id=None,
-                                timestamp=timestamp,
-                                receipt_timestamp=rtimestamp)
-
-    async def _l2_update(self, msg: dict, rtimestamp: float):
-        '''
-        WARNING: API provides no way to synchronize from a REST snapshot,
-        nor does it provide a snapshot via REST. This implementation builds an
-        orderbook solely from deltas, and is likely to take some time to
-        build an accurate state.
-        {
-            "type": "orderbookdepth",
-            "content": {
-                "list": [
-                    {
-                        "symbol": "BTC_KRW",
-                        "orderType": "ask", // order type-bid / ask
-                        "price": "10593000", // quote
-                        "quantity": "1.11223318", // balance
-                        "total": "3" // number of cases
-                    },
-                    {"symbol": "BTC_KRW", "orderType": "ask", "price": "10596000", "quantity": "0.5495", "total": "8"},
-                    {"symbol": "BTC_KRW", "orderType": "ask", "price": "10598000", "quantity": "18.2085", "total": "10"},
-                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10532000", "quantity": "0", "total": "0"},
-                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10572000", "quantity": "2.3324", "total": "4"},
-                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10571000", "quantity": "1.469", "total": "3"},
-                    {"symbol": "BTC_KRW", "orderType": "bid", "price": "10569000", "quantity": "0.5152", "total": "2"}
-                ],
-                "datetime":1580268255864325 // date and time
-            }
-        }
-        '''
-        depths = msg.get('content', {}).get('list', [])
-        timestamp = msg.get('content', {}).get('datetime', None)
-
-        if len(depths) > 0:
-            # API ref list uses '-', but market data returns '_'
-            # assume that all depths in the same msg belong to the same symbol
-            symbol = self.exchange_symbol_to_std_symbol(depths[0]['symbol'])
-
-            # Copy over so that book_callback can generate deltas.
-            self.previous_book[symbol] = copy.deepcopy(self._l2_book[symbol])
-
-            for depth in depths:
-                price = Decimal(depth['price'])
-                quantity = Decimal(depth['quantity'])
-                side = BID if depth['orderType'] == 'bid' else ASK
-
-                if quantity == 0:
-                    self._l2_book[symbol][side].pop(price, None)
-                else:
-                    self._l2_book[symbol][side][price] = quantity
-
-            # Bithumb REST orderbooks only show/retain 30 levels, drop
-            # everything past 30 levels
-            for book_side, pop_index in ((BID, 0), (ASK, -1)):
-                book = self._l2_book[symbol][book_side]
-                while len(book) > 30:
-                    book.popitem(pop_index)
-
-            await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, False, None, timestamp, rtimestamp)
+            t = Trade(self.id, symbol, side, quantity, price, timestamp, raw=trade)
+            await self.callback(TRADES, t, rtimestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -196,16 +127,12 @@ class Bithumb(Feed):
 
         if msg_type == 'transaction':
             await self._trades(msg, timestamp)
-        elif msg_type == 'orderbookdepth':
-            await self._l2_update(msg, timestamp)
         elif msg_type is None and msg.get('status', None) == '0000':
             return
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
-        self.__reset()
-
         if self.subscription:
             for chan in self.subscription:
                 await conn.write(json.dumps({

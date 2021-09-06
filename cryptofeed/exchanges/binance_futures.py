@@ -7,7 +7,6 @@ associated with this software.
 from asyncio import create_task
 from decimal import Decimal
 import logging
-import time
 from typing import List, Tuple, Callable, Dict
 
 from yapic import json
@@ -16,6 +15,7 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BINANCE_FUTURES, FUNDING, LIQUIDATIONS, OPEN_INTEREST
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
+from cryptofeed.types import OpenInterest
 
 LOG = logging.getLogger('feedhandler')
 
@@ -43,12 +43,18 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         base.update(add)
         return base, info
 
-    def __init__(self, **kwargs):
+    def __init__(self, open_interest_interval=1.0, **kwargs):
+        """
+        open_interest_interval: flaot
+            time in seconds between open_interest polls
+        """
         super().__init__(**kwargs)
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
+
+        self.open_interest_interval = open_interest_interval
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         skip_update = False
@@ -66,7 +72,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
-        return skip_update, forced, current_match
+        return skip_update, current_match
 
     async def _open_interest(self, msg: dict, timestamp: float):
         """
@@ -79,13 +85,14 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         pair = msg['symbol']
         oi = msg['openInterest']
         if oi != self._open_interest_cache.get(pair, None):
-            await self.callback(OPEN_INTEREST,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(pair),
-                                open_interest=oi,
-                                timestamp=self.timestamp_normalize(msg['time']),
-                                receipt_timestamp=time.time()
-                                )
+            o = OpenInterest(
+                self.id,
+                self.exchange_symbol_to_std_symbol(pair),
+                Decimal(oi),
+                self.timestamp_normalize(msg['time']),
+                raw=msg
+            )
+            await self.callback(OPEN_INTEREST, o, timestamp)
             self._open_interest_cache[pair] = oi
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
@@ -96,7 +103,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         for chan in set(self.subscription):
             if chan == 'open_interest':
                 addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
-                ret.append((PollCls(addrs, self.id, delay=60.0, sleep=1.0, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
+                ret.append((PollCls(addrs, self.id, delay=60.0, sleep=self.open_interest_interval, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):

@@ -13,10 +13,10 @@ import time
 import logging
 
 from yapic import json
-from sortedcontainers.sorteddict import SortedDict as sd
 
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
+from cryptofeed.defines import BALANCES, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_INFO, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -127,18 +127,12 @@ class PoloniexRestMixin(RestExchange):
                 }
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = await self._get("returnOrderBook", params=f"&currencyPair={sym}", retry_count=retry_count, retry_delay=retry_delay)
-        return {
-            BID: sd({
-                    Decimal(u[0]): Decimal(u[1])
-                    for u in data['bids']
-                    }),
-            ASK: sd({
-                    Decimal(u[0]): Decimal(u[1])
-                    for u in data['asks']
-                    })
-        }
+        ret.book.bids = {Decimal(u[0]): Decimal(u[1]) for u in data['bids']}
+        ret.book.asks = {Decimal(u[0]): Decimal(u[1]) for u in data['asks']}
+        return ret
 
     def _trade_normalize(self, trade, symbol):
         return {

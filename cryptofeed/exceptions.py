@@ -52,7 +52,3 @@ class ConnectionClosed(Exception):
 
 class UnexpectedMessage(Exception):
     pass
-
-
-class ConnectionExists(Exception):
-    pass

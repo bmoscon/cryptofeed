@@ -7,9 +7,9 @@ associated with this software.
 import logging
 import time
 import asyncio
-from asyncio import Queue, create_task
-from contextlib import asynccontextmanager
-from typing import List, Union, AsyncIterable, Optional
+from asyncio import Queue, CancelledError
+from contextlib import asynccontextmanager, suppress
+from typing import List, Union, AsyncIterable
 from decimal import Decimal
 import atexit
 from aiohttp.client_reqrep import ClientResponse
@@ -20,7 +20,7 @@ import aiohttp
 from aiohttp.typedefs import StrOrURL
 from yapic import json as json_parser
 
-from cryptofeed.exceptions import ConnectionClosed, ConnectionExists
+from cryptofeed.exceptions import ConnectionClosed
 
 
 LOG = logging.getLogger('feedhandler')
@@ -75,8 +75,12 @@ class AsyncConnection(Connection):
         atexit.register(self.__del__)
 
     def __del__(self):
+        # best effort clean up. Shutdown should be called on Feed/Exchange classes
+        # and any user of the Async connection should use a context manager (via connect)
+        # or call close manually. If not, we *might* be able to clean up the connection on exit
         try:
-            asyncio.ensure_future(self.close())
+            if self.is_open:
+                asyncio.ensure_future(self.close())
         except (RuntimeError, RuntimeWarning):
             # no event loop, ignore error
             pass
@@ -215,11 +219,12 @@ class HTTPPoll(HTTPAsyncConn):
         self.delay = delay
 
     async def _read_address(self, address: str, header=None) -> str:
-        if not self.is_open:
-            LOG.error('%s: connection closed in read()', self.id)
-            raise ConnectionClosed
         LOG.debug("%s: polling %s", self.id, address)
         while True:
+            if not self.is_open:
+                LOG.error('%s: connection closed in read()', self.id)
+                raise ConnectionClosed
+
             async with self.conn.get(address, headers=header, proxy=self.proxy) as response:
                 data = await response.text()
                 self.received += 1
@@ -244,30 +249,28 @@ class HTTPConcurrentPoll(HTTPPoll):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._queue: Optional[Queue] = None
-
-    async def _poll_address(self, address: str, header=None):
-        try:
-            while True:
-                data = await self._read_address(address, header)
-                await asyncio.gather(self._queue.put(data), asyncio.sleep(self.sleep))
-        except Exception as e:
-            await self._queue.put(e)
-
-    async def read(self, header=None) -> AsyncIterable[str]:
-        if self._queue:
-            raise ConnectionExists('Only one reader allowed per poll')
-
         self._queue = Queue()
 
-        for address in self.address:
-            create_task(self._poll_address(address, header))
-
+    async def _poll_address(self, address: str, header=None):
         while True:
-            data = await self._queue.get()
-            if isinstance(data, Exception):
-                raise data
-            yield data
+            data = await self._read_address(address, header)
+            await self._queue.put(data)
+            await asyncio.sleep(self.sleep)
+
+    async def read(self, header=None) -> AsyncIterable[str]:
+        tasks = asyncio.gather(*(self._poll_address(address, header) for address in self.address))
+
+        try:
+            while not tasks.done():
+                with suppress(asyncio.exceptions.TimeoutError):
+                    yield await asyncio.wait_for(self._queue.get(), timeout=1)
+        finally:
+            if not tasks.done():
+                tasks.cancel()
+                with suppress(CancelledError):
+                    await tasks
+            elif tasks.exception() is not None:
+                raise tasks.exception()
 
 
 class WSAsyncConn(AsyncConnection):
@@ -301,6 +304,7 @@ class WSAsyncConn(AsyncConnection):
             self.conn = await websockets.connect(self.address, **self.ws_kwargs)
         self.sent = 0
         self.received = 0
+        self.last_message = None
 
     async def read(self) -> AsyncIterable:
         if not self.is_open:

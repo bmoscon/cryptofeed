@@ -12,27 +12,28 @@ from cryptofeed.exchanges import BinanceDelivery
 # These should ALL be in the internal OB if market moves upwards
 # Some may not be if the price level gets updated while cf is running (eg. by another participant)
 ASKS_TO_LOOK_FOR = [
-    (Decimal('266.0'), Decimal('0.06')),
-    (Decimal('266.1'), Decimal('0.06')),
-    (Decimal('266.2'), Decimal('0.06')),  # added this one AFTER starting cf (will be in the book)
-    (Decimal('266.3'), Decimal('0.06')),
+    (Decimal('259.2'), Decimal('0.06')),
+    (Decimal('259.3'), Decimal('0.06')),
+    (Decimal('259.4'), Decimal('0.06')),  # added this one AFTER starting cf (will be in the book)
+    (Decimal('259.5'), Decimal('0.06')),
 ]
 
 
 def timer(interval):
     then = time()
 
-    async def abook(feed, symbol, book, timestamp, receipt_timestamp):
+    async def abook(book, timestamp):
         nonlocal then
         now = time()
 
         delta = (now - then) * 1000
 
-        asks = book['ask'].items()[:20]
+        asks = [(x, book.book.asks[x]) for x in book.book.asks.keys()]
+        asks = asks[:20]
 
         asks_debug = [f'{px:.2f}|{sz:.3f}' for px, sz in asks]
 
-        print(f'\nSnap at {timestamp} (truncated book from {len(book["ask"])} to {len(asks)}):')
+        print(f'\nSnap at {timestamp} (truncated book from {len(book.book.asks)} to {len(asks)}):')
         print(', '.join(asks_debug))
 
         max_px_in_book = asks[-1][0]
@@ -42,7 +43,7 @@ def timer(interval):
                 continue
             else:
                 if px not in [p for p, _ in asks]:
-                    # print(f'ERROR. {px:.2f} not in book but should be!!')
+                    print(f'ERROR. {px:.2f} not in book but should be!!')
                     pass
 
         then = now
@@ -57,7 +58,7 @@ def main():
                        symbols=['DASH-BUSD'],
                        channels=[L2_BOOK],
                        callbacks={L2_BOOK: timer('100ms')},
-                       concurrent_http=True))
+                       concurrent_http=False))
     f.run()
 
 
