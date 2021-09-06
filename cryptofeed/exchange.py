@@ -173,7 +173,7 @@ class RestExchange:
         except StopAsyncIteration:
             return
 
-    async def candles(self, symbol: str, start=None, end=None, interval=None, retry_count=1, retry_delay=60):
+    async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):

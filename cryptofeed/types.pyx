@@ -17,7 +17,7 @@ cdef class Trade:
     cdef readonly str id
     cdef readonly str order_type
     cdef readonly double timestamp
-    cdef readonly object raw # can be dict or list
+    cdef readonly object raw  # can be dict or list
 
     def __init__(self, exchange, symbol, side, amount, price, timestamp, id=None, order_type=None, raw=None):
         self.price = price
@@ -36,6 +36,12 @@ cdef class Trade:
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} amount: {self.amount} price: {self.price} id: {self.id} order_type: {self.order_type} timestamp: {self.timestamp}"
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.price == cmp.price and self.amount == cmp.amount and self.side == cmp.side and self.id == cmp.id and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 
 cdef class Ticker:
@@ -59,9 +65,14 @@ cdef class Ticker:
             return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': self.bid, 'ask': self.ask, 'timestamp': self.timestamp}
         return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': as_type(self.bid), 'ask': as_type(self.ask), 'timestamp': self.timestamp}
 
-
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} bid: {self.bid} ask: {self.ask} timestamp: {self.timestamp}"
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.bid == cmp.bid and self.ask == cmp.ask and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 
 cdef class Liquidation:
@@ -94,6 +105,11 @@ cdef class Liquidation:
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} leaves_qty: {self.leaves_qty} price: {self.price} id: {self.id} status: {self.status} timestamp: {self.timestamp}"
 
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.side == cmp.side and self.leaves_qty == cmp.leaves_qty and self.price == cmp.price and self.id == cmp.id and self.status == cmp.status and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 cdef class Funding:
     cdef readonly str exchange
@@ -123,6 +139,12 @@ cdef class Funding:
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
 
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.mark_price == cmp.mark_price and self.rate == cmp.rate and self.next_funding_time == cmp.next_funding_time and self.predicted_rate == cmp.predicted_rate and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
 
 cdef class Candle:
     cdef readonly str exchange
@@ -130,15 +152,15 @@ cdef class Candle:
     cdef readonly double start
     cdef readonly double stop
     cdef readonly str interval
-    cdef readonly object trades # None or int
+    cdef readonly object trades  # None or int
     cdef readonly object open
     cdef readonly object close
     cdef readonly object high
     cdef readonly object low
     cdef readonly object volume
     cdef readonly bint closed
-    cdef readonly object timestamp # None or float
-    cdef readonly object raw # dict or list
+    cdef readonly object timestamp  # None or float
+    cdef readonly object raw  # dict or list
 
     def __init__(self, exchange, symbol, start, stop, interval, trades, open, close, high, low, volume, closed, timestamp, raw=None):
         self.exchange = exchange
@@ -158,12 +180,20 @@ cdef class Candle:
 
     cpdef dict to_dict(self, as_type=None):
         if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': self.open, 'close': self.close, 'high': self.high, 'low': self.low, 'volume' : self.volume, 'closed': self.closed, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': as_type(self.open), 'close': as_type(self.close), 'high': as_type(self.high), 'low': as_type(self.low), 'volume' : as_type(self.volume), 'closed': self.closed, 'timestamp': self.timestamp}
-
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': self.open, 'close': self.close, 'high': self.high, 'low': self.low, 'volume': self.volume, 'closed': self.closed, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': as_type(self.open), 'close': as_type(self.close), 'high': as_type(self.high), 'low': as_type(self.low), 'volume': as_type(self.volume), 'closed': self.closed, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} start: {self.start} stop: {self.stop} interval: {self.interval} trades: {self.trades} open: {self.open} close: {self.close} high: {self.high} low: {self.low} volume: {self.volume} closed: {self.closed} timestamp: {self.timestamp}"
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.start == cmp.start and self.stop == cmp.stop and self.interval == cmp.interval and self.trades == cmp.trades and self.open == cmp.open and self.close == cmp.close and self.high == cmp.high and self.low == cmp.low and self.volume == cmp.volume and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 
 cdef class Index:
@@ -188,6 +218,12 @@ cdef class Index:
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} price: {self.price} timestamp: {self.timestamp}"
 
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.price == cmp.price and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
 
 cdef class OpenInterest:
     cdef readonly str exchange
@@ -208,9 +244,14 @@ cdef class OpenInterest:
             return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': self.open_interest, 'timestamp': self.timestamp}
         return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': as_type(self.open_interest), 'timestamp': self.timestamp}
 
-
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} open_interest: {self.open_interest} timestamp: {self.timestamp}"
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.open_interest == cmp.open_interest and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 
 cdef class OrderBook:
@@ -253,6 +294,12 @@ cdef class OrderBook:
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {self.timestamp}"
 
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.delta == cmp.delta and self.timestamp == cmp.timestamp and self.sequence_number == cmp.sequence_number and self.checksum == cmp.checksum and self.book.to_dict() == cmp.book.to_dict()
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
 
 cdef class OrderInfo:
     cdef readonly str exchange
@@ -280,11 +327,19 @@ cdef class OrderInfo:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': as_type(self.price), 'amount': as_type(self.amount), 'remaining': as_type(self.remaining), 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f'exchange: {self.exchange} symbol: {self.symbol} id: {self.id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} timestamp: {self.timestamp}'
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.id == cmp.id and self.status == cmp.status and self.type == cmp.type and self.price == cmp.price and self.amount == cmp.amount and self.remaining == cmp.remaining and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 
 cdef class Balance:
@@ -301,11 +356,19 @@ cdef class Balance:
         self.reserved = reserved
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'currency': self.currency, 'reserved': self.reserved}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'currency': self.currency, 'balance': self.balance, 'reserved': self.reserved}
+        return {'exchange': self.exchange, 'currency': self.currency, 'balance': as_type(self.balance), 'reserved': as_type(self.reserved)}
 
     def __repr__(self):
-        return f'exchange: {self.exchange} currency: {self.currency} reserved: {self.reserved}'
+        return f'exchange: {self.exchange} currency: {self.currency} balance: {self.balance} reserved: {self.reserved}'
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.currency == cmp.currency and self.balance == cmp.balance and self.reserved == cmp.reserved
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 
 cdef class L1Book:
@@ -328,11 +391,19 @@ cdef class L1Book:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': self.bid_price, 'bid_size': self.bid_size, 'ask_price': self.ask_price, 'ask_size': self.ask_size, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type):
+        if as_type is None:
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': self.bid_price, 'bid_size': self.bid_size, 'ask_price': self.ask_price, 'ask_size': self.ask_size, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': as_type(self.bid_price), 'bid_size': as_type(self.bid_size), 'ask_price': as_type(self.ask_price), 'ask_size': as_type(self.ask_size), 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f'exchange: {self.exchange} symbol: {self.symbol} bid_price: {self.bid_price} bid_size: {self.bid_size}, ask_price: {self.ask_price} ask_size: {self.ask_size} timestamp: {self.timestamp}'
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.bid_price == cmp.bid_price and self.bid_size == cmp.bid_size and self.ask_price == cmp.ask_price and self.ask_size == cmp.ask_size and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
 
 cdef class Transaction:
@@ -341,7 +412,6 @@ cdef class Transaction:
     cdef readonly str type
     cdef readonly str status
     cdef readonly object amount
-    cdef readonly object fee
     cdef readonly double timestamp
     cdef readonly dict raw
 
@@ -354,8 +424,16 @@ cdef class Transaction:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self):
-        return {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': self.amount, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, as_type=None):
+        if as_type is None:
+            return {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': self.amount, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': as_type(self.amount), 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f'exchange: {self.exchange} currency: {self.currency} type: {self.type} status: {self.status} amount: {self.amount} timestamp {self.timestamp}'
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.currency == cmp.currency and self.type == cmp.type and self.status == cmp.status and self.amount == cmp.amount and self.timestamp == cmp.timestamp
+
+    def __hash__(self):
+        return hash(self.__repr__())

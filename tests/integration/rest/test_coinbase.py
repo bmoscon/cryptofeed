@@ -11,6 +11,7 @@ import pytest
 
 from cryptofeed.defines import BID, ASK, BUY, LIMIT
 from cryptofeed.exchanges import Coinbase
+from cryptofeed.types import Candle
 
 
 public = Coinbase(config='config.yaml')
@@ -68,23 +69,36 @@ class TestCoinbaseRest:
 
     def test_candle_history_specific_time(self):
         expected = [
-            {
-                'symbol': 'BTC-USD', 'feed': 'COINBASE',
-                'timestamp': 1578733200,
-                'low': Decimal('8054.64'),
-                'high': Decimal('8122'),
-                'open': Decimal('8054.66'),
-                'close': Decimal('8109.53'),
-                'volume': Decimal('78.91111363')},
-            {
-                'symbol': 'BTC-USD', 'feed': 'COINBASE',
-                'timestamp': 1578736800,
-                'low': Decimal('8045.67'),
-                'high': Decimal('8110.95'),
-                'open': Decimal('8110.95'),
-                'close': Decimal('8050.94'),
-                'volume': Decimal('71.11516828')
-            }
+            Candle(
+                Coinbase.id,
+                'BTC-USD',
+                1578733200,
+                1578733200 + 3600,
+                '1h',
+                None,
+                Decimal('8054.66'),
+                Decimal('8109.53'),
+                Decimal('8122'),
+                Decimal('8054.64'),
+                Decimal('78.91111363'),
+                True,
+                1578733200
+            ),
+            Candle(
+                Coinbase.id,
+                'BTC-USD',
+                1578736800,
+                1578736800 + 3600,
+                '1h',
+                None,
+                Decimal('8110.95'),
+                Decimal('8050.94'),
+                Decimal('8110.95'),
+                Decimal('8045.67'),
+                Decimal('71.11516828'),
+                True,
+                1578736800
+            )
         ]
         s = '2020-01-11 09:00:00'
         e = '2020-01-11 10:00:00'

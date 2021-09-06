@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 import base64
+from cryptofeed.util.time import timedelta_str_to_sec
 import hmac
 import hashlib
 from datetime import datetime as dt
@@ -19,7 +20,7 @@ from yapic import json
 from cryptofeed.defines import BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
 from cryptofeed.exceptions import UnexpectedMessage
 from cryptofeed.exchange import RestExchange
-from cryptofeed.types import OrderBook
+from cryptofeed.types import OrderBook, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -259,15 +260,23 @@ class CoinbaseRestMixin(RestExchange):
             for order in data
         ]
 
-    def _candle_normalize(self, symbol: str, data: list) -> dict:
-        candle_position_names = ('time', 'low', 'high', 'open', 'close', 'volume')
-        res = {'symbol': symbol, 'feed': self.id}
-        for i, name in enumerate(candle_position_names):
-            if name == 'time':
-                res['timestamp'] = data[i]
-            else:
-                res[name] = Decimal(data[i])
-        return res
+    def _candle_normalize(self, symbol: str, data: list, interval: str) -> dict:
+        return Candle(
+            self.id,
+            symbol,
+            data[0],
+            data[0] + timedelta_str_to_sec(interval),
+            interval,
+            None,
+            Decimal(data[3]),
+            Decimal(data[4]),
+            Decimal(data[2]),
+            Decimal(data[1]),
+            Decimal(data[5]),
+            True,
+            data[0],
+            raw=data
+        )
 
     def _to_isoformat(self, timestamp):
         """Required as cryptostore doesnt allow +00:00 for UTC requires Z explicitly.
@@ -312,9 +321,9 @@ class CoinbaseRestMixin(RestExchange):
                 url = f'/products/{symbol}/candles?granularity={valid_intervals[interval]}&start={self._to_isoformat(start_id)}&end={self._to_isoformat(end_id)}'
                 data = await self._request('GET', url, retry_count=retry_count, retry_delay=retry_delay)
                 data = list(reversed(data))
-                yield list(map(lambda x: self._candle_normalize(symbol, x), data))
+                yield list(map(lambda x: self._candle_normalize(symbol, x, interval), data))
                 await asyncio.sleep(1 / self.request_limit)
                 start_id = end_id + valid_intervals[interval]
         else:
             data = await self._request('GET', f"/products/{symbol}/candles?granularity={valid_intervals[interval]}", retry_count=retry_count, retry_delay=retry_delay)
-            yield [self._candle_normalize(symbol, d) for d in data]
+            yield [self._candle_normalize(symbol, d, interval) for d in data]
