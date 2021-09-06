@@ -4,10 +4,12 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import logging
 from asyncio import create_task
 from collections import defaultdict, deque
 from decimal import Decimal
+import time
 from typing import Dict, Union, Tuple
 
 from sortedcontainers import SortedDict as sd
@@ -66,6 +68,13 @@ class Binance(Feed, BinanceRestMixin):
             info['instrument_type'][s.normalized] = stype
         return ret, info
 
+    def _max_msgs_since_snapshot(self) -> int:
+        max_depth = self.max_depth if self.max_depth else 20
+        if self.depth_interval == '100ms':
+            return max_depth / 2
+        else:
+            return max_depth / 5
+
     def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', concurrent_http=False, **kwargs):
         """
         candle_interval: str
@@ -90,6 +99,8 @@ class Binance(Feed, BinanceRestMixin):
         self.depth_interval = depth_interval
         self.address = self._address()
         self.concurrent_http = concurrent_http
+        self._msgs_since_snapshot: Dict[str, int] = {}
+        self._fetch_snapshop_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
 
         self._reset()
 
@@ -255,7 +266,7 @@ class Binance(Feed, BinanceRestMixin):
 
         return skip_update, forced, current_match
 
-    async def _snapshot(self, pair: str) -> None:
+    async def _fetch_snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else 20
         if max_depth not in self.valid_depths:
             for d in self.valid_depths:
@@ -266,6 +277,10 @@ class Binance(Feed, BinanceRestMixin):
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
         resp = await self.http_conn.read(url)
         resp = json.loads(resp, parse_float=Decimal)
+        return resp
+
+    async def _snapshot(self, pair: str) -> None:
+        resp = await self._fetch_snapshot(pair)
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
@@ -275,23 +290,74 @@ class Binance(Feed, BinanceRestMixin):
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
                 self._l2_book[std_pair][side][price] = amount
+        
+        # Reset messages since snapshot and delete buffer
+        self._msgs_since_snapshot[std_pair] = 0
+        self._fetch_snapshop_buffer.pop(std_pair, None)
 
-    async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
-        """
-        Processes 'depthUpdate' update book msg. This method should only be called if pair's l2_book exists.
-        """
+    async def _refresh_snapshot_with_buffer(self, pair: str) -> None:
+        resp = await self._fetch_snapshot(pair)
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        skip_update, forced, current_match = self._check_update_id(std_pair, msg)
-        if current_match:
-            # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
-            return await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, self._l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
 
-        if skip_update:
+        if std_pair in self._book_buffer or std_pair not in self._fetch_snapshop_buffer:
+            # already fetching / fetched a snapshot, so ignore this message
+            self._fetch_snapshop_buffer.pop(std_pair, None)
             return
 
-        delta = {BID: [], ASK: []}
-        ts = msg['E']
+        while resp['lastUpdateId'] > self.last_update_id[std_pair]:
+            # Snapshot came before we received the corresponding WS update. Wait until we receive that.
+            print("Quick response!! sleep for a moment")
+            if self.depth_interval == '100ms':
+                await asyncio.sleep(0.1)
+            elif self.depth_interval == '1000ms':
+                await asyncio.sleep(0.5)
+        
 
+        # Construct a temporary book from snapshot
+        temp_book = {BID: sd(), ASK: sd()}
+        for s, side in (('bids', BID), ('asks', ASK)):
+            for update in resp[s]:
+                price = Decimal(update[0])
+                amount = Decimal(update[1])
+                temp_book[side][price] = amount
+
+        # Apply buffered messages to temporary book
+        while len(self._fetch_snapshop_buffer[std_pair]) > 0:
+            msg = self._fetch_snapshop_buffer[std_pair].popleft()
+            for s, side in (('b', BID), ('a', ASK)):
+                for update in msg[s]:
+                    price = Decimal(update[0])
+                    amount = Decimal(update[1])
+                    if amount == 0:
+                        if price in temp_book[side]:
+                            del temp_book[side][price]
+                    else:
+                        temp_book[side][price] = amount
+        
+        # Apply temporary book to local l2 book and resolve deltas
+        delta = {BID: [], ASK: []}
+        for side, levels in temp_book.items():
+            for price, amount in levels.items():
+                if price in self._l2_book[std_pair][side]:
+                    if amount != self._l2_book[std_pair][side][price]:
+                        # This should never happen
+                        self._reset()
+                        LOG.error("%s: Book amount not equal to snapshot amount after fetching a refresh snapshot, resetting book", self.id)
+                        return
+                else:
+                    # Price not in order book: add it there
+                    self._l2_book[std_pair][side][price] = amount
+                    delta[side].append((price, amount))
+        
+        # Delete buffer and reset messages since snapshot update
+        self._msgs_since_snapshot[std_pair] = 0
+        self._fetch_snapshop_buffer.pop(std_pair, None)
+        
+        ts = time.time()
+        await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, False, delta, self.timestamp_normalize(ts), self.timestamp_normalize(ts))
+
+    def append_msg_to_internal_book(self, std_pair: str, msg: dict) -> dict:
+        delta = {BID: [], ASK: []}
         for s, side in (('b', BID), ('a', ASK)):
             for update in msg[s]:
                 price = Decimal(update[0])
@@ -304,6 +370,43 @@ class Binance(Feed, BinanceRestMixin):
                 else:
                     self._l2_book[std_pair][side][price] = amount
                     delta[side].append((price, amount))
+        return delta
+
+    async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
+        """
+        Processes 'depthUpdate' update book msg. This method should only be called if pair's l2_book exists.
+        """
+        std_pair = self.exchange_symbol_to_std_symbol(pair)
+        skip_update, forced, current_match = self._check_update_id(std_pair, msg)
+        if current_match:
+            # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
+            return await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, self._l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
+        if skip_update:
+            return
+
+        self._msgs_since_snapshot[std_pair] += 1
+
+        ts = msg['E']
+        delta = self.append_msg_to_internal_book(std_pair, msg)
+        await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, delta, self.timestamp_normalize(ts), timestamp)
+
+    async def _handle_and_buffer_book_msg(self, msg: dict, pair: str, timestamp: float):
+        """
+        Processes 'depthUpdate' update book msg, and appends it to the refresh snapshot buffer.
+        """
+        std_pair = self.exchange_symbol_to_std_symbol(pair)
+        skip_update, forced, current_match = self._check_update_id(std_pair, msg)
+        if current_match:
+            # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
+            return await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, self._l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
+        if skip_update:
+            return
+
+        self._msgs_since_snapshot[std_pair] += 1
+        self._fetch_snapshop_buffer[std_pair].append(msg)
+
+        ts = msg['E']
+        delta = self.append_msg_to_internal_book(std_pair, msg)
         await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, delta, self.timestamp_normalize(ts), timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float) -> None:
@@ -333,14 +436,30 @@ class Binance(Feed, BinanceRestMixin):
 
         if not self.concurrent_http:
             # handle snapshot (a)synchronously
-            if std_pair not in self._l2_book:
+            is_expired_snapshot = std_pair in self._msgs_since_snapshot and self._msgs_since_snapshot[std_pair] >= self._max_msgs_since_snapshot()
+            if std_pair not in self._l2_book or is_expired_snapshot:
+                if is_expired_snapshot:
+                    print("Fetching new snapshot")
+                    # We don't reset the whole book on expired snapshots, so set forced update here
+                    self.forced[std_pair] = False
                 await self._snapshot(pair)
+                self._msgs_since_snapshot[std_pair] = 0
 
-            return await self._handle_book_msg(*book_args)
+            await self._handle_book_msg(*book_args)
+            return 
 
         if std_pair in self._book_buffer:
             # snapshot is currently being fetched. std_pair will exist in self._l2_book after snapshot, but we need to continue buffering until all previous buffered messages have been processed.
             return self._book_buffer[std_pair].append(book_args)
+
+        if std_pair in self._msgs_since_snapshot and self._msgs_since_snapshot[std_pair] >= self._max_msgs_since_snapshot():
+            # Fetch new snapshot to make sure our data is still up to date
+            if std_pair not in self._fetch_snapshop_buffer:
+                print("Fetching new snapshot")
+                # Create a job to fetch a snapshot in the background
+                self._fetch_snapshop_buffer[std_pair] = deque()
+                create_task(self._refresh_snapshot_with_buffer(pair))
+            return await self._handle_and_buffer_book_msg(*book_args)
 
         elif std_pair in self._l2_book:
             # snapshot exists

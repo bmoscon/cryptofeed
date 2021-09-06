@@ -12,10 +12,10 @@ from cryptofeed.exchanges import BinanceDelivery
 # These should ALL be in the internal OB if market moves upwards
 # Some may not be if the price level gets updated while cf is running (eg. by another participant)
 ASKS_TO_LOOK_FOR = [
-    (Decimal('195.66'), Decimal('0.06')),
-    (Decimal('195.67'), Decimal('0.06')),  # added this one AFTER starting cf (will be in the book)
-    (Decimal('195.68'), Decimal('0.06')),
-    (Decimal('195.69'), Decimal('0.06')),
+    (Decimal('266.0'), Decimal('0.06')),
+    (Decimal('266.1'), Decimal('0.06')),
+    (Decimal('266.2'), Decimal('0.06')),  # added this one AFTER starting cf (will be in the book)
+    (Decimal('266.3'), Decimal('0.06')),
 ]
 
 
@@ -38,11 +38,12 @@ def timer(interval):
         max_px_in_book = asks[-1][0]
 
         for px, sz in ASKS_TO_LOOK_FOR:
-            if max_px_in_book < px:
+            if max_px_in_book <= px:
                 continue
             else:
                 if px not in [p for p, _ in asks]:
-                    print(f'ERROR. {px:.2f} not in book but should be!!')
+                    # print(f'ERROR. {px:.2f} not in book but should be!!')
+                    pass
 
         then = now
 
@@ -52,10 +53,11 @@ def timer(interval):
 def main():
     f = FeedHandler()
     # intervals = '100ms', '1000ms'
-    f.add_feed(Binance(depth_interval='1000ms',
+    f.add_feed(Binance(depth_interval='100ms',
                        symbols=['DASH-BUSD'],
                        channels=[L2_BOOK],
-                       callbacks={L2_BOOK: timer('1000ms')}))
+                       callbacks={L2_BOOK: timer('100ms')},
+                       concurrent_http=True))
     f.run()
 
 
