@@ -31,6 +31,7 @@
  * Update: Subscribe to 200 levels per side for Bybit
  * Feature: Candles support added to Binance REST
  * Breaking Change: Candle REST methods return Candle object
+ * Feature: data objects now hashable and comparable (equal only)
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
