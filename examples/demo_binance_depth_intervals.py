@@ -12,10 +12,10 @@ from cryptofeed.exchanges import BinanceDelivery
 # These should ALL be in the internal OB if market moves upwards
 # Some may not be if the price level gets updated while cf is running (eg. by another participant)
 ASKS_TO_LOOK_FOR = [
-    (Decimal('259.2'), Decimal('0.06')),
-    (Decimal('259.3'), Decimal('0.06')),
-    (Decimal('259.4'), Decimal('0.06')),  # added this one AFTER starting cf (will be in the book)
-    (Decimal('259.5'), Decimal('0.06')),
+    (Decimal('236.8'), Decimal('0.06')),
+    (Decimal('236.9'), Decimal('0.06')),
+    (Decimal('237.0'), Decimal('0.06')),  # added this one AFTER starting cf (will be in the book)
+    (Decimal('237.1'), Decimal('0.06')),
 ]
 
 
@@ -26,7 +26,7 @@ def timer(interval):
         nonlocal then
         now = time()
 
-        delta = (now - then) * 1000
+        time_diff = (now - then) * 1000
 
         asks = [(x, book.book.asks[x]) for x in book.book.asks.keys()]
         asks = asks[:20]
@@ -35,6 +35,10 @@ def timer(interval):
 
         print(f'\nSnap at {timestamp} (truncated book from {len(book.book.asks)} to {len(asks)}):')
         print(', '.join(asks_debug))
+
+        if book.delta and book.delta['ask']:
+            ask_deltas = book.delta['ask']
+            print(f'Deltas:\t{ask_deltas}')
 
         max_px_in_book = asks[-1][0]
 
