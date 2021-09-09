@@ -10,8 +10,7 @@ import logging
 
 from yapic import json
 
-from cryptofeed.defines import BUY, CANDLES, FUNDING, L2_BOOK, TICKER, TRADES
-from cryptofeed.defines import SELL
+from cryptofeed.defines import BUY, CANDLES, FUNDING, L2_BOOK, TICKER, TRADES, SELL
 from cryptofeed.exchange import RestExchange
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.types import OrderBook, Candle
@@ -96,7 +95,7 @@ class FTXRestMixin(RestExchange):
             data = [Candle(self.id, symbol, self.timestamp_normalize(e['startTime']), self.timestamp_normalize(e['startTime']) + interval_sec, interval, None, Decimal(e['open']), Decimal(e['close']), Decimal(e['high']), Decimal(e['low']), Decimal(e['volume']), True, self.timestamp_normalize(e['startTime']), raw=e) for e in data]
             yield data
 
-            end = data[0].start
+            end = data[0].start - interval_sec
             if not start or len(data) < 1501:
                 break
             await asyncio.sleep(1 / self.request_limit)

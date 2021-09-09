@@ -440,8 +440,6 @@ cdef class Transaction:
         return hash(self.__repr__())
 
 
-
-
 cdef class Fill:
     cdef readonly str exchange
     cdef readonly str symbol
