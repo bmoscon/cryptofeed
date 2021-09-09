@@ -279,7 +279,7 @@ class Binance(Feed, BinanceRestMixin):
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
-        self._l2_book[std_pair] = OrderBook(self.id, std_pair, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
+        self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
         self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
         self._l2_book[std_pair].raw = resp
         
@@ -334,7 +334,7 @@ class Binance(Feed, BinanceRestMixin):
                 await asyncio.sleep(0.5)
 
         # Construct a temporary book from snapshot
-        temp_book = OrderBook(self.id, std_pair, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
+        temp_book = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
 
         # Apply buffered messages to temporary book
         while len(self._fetch_snapshop_buffer[std_pair]) > 0:
