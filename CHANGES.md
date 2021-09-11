@@ -1,5 +1,7 @@
 ## Changelog
 
+### 2.0.1
+ * Bugfix: Upbit REST candles do not work when start/end are not specified
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
  * Feature: Add next funding rate data to FTX funding data
