@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.0.0
+### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
  * Feature: Add next funding rate data to FTX funding data
  * Bugfix: Kraken info dict returning empty
