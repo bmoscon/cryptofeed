@@ -13,6 +13,8 @@ def timedelta_str_to_sec(td: str):
         return 180
     if td == '5m':
         return 300
+    if td == '10m':
+        return 600
     if td == '15m':
         return 900
     if td == '30m':
