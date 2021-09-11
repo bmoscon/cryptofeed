@@ -81,6 +81,6 @@ class UpbitRestMixin(RestExchange):
             _last = set([c.start for c in data])
 
             start = data[-1].start + offset
-            if not start or start >= end:
+            if not end or start >= end:
                 break
             await asyncio.sleep(1 / self.request_limit)
