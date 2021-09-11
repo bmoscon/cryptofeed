@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
@@ -9,13 +15,14 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.upbit_rest import UpbitRestMixin
 from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Upbit(Feed):
+class Upbit(Feed, UpbitRestMixin):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
     symbol_endpoint = 'https://api.upbit.com/v1/market/all'
@@ -23,6 +30,7 @@ class Upbit(Feed):
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
     }
+    request_limit = 10
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
