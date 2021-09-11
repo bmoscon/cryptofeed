@@ -7,7 +7,7 @@ associated with this software.
 import asyncio
 from decimal import Decimal
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 
 from yapic import json
 
@@ -56,22 +56,31 @@ class UpbitRestMixin(RestExchange):
         else:
             base = f'{self.api}candles/minutes/{interval_mins}?market={sym}&count=200'
         start, end = self._interval_normalize(start, end)
-        print(interval_mins)
+
+        def _ts_norm(timestamp: datetime) -> float:
+            # Upbit sends timezone naïve datetimes, so need to force to UTC before converting to timestamp
+            assert timestamp.tzinfo is None
+            return timestamp.replace(tzinfo=timezone.utc).timestamp()
+
+        _last = set()
         while True:
             endpoint = base
             if start and end:
                 end_timestamp = datetime.utcfromtimestamp(start + offset * 200)
                 end_timestamp = end_timestamp.replace(microsecond=0).isoformat() + 'Z'
-                print(end_timestamp)
                 endpoint = f'{base}&to={end_timestamp}'
-            print(endpoint)
+
             r = await self.http_conn.read(endpoint, retry_count=retry_count, retry_delay=retry_delay)
             data = json.loads(r, parse_float=Decimal)
-            data = [Candle(self.id, symbol, e['candle_date_time_utc'].timestamp(), e['candle_date_time_utc'].timestamp() + interval_mins * 60, interval, None, Decimal(e['opening_price']), None, Decimal(e['high_price']), Decimal(e['low_price']), Decimal(e['candle_acc_trade_volume']), True, float(e['timestamp']) / 1000, raw=e) for e in data]
-            print(len(data))
+            data = [Candle(self.id, symbol, _ts_norm(e['candle_date_time_utc']), _ts_norm(e['candle_date_time_utc']) + interval_mins * 60, interval, None, Decimal(e['opening_price']), None, Decimal(e['high_price']), Decimal(e['low_price']), Decimal(e['candle_acc_trade_volume']), True, float(e['timestamp']) / 1000, raw=e) for e in data]
+            data = list(sorted([c for c in data if c.start <= end and c.start not in _last], key=lambda x: x.start))
             yield data
 
-            start = data[0].start + offset
+            # exchange downtime can cause gaps in candles, and because of the way pagination works, there will be overlap in ranges that
+            # cover the downtime. Solution: remove duplicates by storing last values returned to client.
+            _last = set([c.start for c in data])
+
+            start = data[-1].start + offset
             if not start or start >= end:
                 break
             await asyncio.sleep(1 / self.request_limit)
