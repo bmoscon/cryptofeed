@@ -35,6 +35,7 @@
  * Breaking Changes: USER_FILLS renamed FILLS, FILLS not use data objects for callbacks
  * Feature: Add support for candles in FTX REST
  * Feature: Add support for candles in Bitstamp REST
+ * Feature: Add support for candles in Upbit REST
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
