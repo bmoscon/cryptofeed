@@ -62,6 +62,11 @@ class UpbitRestMixin(RestExchange):
             assert timestamp.tzinfo is None
             return timestamp.replace(tzinfo=timezone.utc).timestamp()
 
+        def retain(c: Candle, _last: set):
+            if start and end:
+                return c.start <= end and c.start not in _last
+            return True
+
         _last = set()
         while True:
             endpoint = base
@@ -73,7 +78,7 @@ class UpbitRestMixin(RestExchange):
             r = await self.http_conn.read(endpoint, retry_count=retry_count, retry_delay=retry_delay)
             data = json.loads(r, parse_float=Decimal)
             data = [Candle(self.id, symbol, _ts_norm(e['candle_date_time_utc']), _ts_norm(e['candle_date_time_utc']) + interval_mins * 60, interval, None, Decimal(e['opening_price']), None, Decimal(e['high_price']), Decimal(e['low_price']), Decimal(e['candle_acc_trade_volume']), True, float(e['timestamp']) / 1000, raw=e) for e in data]
-            data = list(sorted([c for c in data if c.start <= end and c.start not in _last], key=lambda x: x.start))
+            data = list(sorted([c for c in data if retain(c, _last)], key=lambda x: x.start))
             yield data
 
             # exchange downtime can cause gaps in candles, and because of the way pagination works, there will be overlap in ranges that
