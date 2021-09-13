@@ -29,6 +29,14 @@ class FTXRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, FUNDING
     )
+    session = requests.Session()
+
+    def _handle_error(self, resp):
+        if resp.status_code != 200:
+            print(f"FTX: Status code {resp.status_code} for URL {resp.url}")
+            print(f"FTX: Headers: {resp.headers}")
+            print(f"FTX: Resp: {resp.text}")
+            resp.raise_for_status()
 
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, retry=None, retry_wait=0, auth=False):
         return self._send_request(endpoint, GET, params=params, retry=retry, retry_wait=retry_wait, auth=auth)
@@ -143,6 +151,9 @@ class FTXRestMixin(RestExchange):
     def orders(self, symbol: str) -> List[dict]:
         sym = self.std_symbol_to_exchange_symbol(symbol)
         return self._get('/orders', params={'market': sym}, auth=True)
+
+    def balances(self) -> dict:
+        return self._get('/wallet/balances', auth=True)
 
     def positions(self, show_avg_price: bool = False) -> List[dict]:
         return self._get('/positions', params={'showAvgPrice': show_avg_price}, auth=True)

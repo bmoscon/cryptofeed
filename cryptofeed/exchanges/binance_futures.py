@@ -14,7 +14,7 @@ from yapic import json
 
 from cryptofeed.auth.binance import BinanceFuturesAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
-from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, FUNDING, FUTURES, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, PERPETUAL, POSITIONS, PREMIUM_INDEX, SELL
+from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, FUNDING, FUTURES, LIMIT, LIQUIDATIONS, LONG, MARKET, OPEN_INTEREST, ORDER_INFO, PERPETUAL, POSITIONS, PREMIUM_INDEX, SELL, SHORT
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
 
@@ -190,6 +190,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
                                 timestamp=self.timestamp_normalize(msg['E']),
                                 receipt_timestamp=timestamp,
                                 position_amount=Decimal(position['pa']),
+                                position_side=LONG if position['ps'] == 'LONG' else SHORT if position['ps'] == 'SHORT' else 'BOTH',
                                 entry_price=Decimal(position['ep']),
                                 unrealised_pnl=Decimal(position['up']))
 

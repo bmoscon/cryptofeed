@@ -69,11 +69,12 @@ class Binance(Feed, BinanceRestMixin):
             ret[s.normalized] = symbol['symbol']
             info['tick_size'][s.normalized] = symbol['filters'][0]['tickSize']
             info['instrument_type'][s.normalized] = stype
-            info['quantity_precision'][s.normalized] = Decimal(symbol.get('quantityPrecision'))
+            if symbol.get('quantityPrecision') is not None:
+                info['quantity_precision'][s.normalized] = Decimal(symbol.get('quantityPrecision'))
             for filter in symbol.get('filters'):
-                if filter.get('filterType') == 'LOT_SIZE':
+                if filter.get('filterType') == 'LOT_SIZE' and 'stepSize' in filter:
                     info['quantity_step'][s.normalized] = Decimal(filter['stepSize'])
-                if filter.get('filterType') == 'MIN_NOTIONAL':
+                if filter.get('filterType') == 'MIN_NOTIONAL' and 'notional' in filter:
                     info['min_size'][s.normalized] = Decimal(filter['notional'])
         return ret, info
 
