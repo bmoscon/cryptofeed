@@ -22,6 +22,7 @@ class BitfinexRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, L3_BOOK
     )
+    candle_mappings = {'1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '3h': '3h', '6h': '6h', '12h': '12h', '1d': '1D', '1w': '7D', '2w': '14D', '1M': '1M'}
 
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
@@ -168,3 +169,19 @@ class BitfinexRestMixin(RestExchange):
                 ret.book[side][price] = update
 
         return ret
+
+    async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
+        _interval = self.candle_mappings[interval]
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        base_endpoint = f"{self.api}candles/trade:{_interval}:{sym}"
+        start, end = self._interval_normalize(start, end)
+
+        while True:
+            if start and end:
+                endpoint = f"{base_endpoint}/hist?limit=10000&start={int(start * 1000)}&end={int(start * 1000)}"
+            else:
+                endpoint = f"{base_endpoint}/last?limit=10000"
+
+            r = await self.http_conn.read(endpoint, retry_delay=retry_delay, retry_count=retry_count)
+            data = json.loads(r, parse_float=Decimal)
+            
