@@ -13,20 +13,20 @@ verify_ssl = true
 [packages]
 pyyaml = "*"
 aiohttp = ">=3.6.2"
-pandas = "*"
 requests = ">=2.18.4"
-sortedcontainers = ">=1.5.9"
 websockets = ">=7.0"
 uvloop = {version = "*", sys_platform = "!= 'windows'"}
-"yapic.json" = ">=1.4.3"    # fast, drop-in replacement of the built-in python.json
+"yapic.json" = ">=1.6.3"    # fast, drop-in replacement of the built-in python.json
 # --- Optional packages to speed-up Cryptofeed -----------------------------------------------
 aiodns = ">=1.1"            # aiodns speeds up DNS resolving
 cchardet = "*"              # cchardet is a faster replacement for chardet
 # --- Optional dependencies ------------------------------------------------------------------
 aiofile = ">=2.0.0"         # used by util/async_file.py
 aiokafka = "*"              # pip install cryptofeed[kafka]
-aioredis = "*"              # pip install cryptofeed[redis]
+hiredis = "*"               # pip install cryptofeed[redis]
+aioredis = ">=2.0.0"        # pip install cryptofeed[redis]
 arctic = "*"                # pip install cryptofeed[arctic]
+pandas = "*"                # pip install cryptofeed[arctic]
 asyncpg = "*"               # pip install cryptofeed[postgres]
 motor = "*"                 # pip install cryptofeed[mongo]
 aio_pika = "*"              # pip install cryptofeed[rabbit]
@@ -34,6 +34,7 @@ pika = "*"                  # used by demo_rabbitmq.py
 pyzmq = "*"                 # pip install cryptofeed[zmq]
 google_cloud_pubsub = "*"   # pip install cryptofeed[gcp_pubsub]
 gcloud_aio_pubsub = "*"     # pip install cryptofeed[gcp_pubsub]
+order_book = ">=0.3.2"
 
 [dev-packages]
 isort = {extras = ["pipfile"], version = "*"}
@@ -51,3 +52,7 @@ pytest-asyncio = "*"
 # pylint_google_style_guide_imports_enforcing = "*"
 # pylint-requests = "*"
 # pylint-unittest = "*"
+flake8 = "*"
+
+[pipenv]
+allow_prereleases = true

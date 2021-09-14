@@ -9,9 +9,7 @@ import asyncio
 import aio_pika
 import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class RabbitCallback:
@@ -50,12 +48,10 @@ class RabbitCallback:
             else:
                 connection = await aio_pika.connect_robust(f"amqp://{self.host}", loop=asyncio.get_running_loop())
                 self.conn = await connection.channel()
-                await self.conn.declare_queue(self.queue_name, auto_delete=False)
+                await self.conn.declare_queue(self.queue_name, auto_delete=False, durable=True)
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict):
         await self.connect()
-        data['feed'] = feed
-        data['symbol'] = symbol
 
         if self.exchange_mode:
             await self.conn.publish(
@@ -73,11 +69,11 @@ class RabbitCallback:
             )
 
 
-class TradeRabbit(RabbitCallback, BackendTradeCallback):
+class TradeRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class FundingRabbit(RabbitCallback, BackendFundingCallback):
+class FundingRabbit(RabbitCallback, BackendCallback):
     pass
 
 
@@ -85,25 +81,17 @@ class BookRabbit(RabbitCallback, BackendBookCallback):
     pass
 
 
-class BookDeltaRabbit(RabbitCallback, BackendBookDeltaCallback):
+class TickerRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class TickerRabbit(RabbitCallback, BackendTickerCallback):
+class OpenInterestRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class OpenInterestRabbit(RabbitCallback, BackendOpenInterestCallback):
+class LiquidationsRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class LiquidationsRabbit(RabbitCallback, BackendLiquidationsCallback):
-    pass
-
-
-class MarketInfoRabbit(RabbitCallback, BackendMarketInfoCallback):
-    pass
-
-
-class TransactionsRabbit(RabbitCallback, BackendTransactionsCallback):
+class CandlesRabbit(RabbitCallback, BackendCallback):
     pass

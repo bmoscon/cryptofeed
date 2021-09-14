@@ -7,10 +7,8 @@ associated with this software.
 import arctic
 import pandas as pd
 
-from cryptofeed.backends.backend import (BackendFundingCallback, BackendOpenInterestCallback,
-                                         BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback,
-                                         BackendMarketInfoCallback, BackendTransactionsCallback)
-from cryptofeed.defines import FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO, TRANSACTIONS
+from cryptofeed.backends.backend import BackendCallback
+from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS
 
 
 class ArcticCallback:
@@ -39,7 +37,7 @@ class ArcticCallback:
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+    async def write(self, data):
         df = pd.DataFrame({key: [value] for key, value in data.items()})
         df['date'] = pd.to_datetime(df.timestamp, unit='s')
         df['receipt_timestamp'] = pd.to_datetime(df.receipt_timestamp, unit='s')
@@ -48,29 +46,25 @@ class ArcticCallback:
         self.lib.append(self.key, df, upsert=True)
 
 
-class TradeArctic(ArcticCallback, BackendTradeCallback):
+class TradeArctic(ArcticCallback, BackendCallback):
     default_key = TRADES
 
 
-class FundingArctic(ArcticCallback, BackendFundingCallback):
+class FundingArctic(ArcticCallback, BackendCallback):
     default_key = FUNDING
 
 
-class TickerArctic(ArcticCallback, BackendTickerCallback):
+class TickerArctic(ArcticCallback, BackendCallback):
     default_key = TICKER
 
 
-class OpenInterestArctic(ArcticCallback, BackendOpenInterestCallback):
+class OpenInterestArctic(ArcticCallback, BackendCallback):
     default_key = OPEN_INTEREST
 
 
-class LiquidationsArctic(ArcticCallback, BackendLiquidationsCallback):
+class LiquidationsArctic(ArcticCallback, BackendCallback):
     default_key = LIQUIDATIONS
 
 
-class MarketInfoArctic(ArcticCallback, BackendMarketInfoCallback):
-    default_key = MARKET_INFO
-
-
-class TransactionsArctic(ArcticCallback, BackendTransactionsCallback):
-    default_key = TRANSACTIONS
+class CandlesArctic(ArcticCallback, BackendCallback):
+    default_key = CANDLES

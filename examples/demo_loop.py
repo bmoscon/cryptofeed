@@ -20,25 +20,26 @@ async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_
     print(f"Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
 
 
+f = FeedHandler()
+
+
 def stop():
     loop = asyncio.get_event_loop()
     loop.stop()
 
 
+def add_new_feed():
+    loop = asyncio.get_event_loop()
+    f.add_feed_running(Coinbase(symbols=['ETH-USD'], channels=[TRADES], callbacks={TRADES: trade}), loop=loop)
+
+
 def main():
     loop = asyncio.get_event_loop()
-    f = FeedHandler()
     f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade}))
     f.run(start_loop=False)
 
-    loop.call_later(5, stop)
-    loop.run_forever()
-
-    print("\n\n******* ADDING NEW TRADING PAIR *******\n\n")
-    f.add_feed(Coinbase(symbols=['ETH-USD'], channels=[TRADES], callbacks={TRADES: trade}))
-    f.run(start_loop=False)
-
-    loop.call_later(5, stop)
+    loop.call_later(2, add_new_feed)
+    loop.call_later(15, stop)
     loop.run_forever()
 
 

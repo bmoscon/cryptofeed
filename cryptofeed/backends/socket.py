@@ -10,9 +10,7 @@ from textwrap import wrap
 
 import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
+from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, BackendCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -40,7 +38,7 @@ class UDPProtocol:
         self.transport = None
 
 
-class SocketCallback:
+class SocketCallback(BackendQueue):
     def __init__(self, addr: str, port=None, numeric_type=float, key=None, mtu=1400, **kwargs):
         """
         Common parent class for all socket callbacks
@@ -70,6 +68,21 @@ class SocketCallback:
         self.numeric_type = numeric_type
         self.key = key if key else self.default_key
 
+    async def writer(self):
+        while True:
+            await self.connect()
+            async with self.read_queue() as update:
+                if self.conn_type == 'udp://':
+                    if len(update) > self.mtu:
+                        chunks = wrap(update, self.mtu)
+                        for chunk in chunks:
+                            msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
+                            self.conn.sendto(msg)
+                    else:
+                        self.conn.sendto(update.encode())
+                else:
+                    self.conn.write(update.encode())
+
     async def connect(self):
         if not self.conn:
             if self.conn_type == 'udp://':
@@ -81,28 +94,17 @@ class SocketCallback:
             elif self.conn_type == 'uds://':
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
-        await self.connect()
+    async def write(self, data: dict):
         data = {'type': self.key, 'data': data}
         data = json.dumps(data)
-
-        if self.conn_type == 'udp://':
-            if len(data) > self.mtu:
-                chunks = wrap(data, self.mtu)
-                for chunk in chunks:
-                    msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
-                    self.conn.sendto(msg)
-            else:
-                self.conn.sendto(data.encode())
-        else:
-            self.conn.write(data.encode())
+        await self.queue.put(data)
 
 
-class TradeSocket(SocketCallback, BackendTradeCallback):
+class TradeSocket(SocketCallback, BackendCallback):
     default_key = 'trades'
 
 
-class FundingSocket(SocketCallback, BackendFundingCallback):
+class FundingSocket(SocketCallback, BackendCallback):
     default_key = 'funding'
 
 
@@ -110,25 +112,17 @@ class BookSocket(SocketCallback, BackendBookCallback):
     default_key = 'book'
 
 
-class BookDeltaSocket(SocketCallback, BackendBookDeltaCallback):
-    default_key = 'book'
-
-
-class TickerSocket(SocketCallback, BackendTickerCallback):
+class TickerSocket(SocketCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestSocket(SocketCallback, BackendOpenInterestCallback):
+class OpenInterestSocket(SocketCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsSocket(SocketCallback, BackendLiquidationsCallback):
+class LiquidationsSocket(SocketCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoSocket(SocketCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
-class TransactionsSocket(SocketCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
+class CandlesSocket(SocketCallback, BackendCallback):
+    default_key = 'candles'

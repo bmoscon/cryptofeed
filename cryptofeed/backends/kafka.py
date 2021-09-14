@@ -9,9 +9,7 @@ import asyncio
 from aiokafka import AIOKafkaProducer
 import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class KafkaCallback:
@@ -31,17 +29,17 @@ class KafkaCallback:
                                              client_id='cryptofeed')
             await self.producer.start()
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict):
         await self.__connect()
-        topic = f"{self.key}-{feed}-{symbol}"
+        topic = f"{self.key}-{data['exchange']}-{data['symbol']}"
         await self.producer.send_and_wait(topic, json.dumps(data).encode('utf-8'))
 
 
-class TradeKafka(KafkaCallback, BackendTradeCallback):
+class TradeKafka(KafkaCallback, BackendCallback):
     default_key = 'trades'
 
 
-class FundingKafka(KafkaCallback, BackendFundingCallback):
+class FundingKafka(KafkaCallback, BackendCallback):
     default_key = 'funding'
 
 
@@ -49,25 +47,17 @@ class BookKafka(KafkaCallback, BackendBookCallback):
     default_key = 'book'
 
 
-class BookDeltaKafka(KafkaCallback, BackendBookDeltaCallback):
-    default_key = 'book'
-
-
-class TickerKafka(KafkaCallback, BackendTickerCallback):
+class TickerKafka(KafkaCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestKafka(KafkaCallback, BackendOpenInterestCallback):
+class OpenInterestKafka(KafkaCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsKafka(KafkaCallback, BackendLiquidationsCallback):
+class LiquidationsKafka(KafkaCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoKafka(KafkaCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
-class TransactionsKafka(KafkaCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
+class CandlesKafka(KafkaCallback, BackendCallback):
+    default_key = 'candles'

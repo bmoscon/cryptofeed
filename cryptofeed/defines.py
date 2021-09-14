@@ -9,7 +9,10 @@ Defines contains all constant string definitions for Cryptofeed,
 as well as some documentation (in comment form) regarding
 the book definitions and structure
 '''
+ASCENDEX = 'ASCENDEX'
+BEQUANT = 'BEQUANT'
 BITFINEX = 'BITFINEX'
+BITHUMB = 'BITHUMB'
 BITMEX = 'BITMEX'
 BINANCE = 'BINANCE'
 BINANCE_US = 'BINANCE_US'
@@ -22,6 +25,7 @@ BLOCKCHAIN = 'BLOCKCHAIN'
 BYBIT = 'BYBIT'
 COINBASE = 'COINBASE'
 DERIBIT = 'DERIBIT'
+DYDX = 'DYDX'
 EXX = 'EXX'
 FTX = 'FTX'
 FTX_US = 'FTX_US'
@@ -33,56 +37,87 @@ HUOBI_DM = 'HUOBI_DM'
 HUOBI_SWAP = 'HUOBI_SWAP'
 KRAKEN = 'KRAKEN'
 KRAKEN_FUTURES = 'KRAKEN_FUTURES'
+KUCOIN = 'KUCOIN'
 OKCOIN = 'OKCOIN'
 OKEX = 'OKEX'
+PHEMEX = 'PHEMEX'
 POLONIEX = 'POLONIEX'
 PROBIT = 'PROBIT'
 BITCOINCOM = 'BITCOINCOM'
-BITMAX = 'BITMAX'
 UPBIT = 'UPBIT'
-
-COINGECKO = 'COINGECKO'
-WHALE_ALERT = 'WHALE_ALERT'
 
 
 # Market Data
+L1_BOOK = 'l1_book'
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
-BOOK_DELTA = 'book_delta'
 TRADES = 'trades'
 TICKER = 'ticker'
-VOLUME = 'volume'
 FUNDING = 'funding'
 OPEN_INTEREST = 'open_interest'
 LIQUIDATIONS = 'liquidations'
-FUTURES_INDEX = 'futures_index'
+INDEX = 'index'
 UNSUPPORTED = 'unsupported'
-MARKET_INFO = 'market_info'
-TRANSACTIONS = 'transactions'
+CANDLES = 'candles'
 
 # Account Data / Authenticated Channels
 ORDER_INFO = 'order_info'
-
+FILLS = 'fills'
+TRANSACTIONS = 'transactions'
+BALANCES = 'balances'
+PLACE_ORDER = 'place_order'
+CANCEL_ORDER = 'cancel_order'
+ORDERS = 'orders'
+ORDER_STATUS = 'order_status'
+TRADE_HISTORY = 'trade_history'
+POSITIONS = 'positions'
 
 BUY = 'buy'
 SELL = 'sell'
 BID = 'bid'
 ASK = 'ask'
 UND = 'undefined'
-
+MAKER = 'maker'
+TAKER = 'taker'
 
 LIMIT = 'limit'
 MARKET = 'market'
+STOP_LIMIT = 'stop-limit'
+STOP_MARKET = 'stop-market'
 MAKER_OR_CANCEL = 'maker-or-cancel'
 FILL_OR_KILL = 'fill-or-kill'
 IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
-
+GOOD_TIL_CANCELED = 'good-til-canceled'
 
 OPEN = 'open'
 PENDING = 'pending'
 FILLED = 'filled'
 PARTIAL = 'partial'
 CANCELLED = 'cancelled'
+UNFILLED = 'unfilled'
+EXPIRED = 'expired'
+SUSPENDED = 'suspended'
+FAILED = 'failed'
+SUBMITTING = 'submitting'
+CANCELLING = 'cancelling'
+CLOSED = 'closed'
+
+# Instrument Definitions
+
+CURRENCY = 'currency'
+FUTURES = 'futures'
+PERPETUAL = 'perpetual'
+OPTION = 'option'
+SPOT = 'spot'
+CALL = 'call'
+PUT = 'put'
+FX = 'fx'
+
+
+# HTTP methods
+GET = 'GET'
+DELETE = 'DELETE'
+POST = 'POST'
 
 
 """

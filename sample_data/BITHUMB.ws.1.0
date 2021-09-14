@@ -1,0 +1,8 @@
+wss://pubwss.bithumb.com/pub/ws <-> 1622591001.8883781
+wss://pubwss.bithumb.com/pub/ws <- 1622591002.2931998: {"type":"transaction","symbols":["SOC_KRW","GOM2_KRW","ANV_KRW","BNB_KRW","RNT_KRW","CHZ_KRW","ETH_BTC","FNB_KRW","CON_KRW","BAL_BTC"]}
+1622591002.2936409: {"status":"0000","resmsg":"Connected Successfully"}
+1622591012.636585: {"status":"0000","resmsg":"Filter Registered Successfully"}
+1622591015.093842: {"type":"transaction","content":{"list":[{"buySellGb":"2","contPrice":"3.908","contQty":"12365.191","contAmt":"48323.166","contDtm":"2021-06-02 08:43:34.555058","updn":"dn","symbol":"CON_KRW"}]}}
+1622591022.386975: {"type":"transaction","content":{"list":[{"buySellGb":"1","contPrice":"7.524","contQty":"626","contAmt":"4710.024","contDtm":"2021-06-02 08:43:41.416901","updn":"up","symbol":"GOM2_KRW"}]}}
+1622591023.1954188: {"type":"transaction","content":{"list":[{"buySellGb":"2","contPrice":"7.523","contQty":"526","contAmt":"3957.098","contDtm":"2021-06-02 08:43:42.239684","updn":"dn","symbol":"GOM2_KRW"}]}}
+1622591024.414725: {"type":"transaction","content":{"list":[{"buySellGb":"2","contPrice":"7.524","contQty":"76999.569","contAmt":"579344.757","contDtm":"2021-06-02 08:43:42.240601","updn":"up","symbol":"GOM2_KRW"},{"buySellGb":"2","contPrice":"7.525","contQty":"537","contAmt":"4040.925","contDtm":"2021-06-02 08:43:42.241208","updn":"up","symbol":"GOM2_KRW"},{"buySellGb":"2","contPrice":"7.525","contQty":"524","contAmt":"3943.100","contDtm":"2021-06-02 08:43:42.241810","updn":"dn","symbol":"GOM2_KRW"},{"buySellGb":"1","contPrice":"7.525","contQty":"556","contAmt":"4183.900","contDtm":"2021-06-02 08:43:43.188333","updn":"dn","symbol":"GOM2_KRW"}]}}

@@ -7,11 +7,12 @@ import bson
 import motor.motor_tornado
 
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback, BackendTransactionsCallback, BackendOrderBookCallback)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
+
 from config import ORDERBOOK_DEPTH
 from numpy import isnan, NaN
+
+
 
 
 class MongoCallback:
@@ -27,14 +28,15 @@ class MongoCallback:
         self.lastloc={}
         self.start={}
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
-        pass
- 
+    async def write(self, data: dict):
+        if 'delta' in data:
+            d = {'exchange': data['exchange'], 'symbol': data['symbol'], 'timestamp': data['timestamp'], 'receipt_timestamp': data['receipt_timestamp'], 'delta': data['delta'], 'bid': bson.BSON.encode(data['bid']), 'ask': bson.BSON.encode(data['ask'])}
+            await self.db[self.collection].insert_one(d)
+        else:
+            await self.db[self.collection].insert_one(data)
 
 
-
-
-class TradeMongo(MongoCallback, BackendTradeCallback):
+class TradeMongo(MongoCallback, BackendCallback):
     default_key = 'trades'
 
     async def write(self, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
@@ -45,7 +47,7 @@ class TradeMongo(MongoCallback, BackendTradeCallback):
         await self.db[pair + '_' + self.collection].update_one(loc, {'$set': d}, upsert = True)
 
 
-class FundingMongo(MongoCallback, BackendFundingCallback):
+class FundingMongo(MongoCallback, BackendCallback):
     default_key = 'funding'
 
 
@@ -78,7 +80,7 @@ class BookMongo(MongoCallback, BackendBookCallback):
 
 
 
-class BookDeltaMongo(MongoCallback, BackendBookDeltaCallback):
+class BookDeltaMongo(MongoCallback, BackendBookCallback):
     default_key = 'bookdelta'
     async def write(self, pair:str, timestamp: float, receipt_timestamp: float, forced:bool, book: dict, delta: dict):
         self.gap=3600
@@ -112,14 +114,14 @@ class BookDeltaMongo(MongoCallback, BackendBookDeltaCallback):
             await self.db[pair + '_' + self.collection].update_one(loc, {'$set': insert}, upsert = True)
    
 
-class TickerMongo(MongoCallback, BackendTickerCallback):
+class TickerMongo(MongoCallback, BackendCallback):
     default_key = 'ticker'
     async def write(self, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         loc = {'_id': timestamp}
         d = {
             '_id': timestamp,
             'receipt_timestamp': receipt_timestamp,
-            'bid': data['bid'],
+            'bid': data['bid'],  
             'bid_size': data['bid_size'],
             'ask': data['ask'],
             'ask_size': data['ask_size'],
@@ -128,22 +130,16 @@ class TickerMongo(MongoCallback, BackendTickerCallback):
         await self.db[pair + '_' + self.collection].update_one(loc, {'$set': d}, upsert =True)
 
 
-class OpenInterestMongo(MongoCallback, BackendOpenInterestCallback):
+class OpenInterestMongo(MongoCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsMongo(MongoCallback, BackendLiquidationsCallback):
+class LiquidationsMongo(MongoCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoMongo(MongoCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
-class TransactionsMongo(MongoCallback, BackendTransactionsCallback):
-    default_key = 'transactions'
     
-class OrderbookMongo(MongoCallback,BackendOrderBookCallback):
+class OrderbookMongo(MongoCallback,BackendBookCallback):
     default_key = 'orderbook'
     async def write(self, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
         loc = {'_id': timestamp}
@@ -177,3 +173,7 @@ class OrderbookMongo(MongoCallback,BackendOrderBookCallback):
         self.lastloc[pair]=loc
 
         await self.db[pair + '_' + self.collection].update_one(loc, {'$set': insert}, upsert = True)
+
+
+class CandlesMongo(MongoCallback, BackendCallback):
+    default_key = 'candles'

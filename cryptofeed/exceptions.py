@@ -44,3 +44,11 @@ class BadChecksum(Exception):
 
 class RestResponseError(Exception):
     pass
+
+
+class ConnectionClosed(Exception):
+    pass
+
+
+class UnexpectedMessage(Exception):
+    pass

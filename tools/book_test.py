@@ -49,7 +49,7 @@ async def book(feed, symbol, book, timestamp):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Bitmex(symbols=['XBTUSD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Bitmex(symbols=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.run()
 
 

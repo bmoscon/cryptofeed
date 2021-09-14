@@ -1,3 +1,9 @@
+'''
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 from multiprocessing import Process
 
 from cryptofeed import FeedHandler
@@ -15,7 +21,7 @@ def receiver(port):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost', port=port))
     channel = connection.channel()
-    channel.queue_declare(queue='cryptofeed')
+    channel.queue_declare(queue='cryptofeed', durable=True)
     channel.basic_consume(queue='cryptofeed',
                           on_message_callback=callback, auto_ack=True)
     print(' [*] Waiting for messages. To exit press CTRL+C')
