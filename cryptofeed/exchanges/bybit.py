@@ -14,7 +14,7 @@ from functools import partial
 from typing import Dict, List, Callable, Tuple, Union
 from datetime import datetime as dt
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL

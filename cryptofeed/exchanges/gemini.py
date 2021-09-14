@@ -13,7 +13,7 @@ import hashlib
 import hmac
 import time
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FAILED, FILLED, GEMINI, L2_BOOK, LIMIT, OPEN, SELL, STOP_LIMIT, SUBMITTING, TRADES, ORDER_INFO

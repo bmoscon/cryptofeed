@@ -8,7 +8,7 @@ import asyncio
 from decimal import Decimal
 import logging
 
-from yapic import json
+import json
 
 from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exchange import RestExchange

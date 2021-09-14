@@ -13,7 +13,7 @@ from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
 
-from yapic import json
+import json
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed

@@ -39,12 +39,12 @@ class MongoCallback:
 class TradeMongo(MongoCallback, BackendCallback):
     default_key = 'trades'
 
-    async def write(self, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        loc = {'_id': timestamp}
-        d = {'_id': timestamp, 'receipt_timestamp': receipt_timestamp, 'size': data['amount'], 'price': data['price'], 'side': True if data['side'] == "sell" else False}
+    async def write(self, data: dict):
+        loc = {'_id': data['timestamp']}
+        d = {'_id': data['timestamp'], 'receipt_timestamp': data['receipt_timestamp'], 'size': data['amount'], 'price': data['price'], 'side': True if data['side'] == "sell" else False}
         if 'tick_direction' in data.keys() and data['side'] != data['tick_direction']:
             d['tick_direction'] = data['tick_direction'], 
-        await self.db[pair + '_' + self.collection].update_one(loc, {'$set': d}, upsert = True)
+        await self.db[data['symbol'] + '_' + self.collection].update_one(loc, {'$set': d}, upsert = True)
 
 
 class FundingMongo(MongoCallback, BackendCallback):
@@ -116,18 +116,17 @@ class BookDeltaMongo(MongoCallback, BackendBookCallback):
 
 class TickerMongo(MongoCallback, BackendCallback):
     default_key = 'ticker'
-    async def write(self, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        loc = {'_id': timestamp}
+    async def write(self,data: dict):
+        loc = {'_id': data['timestamp']}
         d = {
-            '_id': timestamp,
-            'receipt_timestamp': receipt_timestamp,
+            '_id': data['timestamp'],
+            'receipt_timestamp': data['receipt_timestamp'],
             'bid': data['bid'],  
-            'bid_size': data['bid_size'],
             'ask': data['ask'],
-            'ask_size': data['ask_size'],
             'mid_price': (float(data['bid']) + float(data['ask'])) / 2
         }
-        await self.db[pair + '_' + self.collection].update_one(loc, {'$set': d}, upsert =True)
+
+        await self.db[data['symbol']+ '_' + self.collection].update_one(loc, {'$set': d}, upsert =True)
 
 
 class OpenInterestMongo(MongoCallback, BackendCallback):

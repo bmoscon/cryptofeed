@@ -10,7 +10,7 @@ from collections import defaultdict, deque
 from decimal import Decimal
 from typing import Dict, Union, Tuple
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
@@ -162,7 +162,7 @@ class Binance(Feed, BinanceRestMixin):
         }
         """
         t = Trade(self.id,
-                  self.exchange_symbol_to_std_symbol(msg['s']),
+                  self.exchange_symbol_to_std_symbol(msg['s']).replace('-USDT-PERP','_USDT'),
                   SELL if msg['m'] else BUY,
                   Decimal(msg['q']),
                   Decimal(msg['p']),
@@ -182,7 +182,7 @@ class Binance(Feed, BinanceRestMixin):
             'A': '176.40000000'
         }
         """
-        pair = self.exchange_symbol_to_std_symbol(msg['s'])
+        pair = self.exchange_symbol_to_std_symbol(msg['s']).replace('-USDT-PERP','_USDT')
         bid = Decimal(msg['b'])
         ask = Decimal(msg['a'])
 

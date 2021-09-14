@@ -12,7 +12,7 @@ import logging
 import time
 from urllib.parse import urlencode
 
-from yapic import json
+import json
 
 from cryptofeed.defines import BALANCES, BUY, CANCEL_ORDER, CANDLES, DELETE, FILL_OR_KILL, GET, GOOD_TIL_CANCELED, IMMEDIATE_OR_CANCEL, LIMIT, MARKET, ORDERS, ORDER_STATUS, PLACE_ORDER, POSITIONS, POST, SELL, TRADES
 from cryptofeed.exchange import RestExchange

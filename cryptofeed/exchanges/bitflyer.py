@@ -9,7 +9,7 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, FUTURES, TICKER, L2_BOOK, SELL, TRADES, FX

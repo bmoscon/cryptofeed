@@ -11,7 +11,7 @@ from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES

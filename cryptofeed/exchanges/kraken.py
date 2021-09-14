@@ -10,7 +10,7 @@ from functools import partial
 import logging
 from typing import Callable, Dict, List, Tuple
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES

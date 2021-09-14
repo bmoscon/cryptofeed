@@ -7,7 +7,7 @@ import zlib
 from decimal import Decimal
 
 import requests
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES

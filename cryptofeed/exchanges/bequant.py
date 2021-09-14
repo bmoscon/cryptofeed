@@ -13,7 +13,7 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple, Callable, List
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET

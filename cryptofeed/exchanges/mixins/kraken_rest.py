@@ -13,7 +13,7 @@ import time
 import urllib
 from decimal import Decimal
 
-from yapic import json
+import json
 
 from cryptofeed.defines import BALANCES, BUY, CANCELLED, CANCEL_ORDER, FILLED, L2_BOOK, LIMIT, MAKER_OR_CANCEL, MARKET, OPEN, ORDERS, ORDER_STATUS, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange

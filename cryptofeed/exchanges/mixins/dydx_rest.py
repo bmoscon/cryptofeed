@@ -7,7 +7,7 @@ associated with this software.
 from decimal import Decimal
 import logging
 
-from yapic import json
+import json
 
 from cryptofeed.exchange import RestExchange
 from cryptofeed.defines import BUY, SELL, TRADES, L2_BOOK

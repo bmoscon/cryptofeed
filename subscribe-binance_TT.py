@@ -19,7 +19,7 @@ def main():
 
     f = FeedHandler()
     f.add_feed(
-        BinanceFutures(symbols=['BTC-USDT', 'ETH-USDT'],
+        BinanceFutures(symbols=['BTC-USDT-PERP', 'ETH-USDT-PERP'],
                channels=list(data.keys()),
                callbacks=data))
     f.run()

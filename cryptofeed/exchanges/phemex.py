@@ -13,7 +13,7 @@ import logging
 from decimal import Decimal
 from typing import Callable, Dict, List, Tuple
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES

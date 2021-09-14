@@ -12,7 +12,7 @@ import logging
 import time
 from typing import Dict, List, Tuple, Callable
 
-from yapic import json
+import json
 
 from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn

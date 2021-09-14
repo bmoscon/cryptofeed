@@ -12,7 +12,7 @@ import hmac
 import base64
 import hashlib
 
-from yapic import json
+import json
 
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed

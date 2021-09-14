@@ -10,7 +10,7 @@ import logging
 import zlib
 from typing import Dict, Tuple
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import ASK, BID, BUY, L2_BOOK, OKCOIN, SELL, TICKER, TRADES

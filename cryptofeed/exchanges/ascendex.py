@@ -10,7 +10,7 @@ from cryptofeed.connection import AsyncConnection
 import logging
 from decimal import Decimal
 
-from yapic import json
+import json
 
 from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber

@@ -9,7 +9,7 @@ from decimal import Decimal
 import logging
 from typing import List, Tuple, Callable, Dict
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BINANCE_FUTURES, FUNDING, LIQUIDATIONS, OPEN_INTEREST

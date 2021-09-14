@@ -20,7 +20,7 @@ def main():
 
     f = FeedHandler()
     f.add_feed(
-        FTX(symbols=['BTC-PERP', 'ETH-PERP'],
+        FTX(symbols=['BTC-USD-PERP', 'ETH-USD-PERP'],
                channels=list(data.keys()),
                callbacks=data))
     f.run()

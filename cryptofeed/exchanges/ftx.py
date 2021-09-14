@@ -12,8 +12,9 @@ from decimal import Decimal
 import hmac
 from time import time
 from typing import Dict, Iterable, Tuple
+import pandas as pd
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, CLOSED, FUTURES, LIMIT, MAKER, MARKET, OPEN, ORDER_INFO, PERPETUAL, SPOT, SUBMITTING, FILLS, TAKER
@@ -235,11 +236,11 @@ class FTX(Feed, FTXRestMixin):
         for trade in msg['data']:
             t = Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(msg['market']),
+                self.exchange_symbol_to_std_symbol(msg['market']).replace('-USD-','_'),
                 BUY if trade['side'] == 'buy' else SELL,
                 Decimal(trade['size']),
                 Decimal(trade['price']),
-                float(self.timestamp_normalize(trade['time'])),
+                float(self.timestamp_normalize(pd.to_datetime(trade['time']))),
                 id=str(trade['id']),
                 raw=trade
             )
@@ -267,7 +268,7 @@ class FTX(Feed, FTXRestMixin):
         """
         t = Ticker(
             self.id,
-            self.exchange_symbol_to_std_symbol(msg['market']),
+            self.exchange_symbol_to_std_symbol(msg['market']).replace('-USD-','_'),
             Decimal(msg['data']['bid'] if msg['data']['bid'] else 0.0),
             Decimal(msg['data']['ask'] if msg['data']['ask'] else 0.0),
             float(msg['data']['time']),
