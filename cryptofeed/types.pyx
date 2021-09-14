@@ -259,16 +259,18 @@ cdef class OrderBook:
     cdef readonly str exchange
     cdef readonly str symbol
     cdef readonly object book
+    cdef readonly bint is_level_3
     cdef public dict delta
     cdef public object sequence_number
     cdef public object checksum
     cdef public object timestamp
     cdef public object raw  # Can be dict or list
 
-    def __init__(self, exchange, symbol, bids=None, asks=None, max_depth=0, checksum_format=None):
+    def __init__(self, exchange, symbol, bids=None, asks=None, max_depth=0, checksum_format=None, is_level_3=False):
         self.exchange = exchange
         self.symbol = symbol
         self.book = _OrderBook(max_depth=max_depth, checksum_format=checksum_format)
+        self.is_level_3 = is_level_3
         if bids:
             self.book.bids = bids
         if asks:
@@ -283,13 +285,31 @@ cdef class OrderBook:
         if delta:
             if as_type is None:
                 return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self.delta, 'timestamp': self.timestamp}
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]], ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]} if self.delta else None, 'timestamp': self.timestamp}
+            else:
+                if self.is_level_3:
+                    delta = {BID: [(_id, as_type(price), as_type(size)) for _id, price, size in self.delta[BID]],
+                             ASK: [(_id, as_type(price), as_type(size)) for _id, price, size in self.delta[ASK]]}
+                else:
+                    delta = {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]],
+                             ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]}
+
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': delta, 'timestamp': self.timestamp}
 
         book_dict = self.book.to_dict()
         if as_type is None:
             return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self.delta, 'timestamp': self.timestamp}
-        ret = {BID: {as_type(price): as_type(size) for price, size in book_dict[BID].items()}, ASK: {as_type(price): as_type(size) for price, size in book_dict[ASK].items()}}
-        delta = {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]], ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]} if self.delta else None
+
+        if self.is_level_3:
+            ret = {BID: {as_type(price): {_id: as_type(price) for _id, price in size.items()} for price, size in book_dict[BID].items()},
+                   ASK: {as_type(price): {_id: as_type(price) for _id, price in size.items()} for price, size in book_dict[ASK].items()}}
+            delta = {BID: [(_id, as_type(price), as_type(size)) for _id, price, size in self.delta[BID]],
+                     ASK: [(_id, as_type(price), as_type(size)) for _id, price, size in self.delta[ASK]]} if self.delta else None
+        else:
+            ret = {BID: {as_type(price): as_type(size) for price, size in book_dict[BID].items()},
+                   ASK: {as_type(price): as_type(size) for price, size in book_dict[ASK].items()}}
+            delta = {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]],
+                     ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]} if self.delta else None
+
         return {'exchange': self.exchange, 'symbol': self.symbol, 'book': ret, 'delta': delta, 'timestamp': self.timestamp}
 
     def __repr__(self):

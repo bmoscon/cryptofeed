@@ -233,7 +233,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
             # snapshot so clear orders
             self.order_map[pair][BID] = {}
             self.order_map[pair][ASK] = {}
-            self._l3_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            self._l3_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, is_level_3=True)
 
             for update in msg[1]:
                 order_id, price, amount = update

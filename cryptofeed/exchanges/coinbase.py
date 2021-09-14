@@ -218,7 +218,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         for res, pair in zip(results, pairs):
             orders = json.loads(res, parse_float=Decimal)
             npair = self.exchange_symbol_to_std_symbol(pair)
-            self._l3_book[npair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            self._l3_book[npair] = OrderBook(self.id, pair, max_depth=self.max_depth, is_level_3=True)
             self.seq_no[npair] = orders['sequence']
             for side in (BID, ASK):
                 for price, size, order_id in orders[side + 's']:

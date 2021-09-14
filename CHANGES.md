@@ -3,7 +3,7 @@
 ### 2.0.1
  * Bugfix: Upbit REST candles do not work when start/end are not specified
  * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
-
+ * Bugfix: OrderBook `to_dict` throw exception when passing `as_type`
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
  * Feature: Add next funding rate data to FTX funding data
