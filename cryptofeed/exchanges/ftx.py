@@ -254,7 +254,7 @@ class FTX(Feed, FTXRestMixin):
                     Decimal(trade['price']),
                     trade['id'],
                     FILLED,
-                    float(self.timestamp_normalize(trade['time'])),
+                    float(self.timestamp_normalize(pd.to_datetime(trade['time']))),
                     raw=trade
                 )
                 await self.callback(LIQUIDATIONS, liq, timestamp)
