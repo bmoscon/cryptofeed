@@ -4,7 +4,7 @@ import time
 from decimal import Decimal
 
 import aiohttp
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import HUOBI_SWAP, FUNDING

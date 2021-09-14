@@ -14,7 +14,7 @@ from time import sleep
 import pandas as pd
 import requests
 from sortedcontainers import SortedDict as sd
-from yapic import json
+import json
 
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, SELL
 from cryptofeed.rest.api import API, request_retry

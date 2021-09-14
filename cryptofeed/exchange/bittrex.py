@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import requests
 from sortedcontainers import SortedDict as sd
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, L2_BOOK, SELL, TICKER, TRADES

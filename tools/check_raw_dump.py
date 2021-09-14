@@ -6,7 +6,7 @@ associated with this software.
 '''
 import sys
 
-from yapic import json
+import json
 
 
 def main(filename):

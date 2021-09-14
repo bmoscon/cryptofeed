@@ -17,7 +17,7 @@ import pandas as pd
 import requests
 from pytz import UTC
 from sortedcontainers.sorteddict import SortedDict as sd
-from yapic import json
+import json
 
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, COINBASE, FILLED, LIMIT, MARKET, OPEN, PARTIAL, PENDING, SELL
 from cryptofeed.rest.api import API, request_retry

@@ -9,7 +9,7 @@ import asyncio
 import google.api_core.exceptions
 
 from gcloud.aio.pubsub import PublisherClient, SubscriberClient, SubscriberMessage
-from yapic import json
+import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.gcppubsub import TradeGCPPubSub

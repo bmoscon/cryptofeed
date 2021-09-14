@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import List, Tuple, Callable
 
 from sortedcontainers import SortedDict as sd
-from yapic import json
+import json
 
 from cryptofeed.auth.gemini import generate_token
 from cryptofeed.connection import AsyncConnection

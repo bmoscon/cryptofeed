@@ -6,7 +6,7 @@ associated with this software.
 '''
 from multiprocessing import Process
 
-from yapic import json
+import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.zmq import BookZMQ, TickerZMQ

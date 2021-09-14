@@ -12,7 +12,7 @@ from time import sleep
 
 import pandas as pd
 import requests
-from yapic import json
+import json
 
 from cryptofeed.defines import BINANCE_FUTURES, BUY, SELL, BINANCE_DELIVERY
 from cryptofeed.rest.api import API, request_retry

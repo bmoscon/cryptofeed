@@ -7,7 +7,7 @@ associated with this software.
 from decimal import Decimal
 import logging
 
-from yapic import json
+import json
 
 from cryptofeed.defines import BINANCE_DELIVERY, OPEN_INTEREST, TICKER
 from cryptofeed.exchange.binance import Binance

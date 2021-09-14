@@ -10,7 +10,7 @@ from functools import partial
 from typing import List, Callable, Tuple
 
 from sortedcontainers import SortedDict as sd
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, L2_BOOK, SELL, TRADES, OPEN_INTEREST, FUTURES_INDEX

@@ -6,7 +6,7 @@ associated with this software.
 '''
 import zmq
 import zmq.asyncio
-from yapic import json
+import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,

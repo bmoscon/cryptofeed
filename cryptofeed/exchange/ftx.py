@@ -14,7 +14,7 @@ from typing import Iterable
 
 import aiohttp
 from sortedcontainers import SortedDict as sd
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY
@@ -108,7 +108,6 @@ class FTX(Feed):
                             oi = data['result']['openInterest']
                             if oi != self.open_interest.get(pair, None):
                                 await self.callback(OPEN_INTEREST,
-                                                    feed=self.id,
                                                     symbol=pair,
                                                     open_interest=oi,
                                                     timestamp=time(),
@@ -167,8 +166,8 @@ class FTX(Feed):
         "size": 0.3616, "side": "buy", "liquidation": false, "time": "2019-08-03T12:20:19.170586+00:00"}]}
         """
         for trade in msg['data']:
-            await self.callback(TRADES, feed=self.id,
-                                symbol=symbol_exchange_to_std(msg['market']),
+            await self.callback(TRADES,
+                                symbol=symbol_exchange_to_std(msg['market']).replace('-','_',1),
                                 side=BUY if trade['side'] == 'buy' else SELL,
                                 amount=Decimal(trade['size']),
                                 price=Decimal(trade['price']),
@@ -177,8 +176,7 @@ class FTX(Feed):
                                 receipt_timestamp=timestamp)
             if bool(trade['liquidation']):
                 await self.callback(LIQUIDATIONS,
-                                    feed=self.id,
-                                    symbol=symbol_exchange_to_std(msg['market']),
+                                    symbol=symbol_exchange_to_std(msg['market']).replace('-','_',1),
                                     side=BUY if trade['side'] == 'buy' else SELL,
                                     leaves_qty=Decimal(trade['size']),
                                     price=Decimal(trade['price']),
@@ -194,11 +192,13 @@ class FTX(Feed):
         {"channel": "ticker", "market": "BTC/USD", "type": "update", "data": {"bid": 10717.5, "ask": 10719.0,
         "last": 10719.0, "time": 1564834587.1299787}}
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=symbol_exchange_to_std(msg['market']),
+        await self.callback(TICKER, 
+                            symbol=symbol_exchange_to_std(msg['market']).replace('-','_',1),
                             bid=Decimal(msg['data']['bid'] if msg['data']['bid'] else 0.0),
                             ask=Decimal(msg['data']['ask'] if msg['data']['ask'] else 0.0),
                             timestamp=float(msg['data']['time']),
+                            ask_size=0,
+                            bid_size=0,
                             receipt_timestamp=timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
@@ -216,7 +216,7 @@ class FTX(Feed):
         check = msg['data']['checksum']
         if msg['type'] == 'partial':
             # snapshot
-            pair = symbol_exchange_to_std(msg['market'])
+            pair = symbol_exchange_to_std(msg['market']).replace('-','_',1)
             self.l2_book[pair] = {
                 BID: sd({
                     Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']
@@ -231,7 +231,7 @@ class FTX(Feed):
         else:
             # update
             delta = {BID: [], ASK: []}
-            pair = symbol_exchange_to_std(msg['market'])
+            pair = symbol_exchange_to_std(msg['market']).replace('-','_',1)
             for side in ('bids', 'asks'):
                 s = BID if side == 'bids' else ASK
                 for price, amount in msg['data'][side]:

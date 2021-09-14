@@ -104,3 +104,15 @@ ENV/
 
 # PyCharm
 .idea/
+
+
+# local files
+config_local.py
+notebook.md
+profile.out
+datacheck/config_local.py
+# local files
+config_local.py
+notebook.md
+profile.out
+bitmexOB25.out

@@ -7,7 +7,7 @@ associated with this software.
 from datetime import datetime as dt
 
 import asyncpg
-from yapic import json
+import json
 
 from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
                                          BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,

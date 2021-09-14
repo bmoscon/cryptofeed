@@ -8,7 +8,7 @@ import asyncio
 from decimal import Decimal
 from multiprocessing import Process
 
-from yapic import json
+import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.socket import BookDeltaSocket, BookSocket, TradeSocket

@@ -11,7 +11,7 @@ import time
 
 import aiohttp
 import requests
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import OKEX, LIQUIDATIONS, BUY, SELL

@@ -8,7 +8,7 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import Tuple, Callable, List
 
-from yapic import json
+import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import COINGECKO, MARKET_INFO
