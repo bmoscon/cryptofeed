@@ -56,6 +56,7 @@ class Bitstamp(Feed, BitstampRestMixin):
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.bitstamp.net/', **kwargs)
+        self.ws_defaults['compression'] = None
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
         data = msg['data']

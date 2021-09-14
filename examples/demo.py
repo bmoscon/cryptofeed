@@ -71,9 +71,10 @@ async def liquidations(liquidation, receipt_timestamp):
 
 
 def main():
-    config = {'log': {'filename': 'demo.log', 'level': 'INFO'}}
+    config = {'log': {'filename': 'demo.log', 'level': 'DEBUG'}}
     # the config will be automatically passed into any exchanges set up by string. Instantiated exchange objects would need to pass the config in manually.
     f = FeedHandler(config=config)
+
     f.add_feed(AscendEX(symbols=['XRP-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: book, TRADES: trade}))
     f.add_feed(Bequant(symbols=['BTC-USDT'], channels=[L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker, CANDLES: candle_callback}))
     pairs = Binance.symbols()[:1]
@@ -105,7 +106,7 @@ def main():
     f.add_feed(KrakenFutures(symbols=KrakenFutures.symbols(), channels=[L2_BOOK, TICKER, TRADES, OPEN_INTEREST, FUNDING], callbacks={L2_BOOK: book, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade, TICKER: ticker}))
     f.add_feed(Kraken(checksum_validation=True, subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], CANDLES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
     f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[TICKER, TRADES, CANDLES], callbacks={CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
-    f.add_feed(OKEx(checksum_validation=True, symbols=['BTC-USDT-PERP', 'BTC-USD-21U03'], channels=[TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, LIQUIDATIONS: liquidations, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade}))
+    f.add_feed(OKEx(checksum_validation=True, symbols=['BTC-USDT-PERP'], channels=[TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, LIQUIDATIONS: liquidations, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade}))
     f.add_feed(OKCoin(checksum_validation=True, symbols=['BTC-USD'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
     f.add_feed(Phemex(symbols=[Symbol('BTC', 'USD', type=PERPETUAL)], channels=[L2_BOOK, CANDLES, TRADES], callbacks={TRADES: trade, L2_BOOK: book, CANDLES: candle_callback}))
     f.add_feed(Poloniex(symbols=['BTC-USDT'], channels=[TICKER, TRADES], callbacks={TICKER: ticker, TRADES: trade}))

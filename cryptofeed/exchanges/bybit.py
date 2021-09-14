@@ -73,6 +73,7 @@ class Bybit(Feed):
 
     def __init__(self, **kwargs):
         super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public', 'USDTP': 'wss://stream.bybit.com/realtime_private'}, **kwargs)
+        self.ws_defaults['compression'] = None
 
     def __reset(self, quote=None):
         self._instrument_info_cache = {}

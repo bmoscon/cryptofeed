@@ -48,6 +48,8 @@ class Gateio(Feed):
 
     def __init__(self, candle_interval='1m', **kwargs):
         super().__init__('wss://api.gateio.ws/ws/v4/', **kwargs)
+        self.ws_defaults['compression'] = None
+
         if candle_interval == '1w':
             candle_interval = '7d'
         self.candle_interval = candle_interval
