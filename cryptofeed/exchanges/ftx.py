@@ -252,7 +252,7 @@ class FTX(Feed, FTXRestMixin):
                     BUY if trade['side'] == 'buy' else SELL,
                     Decimal(trade['size']),
                     Decimal(trade['price']),
-                    trade['id'],
+                    str(trade['id']),
                     FILLED,
                     float(self.timestamp_normalize(trade['time'])),
                     raw=trade
