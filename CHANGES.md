@@ -6,6 +6,7 @@
  * Feature: Add support for candles on Bitfinex REST
  * Bugfix: Kraken Candle timestamps strings instead of floats
  * Bugfix: Coinbase book \_change handler passing wrong book type
+ * Bugfix: dYdX orderbooks contained prices levels of size 0
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
