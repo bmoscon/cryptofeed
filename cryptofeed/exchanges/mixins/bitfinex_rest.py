@@ -14,7 +14,8 @@ from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
-from cryptofeed.types import OrderBook
+from cryptofeed.util.time import timedelta_str_to_sec
+from cryptofeed.types import OrderBook, Candle
 
 
 class BitfinexRestMixin(RestExchange):
@@ -175,13 +176,21 @@ class BitfinexRestMixin(RestExchange):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         base_endpoint = f"{self.api}candles/trade:{_interval}:{sym}"
         start, end = self._interval_normalize(start, end)
+        offset = timedelta_str_to_sec(interval)
 
         while True:
             if start and end:
-                endpoint = f"{base_endpoint}/hist?limit=10000&start={int(start * 1000)}&end={int(start * 1000)}"
+                endpoint = f"{base_endpoint}/hist?limit=10000&start={int(start * 1000)}&end={int(end * 1000)}&sort=1"
             else:
-                endpoint = f"{base_endpoint}/last?limit=10000"
+                endpoint = f"{base_endpoint}/last"
 
             r = await self.http_conn.read(endpoint, retry_delay=retry_delay, retry_count=retry_count)
             data = json.loads(r, parse_float=Decimal)
-            
+            if not isinstance(data[0], list):
+                data = [data]
+            data = [Candle(self.id, symbol, self.timestamp_normalize(e[0]), self.timestamp_normalize(e[0]) + offset, interval, None, Decimal(e[1]), Decimal(e[2]), Decimal(e[3]), Decimal(e[4]), Decimal(e[5]), True, self.timestamp_normalize(e[0]), raw=e) for e in data]
+            yield data
+
+            if not end or len(data) < 10000:
+                break
+            start = data[-1].start + offset
