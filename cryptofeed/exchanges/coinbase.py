@@ -328,7 +328,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
 
         delta[side].append((order_id, price, new_size))
 
-        await self.book_callback(L3_BOOK, self._l3_book, timestamp, delta=delta, timestamp=ts, raw=msg, sequence_number=msg['sequence'])
+        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, delta=delta, timestamp=ts, raw=msg, sequence_number=msg['sequence'])
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         # PERF perf_start(self.id, 'msg')
