@@ -3,6 +3,7 @@
 ### 2.0.1
  * Bugfix: Upbit REST candles do not work when start/end are not specified
  * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
+ * Bugfix: Coinbase book _change handler passing wrong book type
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
