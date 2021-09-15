@@ -4,6 +4,7 @@
  * Bugfix: Upbit REST candles do not work when start/end are not specified
  * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
  * Feature: Add support for candles on Bitfinex REST
+ * Bugfix: Kraken Candle timestamps strings instead of floats
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
