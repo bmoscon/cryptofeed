@@ -4,6 +4,7 @@
  * Bugfix: Upbit REST candles do not work when start/end are not specified
  * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
  * Feature: Add support for candles on Bitfinex REST
+ * Bugfix: Book callback with cross_check option enabled causes an error 
  * Bugfix: Kraken Candle timestamps strings instead of floats
  * Bugfix: Coinbase book \_change handler passing wrong book type
  * Bugfix: dYdX orderbooks contained prices levels of size 0
