@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 2.0.1
+ * Bugfix: BinanceDelivery and BinanceFutures WS compression
  * Bugfix: Upbit REST candles do not work when start/end are not specified
  * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
  * Feature: Add support for candles on Bitfinex REST
