@@ -208,7 +208,7 @@ class Kraken(Feed, KrakenRestMixin):
             Decimal(low),
             Decimal(volume),
             None,
-            start,
+            float(start),
             raw=msg
         )
         await self.callback(CANDLES, c, timestamp)

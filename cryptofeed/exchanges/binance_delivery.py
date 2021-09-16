@@ -36,6 +36,7 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
         self.address = self._address()
+        self.ws_defaults['compression'] = None
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         skip_update = False

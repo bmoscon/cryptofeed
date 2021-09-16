@@ -80,6 +80,7 @@ class OKEx(Feed):
         self.addresses = {'public': 'wss://ws.okex.com:8443/ws/v5/public',
                           'private': 'wss://ws.okex.com:8443/ws/v5/private'}
         super().__init__(self.addresses, **kwargs)
+        self.ws_defaults['compression'] = None
 
     async def _liquidations(self, pairs: list):
         last_update = defaultdict(dict)

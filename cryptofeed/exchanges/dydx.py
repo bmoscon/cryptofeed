@@ -87,7 +87,9 @@ class dYdX(Feed, dYdXRestMixin):
                 side = BID if side == 'bids' else ASK
                 for entry in data:
                     self.offsets[pair][Decimal(entry['price'])] = int(entry['offset'])
-                    self._l2_book[pair].book[side][Decimal(entry['price'])] = Decimal(entry['size'])
+                    size = Decimal(entry['size'])
+                    if size > 0:
+                        self._l2_book[pair].book[side][Decimal(entry['price'])] = size
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
 
