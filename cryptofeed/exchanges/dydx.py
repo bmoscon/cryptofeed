@@ -10,14 +10,13 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, DYDX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges.mixins.dydx_rest import dYdXRestMixin
-
+from cryptofeed.types import OrderBook, Trade
 
 LOG = logging.getLogger('feedhandler')
 
@@ -56,7 +55,6 @@ class dYdX(Feed, dYdXRestMixin):
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['id'])
         delta = {BID: [], ASK: []}
-        forced = False
 
         if msg['type'] == 'channel_data':
             for side, data in msg['contents'].items():
@@ -73,25 +71,27 @@ class dYdX(Feed, dYdXRestMixin):
 
                     self.offsets[pair][price] = offset
                     if amount == 0:
-                        if price in self._l2_book[pair]:
-                            del self._l2_book[pair][side][price]
+                        if price in self._l2_book[pair].book[side]:
+                            del self._l2_book[pair].book[side][price]
                         delta[side].append((price, 0))
                     else:
-                        self._l2_book[pair][side][price] = amount
+                        self._l2_book[pair].book[side][price] = amount
                         delta[side].append((price, amount))
         else:
             # snapshot
-            self._l2_book[pair] = {BID: sd(), ASK: sd()}
+            delta = None
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             self.offsets[pair] = {}
-            forced = True
 
             for side, data in msg['contents'].items():
                 side = BID if side == 'bids' else ASK
                 for entry in data:
                     self.offsets[pair][Decimal(entry['price'])] = int(entry['offset'])
-                    self._l2_book[pair][side][Decimal(entry['price'])] = Decimal(entry['size'])
+                    size = Decimal(entry['size'])
+                    if size > 0:
+                        self._l2_book[pair].book[side][Decimal(entry['price'])] = size
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -137,15 +137,16 @@ class dYdX(Feed, dYdXRestMixin):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['id'])
         for trade in msg['contents']['trades']:
-            await self.callback(TRADES,
-                                feed=self.id,
-                                order_id=None,
-                                symbol=pair,
-                                side=BUY if trade['side'] == 'BUY' else SELL,
-                                amount=Decimal(trade['size']),
-                                price=Decimal(trade['price']),
-                                timestamp=self.timestamp_normalize(trade['createdAt']),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                pair,
+                BUY if trade['side'] == 'BUY' else SELL,
+                Decimal(trade['size']),
+                Decimal(trade['price']),
+                self.timestamp_normalize(trade['createdAt']),
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

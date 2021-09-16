@@ -1,23 +1,21 @@
 from collections import defaultdict
-from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
-
-from sortedcontainers import SortedDict as sd
-from yapic import json
-
-from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, DERIBIT, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, FILLED, USER_DATA
-from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
-from cryptofeed.feed import Feed
-from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.symbols import Symbol
-# For auth
 import hashlib
 import hmac
 from datetime import datetime
 
+from yapic import json
+
+from cryptofeed.connection import AsyncConnection
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TAKER, TICKER, TRADES, FILLED
+from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, FILLS, L1_BOOK
+from cryptofeed.feed import Feed
+from cryptofeed.exceptions import MissingSequenceNumber
+from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Balance, L1Book, Fill
 
 LOG = logging.getLogger('feedhandler')
 
@@ -34,9 +32,8 @@ class Deribit(Feed, DeribitRestMixin):
         OPEN_INTEREST: 'ticker',
         LIQUIDATIONS: 'trades',
         ORDER_INFO: 'user.orders',
-        USER_FILLS: 'user.trades',
+        FILLS: 'user.trades',
         BALANCES: 'user.portfolio',
-        USER_DATA: 'user.changes'
     }
     request_limit = 20
 
@@ -106,28 +103,31 @@ class Deribit(Feed, DeribitRestMixin):
         }
         """
         for trade in msg["params"]["data"]:
-            await self.callback(TRADES,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
-                                order_id=trade['trade_id'],
-                                side=BUY if trade['direction'] == 'buy' else SELL,
-                                amount=Decimal(trade['amount']),
-                                price=Decimal(trade['price']),
-                                timestamp=self.timestamp_normalize(trade['timestamp']),
-                                receipt_timestamp=timestamp,
-                                )
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
+                BUY if trade['direction'] == 'buy' else SELL,
+                Decimal(trade['amount']),
+                Decimal(trade['price']),
+                self.timestamp_normalize(trade['timestamp']),
+                id=trade['trade_id'],
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
+
             if 'liquidation' in trade:
-                await self.callback(LIQUIDATIONS,
-                                    feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
-                                    side=BUY if trade['direction'] == 'buy' else SELL,
-                                    leaves_qty=Decimal(trade['amount']),
-                                    price=Decimal(trade['price']),
-                                    order_id=trade['trade_id'],
-                                    status=FILLED,
-                                    timestamp=self.timestamp_normalize(trade['timestamp']),
-                                    receipt_timestamp=timestamp
-                                    )
+                liq = Liquidation(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
+                    BUY if trade['direction'] == 'buy' else SELL,
+                    Decimal(trade['amount']),
+                    Decimal(trade['price']),
+                    trade['trade_id'],
+                    FILLED,
+                    self.timestamp_normalize(trade['timestamp']),
+                    raw=trade
+                )
+                await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''
@@ -163,43 +163,53 @@ class Deribit(Feed, DeribitRestMixin):
         '''
         pair = self.exchange_symbol_to_std_symbol(msg['params']['data']['instrument_name'])
         ts = self.timestamp_normalize(msg['params']['data']['timestamp'])
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=Decimal(msg["params"]["data"]['best_bid_price']),
-                            ask=Decimal(msg["params"]["data"]['best_ask_price']),
-                            timestamp=ts,
-                            receipt_timestamp=timestamp)
+        t = Ticker(
+            self.id,
+            pair,
+            Decimal(msg["params"]["data"]['best_bid_price']),
+            Decimal(msg["params"]["data"]['best_ask_price']),
+            ts,
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
 
         if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
-            await self.callback(FUNDING, feed=self.id,
-                                symbol=pair,
-                                timestamp=ts,
-                                receipt_timestamp=timestamp,
-                                rate=msg["params"]["data"]["current_funding"],
-                                rate_8h=msg["params"]["data"]["funding_8h"])
+            f = Funding(
+                self.id,
+                pair,
+                Decimal(msg['params']['data']['mark_price']),
+                Decimal(msg["params"]["data"]["current_funding"]),
+                None,
+                ts,
+                raw=msg
+            )
+            await self.callback(FUNDING, f, timestamp)
+
         oi = msg['params']['data']['open_interest']
         if pair in self._open_interest_cache and oi == self._open_interest_cache[pair]:
             return
         self._open_interest_cache[pair] = oi
-        await self.callback(OPEN_INTEREST,
-                            feed=self.id,
-                            symbol=pair,
-                            open_interest=oi,
-                            timestamp=ts,
-                            receipt_timestamp=timestamp
-                            )
+        o = OpenInterest(
+            self.id,
+            pair,
+            Decimal(oi),
+            ts,
+            raw=msg
+        )
+        await self.callback(OPEN_INTEREST, o, timestamp)
 
     async def _quote(self, quote: dict, timestamp: float):
-        await self.callback(L1_BOOK,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(quote['instrument_name']),
-                            bid_price=Decimal(quote['best_bid_price']),
-                            ask_price=Decimal(quote['best_ask_price']),
-                            bid_amount=Decimal(quote['best_bid_amount']),
-                            ask_amount=Decimal(quote['best_ask_amount']),
-                            timestamp=self.timestamp_normalize(quote['timestamp']),
-                            receipt_timestamp=timestamp,
-                            )
+        book = L1Book(
+            self.id,
+            self.exchange_symbol_to_std_symbol(quote['instrument_name']),
+            Decimal(quote['best_bid_price']),
+            Decimal(quote['best_bid_amount']),
+            Decimal(quote['best_ask_price']),
+            Decimal(quote['best_ask_amount']),
+            self.timestamp_normalize(quote['timestamp']),
+            raw=quote
+        )
+        await self.callback(L1_BOOK, book, timestamp)
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
@@ -254,21 +264,12 @@ class Deribit(Feed, DeribitRestMixin):
         """
         ts = msg["params"]["data"]["timestamp"]
         pair = self.exchange_symbol_to_std_symbol(msg["params"]["data"]["instrument_name"])
-        self._l2_book[pair] = {
-            BID: sd({
-                Decimal(price): Decimal(amount)
-                # _ is always 'new' for snapshot
-                for _, price, amount in msg["params"]["data"]["bids"]
-            }),
-            ASK: sd({
-                Decimal(price): Decimal(amount)
-                for _, price, amount in msg["params"]["data"]["asks"]
-            })
-        }
-
+        self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+        self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["bids"]}
+        self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["asks"]}
         self.seq_no[pair] = msg["params"]["data"]["change_id"]
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), sequence_number=msg["params"]["data"]["change_id"], raw=msg)
 
     async def _book_update(self, msg: dict, timestamp: float):
         ts = msg["params"]["data"]["timestamp"]
@@ -284,23 +285,21 @@ class Deribit(Feed, DeribitRestMixin):
         delta = {BID: [], ASK: []}
 
         for action, price, amount in msg["params"]["data"]["bids"]:
-            bidask = self._l2_book[pair][BID]
             if action != "delete":
-                bidask[price] = Decimal(amount)
+                self._l2_book[pair].book.bids[price] = Decimal(amount)
                 delta[BID].append((Decimal(price), Decimal(amount)))
             else:
-                del bidask[price]
+                del self._l2_book[pair].book.bids[price]
                 delta[BID].append((Decimal(price), Decimal(amount)))
 
         for action, price, amount in msg["params"]["data"]["asks"]:
-            bidask = self._l2_book[pair][ASK]
             if action != "delete":
-                bidask[price] = amount
+                self._l2_book[pair].book.asks[price] = amount
                 delta[ASK].append((Decimal(price), Decimal(amount)))
             else:
-                del bidask[price]
+                del self._l2_book[pair].book.asks[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg, delta=delta, sequence_number=msg['params']['data']['change_id'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -397,21 +396,168 @@ class Deribit(Feed, DeribitRestMixin):
         return auth
 
     async def _user_channels(self, conn: AsyncConnection, msg: dict, timestamp: float, subchan: str):
+        order_status = {
+            "open": OPEN,
+            "filled": FILLED,
+            "rejected": FAILED,
+            "cancelled": CANCELLED,
+            "untriggered": OPEN
+        }
+        order_types = {
+            "limit": LIMIT,
+            "market": MARKET,
+            "stop_limit": STOP_LIMIT,
+            "stop_market": STOP_MARKET
+        }
+
         if 'data' in msg['params']:
             data = msg['params']['data']
 
             if subchan == 'portfolio':
-                currency = self.exchange_symbol_to_std_symbol(data['currency'])
-                await self.callback(BALANCES, feed=self.id, currency=currency, data=data, receipt_timestamp=timestamp)
+                '''
+                {
+                    "params" : {
+                        "data" : {
+                            "total_pl" : 0.00000425,
+                            "session_upl" : 0.00000425,
+                            "session_rpl" : -2e-8,
+                            "projected_maintenance_margin" : 0.00009141,
+                            "projected_initial_margin" : 0.00012542,
+                            "projected_delta_total" : 0.0043,
+                            "portfolio_margining_enabled" : false,
+                            "options_vega" : 0,
+                            "options_value" : 0,
+                            "options_theta" : 0,
+                            "options_session_upl" : 0,
+                            "options_session_rpl" : 0,
+                            "options_pl" : 0,
+                            "options_gamma" : 0,
+                            "options_delta" : 0,
+                            "margin_balance" : 0.2340038,
+                            "maintenance_margin" : 0.00009141,
+                            "initial_margin" : 0.00012542,
+                            "futures_session_upl" : 0.00000425,
+                            "futures_session_rpl" : -2e-8,
+                            "futures_pl" : 0.00000425,
+                            "estimated_liquidation_ratio" : 0.01822795,
+                            "equity" : 0.2340038,
+                            "delta_total" : 0.0043,
+                            "currency" : "BTC",
+                            "balance" : 0.23399957,
+                            "available_withdrawal_funds" : 0.23387415,
+                            "available_funds" : 0.23387838
+                        },
+                        "channel" : "user.portfolio.btc"
+                    },
+                    "method" : "subscription",
+                    "jsonrpc" : "2.0"
+                }
+                '''
+                b = Balance(
+                    self.id,
+                    data['currency'],
+                    Decimal(data['balance']),
+                    Decimal(data['balance']) - Decimal(data['available_withdrawal_funds']),
+                    raw=data
+                )
+                await self.callback(BALANCES, b, timestamp)
 
             elif subchan == 'orders':
-                symbol = self.exchange_symbol_to_std_symbol(data['instrument_name'])
-                await self.callback(ORDER_INFO, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+                '''
+                {
+                    "params" : {
+                        "data" : {
+                            "time_in_force" : "good_til_cancelled",
+                            "replaced" : false,
+                            "reduce_only" : false,
+                            "profit_loss" : 0,
+                            "price" : 10502.52,
+                            "post_only" : false,
+                            "original_order_type" : "market",
+                            "order_type" : "limit",
+                            "order_state" : "open",
+                            "order_id" : "5",
+                            "max_show" : 200,
+                            "last_update_timestamp" : 1581507423789,
+                            "label" : "",
+                            "is_liquidation" : false,
+                            "instrument_name" : "BTC-PERPETUAL",
+                            "filled_amount" : 0,
+                            "direction" : "buy",
+                            "creation_timestamp" : 1581507423789,
+                            "commission" : 0,
+                            "average_price" : 0,
+                            "api" : false,
+                            "amount" : 200
+                        },
+                        "channel" : "user.orders.BTC-PERPETUAL.raw"
+                    },
+                    "method" : "subscription",
+                    "jsonrpc" : "2.0"
+                }
+                '''
+                oi = OrderInfo(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(data['instrument_name']),
+                    data["order_id"],
+                    BUY if msg["side"] == 'Buy' else SELL,
+                    order_status[data["order_state"]],
+                    order_types[data['order_type']],
+                    Decimal(data['price']),
+                    Decimal(data['filled_amount']),
+                    Decimal(data['amount']) - Decimal(data['cumQuantity']),
+                    self.timestamp_normalize(data["last_update_timestamp"]),
+                    raw=data
+                )
+                await self.callback(ORDER_INFO, oi, timestamp)
 
             elif subchan == 'trades':
-                for i in range(len(data)):
-                    symbol = self.exchange_symbol_to_std_symbol(data[i]['instrument_name'])
-                    await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data[i], receipt_timestamp=timestamp)
+                '''
+                {
+                    "params" : {
+                        "data" : [
+                        {
+                            "trade_seq" : 30289432,
+                            "trade_id" : "48079254",
+                            "timestamp" : 1590484156350,
+                            "tick_direction" : 0,
+                            "state" : "filled",
+                            "self_trade" : false,
+                            "reduce_only" : false,
+                            "price" : 8954,
+                            "post_only" : false,
+                            "order_type" : "market",
+                            "order_id" : "4008965646",
+                            "matching_id" : null,
+                            "mark_price" : 8952.86,
+                            "liquidity" : "T",
+                            "instrument_name" : "BTC-PERPETUAL",
+                            "index_price" : 8956.73,
+                            "fee_currency" : "BTC",
+                            "fee" : 0.00000168,
+                            "direction" : "sell",
+                            "amount" : 20
+                        }]
+                    }
+                }
+                '''
+                for entry in data:
+                    symbol = self.exchange_symbol_to_std_symbol(entry['instrument_name'])
+                    f = Fill(
+                        self.id,
+                        symbol,
+                        SELL if entry['direction'] == 'sell' else BUY,
+                        Decimal(entry['amount']),
+                        Decimal(entry['price']),
+                        Decimal(entry['fee']),
+                        entry['trade_id'],
+                        entry['order_id'],
+                        entry['order_type'],
+                        TAKER if entry['liquidity'] == 'T' else MAKER,
+                        self.timestamp_normalize(entry['timestamp']),
+                        raw=entry
+                    )
+                    await self.callback(FILLS, f, timestamp)
             else:
                 LOG.warning("%s: Unknown channel 'user.%s'", conn.uuid, subchan)
         else:

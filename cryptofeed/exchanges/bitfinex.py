@@ -10,7 +10,6 @@ from functools import partial
 import logging
 from typing import Callable, Dict, List, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
@@ -19,6 +18,7 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.bitfinex_rest import BitfinexRestMixin
+from cryptofeed.types import Ticker, Trade, OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -48,9 +48,9 @@ class Bitfinex(Feed, BitfinexRestMixin):
         L2_BOOK: 'book-P0-F0-100',
         TRADES: 'trades',
         TICKER: 'ticker',
-        FUNDING: 'trades',
     }
     request_limit = 1
+    valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '3h', '6h', '12h', '1d', '1w', '2w', '1M'}
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -96,37 +96,35 @@ class Bitfinex(Feed, BitfinexRestMixin):
         self.__reset()
 
     def __reset(self):
-        self._l2_book = defaultdict(dict)
-        self._l3_book = defaultdict(dict)
+        self._l2_book = {}
+        self._l3_book = {}
         self.handlers = {}  # maps a channel id (int) to a function
         self.order_map = defaultdict(dict)
         self.seq_no = defaultdict(int)
 
-    async def _ticker(self, pair: str, msg: dict, timestamp: float):
+    async def _ticker(self, pair: str, msg: list, timestamp: float):
         if msg[1] == 'hb':
             return  # ignore heartbeats
         # bid, bid_size, ask, ask_size, daily_change, daily_change_percent,
         # last_price, volume, high, low
         bid, _, ask, _, _, _, _, _, _, _ = msg[1]
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=bid,
-                            ask=ask,
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
-    async def _funding(self, pair: str, msg: dict, timestamp: float):
+    async def _funding(self, pair: str, msg: list, timestamp: float):
         async def _funding_update(funding: list, timestamp: float):
             order_id, ts, amount, price, period = funding
-            await self.callback(FUNDING, feed=self.id,
-                                symbol=pair,
-                                side=SELL if amount < 0 else BUY,
-                                amount=abs(amount),
-                                price=Decimal(price),
-                                order_id=order_id,
-                                timestamp=self.timestamp_normalize(ts),
-                                receipt_timestamp=timestamp,
-                                period=period)
+            t = Trade(
+                self.id,
+                pair,
+                SELL if amount < 0 else BUY,
+                Decimal(abs(Decimal(amount))),
+                Decimal(price),
+                self.timestamp_normalize(ts),
+                id=order_id,
+                raw=funding
+            )
+            await self.callback(TRADES, t, timestamp)
 
         if isinstance(msg[1], list):
             # snapshot
@@ -139,17 +137,19 @@ class Bitfinex(Feed, BitfinexRestMixin):
             # ignore trade updates and heartbeats
             LOG.warning('%s %s: Unexpected funding message %s', self.id, pair, msg)
 
-    async def _trades(self, pair: str, msg: dict, timestamp: float):
+    async def _trades(self, pair: str, msg: list, timestamp: float):
         async def _trade_update(trade: list, timestamp: float):
             order_id, ts, amount, price = trade
-            await self.callback(TRADES, feed=self.id,
-                                symbol=pair,
-                                side=SELL if amount < 0 else BUY,
-                                amount=abs(amount),
-                                price=Decimal(price),
-                                order_id=order_id,
-                                timestamp=self.timestamp_normalize(ts),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                pair,
+                SELL if amount < 0 else BUY,
+                Decimal(abs(Decimal(amount))),
+                Decimal(price),
+                self.timestamp_normalize(ts),
+                id=str(order_id),
+            )
+            await self.callback(TRADES, t, timestamp)
 
         if isinstance(msg[1], list):
             # snapshot
@@ -162,20 +162,17 @@ class Bitfinex(Feed, BitfinexRestMixin):
             # ignore trade updates and heartbeats
             LOG.warning('%s %s: Unexpected trade message %s', self.id, pair, msg)
 
-    async def _book(self, pair: str, l2_book: dict, msg: dict, timestamp: float):
+    async def _book(self, pair: str, msg: list, timestamp: float):
         """For L2 book updates."""
         if not isinstance(msg[1], list):
             if msg[1] != 'hb':
                 LOG.warning('%s: Unexpected book L2 msg %s', self.id, msg)
             return
 
-        delta = {BID: [], ASK: []}
-
+        delta = None
         if isinstance(msg[1][0], list):
             # snapshot so clear book
-            forced = True
-            l2_book[BID] = sd()
-            l2_book[ASK] = sd()
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             for update in msg[1]:
                 price, _, amount = update
                 price = Decimal(price)
@@ -186,10 +183,10 @@ class Bitfinex(Feed, BitfinexRestMixin):
                 else:
                     side = ASK
                     amount = abs(amount)
-                l2_book[side][price] = amount
+                self._l2_book[pair].book[side][price] = amount
         else:
             # book update
-            forced = False
+            delta = {BID: [], ASK: []}
             price, count, amount = msg[1]
             price = Decimal(price)
             amount = Decimal(amount)
@@ -203,16 +200,16 @@ class Bitfinex(Feed, BitfinexRestMixin):
             if count > 0:
                 # change at price level
                 delta[side].append((price, amount))
-                l2_book[side][price] = amount
+                self._l2_book[pair].book[side][price] = amount
             else:
                 # remove price level
-                if price in l2_book[side]:
-                    del l2_book[side][price]
+                if price in self._l2_book[pair].book[side]:
+                    self._l2_book[pair].book[side][price]
                     delta[side].append((price, 0))
 
-        await self.book_callback(l2_book, L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta, sequence_number=msg[-1])
 
-    async def _raw_book(self, pair: str, l3_book: dict, order_map: dict, msg: dict, timestamp: float):
+    async def _raw_book(self, pair: str, msg: list, timestamp: float):
         """For L3 book updates."""
         if not isinstance(msg[1], list):
             if msg[1] != 'hb':
@@ -220,26 +217,24 @@ class Bitfinex(Feed, BitfinexRestMixin):
             return
 
         def add_to_book(side, price, order_id, amount):
-            if price in l3_book[side]:
-                l3_book[side][price][order_id] = amount
+            if price in self._l3_book[pair].book[side]:
+                self._l3_book[pair].book[side][price][order_id] = amount
             else:
-                l3_book[side][price] = {order_id: amount}
+                self._l3_book[pair].book[side][price] = {order_id: amount}
 
         def remove_from_book(side, order_id):
-            price = order_map[side][order_id]['price']
-            del l3_book[side][price][order_id]
-            if len(l3_book[side][price]) == 0:
-                del l3_book[side][price]
+            price = self.order_map[pair][side][order_id]['price']
+            del self._l3_book[pair].book[side][price][order_id]
+            if len(self._l3_book[pair].book[side][price]) == 0:
+                del self._l3_book[pair].book[side][price]
 
         delta = {BID: [], ASK: []}
 
         if isinstance(msg[1][0], list):
             # snapshot so clear orders
-            forced = True
-            order_map[BID] = {}
-            order_map[ASK] = {}
-            l3_book[BID] = sd()
-            l3_book[ASK] = sd()
+            self.order_map[pair][BID] = {}
+            self.order_map[pair][ASK] = {}
+            self._l3_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
             for update in msg[1]:
                 order_id, price, amount = update
@@ -252,11 +247,10 @@ class Bitfinex(Feed, BitfinexRestMixin):
                     side = ASK
                     amount = - amount
 
-                order_map[side][order_id] = {'price': price, 'amount': amount}
+                self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
                 add_to_book(side, price, order_id, amount)
         else:
             # book update
-            forced = False
             order_id, price, amount = msg[1]
             price = Decimal(price)
             amount = Decimal(amount)
@@ -268,13 +262,13 @@ class Bitfinex(Feed, BitfinexRestMixin):
                 amount = abs(amount)
 
             if price == 0:
-                price = order_map[side][order_id]['price']
+                price = self.order_map[pair][side][order_id]['price']
                 remove_from_book(side, order_id)
-                del order_map[side][order_id]
+                del self.order_map[pair][side][order_id]
                 delta[side].append((order_id, price, 0))
             else:
-                if order_id in order_map[side]:
-                    del_price = order_map[side][order_id]['price']
+                if order_id in self.order_map[pair][side]:
+                    del_price = self.order_map[pair][side][order_id]['price']
                     delta[side].append((order_id, del_price, 0))
                     # remove existing order before adding new one
                     delta[side].append((order_id, price, amount))
@@ -282,12 +276,12 @@ class Bitfinex(Feed, BitfinexRestMixin):
                 else:
                     delta[side].append((order_id, price, amount))
                 add_to_book(side, price, order_id, amount)
-                order_map[side][order_id] = {'price': price, 'amount': amount}
+                self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
 
-        await self.book_callback(l3_book, L3_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, raw=msg, delta=delta, sequence_number=msg[-1])
 
     @staticmethod
-    async def _do_nothing(msg: dict, timestamp: float):
+    async def _do_nothing(msg: list, timestamp: float):
         pass
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
@@ -317,7 +311,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
         elif msg['event'] == 'error':
             LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
         elif msg['event'] in ('info', 'conf'):
-            LOG.info('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
+            LOG.debug('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
         elif 'chanId' in msg and 'symbol' in msg:
             self.register_channel_handler(msg, conn)
         else:
@@ -330,7 +324,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
 
         if msg['channel'] == 'ticker':
             if is_funding:
-                LOG.warning('%s %s: Ticker funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                LOG.warning('%s %s: Ticker funding not implemented - ignoring for %s', conn.uuid, pair, msg)
                 handler = self._do_nothing
             else:
                 handler = partial(self._ticker, pair)
@@ -341,12 +335,12 @@ class Bitfinex(Feed, BitfinexRestMixin):
                 handler = partial(self._trades, pair)
         elif msg['channel'] == 'book':
             if msg['prec'] == 'R0':
-                handler = partial(self._raw_book, pair, self._l3_book[pair], self.order_map[pair])
+                handler = partial(self._raw_book, pair)
             elif is_funding:
-                LOG.warning('%s %s: Book funding not implemented - set _do_nothing() for %s', conn.uuid, pair, msg)
+                LOG.warning('%s %s: Book funding not implemented - ignoring for %s', conn.uuid, pair, msg)
                 handler = self._do_nothing
             else:
-                handler = partial(self._book, pair, self._l2_book[pair])
+                handler = partial(self._book, pair)
         else:
             LOG.warning('%s %s: Unexpected message %s', conn.uuid, pair, msg)
             return
@@ -360,7 +354,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
         Bitfinex only supports 25 pair/channel combinations per websocket, so
         if we require more we need to create more connections
 
-        Furthermore, the sequence numbers bitinex provides are per-connection
+        Furthermore, the sequence numbers bitfinex provides are per-connection
         so we need to bind our connection id to the message handler
         so we know to which connextion the sequence number belongs.
         """

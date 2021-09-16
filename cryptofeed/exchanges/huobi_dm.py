@@ -11,12 +11,12 @@ from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BUY, FUNDING, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
@@ -76,28 +76,17 @@ class HuobiDM(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
         data = msg['tick']
-        forced = pair not in self._l2_book
 
         # When Huobi Delists pairs, empty updates still sent:
         # {'ch': 'market.AKRO-USD.depth.step0', 'ts': 1606951241196, 'tick': {'mrid': 50651100044, 'id': 1606951241, 'ts': 1606951241195, 'version': 1606951241, 'ch': 'market.AKRO-USD.depth.step0'}}
         # {'ch': 'market.AKRO-USD.depth.step0', 'ts': 1606951242297, 'tick': {'mrid': 50651100044, 'id': 1606951242, 'ts': 1606951242295, 'version': 1606951242, 'ch': 'market.AKRO-USD.depth.step0'}}
         if 'bids' in data and 'asks' in data:
-            update = {
-                BID: sd({
-                    Decimal(price): Decimal(amount)
-                    for price, amount in data['bids']
-                }),
-                ASK: sd({
-                    Decimal(price): Decimal(amount)
-                    for price, amount in data['asks']
-                })
-            }
+            if pair not in self._l2_book:
+                self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+            self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
 
-            if not forced:
-                self.previous_book[pair] = self._l2_book[pair]
-            self._l2_book[pair] = update
-
-            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, False, self.timestamp_normalize(msg['ts']), timestamp)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['ts']), raw=msg)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -111,16 +100,17 @@ class HuobiDM(Feed):
         }
         """
         for trade in msg['tick']['data']:
-            await self.callback(TRADES,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
-                                order_id=trade['id'],
-                                side=BUY if trade['direction'] == 'buy' else SELL,
-                                amount=Decimal(trade['amount']),
-                                price=Decimal(trade['price']),
-                                timestamp=self.timestamp_normalize(trade['ts']),
-                                receipt_timestamp=timestamp
-                                )
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
+                BUY if trade['direction'] == 'buy' else SELL,
+                Decimal(trade['amount']),
+                Decimal(trade['price']),
+                self.timestamp_normalize(trade['ts']),
+                id=str(trade['id']),
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

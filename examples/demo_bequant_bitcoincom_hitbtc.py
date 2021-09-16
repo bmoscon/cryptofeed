@@ -18,25 +18,34 @@ This example demonstrates all features currently supported on these 3 exchanges
 '''
 
 
-# Publicly available feeds: (No authentication/API key required)
-async def ticker(feed, symbol, bid, ask, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Received: {receipt_timestamp} Feed: {feed} Symbol: {symbol} Bid: {bid} Ask: {ask}')
+async def ticker(t, receipt_timestamp):
+    if t.timestamp is not None:
+        assert isinstance(t.timestamp, float)
+    assert isinstance(t.exchange, str)
+    assert isinstance(t.bid, Decimal)
+    assert isinstance(t.ask, Decimal)
+    print(f'Ticker received at {receipt_timestamp}: {t}')
 
 
-async def book(feed, symbol, book, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Symbol: {symbol} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
+async def trade(t, receipt_timestamp):
+    assert isinstance(t.timestamp, float)
+    assert isinstance(t.side, str)
+    assert isinstance(t.amount, Decimal)
+    assert isinstance(t.price, Decimal)
+    assert isinstance(t.exchange, str)
+    print(f"Trade received at {receipt_timestamp}: {t}")
 
 
-async def candles_callback(feed, symbol, start, stop, interval, trades, open_price, close_price, high_price, low_price, volume, closed, timestamp, receipt_timestamp):
-    print(f"{feed}, TS: {timestamp} Rec'd: {receipt_timestamp} Symbol: {symbol} Start: {start} Stop: {stop} Interval: {interval} Trades: {trades} Open: {open_price} Close: {close_price} High: {high_price} Low: {low_price} Volume: {volume} Candle Closed? {closed}")
+async def book(book, receipt_timestamp):
+    print(f'Book received at {receipt_timestamp} for {book.exchange} - {book.symbol}, with {len(book.book)} entries. Top of book prices: {book.book.asks.index(0)[0]} - {book.book.bids.index(0)[0]}')
+    if book.delta:
+        print(f"Delta from last book contains {len(book.delta[BID]) + len(book.delta[ASK])} entries.")
+    if book.sequence_number:
+        assert isinstance(book.sequence_number, int)
 
 
-async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_timestamp):
-    assert isinstance(timestamp, float)
-    assert isinstance(side, str)
-    assert isinstance(amount, Decimal)
-    assert isinstance(price, Decimal)
-    print(f"Timestamp: {timestamp} Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Symbol: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
+async def candles_callback(c, receipt_timestamp):
+    print(f"Candle received at {receipt_timestamp}: {c}")
 
 
 # Private feeds, requiring API keys with correctly set privilages.

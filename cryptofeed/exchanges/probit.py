@@ -8,13 +8,13 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
@@ -91,19 +91,17 @@ class Probit(Feed):
         '''
         pair = self.exchange_symbol_to_std_symbol(msg['market_id'])
         for update in msg['recent_trades']:
-            price = Decimal(update['price'])
-            quantity = Decimal(update['quantity'])
-            side = BUY if update['side'] == 'buy' else SELL
-            order_id = update['id']
-            timestamp = self.timestamp_normalize(update['time'])
-            await self.callback(TRADES, feed=self.id,
-                                symbol=pair,
-                                side=side,
-                                amount=quantity,
-                                price=price,
-                                order_id=order_id,
-                                timestamp=timestamp,
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                pair,
+                BUY if update['side'] == 'buy' else SELL,
+                Decimal(update['quantity']),
+                Decimal(update['price']),
+                self.timestamp_normalize(update['time']),
+                id=update['id'],
+                raw=update
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _l2_update(self, msg: dict, timestamp: float):
         '''
@@ -150,15 +148,15 @@ class Probit(Feed):
         is_snapshot = msg.get('reset', False)
 
         if is_snapshot:
-            self._l2_book[pair] = {ASK: sd(), BID: sd()}
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
             for entry in msg["order_books"]:
                 price = Decimal(entry['price'])
                 quantity = Decimal(entry['quantity'])
                 side = BID if entry['side'] == "buy" else ASK
-                self._l2_book[pair][side][price] = quantity
+                self._l2_book[pair].book[side][price] = quantity
 
-            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg)
         else:
             delta = {BID: [], ASK: []}
 
@@ -167,14 +165,14 @@ class Probit(Feed):
                 quantity = Decimal(entry['quantity'])
                 side = BID if entry['side'] == "buy" else ASK
                 if quantity == 0:
-                    if price in self._l2_book[pair][side]:
-                        del self._l2_book[pair][side][price]
+                    if price in self._l2_book[pair].book[side]:
+                        del self._l2_book[pair].book[side][price]
                     delta[side].append((price, 0))
                 else:
-                    self._l2_book[pair][side][price] = quantity
+                    self._l2_book[pair].book[side][price] = quantity
                     delta[side].append((price, quantity))
 
-            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

@@ -9,7 +9,6 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
@@ -17,6 +16,7 @@ from cryptofeed.defines import BID, ASK, BUY
 from cryptofeed.defines import EXX as EXX_id
 from cryptofeed.defines import L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
@@ -102,25 +102,17 @@ class EXX(Feed):
 
         ['E', '1', '1547942636', 'BTC_USDT', 'ASK', '3674.91740000', '0.02600000']
         """
-        forced = False
         delta = {BID: [], ASK: []}
         if msg[0] == 'AE':
             # snapshot
-            forced = True
+            delta = None
             pair = self.exchange_symbol_to_std_symbol(msg[2])
             ts = msg[3]
             asks = msg[4]['asks'] if 'asks' in msg[4] else msg[5]['asks']
             bids = msg[5]['bids'] if 'bids' in msg[5] else msg[4]['bids']
-            self._l2_book[pair] = {
-                BID: sd({
-                    Decimal(price): Decimal(amount)
-                    for price, amount in bids
-                }),
-                ASK: sd({
-                    Decimal(price): Decimal(amount)
-                    for price, amount in asks
-                })
-            }
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for price, amount in bids}
+            self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for price, amount in asks}
         else:
             # Update
             ts = msg[2]
@@ -130,14 +122,14 @@ class EXX(Feed):
             amount = Decimal(msg[6])
 
             if amount == 0:
-                if price in self._l2_book[pair][side]:
-                    del self._l2_book[pair][side][price]
+                if price in self._l2_book[pair].book[side]:
+                    del self._l2_book[pair][side].book[price]
                     delta[side].append((price, 0))
             else:
-                self._l2_book[pair][side][price] = amount
+                self._l2_book[pair].book[side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, ts, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts, raw=msg, delta=delta)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -145,23 +137,19 @@ class EXX(Feed):
 
         ['T', '1', '1547947390', 'BTC_USDT', 'bid', '3683.74440000', '0.082', '33732290']
         """
-        ts = float(msg[2])
         pair = self.exchange_symbol_to_std_symbol(msg[3])
-        side = BUY if msg[4] == 'bid' else SELL
-        price = Decimal(msg[5])
-        amount = Decimal(msg[6])
-        trade_id = msg[7]
 
-        await self.callback(TRADES,
-                            feed=self.id,
-                            symbol=pair,
-                            order_id=trade_id,
-                            side=side,
-                            amount=amount,
-                            price=price,
-                            timestamp=ts,
-                            receipt_timestamp=timestamp,
-                            )
+        t = Trade(
+            self.id,
+            pair,
+            BUY if msg[4] == 'bid' else SELL,
+            Decimal(msg[6]),
+            Decimal(msg[5]),
+            float(msg[2]),
+            id=msg[7],
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

@@ -13,11 +13,11 @@ import time
 import urllib
 from decimal import Decimal
 
-from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, L2_BOOK, LIMIT, MAKER_OR_CANCEL, MARKET, OPEN, ORDERS, ORDER_STATUS, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
+from cryptofeed.defines import BALANCES, BUY, CANCELLED, CANCEL_ORDER, FILLED, L2_BOOK, LIMIT, MAKER_OR_CANCEL, MARKET, OPEN, ORDERS, ORDER_STATUS, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -101,19 +101,13 @@ class KrakenRestMixin(RestExchange):
                     }
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
         sym = self.std_symbol_to_exchange_symbol(symbol).replace("/", "")
         data = await self._post_public("/public/Depth", {'pair': sym, 'count': 200}, retry_count=retry_count, retry_delay=retry_delay)
         for _, val in data['result'].items():
-            return {
-                BID: sd({
-                    Decimal(u[0]): Decimal(u[1])
-                    for u in val['bids']
-                }),
-                ASK: sd({
-                    Decimal(u[0]): Decimal(u[1])
-                    for u in val['asks']
-                })
-            }
+            ret.book.bids = {Decimal(u[0]): Decimal(u[1]) for u in val['bids']}
+            ret.book.asks = {Decimal(u[0]): Decimal(u[1]) for u in val['asks']}
+            return ret
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         start, end = self._interval_normalize(start, end)

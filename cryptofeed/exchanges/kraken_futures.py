@@ -10,13 +10,13 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest
 
 
 LOG = logging.getLogger('feedhandler')
@@ -107,14 +107,17 @@ class KrakenFutures(Feed):
             "price": 11735.0
         }
         """
-        await self.callback(TRADES, feed=self.id,
-                            symbol=pair,
-                            side=BUY if msg['side'] == 'buy' else SELL,
-                            amount=Decimal(msg['qty']),
-                            price=Decimal(msg['price']),
-                            order_id=msg['uid'],
-                            timestamp=self.timestamp_normalize(msg['time']),
-                            receipt_timestamp=timestamp)
+        t = Trade(
+            self.id,
+            pair,
+            BUY if msg['side'] == 'buy' else SELL,
+            Decimal(msg['qty']),
+            Decimal(msg['price']),
+            self.timestamp_normalize(msg['time']),
+            id=msg['uid'],
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
@@ -132,7 +135,8 @@ class KrakenFutures(Feed):
             "maturityTime": 0
         }
         """
-        await self.callback(TICKER, feed=self.id, symbol=pair, bid=msg['bid'], ask=msg['ask'], timestamp=timestamp, receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, msg['bid'], msg['ask'], None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _book_snapshot(self, msg: dict, pair: str, timestamp: float):
         """
@@ -158,11 +162,14 @@ class KrakenFutures(Feed):
             "tickSize": null
         }
         """
-        self._l2_book[pair] = {
-            BID: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['bids']}),
-            ASK: sd({Decimal(update['price']): Decimal(update['qty']) for update in msg['asks']})
-        }
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, timestamp, timestamp)
+        bids = {Decimal(update['price']): Decimal(update['qty']) for update in msg['bids']}
+        asks = {Decimal(update['price']): Decimal(update['qty']) for update in msg['asks']}
+        if pair in self._l2_book:
+            self._l2_book[pair].book.bids = bids
+            self._l2_book[pair].book.asks = asks
+        else:
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, sequence_number=msg['seq'])
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
@@ -188,47 +195,39 @@ class KrakenFutures(Feed):
 
         if amount == 0:
             delta[s].append((price, 0))
-            del self._l2_book[pair][s][price]
+            del self._l2_book[pair].book[s][price]
         else:
             delta[s].append((price, amount))
-            self._l2_book[pair][s][price] = amount
+            self._l2_book[pair].book[s][price] = amount
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, sequence_number=msg['seq'], raw=msg)
 
     async def _funding(self, msg: dict, pair: str, timestamp: float):
-        if msg['tag'] == 'perpetual':
-            await self.callback(FUNDING,
-                                feed=self.id,
-                                symbol=pair,
-                                timestamp=self.timestamp_normalize(msg['time']),
-                                receipt_timestamp=timestamp,
-                                tag=msg['tag'],
-                                rate=msg['funding_rate'],
-                                rate_prediction=msg.get('funding_rate_prediction', None),
-                                relative_rate=msg['relative_funding_rate'],
-                                relative_rate_prediction=msg.get('relative_funding_rate_prediction', None),
-                                next_rate_timestamp=self.timestamp_normalize(msg['next_funding_rate_time']))
-        else:
-            await self.callback(FUNDING,
-                                feed=self.id,
-                                symbol=pair,
-                                timestamp=self.timestamp_normalize(msg['time']),
-                                receipt_timestamp=timestamp,
-                                tag=msg['tag'],
-                                premium=msg['premium'],
-                                maturity_timestamp=self.timestamp_normalize(msg['maturityTime']))
+        if 'funding_rate' in msg:
+            f = Funding(
+                self.id,
+                pair,
+                None,
+                msg['funding_rate'],
+                self.timestamp_normalize(msg['next_funding_rate_time']),
+                self.timestamp_normalize(msg['time']),
+                predicted_rate=msg['funding_rate_prediction'],
+                raw=msg
+            )
+            await self.callback(FUNDING, f, timestamp)
 
         oi = msg['openInterest']
         if pair in self._open_interest_cache and oi == self._open_interest_cache[pair]:
             return
         self._open_interest_cache[pair] = oi
-        await self.callback(OPEN_INTEREST,
-                            feed=self.id,
-                            symbol=pair,
-                            open_interest=msg['openInterest'],
-                            timestamp=self.timestamp_normalize(msg['time']),
-                            receipt_timestamp=timestamp
-                            )
+        o = OpenInterest(
+            self.id,
+            pair,
+            oi,
+            self.timestamp_normalize(msg['time']),
+            raw=msg
+        )
+        await self.callback(OPEN_INTEREST, o, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

@@ -10,14 +10,14 @@ from collections import defaultdict, deque
 from decimal import Decimal
 from typing import Dict, Union, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
+from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -91,6 +91,7 @@ class Binance(Feed, BinanceRestMixin):
         self.address = self._address()
         self.concurrent_http = concurrent_http
 
+        self._open_interest_cache = {}
         self._reset()
 
     def _address(self) -> Union[str, Dict]:
@@ -108,7 +109,7 @@ class Binance(Feed, BinanceRestMixin):
 
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
-            if self.exchange_channel_to_std(chan) == OPEN_INTEREST:
+            if normalized_chan == OPEN_INTEREST:
                 continue
 
             stream = chan
@@ -126,7 +127,7 @@ class Binance(Feed, BinanceRestMixin):
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
 
-        if len(subs) < 200:
+        if 0 < len(subs) < 200:
             return address + '/'.join(subs)
         else:
             def split_list(_list: list, n: int):
@@ -139,7 +140,6 @@ class Binance(Feed, BinanceRestMixin):
         self.forced = defaultdict(bool)
         self._l2_book = {}
         self.last_update_id = {}
-        self._open_interest_cache = {}
 
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched
@@ -161,16 +161,15 @@ class Binance(Feed, BinanceRestMixin):
             "M": true         // Ignore
         }
         """
-        price = Decimal(msg['p'])
-        amount = Decimal(msg['q'])
-        await self.callback(TRADES, feed=self.id,
-                            order_id=msg['a'],
-                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            side=SELL if msg['m'] else BUY,
-                            amount=amount,
-                            price=price,
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp)
+        t = Trade(self.id,
+                  self.exchange_symbol_to_std_symbol(msg['s']),
+                  SELL if msg['m'] else BUY,
+                  Decimal(msg['q']),
+                  Decimal(msg['p']),
+                  self.timestamp_normalize(msg['E']),
+                  id=str(msg['a']),
+                  raw=msg)
+        await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -193,12 +192,8 @@ class Binance(Feed, BinanceRestMixin):
         else:
             ts = timestamp
 
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=bid,
-                            ask=ask,
-                            timestamp=ts,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, bid, ask, ts, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _liquidations(self, msg: dict, timestamp: float):
         """
@@ -221,16 +216,16 @@ class Binance(Feed, BinanceRestMixin):
         }
         """
         pair = self.exchange_symbol_to_std_symbol(msg['o']['s'])
-        await self.callback(LIQUIDATIONS,
-                            feed=self.id,
-                            symbol=pair,
-                            side=msg['o']['S'],
-                            leaves_qty=Decimal(msg['o']['q']),
-                            price=Decimal(msg['o']['p']),
-                            order_id=None,
-                            status=FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp)
+        liq = Liquidation(self.id,
+                          pair,
+                          SELL if msg['o']['S'] == 'SELL' else BUY,
+                          Decimal(msg['o']['q']),
+                          Decimal(msg['o']['p']),
+                          None,
+                          FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
+                          self.timestamp_normalize(msg['E']),
+                          raw=msg)
+        await self.callback(LIQUIDATIONS, liq, receipt_timestamp=timestamp)
 
     def _check_update_id(self, std_pair: str, msg: dict) -> Tuple[bool, bool, bool]:
         """
@@ -253,10 +248,10 @@ class Binance(Feed, BinanceRestMixin):
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
 
-        return skip_update, forced, current_match
+        return skip_update, current_match
 
     async def _snapshot(self, pair: str) -> None:
-        max_depth = self.max_depth if self.max_depth else 1000
+        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         if max_depth not in self.valid_depths:
             for d in self.valid_depths:
                 if d > max_depth:
@@ -269,42 +264,38 @@ class Binance(Feed, BinanceRestMixin):
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
-        self._l2_book[std_pair] = {BID: sd(), ASK: sd()}
-        for s, side in (('bids', BID), ('asks', ASK)):
-            for update in resp[s]:
-                price = Decimal(update[0])
-                amount = Decimal(update[1])
-                self._l2_book[std_pair][side][price] = amount
+        self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
+        self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
+        self._l2_book[std_pair].raw = resp
 
     async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
         """
         Processes 'depthUpdate' update book msg. This method should only be called if pair's l2_book exists.
         """
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        skip_update, forced, current_match = self._check_update_id(std_pair, msg)
+        skip_update, current_match = self._check_update_id(std_pair, msg)
         if current_match:
             # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
-            return await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, self._l2_book[std_pair], self.timestamp_normalize(msg['E']), timestamp)
+            return await self.book_callback(L2_BOOK, self._l2_book[std_pair], timestamp, raw=msg, sequence_number=self.last_update_id[std_pair], timestamp=self.timestamp_normalize(msg['E']))
 
         if skip_update:
             return
 
         delta = {BID: [], ASK: []}
-        ts = msg['E']
-
         for s, side in (('b', BID), ('a', ASK)):
             for update in msg[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self._l2_book[std_pair][side]:
-                        del self._l2_book[std_pair][side][price]
+                    if price in self._l2_book[std_pair].book[side]:
+                        del self._l2_book[std_pair].book[side][price]
                         delta[side].append((price, amount))
                 else:
-                    self._l2_book[std_pair][side][price] = amount
+                    self._l2_book[std_pair].book[side][price] = amount
                     delta[side].append((price, amount))
-        await self.book_callback(self._l2_book[std_pair], L2_BOOK, std_pair, forced, delta, self.timestamp_normalize(ts), timestamp)
+
+        await self.book_callback(L2_BOOK, self._l2_book[std_pair], timestamp, timestamp=self.timestamp_normalize(msg['E']), raw=msg, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     async def _book(self, msg: dict, pair: str, timestamp: float) -> None:
         """
@@ -370,15 +361,14 @@ class Binance(Feed, BinanceRestMixin):
             "T": 1562306400000       // Next funding time
         }
         """
-        await self.callback(FUNDING,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp,
-                            mark_price=msg['p'],
-                            rate=msg['r'],
-                            next_funding_time=self.timestamp_normalize(msg['T']),
-                            )
+        f = Funding(self.id,
+                    self.exchange_symbol_to_std_symbol(msg['s']),
+                    msg['p'],
+                    msg['r'],
+                    self.timestamp_normalize(msg['T']),
+                    self.timestamp_normalize(msg['E']),
+                    raw=msg)
+        await self.callback(FUNDING, f, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
         """
@@ -409,22 +399,21 @@ class Binance(Feed, BinanceRestMixin):
         """
         if self.candle_closed_only and not msg['k']['x']:
             return
-
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['s']),
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp,
-                            start=msg['k']['t'] / 1000,
-                            stop=msg['k']['T'] / 1000,
-                            interval=msg['k']['i'],
-                            trades=msg['k']['n'],
-                            open_price=Decimal(msg['k']['o']),
-                            close_price=Decimal(msg['k']['c']),
-                            high_price=Decimal(msg['k']['h']),
-                            low_price=Decimal(msg['k']['l']),
-                            volume=Decimal(msg['k']['v']),
-                            closed=msg['k']['x'])
+        c = Candle(self.id,
+                   self.exchange_symbol_to_std_symbol(msg['s']),
+                   msg['k']['t'] / 1000,
+                   msg['k']['T'] / 1000,
+                   msg['k']['i'],
+                   msg['k']['n'],
+                   Decimal(msg['k']['o']),
+                   Decimal(msg['k']['c']),
+                   Decimal(msg['k']['h']),
+                   Decimal(msg['k']['l']),
+                   Decimal(msg['k']['v']),
+                   msg['k']['x'],
+                   self.timestamp_normalize(msg['E']),
+                   raw=msg)
+        await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -456,5 +445,7 @@ class Binance(Feed, BinanceRestMixin):
         # Binance does not have a separate subscribe message, the
         # subscription information is included in the
         # connection endpoint
-        if not isinstance(conn, HTTPPoll):
+        if isinstance(conn, (HTTPPoll, HTTPConcurrentPoll)):
+            self._open_interest_cache = {}
+        else:
             self._reset()

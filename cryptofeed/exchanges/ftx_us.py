@@ -6,7 +6,7 @@ associated with this software.
 '''
 import logging
 
-from cryptofeed.defines import FTX_US, L2_BOOK, ORDER_INFO, TICKER, TRADES, USER_FILLS
+from cryptofeed.defines import FTX_US, L2_BOOK, ORDER_INFO, TICKER, TRADES, FILLS
 from cryptofeed.exchanges.ftx import FTX
 from cryptofeed.exchanges.mixins.ftx_rest_us import FTXUSRestMixin
 
@@ -22,7 +22,7 @@ class FTXUS(FTX, FTXUSRestMixin):
         TRADES: 'trades',
         TICKER: 'ticker',
         ORDER_INFO: 'orders',
-        USER_FILLS: 'fills',
+        FILLS: 'fills',
     }
 
     def __init__(self, **kwargs):

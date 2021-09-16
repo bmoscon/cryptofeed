@@ -11,10 +11,10 @@ import time
 from urllib.parse import urlparse
 
 from yapic import json
-from sortedcontainers import SortedDict as sd
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 class BitmexRestMixin(RestExchange):
@@ -107,9 +107,10 @@ class BitmexRestMixin(RestExchange):
         yield list(map(self._trade_normalization, data))
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
-        ret = {BID: sd(), ASK: sd()}
+        ret = OrderBook(self.id, symbol)
+
         data = await self._get('orderBook/L2', self.std_symbol_to_exchange_symbol(symbol), retry_count, retry_delay)
         for update in data:
             side = ASK if update['side'] == 'Sell' else BID
-            ret[side][decimal.Decimal(update['price'])] = decimal.Decimal(update['size'])
+            ret.book[side][decimal.Decimal(update['price'])] = decimal.Decimal(update['size'])
         return ret

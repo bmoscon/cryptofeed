@@ -8,12 +8,11 @@ import asyncio
 from decimal import Decimal
 import logging
 
-from sortedcontainers.sorteddict import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.gemini import generate_token
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
+from cryptofeed.defines import BALANCES, BUY, CANCELLED, CANCEL_ORDER, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, L2_BOOK, LIMIT, MAKER_OR_CANCEL, OPEN, ORDER_STATUS, PARTIAL, PLACE_ORDER, SELL, TICKER, TRADES, TRADE_HISTORY
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -61,7 +60,7 @@ class GeminiRestMixin(RestExchange):
         return json.loads(resp, parse_float=Decimal)
 
     async def _post(self, command: str, payload=None):
-        headers = generate_token(self.config.key_id, self.config.key_secret, command, account_name=self.config.account_name, payload=payload)
+        headers = self.generate_token(command, payload=payload)
 
         headers['Content-Type'] = "text/plain"
         headers['Content-Length'] = "0"
@@ -84,18 +83,12 @@ class GeminiRestMixin(RestExchange):
                 }
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
         sym = self.std_symbol_to_exchange_symbol(symbol)
         data = await self._get(f"/v1/book/{sym}", retry_count, retry_delay)
-        return {
-            BID: sd({
-                Decimal(u['price']): Decimal(u['amount'])
-                for u in data['bids']
-            }),
-            ASK: sd({
-                Decimal(u['price']): Decimal(u['amount'])
-                for u in data['asks']
-            })
-        }
+        ret.book.bids = {Decimal(u['price']): Decimal(u['amount']) for u in data['bids']}
+        ret.book.asks = {Decimal(u['price']): Decimal(u['amount']) for u in data['asks']}
+        return ret
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         sym = self.std_symbol_to_exchange_symbol(symbol)

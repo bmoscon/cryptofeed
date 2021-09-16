@@ -53,7 +53,7 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             skip_update = True
-        return skip_update, forced, current_match
+        return skip_update, current_match
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

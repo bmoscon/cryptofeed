@@ -10,11 +10,12 @@ import hmac
 import time
 from decimal import Decimal
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange
+from cryptofeed.util.time import timedelta_str_to_sec
+from cryptofeed.types import OrderBook, Candle
 
 
 class BitfinexRestMixin(RestExchange):
@@ -22,6 +23,7 @@ class BitfinexRestMixin(RestExchange):
     rest_channels = (
         TRADES, TICKER, L2_BOOK, L3_BOOK
     )
+    candle_mappings = {'1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '3h': '3h', '6h': '6h', '12h': '12h', '1d': '1D', '1w': '7D', '2w': '14D', '1M': '1M'}
 
     def _nonce(self):
         return str(int(round(time.time() * 1000)))
@@ -130,8 +132,9 @@ class BitfinexRestMixin(RestExchange):
         return await self._rest_book(symbol, l3=True, retry_count=retry_count, retry_delay=retry_delay)
 
     async def _rest_book(self, symbol: str, l3=False, retry_count=0, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
+
         symbol = self.std_symbol_to_exchange_symbol(symbol)
-        ret = {BID: sd(), ASK: sd()}
         funding = 'f' in symbol
 
         precision = 'R0' if l3 is True else 'P0'
@@ -149,10 +152,10 @@ class BitfinexRestMixin(RestExchange):
                 amount = Decimal(amount)
                 price = Decimal(price)
                 side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
-                if price not in ret[side]:
-                    ret[side][price] = {order_id: update}
+                if price not in ret.book[side]:
+                    ret.book[side][price] = {order_id: update}
                 else:
-                    ret[side][price][order_id] = update
+                    ret.book[side][price][order_id] = update
         else:
             for entry in data:
                 if funding:
@@ -164,6 +167,30 @@ class BitfinexRestMixin(RestExchange):
                 price = Decimal(price)
                 amount = Decimal(amount)
                 side = BID if (amount > 0 and not funding) or (amount < 0 and funding) else ASK
-                ret[side][price] = update
+                ret.book[side][price] = update
 
         return ret
+
+    async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
+        _interval = self.candle_mappings[interval]
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        base_endpoint = f"{self.api}candles/trade:{_interval}:{sym}"
+        start, end = self._interval_normalize(start, end)
+        offset = timedelta_str_to_sec(interval)
+
+        while True:
+            if start and end:
+                endpoint = f"{base_endpoint}/hist?limit=10000&start={int(start * 1000)}&end={int(end * 1000)}&sort=1"
+            else:
+                endpoint = f"{base_endpoint}/last"
+
+            r = await self.http_conn.read(endpoint, retry_delay=retry_delay, retry_count=retry_count)
+            data = json.loads(r, parse_float=Decimal)
+            if not isinstance(data[0], list):
+                data = [data]
+            data = [Candle(self.id, symbol, self.timestamp_normalize(e[0]), self.timestamp_normalize(e[0]) + offset, interval, None, Decimal(e[1]), Decimal(e[2]), Decimal(e[3]), Decimal(e[4]), Decimal(e[5]), True, self.timestamp_normalize(e[0]), raw=e) for e in data]
+            yield data
+
+            if not end or len(data) < 10000:
+                break
+            start = data[-1].start + offset

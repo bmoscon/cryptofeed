@@ -24,3 +24,7 @@ color_output = true
 skip_gitignore = true
 lines_after_imports = 2
 ensure_newline_before_comments = true
+
+
+[build-system]
+requires = ["setuptools", "wheel", "Cython"]

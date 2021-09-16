@@ -10,10 +10,9 @@ import hmac
 import logging
 import time
 from collections import defaultdict
-from datetime import datetime as dt
+from datetime import timedelta
 from decimal import Decimal
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
@@ -21,7 +20,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.exchanges.mixins.bitmex_rest import BitmexRestMixin
-
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation
 
 LOG = logging.getLogger('feedhandler')
 
@@ -62,13 +61,14 @@ class Bitmex(Feed, BitmexRestMixin):
     def __init__(self, sandbox=False, **kwargs):
         auth_api = 'wss://www.bitmex.com/realtime' if not sandbox else 'wss://testnet.bitmex.com/realtime'
         super().__init__(auth_api, **kwargs)
+        self.ws_defaults['compression'] = None
         self._reset()
 
     def _reset(self):
         self.partial_received = defaultdict(bool)
         self.order_id = {}
         for pair in self.normalized_symbols:
-            self._l2_book[pair] = {BID: sd(), ASK: sd()}
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             self.order_id[pair] = defaultdict(dict)
 
     async def _trade(self, msg: dict, timestamp: float):
@@ -90,14 +90,17 @@ class Bitmex(Feed, BitmexRestMixin):
         """
         for data in msg['data']:
             ts = self.timestamp_normalize(data['timestamp'])
-            await self.callback(TRADES, feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
-                                side=BUY if data['side'] == 'Buy' else SELL,
-                                amount=Decimal(data['size']),
-                                price=Decimal(data['price']),
-                                order_id=data['trdMatchID'],
-                                timestamp=ts,
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(data['symbol']),
+                BUY if data['side'] == 'Buy' else SELL,
+                Decimal(data['size']),
+                Decimal(data['price']),
+                ts,
+                id=data['trdMatchID'],
+                raw=data
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -105,9 +108,8 @@ class Bitmex(Feed, BitmexRestMixin):
         """
         # PERF perf_start(self.id, 'book_msg')
 
-        delta = {BID: [], ASK: []}
+        delta = None
         # if we reset the book, force a full update
-        forced = False
         pair = self.exchange_symbol_to_std_symbol(msg['data'][0]['symbol'])
 
         if not self.partial_received[pair]:
@@ -116,7 +118,6 @@ class Bitmex(Feed, BitmexRestMixin):
             if msg['action'] != 'partial':
                 return
             self.partial_received[pair] = True
-            forced = True
 
         if msg['action'] == 'partial':
             for data in msg['data']:
@@ -125,19 +126,21 @@ class Bitmex(Feed, BitmexRestMixin):
                 size = Decimal(data['size'])
                 order_id = data['id']
 
-                self._l2_book[pair][side][price] = size
+                self._l2_book[pair].book[side][price] = size
                 self.order_id[pair][side][order_id] = price
         elif msg['action'] == 'insert':
+            delta = {BID: [], ASK: []}
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 price = Decimal(data['price'])
                 size = Decimal(data['size'])
                 order_id = data['id']
 
-                self._l2_book[pair][side][price] = size
+                self._l2_book[pair].book[side][price] = size
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, size))
         elif msg['action'] == 'update':
+            delta = {BID: [], ASK: []}
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 update_size = Decimal(data['size'])
@@ -145,17 +148,18 @@ class Bitmex(Feed, BitmexRestMixin):
 
                 price = self.order_id[pair][side][order_id]
 
-                self._l2_book[pair][side][price] = update_size
+                self._l2_book[pair].book[side][price] = update_size
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, update_size))
         elif msg['action'] == 'delete':
+            delta = {BID: [], ASK: []}
             for data in msg['data']:
                 side = BID if data['side'] == 'Buy' else ASK
                 order_id = data['id']
 
                 delete_price = self.order_id[pair][side][order_id]
                 del self.order_id[pair][side][order_id]
-                del self._l2_book[pair][side][delete_price]
+                del self._l2_book[pair].book[side][delete_price]
                 delta[side].append((delete_price, 0))
 
         else:
@@ -164,16 +168,19 @@ class Bitmex(Feed, BitmexRestMixin):
         # PERF perf_end(self.id, 'book_msg')
         # PERF perf_log(self.id, 'book_msg')
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta)
 
     async def _ticker(self, msg: dict, timestamp: float):
         for data in msg['data']:
-            await self.callback(TICKER, feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
-                                bid=Decimal(data['bidPrice']),
-                                ask=Decimal(data['askPrice']),
-                                timestamp=self.timestamp_normalize(data['timestamp']),
-                                receipt_timestamp=timestamp)
+            t = Ticker(
+                self.id,
+                self.exchange_symbol_to_std_symbol(data['symbol']),
+                Decimal(data['bidPrice']),
+                Decimal(data['askPrice']),
+                self.timestamp_normalize(data['timestamp']),
+                raw=data
+            )
+            await self.callback(TICKER, t, timestamp)
 
     async def _funding(self, msg: dict, timestamp: float):
         """
@@ -207,15 +214,16 @@ class Bitmex(Feed, BitmexRestMixin):
         for data in msg['data']:
             ts = self.timestamp_normalize(data['timestamp'])
             interval = data['fundingInterval']
-            interval = int((interval - dt(interval.year, interval.month, interval.day, tzinfo=interval.tzinfo)).total_seconds())
-            await self.callback(FUNDING, feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
-                                timestamp=ts,
-                                receipt_timestamp=timestamp,
-                                interval=interval,
-                                rate=data['fundingRate'],
-                                rate_daily=data['fundingRateDaily']
-                                )
+            f = Funding(
+                self.id,
+                self.exchange_symbol_to_std_symbol(data['symbol']),
+                None,
+                data['fundingRate'],
+                self.timestamp_normalize(data['timestamp'] + timedelta(hours=interval.hour)),
+                ts,
+                raw=data
+            )
+            await self.callback(FUNDING, f, timestamp)
 
     async def _instrument(self, msg: dict, timestamp: float):
         """
@@ -455,11 +463,8 @@ class Bitmex(Feed, BitmexRestMixin):
         for data in msg['data']:
             if 'openInterest' in data:
                 ts = self.timestamp_normalize(data['timestamp'])
-                await self.callback(OPEN_INTEREST, feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
-                                    open_interest=data['openInterest'],
-                                    timestamp=ts,
-                                    receipt_timestamp=timestamp)
+                oi = OpenInterest(self.id, self.exchange_symbol_to_std_symbol(data['symbol']), data['openInterest'], ts, raw=data)
+                await self.callback(OPEN_INTEREST, oi, timestamp)
 
     async def _liquidation(self, msg: dict, timestamp: float):
         """
@@ -475,15 +480,18 @@ class Bitmex(Feed, BitmexRestMixin):
         """
         if msg['action'] == 'insert':
             for data in msg['data']:
-                await self.callback(LIQUIDATIONS, feed=self.id,
-                                    symbol=self.exchange_symbol_to_std_symbol(data['symbol']),
-                                    side=BUY if data['side'] == 'Buy' else SELL,
-                                    leaves_qty=Decimal(data['leavesQty']),
-                                    price=Decimal(data['price']),
-                                    order_id=data['orderID'],
-                                    status=UNFILLED,
-                                    timestamp=timestamp,
-                                    receipt_timestamp=timestamp)
+                liq = Liquidation(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(data['symbol']),
+                    BUY if data['side'] == 'Buy' else SELL,
+                    Decimal(data['leavesQty']),
+                    Decimal(data['price']),
+                    data['orderID'],
+                    UNFILLED,
+                    None,
+                    raw=data
+                )
+                await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -503,7 +511,7 @@ class Bitmex(Feed, BitmexRestMixin):
             else:
                 LOG.warning("%s: Unhandled table=%r in %r", conn.uuid, msg['table'], msg)
         elif 'info' in msg:
-            LOG.info("%s: Info message from exchange: %s", conn.uuid, msg)
+            LOG.debug("%s: Info message from exchange: %s", conn.uuid, msg)
         elif 'subscribe' in msg:
             if not msg['success']:
                 LOG.error("%s: Subscribe failure: %s", conn.uuid, msg)
@@ -511,7 +519,7 @@ class Bitmex(Feed, BitmexRestMixin):
             LOG.error("%s: Error message from exchange: %s", conn.uuid, msg)
         elif 'request' in msg:
             if msg['success']:
-                LOG.info("%s: Success %s", conn.uuid, msg['request'].get('op'))
+                LOG.debug("%s: Success %s", conn.uuid, msg['request'].get('op'))
             else:
                 LOG.warning("%s: Failure %s", conn.uuid, msg['request'])
         else:
