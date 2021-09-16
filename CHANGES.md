@@ -10,6 +10,7 @@
  * Bugfix: Coinbase book \_change handler passing wrong book type
  * Bugfix: dYdX orderbooks contained prices levels of size 0
  * Bugfix: FTX trade id for liquidations not correctly being converted to str
+ * Bugfix: L3 OrderBooks not being correctly converted when as_type was used with to_dict
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
