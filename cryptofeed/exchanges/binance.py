@@ -383,7 +383,6 @@ class Binance(Feed, BinanceRestMixin):
         self._last_snapshot_time[std_pair] = receipt_timestamp
         self._fetch_snapshop_buffer.pop(std_pair, None)
         
-        ts = time.time()
         await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     def _apply_msg_to_book(self, book: OrderBook, std_pair: str, msg: dict) -> dict:
