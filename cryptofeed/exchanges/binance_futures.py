@@ -53,6 +53,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
         self.address = self._address()
+        self.ws_defaults['compression'] = None
 
         self.open_interest_interval = open_interest_interval
 
