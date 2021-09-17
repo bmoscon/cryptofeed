@@ -11,6 +11,9 @@
  * Bugfix: dYdX orderbooks contained prices levels of size 0
  * Bugfix: FTX trade id for liquidations not correctly being converted to str
  * Bugfix: L3 OrderBooks not being correctly converted when as_type was used with to_dict
+ * Feature: kwarg snapshots_only when true allow storage of full book updates only (no deltas)
+ * Bugfix: initial snapshot of Binance books did not have delta set to None
+ * Bugfix: RedisBook callback accessed key delta when it did not exist, causing crash
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
