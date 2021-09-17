@@ -4,6 +4,8 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from decimal import Decimal
+
 from cryptofeed.defines import BID, ASK
 from order_book import OrderBook as _OrderBook
 
@@ -276,25 +278,30 @@ cdef class OrderBook:
         self.checksum = None
         self.raw = None
 
+    def _delta(self, as_type) -> dict:
+        return {
+            BID: [tuple([as_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[BID]],
+            ASK: [tuple([as_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[ASK]]
+        }
+
     def to_dict(self, delta=False, as_type=None) -> dict:
-        if delta:
-            if as_type is None:
-                return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self.delta, 'timestamp': self.timestamp}
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]], ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]} if self.delta else None, 'timestamp': self.timestamp}
-
-        if as_type is None:
-            book_dict = self.book.to_dict()
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self.delta, 'timestamp': self.timestamp}
-
         def helper(x):
             if isinstance(x, dict):
                 return {k: as_type(v) for k, v in x.items()}
             else:
                 return as_type(x)
 
+        if delta:
+            if as_type is None:
+                return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self.delta, 'timestamp': self.timestamp}
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self._delta(as_type) if self.delta else None, 'timestamp': self.timestamp}
+
+        if as_type is None:
+            book_dict = self.book.to_dict()
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self.delta, 'timestamp': self.timestamp}
+
         book_dict = self.book.to_dict(to_type=helper)
-        delta = {BID: [(as_type(price), as_type(size)) for price, size in self.delta[BID]], ASK: [(as_type(price), as_type(size)) for price, size in self.delta[ASK]]} if self.delta else None
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': delta, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self._delta(as_type)if self.delta else None, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {self.timestamp}"
