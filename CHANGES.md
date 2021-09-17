@@ -14,6 +14,7 @@
  * Feature: kwarg snapshots_only when true allow storage of full book updates only (no deltas)
  * Bugfix: initial snapshot of Binance books did not have delta set to None
  * Bugfix: RedisBook callback accessed key delta when it did not exist, causing crash
+ * Feature: Candle support for Bybit
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
