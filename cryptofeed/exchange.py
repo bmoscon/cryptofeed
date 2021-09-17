@@ -26,6 +26,7 @@ class Exchange:
     _parse_symbol_data = NotImplemented
     websocket_channels = NotImplemented
     request_limit = NotImplemented
+    valid_candle_intervals = NotImplemented
     http_sync = HTTPSync()
 
     def __init__(self, config=None, sandbox=False, subaccount=None, **kwargs):

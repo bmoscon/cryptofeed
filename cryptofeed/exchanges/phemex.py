@@ -59,11 +59,8 @@ class Phemex(Feed):
             cls.price_scale[s.normalized] = 10 ** entry.get('priceScale', 8)
         return ret, info
 
-    def __init__(self, candle_interval='1m', **kwargs):
+    def __init__(self, **kwargs):
         super().__init__('wss://phemex.com/ws', **kwargs)
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
-        self.candle_interval = candle_interval
         seconds = [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000]
         self.candle_interval_map = {
             interval: second for interval, second in zip(self.valid_candle_intervals, seconds)

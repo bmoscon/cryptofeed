@@ -58,11 +58,11 @@ class Kraken(Feed, KrakenRestMixin):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, candle_interval='1m', max_depth=1000, **kwargs):
-        lookup = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
-        self.candle_interval = lookup[candle_interval]
-        self.normalize_interval = {value: key for key, value in lookup.items()}
+    def __init__(self, max_depth=1000, **kwargs):
         super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
+        lookup = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
+        self.candle_interval = lookup[self.candle_interval]
+        self.normalize_interval = {value: key for key, value in lookup.items()}
 
     def __reset(self):
         self._l2_book = {}

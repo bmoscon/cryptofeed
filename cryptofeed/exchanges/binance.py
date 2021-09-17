@@ -67,10 +67,8 @@ class Binance(Feed, BinanceRestMixin):
             info['instrument_type'][s.normalized] = stype
         return ret, info
 
-    def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', concurrent_http=False, **kwargs):
+    def __init__(self, candle_closed_only=False, depth_interval='100ms', concurrent_http=False, **kwargs):
         """
-        candle_interval: str
-            time between candles updates ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
         candle_closed_only: bool
             return only closed candles, i.e. no updates in between intervals.
         depth_interval: str
@@ -78,15 +76,12 @@ class Binance(Feed, BinanceRestMixin):
         concurrent_http: bool
             http requests will be made concurrently, if False requests will be made one at a time (affects L2_BOOK, OPEN_INTEREST).
         """
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
 
         super().__init__({}, **kwargs)
         self.ws_endpoint = 'wss://stream.binance.com:9443'
         self.rest_endpoint = 'https://www.binance.com/api/v1'
-        self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
         self.address = self._address()
