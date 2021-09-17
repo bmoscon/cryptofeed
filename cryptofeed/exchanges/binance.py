@@ -81,7 +81,7 @@ class Binance(Feed, BinanceRestMixin):
 
         super().__init__({}, **kwargs)
         self.ws_endpoint = 'wss://stream.binance.com:9443'
-        self.rest_endpoint = 'https://www.binance.com/api/v1'
+        self.rest_endpoint = 'https://www.binance.com/api/v3'
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
         self.address = self._address()
