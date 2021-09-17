@@ -127,9 +127,14 @@ class FundingStream(RedisStreamCallback, BackendCallback):
 class BookRedis(RedisZSetCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, score_key='receipt_timestamp', **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, score_key=score_key, **kwargs)
+
     async def write(self, data: dict):
-        if data['delta'] is None:
-            data['delta'] = 'None'
+        if not self.snapshots_only:
+            if 'delta' in data and data['delta'] is None:
+                data['delta'] = 'None'
         if data['timestamp'] is None:
             data['timestamp'] = 'None'
         await super().write(data)
@@ -137,6 +142,10 @@ class BookRedis(RedisZSetCallback, BackendBookCallback):
 
 class BookStream(RedisStreamCallback, BackendBookCallback):
     default_key = 'book'
+
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
 
     async def write(self, data: dict):
         if 'delta' in data:

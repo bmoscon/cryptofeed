@@ -111,6 +111,10 @@ class FundingSocket(SocketCallback, BackendCallback):
 class BookSocket(SocketCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
 
 class TickerSocket(SocketCallback, BackendCallback):
     default_key = 'ticker'

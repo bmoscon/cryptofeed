@@ -48,6 +48,10 @@ class FundingZMQ(ZMQCallback, BackendCallback):
 class BookZMQ(ZMQCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
 
 class OpenInterestZMQ(ZMQCallback, BackendCallback):
     default_key = 'open_interest'

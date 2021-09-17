@@ -145,6 +145,10 @@ class LiquidationsPostgres(PostgresCallback, BackendCallback):
 class BookPostgres(PostgresCallback, BackendBookCallback):
     default_table = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
 
 class CandlesPostgres(PostgresCallback, BackendCallback):
     default_table = CANDLES

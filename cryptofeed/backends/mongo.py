@@ -37,6 +37,10 @@ class FundingMongo(MongoCallback, BackendCallback):
 class BookMongo(MongoCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
 
 class TickerMongo(MongoCallback, BackendCallback):
     default_key = 'ticker'

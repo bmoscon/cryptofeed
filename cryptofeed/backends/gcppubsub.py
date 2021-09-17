@@ -108,6 +108,10 @@ class FundingGCPPubSub(GCPPubSubCallback, BackendCallback):
 class BookGCPPubSub(GCPPubSubCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
 
 class TickerGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'ticker'

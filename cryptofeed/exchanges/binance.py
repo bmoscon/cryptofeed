@@ -9,6 +9,7 @@ from asyncio import create_task
 from collections import defaultdict, deque
 from decimal import Decimal
 from typing import Dict, Union, Tuple
+import time
 
 from yapic import json
 
@@ -137,7 +138,6 @@ class Binance(Feed, BinanceRestMixin):
             return {chunk[0]: address + '/'.join(chunk) for chunk in split_list(subs, 200)}
 
     def _reset(self):
-        self.forced = defaultdict(bool)
         self._l2_book = {}
         self.last_update_id = {}
 
@@ -227,28 +227,23 @@ class Binance(Feed, BinanceRestMixin):
                           raw=msg)
         await self.callback(LIQUIDATIONS, liq, receipt_timestamp=timestamp)
 
-    def _check_update_id(self, std_pair: str, msg: dict) -> Tuple[bool, bool, bool]:
+    def _check_update_id(self, std_pair: str, msg: dict) -> bool:
         """
-        'current_match' is True if the msg's update_id matches snapshot's update_id in self.last_update_id.
-        Messages will be queued (or buffered if concurrent_http is True) while fetching for snapshot, and we can return a book_callback using this msg's data instead of waiting for the next update.
+        Messages will be queued (or buffered if concurrent_http is True) while fetching for snapshot
+        and we can return a book_callback using this msg's data instead of waiting for the next update.
         """
-        skip_update = False
-        forced = not self.forced[std_pair]
-        current_match = msg['u'] == self.last_update_id[std_pair]
-
-        if forced and msg['u'] <= self.last_update_id[std_pair]:
-            skip_update = True
-        elif forced and msg['U'] <= self.last_update_id[std_pair] + 1 <= msg['u']:
+        if self._l2_book[std_pair].delta is None and msg['u'] <= self.last_update_id[std_pair]:
+            return True
+        elif msg['U'] <= self.last_update_id[std_pair] + 1 <= msg['u']:
             self.last_update_id[std_pair] = msg['u']
-            self.forced[std_pair] = True
-        elif not forced and self.last_update_id[std_pair] + 1 == msg['U']:
+            return False
+        elif self.last_update_id[std_pair] + 1 == msg['U']:
             self.last_update_id[std_pair] = msg['u']
+            return False
         else:
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
-            skip_update = True
-
-        return skip_update, current_match
+            return True
 
     async def _snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
@@ -265,19 +260,15 @@ class Binance(Feed, BinanceRestMixin):
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
         self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
-        self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
-        self._l2_book[std_pair].raw = resp
+        ts = self.timestamp_normalize(resp['E']) if 'E' in resp else None
+        await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), raw=resp, timestamp=ts, sequence_number=resp['lastUpdateId'])
 
     async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
         """
         Processes 'depthUpdate' update book msg. This method should only be called if pair's l2_book exists.
         """
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        skip_update, current_match = self._check_update_id(std_pair, msg)
-        if current_match:
-            # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
-            return await self.book_callback(L2_BOOK, self._l2_book[std_pair], timestamp, raw=msg, sequence_number=self.last_update_id[std_pair], timestamp=self.timestamp_normalize(msg['E']))
-
+        skip_update = self._check_update_id(std_pair, msg)
         if skip_update:
             return
 

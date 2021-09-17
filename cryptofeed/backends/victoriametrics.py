@@ -109,8 +109,12 @@ class FundingVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
 
 
 class BookVictoriaMetrics(VictoriaMetricsBookCallback, BackendBookCallback):
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
     async def write(self, data):
-        start = f"{self.key},feed={data['exchange']},symbol={data['symbol']},delta={str('delta' in data)}"
+        start = f"{self.key},exchange={data['exchange']},symbol={data['symbol']},delta={str('delta' in data)}"
         await self._write_rows(start, data)
 
 

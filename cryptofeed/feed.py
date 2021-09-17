@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
-from cryptofeed.exchange import Exchange
 from functools import partial
 import logging
 from typing import Tuple, Callable, Union, List
@@ -15,9 +14,9 @@ from aiohttp.typedefs import StrOrURL
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
-from cryptofeed.defines import (ASK, BALANCES, BID, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, FILLS)
+from cryptofeed.defines import BALANCES, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, FILLS
 from cryptofeed.exceptions import BidAskOverlapping
+from cryptofeed.exchange import Exchange
 from cryptofeed.types import OrderBook
 
 

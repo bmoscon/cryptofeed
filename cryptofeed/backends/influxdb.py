@@ -92,6 +92,10 @@ class FundingInflux(InfluxCallback, BackendCallback):
 class BookInflux(InfluxCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
     def format(self, data):
         delta = 'delta' in data
         book = data['book'] if not delta else data['delta']

@@ -78,7 +78,9 @@ class FundingRabbit(RabbitCallback, BackendCallback):
 
 
 class BookRabbit(RabbitCallback, BackendBookCallback):
-    pass
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
 
 
 class TickerRabbit(RabbitCallback, BackendCallback):

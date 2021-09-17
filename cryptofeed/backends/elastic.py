@@ -52,7 +52,8 @@ class FundingElastic(ElasticCallback, BackendCallback):
 class BookElastic(ElasticCallback, BackendBookCallback):
     default_index = 'book'
 
-    def __init__(self, *args, index='book', **kwargs):
+    def __init__(self, *args, index='book', snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 

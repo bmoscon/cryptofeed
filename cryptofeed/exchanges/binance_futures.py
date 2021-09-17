@@ -57,23 +57,19 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
 
         self.open_interest_interval = open_interest_interval
 
-    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
-        skip_update = False
-        forced = not self.forced[pair]
-        current_match = self.last_update_id[pair] == msg['u']
-
-        if forced and msg['u'] < self.last_update_id[pair]:
-            skip_update = True
-        elif forced and msg['U'] <= self.last_update_id[pair] <= msg['u']:
+    def _check_update_id(self, pair: str, msg: dict) -> bool:
+        if self._l2_book[pair].delta is None and msg['u'] < self.last_update_id[pair]:
+            return True
+        elif msg['U'] <= self.last_update_id[pair] <= msg['u']:
             self.last_update_id[pair] = msg['u']
-            self.forced[pair] = True
-        elif not forced and self.last_update_id[pair] == msg['pu']:
+            return False
+        elif self.last_update_id[pair] == msg['pu']:
             self.last_update_id[pair] = msg['u']
+            return False
         else:
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
-            skip_update = True
-        return skip_update, current_match
+            return True
 
     async def _open_interest(self, msg: dict, timestamp: float):
         """
