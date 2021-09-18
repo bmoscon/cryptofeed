@@ -261,6 +261,9 @@ class Coinbase(Feed, CoinbaseRestMixin):
         for orders which are not on the book should be ignored when maintaining a real-time order book.
         """
         if 'price' not in msg:
+            # market order life cycle: received -> done
+            self.order_type_map.pop(msg['order_id'], None)
+            self.order_map.pop(msg['order_id'], None)
             return
 
         order_id = msg['order_id']
