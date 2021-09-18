@@ -18,6 +18,7 @@
  * Bugfix: Fix L3 Book Deltas when use as_type kwarg in to_dict
  * Bugfix: Use V3 endpoint for book snapshots in Binance and BinanceUS
  * Bugfix: Coinbase level 3 book potential memory leak
+ * Feature: Perpetual support for Bitfinex
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
