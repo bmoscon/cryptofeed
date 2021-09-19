@@ -13,7 +13,7 @@ from typing import Callable, Dict, List, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES, PERPETUAL
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -42,10 +42,14 @@ CHECKSUM = 131072
 
 class Bitfinex(Feed, BitfinexRestMixin):
     id = BITFINEX
-    symbol_endpoint = ['https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange', 'https://api-pub.bitfinex.com/v2/conf/pub:list:currency']
+    symbol_endpoint = [
+        'https://api-pub.bitfinex.com/v2/conf/pub:list:pair:exchange',
+        'https://api-pub.bitfinex.com/v2/conf/pub:list:currency',
+        'https://api-pub.bitfinex.com/v2/conf/pub:list:pair:futures',
+    ]
     websocket_channels = {
-        L3_BOOK: 'book-R0-F0-100',
-        L2_BOOK: 'book-P0-F0-100',
+        L3_BOOK: 'book-R0-{}-{}',
+        L2_BOOK: 'book-P0-{}-{}',
         TRADES: 'trades',
         TICKER: 'ticker',
     }
@@ -64,6 +68,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
 
         pairs = data[0][0]
         currencies = data[1][0]
+        perpetuals = data[2][0]
         for c in currencies:
             c = c.replace('BCHN', 'BCH')  # Bitfinex uses BCHN, other exchanges use BCH
             c = c.replace('UST', 'USDT')
@@ -73,7 +78,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
 
         for p in pairs:
             norm = p.replace('BCHN', 'BCH')
-            norm = p.replace('UST', 'USDT')
+            norm = norm.replace('UST', 'USDT')
 
             if ':' in norm:
                 base, quote = norm.split(":")
@@ -83,10 +88,32 @@ class Bitfinex(Feed, BitfinexRestMixin):
             s = Symbol(base, quote)
             ret[s.normalized] = "t" + p
             info['instrument_type'][s.normalized] = s.type
+
+        for f in perpetuals:
+            norm = f.replace('BCHN', 'BCH')
+            norm = norm.replace('UST', 'USDT')
+            base, quote = norm.split(':')  # 'ALGF0:USTF0'
+            base, quote = base[:-2], quote[:-2]
+            s = Symbol(base, quote, type=PERPETUAL)
+            ret[s.normalized] = "t" + f
+            info['instrument_type'][s.normalized] = s.type
+
         return ret, info
 
-    def __init__(self, symbols=None, channels=None, subscription=None, **kwargs):
-        super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, subscription=subscription, **kwargs)
+    def __init__(self, symbols=None, channels=None, subscription=None, number_of_price_points: int = 100,
+                 book_frequency: str = 'F0', **kwargs):
+        if number_of_price_points not in (1, 25, 100, 250):
+            raise ValueError("number_of_price_points should be in 1, 25, 100, 250")
+        if book_frequency not in ('F0', 'F1'):
+            raise ValueError("book_frequency should be in F0, F1")
+
+        if symbols is not None and channels is not None:
+            super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, **kwargs)
+        else:
+            super().__init__('wss://api.bitfinex.com/ws/2', subscription=subscription, **kwargs)
+
+        self.number_of_price_points = number_of_price_points
+        self.book_frequency = book_frequency
         if channels or subscription:
             for chan in set(channels or subscription):
                 for pair in set(subscription[chan] if subscription else symbols or []):
@@ -204,7 +231,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
             else:
                 # remove price level
                 if price in self._l2_book[pair].book[side]:
-                    self._l2_book[pair].book[side][price]
+                    del self._l2_book[pair].book[side][price]
                     delta[side].append((price, 0))
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta, sequence_number=msg[-1])
@@ -397,8 +424,8 @@ class Bitfinex(Feed, BitfinexRestMixin):
                     message['channel'] = 'book'
                     try:
                         message['prec'] = parts[1]
-                        message['freq'] = parts[2]
-                        message['len'] = parts[3]
+                        message['freq'] = self.book_frequency
+                        message['len'] = self.number_of_price_points
                     except IndexError:
                         # any non specified params will be defaulted
                         pass
