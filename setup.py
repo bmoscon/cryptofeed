@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import os
 import sys
 
 from setuptools import setup
@@ -29,6 +30,10 @@ class Test(TestCommand):
         import pytest
         errno = pytest.main(['tests/'])
         sys.exit(errno)
+
+
+# comment out line below to enable type checking in cython code (via assertions)
+os.environ['CFLAGS'] = '-DCYTHON_WITHOUT_ASSERTIONS'
 
 
 setup(

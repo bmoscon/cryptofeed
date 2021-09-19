@@ -230,10 +230,10 @@ class OKEx(Feed):
                 self.id,
                 self.exchange_symbol_to_std_symbol(update['instId']),
                 None,
-                update['fundingRate'],
+                Decimal(update['fundingRate']),
                 None,
                 self.timestamp_normalize(int(update['fundingTime'])),
-                predicted_rate=update['nextFundingRate'],
+                predicted_rate=Decimal(update['nextFundingRate']),
                 raw=update
             )
             await self.callback(FUNDING, f, timestamp)
