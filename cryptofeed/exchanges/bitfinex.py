@@ -106,7 +106,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
             raise ValueError("number_of_price_points should be in 1, 25, 100, 250")
         if book_frequency not in ('F0', 'F1'):
             raise ValueError("book_frequency should be in F0, F1")
-        super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, subscription=subscription, **kwargs)
+        super().__init__('wss://api.bitfinex.com/ws/2', subscription=subscription, **kwargs)
 
         self.number_of_price_points = number_of_price_points
         self.book_frequency = book_frequency
