@@ -19,6 +19,8 @@
  * Bugfix: Use V3 endpoint for book snapshots in Binance and BinanceUS
  * Bugfix: Coinbase level 3 book potential memory leak
  * Feature: Perpetual support for Bitfinex
+ * Feature: Type checking in Cython code (disabled by default, enable in setup.py)
+ * Bugfix: Fix type issues in OKEx and Binance Futures - some numeric data being returned as string
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
