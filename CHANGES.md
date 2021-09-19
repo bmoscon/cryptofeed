@@ -21,6 +21,7 @@
  * Feature: Perpetual support for Bitfinex
  * Feature: Type checking in Cython code (disabled by default, enable in setup.py)
  * Bugfix: Fix type issues in OKEx and Binance Futures - some numeric data being returned as string
+ * Bugfix: Fix symbol normalization in FTX and Huoni Swap
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
