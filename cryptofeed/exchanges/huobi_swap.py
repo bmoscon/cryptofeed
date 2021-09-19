@@ -80,7 +80,7 @@ class HuobiSwap(HuobiDM):
 
                 f = Funding(
                     self.id,
-                    pair,
+                    self.exchange_symbol_to_std_symbol(pair),
                     None,
                     Decimal(data['data']['funding_rate']),
                     self.timestamp_normalize(int(data['data']['next_funding_time'])),

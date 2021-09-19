@@ -171,7 +171,7 @@ class FTX(Feed, FTXRestMixin):
                     if oi != self._open_interest_cache.get(pair, None):
                         o = OpenInterest(
                             self.id,
-                            pair,
+                            self.exchange_symbol_to_std_symbol(pair),
                             oi,
                             None,
                             raw=data
