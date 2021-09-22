@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.0.1
+### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
  * Bugfix: Upbit REST candles do not work when start/end are not specified
  * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
@@ -23,6 +23,7 @@
  * Bugfix: Fix type issues in OKEx and Binance Futures - some numeric data being returned as string
  * Bugfix: Fix symbol normalization in FTX and Huoni Swap
  * Feature: Redis backend to choose sleep interval for writer
+ * Feature: snapshot_interval added to book backends
 
 ### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
