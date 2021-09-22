@@ -5,16 +5,18 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from asyncio import create_task
+from asyncio import create_task, sleep
 from collections import defaultdict, deque
 from decimal import Decimal
-from typing import Dict, Union, Tuple
+import requests
 import time
+from typing import Dict, Union, Tuple
+from urllib.parse import urlencode
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
-from cryptofeed.defines import BID, ASK, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
@@ -27,6 +29,7 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
+    listen_key_endpoint = 'userDataStream'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
@@ -35,7 +38,8 @@ class Binance(Feed, BinanceRestMixin):
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
         TICKER: 'bookTicker',
-        CANDLES: 'kline_'
+        CANDLES: 'kline_',
+        BALANCES: BALANCES
     }
     request_limit = 20
 
@@ -86,6 +90,7 @@ class Binance(Feed, BinanceRestMixin):
         self.depth_interval = depth_interval
         self.address = self._address()
         self.concurrent_http = concurrent_http
+        self.token = None
 
         self._open_interest_cache = {}
         self._reset()
@@ -100,12 +105,23 @@ class Binance(Feed, BinanceRestMixin):
         The generic connect method supplied by Feed will take care of creating the
         correct connection objects from the addresses.
         """
-        address = self.ws_endpoint + '/stream?streams='
+        if self.requires_authentication:
+            listen_key = self._generate_token()
+            address = self.ws_endpoint + '/ws/' + listen_key
+        else:
+            address = self.ws_endpoint + '/stream?streams='
         subs = []
+
+        is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)
+        is_any_public = any(not self.is_authenticated_channel(chan) for chan in self.subscription)
+        if is_any_private and is_any_public:
+            raise ValueError("Private and public channels should be subscribed to in separate feeds")
 
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
             if normalized_chan == OPEN_INTEREST:
+                continue
+            if self.is_authenticated_channel(normalized_chan):
                 continue
 
             stream = chan
@@ -139,6 +155,26 @@ class Binance(Feed, BinanceRestMixin):
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched
             self._book_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
+
+    async def _refresh_token(self):
+        while True:
+            await sleep(30 * 60)
+            if self.token is None:
+                raise ValueError('There is no token to refresh')
+            payload = {'listenKey': self.token}
+            r = requests.put(f'{self.api}{self.listen_key_endpoint}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
+            r.raise_for_status()
+
+    def _generate_token(self) -> str:
+        url = f'{self.api}{self.listen_key_endpoint}'
+        r = requests.post(url, headers={'X-MBX-APIKEY': self.key_id})
+        r.raise_for_status()
+        response = r.json()
+        if 'listenKey' in response:
+            self.token = response['listenKey']
+            return self.token
+        else:
+            raise ValueError(f'Unable to retrieve listenKey token from {url}')
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -414,9 +450,38 @@ class Binance(Feed, BinanceRestMixin):
                    raw=msg)
         await self.callback(CANDLES, c, timestamp)
 
+    async def _account_update(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "outboundAccountPosition", //Event type
+            "E": 1564034571105,             //Event Time
+            "u": 1564034571073,             //Time of last account update
+            "B": [                          //Balances Array
+                {
+                "a": "ETH",                 //Asset
+                "f": "10000.000000",        //Free
+                "l": "0.000000"             //Locked
+                }
+            ]
+        }
+        """
+        for balance in msg['B']:
+            await self.callback(BALANCES,
+                                feed=self.id,
+                                symbol=balance['a'],
+                                timestamp=self.timestamp_normalize(msg['E']),
+                                receipt_timestamp=timestamp,
+                                wallet_balance=Decimal(balance['f']))
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
+        # Handle account updates from User Data Stream
+        if self.requires_authentication:
+            msg_type = msg['e']
+            if msg_type == 'outboundAccountPosition':
+                await self._account_update(msg, timestamp)
+            return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
         pair, _ = msg['stream'].split('@', 1)
@@ -448,3 +513,5 @@ class Binance(Feed, BinanceRestMixin):
             self._open_interest_cache = {}
         else:
             self._reset()
+        if self.requires_authentication:
+            create_task(self._refresh_token())

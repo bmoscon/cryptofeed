@@ -63,3 +63,11 @@ class LiquidationsZMQ(ZMQCallback, BackendCallback):
 
 class CandlesZMQ(ZMQCallback, BackendCallback):
     default_key = 'candles'
+
+
+class BalancesZMQ(ZMQCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class PositionsZMQ(ZMQCallback, BackendCallback):
+    default_key = 'positions'

@@ -10,7 +10,7 @@ import logging
 from datetime import datetime as dt, timezone
 from typing import Dict, Optional, Tuple, Union
 
-from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
+from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
@@ -114,7 +114,7 @@ class Exchange:
 
     @classmethod
     def is_authenticated_channel(cls, channel: str) -> bool:
-        return channel in (ORDER_INFO, FILLS, TRANSACTIONS, BALANCES)
+        return channel in (ORDER_INFO, FILLS, TRANSACTIONS, BALANCES, POSITIONS)
 
     def exchange_symbol_to_std_symbol(self, symbol: str) -> str:
         try:
