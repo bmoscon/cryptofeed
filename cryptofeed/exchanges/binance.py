@@ -120,7 +120,6 @@ class Binance(Feed, BinanceRestMixin):
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
             if normalized_chan == OPEN_INTEREST:
-<<<<<<< binance_user_data
                 continue
             if self.is_authenticated_channel(normalized_chan):
                 continue
