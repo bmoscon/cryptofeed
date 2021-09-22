@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from collections import defaultdict
 
 import aio_pika
 from yapic import json
@@ -78,8 +79,10 @@ class FundingRabbit(RabbitCallback, BackendCallback):
 
 
 class BookRabbit(RabbitCallback, BackendBookCallback):
-    def __init__(self, *args, snapshots_only=False, **kwargs):
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
         self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
         super().__init__(*args, **kwargs)
 
 

@@ -4,7 +4,9 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import asyncio
+
 import aioredis
 from yapic import json
 
@@ -133,8 +135,10 @@ class FundingStream(RedisStreamCallback, BackendCallback):
 class BookRedis(RedisZSetCallback, BackendBookCallback):
     default_key = 'book'
 
-    def __init__(self, *args, snapshots_only=False, score_key='receipt_timestamp', **kwargs):
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, score_key='receipt_timestamp', **kwargs):
         self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
         super().__init__(*args, score_key=score_key, **kwargs)
 
     async def write(self, data: dict):
@@ -149,8 +153,10 @@ class BookRedis(RedisZSetCallback, BackendBookCallback):
 class BookStream(RedisStreamCallback, BackendBookCallback):
     default_key = 'book'
 
-    def __init__(self, *args, snapshots_only=False, **kwargs):
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
         self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
         super().__init__(*args, **kwargs)
 
     async def write(self, data: dict):

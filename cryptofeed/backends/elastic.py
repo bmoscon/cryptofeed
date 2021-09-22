@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import itertools
 import logging
 from datetime import datetime as dt
@@ -52,8 +53,10 @@ class FundingElastic(ElasticCallback, BackendCallback):
 class BookElastic(ElasticCallback, BackendBookCallback):
     default_index = 'book'
 
-    def __init__(self, *args, index='book', snapshots_only=False, **kwargs):
+    def __init__(self, *args, index='book', snapshots_only=False, snapshot_interval=1000, **kwargs):
         self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
         super().__init__(*args, index=index, **kwargs)
         self.addr = f"{self.addr}/_bulk"
 

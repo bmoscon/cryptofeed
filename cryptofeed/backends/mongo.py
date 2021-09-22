@@ -4,9 +4,10 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
+
 import bson
 import motor.motor_asyncio
-
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
@@ -37,8 +38,10 @@ class FundingMongo(MongoCallback, BackendCallback):
 class BookMongo(MongoCallback, BackendBookCallback):
     default_key = 'book'
 
-    def __init__(self, *args, snapshots_only=False, **kwargs):
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
         self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
         super().__init__(*args, **kwargs)
 
 
