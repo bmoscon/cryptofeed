@@ -39,7 +39,7 @@ os.environ['CFLAGS'] = '-DCYTHON_WITHOUT_ASSERTIONS'
 setup(
     name="cryptofeed",
     ext_modules=cythonize("cryptofeed/types.pyx", language_level=3),
-    version="2.0.1",
+    version="2.0.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
