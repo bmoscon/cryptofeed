@@ -12,7 +12,6 @@ from typing import List, Tuple, Callable, Dict
 
 from yapic import json
 
-from cryptofeed.auth.binance import BinanceFuturesAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BALANCES, BINANCE_FUTURES, FUNDING, LIQUIDATIONS, OPEN_INTEREST, POSITIONS
 from cryptofeed.exchanges.binance import Binance
@@ -24,6 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class BinanceFutures(Binance, BinanceFuturesRestMixin):
     id = BINANCE_FUTURES
     symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
+    listen_key_endpoint = 'listenKey'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
     websocket_channels = {
@@ -50,7 +50,6 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://fstream.binance.com'
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1'
-        self.auth = BinanceFuturesAuth(self.key_id)
         self.address = self._address()
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:

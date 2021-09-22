@@ -6,15 +6,16 @@ associated with this software.
 '''
 from asyncio.events import AbstractEventLoop
 import logging
-from asyncio import create_task
+from asyncio import create_task, sleep
 from collections import defaultdict, deque
 from decimal import Decimal
+import requests
 from typing import Dict, Union, Tuple
+from urllib.parse import urlencode
 
 from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.binance import BinanceAuth
 from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
@@ -28,6 +29,7 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
+    listen_key_endpoint = 'userDataStream'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
@@ -91,9 +93,9 @@ class Binance(Feed, BinanceRestMixin):
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
-        self.auth = BinanceAuth(self.key_id)
         self.address = self._address()
         self.concurrent_http = concurrent_http
+        self.token = None
 
         self._reset()
 
@@ -108,7 +110,7 @@ class Binance(Feed, BinanceRestMixin):
         correct connection objects from the addresses.
         """
         if self.requires_authentication:
-            listen_key = self.auth.generate_token()
+            listen_key = self._generate_token()
             address = self.ws_endpoint + '/ws/' + listen_key
         else:
             address = self.ws_endpoint + '/stream?streams='
@@ -159,6 +161,26 @@ class Binance(Feed, BinanceRestMixin):
         if self.concurrent_http:
             # buffer 'depthUpdate' book msgs until snapshot is fetched
             self._book_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
+
+    async def _refresh_token(self):
+        while True:
+            await sleep(30 * 60)
+            if self.token is None:
+                raise ValueError('There is no token to refresh')
+            payload = {'listenKey': self.token}
+            r = requests.put(f'{self.api}{self.listen_key_endpoint}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
+            r.raise_for_status()
+
+    def _generate_token(self) -> str:
+        url = f'{self.api}{self.listen_key_endpoint}'
+        r = requests.post(url, headers={'X-MBX-APIKEY': self.key_id})
+        r.raise_for_status()
+        response = r.json()
+        if 'listenKey' in response:
+            self.token = response['listenKey']
+            return self.token
+        else:
+            raise ValueError(f'Unable to retrieve listenKey token from {url}')
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -502,8 +524,5 @@ class Binance(Feed, BinanceRestMixin):
         # connection endpoint
         if not isinstance(conn, HTTPPoll):
             self._reset()
-
-    def start(self, loop: AbstractEventLoop):
-        super().start(loop)
         if self.requires_authentication:
-            loop.create_task(self.auth.refresh_token())
+            create_task(self._refresh_token())

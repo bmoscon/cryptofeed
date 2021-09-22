@@ -1,7 +1,5 @@
 from cryptofeed import FeedHandler
-from cryptofeed.auth.binance import BinanceAuth, BinanceDeliveryAuth, BinanceFuturesAuth
-from cryptofeed.config import Config
-from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BALANCES, POSITIONS
+from cryptofeed.defines import BALANCES, POSITIONS
 from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 
 
@@ -16,23 +14,18 @@ async def position(**kwargs):
 def main():
     path_to_config = 'config.yaml'
 
-    config = Config(config=path_to_config)
-    auth = BinanceAuth(config[BINANCE.lower()].key_id)
-    print(auth.generate_token())
+    binance = Binance(config=path_to_config, subscription={BALANCES: []}, timeout=-1, callbacks={BALANCES: balance})
+    binance_delivery = BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position})
+    binance_futures = BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position})
 
-    auth = BinanceFuturesAuth(config[BINANCE_FUTURES.lower()].key_id)
-    print(auth.generate_token())
-
-    auth = BinanceDeliveryAuth(config[BINANCE_DELIVERY.lower()].key_id)
-    print(auth.generate_token())
+    print(binance._generate_token())
+    print(binance_delivery._generate_token())
+    print(binance_futures._generate_token())
 
     f = FeedHandler()
-    f.add_feed(Binance(config=path_to_config, subscription={BALANCES: []}, timeout=-1,
-                       callbacks={BALANCES: balance}))
-    f.add_feed(BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1,
-                               callbacks={BALANCES: balance, POSITIONS: position}))
-    f.add_feed(BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1,
-                              callbacks={BALANCES: balance, POSITIONS: position}))
+    f.add_feed(binance)
+    f.add_feed(binance_delivery)
+    f.add_feed(binance_futures)
     f.run()
 
 

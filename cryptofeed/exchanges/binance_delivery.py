@@ -10,7 +10,6 @@ from typing import Tuple
 
 from yapic import json
 
-from cryptofeed.auth.binance import BinanceDeliveryAuth
 from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, FUNDING, LIQUIDATIONS, OPEN_INTEREST, POSITIONS
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
@@ -22,6 +21,7 @@ LOG = logging.getLogger('feedhandler')
 class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     id = BINANCE_DELIVERY
     symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
+    listen_key_endpoint = 'listenKey'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
     websocket_channels = {
@@ -37,7 +37,6 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
-        self.auth = BinanceDeliveryAuth(self.key_id)
         self.address = self._address()
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
