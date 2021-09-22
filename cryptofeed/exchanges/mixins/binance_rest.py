@@ -14,8 +14,9 @@ from urllib.parse import urlencode
 
 from yapic import json
 
-from cryptofeed.defines import BALANCES, BUY, CANCEL_ORDER, DELETE, FILL_OR_KILL, GET, GOOD_TIL_CANCELED, IMMEDIATE_OR_CANCEL, LIMIT, MARKET, ORDERS, ORDER_STATUS, PLACE_ORDER, POSITIONS, POST, SELL, TRADES
+from cryptofeed.defines import BALANCES, BUY, CANCEL_ORDER, CANDLES, DELETE, FILL_OR_KILL, GET, GOOD_TIL_CANCELED, IMMEDIATE_OR_CANCEL, LIMIT, MARKET, ORDERS, ORDER_STATUS, PLACE_ORDER, POSITIONS, POST, SELL, TRADES
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import Candle
 
 
 LOG = logging.getLogger('cryptofeed.rest')
@@ -24,7 +25,7 @@ LOG = logging.getLogger('cryptofeed.rest')
 class BinanceRestMixin(RestExchange):
     api = "https://api.binance.com/api/v3/"
     rest_channels = (
-        TRADES, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS
+        TRADES, ORDER_STATUS, CANCEL_ORDER, PLACE_ORDER, BALANCES, ORDERS, CANDLES
     )
     order_options = {
         LIMIT: 'LIMIT',
@@ -109,6 +110,30 @@ class BinanceRestMixin(RestExchange):
         }
         return ret
 
+    async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        ep = f'{self.api}klines?symbol={sym}&interval={interval}&limit=1000'
+
+        start, end = self._interval_normalize(start, end)
+        if start and end:
+            start = int(start * 1000)
+            end = int(end * 1000)
+
+        while True:
+            if start and end:
+                endpoint = f'{ep}&startTime={start}&endTime={end}'
+            else:
+                endpoint = ep
+            r = await self.http_conn.read(endpoint, retry_count=retry_count, retry_delay=retry_delay)
+            data = json.loads(r, parse_float=Decimal)
+            start = data[-1][6]
+            data = [Candle(self.id, symbol, self.timestamp_normalize(e[0]), self.timestamp_normalize(e[6]), interval, e[8], Decimal(e[1]), Decimal(e[4]), Decimal(e[2]), Decimal(e[3]), Decimal(e[5]), True, self.timestamp_normalize(e[6]), raw=e) for e in data]
+            yield data
+
+            if len(data) < 1000 or end is None:
+                break
+            await asyncio.sleep(1 / self.request_limit)
+
     # Trading APIs
     async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, time_in_force=None, test=False):
         if order_type == MARKET and price:
@@ -188,3 +213,10 @@ class BinanceDeliveryRestMixin(BinanceRestMixin):
     async def positions(self):
         data = await self._request(GET, 'account', auth=True)
         return data['positions']
+
+
+class BinanceUSRestMixin(BinanceRestMixin):
+    api = 'https://api.binance.us/api/v3/'
+    rest_channels = (
+        TRADES
+    )

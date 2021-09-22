@@ -17,6 +17,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL
 from cryptofeed.exchanges.huobi_dm import HuobiDM
+from cryptofeed.types import Funding
 
 
 LOG = logging.getLogger('feedhandler')
@@ -51,6 +52,21 @@ class HuobiSwap(HuobiDM):
         self.funding_updates = {}
 
     async def _funding(self, pairs):
+        """
+        {
+            "status": "ok",
+            "data": {
+                "estimated_rate": "0.000100000000000000",
+                "funding_rate": "-0.000362360011416593",
+                "contract_code": "BTC-USD",
+                "symbol": "BTC",
+                "fee_asset": "BTC",
+                "funding_time": "1603872000000",
+                "next_funding_time": "1603900800000"
+            },
+            "ts": 1603866304635
+        }
+        """
         while True:
             for pair in pairs:
                 data = await self.http_conn.read(f'https://api.hbdm.com/swap-api/v1/swap_funding_rate?contract_code={pair}')
@@ -61,15 +77,18 @@ class HuobiSwap(HuobiDM):
                     await asyncio.sleep(1)
                     continue
                 self.funding_updates[pair] = update
-                await self.callback(FUNDING,
-                                    feed=self.id,
-                                    symbol=pair,
-                                    timestamp=self.timestamp_normalize(data['ts']),
-                                    receipt_timestamp=received,
-                                    rate=Decimal(update[0]),
-                                    next_funding_time=update[1]
-                                    )
 
+                f = Funding(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(pair),
+                    None,
+                    Decimal(data['data']['funding_rate']),
+                    self.timestamp_normalize(int(data['data']['next_funding_time'])),
+                    self.timestamp_normalize(int(data['data']['funding_time'])),
+                    predicted_rate=Decimal(data['data']['estimated_rate']),
+                    raw=data
+                )
+                await self.callback(FUNDING, f, received)
                 await asyncio.sleep(0.1)
 
     async def subscribe(self, conn: AsyncConnection):

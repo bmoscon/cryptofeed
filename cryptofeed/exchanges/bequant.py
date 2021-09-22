@@ -13,15 +13,15 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple, Callable, List
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET, MAKER_OR_CANCEL
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import Trade, Ticker, Candle, OrderBook, OrderInfo, Balance, Transaction
 
 
 LOG = logging.getLogger('feedhandler')
@@ -65,17 +65,15 @@ class Bequant(Feed):
 
         return ret, info
 
-    def __init__(self, candle_interval='1m', **kwargs):
+    def __init__(self, **kwargs):
         urls = {
             'market': 'wss://api.bequant.io/api/2/ws/public',
             'trading': 'wss://api.bequant.io/api/2/ws/trading',
             'account': 'wss://api.bequant.io/api/2/ws/account',
         }
         super().__init__(urls, **kwargs)
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
-        self.candle_interval = interval_map[candle_interval]
+        self.candle_interval = interval_map[self.candle_interval]
         self.normalize_interval = {value: key for key, value in interval_map.items()}
         self.__reset()
 
@@ -83,7 +81,7 @@ class Bequant(Feed):
         self._l2_book = {}
         self.seq_no = {}
 
-    async def _ticker(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _ticker(self, msg: dict, timestamp: float):
         """
         {
             "ask": "0.054464", <- best ask
@@ -98,26 +96,15 @@ class Bequant(Feed):
             "symbol": "ETHBTC"
         }
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
-                            bid=Decimal(msg['bid']),
-                            ask=Decimal(msg['ask']),
-                            receipt_timestamp=ts,
-                            timestamp=self.timestamp_normalize(msg['timestamp']))
+        t = Ticker(self.id, self.exchange_symbol_to_std_symbol(msg['symbol']), Decimal(msg['bid']), Decimal(msg['ask']), self.timestamp_normalize(msg['timestamp']), raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
-    async def _book_snapshot(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _book_snapshot(self, msg: dict, ts: float):
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        self._l2_book[pair] = {
-            BID: sd({
-                Decimal(bid['price']): Decimal(bid['size']) for bid in msg['bid']
-            }),
-            ASK: sd({
-                Decimal(ask['price']): Decimal(ask['size']) for ask in msg['ask']
-            })
-        }
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, None, self.timestamp_normalize(msg['timestamp']), ts)
+        self._l2_book[pair] = OrderBook(self.id, pair, bids={Decimal(bid['price']): Decimal(bid['size']) for bid in msg['bid']}, asks={Decimal(ask['price']): Decimal(ask['size']) for ask in msg['ask']})
+        await self.book_callback(L2_BOOK, self._l2_book[pair], ts, raw=msg, timestamp=self.timestamp_normalize(msg['timestamp']))
 
-    async def _book_update(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _book_update(self, msg: dict, ts: float):
         delta = {BID: [], ASK: []}
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for side in ('bid', 'ask'):
@@ -127,13 +114,14 @@ class Bequant(Feed):
                 amount = Decimal(entry['size'])
                 if amount == 0:
                     delta[s].append((price, 0))
-                    del self._l2_book[pair][s][price]
+                    del self._l2_book[pair].book[s][price]
                 else:
                     delta[s].append((price, amount))
-                    self._l2_book[pair][s][price] = amount
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, self.timestamp_normalize(msg['timestamp']), ts)
+                    self._l2_book[pair].book[s][price] = amount
 
-    async def _trades(self, msg: dict, conn: AsyncConnection, ts: float):
+        await self.book_callback(L2_BOOK, self._l2_book[pair], ts, timestamp=self.timestamp_normalize(msg['timestamp']), raw=msg, sequence_number=self.seq_no[msg['symbol']], delta=delta)
+
+    async def _trades(self, msg: dict, timestamp: float):
         """
         "params": {
             "data": [
@@ -150,16 +138,17 @@ class Bequant(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for update in msg['data']:
-            await self.callback(TRADES, feed=self.id,
-                                symbol=pair,
-                                side=BUY if update['side'] == 'buy' else SELL,
-                                amount=Decimal(update['quantity']),
-                                price=Decimal(update['price']),
-                                order_id=update['id'],
-                                timestamp=self.timestamp_normalize(update['timestamp']),
-                                receipt_timestamp=ts)
+            t = Trade(self.id,
+                      pair,
+                      BUY if update['side'] == 'buy' else SELL,
+                      Decimal(update['quantity']),
+                      Decimal(update['price']),
+                      self.timestamp_normalize(update['timestamp']),
+                      id=str(update['id']),
+                      raw=update)
+            await self.callback(TRADES, t, timestamp)
 
-    async def _candles(self, msg: dict, conn: AsyncConnection, ts: float):
+    async def _candles(self, msg: dict, timestamp: float):
         """
         {
             "jsonrpc": "2.0",
@@ -187,23 +176,25 @@ class Bequant(Feed):
         for candle in msg['data']:
             start = self.timestamp_normalize(candle['timestamp'])
             end = start + timedelta_str_to_sec(interval) - 1
-            await self.callback(CANDLES,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
-                                timestamp=ts,  # no timestamp provided by exchange
-                                receipt_timestamp=ts,
-                                start=start,
-                                stop=end,
-                                interval=interval,
-                                trades=None,
-                                open_price=Decimal(candle['open']),
-                                close_price=Decimal(candle['close']),
-                                high_price=Decimal(candle['max']),
-                                low_price=Decimal(candle['min']),
-                                volume=Decimal(candle['volume']),
-                                closed=None)
+            c = Candle(
+                self.id,
+                self.exchange_symbol_to_std_symbol(msg['symbol']),
+                start,
+                end,
+                interval,
+                None,
+                Decimal(candle['open']),
+                Decimal(candle['close']),
+                Decimal(candle['max']),
+                Decimal(candle['min']),
+                Decimal(candle['volume']),
+                None,
+                None,
+                raw=candle
+            )
+            await self.callback(CANDLES, c, timestamp)
 
-    async def _order_status(self, msg: str, conn: AsyncConnection, ts: float):
+    async def _order_status(self, msg: str, ts: float):
         status_lookup = {
             'new': OPEN,
             'partiallyFilled': PARTIAL,
@@ -246,71 +237,82 @@ class Bequant(Feed):
             }
         }
         """
-        res = {
-            'symbol': msg["symbol"],
-            # 'symbol': self.exchange_symbol_to_std_symbol(msg["symbol"]),
-            'status': status_lookup[msg["status"]],
-            'order_id': msg["id"],
-            'side': SELL if msg["side"] == 'sell' else BUY,
-            'order_type': type_lookup[msg["type"]],
-            'timestamp': self.timestamp_normalize(msg["updatedAt"]) if msg["updatedAt"] else self.timestamp_normalize(msg["createdAt"]),
-            'receipt_timestamp': ts,
-            'report_type': msg['reportType'],
-            'client_order_id': msg["clientOrderId"],
-            'order_policy': msg["timeInForce"],
-            'order_quantity': Decimal(msg["quantity"]),
-            'price': Decimal(msg["price"]),
-            'cumulative_quant': Decimal(msg["cumQuantity"]),
-            MAKER_OR_CANCEL: bool(msg["postOnly"]),
-        }
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg["symbol"]),
+            msg["id"],
+            SELL if msg["side"] == 'sell' else BUY,
+            status_lookup[msg["status"]],
+            type_lookup[msg["type"]],
+            Decimal(msg['price']),
+            Decimal(msg['cumQuantity']),
+            Decimal(msg['quantity']) - Decimal(msg['cumQuantity']),
+            self.timestamp_normalize(msg["updatedAt"]) if msg["updatedAt"] else self.timestamp_normalize(msg["createdAt"]),
+            raw=msg
+        )
+        await self.callback(ORDER_INFO, oi, ts)
 
-        if msg["reportType"] == 'trade':
-            res['trade_quantity'] = Decimal(msg["tradeQuantity"])
-            res['trade_price'] = Decimal(msg["tradePrice"])
-            res['trade_id'] = msg['tradeID']
-            res['trade_fee'] = Decimal(msg['tradeFee'])
+    async def _transactions(self, msg: str, ts: float):
 
-        # Conn passed up to callback as way of handing authenticated ws (with trading endpoint) to application
-        # Temporary solution until ws trading implemented
-        await self.callback(ORDER_INFO, feed=self.id, conn=conn, **res)
-
-    async def _transactions(self, msg: str, conn: AsyncConnection, ts: float):
-
-        """A transaction notification occurs each time the transaction has been changed, such as creating a transaction,
+        """
+        A transaction notification occurs each time the transaction has been changed, such as creating a transaction,
         updating the pending state (for example the hash assigned) or completing a transaction.
-        This is the easiest way to track deposits or develop real-time asset monitoring."""
+        This is the easiest way to track deposits or develop real-time asset monitoring.
 
-        keys = ['id', 'index', 'currency', 'amount', 'fee', 'address', 'paymentId', 'hash', 'status', 'type', 'subType', 'senders', 'offchainId', 'confirmations', 'publicComment', 'errorCode', 'createdAt', 'updatedAt']
+        {
+            "jsonrpc": "2.0",
+            "method": "updateTransaction",
+            "params": {
+                "id": "76b70d1c-3dd7-423e-976e-902e516aae0e",
+                "index": 7173627250,
+                "type": "bankToExchange",
+                "status": "success",
+                "currency": "BTG",
+                "amount": "0.00001000",
+                "createdAt": "2021-01-31T08:19:33.892Z",
+                "updatedAt": "2021-01-31T08:19:33.967Z"
+            }
+        }
+        """
+        t = Transaction(
+            self.id,
+            msg['params']['currency'],
+            msg['params']['type'],
+            msg['params']['status'],
+            Decimal(msg['params']['amount']),
+            msg['params']['createdAt'].timestamp(),
+            raw=msg
+        )
+        await self.callback(TRANSACTIONS, t, ts)
 
-        decimalize = ['amount', 'fee']
-        ts_normalize = ['createdAt', 'updatedAt']
-        transaction = {k: Decimal(msg[k]) if k in decimalize else self.timestamp_normalize(msg[k]) if k in ts_normalize else k for k in keys if k in msg}
-
-        transaction['receipt_timestamp'] = ts
-        # transaction = {
-        #     'receipt_timestamp': ts,
-        #     'tx_id': msg['id'],
-        #     'exch_index': msg['index'],
-        #     'currency': msg['currency'],
-        #     'amount': Decimal(msg['amount']),
-        #     'fee': Decimal(msg['fee']),
-        #     'address': msg['address'],
-        #     'payment_id': msg['paymentId'],
-        #     'tx_hash': msg['hash'],
-        #     'status': msg['status'],
-        #     'tx_type': msg['type'],
-        #     'tx_subType': msg['subType'],
-        #     'senders': msg['senders'],
-        #     'off_chain_id': msg['offchainId'],
-        #     'confirmations': msg['confirmations'],
-        # }
-
-        await self.callback(TRANSACTIONS, feed=self.id, conn=conn, **transaction)
-
-    async def _balances(self, msg: str, conn: AsyncConnection, ts: float):
-        accounts = [{k: Decimal(v) if k in ['available', 'reserved'] else v for (k, v) in account.items()} for account in msg]
-
-        await self.callback(BALANCES, feed=self.id, conn=conn, accounts=accounts)
+    async def _balances(self, msg: str, ts: float):
+        '''
+        {
+            "jsonrpc": "2.0",
+            "method": "balance",
+            "params": [
+                {
+                    "currency": "BTC",
+                    "available": "0.00005821",
+                    "reserved": "0"
+                },
+                {
+                    "currency": "DOGE",
+                    "available": "11",
+                    "reserved": "0"
+                }
+            ]
+        }
+        '''
+        for entry in msg['params']:
+            b = Balance(
+                self.id,
+                entry['currency'],
+                Decimal(entry['available']),
+                Decimal(entry['reserved']),
+                raw=entry
+            )
+            await self.callback(BALANCES, b, ts)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, ts: float):
 
@@ -330,40 +332,31 @@ class Bequant(Feed):
             m = msg['method']
             params = msg['params']
             if m == 'ticker':
-                await self._ticker(params, conn, ts)
+                await self._ticker(params, ts)
             elif m == 'snapshotOrderbook':
-                await self._book_snapshot(params, conn, ts)
+                await self._book_snapshot(params, ts)
             elif m == 'updateOrderbook':
-                await self._book_update(params, conn, ts)
+                await self._book_update(params, ts)
             elif m in ('updateTrades', 'snapshotTrades'):
-                await self._trades(params, conn, ts)
+                await self._trades(params, ts)
             elif m in ('snapshotCandles', 'updateCandles'):
-                await self._candles(params, conn, ts)
+                await self._candles(params, ts)
             elif m in ('activeOrders', 'report'):
                 if isinstance(params, list):
                     for entry in params:
-                        # Conn passed up to callback as way of handing authenticated ws (with trading endpoint) to application
-                        # Temporary fix until ws trading implemented
-                        await self._order_status(entry, conn, ts)
+                        await self._order_status(entry, ts)
                 else:
-                    await self._order_status(params, conn, ts)
+                    await self._order_status(params, ts)
             elif m == 'updateTransaction':
-                # Ditto for 'account' ws conn. (Same auth, different endpoint)
-                await self._transactions(params, conn, ts)
+                await self._transactions(params, ts)
             elif m == 'balance':
-                if isinstance(params, list):
-                    for entry in params:
-                        await self._balances(entry, conn, ts)
-                else:
-                    await self._balances(params, conn, ts)
+                await self._balances(msg, conn, ts)
             else:
                 LOG.warning(f"{self.id}: Invalid message received on {conn.uuid}: {msg}")
 
         else:
             if 'error' in msg:
                 LOG.error(f"{self.id}: Received error on {conn.uuid}: {msg['error']}")
-            elif 'result' in msg:
-                LOG.info(f"{self.id}: Received result on {conn.uuid}: {msg}")
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []

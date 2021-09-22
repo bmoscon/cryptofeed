@@ -4,11 +4,13 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import os
 import sys
 
 from setuptools import setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
+from Cython.Build import cythonize
 
 
 def get_long_description():
@@ -30,9 +32,14 @@ class Test(TestCommand):
         sys.exit(errno)
 
 
+# comment out line below to enable type checking in cython code (via assertions)
+os.environ['CFLAGS'] = '-DCYTHON_WITHOUT_ASSERTIONS'
+
+
 setup(
     name="cryptofeed",
-    version="2.0.0",
+    ext_modules=cythonize("cryptofeed/types.pyx", language_level=3),
+    version="2.0.1",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
@@ -61,8 +68,7 @@ setup(
     tests_require=["pytest"],
     install_requires=[
         "requests>=2.18.4",
-        "websockets>=7.0",
-        "sortedcontainers>=1.5.9",
+        "websockets>=10.0",
         "pyyaml",
         "aiohttp>=3.7.1, < 4.0.0",
         "aiofile>=2.0.0",
@@ -71,6 +77,7 @@ setup(
         # Two (optional) dependencies that speed up Cryptofeed:
         "aiodns>=1.1",  # aiodns speeds up DNS resolving
         "cchardet",     # cchardet is a faster replacement for chardet
+        "order_book>=0.4.0"
     ],
     extras_require={
         "arctic": ["arctic", "pandas"],

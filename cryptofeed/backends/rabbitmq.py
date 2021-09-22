@@ -9,9 +9,7 @@ import asyncio
 import aio_pika
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class RabbitCallback:
@@ -52,10 +50,8 @@ class RabbitCallback:
                 self.conn = await connection.channel()
                 await self.conn.declare_queue(self.queue_name, auto_delete=False, durable=True)
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict):
         await self.connect()
-        data['feed'] = feed
-        data['symbol'] = symbol
 
         if self.exchange_mode:
             await self.conn.publish(
@@ -73,33 +69,31 @@ class RabbitCallback:
             )
 
 
-class TradeRabbit(RabbitCallback, BackendTradeCallback):
+class TradeRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class FundingRabbit(RabbitCallback, BackendFundingCallback):
+class FundingRabbit(RabbitCallback, BackendCallback):
     pass
 
 
 class BookRabbit(RabbitCallback, BackendBookCallback):
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
+
+
+class TickerRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class BookDeltaRabbit(RabbitCallback, BackendBookDeltaCallback):
+class OpenInterestRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class TickerRabbit(RabbitCallback, BackendTickerCallback):
+class LiquidationsRabbit(RabbitCallback, BackendCallback):
     pass
 
 
-class OpenInterestRabbit(RabbitCallback, BackendOpenInterestCallback):
-    pass
-
-
-class LiquidationsRabbit(RabbitCallback, BackendLiquidationsCallback):
-    pass
-
-
-class CandlesRabbit(RabbitCallback, BackendCandlesCallback):
+class CandlesRabbit(RabbitCallback, BackendCallback):
     pass

@@ -9,13 +9,13 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, FUTURES, TICKER, L2_BOOK, SELL, TRADES, FX
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import Ticker, Trade, OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -88,12 +88,8 @@ class Bitflyer(Feed):
         pair = self.exchange_symbol_to_std_symbol(msg['params']['message']['product_code'])
         bid = msg['params']['message']['best_bid']
         ask = msg['params']['message']['best_ask']
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=bid,
-                            ask=ask,
-                            timestamp=self.timestamp_normalize(msg['params']['message']['timestamp']),
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, bid, ask, self.timestamp_normalize(msg['params']['message']['timestamp']), raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -116,17 +112,18 @@ class Bitflyer(Feed):
             }
         }
         """
-        pair = msg['params']['channel'][21:]
-        pair = self.exchange_symbol_to_std_symbol(pair)
+        pair = self.exchange_symbol_to_std_symbol(msg['params']['channel'][21:])
         for update in msg['params']['message']:
-            await self.callback(TRADES, feed=self.id,
-                                order_id=update['id'],
-                                symbol=pair,
-                                side=BUY if update['side'] == 'BUY' else SELL,
-                                amount=update['size'],
-                                price=update['price'],
-                                timestamp=self.timestamp_normalize(update['exec_date']),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                pair,
+                BUY if update['side'] == 'BUY' else SELL,
+                update['size'],
+                update['price'],
+                self.timestamp_normalize(update['exec_date']),
+                raw=update
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -161,35 +158,32 @@ class Bitflyer(Feed):
             pair = msg['params']['channel'].split("lightning_board")[1][1:]
         pair = self.exchange_symbol_to_std_symbol(pair)
 
-        forced = pair not in self._l2_book
-
         # Ignore deltas until a snapshot is received
         if pair not in self._l2_book and not snapshot:
             return
 
+        delta = None
         if snapshot:
-            if not forced:
-                self.previous_book[pair] = self._l2_book[pair]
-            self._l2_book[pair] = {BID: sd(), ASK: sd()}
-            delta = None
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
         else:
             delta = {BID: [], ASK: []}
-        data = msg['params']['message']
 
-        for side, s in (('bids', BID), ('asks', ASK)):
+        data = msg['params']['message']
+        for side in ('bids', 'asks'):
+            s = BID if side == 'bids' else ASK
             if snapshot:
-                self._l2_book[pair][s] = {d['price']: d['size'] for d in data[side]}
+                self._l2_book[pair].book[side] = {d['price']: d['size'] for d in data[side]}
             else:
                 for entry in data[side]:
                     if entry['size'] == 0:
-                        if entry['price'] in self._l2_book[pair][s]:
-                            del self._l2_book[pair][s][entry['price']]
+                        if entry['price'] in self._l2_book[pair].book[side]:
+                            del self._l2_book[pair].book[side][entry['price']]
                             delta[s].append((entry['price'], Decimal(0.0)))
                     else:
-                        self._l2_book[pair][s][entry['price']] = entry['size']
+                        self._l2_book[pair].book[side][entry['price']] = entry['size']
                         delta[s].append((entry['price'], entry['size']))
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

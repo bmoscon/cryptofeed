@@ -1,12 +1,12 @@
 import asyncio
 import base64
 import logging
+import time
 from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
 
 import requests
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
@@ -14,6 +14,7 @@ from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, T
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exceptions import MissingSequenceNumber
+from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -23,6 +24,7 @@ class Bittrex(Feed):
     id = BITTREX
     symbol_endpoint = 'https://api.bittrex.com/v3/markets'
     valid_candle_intervals = {'1m', '5m', '1h', '1d'}
+    valid_depths = [1, 25, 500]
     websocket_channels = {
         L2_BOOK: 'orderbook_{}_{}',
         TRADES: 'trade_{}',
@@ -42,26 +44,26 @@ class Bittrex(Feed):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, depth=500, candle_interval='1m', **kwargs):
+    def __init__(self, **kwargs):
         super().__init__('wss://socket-v3.bittrex.com/signalr/connect', **kwargs)
         r = requests.get('https://socket-v3.bittrex.com/signalr/negotiate', params={'connectionData': json.dumps([{'name': 'c3'}]), 'clientProtocol': 1.5})
         token = r.json()['ConnectionToken']
         url = requests.Request('GET', 'https://socket-v3.bittrex.com/signalr/connect', params={'transport': 'webSockets', 'connectionToken': token, 'connectionData': json.dumps([{"name": "c3"}]), 'clientProtocol': 1.5}).prepare().url
         url = url.replace('https://', 'wss://')
         self.address = url
-        self.depth = depth
-        if depth not in (1, 25, 500):
-            if depth >= 500 or depth >= 25:
-                self.depth = 500
-            else:
-                self.depth = 25
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
-        self.candle_interval = candle_interval
 
     def __reset(self):
         self._l2_book = {}
         self.seq_no = {}
+
+    def __depth(self):
+        depth = self.valid_depths[-1]
+        if self.max_depth:
+            if 25 <= self.max_depth >= 500:
+                depth = 500
+            else:
+                depth = 25
+        return depth
 
     async def ticker(self, msg: dict, timestamp: float):
         """
@@ -72,13 +74,15 @@ class Bittrex(Feed):
             'askRate': '38886.38815323'
         }
         """
-        await self.callback(TICKER,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['symbol']),
-                            bid=Decimal(msg['bidRate']),
-                            ask=Decimal(msg['askRate']),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp)
+        t = Ticker(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['symbol']),
+            Decimal(msg['bidRate']),
+            Decimal(msg['askRate']),
+            None,
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
 
     async def book(self, msg: dict, timestamp: float):
         """
@@ -114,11 +118,9 @@ class Bittrex(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['marketSymbol'])
         seq_no = int(msg['sequence'])
-        forced = False
         delta = {BID: [], ASK: []}
 
         if pair not in self._l2_book:
-            forced = True
             await self._snapshot(pair, seq_no)
         else:
             if seq_no <= self.seq_no[pair]:
@@ -133,17 +135,17 @@ class Bittrex(Feed):
                     size = Decimal(update['quantity'])
                     if size == 0:
                         delta[side].append((price, 0))
-                        if price in self._l2_book[pair][side]:
-                            del self._l2_book[pair][side][price]
+                        if price in self._l2_book[pair].book[side]:
+                            del self._l2_book[pair].book[side][price]
                     else:
-                        self._l2_book[pair][side][price] = size
+                        self._l2_book[pair].book[side][price] = size
                         delta[side].append((price, size))
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, sequence_number=seq_no, delta=delta)
 
     async def _snapshot(self, symbol: str, sequence_number: int):
         while True:
-            ret, headers = await self.http_conn.read(f'https://api.bittrex.com/v3/markets/{symbol}/orderbook?depth={self.depth}', return_headers=True)
+            ret, headers = await self.http_conn.read(f'https://api.bittrex.com/v3/markets/{symbol}/orderbook?depth={self.__depth()}', return_headers=True)
             seq = int(headers['Sequence'])
             if seq >= sequence_number:
                 break
@@ -151,9 +153,10 @@ class Bittrex(Feed):
 
         self.seq_no[symbol] = seq
         data = json.loads(ret, parse_float=Decimal)
-        self._l2_book[symbol] = {BID: {}, ASK: {}}
+        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
         for side, entries in data.items():
-            self._l2_book[symbol][side] = sd({Decimal(e['rate']): Decimal(e['quantity']) for e in entries})
+            self._l2_book[symbol].book[side] = {Decimal(e['rate']): Decimal(e['quantity']) for e in entries}
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], time.time(), raw=data, sequence_number=seq)
 
     async def trades(self, msg: dict, timestamp: float):
         """
@@ -173,15 +176,17 @@ class Bittrex(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['marketSymbol'])
         for trade in msg['deltas']:
-            await self.callback(TRADES,
-                                feed=self.id,
-                                order_id=trade['id'],
-                                symbol=pair,
-                                side=BUY if trade['takerSide'] == 'BUY' else SELL,
-                                amount=Decimal(trade['quantity']),
-                                price=Decimal(trade['rate']),
-                                timestamp=self.timestamp_normalize(trade['executedAt']),
-                                receipt_timestamp=timestamp)
+            t = Trade(
+                self.id,
+                pair,
+                BUY if trade['takerSide'] == 'BUY' else SELL,
+                Decimal(trade['quantity']),
+                Decimal(trade['rate']),
+                self.timestamp_normalize(trade['executedAt']),
+                id=trade['id'],
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def candle(self, msg: dict, timestamp: float):
         """
@@ -213,21 +218,23 @@ class Bittrex(Feed):
             offset = 86400
         end = start + offset
 
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['marketSymbol']),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp,
-                            start=start,
-                            stop=end,
-                            interval=self.candle_interval,
-                            trades=None,
-                            open_price=Decimal(msg['delta']['open']),
-                            close_price=Decimal(msg['delta']['close']),
-                            high_price=Decimal(msg['delta']['high']),
-                            low_price=Decimal(msg['delta']['low']),
-                            volume=Decimal(msg['delta']['volume']),
-                            closed=None)
+        c = Candle(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['marketSymbol']),
+            start,
+            end,
+            self.candle_interval,
+            None,
+            Decimal(msg['delta']['open']),
+            Decimal(msg['delta']['close']),
+            Decimal(msg['delta']['high']),
+            Decimal(msg['delta']['low']),
+            Decimal(msg['delta']['volume']),
+            None,
+            None,
+            raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg)
@@ -265,7 +272,7 @@ class Bittrex(Feed):
             i = 1
             for symbol in self.subscription[chan]:
                 if channel == L2_BOOK:
-                    msg = {'A': ([chan.format(symbol, self.depth)],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
+                    msg = {'A': ([chan.format(symbol, self.__depth())],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
                 elif channel in (TRADES, TICKER):
                     msg = {'A': ([chan.format(symbol)],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
                 elif channel == CANDLES:

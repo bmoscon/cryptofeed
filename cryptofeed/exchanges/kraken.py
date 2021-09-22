@@ -9,9 +9,7 @@ from collections import defaultdict
 from functools import partial
 import logging
 from typing import Callable, Dict, List, Tuple
-import zlib
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
@@ -21,6 +19,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.util.split import list_by_max_items
 from cryptofeed.exchanges.mixins.kraken_rest import KrakenRestMixin
+from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -29,7 +28,7 @@ LOG = logging.getLogger('feedhandler')
 class Kraken(Feed, KrakenRestMixin):
     id = KRAKEN
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '15d'}
-    valid_depths = [5, 10, 20, 50, 100, 500, 1000]
+    valid_depths = [10, 25, 100, 500, 1000]
     symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
     websocket_channels = {
         L2_BOOK: 'book',
@@ -59,26 +58,14 @@ class Kraken(Feed, KrakenRestMixin):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, candle_interval='1m', max_depth=1000, **kwargs):
-        lookup = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
-        self.candle_interval = lookup[candle_interval]
-        self.normalize_interval = {value: key for key, value in lookup.items()}
+    def __init__(self, max_depth=1000, **kwargs):
         super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
+        lookup = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
+        self.candle_interval = lookup[self.candle_interval]
+        self.normalize_interval = {value: key for key, value in lookup.items()}
 
     def __reset(self):
         self._l2_book = {}
-
-    def __calc_checksum(self, pair):
-        bid_prices = list(reversed(self._l2_book[pair][BID].keys()))[:10]
-        ask_prices = list(self._l2_book[pair][ASK].keys())[:10]
-
-        combined = ""
-        for data, side in ((ask_prices, ASK), (bid_prices, BID)):
-            sizes = [str(self._l2_book[pair][side][price]).replace('.', '').lstrip('0') for price in data]
-            prices = [str(price).replace('.', '').lstrip('0') for price in data]
-            combined += ''.join([b for a in zip(prices, sizes) for b in a])
-
-        return str(zlib.crc32(combined.encode()))
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         """
@@ -132,27 +119,25 @@ class Kraken(Feed, KrakenRestMixin):
         for trade in msg[1]:
             price, amount, server_timestamp, side, order_type, _ = trade
             order_type = 'limit' if order_type == 'l' else 'market'
-            await self.callback(TRADES, feed=self.id,
-                                symbol=pair,
-                                side=BUY if side == 'b' else SELL,
-                                amount=Decimal(amount),
-                                price=Decimal(price),
-                                order_id=None,
-                                timestamp=float(server_timestamp),
-                                receipt_timestamp=timestamp,
-                                order_type=order_type)
+            t = Trade(
+                self.id,
+                pair,
+                BUY if side == 'b' else SELL,
+                Decimal(amount),
+                Decimal(price),
+                float(server_timestamp),
+                type=order_type,
+                raw=trade
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
         [93, {'a': ['105.85000', 0, '0.46100000'], 'b': ['105.77000', 45, '45.00000000'], 'c': ['105.83000', '5.00000000'], 'v': ['92170.25739498', '121658.17399954'], 'p': ['107.58276', '107.95234'], 't': [4966, 6717], 'l': ['105.03000', '105.03000'], 'h': ['110.33000', '110.33000'], 'o': ['109.45000', '106.78000']}]
         channel id, asks: price, wholeLotVol, vol, bids: price, wholeLotVol, close: ...,, vol: ..., VWAP: ..., trades: ..., low: ...., high: ..., open: ...
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=pair,
-                            bid=Decimal(msg[1]['b'][0]),
-                            ask=Decimal(msg[1]['a'][0]),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, pair, Decimal(msg[1]['b'][0]), Decimal(msg[1]['a'][0]), None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         delta = {BID: [], ASK: []}
@@ -160,12 +145,10 @@ class Kraken(Feed, KrakenRestMixin):
 
         if 'as' in msg[0]:
             # Snapshot
-            self._l2_book[pair] = {BID: sd({
-                Decimal(update[0]): Decimal(update[1]) for update in msg[0]['bs']
-            }), ASK: sd({
-                Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']
-            })}
-            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, True, delta, timestamp, timestamp)
+            bids = {Decimal(update[0]): Decimal(update[1]) for update in msg[0]['bs']}
+            asks = {Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']}
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks, checksum_format='KRAKEN')
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg)
         else:
             for m in msg:
                 for s, updates in m.items():
@@ -183,21 +166,16 @@ class Kraken(Feed, KrakenRestMixin):
                                 # Per Kraken's technical support
                                 # they deliver erroneous deletion messages
                                 # periodically which should be ignored
-                                if price in self._l2_book[pair][side]:
-                                    del self._l2_book[pair][side][price]
+                                if price in self._l2_book[pair].book[side]:
+                                    del self._l2_book[pair].book[side][price]
                                     delta[side].append((price, 0))
                             else:
                                 delta[side].append((price, size))
-                                self._l2_book[pair][side][price] = size
-            for side in (BID, ASK):
-                while len(self._l2_book[pair][side]) > self.max_depth:
-                    del_price = self._l2_book[pair][side].items()[0 if side == BID else -1][0]
-                    del self._l2_book[pair][side][del_price]
-                    delta[side].append((del_price, 0))
+                                self._l2_book[pair].book[side][price] = size
 
-            if self.checksum_validation and 'c' in msg[0] and self.__calc_checksum(pair) != msg[0]['c']:
+            if self.checksum_validation and 'c' in msg[0] and self._l2_book[pair].book.checksum() != int(msg[0]['c']):
                 raise BadChecksum("Checksum validation on orderbook failed")
-            await self.book_callback(self._l2_book[pair], L2_BOOK, pair, False, delta, timestamp, timestamp)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg, checksum=int(msg[0]['c']) if 'c' in msg[0] else None)
 
     async def _candle(self, msg: list, pair: str, timestamp: float):
         """
@@ -217,21 +195,23 @@ class Kraken(Feed, KrakenRestMixin):
         """
         start, end, open, high, low, close, _, volume, count = msg[1]
         interval = int(msg[-2].split("-")[-1])
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=pair,
-                            timestamp=start,
-                            receipt_timestamp=timestamp,
-                            start=float(end) - (interval * 60),
-                            stop=float(end),
-                            interval=self.normalize_interval[interval],
-                            trades=count,
-                            open_price=Decimal(open),
-                            close_price=Decimal(close),
-                            high_price=Decimal(high),
-                            low_price=Decimal(low),
-                            volume=Decimal(volume),
-                            closed=None)
+        c = Candle(
+            self.id,
+            pair,
+            float(end) - (interval * 60),
+            float(end),
+            self.normalize_interval[interval],
+            count,
+            Decimal(open),
+            Decimal(close),
+            Decimal(high),
+            Decimal(low),
+            Decimal(volume),
+            None,
+            float(start),
+            raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

@@ -4,20 +4,22 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from cryptofeed.connection import AsyncConnection
 from decimal import Decimal
 import logging
 import time
 from typing import Dict, Tuple
+import hmac
+import base64
+import hashlib
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.auth.kucoin import generate_token
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
+from cryptofeed.connection import AsyncConnection
+from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -47,7 +49,7 @@ class KuCoin(Feed):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, candle_interval='1m', **kwargs):
+    def __init__(self, **kwargs):
         address_info = self.http_sync.write('https://api.kucoin.com/api/v1/bullet-public', json=True)
         token = address_info['data']['token']
         address = address_info['data']['instanceServers'][0]['endpoint']
@@ -55,7 +57,7 @@ class KuCoin(Feed):
         super().__init__(address, **kwargs)
         self.ws_defaults['ping_interval'] = address_info['data']['instanceServers'][0]['pingInterval'] / 2000
         lookup = {'1m': '1min', '3m': '3min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week'}
-        self.candle_interval = lookup[candle_interval]
+        self.candle_interval = lookup[self.candle_interval]
         self.normalize_interval = {value: key for key, value in lookup.items()}
         self.__reset()
 
@@ -80,21 +82,23 @@ class KuCoin(Feed):
         interval = self.normalize_interval[interval]
         start, open, close, high, low, vol, _ = msg['data']['candles']
         end = int(start) + timedelta_str_to_sec(interval) - 1
-        await self.callback(CANDLES,
-                            feed=self.id,
-                            symbol=symbol,
-                            timestamp=msg['data']['time'] / 1000000000,
-                            receipt_timestamp=timestamp,
-                            start=int(start),
-                            stop=end,
-                            interval=interval,
-                            trades=None,
-                            open_price=Decimal(open),
-                            close_price=Decimal(close),
-                            high_price=Decimal(high),
-                            low_price=Decimal(low),
-                            volume=Decimal(vol),
-                            closed=None)
+        c = Candle(
+            self.id,
+            symbol,
+            int(start),
+            end,
+            interval,
+            None,
+            Decimal(open),
+            Decimal(close),
+            Decimal(high),
+            Decimal(low),
+            Decimal(vol),
+            None,
+            msg['data']['time'] / 1000000000,
+            raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
 
     async def _ticker(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -114,12 +118,8 @@ class KuCoin(Feed):
             }
         }
         """
-        await self.callback(TICKER, feed=self.id,
-                            symbol=symbol,
-                            bid=Decimal(msg['data']['bestBid']),
-                            ask=Decimal(msg['data']['bestAsk']),
-                            timestamp=timestamp,
-                            receipt_timestamp=timestamp)
+        t = Ticker(self.id, symbol, Decimal(msg['data']['bestBid']), Decimal(msg['data']['bestAsk']), None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
 
     async def _trades(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -142,30 +142,52 @@ class KuCoin(Feed):
             }
         }
         """
-        await self.callback(TRADES, feed=self.id,
-                            symbol=symbol,
-                            side=BUY if msg['data']['side'] == 'buy' else SELL,
-                            amount=Decimal(msg['data']['size']),
-                            price=Decimal(msg['data']['price']),
-                            timestamp=float(msg['data']['time']) / 1000000000,
-                            receipt_timestamp=timestamp,
-                            order_id=msg['data']['tradeId'])
+        t = Trade(
+            self.id,
+            symbol,
+            BUY if msg['data']['side'] == 'buy' else SELL,
+            Decimal(msg['data']['size']),
+            Decimal(msg['data']['price']),
+            float(msg['data']['time']) / 1000000000,
+            id=msg['data']['tradeId'],
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
+
+    def generate_token(self, str_to_sign: str) -> dict:
+        # https://docs.kucoin.com/#authentication
+
+        # Now required to pass timestamp with string to sign. Timestamp should exactly match header timestamp
+        now = str(int(time.time() * 1000))
+        str_to_sign = now + str_to_sign
+        signature = base64.b64encode(hmac.new(self.key_secret.encode('utf-8'), str_to_sign.encode('utf-8'), hashlib.sha256).digest())
+        # Passphrase must now be encrypted by key_secret
+        passphrase = base64.b64encode(hmac.new(self.key_secret.encode('utf-8'), self.key_passphrase.encode('utf-8'), hashlib.sha256).digest())
+
+        # API key version is currently 2 (whereas API version is anywhere from 1-3 ¯\_(ツ)_/¯)
+        header = {
+            "KC-API-KEY": self.key_id,
+            "KC-API-SIGN": signature.decode(),
+            "KC-API-TIMESTAMP": now,
+            "KC-API-PASSPHRASE": passphrase.decode(),
+            "KC-API-KEY-VERSION": "2"
+        }
+        return header
 
     async def _snapshot(self, symbol: str):
         url = f"https://api.kucoin.com/api/v3/market/orderbook/level2?symbol={symbol}"
         str_to_sign = "GET" + f"/api/v3/market/orderbook/level2?symbol={symbol}"
-        headers = generate_token(self.key_id, self.key_secret, self.key_passphrase, str_to_sign)
+        headers = self.generate_token(str_to_sign)
         data = await self.http_conn.read(url, header=headers)
+        timestamp = time.time()
         data = json.loads(data, parse_float=Decimal)
         data = data['data']
         self.seq_no[symbol] = int(data['sequence'])
-        self._l2_book[symbol] = {
-            BID: sd({Decimal(price): Decimal(amount) for price, amount in data['bids']}),
-            ASK: sd({Decimal(price): Decimal(amount) for price, amount in data['asks']})
-        }
+        bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+        asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
+        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
 
-        timestamp = time.time()
-        await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, True, None, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, raw=data, sequence_number=int(data['sequence']))
 
     async def _process_l2_book(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -184,14 +206,12 @@ class KuCoin(Feed):
             'type': 'message'
         }
         """
-        forced = False
         data = msg['data']
         sequence = data['sequenceStart']
         if symbol not in self._l2_book or sequence > self.seq_no[symbol] + 1:
             if symbol in self.seq_no and sequence > self.seq_no[symbol] + 1:
                 LOG.warning("%s: Missing book update detected, resetting book", self.id)
             await self._snapshot(symbol)
-            forced = True
 
         data = msg['data']
         if sequence < self.seq_no[symbol]:
@@ -206,14 +226,14 @@ class KuCoin(Feed):
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self._l2_book[symbol][side]:
-                        del self._l2_book[symbol][side][price]
+                    if price in self._l2_book[symbol].book[side]:
+                        del self._l2_book[symbol].book[side][price]
                         delta[side].append((price, amount))
                 else:
-                    self._l2_book[symbol][side][price] = amount
+                    self._l2_book[symbol].book[side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(self._l2_book[symbol], L2_BOOK, symbol, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, raw=msg, sequence_number=data['sequenceEnd'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

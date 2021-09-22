@@ -10,9 +10,7 @@ from textwrap import wrap
 
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback)
+from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, BackendCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -96,39 +94,39 @@ class SocketCallback(BackendQueue):
             elif self.conn_type == 'uds://':
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict):
         data = {'type': self.key, 'data': data}
         data = json.dumps(data)
         await self.queue.put(data)
 
 
-class TradeSocket(SocketCallback, BackendTradeCallback):
+class TradeSocket(SocketCallback, BackendCallback):
     default_key = 'trades'
 
 
-class FundingSocket(SocketCallback, BackendFundingCallback):
+class FundingSocket(SocketCallback, BackendCallback):
     default_key = 'funding'
 
 
 class BookSocket(SocketCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
 
-class BookDeltaSocket(SocketCallback, BackendBookDeltaCallback):
-    default_key = 'book'
 
-
-class TickerSocket(SocketCallback, BackendTickerCallback):
+class TickerSocket(SocketCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestSocket(SocketCallback, BackendOpenInterestCallback):
+class OpenInterestSocket(SocketCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsSocket(SocketCallback, BackendLiquidationsCallback):
+class LiquidationsSocket(SocketCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class CandlesSocket(SocketCallback, BackendCandlesCallback):
+class CandlesSocket(SocketCallback, BackendCallback):
     default_key = 'candles'

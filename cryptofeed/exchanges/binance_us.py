@@ -8,12 +8,13 @@ import logging
 
 from cryptofeed.defines import BINANCE_US
 from cryptofeed.exchanges.binance import Binance
+from cryptofeed.exchanges.mixins.binance_rest import BinanceUSRestMixin
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class BinanceUS(Binance):
+class BinanceUS(Binance, BinanceUSRestMixin):
     id = BINANCE_US
     symbol_endpoint = 'https://api.binance.us/api/v3/exchangeInfo'
 
@@ -21,5 +22,5 @@ class BinanceUS(Binance):
         super().__init__(**kwargs)
         # overwrite values previously set by the super class Binance
         self.ws_endpoint = 'wss://stream.binance.us:9443'
-        self.rest_endpoint = 'https://api.binance.us/api/v1'
+        self.rest_endpoint = 'https://api.binance.us/api/v3'
         self.address = self._address()

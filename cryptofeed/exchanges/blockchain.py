@@ -8,7 +8,6 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
@@ -16,6 +15,7 @@ from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
@@ -55,25 +55,20 @@ class Blockchain(Feed):
     async def _pair_l2_update(self, msg: str, timestamp: float):
         delta = {BID: [], ASK: []}
         pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        forced = False
         if msg['event'] == 'snapshot':
             # Reset the book
-            self._l2_book[pair] = {BID: sd(), ASK: sd()}
-            forced = True
-        book = self._l2_book[pair]
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
         for side in (BID, ASK):
             for update in msg[side + 's']:
                 price = update['px']
                 qty = update['qty']
-                book[side][price] = qty
+                self._l2_book[pair].book[side][price] = qty
                 if qty <= 0:
-                    del book[side][price]
+                    del self._l2_book[pair].book[side][price]
                 delta[side].append((price, qty))
 
-        self._l2_book[pair] = book
-
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta if msg['event'] != 'snapshot' else None, sequence_number=msg['seqnum'])
 
     async def _handle_l2_msg(self, msg: str, timestamp: float):
         """
@@ -88,7 +83,7 @@ class Blockchain(Feed):
         """
 
         if msg['event'] == 'subscribed':
-            LOG.info("%s: Subscribed to L2 data for %s", self.id, msg['symbol'])
+            LOG.debug("%s: Subscribed to L2 data for %s", self.id, msg['symbol'])
         elif msg['event'] in ['snapshot', 'updated']:
             await self._pair_l2_update(msg, timestamp)
         else:
@@ -100,9 +95,7 @@ class Blockchain(Feed):
 
         if msg['event'] == 'snapshot':
             # Reset the book
-            self._l3_book[pair] = {BID: sd(), ASK: sd()}
-
-        book = self._l3_book[pair]
+            self._l3_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
         for side in (BID, ASK):
             for update in msg[side + 's']:
@@ -110,24 +103,24 @@ class Blockchain(Feed):
                 qty = update['qty']
                 order_id = update['id']
 
-                p_orders = book[side].get(price, sd())
-                p_orders[order_id] = qty
                 if qty <= 0:
-                    del p_orders[order_id]
+                    del self._l3_book[pair].book[side][price][order_id]
+                else:
+                    if price in self._l3_book[pair].book[side]:
+                        self._l3_book[pair].book[side][price][order_id] = qty
+                    else:
+                        self._l3_book[pair].book[side][price] = {order_id: qty}
 
-                book[side][price] = p_orders
-                if len(book[side][price]) == 0:
-                    del book[side][price]
+                if len(self._l3_book[pair].book[side][price]) == 0:
+                    del self._l3_book[pair].book[side][price]
 
                 delta[side].append((order_id, price, qty))
 
-        self._l3_book[pair] = book
-
-        await self.book_callback(self._l3_book[pair], L3_BOOK, pair, False, delta, timestamp, timestamp)
+        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, raw=msg, delta=delta if msg['event'] != 'snapshot' else None, sequence_number=msg['seqnum'])
 
     async def _handle_l3_msg(self, msg: str, timestamp: float):
         if msg['event'] == 'subscribed':
-            LOG.info("%s: Subscribed to L3 data for %s", self.id, msg['symbol'])
+            LOG.debug("%s: Subscribed to L3 data for %s", self.id, msg['symbol'])
         elif msg['event'] in ['snapshot', 'updated']:
             await self._pair_l3_update(msg, timestamp)
         else:
@@ -149,18 +142,20 @@ class Blockchain(Feed):
           "trade_id": "12884909920"
         }
         """
-        await self.callback(TRADES, feed=self.id,
-                            symbol=msg['symbol'],
-                            side=BUY if msg['side'] == 'buy' else SELL,
-                            amount=msg['qty'],
-                            price=msg['price'],
-                            order_id=msg['trade_id'],
-                            timestamp=self.timestamp_normalize(msg['timestamp']),
-                            receipt_timestamp=timestamp)
+        t = Trade(
+            self.id,
+            msg['symbol'],
+            BUY if msg['side'] == 'buy' else SELL,
+            msg['qty'],
+            msg['price'],
+            self.timestamp_normalize(msg['timestamp']),
+            id=msg['trade_id'],
+        )
+        await self.callback(TRADES, t, timestamp)
 
     async def _handle_trade_msg(self, msg: str, timestamp: float):
         if msg['event'] == 'subscribed':
-            LOG.info("%s: Subscribed to trades channel for %s", self.id, msg['symbol'])
+            LOG.debug("%s: Subscribed to trades channel for %s", self.id, msg['symbol'])
         elif msg['event'] == 'updated':
             await self._trade(msg, timestamp)
         else:

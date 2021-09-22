@@ -8,11 +8,11 @@ import asyncio
 from decimal import Decimal
 import logging
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exchange import RestExchange
+from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger('feedhandler')
@@ -67,13 +67,13 @@ class DeribitRestMixin(RestExchange):
         return ret
 
     async def l2_book(self, symbol: str, retry_count=0, retry_delay=60):
+        ret = OrderBook(self.id, symbol)
         symbol = self.std_symbol_to_exchange_symbol(symbol)
-        ret = {BID: sd(), ASK: sd()}
 
         data = await self.http_conn.read(f"{self.api}get_order_book?depth=10000&instrument_name={symbol}", retry_count=retry_count, retry_delay=retry_delay)
         data = json.loads(data, parse_float=Decimal)
-        for side, key in ((BID, 'bids'), (ASK, 'asks')):
-            for entry_bid in data["result"][key]:
+        for side in ('bids', 'asks'):
+            for entry_bid in data["result"][side]:
                 price, amount = entry_bid
-                ret[side][price] = amount
+                ret.book[side][price] = amount
         return ret

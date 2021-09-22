@@ -1,21 +1,28 @@
+'''
+Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
+
+Please see the LICENSE file for the terms and conditions
+associated with this software.
+'''
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 import uuid
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TRADES, UPBIT
+from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.mixins.upbit_rest import UpbitRestMixin
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Upbit(Feed):
+class Upbit(Feed, UpbitRestMixin):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
     symbol_endpoint = 'https://api.upbit.com/v1/market/all'
@@ -23,6 +30,7 @@ class Upbit(Feed):
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
     }
+    request_limit = 10
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -66,14 +74,17 @@ class Upbit(Feed):
 
         price = Decimal(msg['tp'])
         amount = Decimal(msg['tv'])
-        await self.callback(TRADES, feed=self.id,
-                            order_id=msg['sid'],
-                            symbol=self.exchange_symbol_to_std_symbol(msg['cd']),
-                            side=BUY if msg['ab'] == 'BID' else SELL,
-                            amount=amount,
-                            price=price,
-                            timestamp=self.timestamp_normalize(msg['ttms']),
-                            receipt_timestamp=timestamp)
+        t = Trade(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['cd']),
+            BUY if msg['ab'] == 'BID' else SELL,
+            amount,
+            price,
+            self.timestamp_normalize(msg['ttms']),
+            id=str(msg['sid']),
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -107,24 +118,13 @@ class Upbit(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['cd'])
         orderbook_timestamp = self.timestamp_normalize(msg['tms'])
-        forced = pair not in self._l2_book
+        if pair not in self._l2_book:
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
-        update = {
-            BID: sd({
-                Decimal(unit['bp']): Decimal(unit['bs'])
-                for unit in msg['obu'] if unit['bp'] > 0
-            }),
-            ASK: sd({
-                Decimal(unit['ap']): Decimal(unit['as'])
-                for unit in msg['obu'] if unit['ap'] > 0
-            })
-        }
+        self._l2_book[pair].book.bids = {Decimal(unit['bp']): Decimal(unit['bs']) for unit in msg['obu'] if unit['bp'] > 0}
+        self._l2_book[pair].book.asks = {Decimal(unit['ap']): Decimal(unit['as']) for unit in msg['obu'] if unit['ap'] > 0}
 
-        if not forced:
-            self.previous_book[pair] = self._l2_book[pair]
-        self._l2_book[pair] = update
-
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, False, orderbook_timestamp, timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=orderbook_timestamp, raw=msg)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 

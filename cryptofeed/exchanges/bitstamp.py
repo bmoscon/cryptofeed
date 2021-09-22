@@ -9,19 +9,21 @@ from cryptofeed.symbols import Symbol
 import logging
 from decimal import Decimal
 from typing import Dict, Tuple
+import time
 
-from sortedcontainers import SortedDict as sd
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.exchanges.mixins.bitstamp_rest import BitstampRestMixin
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Bitstamp(Feed):
+class Bitstamp(Feed, BitstampRestMixin):
     id = BITSTAMP
     symbol_endpoint = "https://www.bitstamp.net/api/v2/trading-pairs-info/"
     # API documentation: https://www.bitstamp.net/websocket/v2/
@@ -30,6 +32,7 @@ class Bitstamp(Feed):
         L2_BOOK: 'diff_order_book',
         TRADES: 'live_trades',
     }
+    request_limit = 13
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -53,20 +56,19 @@ class Bitstamp(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.bitstamp.net/', **kwargs)
+        self.ws_defaults['compression'] = None
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
         data = msg['data']
         chan = msg['channel']
         ts = int(data['microtimestamp'])
         pair = self.exchange_symbol_to_std_symbol(chan.split('_')[-1])
-        forced = False
         delta = {BID: [], ASK: []}
 
         if pair in self.last_update_id:
             if data['timestamp'] < self.last_update_id[pair]:
                 return
             else:
-                forced = True
                 del self.last_update_id[pair]
 
         for side in (BID, ASK):
@@ -75,14 +77,14 @@ class Bitstamp(Feed):
                 size = Decimal(update[1])
 
                 if size == 0:
-                    if price in self._l2_book[pair][side]:
-                        del self._l2_book[pair][side][price]
+                    if price in self._l2_book[pair].book[side]:
+                        del self._l2_book[pair].book[side][price]
                         delta[side].append((price, size))
                 else:
-                    self._l2_book[pair][side][price] = size
+                    self._l2_book[pair].book[side][price] = size
                     delta[side].append((price, size))
 
-        await self.book_callback(self._l2_book[pair], L2_BOOK, pair, forced, delta, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), delta=delta, raw=msg)
 
     async def _process_l3_book(self, msg: dict, timestamp: float):
         data = msg['data']
@@ -90,14 +92,18 @@ class Bitstamp(Feed):
         ts = int(data['microtimestamp'])
         pair = self.exchange_symbol_to_std_symbol(chan.split('_')[-1])
 
-        book = {BID: sd(), ASK: sd()}
+        book = OrderBook(self.id, pair, max_depth=self.max_depth)
         for side in (BID, ASK):
             for price, size, order_id in data[side + 's']:
                 price = Decimal(price)
                 size = Decimal(size)
-                book[side].get(price, sd())[order_id] = size
+                if price in book.book[side]:
+                    book.book[side][price][order_id] = size
+                else:
+                    book.book[side][price] = {order_id: size}
+
         self._l3_book[pair] = book
-        await self.book_callback(self._l3_book[pair], L3_BOOK, pair, False, False, self.timestamp_normalize(ts), timestamp)
+        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg)
 
     async def _trades(self, msg: dict, timestamp: float):
         """
@@ -122,19 +128,17 @@ class Bitstamp(Feed):
         chan = msg['channel']
         pair = self.exchange_symbol_to_std_symbol(chan.split('_')[-1])
 
-        side = BUY if data['type'] == 0 else SELL
-        amount = Decimal(data['amount'])
-        price = Decimal(data['price'])
-        ts = int(data['microtimestamp'])
-        order_id = data['id']
-        await self.callback(TRADES, feed=self.id,
-                            symbol=pair,
-                            side=side,
-                            amount=amount,
-                            price=price,
-                            timestamp=self.timestamp_normalize(ts),
-                            receipt_timestamp=timestamp,
-                            order_id=order_id)
+        t = Trade(
+            self.id,
+            pair,
+            BUY if data['type'] == 0 else SELL,
+            Decimal(data['amount']),
+            Decimal(data['price']),
+            self.timestamp_normalize(int(data['microtimestamp'])),
+            id=str(data['id']),
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -165,12 +169,8 @@ class Bitstamp(Feed):
         for r, pair in zip(results, pairs):
             std_pair = self.exchange_symbol_to_std_symbol(pair) if pair else 'BTC-USD'
             self.last_update_id[std_pair] = r['timestamp']
-            self._l2_book[std_pair] = {BID: sd(), ASK: sd()}
-            for s, side in (('bids', BID), ('asks', ASK)):
-                for update in r[s]:
-                    price = Decimal(update[0])
-                    amount = Decimal(update[1])
-                    self._l2_book[std_pair][side][price] = amount
+            self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, asks={Decimal(u[0]): Decimal(u[1]) for u in r['asks']}, bids={Decimal(u[0]): Decimal(u[1]) for u in r['bids']})
+            await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), timestamp=float(r['timestamp']), raw=r)
 
     async def subscribe(self, conn: AsyncConnection):
         snaps = []

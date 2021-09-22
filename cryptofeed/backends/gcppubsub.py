@@ -20,15 +20,7 @@ from yapic import json
 # https://github.com/talkiq/gcloud-aio
 from gcloud.aio.pubsub import PublisherClient, PubsubMessage
 
-from cryptofeed.backends.backend import (
-    BackendBookCallback,
-    BackendBookDeltaCallback, BackendCandlesCallback,
-    BackendFundingCallback,
-    BackendLiquidationsCallback,
-    BackendOpenInterestCallback,
-    BackendTickerCallback,
-    BackendTradeCallback,
-)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class GCPPubSubCallback:
@@ -94,44 +86,44 @@ class GCPPubSubCallback:
             )
         return self.client
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict):
         '''
         Publish message. For filtering, "feed" and "symbol" are added as attributes.
         https://cloud.google.com/pubsub/docs/filtering
         '''
         client = await self.get_client()
         payload = json.dumps(data).encode()
-        message = PubsubMessage(payload, feed=feed, symbol=symbol)
+        message = PubsubMessage(payload, feed=data['exchange'], symbol=data['symbol'])
         await client.publish(self.topic_path, [message])
 
 
-class TradeGCPPubSub(GCPPubSubCallback, BackendTradeCallback):
+class TradeGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'trades'
 
 
-class FundingGCPPubSub(GCPPubSubCallback, BackendFundingCallback):
+class FundingGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'funding'
 
 
 class BookGCPPubSub(GCPPubSubCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, **kwargs):
+        self.snapshots_only = snapshots_only
+        super().__init__(*args, **kwargs)
 
-class BookDeltaGCPPubSub(GCPPubSubCallback, BackendBookDeltaCallback):
-    default_key = 'book'
 
-
-class TickerGCPPubSub(GCPPubSubCallback, BackendTickerCallback):
+class TickerGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestGCPPubSub(GCPPubSubCallback, BackendOpenInterestCallback):
+class OpenInterestGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsGCPPubSub(GCPPubSubCallback, BackendLiquidationsCallback):
+class LiquidationsGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class CandlesGCPPubSub(GCPPubSubCallback, BackendCandlesCallback):
+class CandlesGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'candles'

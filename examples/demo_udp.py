@@ -11,8 +11,8 @@ from multiprocessing import Process
 from yapic import json
 
 from cryptofeed import FeedHandler
-from cryptofeed.backends.socket import BookDeltaSocket, BookSocket, TradeSocket
-from cryptofeed.defines import BOOK_DELTA, L2_BOOK, TRADES
+from cryptofeed.backends.socket import BookSocket, TradeSocket
+from cryptofeed.defines import L2_BOOK, TRADES
 from cryptofeed.exchanges import Coinbase
 
 
@@ -48,7 +48,6 @@ def main():
         f.add_feed(Coinbase(channels=[L2_BOOK, TRADES], symbols=['BTC-USD'],
                             callbacks={TRADES: TradeSocket('udp://127.0.0.1', port=5555),
                                        L2_BOOK: BookSocket('udp://127.0.0.1', port=5555),
-                                       BOOK_DELTA: BookDeltaSocket('udp://127.0.0.1', port=5555)
                                        }))
 
         f.run()

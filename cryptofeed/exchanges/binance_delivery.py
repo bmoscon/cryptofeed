@@ -6,7 +6,6 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
-from typing import Tuple
 
 from yapic import json
 
@@ -38,24 +37,21 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         self.ws_endpoint = 'wss://dstream.binance.com'
         self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
         self.address = self._address()
+        self.ws_defaults['compression'] = None
 
-    def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool, bool]:
-        skip_update = False
-        forced = not self.forced[pair]
-        current_match = self.last_update_id[pair] == msg['u']
-
-        if forced and msg['u'] < self.last_update_id[pair]:
-            skip_update = True
-        elif forced and msg['U'] <= self.last_update_id[pair] <= msg['u']:
+    def _check_update_id(self, pair: str, msg: dict) -> bool:
+        if self._l2_book[pair].delta is None and msg['u'] < self.last_update_id[pair]:
+            return True
+        elif msg['U'] <= self.last_update_id[pair] <= msg['u']:
             self.last_update_id[pair] = msg['u']
-            self.forced[pair] = True
-        elif not forced and self.last_update_id[pair] == msg['pu']:
+            return False
+        elif self.last_update_id[pair] == msg['pu']:
             self.last_update_id[pair] = msg['u']
+            return False
         else:
             self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
-            skip_update = True
-        return skip_update, forced, current_match
+            return True
 
     async def _account_update(self, msg: dict, timestamp: float):
         """
