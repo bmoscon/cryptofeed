@@ -309,7 +309,6 @@ class Binance(Feed, BinanceRestMixin):
             return True
 
     async def _fetch_snapshot(self, pair: str) -> None:
-        print("_______fetch")
         max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         if max_depth < 100:
             # Always fetch minimum of 100 depth snapshot
