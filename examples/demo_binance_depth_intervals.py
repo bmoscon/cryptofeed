@@ -62,7 +62,9 @@ def main():
                        symbols=['DASH-BUSD'],
                        channels=[L2_BOOK],
                        callbacks={L2_BOOK: timer('100ms')},
-                       concurrent_http=True))
+                       concurrent_http=True,
+                       max_depth=20,
+                       refresh_snapshot=True))
     f.run()
 
 

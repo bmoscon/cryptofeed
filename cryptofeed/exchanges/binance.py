@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 import logging
+import random
 from asyncio import create_task
 from collections import defaultdict, deque
 from decimal import Decimal
@@ -68,19 +69,16 @@ class Binance(Feed, BinanceRestMixin):
             info['instrument_type'][s.normalized] = stype
         return ret, info
 
-    def _get_next_snapshot_refresh_time(self, symbol) -> float:
-        return self._last_snapshot_time[symbol] + self._get_snapshot_refresh_interval()
-
     # Algorithm to decide how often new snapshots should be refreshed. Increases (non-linearly) as max_depth increases.
+    # Randomise the exact next refresh time so it's anywhere between 0.50x to 1.50x the actual time
     # Example times:
-    #   max_depth = 10: 10 seconds 
-    #   max_depth = 100: 55 seconds
-    #   max_depth = 1000: 4 mins 40 seconds
-    #   max_depth = 5000: 15 mins 47 seconds
-    def _get_snapshot_refresh_interval(self) -> float:
+    #   max_depth <= 100: 1 minute
+    #   max_depth = 1000: 4 mins 45 seconds
+    #   max_depth = 5000: 15 mins 52 seconds
+    def _next_snapshot_refresh_interval(self) -> float:
         max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
-        # Default: 5 seconds
-        refresh_interval = 5
+        # Default: 1 minute
+        refresh_interval = 60
         if max_depth > 1000:
             # Depth > 1000: 6 records per second
             participating_depth = max_depth - 1000
@@ -91,12 +89,10 @@ class Binance(Feed, BinanceRestMixin):
             participating_depth = max_depth - 100
             refresh_interval += participating_depth / 4
             max_depth -= participating_depth
-        # Dept < 100: 2 records per second
-        refresh_interval += max_depth / 2
-        return refresh_interval
+        return refresh_interval * random.uniform(0.50, 1.50)
 
 
-    def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', concurrent_http=False, **kwargs):
+    def __init__(self, candle_interval='1m', candle_closed_only=False, depth_interval='100ms', concurrent_http=False, refresh_snapshot=False, **kwargs):
         """
         candle_interval: str
             time between candles updates ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
@@ -106,6 +102,10 @@ class Binance(Feed, BinanceRestMixin):
             time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
         concurrent_http: bool
             http requests will be made concurrently, if False requests will be made one at a time (affects L2_BOOK, OPEN_INTEREST).
+        refresh_snapshot: bool
+            Automatically fetch new order book snapshots at regular intervals. Helps the order book from going stale, particularly at periods of large market price movements.
+            Turned off by default due to a risk of breaching rate limits when ubscribing to many symbols.
+            TODO turn it on by default when we can gracefully handle 429 errors
         """
         if candle_interval not in self.valid_candle_intervals:
             raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
@@ -120,8 +120,10 @@ class Binance(Feed, BinanceRestMixin):
         self.depth_interval = depth_interval
         self.address = self._address()
         self.concurrent_http = concurrent_http
-        self._last_snapshot_time: Dict[str, float] = {}
-        self._fetch_snapshop_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
+        self.refresh_snapshot = refresh_snapshot
+        if self.refresh_snapshot:
+            self._next_snapshot_time: Dict[str, float] = {}
+            self._fetch_snapshop_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
 
         self._open_interest_cache = {}
         self._reset()
@@ -284,6 +286,9 @@ class Binance(Feed, BinanceRestMixin):
 
     async def _fetch_snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
+        if max_depth < 100:
+            # Always fetch minimum of 100 depth snapshot
+            max_depth = 100
         if max_depth not in self.valid_depths:
             for d in self.valid_depths:
                 if d > max_depth:
@@ -304,9 +309,10 @@ class Binance(Feed, BinanceRestMixin):
         self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
         self._l2_book[std_pair].raw = resp
         
-        # Delete buffer and reset time since snapshot update
-        self._last_snapshot_time[std_pair] = time.time()
-        self._fetch_snapshop_buffer.pop(std_pair, None)
+        if self.refresh_snapshot:
+            # Delete buffer and reset time since snapshot update
+            self._next_snapshot_time[std_pair] = time.time() + self._next_snapshot_refresh_interval()
+            self._fetch_snapshop_buffer.pop(std_pair, None)
 
     async def _refresh_snapshot(self, pair: str) -> None:
         resp = await self._fetch_snapshot(pair)
@@ -331,9 +337,10 @@ class Binance(Feed, BinanceRestMixin):
                     delta[side].append((price, amount))
         self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
         
-        # Delete buffer and reset time since snapshot update
-        self._last_snapshot_time[std_pair] = receipt_timestamp
-        self._fetch_snapshop_buffer.pop(std_pair, None)
+        if self.refresh_snapshot:
+            # Delete buffer and reset time since snapshot update
+            self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
+            self._fetch_snapshop_buffer.pop(std_pair, None)
 
         await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, delta=delta, sequence_number=self.last_update_id[std_pair])
 
@@ -361,7 +368,7 @@ class Binance(Feed, BinanceRestMixin):
         # Apply buffered messages to temporary book
         while len(self._fetch_snapshop_buffer[std_pair]) > 0:
             msg = self._fetch_snapshop_buffer[std_pair].popleft()
-            self._apply_msg_to_book(temp_book.book, std_pair, msg)
+            self._apply_msg_to_book(temp_book.book, msg)
         
         # Apply temporary book to local l2 book and resolve deltas
         delta = {BID: [], ASK: []}
@@ -379,13 +386,14 @@ class Binance(Feed, BinanceRestMixin):
                     self._l2_book[std_pair].book[side][price] = amount
                     delta[side].append((price, amount))
         
-        # Delete buffer and reset time since snapshot update
-        self._last_snapshot_time[std_pair] = receipt_timestamp
-        self._fetch_snapshop_buffer.pop(std_pair, None)
+        if self.refresh_snapshot:
+            # Delete buffer and reset time since snapshot update
+            self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
+            self._fetch_snapshop_buffer.pop(std_pair, None)
         
         await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, delta=delta, sequence_number=self.last_update_id[std_pair])
 
-    def _apply_msg_to_book(self, book: OrderBook, std_pair: str, msg: dict) -> dict:
+    def _apply_msg_to_book(self, book: OrderBook, msg: dict) -> dict:
         delta = {BID: [], ASK: []}
         for s, side in (('b', BID), ('a', ASK)):
             for update in msg[s]:
@@ -412,7 +420,7 @@ class Binance(Feed, BinanceRestMixin):
         if skip_update:
             return
 
-        delta = self._apply_msg_to_book(self._l2_book[std_pair].book, std_pair, msg)
+        delta = self._apply_msg_to_book(self._l2_book[std_pair].book, msg)
         await self.book_callback(L2_BOOK, self._l2_book[std_pair], timestamp, timestamp=self.timestamp_normalize(msg['E']), raw=msg, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     async def _book(self, msg: dict, pair: str, timestamp: float) -> None:
@@ -439,7 +447,7 @@ class Binance(Feed, BinanceRestMixin):
         """
         book_args = (msg, pair, timestamp)
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        is_expired_snapshot = std_pair in self._last_snapshot_time and time.time() > self._get_next_snapshot_refresh_time(std_pair)
+        is_expired_snapshot = self.refresh_snapshot and std_pair in self._next_snapshot_time and time.time() > self._next_snapshot_time[std_pair]
 
         if not self.concurrent_http:
             # handle snapshot (a)synchronously
