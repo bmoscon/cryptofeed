@@ -17,9 +17,9 @@ from datetime import datetime as dt
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, USER_FILLS, FUTURES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle
 
 
 LOG = logging.getLogger('feedhandler')
@@ -31,13 +31,15 @@ class Bybit(Feed):
     websocket_channels = {
         L2_BOOK: 'orderBook_200.100ms',
         TRADES: 'trade',
-        USER_FILLS: 'execution',
+        FILLS: 'execution',
         ORDER_INFO: 'order',
         INDEX: 'instrument_info.100ms',
         OPEN_INTEREST: 'instrument_info.100ms',
         FUNDING: 'instrument_info.100ms',
+        CANDLES: 'klineV2',
         # BALANCES: 'position' removing temporarily, this is a position, not a balance
     }
+    valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '1w', '1M'}
 
     @classmethod
     def timestamp_normalize(cls, ts: Union[int, dt]) -> float:
@@ -73,6 +75,8 @@ class Bybit(Feed):
 
     def __init__(self, **kwargs):
         super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public', 'USDTP': 'wss://stream.bybit.com/realtime_private'}, **kwargs)
+        self.ws_defaults['compression'] = None
+        self.candle_mapping = {'1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '2h': '120', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W', '1M': 'M'}
 
     def __reset(self, quote=None):
         self._instrument_info_cache = {}
@@ -82,6 +86,46 @@ class Bybit(Feed):
             rem = [symbol for symbol in self._l2_book if quote in symbol]
             for symbol in rem:
                 del self._l2_book[symbol]
+
+    async def _candle(self, msg: dict, timestamp: float):
+        '''
+        {
+            "topic": "klineV2.1.BTCUSD",                //topic name
+            "data": [{
+                "start": 1572425640,                    //start time of the candle
+                "end": 1572425700,                      //end time of the candle
+                "open": 9200,                           //open price
+                "close": 9202.5,                        //close price
+                "high": 9202.5,                         //max price
+                "low": 9196,                            //min price
+                "volume": 81790,                        //volume
+                "turnover": 8.889247899999999,          //turnover
+                "confirm": False,                       //snapshot flag
+                "cross_seq": 297503466,
+                "timestamp": 1572425676958323           //cross time
+            }],
+            "timestamp_e6": 1572425677047994            //server time
+        }
+        '''
+        symbol = self.exchange_symbol_to_std_symbol(msg['topic'].split(".")[-1])
+        ts = msg['timestamp_e6'] / 1_000_000
+
+        for entry in msg['data']:
+            c = Candle(self.id,
+                       symbol,
+                       entry['start'],
+                       entry['end'],
+                       self.candle_interval,
+                       None,
+                       Decimal(entry['open']),
+                       Decimal(entry['close']),
+                       Decimal(entry['high']),
+                       Decimal(entry['low']),
+                       Decimal(entry['volume']),
+                       None,
+                       ts,
+                       raw=entry)
+            await self.callback(CANDLES, c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -107,6 +151,8 @@ class Bybit(Feed):
             await self._order(msg, timestamp)
         elif "execution" in msg["topic"]:
             await self._execution(msg, timestamp)
+        elif 'klineV2' in msg['topic'] or 'candle' in msg['topic']:
+            await self._candle(msg, timestamp)
         # elif "position" in msg["topic"]:
         #     await self._balances(msg, timestamp)
         else:
@@ -158,7 +204,7 @@ class Bybit(Feed):
                     await connection.write(json.dumps(
                         {
                             "op": "subscribe",
-                            "args": [f"{chan}.{pair}"]
+                            "args": [f"{chan}.{pair}"] if self.exchange_channel_to_std(chan) != CANDLES else [f"{chan if quote == 'USD' else 'candle'}.{self.candle_mapping[self.candle_interval]}.{pair}"]
                         }
                     ))
                     LOG.debug(f'{connection.uuid}: Subscribing to public, quote: {quote}, {chan}.{pair}')
@@ -417,10 +463,45 @@ class Bybit(Feed):
             await self.callback(ORDER_INFO, oi, timestamp)
 
     async def _execution(self, msg: dict, timestamp: float):
-        for i in range(len(msg['data'])):
-            data = msg['data'][i]
-            symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
-            await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
+        '''
+        {
+            "topic": "execution",
+            "data": [
+                {
+                    "symbol": "BTCUSD",
+                    "side": "Buy",
+                    "order_id": "xxxxxxxx-xxxx-xxxx-9a8f-4a973eb5c418",
+                    "exec_id": "xxxxxxxx-xxxx-xxxx-8b66-c3d2fcd352f6",
+                    "order_link_id": "",
+                    "price": "8300",
+                    "order_qty": 1,
+                    "exec_type": "Trade",
+                    "exec_qty": 1,
+                    "exec_fee": "0.00000009",
+                    "leaves_qty": 0,
+                    "is_maker": false,
+                    "trade_time": "2020-01-14T14:07:23.629Z" // trade time
+                }
+            ]
+        }
+        '''
+        for entry in msg['data']:
+            symbol = self.exchange_symbol_to_std_symbol(entry['symbol'])
+            f = Fill(
+                self.id,
+                symbol,
+                BUY if entry['side'] == 'Buy' else SELL,
+                Decimal(entry['exec_qty']),
+                Decimal(entry['price']),
+                Decimal(entry['exec_fee']),
+                entry['exec_id'],
+                entry['order_id'],
+                None,
+                MAKER if entry['is_maker'] else TAKER,
+                entry['trade_time'].timestamp(),
+                raw=entry
+            )
+            await self.callback(FILLS, f, timestamp)
 
     # async def _balances(self, msg: dict, timestamp: float):
     #    for i in range(len(msg['data'])):

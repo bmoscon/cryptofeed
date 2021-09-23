@@ -1,6 +1,31 @@
 ## Changelog
 
-### 2.0.0
+### 2.0.1 (2021-09-22)
+ * Bugfix: BinanceDelivery and BinanceFutures WS compression
+ * Bugfix: Upbit REST candles do not work when start/end are not specified
+ * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
+ * Feature: Add support for candles on Bitfinex REST
+ * Bugfix: Book callback with cross_check option enabled causes an error 
+ * Bugfix: Kraken Candle timestamps strings instead of floats
+ * Bugfix: Coinbase book \_change handler passing wrong book type
+ * Bugfix: dYdX orderbooks contained prices levels of size 0
+ * Bugfix: FTX trade id for liquidations not correctly being converted to str
+ * Bugfix: L3 OrderBooks not being correctly converted when as_type was used with to_dict
+ * Feature: kwarg snapshots_only when true allow storage of full book updates only (no deltas)
+ * Bugfix: initial snapshot of Binance books did not have delta set to None
+ * Bugfix: RedisBook callback accessed key delta when it did not exist, causing crash
+ * Feature: Candle support for Bybit
+ * Bugfix: Fix L3 Book Deltas when use as_type kwarg in to_dict
+ * Bugfix: Use V3 endpoint for book snapshots in Binance and BinanceUS
+ * Bugfix: Coinbase level 3 book potential memory leak
+ * Feature: Perpetual support for Bitfinex
+ * Feature: Type checking in Cython code (disabled by default, enable in setup.py)
+ * Bugfix: Fix type issues in OKEx and Binance Futures - some numeric data being returned as string
+ * Bugfix: Fix symbol normalization in FTX and Huoni Swap
+ * Feature: Redis backend to choose sleep interval for writer
+ * Feature: snapshot_interval added to book backends
+
+### 2.0.0 (2021-09-11)
  * Feature: Binance REST support
  * Feature: Add next funding rate data to FTX funding data
  * Bugfix: Kraken info dict returning empty
@@ -8,6 +33,7 @@
  * Feature: Remove pandas dependency
  * Breaking Change: Rewrite all rest endpoints to support sync and async versions of the endpoint.
  * Feature: Add dYdX REST endpoints
+ * Feature: Add Binance authentication for User Data Streams
  * Feature: Add support for Binance trading REST API
  * Bugfix: Fix typo by renaming rest_options to order_options
  * Bugfix: Use correct max depth for Binance (and its child classes).
@@ -29,12 +55,19 @@
  * Breaking Change: Balance callback changed to return object
  * Breaking Change: L1_Book callback returns object
  * Update: Subscribe to 200 levels per side for Bybit
+ * Feature: Candles support added to Binance REST
+ * Breaking Change: Candle REST methods return Candle object
+ * Feature: data objects now hashable and comparable (equal only)
+ * Breaking Changes: USER_FILLS renamed FILLS, FILLS not use data objects for callbacks
+ * Feature: Add support for candles in FTX REST
+ * Feature: Add support for candles in Bitstamp REST
+ * Feature: Add support for candles in Upbit REST
 
 ### 1.9.3 (2021-08-05)
   * Feature: Add support for private channel USER_DATA, public channel LAST_PRICE on Phemex
-  * Feature: Add support for private channels USER_FILLS, ORDER_INFO, BALANCES on Deribit
+  * Feature: Add support for private channels FILLS, ORDER_INFO, BALANCES on Deribit
   * Feature: Add support for public channel L1_BOOK on Deribit
-  * Feature: Add support for private channels USER_FILLS and ORDER_INFO on Bybit
+  * Feature: Add support for private channels FILLS and ORDER_INFO on Bybit
   * Bugfix: Fix demo.py
   * Feature: Allow user to specify a delay when starting an exchange connection (useful for avoiding 429s when creating a large number of feeds)
   * Update: Support Okex v5
@@ -57,7 +90,7 @@
   * Bugfix: #518 - fix aggregator example code
   * Update: Support Bittrex V3
   * Feature: Add support for candles on Bittrex
-  * Feature: Add support to authenticate private channels (e.g. USER_FILLS) on FTX
+  * Feature: Add support to authenticate private channels (e.g. FILLS) on FTX
   * Feature: Support private rest api commands for FTX
   * Update: Improve impl for FTX rest api
   * Bugfix: #528 - Fix standardisation of Deribit's symbols when passed to callbacks

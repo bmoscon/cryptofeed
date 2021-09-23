@@ -4,6 +4,8 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
+
 import zmq
 import zmq.asyncio
 from yapic import json
@@ -48,6 +50,12 @@ class FundingZMQ(ZMQCallback, BackendCallback):
 class BookZMQ(ZMQCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
+
 
 class OpenInterestZMQ(ZMQCallback, BackendCallback):
     default_key = 'open_interest'
@@ -59,3 +67,11 @@ class LiquidationsZMQ(ZMQCallback, BackendCallback):
 
 class CandlesZMQ(ZMQCallback, BackendCallback):
     default_key = 'candles'
+
+
+class BalancesZMQ(ZMQCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class PositionsZMQ(ZMQCallback, BackendCallback):
+    default_key = 'positions'

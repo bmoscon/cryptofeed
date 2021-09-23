@@ -44,16 +44,13 @@ class Bittrex(Feed):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, candle_interval='1m', **kwargs):
+    def __init__(self, **kwargs):
         super().__init__('wss://socket-v3.bittrex.com/signalr/connect', **kwargs)
         r = requests.get('https://socket-v3.bittrex.com/signalr/negotiate', params={'connectionData': json.dumps([{'name': 'c3'}]), 'clientProtocol': 1.5})
         token = r.json()['ConnectionToken']
         url = requests.Request('GET', 'https://socket-v3.bittrex.com/signalr/connect', params={'transport': 'webSockets', 'connectionToken': token, 'connectionData': json.dumps([{"name": "c3"}]), 'clientProtocol': 1.5}).prepare().url
         url = url.replace('https://', 'wss://')
         self.address = url
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
-        self.candle_interval = candle_interval
 
     def __reset(self):
         self._l2_book = {}

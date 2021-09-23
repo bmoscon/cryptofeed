@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 
 from yapic import json
@@ -82,7 +83,7 @@ class TradeInflux(InfluxCallback, BackendCallback):
     default_key = 'trades'
 
     def format(self, data):
-        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",order_type="{str(data["order_type"])}"'
+        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",type="{str(data["type"])}"'
 
 
 class FundingInflux(InfluxCallback, BackendCallback):
@@ -91,6 +92,12 @@ class FundingInflux(InfluxCallback, BackendCallback):
 
 class BookInflux(InfluxCallback, BackendBookCallback):
     default_key = 'book'
+
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
 
     def format(self, data):
         delta = 'delta' in data

@@ -4,8 +4,8 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from collections import defaultdict
-from cryptofeed.exchange import Exchange
 from functools import partial
 import logging
 from typing import Tuple, Callable, Union, List
@@ -15,9 +15,9 @@ from aiohttp.typedefs import StrOrURL
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
-from cryptofeed.defines import (ASK, BALANCES, BID, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS,
-                                OPEN_INTEREST, ORDER_INFO, TICKER, TRADES, USER_FILLS)
+from cryptofeed.defines import BALANCES, CANDLES, FUNDING, INDEX, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, ORDER_INFO, POSITIONS, TICKER, TRADES, FILLS
 from cryptofeed.exceptions import BidAskOverlapping
+from cryptofeed.exchange import Exchange
 from cryptofeed.types import OrderBook
 
 
@@ -25,12 +25,14 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, address: Union[dict, str], timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, address: Union[dict, str], candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
         address: str, or dict
             address to be used to create the connection.
             The address protocol (wss or https) will be used to determine the connection type.
             Use a "str" to pass one single address, or a dict of option/address
+        candle_interval: str
+            the candle interval. See the specific exchange to see what intervals they support
         timeout: int
             Time, in seconds, between message to wait before a feed is considered dead and will be restarted.
             Set to -1 for infinite.
@@ -84,6 +86,11 @@ class Feed(Exchange):
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
         self.http_proxy = http_proxy
         self.start_delay = delay_start
+        self.candle_interval = candle_interval
+
+        if self.valid_candle_intervals != NotImplemented:
+            if candle_interval not in self.valid_candle_intervals:
+                raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
 
         if subscription is not None and (symbols is not None or channels is not None):
             raise ValueError("Use subscription, or channels and symbols, not both")
@@ -127,8 +134,9 @@ class Feed(Exchange):
                           TRADES: Callback(None),
                           CANDLES: Callback(None),
                           ORDER_INFO: Callback(None),
-                          USER_FILLS: Callback(None),
-                          BALANCES: Callback(None)
+                          FILLS: Callback(None),
+                          BALANCES: Callback(None),
+                          POSITIONS: Callback(None)
                           }
 
         if callbacks:
@@ -172,7 +180,7 @@ class Feed(Exchange):
 
     async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float, timestamp=None, raw=None, sequence_number=None, checksum=None, delta=None):
         if self.cross_check:
-            self.check_bid_ask_overlapping(book)
+            self.check_bid_ask_overlapping(book.book)
 
         book.timestamp = timestamp
         book.raw = raw
@@ -182,9 +190,9 @@ class Feed(Exchange):
         await self.callback(book_type, book, receipt_timestamp)
 
     def check_bid_ask_overlapping(self, book):
-        bid, ask = book[BID], book[ASK]
+        bid, ask = book.bids, book.asks
         if len(bid) > 0 and len(ask) > 0:
-            best_bid, best_ask = bid.keys()[-1], ask.keys()[0]
+            best_bid, best_ask = bid.index(0)[0], ask.index(0)[0]
             if best_bid >= best_ask:
                 raise BidAskOverlapping(f"{self.id} - {book.symbol}: best bid {best_bid} >= best ask {best_ask}")
 
@@ -223,7 +231,7 @@ class Feed(Exchange):
         for c in self.connection_handlers:
             c.running = False
 
-    def start(self, loop):
+    def start(self, loop: asyncio.AbstractEventLoop):
         """
         Create tasks for exchange interfaces and backends
         """

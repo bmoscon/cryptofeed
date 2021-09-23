@@ -16,14 +16,14 @@ from typing import Dict, Iterable, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, CLOSED, FUTURES, LIMIT, MARKET, OPEN, ORDER_INFO, PERPETUAL, SPOT, SUBMITTING, USER_FILLS
+from cryptofeed.defines import BID, ASK, BUY, CLOSED, FUTURES, LIMIT, MAKER, MARKET, OPEN, ORDER_INFO, PERPETUAL, SPOT, SUBMITTING, FILLS, TAKER
 from cryptofeed.defines import FTX as FTX_id
 from cryptofeed.defines import FUNDING, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, SELL, TICKER, TRADES, FILLED
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.ftx_rest import FTXRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Fill
 
 
 LOG = logging.getLogger('feedhandler')
@@ -40,7 +40,7 @@ class FTX(Feed, FTXRestMixin):
         OPEN_INTEREST: 'open_interest',
         LIQUIDATIONS: 'trades',
         ORDER_INFO: 'orders',
-        USER_FILLS: 'fills',
+        FILLS: 'fills',
     }
     request_limit = 30
 
@@ -89,6 +89,7 @@ class FTX(Feed, FTXRestMixin):
 
     def __init__(self, **kwargs):
         super().__init__('wss://ftexchange.com/ws/', **kwargs)
+        self.ws_defaults['compression'] = None
 
     def __reset(self):
         self._l2_book = {}
@@ -170,7 +171,7 @@ class FTX(Feed, FTXRestMixin):
                     if oi != self._open_interest_cache.get(pair, None):
                         o = OpenInterest(
                             self.id,
-                            pair,
+                            self.exchange_symbol_to_std_symbol(pair),
                             oi,
                             None,
                             raw=data
@@ -251,7 +252,7 @@ class FTX(Feed, FTXRestMixin):
                     BUY if trade['side'] == 'buy' else SELL,
                     Decimal(trade['size']),
                     Decimal(trade['price']),
-                    trade['id'],
+                    str(trade['id']),
                     FILLED,
                     float(self.timestamp_normalize(trade['time'])),
                     raw=trade
@@ -341,16 +342,21 @@ class FTX(Feed, FTXRestMixin):
         }
         """
         fill = msg['data']
-        await self.callback(USER_FILLS, feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(fill['market']),
-                            side=BUY if fill['side'] == 'buy' else SELL,
-                            amount=Decimal(fill['size']),
-                            price=Decimal(fill['price']),
-                            liquidity=fill['liquidity'],
-                            order_id=fill['orderId'],
-                            trade_id=fill['tradeId'],
-                            timestamp=float(self.timestamp_normalize(fill['time'])),
-                            receipt_timestamp=timestamp)
+        f = Fill(
+            self.id,
+            self.exchange_symbol_to_std_symbol(fill['market']),
+            BUY if fill['side'] == 'buy' else SELL,
+            Decimal(fill['size']),
+            Decimal(fill['price']),
+            Decimal(fill['fee']),
+            str(fill['tradeId']),
+            str(fill['orderId']),
+            None,
+            TAKER if fill['liquidity'] == 'taker' else MAKER,
+            fill['time'].timestamp(),
+            raw=msg
+        )
+        await self.callback(FILLS, f, timestamp)
 
     async def _order(self, msg: dict, timestamp: float):
         """

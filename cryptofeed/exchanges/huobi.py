@@ -51,12 +51,10 @@ class Huobi(Feed):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, candle_interval='1m', **kwargs):
+    def __init__(self, **kwargs):
         super().__init__('wss://api.huobi.pro/ws', **kwargs)
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         lookup = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1M': '1mon', '1w': '1week', '1Y': '1year'}
-        self.candle_interval = lookup[candle_interval]
+        self.candle_interval = lookup[self.candle_interval]
         self.normalize_interval = {value: key for key, value in lookup.items()}
         self.__reset()
 

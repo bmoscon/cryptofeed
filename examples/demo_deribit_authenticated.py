@@ -2,7 +2,7 @@
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import OrderInfoCallback, BalancesCallback, UserFillsCallback
-from cryptofeed.defines import DERIBIT, ORDER_INFO, BALANCES, USER_FILLS
+from cryptofeed.defines import DERIBIT, ORDER_INFO, BALANCES, FILLS
 
 
 async def order(feed, symbol, data: dict, receipt_timestamp):
@@ -21,9 +21,9 @@ def main():
     f = FeedHandler(config="config.yaml")
 
     f.add_feed(DERIBIT,
-               channels=[USER_FILLS, ORDER_INFO],
+               channels=[FILLS, ORDER_INFO],
                symbols=["ETH-USD-PERP", "BTC-USD-PERP", "ETH-USD-22M24", "BTC-50000-22M24-call"],
-               callbacks={USER_FILLS: UserFillsCallback(fill), ORDER_INFO: OrderInfoCallback(order)},
+               callbacks={FILLS: UserFillsCallback(fill), ORDER_INFO: OrderInfoCallback(order)},
                timeout=-1)
     f.add_feed(DERIBIT,
                channels=[BALANCES],

@@ -16,13 +16,14 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.exchanges.mixins.bitstamp_rest import BitstampRestMixin
 from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Bitstamp(Feed):
+class Bitstamp(Feed, BitstampRestMixin):
     id = BITSTAMP
     symbol_endpoint = "https://www.bitstamp.net/api/v2/trading-pairs-info/"
     # API documentation: https://www.bitstamp.net/websocket/v2/
@@ -31,6 +32,7 @@ class Bitstamp(Feed):
         L2_BOOK: 'diff_order_book',
         TRADES: 'live_trades',
     }
+    request_limit = 13
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -54,6 +56,7 @@ class Bitstamp(Feed):
 
     def __init__(self, **kwargs):
         super().__init__('wss://ws.bitstamp.net/', **kwargs)
+        self.ws_defaults['compression'] = None
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
         data = msg['data']

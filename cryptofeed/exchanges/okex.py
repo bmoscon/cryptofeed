@@ -80,6 +80,7 @@ class OKEx(Feed):
         self.addresses = {'public': 'wss://ws.okex.com:8443/ws/v5/public',
                           'private': 'wss://ws.okex.com:8443/ws/v5/private'}
         super().__init__(self.addresses, **kwargs)
+        self.ws_defaults['compression'] = None
 
     async def _liquidations(self, pairs: list):
         last_update = defaultdict(dict)
@@ -229,10 +230,10 @@ class OKEx(Feed):
                 self.id,
                 self.exchange_symbol_to_std_symbol(update['instId']),
                 None,
-                update['fundingRate'],
+                Decimal(update['fundingRate']),
                 None,
                 self.timestamp_normalize(int(update['fundingTime'])),
-                predicted_rate=update['nextFundingRate'],
+                predicted_rate=Decimal(update['nextFundingRate']),
                 raw=update
             )
             await self.callback(FUNDING, f, timestamp)
@@ -339,23 +340,6 @@ class OKEx(Feed):
             raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
-
-    async def _swap_order(self, msg: dict, timestamp: float):
-
-        keys = ('filled_qty', 'last_fill_qty', 'price_avg', 'fee')
-        data = {k: Decimal(msg['data'][0][k]) for k in keys if k in msg['data'][0]}
-
-        await self.callback(ORDER_INFO,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['data'][0]['instrument_id'].upper()),  # This uses the REST endpoint format (lower case)
-                            status=int(msg['data'][0]['state']),
-                            order_id=msg['data'][0]['order_id'],
-                            side=int(msg['data'][0]['type']),
-                            order_type=int(msg['data'][0]['order_type']),
-                            timestamp=msg['data'][0]['timestamp'].timestamp(),
-                            receipt_timestamp=timestamp,
-                            **data
-                            )
 
     async def _login(self, msg: dict, timestamp: float):
         LOG.debug('%s: Websocket logged in? %s', self.id, msg['code'])

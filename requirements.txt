@@ -8,4 +8,4 @@ aiodns>=1.1  # aiodns speeds up DNS resolving
 cchardet
 uvloop
 cython
-order_book==0.3.2
+order_book==0.4.0

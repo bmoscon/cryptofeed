@@ -59,9 +59,9 @@ fh = FeedHandler()
 
 # ticker, trade, and book are user defined functions that
 # will be called when ticker, trade and book updates are received
-ticker_cb = {TICKER: TickerCallback(ticker)}
-trade_cb = {TRADES: TradeCallback(trade)}
-gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
+ticker_cb = {TICKER: ticker}
+trade_cb = {TRADES: trade}
+gemini_cb = {TRADES: trade, L2_BOOK: book}
 
 
 fh.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
@@ -119,7 +119,7 @@ Cryptofeed supports the following channels from exchanges:
 * ORDER_INFO - Order status updates
 * TRANSACTIONS - Real-time updates on account deposits and withdrawals
 * BALANCES - Updates on wallet funds
-* USER_FILLS - Executed user trades
+* FILLS - User's executed trades
 
 
 ## Backends

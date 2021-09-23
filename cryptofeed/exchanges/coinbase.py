@@ -162,7 +162,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
             Decimal(msg['price']),
             ts,
             id=str(msg['trade_id']),
-            order_type=order_type,
+            type=order_type,
             raw=msg
         )
         await self.callback(TRADES, t, timestamp)
@@ -261,6 +261,9 @@ class Coinbase(Feed, CoinbaseRestMixin):
         for orders which are not on the book should be ignored when maintaining a real-time order book.
         """
         if 'price' not in msg:
+            # market order life cycle: received -> done
+            self.order_type_map.pop(msg['order_id'], None)
+            self.order_map.pop(msg['order_id'], None)
             return
 
         order_id = msg['order_id']
@@ -328,7 +331,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
 
         delta[side].append((order_id, price, new_size))
 
-        await self.book_callback(L3_BOOK, self._l3_book, timestamp, delta=delta, timestamp=ts, raw=msg, sequence_number=msg['sequence'])
+        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, delta=delta, timestamp=ts, raw=msg, sequence_number=msg['sequence'])
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         # PERF perf_start(self.id, 'msg')

@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BUY, SELL
 from cryptofeed.exchanges import BinanceFutures, BinanceDelivery, Binance
+from cryptofeed.types import Candle
 
 
 b = Binance()
@@ -51,7 +52,29 @@ class TestBinanceRest:
         assert len(ret) == 3
         assert ret[0] == expected
         assert ret[0]['timestamp'] < ret[-1]['timestamp']
+    
+    def test_candles(self):
+        expected = Candle(
+            b.id,
+            'BTC-USDT',
+            1577836800.0,
+            1577836859.999,
+            '1m',
+            493,
+            Decimal('7195.24'),
+            Decimal('7186.68'),
+            Decimal('7196.25'),
+            Decimal('7183.14'),
+            Decimal('51.642812'),
+            True,
+            1577836859.999
+        )
+        ret = []
+        for data in b.candles_sync('BTC-USDT', start='2020-01-01 00:00:00', end='2020-01-01 00:00:59'):
+            ret.extend(data)
 
+        assert len(ret) == 1
+        assert ret[0] == expected    
 
     def test_bf_trade(self):
         expected = {'timestamp': 1577836801.481,

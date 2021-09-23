@@ -4,7 +4,9 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import asyncio
+
 import aioredis
 from yapic import json
 
@@ -12,16 +14,21 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, Ba
 
 
 def trades_none_to_str(data):
-    data['order_type'] = str(data['order_type'])
+    data['type'] = str(data['type'])
     data['id'] = str(data['id'])
 
 
 class RedisCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, numeric_type=float, **kwargs):
+    def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, numeric_type=float, writer_interval=0.01, **kwargs):
         """
         setting key lets you override the prefix on the
         key used in redis. The defaults are related to the data
         being stored, i.e. trade, funding, etc
+
+        writer_interval:
+        the frequency writer sleep when there is nothing in
+        data queue. 0 makes this thread consuming a lot of CPU.
+        while large interval put pressure on queue.
         """
         prefix = 'redis://'
         if socket:
@@ -32,6 +39,7 @@ class RedisCallback(BackendQueue):
         self.numeric_type = numeric_type
         self.running = True
         self.exited = False
+        self.writer_interval = writer_interval
 
     async def stop(self):
         self.running = False
@@ -59,7 +67,7 @@ class RedisZSetCallback(RedisCallback):
 
             count = self.queue.qsize()
             if count == 0:
-                await asyncio.sleep(0)
+                await asyncio.sleep(self.writer_interval)
             elif count > 1:
                 async with self.read_many_queue(count) as updates:
                     async with self.redis.pipeline(transaction=False) as pipe:
@@ -84,7 +92,7 @@ class RedisStreamCallback(RedisCallback):
 
             count = self.queue.qsize()
             if count == 0:
-                await asyncio.sleep(0)
+                await asyncio.sleep(self.writer_interval)
             elif count > 1:
                 async with self.read_many_queue(count) as updates:
                     async with self.redis.pipeline(transaction=False) as pipe:
@@ -127,9 +135,16 @@ class FundingStream(RedisStreamCallback, BackendCallback):
 class BookRedis(RedisZSetCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, score_key='receipt_timestamp', **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, score_key=score_key, **kwargs)
+
     async def write(self, data: dict):
-        if data['delta'] is None:
-            data['delta'] = 'None'
+        if not self.snapshots_only:
+            if 'delta' in data and data['delta'] is None:
+                data['delta'] = 'None'
         if data['timestamp'] is None:
             data['timestamp'] = 'None'
         await super().write(data)
@@ -137,6 +152,12 @@ class BookRedis(RedisZSetCallback, BackendBookCallback):
 
 class BookStream(RedisStreamCallback, BackendBookCallback):
     default_key = 'book'
+
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
 
     async def write(self, data: dict):
         if 'delta' in data:

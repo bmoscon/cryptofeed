@@ -9,13 +9,13 @@ from datetime import datetime
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, FILLED
-from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, USER_FILLS, L1_BOOK
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TAKER, TICKER, TRADES, FILLED
+from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, FILLS, L1_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.deribit_rest import DeribitRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Balance, L1Book
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Balance, L1Book, Fill
 
 LOG = logging.getLogger('feedhandler')
 
@@ -32,7 +32,7 @@ class Deribit(Feed, DeribitRestMixin):
         OPEN_INTEREST: 'ticker',
         LIQUIDATIONS: 'trades',
         ORDER_INFO: 'user.orders',
-        USER_FILLS: 'user.trades',
+        FILLS: 'user.trades',
         BALANCES: 'user.portfolio',
     }
     request_limit = 20
@@ -512,9 +512,52 @@ class Deribit(Feed, DeribitRestMixin):
                 await self.callback(ORDER_INFO, oi, timestamp)
 
             elif subchan == 'trades':
-                for i in range(len(data)):
-                    symbol = self.exchange_symbol_to_std_symbol(data[i]['instrument_name'])
-                    await self.callback(USER_FILLS, feed=self.id, symbol=symbol, data=data[i], receipt_timestamp=timestamp)
+                '''
+                {
+                    "params" : {
+                        "data" : [
+                        {
+                            "trade_seq" : 30289432,
+                            "trade_id" : "48079254",
+                            "timestamp" : 1590484156350,
+                            "tick_direction" : 0,
+                            "state" : "filled",
+                            "self_trade" : false,
+                            "reduce_only" : false,
+                            "price" : 8954,
+                            "post_only" : false,
+                            "order_type" : "market",
+                            "order_id" : "4008965646",
+                            "matching_id" : null,
+                            "mark_price" : 8952.86,
+                            "liquidity" : "T",
+                            "instrument_name" : "BTC-PERPETUAL",
+                            "index_price" : 8956.73,
+                            "fee_currency" : "BTC",
+                            "fee" : 0.00000168,
+                            "direction" : "sell",
+                            "amount" : 20
+                        }]
+                    }
+                }
+                '''
+                for entry in data:
+                    symbol = self.exchange_symbol_to_std_symbol(entry['instrument_name'])
+                    f = Fill(
+                        self.id,
+                        symbol,
+                        SELL if entry['direction'] == 'sell' else BUY,
+                        Decimal(entry['amount']),
+                        Decimal(entry['price']),
+                        Decimal(entry['fee']),
+                        entry['trade_id'],
+                        entry['order_id'],
+                        entry['order_type'],
+                        TAKER if entry['liquidity'] == 'T' else MAKER,
+                        self.timestamp_normalize(entry['timestamp']),
+                        raw=entry
+                    )
+                    await self.callback(FILLS, f, timestamp)
             else:
                 LOG.warning("%s: Unknown channel 'user.%s'", conn.uuid, subchan)
         else:

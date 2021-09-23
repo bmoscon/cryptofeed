@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import os
 import io
 from typing import Optional
@@ -107,6 +108,12 @@ class FundingGCPPubSub(GCPPubSubCallback, BackendCallback):
 
 class BookGCPPubSub(GCPPubSubCallback, BackendBookCallback):
     default_key = 'book'
+
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
 
 
 class TickerGCPPubSub(GCPPubSubCallback, BackendCallback):

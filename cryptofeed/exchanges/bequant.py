@@ -65,17 +65,15 @@ class Bequant(Feed):
 
         return ret, info
 
-    def __init__(self, candle_interval='1m', **kwargs):
+    def __init__(self, **kwargs):
         urls = {
             'market': 'wss://api.bequant.io/api/2/ws/public',
             'trading': 'wss://api.bequant.io/api/2/ws/trading',
             'account': 'wss://api.bequant.io/api/2/ws/account',
         }
         super().__init__(urls, **kwargs)
-        if candle_interval not in self.valid_candle_intervals:
-            raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
         interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
-        self.candle_interval = interval_map[candle_interval]
+        self.candle_interval = interval_map[self.candle_interval]
         self.normalize_interval = {value: key for key, value in interval_map.items()}
         self.__reset()
 
