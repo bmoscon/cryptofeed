@@ -3,8 +3,8 @@ from cryptofeed.defines import LIQUIDATIONS
 from cryptofeed.exchanges import EXCHANGE_MAP
 
 
-async def liquidations(feed, symbol, side, leaves_qty, price, order_id, status, timestamp, receipt_timestamp):
-    print(f'Cryptofeed Receipt: {receipt_timestamp} Feed: {feed} Pair: {symbol} Side: {side} LeavesQty: {leaves_qty} Price: {price} ID: {order_id} Status: {status}')
+async def liquidations(data, receipt):
+    print(f'Cryptofeed Receipt: {receipt} Exchange: {data.exchange} Symbol: {data.symbol} Side: {data.side} LeavesQty: {data.leaves_qty} Price: {data.price} ID: {data.id} Status: {data.status}')
 
 
 def main():
