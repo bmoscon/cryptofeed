@@ -286,6 +286,7 @@ class Binance(Feed, BinanceRestMixin):
 
         url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
         resp = await self.http_conn.read(url)
+        await sleep(1 / self.request_limit)
         resp = json.loads(resp, parse_float=Decimal)
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
@@ -341,27 +342,23 @@ class Binance(Feed, BinanceRestMixin):
             ]
         }
         """
-        book_args = (msg, pair, timestamp)
         std_pair = self.exchange_symbol_to_std_symbol(pair)
+        if std_pair in self._l2_book:
+            return await self._handle_book_msg(msg, pair, timestamp)
 
         if not self.concurrent_http:
             # handle snapshot (a)synchronously
-            if std_pair not in self._l2_book:
-                await self._snapshot(pair)
-
-            return await self._handle_book_msg(*book_args)
+            await self._snapshot(pair)
+            return await self._handle_book_msg(msg, pair, timestamp)
 
         if std_pair in self._book_buffer:
             # snapshot is currently being fetched. std_pair will exist in self._l2_book after snapshot, but we need to continue buffering until all previous buffered messages have been processed.
-            return self._book_buffer[std_pair].append(book_args)
+            return self._book_buffer[std_pair].append((msg, pair, timestamp))
 
-        elif std_pair in self._l2_book:
-            # snapshot exists
-            return await self._handle_book_msg(*book_args)
-
-        # Initiate buffer & get snapshot
+        # concurrent http enabled and no buffer exists, so
+        # initiate buffer & get snapshot
         self._book_buffer[std_pair] = deque()
-        self._book_buffer[std_pair].append(book_args)
+        self._book_buffer[std_pair].append((msg, pair, timestamp))
 
         async def _concurrent_snapshot():
             await self._snapshot(pair)
