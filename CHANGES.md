@@ -1,5 +1,9 @@
 ## Changelog
 
+### 2.0.2
+ * Feature: random backoff when 429s are hit
+ * Bugfix: Add rate limiting delay to snapshot querying on Binance
+
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
  * Bugfix: Upbit REST candles do not work when start/end are not specified
