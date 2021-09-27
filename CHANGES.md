@@ -1,5 +1,11 @@
 ## Changelog
 
+### 2.0.2
+ * Feature: random backoff when 429s are hit
+ * Bugfix: Add rate limiting delay to snapshot querying on Binance
+ * Update: Write deltas then snapshot when book interval is hit on Book Backends
+ * Feature: Bybit liquidation support
+
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
  * Bugfix: Upbit REST candles do not work when start/end are not specified

@@ -17,9 +17,9 @@ from datetime import datetime as dt
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation
 
 
 LOG = logging.getLogger('feedhandler')
@@ -37,6 +37,7 @@ class Bybit(Feed):
         OPEN_INTEREST: 'instrument_info.100ms',
         FUNDING: 'instrument_info.100ms',
         CANDLES: 'klineV2',
+        LIQUIDATIONS: 'liquidation'
         # BALANCES: 'position' removing temporarily, this is a position, not a balance
     }
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '1w', '1M'}
@@ -127,6 +128,32 @@ class Bybit(Feed):
                        raw=entry)
             await self.callback(CANDLES, c, timestamp)
 
+    async def _liquidation(self, msg: dict, timestamp: float):
+        '''
+        {
+            'topic': 'liquidation.EOSUSDT',
+            'data': {
+                'symbol': 'EOSUSDT',
+                'side': 'Buy',
+                'price': '3.950',
+                'qty': '58.0',
+                'time': 1632586154956
+            }
+        }
+        '''
+        liq = Liquidation(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['data']['symbol']),
+            BUY if msg['data']['side'] == 'Buy' else SELL,
+            Decimal(msg['data']['qty']),
+            Decimal(msg['data']['price']),
+            None,
+            None,
+            self.timestamp_normalize(msg['data']['time']),
+            raw=msg
+        )
+        await self.callback(LIQUIDATIONS, liq, timestamp)
+
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg = json.loads(msg, parse_float=Decimal)
@@ -141,10 +168,12 @@ class Bybit(Feed):
                     LOG.warning("%s: Unhandled 'successs' message received", conn.uuid)
             else:
                 LOG.error("%s: Error from exchange %s", conn.uuid, msg)
-        elif "trade" in msg["topic"]:
+        elif msg["topic"].startswith('trade'):
             await self._trade(msg, timestamp)
         elif msg["topic"].startswith('orderBook'):
             await self._book(msg, timestamp)
+        elif msg['topic'].startswith('liquidation'):
+            await self._liquidation(msg, timestamp)
         elif "instrument_info" in msg["topic"]:
             await self._instrument_info(msg, timestamp)
         elif "order" in msg["topic"]:
