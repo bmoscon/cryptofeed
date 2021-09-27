@@ -297,6 +297,9 @@ class Binance(Feed, BinanceRestMixin):
         """
         if self._l2_book[std_pair].delta is None and msg['u'] <= self.last_update_id[std_pair]:
             return True
+        elif msg['U'] <= self.last_update_id[std_pair] and msg['u'] <= self.last_update_id[std_pair]:
+            # Old message, can ignore it
+            return True
         elif msg['U'] <= self.last_update_id[std_pair] + 1 <= msg['u']:
             self.last_update_id[std_pair] = msg['u']
             return False
@@ -339,7 +342,7 @@ class Binance(Feed, BinanceRestMixin):
             self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
             self._fetch_snapshop_buffer.pop(std_pair, None)
         ts = self.timestamp_normalize(resp['E']) if 'E' in resp else None
-        await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, timestamp=ts)
+        await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, raw=resp, timestamp=ts, sequence_number=resp['lastUpdateId'])
 
     async def _refresh_snapshot(self, pair: str) -> None:
         resp = await self._fetch_snapshot(pair)
@@ -372,8 +375,7 @@ class Binance(Feed, BinanceRestMixin):
             self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
             self._fetch_snapshop_buffer.pop(std_pair, None)
 
-        await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, delta=delta, sequence_number=self.last_update_id[std_pair])
-        self._l2_book[std_pair].delta = None  # Set delta as None to allow older messages to be skipped correctly
+        await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, raw=resp, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     async def _refresh_snapshot_with_buffer(self, pair: str) -> None:
         resp = await self._fetch_snapshot(pair)
@@ -423,7 +425,7 @@ class Binance(Feed, BinanceRestMixin):
             self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
             self._fetch_snapshop_buffer.pop(std_pair, None)
         
-        await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, delta=delta, sequence_number=self.last_update_id[std_pair])
+        await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, raw=resp, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     def _apply_msg_to_book(self, book: OrderBook, msg: dict) -> dict:
         max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
@@ -449,9 +451,6 @@ class Binance(Feed, BinanceRestMixin):
         """
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         skip_update = self._check_update_id(std_pair, msg)
-        # if current_match:
-        #     # Current msg.final_update_id == self.last_update_id[pair] which is the snapshot's update id
-        #     return await self.book_callback(L2_BOOK, self._l2_book[std_pair], timestamp, raw=msg, sequence_number=self.last_update_id[std_pair], timestamp=self.timestamp_normalize(msg['E']))
         if skip_update:
             return
 
