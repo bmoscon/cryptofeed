@@ -316,7 +316,7 @@ cdef class OrderBook:
     def to_dict(self, delta=False, as_type=None) -> dict:
         assert self.sequence_number is None or isinstance(self.sequence_number, int)
         assert self.checksum is None or isinstance(self.checksum, (str, int))
-        assert self.timestamp is None or isinstance(self.timestamp, Decimal)
+        assert self.timestamp is None or isinstance(self.timestamp, float)
 
         def helper(x):
             if isinstance(x, dict):
