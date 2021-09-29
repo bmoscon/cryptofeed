@@ -10,6 +10,17 @@ from cryptofeed.defines import BID, ASK
 from order_book import OrderBook as _OrderBook
 
 
+cdef extern from *:
+    """
+    #ifdef CYTHON_WITHOUT_ASSERTIONS
+    #define _COMPILED_WITH_ASSERTIONS 0
+    #else
+    #define _COMPILED_WITH_ASSERTIONS 1
+    #endif
+    """
+    cdef bint _COMPILED_WITH_ASSERTIONS
+COMPILED_WITH_ASSERTIONS = _COMPILED_WITH_ASSERTIONS
+
 cdef class Trade:
     cdef readonly str exchange
     cdef readonly str symbol
