@@ -5,6 +5,7 @@
  * Bugfix: Add rate limiting delay to snapshot querying on Binance
  * Update: Write deltas then snapshot when book interval is hit on Book Backends
  * Feature: Bybit liquidation support
+ * Feature: Add support for Binance websocket orders stream
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
