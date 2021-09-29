@@ -8,6 +8,7 @@
  * Feature: Add support for Binance websocket orders stream
  * Bugfix: typo in influxDB backend
  * Bugfix: typo in optional type checking in cython module
+ * Feature: compile cython code (and toggle optional assertions) correctly on windows
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
