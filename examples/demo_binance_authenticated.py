@@ -1,5 +1,5 @@
 from cryptofeed import FeedHandler
-from cryptofeed.defines import BALANCES, POSITIONS
+from cryptofeed.defines import BALANCES, ORDER_INFO, POSITIONS
 from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 
 
@@ -11,12 +11,16 @@ async def position(**kwargs):
     print(f"Position: {kwargs}")
 
 
+async def order_info(**kwargs):
+    print(f"Order info: {kwargs}")
+
+
 def main():
     path_to_config = 'config.yaml'
 
-    binance = Binance(config=path_to_config, subscription={BALANCES: []}, timeout=-1, callbacks={BALANCES: balance})
-    binance_delivery = BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position})
-    binance_futures = BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position})
+    binance = Binance(config=path_to_config, subscription={BALANCES: []}, timeout=-1, callbacks={BALANCES: balance, ORDER_INFO: order_info})
+    binance_delivery = BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
+    binance_futures = BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
 
     print(binance._generate_token())
     print(binance_delivery._generate_token())

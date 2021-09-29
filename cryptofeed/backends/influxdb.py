@@ -75,7 +75,7 @@ class InfluxCallback(HTTPCallback):
 
     async def write(self, data):
         d = self.format(data)
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]} {d},timestamp={data["timestmap"]},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1000000)}'
+        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]} {d},timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1000000)}'
         await self.queue.put({'data': update, 'headers': self.headers})
 
 

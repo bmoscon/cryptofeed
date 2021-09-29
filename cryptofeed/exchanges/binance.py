@@ -16,11 +16,11 @@ from urllib.parse import urlencode
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
-from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
-from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook
+from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook, OrderInfo
 
 
 LOG = logging.getLogger('feedhandler')
@@ -39,7 +39,8 @@ class Binance(Feed, BinanceRestMixin):
         TRADES: 'aggTrade',
         TICKER: 'bookTicker',
         CANDLES: 'kline_',
-        BALANCES: BALANCES
+        BALANCES: BALANCES,
+        ORDER_INFO: ORDER_INFO
     }
     request_limit = 20
 
@@ -470,6 +471,57 @@ class Binance(Feed, BinanceRestMixin):
                                 receipt_timestamp=timestamp,
                                 wallet_balance=Decimal(balance['f']))
 
+    async def _order_update(self, msg: dict, timestamp: float):
+        """
+        {
+            "e": "executionReport",        // Event type
+            "E": 1499405658658,            // Event time
+            "s": "ETHBTC",                 // Symbol
+            "c": "mUvoqJxFIILMdfAW5iGSOW", // Client order ID
+            "S": "BUY",                    // Side
+            "o": "LIMIT",                  // Order type
+            "f": "GTC",                    // Time in force
+            "q": "1.00000000",             // Order quantity
+            "p": "0.10264410",             // Order price
+            "P": "0.00000000",             // Stop price
+            "F": "0.00000000",             // Iceberg quantity
+            "g": -1,                       // OrderListId
+            "C": "",                       // Original client order ID; This is the ID of the order being canceled
+            "x": "NEW",                    // Current execution type
+            "X": "NEW",                    // Current order status
+            "r": "NONE",                   // Order reject reason; will be an error code.
+            "i": 4293153,                  // Order ID
+            "l": "0.00000000",             // Last executed quantity
+            "z": "0.00000000",             // Cumulative filled quantity
+            "L": "0.00000000",             // Last executed price
+            "n": "0",                      // Commission amount
+            "N": null,                     // Commission asset
+            "T": 1499405658657,            // Transaction time
+            "t": -1,                       // Trade ID
+            "I": 8641984,                  // Ignore
+            "w": true,                     // Is the order on the book?
+            "m": false,                    // Is this trade the maker side?
+            "M": false,                    // Ignore
+            "O": 1499405658657,            // Order creation time
+            "Z": "0.00000000",             // Cumulative quote asset transacted quantity
+            "Y": "0.00000000",             // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
+            "Q": "0.00000000"              // Quote Order Qty
+        }
+        """
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['s']),
+            msg['i'],
+            BUY if msg['S'].lower() == 'buy' else SELL,
+            msg['x'],
+            LIMIT if msg['o'].lower() == 'limit' else MARKET if msg['o'].lower() == 'market' else None,
+            Decimal(msg['Z'] / Decimal(msg['z'])) if not Decimal.is_zero(Decimal(msg['z'])) else None,
+            Decimal(msg['q']),
+            Decimal(msg['q']) - Decimal(msg['z']),
+            self.timestamp_normalize(msg['E']),
+        )
+        await self.callback(ORDER_INFO, oi, timestamp)
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -478,6 +530,8 @@ class Binance(Feed, BinanceRestMixin):
             msg_type = msg['e']
             if msg_type == 'outboundAccountPosition':
                 await self._account_update(msg, timestamp)
+            elif msg_type == 'executionReport':
+                await self._order_update(msg, timestamp)
             return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
