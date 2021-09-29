@@ -15,7 +15,7 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
-from cryptofeed.types import OpenInterest
+from cryptofeed.types import OpenInterest, OrderInfo
 
 LOG = logging.getLogger('feedhandler')
 
@@ -224,20 +224,19 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             }
         }
         """
-        await self.callback(ORDER_INFO,
-                            feed=self.id,
-                            symbol=self.exchange_symbol_to_std_symbol(msg['o']['s']),
-                            status=msg['o']['x'],
-                            order_id=msg['o']['i'],
-                            side=BUY if msg['o']['S'].lower() == 'buy' else SELL,
-                            order_type=LIMIT if msg['o']['o'].lower() == 'limit' else MARKET if msg['o']['o'].lower() == 'market' else None,
-                            avg_fill_price=Decimal(msg['o']['ap']) if not Decimal.is_zero(Decimal(msg['o']['ap'])) else None,
-                            filled_size=Decimal(msg['o']['z']),
-                            remaining_size=Decimal(msg['o']['q']) - Decimal(msg['o']['z']),
-                            amount=Decimal(msg['o']['q']),
-                            timestamp=self.timestamp_normalize(msg['E']),
-                            receipt_timestamp=timestamp
-                            )
+        oi = OrderInfo(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['o']['s']),
+            msg['o']['i'],
+            BUY if msg['o']['S'].lower() == 'buy' else SELL,
+            msg['o']['x'],
+            LIMIT if msg['o']['o'].lower() == 'limit' else MARKET if msg['o']['o'].lower() == 'market' else None,
+            Decimal(msg['o']['ap']) if not Decimal.is_zero(Decimal(msg['o']['ap'])) else None,
+            Decimal(msg['o']['q']),
+            Decimal(msg['o']['q']) - Decimal(msg['o']['z']),
+            self.timestamp_normalize(msg['E']),
+        )
+        await self.callback(ORDER_INFO, oi, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
