@@ -235,6 +235,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             Decimal(msg['o']['q']),
             Decimal(msg['o']['q']) - Decimal(msg['o']['z']),
             self.timestamp_normalize(msg['E']),
+            raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
 

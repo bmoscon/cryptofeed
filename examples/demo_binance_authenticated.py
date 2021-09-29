@@ -3,16 +3,16 @@ from cryptofeed.defines import BALANCES, ORDER_INFO, POSITIONS
 from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 
 
-async def balance(**kwargs):
-    print(f"Balance: {kwargs}")
+async def balance(balance, receipt):
+    print(f"Balance: {balance}")
 
 
-async def position(**kwargs):
-    print(f"Position: {kwargs}")
+async def position(position, receipt):
+    print(f"Position: {position}")
 
 
-async def order_info(**kwargs):
-    print(f"Order info: {kwargs}")
+async def order_info(order, receipt):
+    print(f"Order info: {order}")
 
 
 def main():

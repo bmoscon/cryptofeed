@@ -519,6 +519,7 @@ class Binance(Feed, BinanceRestMixin):
             Decimal(msg['q']),
             Decimal(msg['q']) - Decimal(msg['z']),
             self.timestamp_normalize(msg['E']),
+            raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
 
