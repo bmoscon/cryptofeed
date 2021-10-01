@@ -19,7 +19,7 @@ from cryptofeed.exchange import RestExchange
 from cryptofeed.types import Candle
 
 
-LOG = logging.getLogger('cryptofeed.rest')
+LOG = logging.getLogger('feedhandler')
 
 
 class BinanceRestMixin(RestExchange):
