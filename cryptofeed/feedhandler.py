@@ -66,8 +66,8 @@ class FeedHandler:
         if not self.config.log.disabled:
             get_logger('feedhandler', self.config.log.filename, self.config.log.level)
 
-            if self.config.log_msg:
-                LOG.info(self.config.log_msg)
+        if self.config.log_msg:
+            LOG.info(self.config.log_msg)
 
         if self.config.uvloop:
             try:
