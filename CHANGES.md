@@ -10,6 +10,8 @@
  * Bugfix: typo in optional type checking in cython module
  * Feature: compile cython code (and toggle optional assertions) correctly on windows
  * Feature: Allow logging disable via config option
+ * Feature: Remove add_feed_running() method, add_feed can be used to add exchange feeds to running feedhandler.
+ * Bugfix: Allow empty feedhandler to be started
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
