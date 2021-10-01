@@ -25,7 +25,7 @@ def stop():
 
 def add_new_feed():
     loop = asyncio.get_event_loop()
-    f.add_feed_running(Coinbase(symbols=['ETH-USD'], channels=[TRADES], callbacks={TRADES: trade}), loop=loop)
+    f.add_feed(Coinbase(symbols=['ETH-USD'], channels=[TRADES], callbacks={TRADES: trade}), loop=loop)
 
 
 def main():

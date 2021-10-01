@@ -25,6 +25,7 @@ async def trade(t, receipt_timestamp):
 
 
 async def book(update, receipt_timestamp):
+    print(f"Received update from {update.exchange}", end=' - ')
     if update.delta:
         print(f"Delta from last book contains {len(update.delta[BID]) + len(update.delta[ASK])} entries.")
     else:
@@ -40,12 +41,12 @@ async def aio_task():
 
 def main():
     f = FeedHandler()
+    f.run(start_loop=False)
+
     f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker}))
     f.add_feed(COINBASE, symbols=['BTC-USD'], channels=[TICKER], callbacks={TICKER: ticker})
     f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade}))
     f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book}))
-
-    f.run(start_loop=False)
 
     loop = asyncio.get_event_loop()
     loop.create_task(aio_task())
