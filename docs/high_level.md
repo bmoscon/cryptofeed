@@ -18,7 +18,7 @@ The feedhandler is the main object that a user of the library will configure. It
 * `add_nbbo`
 * `run`
 
-`add_feed`is the main method used to register an exchange with the feedhandler. You can supply an Exchange object, or a string matching the exchange's name (all uppercase). Currently if you wish to add multiple exchanges, you must call add_feed multiple times (one per exchange).
+`add_feed`is the main method used to register an exchange with the feedhandler. You can supply an Exchange object, or a string matching the exchange's name (all uppercase). Currently, if you wish to add multiple exchanges, you must call add_feed multiple times (one per exchange).
 
 `add_nbbo` lets you compose your own NBBO data feed. It takes the arguments `feeds`, `symbols` and `callback`, which are the normal arguments you'd supply for exchange objects when supplied to the feed handler. The exchanges in the `feeds` list will subscribe to the `symbols` and NBBO updates will be supplied to the `callback` method as they are received from the exchanges.
 
@@ -38,7 +38,7 @@ The exchange objects are supplied with the following arguments:
 * `config`
 * `callbacks`
 
-`channels` are the data channels for which you are interested in receiving updates. Examples are TRADES, TICKER, and L2_BOOK. Not all exchanges support all channels. `symbols` are the trading symbols. Every symbol in `symbols` will subscribed to every channel in `channels`. If you wish to create a more granular subscription, use the `subscription` option. The `config` kwarg can be used to specify exchange specific configuration information. See the [config](config.md) doc for more information.  
+`channels` are the data channels for which you are interested in receiving updates. Examples are TRADES, TICKER, and L2_BOOK. Not all exchanges support all channels. `symbols` are the trading symbols. Every symbol in `symbols` will be subscribed to every channel in `channels`. If you wish to create a more granular subscription, use the `subscription` option. The `config` kwarg can be used to specify exchange specific configuration information. See the [config](config.md) doc for more information.  
 
 The supported data channels are:
 
