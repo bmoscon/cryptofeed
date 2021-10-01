@@ -163,7 +163,7 @@ Alternatively, you can install in 'edit' mode (also called development mode):
 
     python setup.py develop
 
-See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
+See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
 
 
