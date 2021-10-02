@@ -15,7 +15,7 @@ The safe way to install and upgrade the Cryptofeed library:
     pip install --user --upgrade cryptofeed
 
 Cryptofeed supports many backends as Redis, ZeroMQ, RabbitMQ, MongoDB, PostgreSQL, Google Cloud and many others.
-Cryptofeed is usually used with a subset of the available backends and installing the dependencies of all backends is not required. 
+Cryptofeed is usually used with a subset of the available backends, and installing the dependencies of all backends is not required. 
 Thus, to minimize the number of dependencies, the backend dependencies are optional, but easy to install.
 
 See the file [`setup.py`](https://github.com/bmoscon/cryptofeed/blob/master/setup.py#L60)
