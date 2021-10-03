@@ -363,10 +363,12 @@ class Binance(Feed, BinanceRestMixin):
 
         async def _concurrent_snapshot():
             await self._snapshot(pair)
-            while len(self._book_buffer[std_pair]) > 0:
+            while self._book_buffer and  std_pair in self._l2_book and len(self._book_buffer[std_pair]) > 0:
                 book_args = self._book_buffer[std_pair].popleft()
                 await self._handle_book_msg(*book_args)
-            del self._book_buffer[std_pair]
+
+            if self._book_buffer:
+                del self._book_buffer[std_pair]
 
         create_task(_concurrent_snapshot())
 
