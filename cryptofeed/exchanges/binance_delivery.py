@@ -40,7 +40,7 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         self.address = self._address()
         self.ws_defaults['compression'] = None
 
-    def _check_update_id(self, pair: str, msg: dict) -> bool:
+    async def _check_update_id(self, pair: str, msg: dict) -> bool:
         if self._l2_book[pair].delta is None and msg['u'] < self.last_update_id[pair]:
             return True
         elif msg['U'] <= self.last_update_id[pair] <= msg['u']:
@@ -50,7 +50,7 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
             self.last_update_id[pair] = msg['u']
             return False
         else:
-            self._reset()
+            await self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             return True
 

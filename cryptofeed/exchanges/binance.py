@@ -4,8 +4,10 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
+from contextlib import suppress
 import logging
-from asyncio import create_task, sleep
+from asyncio import create_task, sleep, Task, CancelledError
 from collections import defaultdict, deque
 from decimal import Decimal
 import requests
@@ -94,7 +96,13 @@ class Binance(Feed, BinanceRestMixin):
         self.token = None
 
         self._open_interest_cache = {}
-        self._reset()
+        self._l2_book = {}
+        self.last_update_id = {}
+
+        if self.concurrent_http:
+            self._book_buffer:Dict[str, deque[Tuple[dict, str, float]]] = {}
+            self._concurrent_snapshot_tasks: deque[Task] = deque()
+
 
     def _address(self) -> Union[str, Dict]:
         """
@@ -149,13 +157,19 @@ class Binance(Feed, BinanceRestMixin):
 
             return {chunk[0]: address + '/'.join(chunk) for chunk in split_list(subs, 200)}
 
-    def _reset(self):
+    async def _reset(self):
         self._l2_book = {}
         self.last_update_id = {}
 
         if self.concurrent_http:
-            # buffer 'depthUpdate' book msgs until snapshot is fetched
-            self._book_buffer: Dict[str, deque[Tuple[dict, str, float]]] = {}
+            while self._concurrent_snapshot_tasks:
+                task = self._concurrent_snapshot_tasks.popleft()
+                task.cancel()
+                try:
+                    await task
+                except CancelledError as e:
+                    pass
+            self._book_buffer = {}
 
     async def _refresh_token(self):
         while True:
@@ -259,7 +273,7 @@ class Binance(Feed, BinanceRestMixin):
                           raw=msg)
         await self.callback(LIQUIDATIONS, liq, receipt_timestamp=timestamp)
 
-    def _check_update_id(self, std_pair: str, msg: dict) -> bool:
+    async def _check_update_id(self, std_pair: str, msg: dict) -> bool:
         """
         Messages will be queued (or buffered if concurrent_http is True) while fetching for snapshot
         and we can return a book_callback using this msg's data instead of waiting for the next update.
@@ -273,7 +287,7 @@ class Binance(Feed, BinanceRestMixin):
             self.last_update_id[std_pair] = msg['u']
             return False
         else:
-            self._reset()
+            await self._reset()
             LOG.warning("%s: Missing book update detected, resetting book", self.id)
             return True
 
@@ -301,7 +315,7 @@ class Binance(Feed, BinanceRestMixin):
         Processes 'depthUpdate' update book msg. This method should only be called if pair's l2_book exists.
         """
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        skip_update = self._check_update_id(std_pair, msg)
+        skip_update = await self._check_update_id(std_pair, msg)
         if skip_update:
             return
 
@@ -363,14 +377,14 @@ class Binance(Feed, BinanceRestMixin):
 
         async def _concurrent_snapshot():
             await self._snapshot(pair)
-            while self._book_buffer and  std_pair in self._l2_book and len(self._book_buffer[std_pair]) > 0:
+            while len(self._book_buffer[std_pair]) > 0:
                 book_args = self._book_buffer[std_pair].popleft()
                 await self._handle_book_msg(*book_args)
 
-            if self._book_buffer:
-                del self._book_buffer[std_pair]
+            del self._book_buffer[std_pair]
 
-        create_task(_concurrent_snapshot())
+        self._concurrent_snapshot_tasks.append(create_task(_concurrent_snapshot()))
+        await asyncio.sleep(0)
 
     async def _funding(self, msg: dict, timestamp: float):
         """
@@ -566,6 +580,6 @@ class Binance(Feed, BinanceRestMixin):
         if isinstance(conn, (HTTPPoll, HTTPConcurrentPoll)):
             self._open_interest_cache = {}
         else:
-            self._reset()
+            await self._reset()
         if self.requires_authentication:
             create_task(self._refresh_token())
