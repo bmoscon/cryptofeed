@@ -536,7 +536,7 @@ cdef class Fill:
         self.price = price
         self.fee = fee
         self.id = id
-        self.order_id = id
+        self.order_id = order_id
         self.type = type
         self.liquidity = liquidity
         self.timestamp = timestamp
