@@ -164,7 +164,7 @@ cdef class Funding:
     cpdef dict to_dict(self, as_type=None):
         if as_type is None:
             return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': as_type(self.mark_price) if self.mark_price else None, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': as_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': as_type(self.mark_price) if self.mark_price else None, 'rate': as_type(self.rate), 'next_funding_time': self.next_funding_time, 'predicted_rate': as_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
