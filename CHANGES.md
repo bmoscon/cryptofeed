@@ -12,6 +12,8 @@
  * Feature: Allow logging disable via config option
  * Feature: Remove add_feed_running() method, add_feed can be used to add exchange feeds to running feedhandler.
  * Bugfix: Allow empty feedhandler to be started
+ * Bugfix: Funding missing type conversion for to_dict method.
+ * Bugfix: RedisStream candles boolean not being converted properly
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
