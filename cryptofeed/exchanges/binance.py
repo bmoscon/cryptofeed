@@ -23,6 +23,7 @@ from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
 from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook, OrderInfo
 
+REFRESH_SNAPSHOT_MIN_INTERVAL_SECONDS = 60
 
 LOG = logging.getLogger('feedhandler')
 
@@ -44,6 +45,8 @@ class Binance(Feed, BinanceRestMixin):
         ORDER_INFO: ORDER_INFO
     }
     request_limit = 20
+    safe_snapshot_refresh_frequency = True  # Override this to `False` to refresh snapshots more frequently.
+                                            # Defaults to `True` to avoid hitting rate limits
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -79,10 +82,12 @@ class Binance(Feed, BinanceRestMixin):
     #   max_depth <= 100: 1 minute
     #   max_depth = 1000: 4 mins 45 seconds
     #   max_depth = 5000: 15 mins 52 seconds
+    # To increase refresh frequency, set `safe_snapshot_refresh_frequency=False`
+    # It divides times to a fifth, allowing much more frequent refreshes but risks hitting rate limits
     def _next_snapshot_refresh_interval(self) -> float:
         max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         # Default: 1 minute
-        refresh_interval = 60
+        refresh_interval = REFRESH_SNAPSHOT_MIN_INTERVAL_SECONDS
         if max_depth > 1000:
             # Depth > 1000: 6 records per second
             participating_depth = max_depth - 1000
@@ -93,6 +98,8 @@ class Binance(Feed, BinanceRestMixin):
             participating_depth = max_depth - 100
             refresh_interval += participating_depth / 4
             max_depth -= participating_depth
+        if not self.safe_snapshot_refresh_frequency:
+            refresh_interval = refresh_interval / 5
         return refresh_interval * random.uniform(0.50, 1.50)
 
 
@@ -353,7 +360,6 @@ class Binance(Feed, BinanceRestMixin):
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
 
-        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         delta = {BID: [], ASK: []}
         for key, side in [('bids', BID) , ('asks', ASK)]:
             for i, (price, amount) in enumerate(resp[key]):
@@ -363,13 +369,11 @@ class Binance(Feed, BinanceRestMixin):
                     if amount != self._l2_book[std_pair].book[side][price]:
                         # Since we haven't looked at all the updates, changes in price are allowed here and will be published as deltas
                         self._l2_book[std_pair].book[side][price] = amount
-                        if i < max_depth:
-                            delta[side].append((price, amount))
+                        delta[side].append((price, amount))
                 else:
                     # Price not in order book: add it there
                     self._l2_book[std_pair].book[side][price] = amount
-                    if i < max_depth:
-                        delta[side].append((price, amount))
+                    delta[side].append((price, amount))
         self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
         
         if self.refresh_snapshot:
@@ -405,7 +409,6 @@ class Binance(Feed, BinanceRestMixin):
             self._apply_msg_to_book(temp_book.book, msg)
         
         # Apply temporary book to local l2 book and resolve deltas
-        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         delta = {BID: [], ASK: []}
         for side in [BID, ASK]:
             for i, price in enumerate(temp_book.book[side]):
@@ -419,8 +422,7 @@ class Binance(Feed, BinanceRestMixin):
                 else:
                     # Price not in order book: add it there
                     self._l2_book[std_pair].book[side][price] = amount
-                    if i < max_depth:
-                        delta[side].append((price, amount))
+                    delta[side].append((price, amount))
         
         if self.refresh_snapshot:
             # Delete buffer and reset time since snapshot update
@@ -430,7 +432,6 @@ class Binance(Feed, BinanceRestMixin):
         await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, raw=resp, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     def _apply_msg_to_book(self, book: OrderBook, msg: dict) -> dict:
-        max_depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         delta = {BID: [], ASK: []}
         for s, side in (('b', BID), ('a', ASK)):
             for i, update in enumerate(msg[s]):
@@ -439,12 +440,10 @@ class Binance(Feed, BinanceRestMixin):
                 if amount == 0:
                     if price in book[side]:
                         del book[side][price]
-                        if i < max_depth:
-                            delta[side].append((price, amount))
+                        delta[side].append((price, amount))
                 else:
                     book[side][price] = amount
-                    if i < max_depth:
-                        delta[side].append((price, amount))
+                    delta[side].append((price, amount))
         return delta
 
     async def _handle_book_msg(self, msg: dict, pair: str, timestamp: float):
