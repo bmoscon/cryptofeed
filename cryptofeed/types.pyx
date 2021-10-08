@@ -10,6 +10,17 @@ from cryptofeed.defines import BID, ASK
 from order_book import OrderBook as _OrderBook
 
 
+cdef extern from *:
+    """
+    #ifdef CYTHON_WITHOUT_ASSERTIONS
+    #define _COMPILED_WITH_ASSERTIONS 0
+    #else
+    #define _COMPILED_WITH_ASSERTIONS 1
+    #endif
+    """
+    cdef bint _COMPILED_WITH_ASSERTIONS
+COMPILED_WITH_ASSERTIONS = _COMPILED_WITH_ASSERTIONS
+
 cdef class Trade:
     cdef readonly str exchange
     cdef readonly str symbol
@@ -153,7 +164,7 @@ cdef class Funding:
     cpdef dict to_dict(self, as_type=None):
         if as_type is None:
             return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': as_type(self.mark_price) if self.mark_price else None, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': as_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': as_type(self.mark_price) if self.mark_price else None, 'rate': as_type(self.rate), 'next_funding_time': self.next_funding_time, 'predicted_rate': as_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
@@ -525,7 +536,7 @@ cdef class Fill:
         self.price = price
         self.fee = fee
         self.id = id
-        self.order_id = id
+        self.order_id = order_id
         self.type = type
         self.liquidity = liquidity
         self.timestamp = timestamp

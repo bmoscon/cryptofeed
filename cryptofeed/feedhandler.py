@@ -59,11 +59,14 @@ class FeedHandler:
         self.feeds = []
         self.config = Config(config=config)
         self.raw_data_collection = None
+        self.running = False
         if raw_data_collection:
             Connection.raw_data_callback = raw_data_collection
             self.raw_data_collection = raw_data_collection
 
-        get_logger('feedhandler', self.config.log.filename, self.config.log.level)
+        if not self.config.log.disabled:
+            get_logger('feedhandler', self.config.log.filename, self.config.log.level)
+
         if self.config.log_msg:
             LOG.info(self.config.log_msg)
 
@@ -75,10 +78,12 @@ class FeedHandler:
             except ImportError:
                 LOG.info("FH: uvloop not initialized")
 
-    def add_feed(self, feed, **kwargs):
+    def add_feed(self, feed, loop=None, **kwargs):
         """
         feed: str or class
             the feed (exchange) to add to the handler
+        loop: event loop
+            the event loop to use for the feed (only when the feedhandler is running)
         kwargs: dict
             if a string is used for the feed, kwargs will be passed to the
             newly instantiated object
@@ -93,24 +98,11 @@ class FeedHandler:
         if self.raw_data_collection:
             self.raw_data_collection.write_header(self.feeds[-1].id, json.dumps(self.feeds[-1]._feed_config))
 
-    def add_feed_running(self, feed, loop=None, **kwargs):
-        """
-        Add and start a new feed to a running instance of cryptofeed
+        if self.running:
+            if loop is None:
+                loop = asyncio.get_event_loop()
 
-        feed: str or class
-            the feed (exchange) to add to the handler
-        loop: None, or EventLoop
-            the loop on which to add the tasks
-        kwargs: dict
-            if a string is used for the feed, kwargs will be passed to the
-            newly instantiated object
-        """
-        self.add_feed(feed, **kwargs)
-
-        if loop is None:
-            loop = asyncio.get_event_loop()
-
-        self.feeds[-1].start(loop)
+            self.feeds[-1].start(loop)
 
     def add_nbbo(self, feeds: List[Feed], symbols: List[str], callback, config=None):
         """
@@ -139,11 +131,7 @@ class FeedHandler:
         exception_handler: asyncio exception handler function pointer
             a custom exception handler for asyncio
         """
-        if len(self.feeds) == 0:
-            txt = f'FH: No feed specified. Please specify at least one feed among {list(EXCHANGE_MAP.keys())}'
-            LOG.error(txt)
-            raise ValueError(txt)
-
+        self.running = True
         loop = asyncio.get_event_loop()
         # Good to enable when debugging or without code change: export PYTHONASYNCIODEBUG=1)
         # loop.set_debug(True)
@@ -172,6 +160,7 @@ class FeedHandler:
         LOG.info('FH: leaving run()')
 
     def _stop(self, loop=None):
+        self.running = False
         if not loop:
             loop = asyncio.get_event_loop()
 

@@ -5,6 +5,17 @@
  * Bugfix: Add rate limiting delay to snapshot querying on Binance
  * Update: Write deltas then snapshot when book interval is hit on Book Backends
  * Feature: Bybit liquidation support
+ * Feature: Add support for Binance websocket orders stream
+ * Bugfix: typo in influxDB backend
+ * Bugfix: typo in optional type checking in cython module
+ * Feature: compile cython code (and toggle optional assertions) correctly on windows
+ * Feature: Allow logging disable via config option
+ * Feature: Remove add_feed_running() method, add_feed can be used to add exchange feeds to running feedhandler.
+ * Bugfix: Allow empty feedhandler to be started
+ * Bugfix: Funding missing type conversion for to_dict method.
+ * Bugfix: RedisStream candles boolean not being converted properly
+ * Bugfix: FTX order info not handling price of None correctly on reduce only updates
+ * Bugfix: Fills using incorrect order id
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression

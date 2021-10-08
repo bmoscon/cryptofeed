@@ -124,7 +124,7 @@ Cryptofeed supports the following channels from exchanges:
 
 ## Backends
 
-Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces
+Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces.
 
 Supported Backends:
 * Redis (Streams and Sorted Sets)
@@ -155,7 +155,7 @@ Cryptofeed has optional dependencies, depending on the backends used. You can in
 
     pip install cryptofeed[all]
 
-If you wish to clone the repository and install from source, run this command from the root of the cloned repository
+If you wish to clone the repository and install from source, run this command from the root of the cloned repository.
 
     python setup.py install
 
@@ -163,7 +163,7 @@ Alternatively, you can install in 'edit' mode (also called development mode):
 
     python setup.py develop
 
-See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
+See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
 
 
@@ -174,7 +174,7 @@ Cryptofeed supports some REST interfaces for retrieving real-time and historical
 
 ## Future Work
 
-There are a lot of planned features, new exchanges, etc planned! If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
+There are a lot of planned features, new exchanges, etc planned! If you'd like to discuss ongoing development, please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
 
 ## Contributing
 

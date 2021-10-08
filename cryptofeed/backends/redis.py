@@ -200,3 +200,7 @@ class CandlesRedis(RedisZSetCallback, BackendCallback):
 
 class CandlesStream(RedisStreamCallback, BackendCallback):
     default_key = 'candles'
+
+    async def write(self, data: dict):
+        data['closed'] = str(data['closed'])
+        await super().write(data)

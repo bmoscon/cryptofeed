@@ -17,7 +17,7 @@ from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.types import Candle
 
 
-LOG = logging.getLogger('cryptofeed.rest')
+LOG = logging.getLogger('feedhandler')
 
 
 class UpbitRestMixin(RestExchange):

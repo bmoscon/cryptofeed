@@ -70,7 +70,7 @@ class Exchange:
         return data
 
     @classmethod
-    def symbols(cls, refresh=False) -> Dict:
+    def symbols(cls, refresh=False) -> list:
         return list(cls.symbol_mapping(refresh=refresh).keys())
 
     @classmethod

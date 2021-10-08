@@ -71,7 +71,7 @@ async def liquidations(liquidation, receipt_timestamp):
 
 
 def main():
-    config = {'log': {'filename': 'demo.log', 'level': 'DEBUG'}}
+    config = {'log': {'filename': 'demo.log', 'level': 'DEBUG', 'disabled': False}}
     # the config will be automatically passed into any exchanges set up by string. Instantiated exchange objects would need to pass the config in manually.
     f = FeedHandler(config=config)
 

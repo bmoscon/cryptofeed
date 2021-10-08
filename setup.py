@@ -7,7 +7,7 @@ associated with this software.
 import os
 import sys
 
-from setuptools import setup
+from setuptools import Extension, setup
 from setuptools import find_packages
 from setuptools.command.test import test as TestCommand
 from Cython.Build import cythonize
@@ -32,13 +32,20 @@ class Test(TestCommand):
         sys.exit(errno)
 
 
-# comment out line below to enable type checking in cython code (via assertions)
-os.environ['CFLAGS'] = '-DCYTHON_WITHOUT_ASSERTIONS'
+extra_compile_args = ["/O2" if os.name == "nt" else "-O3"]
+define_macros = []
 
+# comment out line to compile with type check assertions
+# verify value at runtime with cryptofeed.types.COMPILED_WITH_ASSERTIONS
+define_macros.append(('CYTHON_WITHOUT_ASSERTIONS', None))
+
+extension = Extension("cryptofeed.types", ["cryptofeed/types.pyx"],
+                      extra_compile_args=extra_compile_args,
+                      define_macros=define_macros)
 
 setup(
     name="cryptofeed",
-    ext_modules=cythonize("cryptofeed/types.pyx", language_level=3),
+    ext_modules=cythonize([extension], language_level=3, force=True),
     version="2.0.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
@@ -76,7 +83,7 @@ setup(
         'uvloop ; platform_system!="Windows"',
         # Two (optional) dependencies that speed up Cryptofeed:
         "aiodns>=1.1",  # aiodns speeds up DNS resolving
-        "cchardet",     # cchardet is a faster replacement for chardet
+        "cchardet",  # cchardet is a faster replacement for chardet
         "order_book>=0.4.0"
     ],
     extras_require={

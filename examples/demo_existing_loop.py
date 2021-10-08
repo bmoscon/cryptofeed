@@ -7,7 +7,6 @@ associated with this software.
 import asyncio
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import BookCallback, TickerCallback, TradeCallback
 from cryptofeed.defines import BID, ASK, COINBASE, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import Binance, Coinbase
 
@@ -17,16 +16,21 @@ from cryptofeed.exchanges import Binance, Coinbase
 # Handlers can be normal methods/functions or async. The feedhandler is paused
 # while the callbacks are being handled (unless they in turn await other functions or I/O)
 # so they should be as lightweight as possible
-async def ticker(feed, symbol, bid, ask, receipt_timestamp):
-    print(f'Feed: {feed} Pair: {symbol} Bid: {bid} Ask: {ask}')
+async def ticker(t, receipt_timestamp):
+    print(t)
 
 
-async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_timestamp):
-    print(f"Timestamp: {timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
+async def trade(t, receipt_timestamp):
+    print(t)
 
 
-async def book(feed, symbol, book, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} Book Bid Size is {len(book[BID])} Ask Size is {len(book[ASK])}')
+async def book(update, receipt_timestamp):
+    print(f"Received update from {update.exchange}", end=' - ')
+    if update.delta:
+        print(f"Delta from last book contains {len(update.delta[BID]) + len(update.delta[ASK])} entries.")
+    else:
+        book_data = update.book.to_dict()
+        print(f'Book received at {receipt_timestamp} for {update.exchange} - {update.symbol}, with {len(book_data[BID]) + len(book_data[ASK])} entries.')
 
 
 async def aio_task():
@@ -37,14 +41,12 @@ async def aio_task():
 
 def main():
     f = FeedHandler()
-    # Note: EXX is extremely unreliable - sometimes a connection can take many many retries
-    # f.add_feed(EXX(symbols=['BTC-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade)}))
-    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: BookCallback(book), TRADES: TradeCallback(trade), TICKER: TickerCallback(ticker)}))
-    f.add_feed(COINBASE, symbols=['BTC-USD'], channels=[TICKER], callbacks={TICKER: TickerCallback(ticker)})
-    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: TradeCallback(trade)}))
-    f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}))
-
     f.run(start_loop=False)
+
+    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker}))
+    f.add_feed(COINBASE, symbols=['BTC-USD'], channels=[TICKER], callbacks={TICKER: ticker})
+    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade}))
+    f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book}))
 
     loop = asyncio.get_event_loop()
     loop.create_task(aio_task())
