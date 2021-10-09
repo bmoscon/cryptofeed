@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.defines import *
-from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str
+from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str, FMFW as FMFW_str
 from .phemex import Phemex
 from .ascendex import AscendEX
 from .bequant import Bequant
@@ -13,7 +13,7 @@ from .binance import Binance
 from .binance_delivery import BinanceDelivery
 from .binance_futures import BinanceFutures
 from .binance_us import BinanceUS
-from .bitcoincom import BitcoinCom
+from .fmfw import FMFW
 from .bitfinex import Bitfinex
 from .bitflyer import Bitflyer
 from .bithumb import Bithumb
@@ -51,7 +51,7 @@ EXCHANGE_MAP = {
     BINANCE_FUTURES: BinanceFutures,
     BINANCE_US: BinanceUS,
     BINANCE: Binance,
-    BITCOINCOM: BitcoinCom,
+    FMFW_str: FMFW,
     BITFINEX: Bitfinex,
     BITFLYER: Bitflyer,
     BITHUMB: Bithumb,
