@@ -11,7 +11,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 * [AscendEX](https://ascendex.com/)
 * [Bequant](https://bequant.io/)
-* [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
 * [Bithumb](https://en.bithumb.com/)
@@ -27,6 +26,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Coinbase](https://www.coinbase.com/)
 * [Deribit](https://www.deribit.com/)
 * [dYdX](https://dydx.exchange/)
+* [FMFW.io](https://www.fmfw.io/)
 * [EXX](https://www.exx.com/)
 * [FTX](https://ftx.com/)
 * [FTX US](https://ftx.us/)
