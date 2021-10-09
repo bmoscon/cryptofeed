@@ -17,6 +17,7 @@ from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADE
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle
+from cryptofeed.util.time import timedelta_str_to_sec
 
 
 LOG = logging.getLogger('feedhandler')
@@ -219,7 +220,7 @@ class Gateio(Feed):
             self.id,
             self.exchange_symbol_to_std_symbol(symbol),
             float(msg['result']['t']),
-            float(msg['result']['t']) + 59,
+            float(msg['result']['t']) + timedelta_str_to_sec(interval) - 0.1,
             interval,
             None,
             Decimal(msg['result']['o']),
