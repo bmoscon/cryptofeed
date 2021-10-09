@@ -16,6 +16,7 @@
  * Bugfix: RedisStream candles boolean not being converted properly
  * Bugfix: FTX order info not handling price of None correctly on reduce only updates
  * Bugfix: Fills using incorrect order id
+ * Feature: Periodically refresh order books in Binance to reduce the likelihood of order levels becoming stale
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
