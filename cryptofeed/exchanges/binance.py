@@ -45,8 +45,9 @@ class Binance(Feed, BinanceRestMixin):
         ORDER_INFO: ORDER_INFO
     }
     request_limit = 20
-    safe_snapshot_refresh_frequency = True  # Override this to `False` to refresh snapshots more frequently.
-                                            # Defaults to `True` to avoid hitting rate limits
+    # Override this to `False` to refresh snapshots more frequently.
+    # Defaults to `True` to avoid hitting rate limits
+    safe_snapshot_refresh_frequency = True
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -101,7 +102,6 @@ class Binance(Feed, BinanceRestMixin):
         if not self.safe_snapshot_refresh_frequency:
             refresh_interval = refresh_interval / 5
         return refresh_interval * random.uniform(0.50, 1.50)
-
 
     def __init__(self, candle_closed_only=False, depth_interval='100ms', concurrent_http=False, refresh_snapshot=False, **kwargs):
         """
@@ -345,7 +345,7 @@ class Binance(Feed, BinanceRestMixin):
         self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
         self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
         self._l2_book[std_pair].raw = resp
-        
+
         if self.refresh_snapshot:
             # Delete buffer and reset time since snapshot update
             self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
@@ -361,7 +361,7 @@ class Binance(Feed, BinanceRestMixin):
         self.last_update_id[std_pair] = resp['lastUpdateId']
 
         delta = {BID: [], ASK: []}
-        for key, side in [('bids', BID) , ('asks', ASK)]:
+        for key, side in [('bids', BID), ('asks', ASK)]:
             for i, (price, amount) in enumerate(resp[key]):
                 price = Decimal(price)
                 amount = Decimal(amount)
@@ -375,7 +375,7 @@ class Binance(Feed, BinanceRestMixin):
                     self._l2_book[std_pair].book[side][price] = amount
                     delta[side].append((price, amount))
         self._l2_book[std_pair].sequence_number = resp['lastUpdateId']
-        
+
         if self.refresh_snapshot:
             # Delete buffer and reset time since snapshot update
             self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
@@ -407,7 +407,7 @@ class Binance(Feed, BinanceRestMixin):
         while len(self._fetch_snapshop_buffer[std_pair]) > 0:
             msg = self._fetch_snapshop_buffer[std_pair].popleft()
             self._apply_msg_to_book(temp_book.book, msg)
-        
+
         # Apply temporary book to local l2 book and resolve deltas
         delta = {BID: [], ASK: []}
         for side in [BID, ASK]:
@@ -423,12 +423,12 @@ class Binance(Feed, BinanceRestMixin):
                     # Price not in order book: add it there
                     self._l2_book[std_pair].book[side][price] = amount
                     delta[side].append((price, amount))
-        
+
         if self.refresh_snapshot:
             # Delete buffer and reset time since snapshot update
             self._next_snapshot_time[std_pair] = receipt_timestamp + self._next_snapshot_refresh_interval()
             self._fetch_snapshop_buffer.pop(std_pair, None)
-        
+
         await self.book_callback(L2_BOOK, self._l2_book[std_pair], receipt_timestamp, raw=resp, delta=delta, sequence_number=self.last_update_id[std_pair])
 
     def _apply_msg_to_book(self, book: OrderBook, msg: dict) -> dict:
@@ -490,7 +490,7 @@ class Binance(Feed, BinanceRestMixin):
             elif is_expired_snapshot:
                 # Refresh snapshot to make sure our data is still up to date
                 await self._refresh_snapshot(pair)
-            return await self._handle_book_msg(msg, pair, timestamp) 
+            return await self._handle_book_msg(msg, pair, timestamp)
 
         if std_pair in self._book_buffer:
             # snapshot is currently being fetched. std_pair will exist in self._l2_book after snapshot, but we need to continue buffering until all previous buffered messages have been processed.

@@ -9,7 +9,6 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | ------------- |:-------------:| :---------------:|:--------------:|
 | AscendEX      |               | x                |                |
 | Bequant       |               | x                |                |
-| Bitcoin.com   |               | x                |                |
 | Bitfinex      |               | x                |                |
 | Bitstamp      |               |                  | x              |
 | Bittrex       |               | x                |                |
@@ -24,6 +23,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Deribit       |               | x                |                |
 | dYdX          |               | x <sup>2</sup>   |                |
 | EXX           |               |                  |                |
+| FMFW.io       |               | x                |                |
 | FTX           | x             |                  |                |
 | FTX US        | x             |                  |                |
 | Gate.io       |               |                  |                |
