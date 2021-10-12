@@ -19,6 +19,7 @@
  * Feature: Periodically refresh order books in Binance to reduce the likelihood of order levels becoming stale
  * Update: Bitcoin.com exchange migrated to FMFW.io and API was updated
  * Revert: Temporarily revert the concurrent http changes in Binance as well as the snapshot refresh code while bugs are resolved
+ * Bugfix: Fix Throttle callback, added an example to illustrate usage
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
