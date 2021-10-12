@@ -21,6 +21,8 @@
  * Revert: Temporarily revert the concurrent http changes in Binance as well as the snapshot refresh code while bugs are resolved
  * Bugfix: Fix Throttle callback, added an example to illustrate usage
  * Bugfix: BinanceFutures and BinanceDelivery not handling rates and funding times of 0/null for futures contracts
+ * Bugfix: Open Interest in Bitmex not being converted to decimal
+ * Update: Renamed field quantity in Liquidation data type
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression

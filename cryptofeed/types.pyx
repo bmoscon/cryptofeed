@@ -100,22 +100,22 @@ cdef class Liquidation:
     cdef readonly str exchange
     cdef readonly str symbol
     cdef readonly str side
-    cdef readonly object leaves_qty
+    cdef readonly object quantity
     cdef readonly object price
     cdef readonly str id
     cdef readonly str status
     cdef readonly object timestamp
     cdef readonly dict raw
 
-    def __init__(self, exchange, symbol, side, leaves_qty, price, id, status, timestamp, raw=None):
-        assert isinstance(leaves_qty, Decimal)
+    def __init__(self, exchange, symbol, side, quantity, price, id, status, timestamp, raw=None):
+        assert isinstance(quantity, Decimal)
         assert isinstance(price, Decimal)
         assert timestamp is None or isinstance(timestamp, float)
 
         self.exchange = exchange
         self.symbol = symbol
         self.side = side
-        self.leaves_qty = leaves_qty
+        self.quantity = quantity
         self.price = price
         self.id = id
         self.status = status
@@ -124,14 +124,14 @@ cdef class Liquidation:
 
     cpdef dict to_dict(self, as_type=None):
         if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'leaves_qty': self.leaves_qty, 'price': self.price, 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'leaves_qty': as_type(self.leaves_qty), 'price': as_type(self.price), 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
+            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'quantity': self.quantity, 'price': self.price, 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
+        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'quantity': as_type(self.quantity), 'price': as_type(self.price), 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
 
     def __repr__(self):
-        return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} leaves_qty: {self.leaves_qty} price: {self.price} id: {self.id} status: {self.status} timestamp: {self.timestamp}"
+        return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} quantity: {self.quantity} price: {self.price} id: {self.id} status: {self.status} timestamp: {self.timestamp}"
 
     def __eq__(self, cmp):
-        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.side == cmp.side and self.leaves_qty == cmp.leaves_qty and self.price == cmp.price and self.id == cmp.id and self.status == cmp.status and self.timestamp == cmp.timestamp
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.side == cmp.side and self.quantity == cmp.quantity and self.price == cmp.price and self.id == cmp.id and self.status == cmp.status and self.timestamp == cmp.timestamp
 
     def __hash__(self):
         return hash(self.__repr__())

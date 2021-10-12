@@ -463,7 +463,7 @@ class Bitmex(Feed, BitmexRestMixin):
         for data in msg['data']:
             if 'openInterest' in data:
                 ts = self.timestamp_normalize(data['timestamp'])
-                oi = OpenInterest(self.id, self.exchange_symbol_to_std_symbol(data['symbol']), data['openInterest'], ts, raw=data)
+                oi = OpenInterest(self.id, self.exchange_symbol_to_std_symbol(data['symbol']), Decimal(data['openInterest']), ts, raw=data)
                 await self.callback(OPEN_INTEREST, oi, timestamp)
 
     async def _liquidation(self, msg: dict, timestamp: float):

@@ -4,7 +4,7 @@ from cryptofeed.exchanges import EXCHANGE_MAP
 
 
 async def liquidations(data, receipt):
-    print(f'Cryptofeed Receipt: {receipt} Exchange: {data.exchange} Symbol: {data.symbol} Side: {data.side} LeavesQty: {data.leaves_qty} Price: {data.price} ID: {data.id} Status: {data.status}')
+    print(f'Cryptofeed Receipt: {receipt} Exchange: {data.exchange} Symbol: {data.symbol} Side: {data.side} Quantity: {data.quantity} Price: {data.price} ID: {data.id} Status: {data.status}')
 
 
 def main():
