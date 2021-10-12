@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.0.2
+### 2.0.2 (2021-10-12)
  * Feature: random backoff when 429s are hit
  * Bugfix: Add rate limiting delay to snapshot querying on Binance
  * Update: Write deltas then snapshot when book interval is hit on Book Backends
