@@ -20,6 +20,7 @@
  * Update: Bitcoin.com exchange migrated to FMFW.io and API was updated
  * Revert: Temporarily revert the concurrent http changes in Binance as well as the snapshot refresh code while bugs are resolved
  * Bugfix: Fix Throttle callback, added an example to illustrate usage
+ * Bugfix: BinanceFutures and BinanceDelivery not handling rates and funding times of 0/null for futures contracts
 
 ### 2.0.1 (2021-09-22)
  * Bugfix: BinanceDelivery and BinanceFutures WS compression
