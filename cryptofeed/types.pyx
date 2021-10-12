@@ -148,7 +148,7 @@ cdef class Funding:
 
     def __init__(self, exchange, symbol, mark_price, rate, next_funding_time, timestamp, predicted_rate=None, raw=None):
         assert mark_price is None or isinstance(mark_price, Decimal)
-        assert isinstance(rate, Decimal)
+        assert rate is None or isinstance(rate, Decimal)
         assert next_funding_time is None or isinstance(next_funding_time, float)
         assert predicted_rate is None or isinstance(predicted_rate, Decimal)
 

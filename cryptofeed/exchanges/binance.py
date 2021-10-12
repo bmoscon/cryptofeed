@@ -363,11 +363,15 @@ class Binance(Feed, BinanceRestMixin):
             "T": 1562306400000          // Next funding time
         }
         """
+        rate = Decimal(msg['r']) if msg['r'] else None
+        if rate == 0.0:
+            rate = None
+
         f = Funding(self.id,
                     self.exchange_symbol_to_std_symbol(msg['s']),
                     Decimal(msg['p']),
-                    Decimal(msg['r']),
-                    self.timestamp_normalize(msg['T']),
+                    rate,
+                    self.timestamp_normalize(msg['T']) if float(msg['T']) > 0 else None,
                     self.timestamp_normalize(msg['E']),
                     predicted_rate=Decimal(msg['P']) if 'P' in msg and msg['P'] is not None else None,
                     raw=msg)
