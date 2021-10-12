@@ -26,11 +26,11 @@ class Throttle(AggregateCallback):
         self.window = window
         self.last_update = 0
 
-    async def __call__(self, data):
+    async def __call__(self, data, receipt_timestamp):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
-            await self.handler(data)
+            await self.handler(data, receipt_timestamp)
 
 
 class OHLCV(AggregateCallback):
