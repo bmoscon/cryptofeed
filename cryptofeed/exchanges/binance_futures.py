@@ -4,14 +4,13 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from asyncio import create_task
 from decimal import Decimal
 import logging
 from typing import List, Tuple, Callable, Dict
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
+from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
@@ -98,7 +97,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         ret = []
         if self.address:
             ret = super().connect()
-        PollCls = HTTPConcurrentPoll if self.concurrent_http else HTTPPoll
+        PollCls = HTTPPoll
         for chan in set(self.subscription):
             if chan == 'open_interest':
                 addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
@@ -244,10 +243,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
 
         # Handle REST endpoint messages first
         if 'openInterest' in msg:
-            coro = self._open_interest(msg, timestamp)
-            if self.concurrent_http:
-                return create_task(coro)
-            return await coro
+            return await self._open_interest(msg, timestamp)
 
         # Handle account updates from User Data Stream
         if self.requires_authentication:

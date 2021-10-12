@@ -2,7 +2,6 @@
 OrderBooks require a snapshot on initial subscription, hence connecting to a lot of symbols will eat up rate limits.
 
 Use a 'http_proxy' to bypass this limitation.
-Use 'concurrent_http' to make concurrent HTTP requests (used in polling and http GETs)
 
 Notes:
     1. 'http_proxy' will only be used for GET requests (not Websockets). For more information visit https://docs.aiohttp.org/en/stable/client_reference.html
@@ -34,8 +33,8 @@ class Counter:
                 return False
         return True
 
-    def callback(self, exchange, channel, symbols, concurrent_http):
-        concurrency = "[concurrent_http]" if concurrent_http else "[sync_http]"
+    def callback(self, exchange, channel, symbols):
+        concurrency = "[sync_http]"
         key = f'{exchange}:{channel} {concurrency}'
         self.counts[key] = defaultdict(int)
         self.total[key] = len(symbols)
@@ -83,14 +82,12 @@ def main(proxy):
     f = FeedHandler()
     counter = Counter(f)
     f.add_feed(Binance(depth_interval='1000ms',
-                       concurrent_http=False,
                        http_proxy=proxy,
                        max_depth=1,
                        symbols=book_symbols,
                        channels=[L2_BOOK],
                        callbacks={L2_BOOK: counter.callback(BINANCE, L2_BOOK, book_symbols, False)}))
     f.add_feed(Binance(depth_interval='1000ms',
-                       concurrent_http=True,
                        http_proxy=proxy,
                        max_depth=1,
                        symbols=book_symbols,
@@ -98,13 +95,11 @@ def main(proxy):
                        callbacks={L2_BOOK: counter.callback(BINANCE, L2_BOOK, book_symbols, True)}))
     f.add_feed(BinanceFutures(http_proxy=proxy,
                               open_interest_interval=1.0,
-                              concurrent_http=False,
                               symbols=futures_symbols,
                               channels=[OPEN_INTEREST],
                               callbacks={OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, False)}))
     f.add_feed(BinanceFutures(http_proxy=proxy,
                               open_interest_interval=1.0,
-                              concurrent_http=True,
                               symbols=futures_symbols,
                               channels=[OPEN_INTEREST],
                               callbacks={OPEN_INTEREST: counter.callback(BINANCE_FUTURES, OPEN_INTEREST, futures_symbols, True)}))
