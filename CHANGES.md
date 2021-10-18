@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.0.3
+ * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
+
 ### 2.0.2 (2021-10-12)
  * Feature: random backoff when 429s are hit
  * Bugfix: Add rate limiting delay to snapshot querying on Binance

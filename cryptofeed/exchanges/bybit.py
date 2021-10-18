@@ -319,12 +319,7 @@ class Bybit(Feed):
             else:
                 self._instrument_info_cache[msg['topic']] = updates
 
-            if 'updated_at_e9' in info:
-                ts = info['updated_at_e9'] / 1e9
-            elif 'updated_at' in info:
-                ts = self.timestamp_normalize(info['updated_at'])
-            else:
-                continue
+            ts = int(msg['timestamp_e6']) / 1_000_000
 
             if 'open_interest' in info:
                 oi = OpenInterest(
