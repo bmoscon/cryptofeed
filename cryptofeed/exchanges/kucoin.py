@@ -267,7 +267,7 @@ class KuCoin(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         for chan in self.subscription:
-            symbols = self.subscription[chan]
+            symbols = list(self.subscription[chan])
             nchan = self.exchange_channel_to_std(chan)
             if nchan == CANDLES:
                 for symbol in symbols:
