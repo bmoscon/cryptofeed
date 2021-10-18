@@ -2,7 +2,9 @@
 
 ### 2.0.3
  * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
- * Bugfix: Update postgres examples and schema. Fix postgres backend for all dtypes
+ * Bugfix: Update postgres examples and schema. Fix postgres backend for all dtypes.
+ * Bugfix: Kucoin has a limit of 100 symbols per subscription message and 300 per connection. These limits are now respected.
+ * Bugfix: Error messages were not handled correctly on Kucoin, causing a crash.
 
 ### 2.0.2 (2021-10-12)
  * Feature: random backoff when 429s are hit
