@@ -2,6 +2,7 @@
 
 ### 2.0.3
  * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
+ * Bugfix: Update postgres examples and schema. Fix postgres backend for all dtypes
 
 ### 2.0.2 (2021-10-12)
  * Feature: random backoff when 429s are hit
