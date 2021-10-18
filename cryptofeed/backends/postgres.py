@@ -88,59 +88,51 @@ class TradePostgres(PostgresCallback, BackendCallback):
     default_table = TRADES
 
     def format(self, data: Tuple):
-        feed = data[0]
-        symbol = data[1]
-        timestamp = data[2]
-        receipt_timestamp = data[3]
-        data = data[4]
-        if data['id'] is None:
-            data['id'] = 'NULL'
-        else:
-            data['id'] = f"'{data['id']}'"
-
-        if data['type'] is None:
-            data['type'] = 'NULL'
-        else:
-            data['type'] = f"'{data['type']}'"
-
-        return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{data['side']}',{data['amount']},{data['price']},{data['id']},{data['type']})"
+        exchange, symbol, timestamp, receipt, data = data
+        id = f"'{data['id']}'" if data['id'] else 'NULL'
+        otype = f"'{data['type']}'" if data['type'] else 'NULL'
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['amount']},{data['price']},{id},{otype})"
 
 
 class FundingPostgres(PostgresCallback, BackendCallback):
     default_table = FUNDING
+
+    def format(self, data: Tuple):
+        exchange, symbol, timestamp, receipt, data = data
+        ts = dt.utcfromtimestamp(data['next_funding_time']) if data['next_funding_time'] else 'NULL'
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['mark_price'] if data['mark_price'] else 'NULL'},{data['rate']},'{ts}',{data['predicted_rate']})"
 
 
 class TickerPostgres(PostgresCallback, BackendCallback):
     default_table = TICKER
 
     def format(self, data: Tuple):
-        feed = data[0]
-        symbol = data[1]
-        timestamp = data[2]
-        receipt_timestamp = data[3]
-        data = data[4]
-
-        return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}',{data['bid']},{data['ask']})"
+        exchange, symbol, timestamp, receipt, data = data
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['bid']},{data['ask']})"
 
 
 class OpenInterestPostgres(PostgresCallback, BackendCallback):
     default_table = OPEN_INTEREST
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        d = f"{data['open_interest']}"
-        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+    def format(self, data: Tuple):
+        exchange, symbol, timestamp, receipt, data = data
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['open_interest']})"
 
 
 class IndexPostgres(PostgresCallback, BackendCallback):
     default_table = INDEX
 
-    async def write(self, feed: str, pair: str, timestamp: float, receipt_timestamp: float, data: dict):
-        d = f"{data['price']}"
-        await super().write(feed, pair, timestamp, receipt_timestamp, d)
+    def format(self, data: Tuple):
+        exchange, symbol, timestamp, receipt, data = data
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['price']})"
 
 
 class LiquidationsPostgres(PostgresCallback, BackendCallback):
     default_table = LIQUIDATIONS
+
+    def format(self, data: Tuple):
+        exchange, symbol, timestamp, receipt, data = data
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['price']},'{data['side']}',{data['quantity']},{data['price']},'{data['id']}','{data['status']}')"
 
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
@@ -157,12 +149,8 @@ class CandlesPostgres(PostgresCallback, BackendCallback):
     default_table = CANDLES
 
     def format(self, data: Tuple):
-        feed = data[0]
-        symbol = data[1]
-        timestamp = data[2]
-        receipt_timestamp = data[3]
-        data = data[4]
+        exchange, symbol, timestamp, receipt, data = data
 
         open_ts = dt.utcfromtimestamp(data['start'])
         close_ts = dt.utcfromtimestamp(data['stop'])
-        return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{open_ts}','{close_ts}','{data['interval']}',{data['trades']},{data['open']},{data['close']},{data['high']},{data['low']},{data['volume']},{data['closed']})"
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{open_ts}','{close_ts}','{data['interval']}',{data['trades'] if data['trades'] is not None else 'NULL'},{data['open']},{data['close']},{data['high']},{data['low']},{data['volume']},{data['closed'] if data['closed'] else 'NULL'})"
