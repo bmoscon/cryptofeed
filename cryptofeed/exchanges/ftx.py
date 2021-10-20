@@ -88,7 +88,7 @@ class FTX(Feed, FTXRestMixin):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__('wss://ftexchange.com/ws/', **kwargs)
+        super().__init__('wss://ftx.com/ws/', **kwargs)
         self.ws_defaults['compression'] = None
 
     def __reset(self):
