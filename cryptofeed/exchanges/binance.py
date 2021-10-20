@@ -115,6 +115,8 @@ class Binance(Feed, BinanceRestMixin):
         is_any_public = any(not self.is_authenticated_channel(chan) for chan in self.subscription)
         if is_any_private and is_any_public:
             raise ValueError("Private and public channels should be subscribed to in separate feeds")
+        if all(self.is_authenticated_channel(chan) for chan in self.subscription):
+            return address
 
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
