@@ -49,7 +49,23 @@ print(trade.to_dict(as_type=str))
  
 ```
 
-The `repr`, `eq` and `hash` magic methods are also defined allowing the object to printed, compared with others, and hashed.
+The `repr`, `eq` and `hash` magic methods are also defined allowing the object to printed, compared with others, and hashed. Each object also has a member called `raw` that contains the raw message from the exchange that was used to generate the object. You can use this to inspect the data and obtain additional data that may not be part of the object in question.
+
+The datatypes currently supported by cryptofeed are:
+
+* Trade
+* Ticker
+* Liquidation
+* Funding
+* Candle
+* Index
+* OpenInterest
+* OrderBook
+* OrderInfo
+* Balance
+* L1Book
+* Transaction
+* Fill
 
 
 ## The OrderBook object
