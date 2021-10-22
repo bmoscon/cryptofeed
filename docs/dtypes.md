@@ -21,5 +21,12 @@ We can also access the data as a dictionary with the `to_dict()` method:
 print(trade.to_dict())
 
 
-
+{'exchange': 'COINBASE',
+ 'symbol': 'BTC-USD',
+ 'side': 'buy',
+ 'amount': 1.2,
+ 'price': 64342.12,
+ 'id': '23454323',
+ 'type': 'limit',
+ 'timestamp': 1634865952.143}
 ```
