@@ -180,7 +180,7 @@ There are a lot of planned features, new exchanges, etc planned! If you'd like t
 
 Issues and PRs are welcomed!
 
-Cryptofeed wouldn't be possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contributors my thanks!'
+Cryptofeed wouldn't be possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contributors my thanks!
 
 ## Donations / Support
 
@@ -188,5 +188,3 @@ Support and donations are appreciated but not required. You can donate via Githu
 
 * Bitcoin: bc1qm0kxz8hqacaglku5fjhfe9a5hjnuyfwk02lsyr
 * Ethereum: 0x690709FEe13eEce9E7852089BB2D53Ae5D073154
-
-
