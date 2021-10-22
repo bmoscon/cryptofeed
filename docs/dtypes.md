@@ -30,3 +30,23 @@ print(trade.to_dict())
  'type': 'limit',
  'timestamp': 1634865952.143}
 ```
+
+The `to_dict()` method also supports an important kwarg: `as_type`. This allows us to convert numeric types to other types when constructing the dictionary.
+
+
+```python
+print(trade.to_dict(as_type=str))
+
+
+{'exchange': 'COINBASE',
+ 'symbol': 'BTC-USD',
+ 'side': 'buy',
+ 'amount': '1.2',
+ 'price': '64342.12',
+ 'id': '23454323',
+ 'type': 'limit',
+ 'timestamp': 1634865952.143}
+ 
+```
+
+The `repr`, `eq` and `hash` magic methods are also defined allowing the object to printed, compared with others, and hashed.
