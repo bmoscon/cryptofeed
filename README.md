@@ -184,7 +184,7 @@ Cryptofeed wouldn't be possible without the help of many [contributors](AUTHORS.
 
 ## Donations / Support
 
-Support and donations are appreciated but not required. You can donate via Github Sponsors, or via the addresses below:
+Support and donations are appreciated but not required. You can donate via [GitHub Sponsors](https://github.com/sponsors/bmoscon), or via the addresses below:
 
 * Bitcoin: bc1qm0kxz8hqacaglku5fjhfe9a5hjnuyfwk02lsyr
 * Ethereum: 0x690709FEe13eEce9E7852089BB2D53Ae5D073154
