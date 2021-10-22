@@ -53,3 +53,52 @@ The `repr`, `eq` and `hash` magic methods are also defined allowing the object t
 
 
 ## The OrderBook object
+
+The orderbook object contains some fields and data structures that may not be completely self documenting. They are described below for clarity.
+
+The fields in the [OrderBook object](https://github.com/bmoscon/cryptofeed/blob/master/cryptofeed/types.pyx#L297) are:
+
+* exchange
+* symbol
+* book
+* delta
+* sequence_number
+* checksum
+* timestamp
+
+Let's dig into the ones that may not be completely intuitive. `delta` contains the exchange provided delta from the last book update (if the exchange provides deltas, and if this is not a snapshot update). The delta will be in the format of {BIDS: \[\], ASKS: \[\]}. If there are updates to the bid or ask sides of the books, the list will contain tuples of the changes. The changes are in the format of (price, size), so each price in the existing book should be updated to the corresponding size. A size of 0 means the level should be removed from the book.
+
+`sequence_number` contains the exchange provided sequence number, if one if provided. Similarly, `checksum` contains the exchange provided checksum, if one is provided. You can see which exchanges privide checksums and sequence numbers in the [documentation](book_validation.md).
+
+The `book` member contains an [orderbook](https://github.com/bmoscon/orderbook) data structure. You can access the sides of the orderbook via `.bids` and `.asks` or also via `['bids']` and `['asks']`. The object supports various forms of this, so you can use bid(s) and ask(s) as well as their variants in all-caps. Each side is an ordered dictionary that you can access with `to_dict()` or via iteration:
+
+
+```python
+
+ob = OrderBook(.......)
+ob.book.bids.to_dict()  # returns dict of this side
+
+
+for price in ob.book.bids:
+    print(f"Price: {price} Size: {ob.book.bids[price]}")
+
+for price in ob.book.asks:
+    print(f"Price: {price} Size: {ob.book.asks[price]}")
+```
+
+Or you can access specific levels with the `index` method:
+
+```python
+
+print("The top level of the order book is:", ob.book.bids.index(0), ob.book.asks.index(0)
+```
+
+Note that `index` returns the price and size as a tuple.
+
+You can also retrieve the whole book as a dictionary with `to_dict`, and like the other types, it supports `as_type` as well.
+
+
+```python
+
+ob.to_dict(as_type=float)
+```
