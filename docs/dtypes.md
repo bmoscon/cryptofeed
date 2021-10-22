@@ -51,4 +51,5 @@ print(trade.to_dict(as_type=str))
 
 The `repr`, `eq` and `hash` magic methods are also defined allowing the object to printed, compared with others, and hashed.
 
-### The OrderBook object
+
+## The OrderBook object
