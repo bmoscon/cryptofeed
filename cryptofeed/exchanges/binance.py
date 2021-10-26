@@ -20,7 +20,7 @@ from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDIN
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
-from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook, OrderInfo
+from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook, OrderInfo, Balance
 
 REFRESH_SNAPSHOT_MIN_INTERVAL_SECONDS = 60
 
@@ -114,7 +114,7 @@ class Binance(Feed, BinanceRestMixin):
         is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)
         is_any_public = any(not self.is_authenticated_channel(chan) for chan in self.subscription)
         if is_any_private and is_any_public:
-            raise ValueError("Private and public channels should be subscribed to in separate feeds")
+            raise ValueError("Private channels should be subscribed in separate feeds vs public channels")
         if all(self.is_authenticated_channel(chan) for chan in self.subscription):
             return address
 
@@ -441,12 +441,13 @@ class Binance(Feed, BinanceRestMixin):
         }
         """
         for balance in msg['B']:
-            await self.callback(BALANCES,
-                                feed=self.id,
-                                symbol=balance['a'],
-                                timestamp=self.timestamp_normalize(msg['E']),
-                                receipt_timestamp=timestamp,
-                                wallet_balance=Decimal(balance['f']))
+            b = Balance(
+                self.id,
+                balance['a'],
+                Decimal(balance['f']),
+                Decimal(balance['l']),
+                raw=msg)
+            await self.callback(BALANCES, b, timestamp)
 
     async def _order_update(self, msg: dict, timestamp: float):
         """
@@ -488,7 +489,7 @@ class Binance(Feed, BinanceRestMixin):
         oi = OrderInfo(
             self.id,
             self.exchange_symbol_to_std_symbol(msg['s']),
-            msg['i'],
+            str(msg['i']),
             BUY if msg['S'].lower() == 'buy' else SELL,
             msg['x'],
             LIMIT if msg['o'].lower() == 'limit' else MARKET if msg['o'].lower() == 'market' else None,

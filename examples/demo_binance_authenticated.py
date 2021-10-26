@@ -3,24 +3,24 @@ from cryptofeed.defines import BALANCES, ORDER_INFO, POSITIONS
 from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 
 
-async def balance(balance, receipt):
-    print(f"Balance: {balance}")
+async def balance(b, receipt_timestamp):
+    print(f"Balance update received at {receipt_timestamp}: {b}")
 
 
-async def position(position, receipt):
-    print(f"Position: {position}")
+async def position(p, receipt_timestamp):
+    print(f"Position update received at {receipt_timestamp}: {p}")
 
 
-async def order_info(order, receipt):
-    print(f"Order info: {order}")
+async def order_info(oi, receipt_timestamp):
+    print(f"Order update received at {receipt_timestamp}: {oi}")
 
 
 def main():
     path_to_config = 'config.yaml'
 
-    binance = Binance(config=path_to_config, subscription={BALANCES: []}, timeout=-1, callbacks={BALANCES: balance, ORDER_INFO: order_info})
-    binance_delivery = BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
-    binance_futures = BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
+    binance = Binance(config=path_to_config, subscription={BALANCES: [], ORDER_INFO: []}, timeout=-1, callbacks={BALANCES: balance, ORDER_INFO: order_info})
+    binance_delivery = BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: [], ORDER_INFO: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
+    binance_futures = BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: [], ORDER_INFO: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
 
     print(binance._generate_token())
     print(binance_delivery._generate_token())
