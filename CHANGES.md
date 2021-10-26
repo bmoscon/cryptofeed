@@ -6,8 +6,9 @@
  * Bugfix: Kucoin has a limit of 100 symbols per subscription message and 300 per connection. These limits are now respected.
  * Bugfix: Error messages were not handled correctly on Kucoin, causing a crash.
  * Bugfix: FTX websocket endpoint update.
- * Bugfix: Fix the address used for authenticated Binance streams
- * Bugfix: Update binance user data streams to use cdef types
+ * Bugfix: Fix the address used for authenticated Binance streams.
+ * Bugfix: Handle cases where Bitmex book data is empty.
+ * Bugfix: Update binance user data streams to use cdef types.
 
 ### 2.0.2 (2021-10-12)
  * Feature: random backoff when 429s are hit

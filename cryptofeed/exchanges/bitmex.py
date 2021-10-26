@@ -108,6 +108,11 @@ class Bitmex(Feed, BitmexRestMixin):
         """
         # PERF perf_start(self.id, 'book_msg')
 
+        if not msg['data']:
+            # see https://github.com/bmoscon/cryptofeed/issues/688
+            # msg['data'] can be an empty list
+            return
+
         delta = None
         # if we reset the book, force a full update
         pair = self.exchange_symbol_to_std_symbol(msg['data'][0]['symbol'])
