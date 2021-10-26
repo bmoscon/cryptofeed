@@ -50,7 +50,8 @@ class FTX(Feed):
 
     def __init__(self, subaccount=None, **kwargs):
         self.subaccount = subaccount
-        super().__init__('wss://ftexchange.com/ws/', **kwargs)
+        super().__init__('wss://ftx.com/ws/', **kwargs)
+        self.ws_defaults['compression'] = None
 
     def load_keys(self):
         self.key_id = os.environ.get(f'CF_{self.id}_KEY_ID') or (self.config[self.id.lower()][self.subaccount].key_id if self.subaccount else self.config[self.id.lower()].key_id)
