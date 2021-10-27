@@ -1,7 +1,7 @@
 ## Changelog
 
 ### 2.1.0
-
+ * Bugfix: Update binance user data streams to use cdef types.
 
 ### 2.0.3 (2021-10-26)
  * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
@@ -11,7 +11,6 @@
  * Bugfix: FTX websocket endpoint update.
  * Bugfix: Fix the address used for authenticated Binance streams.
  * Bugfix: Handle cases where Bitmex book data is empty.
- * Bugfix: Update binance user data streams to use cdef types.
 
 ### 2.0.2 (2021-10-12)
  * Feature: random backoff when 429s are hit
