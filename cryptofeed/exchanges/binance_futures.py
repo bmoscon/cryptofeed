@@ -14,7 +14,7 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll
 from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
-from cryptofeed.types import OpenInterest, OrderInfo
+from cryptofeed.types import Balance, OpenInterest, OrderInfo, Position
 
 LOG = logging.getLogger('feedhandler')
 
@@ -163,21 +163,23 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         }
         """
         for balance in msg['a']['B']:
-            await self.callback(BALANCES,
-                                feed=self.id,
-                                symbol=balance['a'],
-                                timestamp=self.timestamp_normalize(msg['E']),
-                                receipt_timestamp=timestamp,
-                                wallet_balance=Decimal(balance['wb']))
+            b = Balance(
+                self.id,
+                balance['a'],
+                Decimal(balance['wb']),
+                None,
+                raw=msg)
+            await self.callback(BALANCES, b, timestamp)
         for position in msg['a']['P']:
-            await self.callback(POSITIONS,
-                                feed=self.id,
-                                symbol=self.exchange_symbol_to_std_symbol(position['s']),
-                                timestamp=self.timestamp_normalize(msg['E']),
-                                receipt_timestamp=timestamp,
-                                position_amount=Decimal(position['pa']),
-                                entry_price=Decimal(position['ep']),
-                                unrealised_pnl=Decimal(position['up']))
+            p = Position(
+                self.id,
+                self.exchange_symbol_to_std_symbol(position['s']),
+                Decimal(position['pa']),
+                Decimal(position['ep']),
+                Decimal(position['up']),
+                self.timestamp_normalize(msg['E']),
+                raw=msg)
+            await self.callback(POSITIONS, p, timestamp)
 
     async def _order_update(self, msg: dict, timestamp: float):
         """
@@ -226,7 +228,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         oi = OrderInfo(
             self.id,
             self.exchange_symbol_to_std_symbol(msg['o']['s']),
-            msg['o']['i'],
+            str(msg['o']['i']),
             BUY if msg['o']['S'].lower() == 'buy' else SELL,
             msg['o']['x'],
             LIMIT if msg['o']['o'].lower() == 'limit' else MARKET if msg['o']['o'].lower() == 'market' else None,

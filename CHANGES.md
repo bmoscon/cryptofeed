@@ -1,7 +1,7 @@
 ## Changelog
 
 ### 2.1.0
-
+ * Bugfix: Update binance user data streams to use cdef types.
 
 ### 2.0.3 (2021-10-26)
  * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
