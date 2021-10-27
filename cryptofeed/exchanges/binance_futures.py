@@ -167,7 +167,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
                 self.id,
                 balance['a'],
                 Decimal(balance['wb']),
-                Decimal(0),
+                None,
                 raw=msg)
             await self.callback(BALANCES, b, timestamp)
         for position in msg['a']['P']:
