@@ -27,7 +27,7 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 class GCPPubSubCallback:
     def __init__(self, topic: Optional[str] = None, key: Optional[str] = None,
                  service_file: Optional[Union[str, IO[AnyStr]]] = None,
-                 ordering_key: Optional[Union[str, io.IOBase]] = None, numeric_type=float):
+                 ordering_key: Optional[Union[str, io.IOBase]] = None, numeric_type=float, none_to=None):
         '''
         Backend using Google Cloud Platform Pub/Sub. Use requires an account with Google Cloud Platform.
         Free tier allows 10GB messages per month.
@@ -57,6 +57,7 @@ class GCPPubSubCallback:
         self.key = key or self.default_key
         self.ordering_key = ordering_key
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.topic = topic or f'cryptofeed-{self.key}'
         self.topic_path = self.get_topic()
         self.service_file = service_file

@@ -14,7 +14,7 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class RabbitCallback:
-    def __init__(self, host='localhost', numeric_type=float, queue_name='cryptofeed', exchange_mode=False, exchange_name='amq.topic', exchange_type='topic', routing_key='cryptofeed', **kwargs):
+    def __init__(self, host='localhost', none_to=None, numeric_type=float, queue_name='cryptofeed', exchange_mode=False, exchange_name='amq.topic', exchange_type='topic', routing_key='cryptofeed', **kwargs):
         """
         Parameters
         ----------
@@ -34,6 +34,7 @@ class RabbitCallback:
         self.conn = None
         self.host = host
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.queue_name = queue_name
         self.exchange_mode = exchange_mode
         self.exchange_name = exchange_name

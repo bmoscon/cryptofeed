@@ -14,12 +14,13 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class KafkaCallback:
-    def __init__(self, bootstrap='127.0.0.1', port=9092, key=None, numeric_type=float, **kwargs):
+    def __init__(self, bootstrap='127.0.0.1', port=9092, key=None, numeric_type=float, none_to=None, **kwargs):
         self.bootstrap = bootstrap
         self.port = port
         self.producer = None
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
+        self.none_to = none_to
 
     async def __connect(self):
         if not self.producer:

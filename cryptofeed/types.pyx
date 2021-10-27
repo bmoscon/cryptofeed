@@ -21,6 +21,14 @@ cdef extern from *:
     cdef bint _COMPILED_WITH_ASSERTIONS
 COMPILED_WITH_ASSERTIONS = _COMPILED_WITH_ASSERTIONS
 
+
+cdef dict convert_none_values(d: dict, s: str):
+    for key, value in d.items():
+        if value is None:
+            d[key] = s
+    return d
+
+
 cdef class Trade:
     cdef readonly str exchange
     cdef readonly str symbol
@@ -46,10 +54,12 @@ cdef class Trade:
         self.type = type
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'id': self.id, 'type': self.type, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': as_type(self.amount), 'price': as_type(self.price), 'id': self.id, 'type': self.type, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'id': self.id, 'type': self.type, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': numeric_type(self.amount), 'price': numeric_type(self.price), 'id': self.id, 'type': self.type, 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} amount: {self.amount} price: {self.price} id: {self.id} type: {self.type} timestamp: {self.timestamp}"
@@ -81,10 +91,12 @@ cdef class Ticker:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': self.bid, 'ask': self.ask, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'bid': as_type(self.bid), 'ask': as_type(self.ask), 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'bid': self.bid, 'ask': self.ask, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'bid': numeric_type(self.bid), 'ask': numeric_type(self.ask), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} bid: {self.bid} ask: {self.ask} timestamp: {self.timestamp}"
@@ -122,10 +134,12 @@ cdef class Liquidation:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'quantity': self.quantity, 'price': self.price, 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'quantity': as_type(self.quantity), 'price': as_type(self.price), 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'quantity': self.quantity, 'price': self.price, 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'quantity': numeric_type(self.quantity), 'price': numeric_type(self.price), 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} side: {self.side} quantity: {self.quantity} price: {self.price} id: {self.id} status: {self.status} timestamp: {self.timestamp}"
@@ -162,10 +176,12 @@ cdef class Funding:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': as_type(self.mark_price) if self.mark_price else None, 'rate': as_type(self.rate), 'next_funding_time': self.next_funding_time, 'predicted_rate': as_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': numeric_type(self.mark_price) if self.mark_price else None, 'rate': numeric_type(self.rate), 'next_funding_time': self.next_funding_time, 'predicted_rate': numeric_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} mark_price: {self.mark_price} rate: {self.rate} next_funding_time: {self.next_funding_time} predicted_rate: {self.predicted_rate} timestamp: {self.timestamp}"
@@ -217,10 +233,12 @@ cdef class Candle:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': self.open, 'close': self.close, 'high': self.high, 'low': self.low, 'volume': self.volume, 'closed': self.closed, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': as_type(self.open), 'close': as_type(self.close), 'high': as_type(self.high), 'low': as_type(self.low), 'volume': as_type(self.volume), 'closed': self.closed, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': self.open, 'close': self.close, 'high': self.high, 'low': self.low, 'volume': self.volume, 'closed': self.closed, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'start': self.start, 'stop': self.stop, 'interval': self.interval, 'trades': self.trades, 'open': numeric_type(self.open), 'close': numeric_type(self.close), 'high': numeric_type(self.high), 'low': numeric_type(self.low), 'volume': numeric_type(self.volume), 'closed': self.closed, 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} start: {self.start} stop: {self.stop} interval: {self.interval} trades: {self.trades} open: {self.open} close: {self.close} high: {self.high} low: {self.low} volume: {self.volume} closed: {self.closed} timestamp: {self.timestamp}"
@@ -248,10 +266,12 @@ cdef class Index:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'price': self.price, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'price': as_type(self.price), 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'price': self.price, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'price': numeric_type(self.price), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} price: {self.price} timestamp: {self.timestamp}"
@@ -280,10 +300,12 @@ cdef class OpenInterest:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': self.open_interest, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': as_type(self.open_interest), 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': self.open_interest, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'open_interest': numeric_type(self.open_interest), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} open_interest: {self.open_interest} timestamp: {self.timestamp}"
@@ -319,34 +341,38 @@ cdef class OrderBook:
         self.checksum = None
         self.raw = None
 
-    def _delta(self, as_type) -> dict:
+    def _delta(self, numeric_type) -> dict:
         return {
-            BID: [tuple([as_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[BID]],
-            ASK: [tuple([as_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[ASK]]
+            BID: [tuple([numeric_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[BID]],
+            ASK: [tuple([numeric_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[ASK]]
         }
 
-    def to_dict(self, delta=False, as_type=None) -> dict:
+    def to_dict(self, delta=False, numeric_type=None, none_to=False) -> dict:
         assert self.sequence_number is None or isinstance(self.sequence_number, int)
         assert self.checksum is None or isinstance(self.checksum, (str, int))
         assert self.timestamp is None or isinstance(self.timestamp, float)
 
         def helper(x):
             if isinstance(x, dict):
-                return {k: as_type(v) for k, v in x.items()}
+                return {k: numeric_type(v) for k, v in x.items()}
             else:
-                return as_type(x)
+                return numeric_type(x)
 
         if delta:
-            if as_type is None:
-                return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self.delta, 'timestamp': self.timestamp}
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self._delta(as_type) if self.delta else None, 'timestamp': self.timestamp}
+            if numeric_type is None:
+                data = {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self.delta, 'timestamp': self.timestamp}
+            else:
+                data = {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self._delta(numeric_type) if self.delta else None, 'timestamp': self.timestamp}
+            return data if not none_to else convert_none_values(data, none_to)
 
-        if as_type is None:
+        if numeric_type is None:
             book_dict = self.book.to_dict()
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self.delta, 'timestamp': self.timestamp}
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self.delta, 'timestamp': self.timestamp}
+            return data if not none_to else convert_none_values(data, none_to)
 
         book_dict = self.book.to_dict(to_type=helper)
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self._delta(as_type)if self.delta else None, 'timestamp': self.timestamp}
+        data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self._delta(numeric_type) if self.delta else None, 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {self.timestamp}"
@@ -389,10 +415,12 @@ cdef class OrderInfo:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': as_type(self.price), 'amount': as_type(self.amount), 'remaining': as_type(self.remaining), 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': numeric_type(self.price), 'amount': numeric_type(self.amount), 'remaining': numeric_type(self.remaining), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f'exchange: {self.exchange} symbol: {self.symbol} id: {self.id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} timestamp: {self.timestamp}'
@@ -421,10 +449,12 @@ cdef class Balance:
         self.reserved = reserved
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'currency': self.currency, 'balance': self.balance, 'reserved': self.reserved}
-        return {'exchange': self.exchange, 'currency': self.currency, 'balance': as_type(self.balance), 'reserved': as_type(self.reserved)}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'currency': self.currency, 'balance': self.balance, 'reserved': self.reserved}
+        else:
+            data = {'exchange': self.exchange, 'currency': self.currency, 'balance': numeric_type(self.balance), 'reserved': numeric_type(self.reserved)}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f'exchange: {self.exchange} currency: {self.currency} balance: {self.balance} reserved: {self.reserved}'
@@ -461,10 +491,12 @@ cdef class L1Book:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': self.bid_price, 'bid_size': self.bid_size, 'ask_price': self.ask_price, 'ask_size': self.ask_size, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': as_type(self.bid_price), 'bid_size': as_type(self.bid_size), 'ask_price': as_type(self.ask_price), 'ask_size': as_type(self.ask_size), 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': self.bid_price, 'bid_size': self.bid_size, 'ask_price': self.ask_price, 'ask_size': self.ask_size, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'bid_price': numeric_type(self.bid_price), 'bid_size': numeric_type(self.bid_size), 'ask_price': numeric_type(self.ask_price), 'ask_size': numeric_type(self.ask_size), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f'exchange: {self.exchange} symbol: {self.symbol} bid_price: {self.bid_price} bid_size: {self.bid_size}, ask_price: {self.ask_price} ask_size: {self.ask_size} timestamp: {self.timestamp}'
@@ -496,10 +528,12 @@ cdef class Transaction:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': self.amount, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': as_type(self.amount), 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': self.amount, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'currency': self.currency, 'type': self.type, 'status': self.status, 'amount': numeric_type(self.amount), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f'exchange: {self.exchange} currency: {self.currency} type: {self.type} status: {self.status} amount: {self.amount} timestamp {self.timestamp}'
@@ -543,10 +577,12 @@ cdef class Fill:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'fee': self.fee, 'liquidity': self.liquidity, 'id': self.id, 'order_id': self.order_id, 'type': self.type, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': as_type(self.amount), 'price': as_type(self.price), 'fee': as_type(self.fee), 'liquidity': self.liquidity, 'id': self.id, 'order_id': self.order_id, 'type': self.type, 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': self.amount, 'price': self.price, 'fee': self.fee, 'liquidity': self.liquidity, 'id': self.id, 'order_id': self.order_id, 'type': self.type, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'amount': numeric_type(self.amount), 'price': numeric_type(self.price), 'fee': numeric_type(self.fee), 'liquidity': self.liquidity, 'id': self.id, 'order_id': self.order_id, 'type': self.type, 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f'exchange: {self.exchange} symbol: {self.symbol} side: {self.side} amount: {self.amount} price: {self.price} fee: {self.fee} liquidity: {self.liquidity} id: {self.id} order_id: {self.order_id} type: {self.type} timestamp: {self.timestamp}'
@@ -583,10 +619,12 @@ cdef class Position:
         self.timestamp = timestamp
         self.raw = raw
 
-    cpdef dict to_dict(self, as_type=None):
-        if as_type is None:
-            return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'position': self.position, 'entry_price': self.entry_price, 'unrealised_pnl': self.unrealised_pnl, 'timestamp': self.timestamp}
-        return {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'position': as_type(self.position), 'entry_price': as_type(self.entry_price), 'unrealised_pnl': as_type(self.unrealised_pnl), 'timestamp': self.timestamp}
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'position': self.position, 'entry_price': self.entry_price, 'unrealised_pnl': self.unrealised_pnl, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'position': numeric_type(self.position), 'entry_price': numeric_type(self.entry_price), 'unrealised_pnl': numeric_type(self.unrealised_pnl), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
         return f'exchange: {self.exchange} symbol: {self.symbol} id: {self.id} position: {self.position} entry_price: {self.entry_price} unrealised_pnl: {self.unrealised_pnl} timestamp: {self.timestamp}'

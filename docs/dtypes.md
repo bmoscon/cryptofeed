@@ -31,11 +31,11 @@ print(trade.to_dict())
  'timestamp': 1634865952.143}
 ```
 
-The `to_dict()` method also supports an important kwarg: `as_type`. This allows us to convert numeric types to other types when constructing the dictionary.
+The `to_dict()` method also supports an important kwarg: `numeric_type`. This allows us to convert numeric types to other types when constructing the dictionary.
 
 
 ```python
-print(trade.to_dict(as_type=str))
+print(trade.to_dict(numeric_type=str))
 
 
 {'exchange': 'COINBASE',
@@ -111,10 +111,10 @@ print("The top level of the order book is:", ob.book.bids.index(0), ob.book.asks
 
 Note that `index` returns the price and size as a tuple.
 
-You can also retrieve the whole book as a dictionary with `to_dict`, and like the other types, it supports `as_type` as well.
+You can also retrieve the whole book as a dictionary with `to_dict`, and like the other types, it supports `numeric_type` as well.
 
 
 ```python
 
-ob.to_dict(as_type=float)
+ob.to_dict(numeric_type=float)
 ```

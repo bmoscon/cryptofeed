@@ -60,6 +60,7 @@ class InfluxCallback(HTTPCallback):
         self.session = None
         self.key = key if key else self.default_key
         self.numeric_type = float
+        self.none_to = None
 
     def format(self, data):
         ret = []

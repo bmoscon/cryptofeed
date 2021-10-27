@@ -21,12 +21,13 @@ LOG = logging.getLogger('feedhandler')
 
 
 class ElasticCallback(HTTPCallback):
-    def __init__(self, addr: str, index=None, numeric_type=str, **kwargs):
+    def __init__(self, addr: str, index=None, none_to=None, numeric_type=str, **kwargs):
         super().__init__(addr, **kwargs)
         index = index if index else self.default_index
         self.addr = f"{addr}/{index}/{index}"
         self.session = None
         self.numeric_type = numeric_type
+        self.none_to = none_to
 
     async def write(self, data):
         if 'timestamp' in data and data['timestamp']:

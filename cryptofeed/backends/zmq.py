@@ -14,13 +14,14 @@ from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, Backe
 
 
 class ZMQCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', port=5555, numeric_type=float, key=None, dynamic_key=True, **kwargs):
+    def __init__(self, host='127.0.0.1', port=5555, none_to=None, numeric_type=float, key=None, dynamic_key=True, **kwargs):
         url = "tcp://{}:{}".format(host, port)
         ctx = zmq.asyncio.Context.instance()
         self.con = ctx.socket(zmq.PUB)
         self.con.connect(url)
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.dynamic_key = dynamic_key
 
     async def write(self, data: dict):

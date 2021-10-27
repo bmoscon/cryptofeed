@@ -40,7 +40,7 @@ class UDPProtocol:
 
 
 class SocketCallback(BackendQueue):
-    def __init__(self, addr: str, port=None, numeric_type=float, key=None, mtu=1400, **kwargs):
+    def __init__(self, addr: str, port=None, none_to=None, numeric_type=float, key=None, mtu=1400, **kwargs):
         """
         Common parent class for all socket callbacks
 
@@ -67,6 +67,7 @@ class SocketCallback(BackendQueue):
         self.port = port
         self.mtu = mtu
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.key = key if key else self.default_key
 
     async def writer(self):

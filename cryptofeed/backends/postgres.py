@@ -16,7 +16,7 @@ from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, 
 
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, numeric_type=float, max_batch=100, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
         """
         host: str
             Database host address
@@ -34,6 +34,7 @@ class PostgresCallback(BackendQueue):
         self.conn = None
         self.table = table if table else self.default_table
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.user = user
         self.db = db
         self.pw = pw

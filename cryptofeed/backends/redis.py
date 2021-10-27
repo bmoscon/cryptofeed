@@ -13,13 +13,8 @@ from yapic import json
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
 
 
-def trades_none_to_str(data):
-    data['type'] = str(data['type'])
-    data['id'] = str(data['id'])
-
-
 class RedisCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, numeric_type=float, writer_interval=0.01, **kwargs):
+    def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, none_to='None', numeric_type=float, writer_interval=0.01, **kwargs):
         """
         setting key lets you override the prefix on the
         key used in redis. The defaults are related to the data
@@ -37,6 +32,7 @@ class RedisCallback(BackendQueue):
         self.redis = aioredis.from_url(f"{prefix}{host}:{port}")
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.running = True
         self.exited = False
         self.writer_interval = writer_interval
@@ -111,17 +107,9 @@ class RedisStreamCallback(RedisCallback):
 class TradeRedis(RedisZSetCallback, BackendCallback):
     default_key = 'trades'
 
-    async def write(self, data):
-        trades_none_to_str(data)
-        await super().write(data)
-
 
 class TradeStream(RedisStreamCallback, BackendCallback):
     default_key = 'trades'
-
-    async def write(self, data):
-        trades_none_to_str(data)
-        await super().write(data)
 
 
 class FundingRedis(RedisZSetCallback, BackendCallback):
@@ -141,14 +129,6 @@ class BookRedis(RedisZSetCallback, BackendBookCallback):
         self.snapshot_count = defaultdict(int)
         super().__init__(*args, score_key=score_key, **kwargs)
 
-    async def write(self, data: dict):
-        if not self.snapshots_only:
-            if 'delta' in data and data['delta'] is None:
-                data['delta'] = 'None'
-        if data['timestamp'] is None:
-            data['timestamp'] = 'None'
-        await super().write(data)
-
 
 class BookStream(RedisStreamCallback, BackendBookCallback):
     default_key = 'book'
@@ -165,8 +145,6 @@ class BookStream(RedisStreamCallback, BackendBookCallback):
         elif 'book' in data:
             data['book'] = json.dumps(data['book'])
 
-        if data['timestamp'] is None:
-            data['timestamp'] = 'None'
         await super().write(data)
 
 
