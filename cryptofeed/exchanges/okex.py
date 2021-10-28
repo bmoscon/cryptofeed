@@ -136,6 +136,8 @@ class OKEx(Feed):
                     instrument_type = self.instrument_type(sym)
                     if instrument_type != PERPETUAL and 'funding' in chan:
                         continue  # No funding for spot, futures and options
+                    if instrument_type == SPOT and chan == 'open-interest':
+                        continue  # No open interest for spot
                     request = {"op": "subscribe", "args": [{"channel": chan, "instId": symbol}]}
                     await conn.write(json.dumps(request))
 
