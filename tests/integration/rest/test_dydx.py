@@ -19,11 +19,11 @@ def teardown_module(module):
 class TestDYDXRest:
     def test_trade(self):
         ret = []
-        for data in d.trades_sync('BTC-USD'):
+        for data in d.trades_sync('BTC-USD-PERP'):
             ret.extend(data)
         assert len(ret) > 1
 
     def test_l2_book(self):
-        ret = d.l2_book_sync('BTC-USD')
+        ret = d.l2_book_sync('BTC-USD-PERP')
         assert len(ret.book[BID]) > 0
         assert len(ret.book[ASK]) > 0
