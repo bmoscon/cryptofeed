@@ -38,10 +38,11 @@ class dYdX(Feed, dYdXRestMixin):
         for symbol, entry in data['markets'].items():
             if entry['status'] != 'ONLINE':
                 continue
-            s = Symbol(entry['baseAsset'], entry['quoteAsset'])
+            stype = entry['type'].lower()
+            s = Symbol(entry['baseAsset'], entry['quoteAsset'], type=stype)
             ret[s.normalized] = symbol
             info['tick_size'][s.normalized] = entry['tickSize']
-            info['instrument_type'][s.normalized] = s.type
+            info['instrument_type'][s.normalized] = stype
         return ret, info
 
     def __init__(self, **kwargs):
