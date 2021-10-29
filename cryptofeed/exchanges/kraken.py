@@ -147,7 +147,7 @@ class Kraken(Feed, KrakenRestMixin):
             # Snapshot
             bids = {Decimal(update[0]): Decimal(update[1]) for update in msg[0]['bs']}
             asks = {Decimal(update[0]): Decimal(update[1]) for update in msg[0]['as']}
-            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks, checksum_format='KRAKEN')
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks, checksum_format='KRAKEN', truncate=self.max_depth != self.valid_depths[-1])
             await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg)
         else:
             for m in msg:
