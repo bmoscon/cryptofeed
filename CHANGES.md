@@ -7,7 +7,7 @@
  * Uodate: Renamed as_type kwarg on to_dict to numeric_type.
  * Bugfix: Some dYdX symbols were incorrectly classified as spot.
  * Update: Drop support for Python 3.7.
- * Bugfix: Orderbooks need to be truncated to the correct depth when max depth is smaller than the maximum
+ * Bugfix: Orderbooks need to be truncated to the correct depth when max depth is smaller than the maximum on Kraken.
 
 ### 2.0.3 (2021-10-26)
  * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
