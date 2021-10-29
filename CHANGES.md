@@ -6,6 +6,7 @@
  * Bugfix: Some redis backends were trying to write Nones to storage and failing.
  * Uodate: Renamed as_type kwarg on to_dict to numeric_type.
  * Bugfix: Some dYdX symbols were incorrectly classified as spot.
+ * Update: Drop support for Python 3.7.
 
 ### 2.0.3 (2021-10-26)
  * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
