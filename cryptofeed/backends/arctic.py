@@ -3,6 +3,9 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
+
+Book backends are intentionally left out here - Arctic cannot handle high throughput
+data like book data. Arctic is best used for writing large datasets in batches.
 '''
 import arctic
 import pandas as pd
