@@ -6,23 +6,22 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.backends.aggregate import CustomAggregate
-from cryptofeed.callback import Callback
 from cryptofeed.defines import TRADES
 from cryptofeed.exchanges import Coinbase
 
 
-async def callback(data=None):
+async def callback(data):
     print(data)
 
 
-def custom_agg(data, feed=None, symbol=None, side=None, amount=None, price=None, order_id=None, timestamp=None, receipt_timestamp=None, order_type=None):
-    if symbol not in data:
-        data[symbol] = {'min': price, 'max': price}
+def custom_agg(data, trade, receipt):
+    if trade.symbol not in data:
+        data[trade.symbol] = {'min': trade.price, 'max': trade.price}
     else:
-        if price > data[symbol]['max']:
-            data[symbol]['max'] = price
-        elif price < data[symbol]['min']:
-            data[symbol]['min'] = price
+        if trade.price > data[trade.symbol]['max']:
+            data[trade.symbol]['max'] = trade.price
+        elif trade.price < data[trade.symbol]['min']:
+            data[trade.symbol]['min'] = trade.price
 
 
 def init(data):
@@ -35,7 +34,7 @@ def init(data):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: CustomAggregate(Callback(callback), window=30, init=init, aggregator=custom_agg)}))
+    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: CustomAggregate(callback, window=30, init=init, aggregator=custom_agg)}))
 
     f.run()
 

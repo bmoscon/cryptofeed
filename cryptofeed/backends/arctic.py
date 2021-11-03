@@ -3,18 +3,19 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
+
+Book backends are intentionally left out here - Arctic cannot handle high throughput
+data like book data. Arctic is best used for writing large datasets in batches.
 '''
 import arctic
 import pandas as pd
 
-from cryptofeed.backends.backend import (BackendFundingCallback, BackendCandlesCallback, BackendOpenInterestCallback,
-                                         BackendTickerCallback, BackendTradeCallback, BackendLiquidationsCallback,
-                                         BackendMarketInfoCallback)
-from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, MARKET_INFO
+from cryptofeed.backends.backend import BackendCallback
+from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS
 
 
 class ArcticCallback:
-    def __init__(self, library, host='127.0.0.1', key=None, numeric_type=float, quota=0, ssl=False, **kwargs):
+    def __init__(self, library, host='127.0.0.1', key=None, none_to=None, numeric_type=float, quota=0, ssl=False, **kwargs):
         """
         library: str
             arctic library. Will be created if does not exist.
@@ -38,8 +39,9 @@ class ArcticCallback:
         self.lib = con[library]
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
+        self.none_to = none_to
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+    async def write(self, data):
         df = pd.DataFrame({key: [value] for key, value in data.items()})
         df['date'] = pd.to_datetime(df.timestamp, unit='s')
         df['receipt_timestamp'] = pd.to_datetime(df.receipt_timestamp, unit='s')
@@ -48,34 +50,25 @@ class ArcticCallback:
         self.lib.append(self.key, df, upsert=True)
 
 
-class TradeArctic(ArcticCallback, BackendTradeCallback):
+class TradeArctic(ArcticCallback, BackendCallback):
     default_key = TRADES
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        if 'order_type' in data:
-            data['order_type'] = str(data['order_type'])
-        await super().write(feed, symbol, timestamp, receipt_timestamp, data)
 
-
-class FundingArctic(ArcticCallback, BackendFundingCallback):
+class FundingArctic(ArcticCallback, BackendCallback):
     default_key = FUNDING
 
 
-class TickerArctic(ArcticCallback, BackendTickerCallback):
+class TickerArctic(ArcticCallback, BackendCallback):
     default_key = TICKER
 
 
-class OpenInterestArctic(ArcticCallback, BackendOpenInterestCallback):
+class OpenInterestArctic(ArcticCallback, BackendCallback):
     default_key = OPEN_INTEREST
 
 
-class LiquidationsArctic(ArcticCallback, BackendLiquidationsCallback):
+class LiquidationsArctic(ArcticCallback, BackendCallback):
     default_key = LIQUIDATIONS
 
 
-class MarketInfoArctic(ArcticCallback, BackendMarketInfoCallback):
-    default_key = MARKET_INFO
-
-
-class CandlesArctic(ArcticCallback, BackendCandlesCallback):
+class CandlesArctic(ArcticCallback, BackendCallback):
     default_key = CANDLES

@@ -8,6 +8,7 @@ import base64
 import hmac
 import requests
 
+
 def get_server_time():
     url = "https://www.okex.com/api/v5/public/time"
     response = requests.get(url)

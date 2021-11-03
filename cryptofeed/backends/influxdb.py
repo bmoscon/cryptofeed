@@ -4,16 +4,14 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
-
 
 LOG = logging.getLogger('feedhandler')
 
@@ -62,11 +60,12 @@ class InfluxCallback(HTTPCallback):
         self.session = None
         self.key = key if key else self.default_key
         self.numeric_type = float
+        self.none_to = None
 
     def format(self, data):
         ret = []
         for key, value in data.items():
-            if key in {'timestamp', 'feed', 'symbol', 'receipt_timestamp'}:
+            if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp'}:
                 continue
             if isinstance(value, str):
                 ret.append(f'{key}="{value}"')
@@ -74,56 +73,54 @@ class InfluxCallback(HTTPCallback):
                 ret.append(f'{key}={value}')
         return ','.join(ret)
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+    async def write(self, data):
         d = self.format(data)
-        update = f'{self.key}-{feed},symbol={symbol} {d},timestamp={timestamp},receipt_timestamp={receipt_timestamp} {int(timestamp * 1000000)}'
+        timestamp = data["timestamp"]
+        timestamp_str = f',timestamp={timestamp}' if timestamp is not None else ''
+        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]} {d}{timestamp_str},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1000000)}'
         await self.queue.put({'data': update, 'headers': self.headers})
 
 
-class TradeInflux(InfluxCallback, BackendTradeCallback):
+class TradeInflux(InfluxCallback, BackendCallback):
     default_key = 'trades'
 
     def format(self, data):
-        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",order_type="{str(data["order_type"])}"'
+        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",type="{str(data["type"])}"'
 
 
-class FundingInflux(InfluxCallback, BackendFundingCallback):
+class FundingInflux(InfluxCallback, BackendCallback):
     default_key = 'funding'
 
 
 class BookInflux(InfluxCallback, BackendBookCallback):
     default_key = 'book'
 
-    def format(self, data):
-        bids = json.dumps(data[BID])
-        asks = json.dumps(data[ASK])
-        return f'delta=false,{BID}="{bids}",{ASK}="{asks}"'
-
-
-class BookDeltaInflux(InfluxCallback, BackendBookDeltaCallback):
-    default_key = 'book'
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
 
     def format(self, data):
-        bids = json.dumps(data[BID])
-        asks = json.dumps(data[ASK])
-        return f'delta=true,{BID}="{bids}",{ASK}="{asks}"'
+        delta = 'delta' in data
+        book = data['book'] if not delta else data['delta']
+        bids = json.dumps(book[BID])
+        asks = json.dumps(book[ASK])
+
+        return f'delta={str(delta)},{BID}="{bids}",{ASK}="{asks}"'
 
 
-class TickerInflux(InfluxCallback, BackendTickerCallback):
+class TickerInflux(InfluxCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestInflux(InfluxCallback, BackendOpenInterestCallback):
+class OpenInterestInflux(InfluxCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsInflux(InfluxCallback, BackendLiquidationsCallback):
+class LiquidationsInflux(InfluxCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoInflux(InfluxCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
-class CandlesInflux(InfluxCallback, BackendCandlesCallback):
+class CandlesInflux(InfluxCallback, BackendCallback):
     default_key = 'candles'

@@ -4,6 +4,7 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import os
 import io
 from typing import Optional
@@ -20,22 +21,13 @@ from yapic import json
 # https://github.com/talkiq/gcloud-aio
 from gcloud.aio.pubsub import PublisherClient, PubsubMessage
 
-from cryptofeed.backends.backend import (
-    BackendBookCallback,
-    BackendBookDeltaCallback, BackendCandlesCallback,
-    BackendFundingCallback,
-    BackendLiquidationsCallback,
-    BackendMarketInfoCallback,
-    BackendOpenInterestCallback,
-    BackendTickerCallback,
-    BackendTradeCallback,
-)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class GCPPubSubCallback:
     def __init__(self, topic: Optional[str] = None, key: Optional[str] = None,
                  service_file: Optional[Union[str, IO[AnyStr]]] = None,
-                 ordering_key: Optional[Union[str, io.IOBase]] = None, numeric_type=float):
+                 ordering_key: Optional[Union[str, io.IOBase]] = None, numeric_type=float, none_to=None):
         '''
         Backend using Google Cloud Platform Pub/Sub. Use requires an account with Google Cloud Platform.
         Free tier allows 10GB messages per month.
@@ -65,6 +57,7 @@ class GCPPubSubCallback:
         self.key = key or self.default_key
         self.ordering_key = ordering_key
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.topic = topic or f'cryptofeed-{self.key}'
         self.topic_path = self.get_topic()
         self.service_file = service_file
@@ -95,48 +88,46 @@ class GCPPubSubCallback:
             )
         return self.client
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict):
         '''
         Publish message. For filtering, "feed" and "symbol" are added as attributes.
         https://cloud.google.com/pubsub/docs/filtering
         '''
         client = await self.get_client()
         payload = json.dumps(data).encode()
-        message = PubsubMessage(payload, feed=feed, symbol=symbol)
+        message = PubsubMessage(payload, feed=data['exchange'], symbol=data['symbol'])
         await client.publish(self.topic_path, [message])
 
 
-class TradeGCPPubSub(GCPPubSubCallback, BackendTradeCallback):
+class TradeGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'trades'
 
 
-class FundingGCPPubSub(GCPPubSubCallback, BackendFundingCallback):
+class FundingGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'funding'
 
 
 class BookGCPPubSub(GCPPubSubCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
 
-class BookDeltaGCPPubSub(GCPPubSubCallback, BackendBookDeltaCallback):
-    default_key = 'book'
 
-
-class TickerGCPPubSub(GCPPubSubCallback, BackendTickerCallback):
+class TickerGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestGCPPubSub(GCPPubSubCallback, BackendOpenInterestCallback):
+class OpenInterestGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsGCPPubSub(GCPPubSubCallback, BackendLiquidationsCallback):
+class LiquidationsGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoGCPPubSub(GCPPubSubCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
-class CandlesGCPPubSub(GCPPubSubCallback, BackendCandlesCallback):
+class CandlesGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'candles'
