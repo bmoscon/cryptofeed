@@ -25,7 +25,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, address: Union[dict, str], candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, address: Union[dict, str], candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, do_deltas=False, **kwargs):
         """
         address: str, or dict
             address to be used to create the connection.
@@ -87,6 +87,7 @@ class Feed(Exchange):
         self.http_proxy = http_proxy
         self.start_delay = delay_start
         self.candle_interval = candle_interval
+        self.do_deltas = do_deltas
 
         if self.valid_candle_intervals != NotImplemented:
             if candle_interval not in self.valid_candle_intervals:
