@@ -13,7 +13,7 @@ import uvloop
 from cryptofeed.feedhandler import FeedHandler
 from cryptofeed.exchanges import EXCHANGE_MAP
 from cryptofeed.raw_data_collection import AsyncFileCallback
-from cryptofeed.defines import BINANCE_FUTURES, BITFINEX, COINGECKO, L2_BOOK, TRADES, TICKER, CANDLES, EXX
+from cryptofeed.defines import BINANCE, BINANCE_FUTURES, BINANCE_US, BITFINEX, L2_BOOK, TRADES, TICKER, CANDLES, EXX
 from check_raw_dump import main as check_dump
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -25,7 +25,7 @@ def stop():
 
 
 def main(only_exchange=None):
-    skip = [COINGECKO, EXX]
+    skip = [EXX]
     files = glob.glob('*')
     for f in files:
         for e in EXCHANGE_MAP.keys():
@@ -41,8 +41,11 @@ def main(only_exchange=None):
         print(f"Collecting data for {exch_str}")
         fh = FeedHandler(raw_data_collection=AsyncFileCallback("./"), config={'uvloop': False, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}, 'rest': {'log': {'filename': 'rest.log', 'level': 'WARNING'}}})
         info = exchange.info()
-        channels = list(set.intersection(set(info['channels']), set([L2_BOOK, TRADES, TICKER, CANDLES])))
+        channels = list(set.intersection(set(info['channels']['websocket']), set([L2_BOOK, TRADES, TICKER, CANDLES])))
         sample_size = 10
+        if exch_str in (BINANCE_US, BINANCE):
+            # books of size 5000 count significantly against rate limits
+            sample_size = 4
         while True:
             try:
                 symbols = random.sample(info['symbols'], sample_size)

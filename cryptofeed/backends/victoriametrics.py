@@ -4,11 +4,10 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import logging
 
-from cryptofeed.backends.backend import (BackendBookCallback, BackendBookDeltaCallback, BackendCandlesCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 from cryptofeed.backends.socket import SocketCallback
 from cryptofeed.defines import BID, ASK
 from typing import Optional
@@ -63,12 +62,12 @@ class VictoriaMetricsCallback(SocketCallback):
         """
         super().__init__(addr, port=port, key=key, numeric_type=float, **kwargs)
 
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
+    async def write(self, data: dict):
         # Convert data to InfluxDB Line Protocol format
         d = ''
         t = ''
         for key, value in data.items():
-            if key in {'timestamp', 'feed', 'symbol', 'receipt_timestamp'}:
+            if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp'}:
                 continue
             # VictoriaMetrics does not support discrete data as values,
             # convert strings to VictoriaMetricsDB tags.
@@ -77,18 +76,21 @@ class VictoriaMetricsCallback(SocketCallback):
             else:
                 d += f'{key}={value},'
 
-        update = f'{self.key},feed={feed},symbol={symbol}{t} {d}timestamp={timestamp},receipt_timestamp={receipt_timestamp}\n'
+        update = f'{self.key},exchange={data["exchange"]},symbol={data["symbol"]}{t} {d}timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}\n'
         await self.queue.put(update)
 
 
 class VictoriaMetricsBookCallback(VictoriaMetricsCallback):
     default_key = 'book'
 
-    async def _write_rows(self, start, data, timestamp, receipt_timestamp):
+    async def _write_rows(self, start, data):
         msg = []
-        ts = int(timestamp * 1000000000)
+        timestamp = data['timestamp']
+        receipt_timestamp = data['receipt_timestamp']
+        ts = int(timestamp * 1000000000) if timestamp else int(receipt_timestamp * 1000000000)
         for side in (BID, ASK):
-            for price, val in data[side].items():
+            for price in data.book[side]:
+                val = data.book[side][price]
                 if isinstance(val, dict):
                     for order_id, amount in val.items():
                         msg.append(f'{start},side={side} id={order_id},receipt_timestamp={receipt_timestamp},timestamp={timestamp},price={price},amount={amount} {ts}')
@@ -99,41 +101,37 @@ class VictoriaMetricsBookCallback(VictoriaMetricsCallback):
         await self.queue.put('\n'.join(msg) + '\n')
 
 
-class TradeVictoriaMetrics(VictoriaMetricsCallback, BackendTradeCallback):
+class TradeVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'trades'
 
 
-class FundingVictoriaMetrics(VictoriaMetricsCallback, BackendFundingCallback):
+class FundingVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'funding'
 
 
 class BookVictoriaMetrics(VictoriaMetricsBookCallback, BackendBookCallback):
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        start = f"{self.key},feed={feed},symbol={symbol},delta=False"
-        await self._write_rows(start, data, timestamp, receipt_timestamp)
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
+
+    async def write(self, data):
+        start = f"{self.key},exchange={data['exchange']},symbol={data['symbol']},delta={str('delta' in data)}"
+        await self._write_rows(start, data)
 
 
-class BookDeltaVictoriaMetrics(VictoriaMetricsBookCallback, BackendBookDeltaCallback):
-    async def write(self, feed, symbol, timestamp, receipt_timestamp, data):
-        start = f"{self.key},feed={feed},symbol={symbol},delta=True"
-        await self._write_rows(start, data, timestamp, receipt_timestamp)
-
-
-class TickerVictoriaMetrics(VictoriaMetricsCallback, BackendTickerCallback):
+class TickerVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestVictoriaMetrics(VictoriaMetricsCallback, BackendOpenInterestCallback):
+class OpenInterestVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsVictoriaMetrics(VictoriaMetricsCallback, BackendLiquidationsCallback):
+class LiquidationsVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoVictoriaMetrics(VictoriaMetricsCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
-class CandlesVictoriaMetrics(VictoriaMetricsCallback, BackendCandlesCallback):
+class CandlesVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'candles'

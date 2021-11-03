@@ -4,15 +4,14 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+from collections import defaultdict
 import asyncio
 import logging
 from textwrap import wrap
 
 from yapic import json
 
-from cryptofeed.backends.backend import (BackendCandlesCallback, BackendQueue, BackendBookCallback, BackendBookDeltaCallback, BackendFundingCallback,
-                                         BackendOpenInterestCallback, BackendTickerCallback, BackendTradeCallback,
-                                         BackendLiquidationsCallback, BackendMarketInfoCallback)
+from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, BackendCallback
 
 
 LOG = logging.getLogger('feedhandler')
@@ -41,7 +40,7 @@ class UDPProtocol:
 
 
 class SocketCallback(BackendQueue):
-    def __init__(self, addr: str, port=None, numeric_type=float, key=None, mtu=1400, **kwargs):
+    def __init__(self, addr: str, port=None, none_to=None, numeric_type=float, key=None, mtu=1400, **kwargs):
         """
         Common parent class for all socket callbacks
 
@@ -68,6 +67,7 @@ class SocketCallback(BackendQueue):
         self.port = port
         self.mtu = mtu
         self.numeric_type = numeric_type
+        self.none_to = none_to
         self.key = key if key else self.default_key
 
     async def writer(self):
@@ -96,43 +96,41 @@ class SocketCallback(BackendQueue):
             elif self.conn_type == 'uds://':
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
-    async def write(self, feed: str, symbol: str, timestamp: float, receipt_timestamp: float, data: dict):
+    async def write(self, data: dict):
         data = {'type': self.key, 'data': data}
         data = json.dumps(data)
         await self.queue.put(data)
 
 
-class TradeSocket(SocketCallback, BackendTradeCallback):
+class TradeSocket(SocketCallback, BackendCallback):
     default_key = 'trades'
 
 
-class FundingSocket(SocketCallback, BackendFundingCallback):
+class FundingSocket(SocketCallback, BackendCallback):
     default_key = 'funding'
 
 
 class BookSocket(SocketCallback, BackendBookCallback):
     default_key = 'book'
 
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = snapshots_only
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, **kwargs)
 
-class BookDeltaSocket(SocketCallback, BackendBookDeltaCallback):
-    default_key = 'book'
 
-
-class TickerSocket(SocketCallback, BackendTickerCallback):
+class TickerSocket(SocketCallback, BackendCallback):
     default_key = 'ticker'
 
 
-class OpenInterestSocket(SocketCallback, BackendOpenInterestCallback):
+class OpenInterestSocket(SocketCallback, BackendCallback):
     default_key = 'open_interest'
 
 
-class LiquidationsSocket(SocketCallback, BackendLiquidationsCallback):
+class LiquidationsSocket(SocketCallback, BackendCallback):
     default_key = 'liquidations'
 
 
-class MarketInfoSocket(SocketCallback, BackendMarketInfoCallback):
-    default_key = 'market_info'
-
-
-class CandlesSocket(SocketCallback, BackendCandlesCallback):
+class CandlesSocket(SocketCallback, BackendCallback):
     default_key = 'candles'

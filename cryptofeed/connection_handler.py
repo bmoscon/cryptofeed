@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 import logging
+import random
 from socket import error as socket_error
 import time
 from typing import Awaitable
@@ -56,12 +57,12 @@ class ConnectionHandler:
         while (retries <= self.retries or self.retries == -1) and self.running:
             try:
                 async with self.conn.connect() as connection:
+                    await self.authenticate(connection)
+                    await self.subscribe(connection)
                     # connection was successful, reset retry count and delay
                     retries = 0
                     rate_limited = 0
                     delay = 1
-                    await self.authenticate(connection)
-                    await self.subscribe(connection)
                     if self.timeout != -1:
                         loop = asyncio.get_running_loop()
                         loop.create_task(self._watcher())
@@ -83,8 +84,9 @@ class ConnectionHandler:
                             LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", self.conn.uuid, str(e))
                             raise
                 if e.status_code == 429:
-                    LOG.warning("%s: Rate Limited - waiting %d seconds to reconnect", self.conn.uuid, rate_limited * 60)
-                    await asyncio.sleep(rate_limited * 60)
+                    rand = random.uniform(1.0, 3.0)
+                    LOG.warning("%s: Rate Limited - waiting %d seconds to reconnect", self.conn.uuid, (rate_limited * 60 * rand))
+                    await asyncio.sleep(rate_limited * 60 * rand)
                     rate_limited += 1
                 else:
                     LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", self.conn.uuid, str(e), delay, exc_info=True)

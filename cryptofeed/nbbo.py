@@ -5,10 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
-from decimal import Decimal
 
 from cryptofeed.callback import Callback
-from cryptofeed.defines import BID, ASK
 
 
 class NBBO(Callback):
@@ -20,21 +18,19 @@ class NBBO(Callback):
 
         super(NBBO, self).__init__(callback)
 
-    def _update(self, feed, symbol, book):
-        bid = Decimal(list(book[BID].keys())[-1])
-        size = book[BID][bid]
-        self.bids[symbol][feed] = {'price': bid, 'size': size}
-        ask = Decimal(list(book[ASK].keys())[0])
-        size = book[ASK][ask]
-        self.asks[symbol][feed] = {'price': ask, 'size': size}
+    def _update(self, book):
+        bid, size = book.book.bids.index(0)
+        self.bids[book.symbol][book.exchange] = {'price': bid, 'size': size}
+        ask, size = book.book.asks.index(0)
+        self.asks[book.symbol][book.exchange] = {'price': ask, 'size': size}
 
-        min_ask = min(self.asks[symbol], key=lambda x: self.asks[symbol][x]['price'])
-        max_bid = max(self.bids[symbol], key=lambda x: self.bids[symbol][x]['price'])
+        min_ask = min(self.asks[book.symbol], key=lambda x: self.asks[book.symbol][x]['price'])
+        max_bid = max(self.bids[book.symbol], key=lambda x: self.bids[book.symbol][x]['price'])
 
-        return self.bids[symbol][max_bid], self.asks[symbol][min_ask], max_bid, min_ask
+        return self.bids[book.symbol][max_bid], self.asks[book.symbol][min_ask], max_bid, min_ask
 
-    async def __call__(self, *, feed: str, symbol: str, book: dict, timestamp: float, receipt_timestamp: float):
-        update = self._update(feed, symbol, book)
+    async def __call__(self, book, receipt_timestamp: float):
+        update = self._update(book)
 
         # only write updates when a best bid / best aks changes
         if self.last_update == update:
@@ -45,7 +41,7 @@ class NBBO(Callback):
         if bid is None:
             return
         if self.is_async:
-            await self.callback(symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)
+            await self.callback(book.symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)
+            await loop.run_in_executor(None, self.callback, book.symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)

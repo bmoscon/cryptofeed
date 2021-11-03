@@ -1,3 +1,4 @@
 include CHANGES.md
 include README.md
 include INSTALL.md
+include cryptofeed/types.pyx

@@ -9,8 +9,8 @@ import atexit
 from collections import defaultdict
 import functools
 import ast
-import json
 
+from yapic import json
 from aiofile import AIOFile
 
 from cryptofeed.defines import HUOBI, UPBIT, OKEX, OKCOIN
@@ -22,12 +22,12 @@ def bytes_string_to_bytes(string):
     return tree.body[0].value.s
 
 
-def playback(feed: str, filenames: list):
-    return asyncio.run(_playback(feed, filenames))
+def playback(feed: str, filenames: list, callbacks: dict = None):
+    return asyncio.run(_playback(feed, filenames, callbacks))
 
 
-async def _playback(feed: str, filenames: list):
-    callbacks = defaultdict(int)
+async def _playback(feed: str, filenames: list, callbacks: dict):
+    callback_stats = defaultdict(int)
 
     class FakeWS:
         def __init__(self, filenames):
@@ -37,7 +37,7 @@ async def _playback(feed: str, filenames: list):
 
             for filename in filenames:
                 if 'http' in filename:
-                    with open(filename, 'r') as fp:
+                    with open(filename, 'r', encoding='utf-8') as fp:
                         for line in fp.readlines():
                             if line.startswith('http'):
                                 file_url, data = line.split(' -> ')
@@ -62,7 +62,7 @@ async def _playback(feed: str, filenames: list):
         if 'ws' not in f and 'http' not in f:
             exchange = f.rsplit("/", 1)[1]
             exchange = exchange.split(".", 1)[0]
-            with open(f, 'r') as fp:
+            with open(f, 'r', encoding='utf-8') as fp:
                 for line in fp.readlines():
                     if 'configuration' in line:
                         sub = json.loads(line.split(": ", 1)[1])
@@ -82,12 +82,14 @@ async def _playback(feed: str, filenames: list):
     HTTPSync.read = symbol_helper
 
     async def internal_cb(*args, **kwargs):
-        callbacks[kwargs['cb_type']] += 1
+        callback_stats[kwargs['cb_type']] += 1
 
-    feed = EXCHANGE_MAP[feed](config="config.yaml", subscription=sub)
-    for cb_type, handler in feed.callbacks.items():
-        f = functools.partial(internal_cb, cb_type=cb_type)
-        handler.append(f)
+    if not callbacks:
+        callbacks = {ctype: functools.partial(internal_cb, cb_type=ctype) for ctype in sub.keys()}
+    else:
+        for ctype in callbacks.keys():
+            callbacks[ctype] = [callbacks[ctype], functools.partial(internal_cb, cb_type=ctype)]
+    feed = EXCHANGE_MAP[feed](config="config.yaml", subscription=sub, callbacks=callbacks)
 
     for _, sub, handler, auth in feed.connect():
         await sub(ws)
@@ -122,13 +124,15 @@ async def _playback(feed: str, filenames: list):
                     await handler(message, ws, timestamp)
                 except Exception:
                     print("Playback failed on message:", message)
+                    feed.stop()
+                    await feed.shutdown()
                     raise
     feed.stop()
     await feed.shutdown()
 
     HTTPAsyncConn.read = http_async_conn_read
     HTTPSync.read = http_sync_read
-    return {'messages_processed': counter, 'callbacks': dict(callbacks)}
+    return {'messages_processed': counter, 'callbacks': dict(callback_stats)}
 
 
 class AsyncFileCallback:

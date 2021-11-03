@@ -6,18 +6,17 @@ associated with this software.
 '''
 from cryptofeed import FeedHandler
 from cryptofeed.backends.aggregate import OHLCV
-from cryptofeed.callback import Callback
 from cryptofeed.defines import TRADES
 from cryptofeed.exchanges import Coinbase
 
 
-async def ohlcv(data=None):
+async def ohlcv(data):
     print(data)
 
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(symbols=['BTC-USD', 'ETH-USD', 'BCH-USD'], channels=[TRADES], callbacks={TRADES: OHLCV(Callback(ohlcv), window=300)}))
+    f.add_feed(Coinbase(symbols=['BTC-USD', 'ETH-USD', 'BCH-USD'], channels=[TRADES], callbacks={TRADES: OHLCV(ohlcv, window=10)}))
 
     f.run()
 

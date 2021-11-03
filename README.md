@@ -1,6 +1,6 @@
 # Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.7+-green.svg)
+![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
 [![Build Status](https://travis-ci.com/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.com/bmoscon/cryptofeed)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
@@ -11,7 +11,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 * [AscendEX](https://ascendex.com/)
 * [Bequant](https://bequant.io/)
-* [Bitcoin.com](https://www.bitcoin.com/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
 * [Bithumb](https://en.bithumb.com/)
@@ -27,6 +26,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Coinbase](https://www.coinbase.com/)
 * [Deribit](https://www.deribit.com/)
 * [dYdX](https://dydx.exchange/)
+* [FMFW.io](https://www.fmfw.io/)
 * [EXX](https://www.exx.com/)
 * [FTX](https://ftx.com/)
 * [FTX US](https://ftx.us/)
@@ -46,10 +46,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
 
-## Supported aggregated crypto data providers
-
-* [Coingecko](https://www.coingecko.com/en)
-
 
 ## Basic Usage
 
@@ -63,9 +59,9 @@ fh = FeedHandler()
 
 # ticker, trade, and book are user defined functions that
 # will be called when ticker, trade and book updates are received
-ticker_cb = {TICKER: TickerCallback(ticker)}
-trade_cb = {TRADES: TradeCallback(trade)}
-gemini_cb = {TRADES: TradeCallback(trade), L2_BOOK: BookCallback(book)}
+ticker_cb = {TICKER: ticker}
+trade_cb = {TRADES: trade}
+gemini_cb = {TRADES: trade, L2_BOOK: book}
 
 
 fh.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TICKER], callbacks=ticker_cb))
@@ -107,32 +103,28 @@ Cryptofeed supports the following channels from exchanges:
 
 ### Market Data Channels (Public)
 
+* L1_BOOK - Top of book
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES - Note this reports the taker's side, even for exchanges that report the maker side.
 * TICKER
 * FUNDING
-* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To receive both create two `feedhandler` objects. Not all exchanges are supported, as some exchanges send complete books on every update.
 * OPEN_INTEREST - Open interest data.
 * LIQUIDATIONS
-* FUTURES_INDEX
+* INDEX
 * CANDLES - Candlestick / K-Line data.
-
-Aggregated data from provider is available in channel:
-
-* MARKET_INFO - current aggregated price, market cap, volume (in USD, BTC or ETH currency), total and circulating supply,
- as well as community data (twitter, reddit, facebook...) and scores (coingecko, developer, community...)
 
 ### Authenticated Data Channels
 
 * ORDER_INFO - Order status updates
-* ACC_TRANSACTIONS - Real-time updates on account deposits and withdrawals
-* ACC_BALANCES - Updates on wallet funds
+* TRANSACTIONS - Real-time updates on account deposits and withdrawals
+* BALANCES - Updates on wallet funds
+* FILLS - User's executed trades
 
 
 ## Backends
 
-Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces
+Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces.
 
 Supported Backends:
 * Redis (Streams and Sorted Sets)
@@ -163,7 +155,7 @@ Cryptofeed has optional dependencies, depending on the backends used. You can in
 
     pip install cryptofeed[all]
 
-If you wish to clone the repository and install from source, run this command from the root of the cloned repository
+If you wish to clone the repository and install from source, run this command from the root of the cloned repository.
 
     python setup.py install
 
@@ -171,21 +163,28 @@ Alternatively, you can install in 'edit' mode (also called development mode):
 
     python setup.py develop
 
-See more options, explanations and Pipenv usage in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
+See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
 
 
 ## Rest API
 
-Cryptofeed supports some REST interfaces for retrieving historical data and placing orders. See the [rest](https://github.com/bmoscon/cryptofeed/tree/master/cryptofeed/rest) package.
+Cryptofeed supports some REST interfaces for retrieving real-time and historical data, as well as order placement and account management. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange.
 
 
 ## Future Work
 
-There are a lot of planned features, new exchanges, etc planned! If you'd like to discuss ongoing development please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
+There are a lot of planned features, new exchanges, etc planned! If you'd like to discuss ongoing development, please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
 
 ## Contributing
 
 Issues and PRs are welcomed!
 
 Cryptofeed wouldn't be possible without the help of many [contributors](AUTHORS.md)! I owe them and all other contributors my thanks!
+
+## Donations / Support
+
+Support and donations are appreciated but not required. You can donate via [GitHub Sponsors](https://github.com/sponsors/bmoscon), or via the addresses below:
+
+* Bitcoin: bc1qm0kxz8hqacaglku5fjhfe9a5hjnuyfwk02lsyr
+* Ethereum: 0x690709FEe13eEce9E7852089BB2D53Ae5D073154

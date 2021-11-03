@@ -1,9 +1,4 @@
 # Example Config File
-rest:
-    log:
-        filename: rest.log
-        level: WARNING
-
 log:
     filename: feedhandler.log
     level: WARNING

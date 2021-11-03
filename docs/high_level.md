@@ -18,7 +18,7 @@ The feedhandler is the main object that a user of the library will configure. It
 * `add_nbbo`
 * `run`
 
-`add_feed`is the main method used to register an exchange with the feedhandler. You can supply an Exchange object, or a string matching the exchange's name (all uppercase). Currently if you wish to add multiple exchanges, you must call add_feed multiple times (one per exchange).
+`add_feed`is the main method used to register an exchange with the feedhandler. You can supply an Exchange object, or a string matching the exchange's name (all uppercase). Currently, if you wish to add multiple exchanges, you must call add_feed multiple times (one per exchange).
 
 `add_nbbo` lets you compose your own NBBO data feed. It takes the arguments `feeds`, `symbols` and `callback`, which are the normal arguments you'd supply for exchange objects when supplied to the feed handler. The exchanges in the `feeds` list will subscribe to the `symbols` and NBBO updates will be supplied to the `callback` method as they are received from the exchanges.
 
@@ -38,19 +38,21 @@ The exchange objects are supplied with the following arguments:
 * `config`
 * `callbacks`
 
-`channels` are the data channels for which you are interested in receiving updates. Examples are TRADES, TICKER, and L2_BOOK. Not all exchanges support all channels. `symbols` are the trading symbols. Every symbol in `symbols` will subscribed to every channel in `channels`. If you wish to create a more granular subscription, use the `subscription` option. The `config` kwarg can be used to specify exchange specific configuration information. See the [config](config.md) doc for more information.  
+`channels` are the data channels for which you are interested in receiving updates. Examples are TRADES, TICKER, and L2_BOOK. Not all exchanges support all channels. `symbols` are the trading symbols. Every symbol in `symbols` will be subscribed to every channel in `channels`. If you wish to create a more granular subscription, use the `subscription` option. The `config` kwarg can be used to specify exchange specific configuration information. See the [config](config.md) doc for more information.  
 
 The supported data channels are:
 
+* L1_BOOK - Top of book
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
 * L3_BOOK - Price aggregated orders. Like the L2 book, some exchanges may only provide partial depth.
 * TRADES - Note this reports the taker's side, even for exchanges that report the maker side
 * TICKER - Traditional ticker updates
+* LIQUIDATIONS
+* OPEN_INTEREST
 * FUNDING - Exchange specific funding data / updates
-* BOOK_DELTA - Subscribed to with L2 or L3 books, receive book deltas rather than the entire book on updates. Full updates will be periodically sent on the L2 or L3 channel. If BOOK_DELTA is enabled, only L2 or L3 book can be enabled, not both. To received both create two `feedhandler` objects. Not all exchanges support, as some exchanges send complete books on every update.
 
 
-Trading symbols follow the following scheme BASE-QUOTE. As an example, Bitcoin denominated by US Dollars would be BTC-USD. Many exchanges do not internally use this format, but cryptofeed handles trading symbol normalization and all symbols should be subscribed to in this format and will be reported in this format. 
+For spot markets, trading symbols follow the following scheme BASE-QUOTE. As an example, Bitcoin denominated by US Dollars would be BTC-USD. Many exchanges do not internally use this format, but cryptofeed handles trading symbol normalization and all symbols should be subscribed to in this format and will be reported in this format. For futures markets, symbols follow the BASE-QUOTE-EXPIRY format. The expiry is comprised of the last 2 digits of the year, followed by the month code, followed by the day. As an example a BTC-USDT contract with an expiry date of Jan 14, 2021 would be BTC-USDT-21F14. Perpetual contracts, are listed as BASE-QUOTE-PERP. Options follow a scheme similar to futures contracts, except the name includes the strike price as well as if the option is put or a call: BASE-QUOTE-STRIKE-EXPIRY-TYPE.
 
 If you use `channels` and `symbols` you cannot use `subscription`, likewise if `subscription` is supplied you cannot use `channels` and `symbols`. `subscription` is supplied in a dictionary format, in the following manner: {CHANNEL: [symbols], ... }. As an example:
 
@@ -60,12 +62,16 @@ If you use `channels` and `symbols` you cannot use `subscription`, likewise if `
 
 ### Normalization
 
-Cryptofeed normalizes various parts of the data - primarily timestamps and symbols, to ensure they are consistent across all exchanges. Pairs take the format BASE-QUOTE (as previously mentioned) and timestamps are all converted to seconds since the epoch (traditional UNIX timestamps), in floating point. 
+Cryptofeed normalizes various parts of the data - primarily timestamps and symbols, to ensure they are consistent across all exchanges. Pairs take the format BASE-QUOTE (for spot, other instrument types have different formats, as previously mentioned) and timestamps are all converted to seconds since the epoch (traditional UNIX timestamps), in floating point. Most numeric data is returned as a `decimal.Decimal` object.
 
 ### Callbacks
 
-Callbacks are user defined functions that will be called on a data event, like when a trade update is received. Their format is specified in the `callbacks.py` file, and user defined callbacks should mirror their interface. 
+Callbacks are user defined functions that will be called on a data event, like when a trade update is received. All callbacks have the same signature: two positional arguments, a data object and the receipt timestamp. The data object will vary based on the type of callback (i.e. a trade callback will have a Trade object, the ticker callback will have a Ticker object, etc). The receipt timestamp is the timestamp that the message was received by cryptofeed.
 
+
+### Data Types
+
+The data types that are returned by callbacks are defined in [types.pyx](../cryptofeed/types.pyx). The data members are all readable, but not writeable. Every data type has a field, `raw` that contains the raw data that was used to construct the object. It will frequently have fields that are not part of the data type. These may or may not be useful to you, depending on your usecase. Every object also provides two methods, `to_dict()` and a `__repr__`. `to_dict()` returns the data in the object as a dictionary (omitting the raw data). `__repr__`  allows the class to be printed out in a useful format.
 
 ### Backends
 
@@ -77,23 +83,22 @@ Backends are supplied callbacks that do specific things, like write updates to a
 Setting up a simple feedhandler. Subscribing to Coinbase
 
 ```python
-from cryptofeed.callback import TickerCallback, TradeCallback, BookCallback, FundingCallback
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase
 from cryptofeed.defines import TRADES, TICKER
 
 
-async def ticker(feed, symbol, bid, ask, timestamp, receipt_timestamp):
-    print(f'Timestamp: {timestamp} Feed: {feed} Pair: {symbol} Bid: {bid} Ask: {ask}')
+async def ticker(t, receipt_timestamp):
+    print(t)
 
 
-async def trade(feed, symbol, order_id, timestamp, side, amount, price, receipt_timestamp):
-    print(f"Timestamp: {timestamp} Feed: {feed} Pair: {symbol} ID: {order_id} Side: {side} Amount: {amount} Price: {price}")
+async def trade(t, receipt_timestamp):
+    print(t)
 
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES, TICKER], callbacks={TICKER: TickerCallback(ticker), TRADES: TradeCallback(trade)}))
+    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES, TICKER], callbacks={TICKER: ticker, TRADES: trade}))
 
     f.run()
 
