@@ -11,12 +11,13 @@ from functools import partial
 import logging
 import time
 from typing import Dict, List, Tuple, Callable
-
+import requests
+import hmac
+import base64
 from yapic import json
 
-from cryptofeed.auth.okex import generate_token
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import CALL, CANCELLED, CANCELLING, FAILED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, SUBMITTING, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED
+from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
@@ -37,7 +38,7 @@ class OKEx(Feed):
         FUNDING: 'funding-rate',
         OPEN_INTEREST: 'open-interest',
         LIQUIDATIONS: LIQUIDATIONS,
-        ORDER_INFO: ORDER_INFO,
+        ORDER_INFO: 'orders',
     }
 
     @classmethod
@@ -81,6 +82,8 @@ class OKEx(Feed):
                           'private': 'wss://ws.okex.com:8443/ws/v5/private'}
         super().__init__(self.addresses, **kwargs)
         self.ws_defaults['compression'] = None
+        self.instrument_type_map = {'perpetual': 'SWAP',
+                                    'spot': 'MARGIN'}
 
     async def _liquidations(self, pairs: list):
         last_update = defaultdict(dict)
@@ -124,22 +127,6 @@ class OKEx(Feed):
                     last_update[pair][status] = data['data'][0]['details'][0]
                 await asyncio.sleep(0.1)
             await asyncio.sleep(60)
-
-    async def subscribe(self, conn: AsyncConnection):
-        self.__reset()
-        for chan in self.subscription:
-            if not self.is_authenticated_channel(chan):
-                if chan == LIQUIDATIONS:
-                    continue
-                for symbol in self.subscription[chan]:
-                    sym = self.exchange_symbol_to_std_symbol(symbol)
-                    instrument_type = self.instrument_type(sym)
-                    if instrument_type != PERPETUAL and 'funding' in chan:
-                        continue  # No funding for spot, futures and options
-                    if instrument_type == SPOT and chan == 'open-interest':
-                        continue  # No open interest for spot
-                    request = {"op": "subscribe", "args": [{"channel": chan, "instId": symbol}]}
-                    await conn.write(json.dumps(request))
 
     def __reset(self):
         self._l2_book = {}
@@ -277,57 +264,81 @@ class OKEx(Feed):
     async def _order(self, msg: dict, timestamp: float):
         '''
         {
-            "table":"spot/order",
-            "data":[
-                {
-                    "client_oid":"",
-                    "filled_notional":"0",
-                    "filled_size":"0",
-                    "instrument_id":"ETC-USDT",
-                    "last_fill_px":"0",
-                    "last_fill_qty":"0",
-                    "last_fill_time":"1970-01-01T00:00:00.000Z",
-                    "margin_trading":"1",
-                    "notional":"",
-                    "order_id":"3576398568830976",
-                    "order_type":"0",
-                    "price":"5.826",
-                    "side":"buy",
-                    "size":"0.1",
-                    "state":"0",
-                    "status":"open",
-                    "timestamp":"2019-09-24T06:45:11.394Z",
-                    "type":"limit",
-                    "created_at":"2019-09-24T06:45:11.394Z"
-                }
-            ]
+          "arg": {
+            "channel": "orders",
+            "instType": "FUTURES",
+            "instId": "BTC-USD-200329"
+          },
+          "data": [
+            {
+              "instType": "FUTURES",
+              "instId": "BTC-USD-200329",
+              "ccy": "BTC",
+              "ordId": "312269865356374016",
+              "clOrdId": "b1",
+              "tag": "",
+              "px": "999",
+              "sz": "333",
+              "notionalUsd": "",
+              "ordType": "limit",
+              "side": "buy",
+              "posSide": "long",
+              "tdMode": "cross",
+              "tgtCcy": "",
+              "fillSz": "0",
+              "fillPx": "long",
+              "tradeId": "0",
+              "accFillSz": "323",
+              "fillNotionalUsd": "",
+              "fillTime": "0",
+              "fillFee": "0.0001",
+              "fillFeeCcy": "BTC",
+              "execType": "T",
+              "state": "canceled",
+              "avgPx": "0",
+              "lever": "20",
+              "tpTriggerPx": "0",
+              "tpOrdPx": "20",
+              "slTriggerPx": "0",
+              "slOrdPx": "20",
+              "feeCcy": "",
+              "fee": "",
+              "rebateCcy": "",
+              "rebate": "",
+              "tgtCcy":"",
+              "pnl": "",
+              "category": "",
+              "uTime": "1597026383085",
+              "cTime": "1597026383085",
+              "reqId": "",
+              "amendResult": "",
+              "code": "0",
+              "msg": ""
+            }
+          ]
         }
         '''
         status = msg['data'][0]['state']
-        if status == -1:
-            status = FAILED
-        elif status == -1:
+        if status == 'canceled':
             status == CANCELLED
-        elif status == 0:
+        elif status == 'live':
             status == OPEN
-        elif status == 1:
+        elif status == 'partially-filled':
             status = PARTIAL
-        elif status == 2:
+        elif status == 'filled':
             status = FILLED
-        elif status == 3:
-            status = SUBMITTING
-        elif status == 4:
-            status = CANCELLING
 
         o_type = msg['data'][0]['ordType']
-        if o_type == 0:
+        if o_type == 'market':
             o_type = MARKET
-        elif o_type == 1:
+        elif o_type == 'post_only':
             o_type = MAKER_OR_CANCEL
-        elif o_type == 2:
+        elif o_type == 'fok':
             o_type = FILL_OR_KILL
-        elif o_type == 3:
+        elif o_type == 'ioc':
             o_type = IMMEDIATE_OR_CANCEL
+        elif o_type == 'limit':
+            o_type = LIMIT
 
         oi = OrderInfo(
             self.id,
@@ -336,9 +347,10 @@ class OKEx(Feed):
             BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
             status,
             o_type,
-            Decimal(msg['data'][0]['filled_notional'] / msg['data'][0]['filled_size']),
-            Decimal(msg['data'][0]['filled_size']),
-            msg['data'][0]['uTime'].timestamp(),
+            Decimal(msg['data'][0]['fillPx']) if msg['data'][0]['fillPx'] else Decimal(0),
+            Decimal(msg['data'][0]['fillSz']) if msg['data'][0]['fillSz'] else Decimal(0),
+            Decimal(msg['data'][0]['sz']) - Decimal(msg['data'][0]['accFillSz']) if msg['data'][0]['accFillSz'] else Decimal(0),
+            self.timestamp_normalize(int(msg['data'][0]['uTime'])),
             raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
@@ -379,21 +391,90 @@ class OKEx(Feed):
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         ret = []
-        for channel in self.subscription:
-            if self.is_authenticated_channel(channel):
-                for s in self.subscription[channel]:
-                    ret.append((WSAsyncConn(self.addresses['private'], self.id, **self.ws_defaults), partial(self.user_order_subscribe, symbol=s), self.message_handler, self.authenticate))
-        ret.append((WSAsyncConn(self.addresses['public'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
+            ret.append((WSAsyncConn(self.address['private'], self.id, **self.ws_defaults),
+                        partial(self.subscribe, private=True), self.message_handler, self.authenticate))
+        if any(not self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
+            ret.append((WSAsyncConn(self.address['public'], self.id, **self.ws_defaults),
+                        partial(self.subscribe, private=False), self.message_handler, self.__no_auth))
         return ret
 
-    async def user_order_subscribe(self, conn: AsyncConnection, symbol=None):
-        self.__reset()
-        timestamp, sign = generate_token(self.key_id, self.key_secret)
+    async def subscribe(self, connection: AsyncConnection, private: bool = False):
+        pri_channels = []
+        pub_channels = []
+        if private:
+            for chan in self.subscription:
+                if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
+                    for pair in self.subscription[chan]:
+                        pri_channels.append(self.build_subscription(chan, pair))
+        else:
+            for chan in self.subscription:
+                if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
+                    for pair in self.subscription[chan]:
+                        pub_channels.append(self.build_subscription(chan, pair))
+
+        if pri_channels:
+            msg = {"op": "subscribe",
+                   "args": pri_channels}
+            LOG.debug(f'{connection.uuid}: Subscribing to private channels with message {msg}')
+            await connection.write(json.dumps(msg))
+
+        if pub_channels:
+            msg = {"op": "subscribe",
+                   "args": pub_channels}
+            LOG.debug(f'{connection.uuid}: Subscribing to public channels with message {msg}')
+            await connection.write(json.dumps(msg))
+
+    async def authenticate(self, conn: AsyncConnection):
+        if self.requires_authentication:
+            auth = self._auth(self.key_id, self.key_secret)
+            LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
+            await conn.write(json.dumps(auth))
+            await asyncio.sleep(1)
+
+    def _auth(self, key_id, key_secret) -> str:
+        timestamp, sign = self._generate_token(key_id, key_secret)
         login_param = {"op": "login", "args": [{"apiKey": self.key_id, "passphrase": self.config.okex.key_passphrase, "timestamp": timestamp, "sign": sign.decode("utf-8")}]}
-        login_str = json.dumps(login_param)
-        await conn.write(login_str)
-        await asyncio.sleep(5)
-        instrument_type = self.instrument_type(symbol)
-        sub_param = {"op": "subscribe", "args": [{"channel": "orders", "instType": instrument_type.upper(), "instId": symbol}]}
-        sub_str = json.dumps(sub_param)
-        await conn.write(sub_str)
+        return login_param
+
+    async def __no_auth(self, conn: AsyncConnection):
+        pass
+
+    def build_subscription(self, channel: str, ticker: str) -> dict:
+        if channel in ['positions', 'orders']:
+            subscription_dict = {"channel": channel,
+                                 "instType": self.inst_type_to_okex_type(ticker),
+                                 "instId": ticker}
+        else:
+            subscription_dict = {"channel": channel,
+                                 "instId": ticker}
+        return subscription_dict
+
+    def inst_type_to_okex_type(self, ticker):
+        sym = self.exchange_symbol_to_std_symbol(ticker)
+        instrument_type = self.instrument_type(sym)
+        return self.instrument_type_map[instrument_type]
+
+    def _get_server_time(self):
+        endpoint = "v5/public/time"
+        response = requests.get(self.api + endpoint)
+        if response.status_code == 200:
+            return response.json()['data'][0]['ts']
+        else:
+            return ""
+
+    def _server_timestamp(self):
+        server_time = self._get_server_time()
+        return int(server_time) / 1000
+
+    def _create_sign(self, timestamp: str, key_secret: str):
+        message = timestamp + 'GET' + '/users/self/verify'
+        mac = hmac.new(bytes(key_secret, encoding='utf8'), bytes(message, encoding='utf-8'), digestmod='sha256')
+        d = mac.digest()
+        sign = base64.b64encode(d)
+        return sign
+
+    def _generate_token(self, key_id: str, key_secret: str) -> dict:
+        timestamp = str(self._server_timestamp())
+        sign = self._create_sign(timestamp, key_secret)
+        return timestamp, sign
