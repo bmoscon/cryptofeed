@@ -4,13 +4,13 @@
  * Bugfix: Update binance user data streams to use cdef types.
  * Feature: Add none_to kwarg to to_dict method of data type objects. Allows replacmen of Nones with specified value.
  * Bugfix: Some redis backends were trying to write Nones to storage and failing.
- * Uodate: Renamed as_type kwarg on to_dict to numeric_type.
+ * Update: Renamed as_type kwarg on to_dict to numeric_type.
  * Bugfix: Some dYdX symbols were incorrectly classified as spot.
  * Update: Drop support for Python 3.7.
  * Bugfix: Orderbooks need to be truncated to the correct depth when max depth is smaller than the maximum on Kraken.
  * Update: Coinbase having similar issues other exchanges with websocket compliance. Updated to fix connection
- * Update: Backends will fill in missing timestamps with receipt_timestamps
- * UPdate: Okex auth channel Orders added
+ * Update: Backends will fill in missing timestamps with receipt_timestamp
+ * Update: Okex auth channel Orders added
 
 ### 2.0.3 (2021-10-26)
  * Bugfix: Use timestamp_e6 for data derived from Bybit's instrument_info data feed.
