@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.1.0
+### 2.1.0 (2021-11-14)
  * Bugfix: Update binance user data streams to use cdef types.
  * Feature: Add none_to kwarg to to_dict method of data type objects. Allows replacmen of Nones with specified value.
  * Bugfix: Some redis backends were trying to write Nones to storage and failing.
