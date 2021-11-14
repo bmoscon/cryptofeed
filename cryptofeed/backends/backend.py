@@ -45,7 +45,7 @@ class BackendQueue:
 class BackendCallback:
     async def __call__(self, dtype, receipt_timestamp: float):
         data = dtype.to_dict(numeric_type=self.numeric_type, none_to=self.none_to)
-        if not data['timestamp']:
+        if not dtype.timestamp:
             data['timestamp'] = receipt_timestamp
         data['receipt_timestamp'] = receipt_timestamp
         await self.write(data)
@@ -55,7 +55,7 @@ class BackendBookCallback:
     async def _write_snapshot(self, book, receipt_timestamp: float):
         data = book.to_dict(numeric_type=self.numeric_type, none_to=self.none_to)
         del data['delta']
-        if not data['timestamp']:
+        if not book.timestamp:
             data['timestamp'] = receipt_timestamp
         data['receipt_timestamp'] = receipt_timestamp
         await self.write(data)
@@ -65,7 +65,7 @@ class BackendBookCallback:
             await self._write_snapshot(book, receipt_timestamp)
         else:
             data = book.to_dict(delta=book.delta is not None, numeric_type=self.numeric_type, none_to=self.none_to)
-            if not data['timestamp']:
+            if not book.timestamp:
                 data['timestamp'] = receipt_timestamp
             data['receipt_timestamp'] = receipt_timestamp
 
