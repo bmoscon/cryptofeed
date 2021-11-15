@@ -597,14 +597,14 @@ cdef class Fill:
 cdef class Position:
     cdef readonly str exchange
     cdef readonly str symbol
-    cdef readonly str id
     cdef readonly object position
     cdef readonly object entry_price
+    cdef readonly object side
     cdef readonly object unrealised_pnl
     cdef readonly object timestamp
     cdef readonly object raw  # Can be dict or list
 
-    def __init__(self, exchange, symbol, id, position, entry_price, unrealised_pnl, timestamp, raw=None):
+    def __init__(self, exchange, symbol, position, entry_price, side, unrealised_pnl, timestamp, raw=None):
         assert isinstance(position, Decimal)
         assert isinstance(entry_price, Decimal)
         assert unrealised_pnl is None or isinstance(unrealised_pnl, Decimal)
@@ -612,25 +612,25 @@ cdef class Position:
 
         self.exchange = exchange
         self.symbol = symbol
-        self.id = id
         self.position = position
         self.entry_price = entry_price
+        self.side = side
         self.unrealised_pnl = unrealised_pnl
         self.timestamp = timestamp
         self.raw = raw
 
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
-            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'position': self.position, 'entry_price': self.entry_price, 'unrealised_pnl': self.unrealised_pnl, 'timestamp': self.timestamp}
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'position': self.position, 'entry_price': self.entry_price, 'side': self.side, 'unrealised_pnl': self.unrealised_pnl, 'timestamp': self.timestamp}
         else:
-            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'position': numeric_type(self.position), 'entry_price': numeric_type(self.entry_price), 'unrealised_pnl': numeric_type(self.unrealised_pnl), 'timestamp': self.timestamp}
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'position': numeric_type(self.position), 'entry_price': numeric_type(self.entry_price),  'side': self.side, 'unrealised_pnl': numeric_type(self.unrealised_pnl), 'timestamp': self.timestamp}
         return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
-        return f'exchange: {self.exchange} symbol: {self.symbol} id: {self.id} position: {self.position} entry_price: {self.entry_price} unrealised_pnl: {self.unrealised_pnl} timestamp: {self.timestamp}'
+        return f'exchange: {self.exchange} symbol: {self.symbol} position: {self.position} entry_price: {self.entry_price} side: {self.side} unrealised_pnl: {self.unrealised_pnl} timestamp: {self.timestamp}'
 
     def __eq__(self, cmp):
-        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.id == cmp.id and self.position == cmp.position and self.entry_price == cmp.entry_price and self.unrealised_pnl == cmp.unrealised_pnl and self.timestamp == cmp.timestamp
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.side == cmp.side and self.position == cmp.position and self.entry_price == cmp.entry_price and self.unrealised_pnl == cmp.unrealised_pnl and self.timestamp == cmp.timestamp
 
     def __hash__(self):
         return hash(self.__repr__())

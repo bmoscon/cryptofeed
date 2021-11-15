@@ -8,11 +8,13 @@ from cryptofeed import FeedHandler
 from cryptofeed.callback import OrderInfoCallback
 from cryptofeed.defines import OKEX, ORDER_INFO
 
+
 async def order(oi, receipt_timestamp):
     print(f"Order update received at {receipt_timestamp}: {oi}")
 
+
 def main():
-    
+
     path_to_config = 'config.yaml'
     f = FeedHandler(config=path_to_config)
     f.add_feed(OKEX,
@@ -22,5 +24,6 @@ def main():
                timeout=-1)
     f.run()
 
+
 if __name__ == "__main__":
-    main()    
+    main()

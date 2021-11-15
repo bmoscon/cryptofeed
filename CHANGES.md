@@ -1,5 +1,9 @@
 ## Changelog
 
+### 2.1.1
+ * Bugfix: Position data type missing side field.
+ * Bugfix: Position data type had unused field 'id'.
+
 ### 2.1.0 (2021-11-14)
  * Bugfix: Update binance user data streams to use cdef types.
  * Feature: Add none_to kwarg to to_dict method of data type objects. Allows replacmen of Nones with specified value.

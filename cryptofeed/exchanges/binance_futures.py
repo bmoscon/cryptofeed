@@ -176,6 +176,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
                 self.exchange_symbol_to_std_symbol(position['s']),
                 Decimal(position['pa']),
                 Decimal(position['ep']),
+                position['ps'].lower(),
                 Decimal(position['up']),
                 self.timestamp_normalize(msg['E']),
                 raw=msg)
