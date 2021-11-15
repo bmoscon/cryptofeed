@@ -1,7 +1,7 @@
 requests>=2.18.4
 websockets>=7.0
 pyyaml
-aiohttp==3.8.0
+aiohttp==3.8.1
 aiofile>=2.0.0
 yapic.json>=1.6.3
 aiodns>=1.1  # aiodns speeds up DNS resolving
