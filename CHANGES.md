@@ -3,6 +3,7 @@
 ### 2.1.1
  * Bugfix: Position data type missing side field.
  * Bugfix: Position data type had unused field 'id'.
+ * Bugfix: Fix Bybit OrderInfo msg/data dict
 
 ### 2.1.0 (2021-11-14)
  * Bugfix: Update binance user data streams to use cdef types.
@@ -54,7 +55,7 @@
  * Bugfix: Upbit REST candles do not work when start/end are not specified
  * Bugfix: New version of websockets enforces RFC rules and non-compliant exchanges will fail to connect.
  * Feature: Add support for candles on Bitfinex REST
- * Bugfix: Book callback with cross_check option enabled causes an error 
+ * Bugfix: Book callback with cross_check option enabled causes an error
  * Bugfix: Kraken Candle timestamps strings instead of floats
  * Bugfix: Coinbase book \_change handler passing wrong book type
  * Bugfix: dYdX orderbooks contained prices levels of size 0
@@ -159,7 +160,7 @@
   * Update: previous HitBTC & Bitcoin.com websocket endpoints deprecated. Now using separate Market, Trading and Account endpoints
   * Bugfix: max_depth on Binance and Kraken was not properly used when querying the snapshot
   * Bugfix: Handle 429s in HTTP connections (by waiting and retrying).
-  
+
 ### 1.9.1 (2021-06-10)
   * Feature: add Bithumb exchange - l2 book and trades
   * Bugfix: Fix inverted Poloniex symbols
@@ -180,7 +181,7 @@
   * Update: Remove deprecated channel mapping from Kraken, use channel name from message instead
   * Bugfix: change Kraken Futures to use the standard symbol to be consistent with the rest of the library
   * Update: use Kucoin v3 endpoint for orderbook snapshot (v2 deprecated).
-  * Update: Poloniex ticker message format update 
+  * Update: Poloniex ticker message format update
 
 ### 1.9.0 (2021-04-25)
   * Bugfix: Fix Binance subscriptions when subscribing to more than one candle
