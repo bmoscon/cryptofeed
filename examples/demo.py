@@ -82,7 +82,7 @@ def main():
     pairs = Binance.symbols()[:1]
     f.add_feed(Binance(symbols=pairs, channels=[L2_BOOK], callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
     pairs = BinanceFutures.symbols()[:30]
-    f.add_feed(BinanceFutures(symbols=pairs, channels=[OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
+    f.add_feed(BinanceFutures(symbols=pairs, channels=[TRADES, OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={TRADES: trade, OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
     f.add_feed(BinanceUS(symbols=BinanceUS.symbols()[:2], channels=[TRADES, L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade}))
     f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[L3_BOOK], callbacks={L3_BOOK: book, TICKER: ticker, TRADES: trade}))
     f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[TICKER, TRADES, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
