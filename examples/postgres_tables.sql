@@ -17,4 +17,4 @@ CREATE TABLE IF NOT EXISTS index (id serial PRIMARY KEY, timestamp TIMESTAMP, re
 CREATE TABLE IF NOT EXISTS funding (id serial PRIMARY KEY, timestamp TIMESTAMP, receipt_timestamp TIMESTAMP, exchange VARCHAR(32), symbol VARCHAR(32), mark_price DOUBLE PRECISION, rate DOUBLE PRECISION, next_funding_time TIMESTAMP, predicted_rate DOUBLE PRECISION);
 
 -- liquidation
-CREATE TABLE IF NOT EXISTS funding (id serial PRIMARY KEY, timestamp TIMESTAMP, receipt_timestamp TIMESTAMP, exchange VARCHAR(32), symbol VARCHAR(32), side VARCHAR(8), quantity NUMERIC(64, 32), price NUMERIC(64, 32), id VARCHAR(64), status VARCHAR(16));
+CREATE TABLE IF NOT EXISTS liquidation (id serial PRIMARY KEY, timestamp TIMESTAMP, receipt_timestamp TIMESTAMP, exchange VARCHAR(32), symbol VARCHAR(32), side VARCHAR(8), quantity NUMERIC(64, 32), price NUMERIC(64, 32), id VARCHAR(64), status VARCHAR(16));
