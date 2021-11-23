@@ -24,6 +24,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Binance US](https://www.binance.us/en)
 * [BitMEX](https://www.bitmex.com/)
 * [Coinbase](https://www.coinbase.com/)
+* [Crypto.com](https://www.crypto.com)
 * [Deribit](https://www.deribit.com/)
 * [dYdX](https://dydx.exchange/)
 * [FMFW.io](https://www.fmfw.io/)

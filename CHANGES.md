@@ -5,6 +5,7 @@
  * Bugfix: Position data type had unused field 'id'.
  * Bugfix: Fix Bybit OrderInfo msg/data dict.
  * Feature: Add support for sandbox/testnet on BinanceFutures.
+ * Feature: New exchange - Crypto.com
 
 ### 2.1.0 (2021-11-14)
  * Bugfix: Update binance user data streams to use cdef types.

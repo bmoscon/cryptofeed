@@ -15,6 +15,6 @@ def test_exchanges_fh():
     """
     path = os.path.dirname(os.path.abspath(__file__))
     files = os.listdir(f"{path}/../../cryptofeed/exchanges")
-    files = [f for f in files if '__' not in f and 'mixins' not in f]
+    files = [f.replace("cryptodotcom", "CRYPTO.COM") for f in files if '__' not in f and 'mixins' not in f]
     files = [f[:-3].upper() for f in files]  # Drop extension .py and uppercase
-    assert sorted(files) == sorted(EXCHANGE_MAP)
+    assert sorted(files) == sorted(EXCHANGE_MAP.keys())
