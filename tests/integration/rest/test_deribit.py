@@ -34,7 +34,7 @@ class TestDeribitRest:
 
         for data in d.trades_sync('BTC-USD-PERP', start=start, end=end):
             ret.extend(data)
-        assert len(ret) > 1000
+        assert len(ret) > 0
         assert ret[0]['symbol'] == 'BTC-USD-PERP'
         assert isinstance(ret[0]['price'], Decimal)
         assert isinstance(ret[0]['amount'], Decimal)

@@ -23,6 +23,7 @@ from .bittrex import Bittrex
 from .blockchain import Blockchain
 from .bybit import Bybit
 from .coinbase import Coinbase
+from .cryptodotcom import CryptoDotCom
 from .deribit import Deribit
 from .dydx import dYdX
 from .exx import EXX
@@ -61,6 +62,7 @@ EXCHANGE_MAP = {
     BLOCKCHAIN: Blockchain,
     BYBIT: Bybit,
     COINBASE: Coinbase,
+    CRYPTODOTCOM: CryptoDotCom,
     DERIBIT: Deribit,
     DYDX: dYdX,
     EXX_str: EXX,
