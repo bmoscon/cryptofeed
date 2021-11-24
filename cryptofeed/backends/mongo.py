@@ -21,8 +21,8 @@ class MongoCallback:
         self.collection = key if key else self.default_key
 
     async def write(self, data: dict):
-        if 'delta' in data:
-            d = {'exchange': data['exchange'], 'symbol': data['symbol'], 'timestamp': data['timestamp'], 'receipt_timestamp': data['receipt_timestamp'], 'delta': data['delta'], 'bid': bson.BSON.encode(data['bid']), 'ask': bson.BSON.encode(data['ask'])}
+        if 'book' in data:
+            d = {'exchange': data['exchange'], 'symbol': data['symbol'], 'timestamp': data['timestamp'], 'receipt_timestamp': data['receipt_timestamp'], 'delta': 'delta' in data, 'bid': bson.BSON.encode(data['book']['bid'] if 'delta' not in data else data['delta']['bid']), 'ask': bson.BSON.encode(data['book']['ask'] if 'delta' not in data else data['delta']['ask'])}
             await self.db[self.collection].insert_one(d)
         else:
             await self.db[self.collection].insert_one(data)
