@@ -31,6 +31,10 @@ class OKEx(Feed):
     id = OKEX
     api = 'https://www.okex.com/api/'
     symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
+    websocket_endpoint = {
+        'public': 'wss://ws.okex.com:8443/ws/v5/public',
+        'private': 'wss://ws.okex.com:8443/ws/v5/private'
+    }
     websocket_channels = {
         L2_BOOK: 'books-l2-tbt',
         TRADES: 'trades',
@@ -78,9 +82,7 @@ class OKEx(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        self.addresses = {'public': 'wss://ws.okex.com:8443/ws/v5/public',
-                          'private': 'wss://ws.okex.com:8443/ws/v5/private'}
-        super().__init__(self.addresses, **kwargs)
+        super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
         self.instrument_type_map = {'perpetual': 'SWAP',
                                     'spot': 'MARGIN'}

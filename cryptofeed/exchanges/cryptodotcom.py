@@ -26,6 +26,7 @@ LOG = logging.getLogger('feedhandler')
 class CryptoDotCom(Feed):
     id = CRYPTODOTCOM
     symbol_endpoint = 'https://api.crypto.com/v2/public/get-instruments'
+    websocket_endpoint = 'wss://stream.crypto.com/v2/market'
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',
@@ -49,10 +50,6 @@ class CryptoDotCom(Feed):
             info['instrument_type'][sym.normalized] = sym.type
             ret[sym.normalized] = entry['instrument_name']
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://stream.crypto.com/v2/market', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}

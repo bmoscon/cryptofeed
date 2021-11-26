@@ -23,6 +23,8 @@ LOG = logging.getLogger('feedhandler')
 class Exchange:
     id = NotImplemented
     symbol_endpoint = NotImplemented
+    websocket_endpoint = NotImplemented
+    sandbox_endpoint = NotImplemented
     _parse_symbol_data = NotImplemented
     websocket_channels = NotImplemented
     request_limit = NotImplemented

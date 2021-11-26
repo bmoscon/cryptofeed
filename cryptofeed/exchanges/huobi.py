@@ -25,6 +25,7 @@ LOG = logging.getLogger('feedhandler')
 class Huobi(Feed):
     id = HUOBI
     symbol_endpoint = 'https://api.huobi.pro/v1/common/symbols'
+    websocket_endpoint = 'wss://api.huobi.pro/ws'
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'}
     websocket_channels = {
         L2_BOOK: 'depth.step0',
@@ -52,7 +53,7 @@ class Huobi(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__('wss://api.huobi.pro/ws', **kwargs)
+        super().__init__(**kwargs)
         lookup = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1M': '1mon', '1w': '1week', '1Y': '1year'}
         self.candle_interval = lookup[self.candle_interval]
         self.normalize_interval = {value: key for key, value in lookup.items()}

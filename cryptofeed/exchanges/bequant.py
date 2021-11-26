@@ -30,6 +30,11 @@ LOG = logging.getLogger('feedhandler')
 class Bequant(Feed):
     id = BEQUANT
     symbol_endpoint = 'https://api.bequant.io/api/2/public/symbol'
+    websocket_endpoint = {
+        'market': 'wss://api.bequant.io/api/2/ws/public',
+        'trading': 'wss://api.bequant.io/api/2/ws/trading',
+        'account': 'wss://api.bequant.io/api/2/ws/account',
+    }
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'}
     websocket_channels = {
         BALANCES: 'subscribeBalance',
@@ -66,12 +71,7 @@ class Bequant(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        urls = {
-            'market': 'wss://api.bequant.io/api/2/ws/public',
-            'trading': 'wss://api.bequant.io/api/2/ws/trading',
-            'account': 'wss://api.bequant.io/api/2/ws/account',
-        }
-        super().__init__(urls, **kwargs)
+        super().__init__(**kwargs)
         interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
         self.candle_interval = interval_map[self.candle_interval]
         self.normalize_interval = {value: key for key, value in interval_map.items()}

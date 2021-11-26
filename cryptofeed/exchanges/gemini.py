@@ -29,6 +29,8 @@ LOG = logging.getLogger('feedhandler')
 class Gemini(Feed, GeminiRestMixin):
     id = GEMINI
     symbol_endpoint = {'https://api.gemini.com/v1/symbols': 'https://api.gemini.com/v1/symbols/details/'}
+    websocket_endpoint = {'public': 'wss://api.gemini.com/v2/marketdata/', 'auth': 'wss://api.gemini.com/v1/order/events'}
+    sandbox_endpoint = {'public': 'wss://api.sandbox.gemini.com/v2/marketdata/', 'auth': 'wss://api.sandbox.gemini.com/v1/order/events'}
     websocket_channels = {
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
@@ -53,10 +55,6 @@ class Gemini(Feed, GeminiRestMixin):
             info['tick_size'][s.normalized] = symbol['tick_size']
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, sandbox=False, **kwargs):
-        auth_api = 'wss://api.gemini.com' if not sandbox else 'wss://api.sandbox.gemini.com'
-        super().__init__({'public': 'wss://api.gemini.com/v2/marketdata/', 'auth': f'{auth_api}/v1/order/events'}, **kwargs)
 
     def __reset(self, pairs):
         for pair in pairs:

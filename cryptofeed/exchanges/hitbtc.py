@@ -15,11 +15,8 @@ LOG = logging.getLogger('feedhandler')
 class HitBTC(Bequant):
     id = HITBTC
     symbol_endpoint = 'https://api.hitbtc.com/api/2/public/symbol'
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.address = {
-            'market': 'wss://api.hitbtc.com/api/2/ws/public',
-            'trading': 'wss://api.hitbtc.com/api/2/ws/trading',
-            'account': 'wss://api.hitbtc.com/api/2/ws/account',
-        }
+    websocket_endpoint = {
+        'market': 'wss://api.hitbtc.com/api/2/ws/public',
+        'trading': 'wss://api.hitbtc.com/api/2/ws/trading',
+        'account': 'wss://api.hitbtc.com/api/2/ws/account',
+    }

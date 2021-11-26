@@ -23,6 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class Probit(Feed):
     id = PROBIT
     symbol_endpoint = 'https://api.probit.com/api/exchange/v1/market'
+    websocket_endpoint = 'wss://api.probit.com/api/exchange/v1/ws'
     websocket_channels = {
         L2_BOOK: 'order_books',
         TRADES: 'recent_trades',
@@ -41,10 +42,6 @@ class Probit(Feed):
             info['instrument_type'][s.normalized] = s.type
 
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://api.probit.com/api/exchange/v1/ws', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}

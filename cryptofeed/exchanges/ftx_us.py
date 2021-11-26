@@ -17,6 +17,7 @@ LOG = logging.getLogger('feedhandler')
 class FTXUS(FTX, FTXUSRestMixin):
     id = FTX_US
     symbol_endpoint = 'https://ftx.us/api/markets'
+    websocket_endpoint = 'wss://ftx.us/ws/'
     websocket_channels = {
         L2_BOOK: 'orderbook',
         TRADES: 'trades',
@@ -24,7 +25,3 @@ class FTXUS(FTX, FTXUSRestMixin):
         ORDER_INFO: 'orders',
         FILLS: 'fills',
     }
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.address = 'wss://ftx.us/ws/'

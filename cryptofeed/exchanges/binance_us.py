@@ -17,10 +17,10 @@ LOG = logging.getLogger('feedhandler')
 class BinanceUS(Binance, BinanceUSRestMixin):
     id = BINANCE_US
     symbol_endpoint = 'https://api.binance.us/api/v3/exchangeInfo'
+    websocket_endpoint = 'wss://stream.binance.us:9443'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # overwrite values previously set by the super class Binance
-        self.ws_endpoint = 'wss://stream.binance.us:9443'
         self.rest_endpoint = 'https://api.binance.us/api/v3'
         self.address = self._address()

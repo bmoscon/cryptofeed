@@ -25,6 +25,7 @@ LOG = logging.getLogger('feedhandler')
 class EXX(Feed):
     id = EXX_id
     symbol_endpoint = "https://api.exx.com/data/v1/tickers"
+    websocket_endpoint = 'wss://ws.exx.com/websocket'
     websocket_channels = {
         L2_BOOK: 'ENTRUST_ADD',
         TRADES: 'TRADE',
@@ -42,10 +43,6 @@ class EXX(Feed):
             ret[s.normalized] = sym
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://ws.exx.com/websocket', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}

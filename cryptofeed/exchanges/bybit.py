@@ -28,6 +28,11 @@ LOG = logging.getLogger('feedhandler')
 class Bybit(Feed):
     id = BYBIT
     symbol_endpoint = 'https://api.bybit.com/v2/public/symbols'
+    websocket_endpoint = {
+        'USD': 'wss://stream.bybit.com/realtime',
+        'USDT': 'wss://stream.bybit.com/realtime_public',
+        'USDTP': 'wss://stream.bybit.com/realtime_private'
+    }
     websocket_channels = {
         L2_BOOK: 'orderBook_200.100ms',
         TRADES: 'trade',
@@ -75,7 +80,7 @@ class Bybit(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__({'USD': 'wss://stream.bybit.com/realtime', 'USDT': 'wss://stream.bybit.com/realtime_public', 'USDTP': 'wss://stream.bybit.com/realtime_private'}, **kwargs)
+        super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
         self.candle_mapping = {'1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '2h': '120', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W', '1M': 'M'}
 
