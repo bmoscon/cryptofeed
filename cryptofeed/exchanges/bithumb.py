@@ -38,6 +38,7 @@ class Bithumb(Feed):
         ('https://api.bithumb.com/public/ticker/ALL_BTC', 'BTC'),
         ('https://api.bithumb.com/public/ticker/ALL_KRW', 'KRW')
     ]
+    websocket_endpoint = "wss://pubwss.bithumb.com/pub/ws"
     websocket_channels = {
         # L2_BOOK: 'orderbookdepth', <-- technically the exchange supports orderbooks but it only provides orderbook deltas, there is
         # no way to synchronize against a rest snapshot, nor request/obtain an orderbook via the websocket, so this isn't really useful
@@ -87,7 +88,7 @@ class Bithumb(Feed):
         return ret, info
 
     def __init__(self, max_depth=30, **kwargs):
-        super().__init__("wss://pubwss.bithumb.com/pub/ws", max_depth=max_depth, **kwargs)
+        super().__init__(max_depth=max_depth, **kwargs)
 
     async def _trades(self, msg: dict, rtimestamp: float):
         '''

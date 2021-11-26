@@ -25,6 +25,7 @@ LOG = logging.getLogger('feedhandler')
 class Poloniex(Feed, PoloniexRestMixin):
     id = POLONIEX
     symbol_endpoint = 'https://poloniex.com/public?command=returnTicker'
+    websocket_endpoint = 'wss://api2.poloniex.com'
     _channel_map = {}
     websocket_channels = {
         L2_BOOK: L2_BOOK,
@@ -45,10 +46,6 @@ class Poloniex(Feed, PoloniexRestMixin):
             ret[s.normalized] = symbol
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://api2.poloniex.com', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}

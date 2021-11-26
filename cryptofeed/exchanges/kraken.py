@@ -30,6 +30,7 @@ class Kraken(Feed, KrakenRestMixin):
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '15d'}
     valid_depths = [10, 25, 100, 500, 1000]
     symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
+    websocket_endpoint = 'wss://ws.kraken.com'
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',
@@ -59,7 +60,7 @@ class Kraken(Feed, KrakenRestMixin):
         return ret, info
 
     def __init__(self, max_depth=1000, **kwargs):
-        super().__init__('wss://ws.kraken.com', max_depth=max_depth, **kwargs)
+        super().__init__(max_depth=max_depth, **kwargs)
         lookup = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
         self.candle_interval = lookup[self.candle_interval]
         self.normalize_interval = {value: key for key, value in lookup.items()}

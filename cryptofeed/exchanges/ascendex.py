@@ -25,6 +25,7 @@ LOG = logging.getLogger('feedhandler')
 class AscendEX(Feed):
     id = ASCENDEX
     symbol_endpoint = 'https://ascendex.com/api/pro/v1/products'
+    websocket_endpoint = 'wss://ascendex.com/1/api/pro/v1/stream'
     websocket_channels = {
         L2_BOOK: 'depth:',
         TRADES: 'trades:',
@@ -48,10 +49,6 @@ class AscendEX(Feed):
                 info['instrument_type'][s.normalized] = s.type
 
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://ascendex.com/1/api/pro/v1/stream', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}

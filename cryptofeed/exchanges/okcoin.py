@@ -25,6 +25,7 @@ LOG = logging.getLogger('feedhandler')
 class OKCoin(Feed):
     id = OKCOIN
     symbol_endpoint = 'https://www.okcoin.com/api/spot/v3/instruments'
+    websocket_endpoint = 'wss://real.okcoin.com:8443/ws/v3'
     websocket_channels = {
         L2_BOOK: 'spot/depth_l2_tbt',
         TRADES: 'spot/trade',
@@ -46,9 +47,6 @@ class OKCoin(Feed):
             info['tick_size'][s.normalized] = e['tick_size']
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://real.okcoin.com:8443/ws/v3', **kwargs)
 
     def __reset(self):
         self._l2_book = {}

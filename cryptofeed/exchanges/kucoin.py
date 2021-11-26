@@ -54,7 +54,8 @@ class KuCoin(Feed):
         token = address_info['data']['token']
         address = address_info['data']['instanceServers'][0]['endpoint']
         address = f"{address}?token={token}"
-        super().__init__(address, **kwargs)
+        super().__init__(**kwargs)
+        self.address = address
         self.ws_defaults['ping_interval'] = address_info['data']['instanceServers'][0]['pingInterval'] / 2000
         lookup = {'1m': '1min', '3m': '3min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week'}
         self.candle_interval = lookup[self.candle_interval]

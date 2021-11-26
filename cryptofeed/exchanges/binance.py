@@ -30,6 +30,7 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
+    websocket_endpoint = 'wss://stream.binance.com:9443'
     listen_key_endpoint = 'userDataStream'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
@@ -83,8 +84,7 @@ class Binance(Feed, BinanceRestMixin):
         if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
 
-        super().__init__({}, **kwargs)
-        self.ws_endpoint = 'wss://stream.binance.com:9443'
+        super().__init__(**kwargs)
         self.rest_endpoint = 'https://www.binance.com/api/v3'
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
@@ -106,9 +106,11 @@ class Binance(Feed, BinanceRestMixin):
         """
         if self.requires_authentication:
             listen_key = self._generate_token()
-            address = self.ws_endpoint + '/ws/' + listen_key
+            address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
+            address += '/ws/' + listen_key
         else:
-            address = self.ws_endpoint + '/stream?streams='
+            address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
+            address += '/stream?streams='
         subs = []
 
         is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)

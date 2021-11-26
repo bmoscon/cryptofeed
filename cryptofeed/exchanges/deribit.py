@@ -23,6 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class Deribit(Feed, DeribitRestMixin):
     id = DERIBIT
     symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH']
+    websocket_endpoint = 'wss://www.deribit.com/ws/api/v2'
     websocket_channels = {
         L1_BOOK: 'quote',
         L2_BOOK: 'book',
@@ -67,10 +68,6 @@ class Deribit(Feed, DeribitRestMixin):
             ret[s.normalized] = currency
             info['instrument_type'][s.normalized] = CURRENCY
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://www.deribit.com/ws/api/v2', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._open_interest_cache = {}

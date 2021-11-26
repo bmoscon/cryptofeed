@@ -45,7 +45,7 @@ class Bittrex(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__('wss://socket-v3.bittrex.com/signalr/connect', **kwargs)
+        super().__init__(**kwargs)
         r = requests.get('https://socket-v3.bittrex.com/signalr/negotiate', params={'connectionData': json.dumps([{'name': 'c3'}]), 'clientProtocol': 1.5})
         token = r.json()['ConnectionToken']
         url = requests.Request('GET', 'https://socket-v3.bittrex.com/signalr/connect', params={'transport': 'webSockets', 'connectionToken': token, 'connectionData': json.dumps([{"name": "c3"}]), 'clientProtocol': 1.5}).prepare().url
