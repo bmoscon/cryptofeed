@@ -26,6 +26,8 @@ LOG = logging.getLogger('feedhandler')
 class Delta(Feed):
     id = DELTA
     symbol_endpoint = 'https://api.delta.exchange/v2/products'
+    websocket_endpoint = 'wss://socket.delta.exchange'
+    sandbox_endpoint = 'wss://testnet-socket.delta.exchange'
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',
@@ -64,11 +66,7 @@ class Delta(Feed):
             ret[sym.normalized] = entry['symbol']
         return ret, info
 
-    def __init__(self, **kwargs):
-        super().__init__('wss://socket.delta.exchange', **kwargs)
-        if self.sandbox:
-            self.address = 'wss://testnet-socket.delta.exchange'
-        self.__reset()
-
     def __reset(self):
         self._l2_book = {}
+    
+    
