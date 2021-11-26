@@ -32,6 +32,7 @@ LOG = logging.getLogger('feedhandler')
 class FTX(Feed, FTXRestMixin):
     id = FTX_id
     symbol_endpoint = "https://ftx.com/api/markets"
+    websocket_endpoint = 'wss://ftx.com/ws/'
     websocket_channels = {
         L2_BOOK: 'orderbook',
         TRADES: 'trades',
@@ -88,7 +89,7 @@ class FTX(Feed, FTXRestMixin):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__('wss://ftx.com/ws/', **kwargs)
+        super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
 
     def __reset(self):

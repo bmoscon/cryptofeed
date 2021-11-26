@@ -26,6 +26,7 @@ class Upbit(Feed, UpbitRestMixin):
     id = UPBIT
     api = 'https://api.upbit.com/v1/'
     symbol_endpoint = 'https://api.upbit.com/v1/market/all'
+    websocket_endpoint = 'wss://api.upbit.com/websocket/v1'
     websocket_channels = {
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
@@ -46,9 +47,6 @@ class Upbit(Feed, UpbitRestMixin):
             ret[s.normalized] = entry['market']
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://api.upbit.com/websocket/v1', **kwargs)
 
     async def _trade(self, msg: dict, timestamp: float):
         """

@@ -28,6 +28,8 @@ LOG = logging.getLogger('feedhandler')
 class Bitmex(Feed, BitmexRestMixin):
     id = BITMEX
     symbol_endpoint = "https://www.bitmex.com/api/v1/instrument/active"
+    websocket_endpoint = 'wss://www.bitmex.com/realtime'
+    sandbox_endpoint = 'wss://testnet.bitmex.com/realtime'
     websocket_channels = {
         L2_BOOK: 'orderBookL2',
         TRADES: 'trade',
@@ -58,9 +60,8 @@ class Bitmex(Feed, BitmexRestMixin):
 
         return ret, info
 
-    def __init__(self, sandbox=False, **kwargs):
-        auth_api = 'wss://www.bitmex.com/realtime' if not sandbox else 'wss://testnet.bitmex.com/realtime'
-        super().__init__(auth_api, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
         self._reset()
 

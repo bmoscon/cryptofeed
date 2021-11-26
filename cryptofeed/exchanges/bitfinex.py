@@ -47,6 +47,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
         'https://api-pub.bitfinex.com/v2/conf/pub:list:currency',
         'https://api-pub.bitfinex.com/v2/conf/pub:list:pair:futures',
     ]
+    websocket_endpoint = 'wss://api.bitfinex.com/ws/2'
     websocket_channels = {
         L3_BOOK: 'book-R0-{}-{}',
         L2_BOOK: 'book-P0-{}-{}',
@@ -100,18 +101,13 @@ class Bitfinex(Feed, BitfinexRestMixin):
 
         return ret, info
 
-    def __init__(self, symbols=None, channels=None, subscription=None, number_of_price_points: int = 100,
-                 book_frequency: str = 'F0', **kwargs):
-        if number_of_price_points not in (1, 25, 100, 250):
-            raise ValueError("number_of_price_points should be in 1, 25, 100, 250")
-        if book_frequency not in ('F0', 'F1'):
-            raise ValueError("book_frequency should be in F0, F1")
+    def __init__(self, symbols=None, channels=None, subscription=None, number_of_price_points: int = 100, book_frequency: str = 'F0', **kwargs):
+        if number_of_price_points not in {1, 25, 100, 250}:
+            raise ValueError("number_of_price_points should be one of 1, 25, 100, 250")
+        if book_frequency not in {'F0', 'F1'}:
+            raise ValueError("book_frequency should be one of F0, F1")
 
-        if symbols is not None and channels is not None:
-            super().__init__('wss://api.bitfinex.com/ws/2', symbols=symbols, channels=channels, **kwargs)
-        else:
-            super().__init__('wss://api.bitfinex.com/ws/2', subscription=subscription, **kwargs)
-
+        super().__init__(symbols=symbols, channels=channels, subscription=subscription, **kwargs)
         self.number_of_price_points = number_of_price_points
         self.book_frequency = book_frequency
         if channels or subscription:

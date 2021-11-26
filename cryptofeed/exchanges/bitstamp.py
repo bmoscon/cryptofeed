@@ -27,6 +27,7 @@ class Bitstamp(Feed, BitstampRestMixin):
     id = BITSTAMP
     symbol_endpoint = "https://www.bitstamp.net/api/v2/trading-pairs-info/"
     # API documentation: https://www.bitstamp.net/websocket/v2/
+    websocket_endpoint = 'wss://ws.bitstamp.net/'
     websocket_channels = {
         L3_BOOK: 'detail_order_book',
         L2_BOOK: 'diff_order_book',
@@ -55,7 +56,7 @@ class Bitstamp(Feed, BitstampRestMixin):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__('wss://ws.bitstamp.net/', **kwargs)
+        super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
 
     async def _process_l2_book(self, msg: dict, timestamp: float):

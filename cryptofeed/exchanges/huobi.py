@@ -25,7 +25,9 @@ LOG = logging.getLogger('feedhandler')
 class Huobi(Feed):
     id = HUOBI
     symbol_endpoint = 'https://api.huobi.pro/v1/common/symbols'
+    websocket_endpoint = 'wss://api.huobi.pro/ws'
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'}
+    candle_interval_map = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1M': '1mon', '1w': '1week', '1Y': '1year'}
     websocket_channels = {
         L2_BOOK: 'depth.step0',
         TRADES: 'trade.detail',
@@ -50,13 +52,6 @@ class Huobi(Feed):
             ret[s.normalized] = e['symbol']
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://api.huobi.pro/ws', **kwargs)
-        lookup = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1M': '1mon', '1w': '1week', '1Y': '1year'}
-        self.candle_interval = lookup[self.candle_interval]
-        self.normalize_interval = {value: key for key, value in lookup.items()}
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}
@@ -123,7 +118,7 @@ class Huobi(Feed):
             }
         }
         """
-        interval = self.normalize_interval[interval]
+        interval = self.normalize_candle_interval[interval]
         start = int(msg['tick']['id'])
         end = start + timedelta_str_to_sec(interval) - 1
         c = Candle(
@@ -176,7 +171,7 @@ class Huobi(Feed):
                 normalized_chan = self.exchange_channel_to_std(chan)
                 await conn.write(json.dumps(
                     {
-                        "sub": f"market.{pair}.{chan}" if normalized_chan != CANDLES else f"market.{pair}.{chan}.{self.candle_interval}",
+                        "sub": f"market.{pair}.{chan}" if normalized_chan != CANDLES else f"market.{pair}.{chan}.{self.candle_interval_map[self.candle_interval]}",
                         "id": client_id
                     }
                 ))

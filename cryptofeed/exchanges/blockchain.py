@@ -24,6 +24,7 @@ LOG = logging.getLogger('feedhandler')
 class Blockchain(Feed):
     id = BLOCKCHAIN
     symbol_endpoint = "https://api.blockchain.com/mercury-gateway/v1/instruments"
+    websocket_endpoint = "wss://ws.prod.blockchain.info/mercury-gateway/v1/ws"
     websocket_channels = {
         L3_BOOK: 'l3',
         L2_BOOK: 'l2',
@@ -44,7 +45,7 @@ class Blockchain(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__("wss://ws.prod.blockchain.info/mercury-gateway/v1/ws", origin="https://exchange.blockchain.com", **kwargs)
+        super().__init__(origin="https://exchange.blockchain.com", **kwargs)
         self.__reset()
 
     def __reset(self):

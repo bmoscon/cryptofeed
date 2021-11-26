@@ -25,6 +25,7 @@ LOG = logging.getLogger('feedhandler')
 class HuobiDM(Feed):
     id = HUOBI_DM
     symbol_endpoint = 'https://www.hbdm.com/api/v1/contract_contract_info'
+    websocket_endpoint = 'wss://www.hbdm.com/ws'
     websocket_channels = {
         L2_BOOK: 'depth.step0',
         TRADES: 'trade.detail',
@@ -47,9 +48,6 @@ class HuobiDM(Feed):
             info['tick_size'][s.normalized] = e['price_tick']
             info['instrument_type'][s.normalized] = FUTURES
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://www.hbdm.com/ws', **kwargs)
 
     def __reset(self):
         self._l2_book = {}

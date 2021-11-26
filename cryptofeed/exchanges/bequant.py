@@ -30,7 +30,13 @@ LOG = logging.getLogger('feedhandler')
 class Bequant(Feed):
     id = BEQUANT
     symbol_endpoint = 'https://api.bequant.io/api/2/public/symbol'
+    websocket_endpoint = {
+        'market': 'wss://api.bequant.io/api/2/ws/public',
+        'trading': 'wss://api.bequant.io/api/2/ws/trading',
+        'account': 'wss://api.bequant.io/api/2/ws/account',
+    }
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'}
+    candle_interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
     websocket_channels = {
         BALANCES: 'subscribeBalance',
         TRANSACTIONS: 'subscribeTransactions',
@@ -64,18 +70,6 @@ class Bequant(Feed):
             info['instrument_type'][s.normalized] = s.type
 
         return ret, info
-
-    def __init__(self, **kwargs):
-        urls = {
-            'market': 'wss://api.bequant.io/api/2/ws/public',
-            'trading': 'wss://api.bequant.io/api/2/ws/trading',
-            'account': 'wss://api.bequant.io/api/2/ws/account',
-        }
-        super().__init__(urls, **kwargs)
-        interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
-        self.candle_interval = interval_map[self.candle_interval]
-        self.normalize_interval = {value: key for key, value in interval_map.items()}
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}
@@ -171,7 +165,7 @@ class Bequant(Feed):
         }
         """
 
-        interval = str(self.normalize_interval[msg['period']])
+        interval = str(self.normalize_candle_interval[msg['period']])
 
         for candle in msg['data']:
             start = self.timestamp_normalize(candle['timestamp'])
@@ -415,7 +409,7 @@ class Bequant(Feed):
                         "symbol": symbol,
                     }
                     if chan == "subscribeCandles":
-                        params['period'] = self.candle_interval
+                        params['period'] = self.candle_interval_map[self.candle_interval]
                     LOG.debug(f'{self.id}: Subscribing to "{chan}"" with params {params}')
                     await conn.write(json.dumps(
                         {

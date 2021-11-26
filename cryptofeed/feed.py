@@ -8,7 +8,7 @@ import asyncio
 from collections import defaultdict
 from functools import partial
 import logging
-from typing import Tuple, Callable, Union, List
+from typing import Tuple, Callable, List
 
 from aiohttp.typedefs import StrOrURL
 
@@ -25,12 +25,8 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, address: Union[dict, str], candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
-        address: str, or dict
-            address to be used to create the connection.
-            The address protocol (wss or https) will be used to determine the connection type.
-            Use a "str" to pass one single address, or a dict of option/address
         candle_interval: str
             the candle interval. See the specific exchange to see what intervals they support
         timeout: int
@@ -73,7 +69,6 @@ class Feed(Exchange):
         self.timeout = timeout
         self.timeout_interval = timeout_interval
         self.subscription = defaultdict(set)
-        self.address = address
         self.cross_check = cross_check
         self.normalized_symbols = []
         self.max_depth = max_depth
@@ -87,10 +82,14 @@ class Feed(Exchange):
         self.http_proxy = http_proxy
         self.start_delay = delay_start
         self.candle_interval = candle_interval
+        self.address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
 
         if self.valid_candle_intervals != NotImplemented:
             if candle_interval not in self.valid_candle_intervals:
                 raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
+
+        if self.candle_interval_map != NotImplemented:
+            self.normalize_candle_interval = {value: key for key, value in self.candle_interval_map.items()}
 
         if subscription is not None and (symbols is not None or channels is not None):
             raise ValueError("Use subscription, or channels and symbols, not both")

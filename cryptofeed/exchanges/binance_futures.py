@@ -22,6 +22,8 @@ LOG = logging.getLogger('feedhandler')
 class BinanceFutures(Binance, BinanceFuturesRestMixin):
     id = BINANCE_FUTURES
     symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
+    websocket_endpoint = 'wss://fstream.binance.com'
+    sandbox_endpoint = "wss://stream.binancefuture.com"
     listen_key_endpoint = 'listenKey'
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
@@ -51,7 +53,6 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         """
         super().__init__(**kwargs)
         # overwrite values previously set by the super class Binance
-        self.ws_endpoint = 'wss://fstream.binance.com' if not self.sandbox else "wss://stream.binancefuture.com"
         self.rest_endpoint = 'https://fapi.binance.com/fapi/v1' if not self.sandbox else "https://testnet.binancefuture.com/fapi/v1"
         self.address = self._address()
         self.ws_defaults['compression'] = None

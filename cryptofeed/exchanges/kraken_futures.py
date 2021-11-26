@@ -25,6 +25,7 @@ LOG = logging.getLogger('feedhandler')
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
     symbol_endpoint = 'https://futures.kraken.com/derivatives/api/v3/instruments'
+    websocket_endpoint = 'wss://futures.kraken.com/ws/v1'
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',
@@ -72,10 +73,6 @@ class KrakenFutures(Feed):
             info['instrument_type'][s.normalized] = stype
             ret[s.normalized] = entry['symbol']
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://futures.kraken.com/ws/v1', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._open_interest_cache = {}

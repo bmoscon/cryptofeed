@@ -26,6 +26,7 @@ LOG = logging.getLogger('feedhandler')
 class Gateio(Feed):
     id = GATEIO
     symbol_endpoint = "https://api.gateio.ws/api/v4/spot/currency_pairs"
+    websocket_endpoint = 'wss://api.gateio.ws/ws/v4/'
     valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d'}
     websocket_channels = {
         L2_BOOK: 'spot.order_book_update',
@@ -48,9 +49,8 @@ class Gateio(Feed):
         return ret, info
 
     def __init__(self, **kwargs):
-        super().__init__('wss://api.gateio.ws/ws/v4/', **kwargs)
+        super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
-        self._reset()
 
     def _reset(self):
         self._l2_book = {}

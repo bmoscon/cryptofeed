@@ -27,6 +27,7 @@ LOG = logging.getLogger('feedhandler')
 class Coinbase(Feed, CoinbaseRestMixin):
     id = COINBASE
     symbol_endpoint = 'https://api.pro.coinbase.com/products'
+    websocket_endpoint = 'wss://ws-feed.pro.coinbase.com'
     websocket_channels = {
         L2_BOOK: 'level2',
         L3_BOOK: 'full',
@@ -48,7 +49,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         return ret, info
 
     def __init__(self, callbacks=None, **kwargs):
-        super().__init__('wss://ws-feed.pro.coinbase.com', callbacks=callbacks, **kwargs)
+        super().__init__(callbacks=callbacks, **kwargs)
         self.ws_defaults['compression'] = None
         # we only keep track of the L3 order book if we have at least one subscribed order-book callback.
         # use case: subscribing to the L3 book plus Trade type gives you order_type information (see _received below),

@@ -24,6 +24,7 @@ LOG = logging.getLogger('feedhandler')
 class dYdX(Feed, dYdXRestMixin):
     id = DYDX
     symbol_endpoint = 'https://api.dydx.exchange/v3/markets'
+    websocket_endpoint = 'wss://api.dydx.exchange/v3/ws'
     websocket_channels = {
         L2_BOOK: 'v3_orderbook',
         TRADES: 'v3_trades',
@@ -44,10 +45,6 @@ class dYdX(Feed, dYdXRestMixin):
             info['tick_size'][s.normalized] = entry['tickSize']
             info['instrument_type'][s.normalized] = stype
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__('wss://api.dydx.exchange/v3/ws', **kwargs)
-        self.__reset()
 
     def __reset(self):
         self._l2_book = {}

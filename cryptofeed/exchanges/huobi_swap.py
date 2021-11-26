@@ -26,6 +26,7 @@ LOG = logging.getLogger('feedhandler')
 class HuobiSwap(HuobiDM):
     id = HUOBI_SWAP
     symbol_endpoint = 'https://api.hbdm.com/swap-api/v1/swap_contract_info'
+    websocket_endpoint = 'wss://api.hbdm.com/swap-ws'
     websocket_channels = {
         **HuobiDM.websocket_channels,
         FUNDING: 'funding'
@@ -48,7 +49,6 @@ class HuobiSwap(HuobiDM):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.address = 'wss://api.hbdm.com/swap-ws'
         self.funding_updates = {}
 
     async def _funding(self, pairs):
