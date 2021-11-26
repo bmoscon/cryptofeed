@@ -51,7 +51,6 @@ class Gateio(Feed):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
-        self._reset()
 
     def _reset(self):
         self._l2_book = {}

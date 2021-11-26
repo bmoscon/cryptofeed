@@ -88,6 +88,9 @@ class Feed(Exchange):
             if candle_interval not in self.valid_candle_intervals:
                 raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
 
+        if self.candle_interval_map != NotImplemented:
+            self.normalize_candle_interval = {value: key for key, value in self.candle_interval_map.items()}
+
         if subscription is not None and (symbols is not None or channels is not None):
             raise ValueError("Use subscription, or channels and symbols, not both")
 

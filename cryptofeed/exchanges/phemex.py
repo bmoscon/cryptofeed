@@ -29,6 +29,8 @@ class Phemex(Feed):
     websocket_endpoint = 'wss://phemex.com/ws'
     price_scale = {}
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
+    candle_interval_map = {interval: second for interval, second in zip(valid_candle_intervals, [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000])}
+
     websocket_channels = {
         BALANCES: 'aop.subscribe',
         L2_BOOK: 'orderbook.subscribe',
@@ -62,11 +64,6 @@ class Phemex(Feed):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        seconds = [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000]
-        self.candle_interval_map = {
-            interval: second for interval, second in zip(self.valid_candle_intervals, seconds)
-        }
-
         # Phemex only allows 5 connections, with 20 subscriptions per connection, check we arent over the limit
         items = len(self.subscription.keys()) * sum(len(v) for v in self.subscription.values())
         if items > 100:
