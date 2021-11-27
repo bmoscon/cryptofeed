@@ -89,8 +89,8 @@ class Binance(Feed, BinanceRestMixin):
         self.rest_endpoint = 'https://www.binance.com/api/v3'
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
-        self.address = self._address()
         self.token = None
+        self.address = self._address()
 
         self._open_interest_cache = {}
         self._reset()
