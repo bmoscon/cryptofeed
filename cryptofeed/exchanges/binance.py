@@ -196,7 +196,7 @@ class Binance(Feed, BinanceRestMixin):
                   SELL if msg['m'] else BUY,
                   Decimal(msg['q']),
                   Decimal(msg['p']),
-                  self.timestamp_normalize(msg['E']),
+                  self.timestamp_normalize(msg['T']),
                   id=str(msg['a']),
                   raw=msg)
         await self.callback(TRADES, t, timestamp)
