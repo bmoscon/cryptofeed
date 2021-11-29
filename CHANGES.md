@@ -13,6 +13,8 @@
  * Feature: Add sandbox/testnet endpoint for Phemex.
  * Feature: New exchange - Delta.
  * Update: Tweak tests to remove deprecation warnings.
+ * Bugfix: Fix token usage in Binance.
+ * Update: Change Binance trades to use trade timestamp instead of event timestamp.
 
 ### 2.1.0 (2021-11-14)
  * Bugfix: Update binance user data streams to use cdef types.
