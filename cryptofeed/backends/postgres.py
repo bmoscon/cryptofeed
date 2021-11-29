@@ -69,7 +69,6 @@ class PostgresCallback(BackendQueue):
 
     async def write_batch(self, updates: list):
         await self._connect()
-
         args_str = ','.join([self.format(u) for u in updates])
 
         async with self.conn.transaction():
@@ -144,6 +143,19 @@ class BookPostgres(PostgresCallback, BackendBookCallback):
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
         super().__init__(*args, **kwargs)
+
+    def format(self, data: Tuple):
+        feed = data[0]
+        symbol = data[1]
+        timestamp = data[2]
+        receipt_timestamp = data[3]
+        data = data[4]
+        if 'book' in data:
+            data = {'snapshot': data['book']}
+        else:
+            data = {'delta': data['delta']}
+
+        return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
 
 
 class CandlesPostgres(PostgresCallback, BackendCallback):

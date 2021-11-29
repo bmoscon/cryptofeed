@@ -5,8 +5,8 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed import FeedHandler
-from cryptofeed.backends.postgres import CandlesPostgres, IndexPostgres, TickerPostgres, TradePostgres, OpenInterestPostgres, LiquidationsPostgres, FundingPostgres
-from cryptofeed.defines import CANDLES, INDEX, TICKER, TRADES, OPEN_INTEREST, LIQUIDATIONS, FUNDING
+from cryptofeed.backends.postgres import CandlesPostgres, IndexPostgres, TickerPostgres, TradePostgres, OpenInterestPostgres, LiquidationsPostgres, FundingPostgres, BookPostgres
+from cryptofeed.defines import CANDLES, INDEX, L2_BOOK, TICKER, TRADES, OPEN_INTEREST, LIQUIDATIONS, FUNDING
 from cryptofeed.exchanges import Bybit, Binance
 
 
@@ -21,7 +21,7 @@ def main():
     f = FeedHandler()
     f.add_feed(Bybit(channels=[CANDLES, TRADES, OPEN_INTEREST, INDEX, LIQUIDATIONS, FUNDING], symbols=['BTC-USD-PERP'], callbacks={FUNDING: FundingPostgres(**postgres_cfg), LIQUIDATIONS: LiquidationsPostgres(**postgres_cfg), CANDLES: CandlesPostgres(**postgres_cfg), OPEN_INTEREST: OpenInterestPostgres(**postgres_cfg), INDEX: IndexPostgres(**postgres_cfg), TRADES: TradePostgres(**postgres_cfg)}))
     f.add_feed(Binance(channels=[TICKER], symbols=['BTC-USDT'], callbacks={TICKER: TickerPostgres(**postgres_cfg)}))
-
+    f.add_feed(Binance(channels=[L2_BOOK], symbols=['LTC-USDT'], callbacks={L2_BOOK: BookPostgres(snapshot_interval=100, table='l2_book', **postgres_cfg)}))
     f.run()
 
 
