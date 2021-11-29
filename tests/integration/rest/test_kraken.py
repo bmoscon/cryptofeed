@@ -15,7 +15,11 @@ kraken = Kraken(config='config.yaml')
 
 
 def teardown_module(module):
-    asyncio.get_event_loop().run_until_complete(kraken.shutdown())
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    loop.run_until_complete(kraken.shutdown())
 
 
 class TestKrakenRest:

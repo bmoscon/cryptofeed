@@ -12,6 +12,7 @@
  * Bugfix: Phemex rounding errors, incorrect volume.
  * Feature: Add sandbox/testnet endpoint for Phemex.
  * Feature: New exchange - Delta.
+ * Update: Tweak tests to remove deprecation warnings.
 
 ### 2.1.0 (2021-11-14)
  * Bugfix: Update binance user data streams to use cdef types.
