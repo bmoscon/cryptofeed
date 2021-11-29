@@ -11,6 +11,7 @@ from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, FUNDING, GEMINI, L
 from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
                                   HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit, KuCoin, Bequant, Upbit, Probit)
 from cryptofeed.exchanges.cryptodotcom import CryptoDotCom
+from cryptofeed.exchanges.delta import Delta
 from cryptofeed.exchanges.fmfw import FMFW
 from cryptofeed.exchanges.kraken_futures import KrakenFutures
 from cryptofeed.exchanges.blockchain import Blockchain
@@ -117,7 +118,7 @@ def main():
     f.add_feed(Probit(subscription={TRADES: ['BTC-USDT'], L2_BOOK: ['BTC-USDT']}, callbacks={TRADES: trade, L2_BOOK: book}))
     f.add_feed(Upbit(subscription={TRADES: ['BTC-USDT'], L2_BOOK: ['BTC-USDT']}, callbacks={TRADES: trade, L2_BOOK: book}))
     f.add_feed(CryptoDotCom(symbols=['BTC-USDT'], channels=[L2_BOOK, TICKER, CANDLES, TRADES], callbacks={TRADES: trade, CANDLES: candle_callback, TICKER: ticker, L2_BOOK: book}))
-
+    f.add_feed(Delta(symbols=['BTC-USDT', 'BTC-USDT-PERP'], channels=[L2_BOOK, TRADES, CANDLES], callbacks={TRADES: trade, CANDLES: candle_callback, L2_BOOK: book}))
     f.run()
 
 

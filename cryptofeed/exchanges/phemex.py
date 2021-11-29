@@ -27,6 +27,7 @@ class Phemex(Feed):
     id = PHEMEX
     symbol_endpoint = 'https://api.phemex.com/exchange/public/cfg/v2/products'
     websocket_endpoint = 'wss://phemex.com/ws'
+    sandbox_endpoint = 'wss://testnet.phemex.com/ws'
     price_scale = {}
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
     candle_interval_map = {interval: second for interval, second in zip(valid_candle_intervals, [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000])}
@@ -96,11 +97,11 @@ class Phemex(Feed):
 
         if msg['type'] == 'snapshot':
             delta = None
-            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids={Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['bids']}, asks={Decimal(entry[0] / self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['asks']})
+            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids={Decimal(entry[0]) / Decimal(self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['bids']}, asks={Decimal(entry[0]) / Decimal(self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['asks']})
         else:
             for key, side in (('asks', ASK), ('bids', BID)):
                 for price, amount in msg['book'][key]:
-                    price = Decimal(price / self.price_scale[symbol])
+                    price = Decimal(price) / Decimal(self.price_scale[symbol])
                     amount = Decimal(amount)
                     delta[side].append((price, amount))
                     if amount == 0:
@@ -130,7 +131,7 @@ class Phemex(Feed):
                 symbol,
                 BUY if side == 'Buy' else SELL,
                 Decimal(amount),
-                Decimal(price / self.price_scale[symbol]),
+                Decimal(price) / Decimal(self.price_scale[symbol]),
                 self.timestamp_normalize(ts),
                 raw=msg
             )
@@ -150,7 +151,7 @@ class Phemex(Feed):
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
 
         for entry in msg['kline']:
-            ts, _, _, open, high, low, close, _, volume = entry
+            ts, _, _, open, high, low, close, volume, _ = entry
             c = Candle(
                 self.id,
                 symbol,
@@ -158,10 +159,10 @@ class Phemex(Feed):
                 ts + self.candle_interval_map[self.candle_interval],
                 self.candle_interval,
                 None,
-                Decimal(open / self.price_scale[symbol]),
-                Decimal(close / self.price_scale[symbol]),
-                Decimal(high / self.price_scale[symbol]),
-                Decimal(low / self.price_scale[symbol]),
+                Decimal(open) / Decimal(self.price_scale[symbol]),
+                Decimal(close) / Decimal(self.price_scale[symbol]),
+                Decimal(high) / Decimal(self.price_scale[symbol]),
+                Decimal(low) / Decimal(self.price_scale[symbol]),
                 Decimal(volume),
                 None,
                 None
@@ -624,7 +625,6 @@ class Phemex(Feed):
         return ret
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
 
         if 'id' in msg and msg['id'] == 100:

@@ -19,8 +19,13 @@ sandbox = Coinbase(sandbox=True, config='config.yaml')
 
 
 def teardown_module(module):
-    asyncio.get_event_loop().run_until_complete(public.shutdown())
-    asyncio.get_event_loop().run_until_complete(sandbox.shutdown())
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    
+    loop.run_until_complete(public.shutdown())
+    loop.run_until_complete(sandbox.shutdown())
 
 
 class TestCoinbaseRest:

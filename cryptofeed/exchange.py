@@ -8,7 +8,7 @@ import asyncio
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
-from typing import Dict, Optional, Tuple, Union
+from typing import AsyncGenerator, Dict, Optional, Tuple, Union
 
 from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
 from cryptofeed.symbols import Symbol, Symbols
@@ -140,6 +140,19 @@ class RestExchange:
     rest_channels = NotImplemented
     order_options = NotImplemented
 
+    def _sync_run_coroutine(self, coroutine):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coroutine)
+
+    def _sync_run_generator(self, generator: AsyncGenerator):
+        loop = asyncio.get_event_loop()
+
+        try:
+            while True:
+                yield loop.run_until_complete(generator.__anext__())
+        except StopAsyncIteration:
+            return
+
     def _datetime_normalize(self, timestamp: Union[str, int, float, dt]) -> float:
         if isinstance(timestamp, (float, int)):
             return timestamp
@@ -162,106 +175,107 @@ class RestExchange:
 
     # public / non account specific
     def ticker_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        return asyncio.get_event_loop().run_until_complete(self.ticker(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        co = self.ticker(symbol, retry_count=retry_count, retry_delay=retry_delay)
+        return self._sync_run_coroutine(co)
 
     async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def candles_sync(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
         gen = self.candles(symbol, start=start, end=end, interval=interval, retry_count=retry_count, retry_delay=retry_delay)
-        try:
-            loop = asyncio.get_event_loop()
-
-            while True:
-                yield loop.run_until_complete(gen.__anext__())
-        except StopAsyncIteration:
-            return
+        return self._sync_run_generator(gen)
 
     async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         gen = self.trades(symbol, start=start, end=end, retry_count=retry_count, retry_delay=retry_delay)
-        try:
-            loop = asyncio.get_event_loop()
-
-            while True:
-                yield loop.run_until_complete(gen.__anext__())
-        except StopAsyncIteration:
-            return
+        return self._sync_run_generator(gen)
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def funding_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        return asyncio.get_event_loop().run_until_complete(self.funding(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        co = self.funding(symbol, retry_count=retry_count, retry_delay=retry_delay)
+        return self._sync_run_coroutine(co)
 
     async def funding(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def open_interest_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        return asyncio.get_event_loop().run_until_complete(self.open_interest(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        co = self.open_interest(symbol, retry_count=retry_count, retry_delay=retry_delay)
+        return self._sync_run_coroutine(co)
 
     async def open_interest(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def l2_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        return asyncio.get_event_loop().run_until_complete(self.l2_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        co = self.l2_book(symbol, retry_count=retry_count, retry_delay=retry_delay)
+        return self._sync_run_coroutine(co)
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def l3_book_sync(self, symbol: str, retry_count=1, retry_delay=60):
-        return asyncio.get_event_loop().run_until_complete(self.l3_book(symbol, retry_count=retry_count, retry_delay=retry_delay))
+        co = self.l3_book(symbol, retry_count=retry_count, retry_delay=retry_delay)
+        return self._sync_run_coroutine(co)
 
     async def l3_book(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     # account specific
     def place_order_sync(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
-        return asyncio.get_event_loop().run_until_complete(self.place_order(symbol, side, order_type, amount, price, **kwargs))
+        co = self.place_order(symbol, side, order_type, amount, price, **kwargs)
+        return self._sync_run_coroutine(co)
 
     async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, **kwargs):
         raise NotImplementedError
 
     def cancel_order_sync(self, order_id: str, **kwargs):
-        return asyncio.get_event_loop().run_until_complete(self.cancel_order(order_id, **kwargs))
+        co = self.cancel_order(order_id, **kwargs)
+        return self._sync_run_coroutine(co)
 
     async def cancel_order(self, order_id: str, **kwargs):
         raise NotImplementedError
 
     def orders_sync(self, symbol: str = None):
-        return asyncio.get_event_loop().run_until_complete(self.orders(symbol))
+        co = self.orders(symbol)
+        return self._sync_run_coroutine(co)
 
     async def orders(self, symbol: str = None):
         raise NotImplementedError
 
     def order_status_sync(self, order_id: str):
-        return asyncio.get_event_loop().run_until_complete(self.order_status(order_id))
+        co = self.order_status(order_id)
+        return self._sync_run_coroutine(co)
 
     async def order_status(self, order_id: str):
         raise NotImplementedError
 
     def trade_history_sync(self, symbol: str = None, start=None, end=None):
-        return asyncio.get_event_loop().run_until_complete(self.trade_history(symbol, start, end))
+        co = self.trade_history(symbol, start, end)
+        return self._sync_run_coroutine(co)
 
     async def trade_history(self, symbol: str = None, start=None, end=None):
         raise NotImplementedError
 
     def balances_sync(self):
-        return asyncio.get_event_loop().run_until_complete(self.balances())
+        co = self.balances()
+        return self._sync_run_coroutine(co)
 
     async def balances(self):
         raise NotImplementedError
 
     def positions_sync(self, **kwargs):
-        return asyncio.get_event_loop().run_until_complete(self.positions(**kwargs))
+        co = self.positions(**kwargs)
+        return self._sync_run_coroutine(co)
 
     async def positions(self, **kwargs):
         raise NotImplementedError
 
     def ledger_sync(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
-        return asyncio.get_event_loop().run_until_complete(self.ledger(aclass, asset, ledger_type, start, end))
+        co = self.ledger(aclass, asset, ledger_type, start, end)
+        return self._sync_run_coroutine(co)
 
     async def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         raise NotImplementedError

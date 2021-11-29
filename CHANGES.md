@@ -9,6 +9,10 @@
  * Bugfix: Fix MongoDB backend.
  * Update: reduce code duplication for candle interval normalization.
  * Update: Simplify code around address specification and selection when using sandbox/testnet.
+ * Bugfix: Phemex rounding errors, incorrect volume.
+ * Feature: Add sandbox/testnet endpoint for Phemex.
+ * Feature: New exchange - Delta.
+ * Update: Tweak tests to remove deprecation warnings.
 
 ### 2.1.0 (2021-11-14)
  * Bugfix: Update binance user data streams to use cdef types.
