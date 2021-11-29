@@ -1,5 +1,9 @@
 ## Changelog
 
+### 2.1.2
+ * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
+ * Feature: Provide sample book schema for Postgres.
+
 ### 2.1.1 (2021-11-29)
  * Bugfix: Position data type missing side field.
  * Bugfix: Position data type had unused field 'id'.
