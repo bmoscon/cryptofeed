@@ -210,7 +210,7 @@ class FeedHandler:
             task.cancel()
 
         LOG.info('FH: run the pending tasks until complete')
-        loop.run_until_complete(asyncio.gather(*pending, loop=loop, return_exceptions=True))
+        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
 
         LOG.info('FH: shutdown asynchronous generators')
         loop.run_until_complete(loop.shutdown_asyncgens())
