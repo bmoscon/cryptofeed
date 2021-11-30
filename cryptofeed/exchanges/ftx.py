@@ -355,6 +355,7 @@ class FTX(Feed, FTXRestMixin):
             None,
             TAKER if fill['liquidity'] == 'taker' else MAKER,
             fill['time'].timestamp(),
+            account=self.subaccount,
             raw=msg
         )
         await self.callback(FILLS, f, timestamp)
@@ -403,6 +404,7 @@ class FTX(Feed, FTXRestMixin):
             Decimal(order['filledSize']),
             Decimal(order['remainingSize']),
             None,
+            account=self.subaccount,
             raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
