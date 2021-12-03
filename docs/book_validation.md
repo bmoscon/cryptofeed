@@ -20,6 +20,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Bithumb       |               |                  |                |       |
 | BitMEX        |               |                  |                |       |
 | Coinbase      |               |  x <sup>1</sup>  |                |       |
+| Crypto.com    |               |                  | x              |       |
 | Deribit       |               | x                |                |       |
 | dYdX          |               |                  |                | x <sup>2</sup> |
 | EXX           |               |                  |                |       |
