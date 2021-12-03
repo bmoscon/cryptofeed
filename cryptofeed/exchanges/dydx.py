@@ -61,8 +61,8 @@ class dYdX(Feed, dYdXRestMixin):
                     price = Decimal(data[0])
                     amount = Decimal(data[1])
 
-                    if price in self._offsets[pair] and offset <= self._offsets[pair][price]:
-                        break
+                    if price in self._offsets[pair] and offset < self._offsets[pair][price]:
+                        continue
 
                     self._offsets[pair][price] = offset
                     delta[side].append((price, amount))
@@ -72,9 +72,10 @@ class dYdX(Feed, dYdXRestMixin):
                             del self._l2_book[pair].book[side][price]
                     else:
                         self._l2_book[pair].book[side][price] = amount
+
+                    await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
         else:
             # snapshot
-            delta = None
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             self._offsets[pair] = {}
 
@@ -85,8 +86,7 @@ class dYdX(Feed, dYdXRestMixin):
                     size = Decimal(entry['size'])
                     if size > 0:
                         self._l2_book[pair].book[side][Decimal(entry['price'])] = size
-
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=None, raw=msg)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
