@@ -55,6 +55,7 @@ class dYdX(Feed, dYdXRestMixin):
         delta = {BID: [], ASK: []}
 
         if msg['type'] == 'channel_data':
+            updated = False
             offset = int(msg['contents']['offset'])
             for side, key in ((BID, 'bids'), (ASK, 'asks')):
                 for data in msg['contents'][key]:
@@ -64,6 +65,7 @@ class dYdX(Feed, dYdXRestMixin):
                     if price in self._offsets[pair] and offset < self._offsets[pair][price]:
                         continue
 
+                    updated = True
                     self._offsets[pair][price] = offset
                     delta[side].append((price, amount))
 
@@ -72,8 +74,8 @@ class dYdX(Feed, dYdXRestMixin):
                             del self._l2_book[pair].book[side][price]
                     else:
                         self._l2_book[pair].book[side][price] = amount
-
-                    await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
+            if updated:
+                await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
         else:
             # snapshot
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
