@@ -5,49 +5,48 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 <br/>
 <br/>
 
-| Exchange      | Checksum      | Sequence Numbers | Snapshots only |
-| ------------- |:-------------:| :---------------:|:--------------:|
-| AscendEX      |               | x                |                |
-| Bequant       |               | x                |                |
-| Bitfinex      |               | x                |                |
-| Bitstamp      |               |                  | x              |
-| Bittrex       |               | x                |                |
-| Blockchain.com|               | x                |                |
-| Bybit         |               |                  |   x            |
-| Binance       |               |   x              |                |
-| BinanceUS     |               | x                |                |
-| Bitflyer      |               |                  |                |
-| Bithumb       |               |                  |                |
-| BitMEX        |               |                  |                |
-| Coinbase      |               |  x <sup>1</sup>  |                |
-| Deribit       |               | x                |                |
-| dYdX          |               | x <sup>2</sup>   |                |
-| EXX           |               |                  |                |
-| FMFW.io       |               | x                |                |
-| FTX           | x             |                  |                |
-| FTX US        | x             |                  |                |
-| Gate.io       |               |                  |                |
-| Gemini        |               |                  |                |
-| HitBTC        |               |  x               |                |
-| Huobi         |               |                  | x              |
-| Huobi DM      |               |                  |  x             |
-| Huobi Swap    |               |                  |  x             |
-| Kraken        |    x          |                  |                |
-| Kraken Futures|               | x                |                |
-| KuCoin        |               | x                |                |
-| OKCoin        |  x            |                  |                |
-| OKEX          |  x            |                  |                |
-| Phemex        |               |                  |                |
-| Poloniex      |               | x                |                |
-| Probit        |               |                  |                |
-| Upbit         |               |                  |     x          |
-
+| Exchange      | Checksum      | Sequence Numbers | Snapshots only | Other |
+| ------------- |:-------------:| :---------------:|:--------------:|:------:
+| AscendEX      |               | x                |                |       |
+| Bequant       |               | x                |                |       |
+| Bitfinex      |               | x                |                |       |
+| Bitstamp      |               |                  | x              |       |
+| Bittrex       |               | x                |                |       |
+| Blockchain.com|               | x                |                |       |
+| Bybit         |               |                  |   x            |       |
+| Binance       |               |   x              |                |       |
+| BinanceUS     |               | x                |                |       |
+| Bitflyer      |               |                  |                |       |
+| Bithumb       |               |                  |                |       |
+| BitMEX        |               |                  |                |       |
+| Coinbase      |               |  x <sup>1</sup>  |                |       |
+| Deribit       |               | x                |                |       |
+| dYdX          |               |                  |                | x <sup>2</sup> |
+| EXX           |               |                  |                |       |
+| FMFW.io       |               | x                |                |       |
+| FTX           | x             |                  |                |       |
+| FTX US        | x             |                  |                |       |
+| Gate.io       |               |                  |                |       |
+| Gemini        |               |                  |                |       |
+| HitBTC        |               |  x               |                |       |
+| Huobi         |               |                  | x              |       |
+| Huobi DM      |               |                  |  x             |       |
+| Huobi Swap    |               |                  |  x             |       |
+| Kraken        |    x          |                  |                |       |
+| Kraken Futures|               | x                |                |       |
+| KuCoin        |               | x                |                |       |
+| OKCoin        |  x            |                  |                |       |
+| OKEX          |  x            |                  |                |       |
+| Phemex        |               |                  |                |       |
+| Poloniex      |               | x                |                |       |
+| Probit        |               |                  |                |       |
+| Upbit         |               |                  |     x          |       |
 
 <br/>
 <sup>1</sup> Coinbase sequence number validation only works when L3 books are enabled for a symbol
 <br/>
 <br/>
-<sup>2</sup> dYdX uses offsets that monotonically increase to help ensure updates are applied in order. They are not quite the same as sequence numbers, strictly speaking
+<sup>2</sup> dYdX uses offsets that monotonically increase to help ensure updates are applied in order. They are not quite the same as sequence numbers, strictly speaking. You should enable `cross_check=True` on the dYdX exchange object to avoid crossed books.
 <br/>
 <br/>
 
