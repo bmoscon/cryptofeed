@@ -48,43 +48,40 @@ class dYdX(Feed, dYdXRestMixin):
 
     def __reset(self):
         self._l2_book = {}
-        self.offsets = {}
+        self._offsets = {}
 
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['id'])
         delta = {BID: [], ASK: []}
 
         if msg['type'] == 'channel_data':
-            for side, data in msg['contents'].items():
-                if side == 'offset':
-                    offset = int(data)
-                    continue
-                side = BID if side == 'bids' else ASK
-                for entry in data:
-                    price = Decimal(entry[0])
-                    amount = Decimal(entry[1])
+            offset = int(msg['contents']['offset'])
+            for side, key in ((BID, 'bids'), (ASK, 'asks')):
+                for data in msg['contents'][key]:
+                    price = Decimal(data[0])
+                    amount = Decimal(data[1])
 
-                    if price in self.offsets[pair] and offset <= self.offsets[pair][price]:
-                        continue
+                    if price in self._offsets[pair] and offset <= self._offsets[pair][price]:
+                        break
 
-                    self.offsets[pair][price] = offset
+                    self._offsets[pair][price] = offset
+                    delta[side].append((price, amount))
+
                     if amount == 0:
                         if price in self._l2_book[pair].book[side]:
                             del self._l2_book[pair].book[side][price]
-                        delta[side].append((price, 0))
                     else:
                         self._l2_book[pair].book[side][price] = amount
-                        delta[side].append((price, amount))
         else:
             # snapshot
             delta = None
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
-            self.offsets[pair] = {}
+            self._offsets[pair] = {}
 
             for side, data in msg['contents'].items():
                 side = BID if side == 'bids' else ASK
                 for entry in data:
-                    self.offsets[pair][Decimal(entry['price'])] = int(entry['offset'])
+                    self._offsets[pair][Decimal(entry['price'])] = int(entry['offset'])
                     size = Decimal(entry['size'])
                     if size > 0:
                         self._l2_book[pair].book[side][Decimal(entry['price'])] = size

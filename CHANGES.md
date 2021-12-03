@@ -4,6 +4,8 @@
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
  * Feature: Provide sample book schema for Postgres.
  * Feature: Add subaccount info to OrderInfo and Fills data types.
+ * Bugfix: Fix issue in orderbook cross check.
+ * Bugfix: Simplify dYdX orderbook logic.
 
 ### 2.1.1 (2021-11-29)
  * Bugfix: Position data type missing side field.
