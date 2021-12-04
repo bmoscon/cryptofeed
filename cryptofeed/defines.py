@@ -125,6 +125,30 @@ GET = 'GET'
 DELETE = 'DELETE'
 POST = 'POST'
 
+# Timestamp Standarization
+TIMESTAMP = 'timestamp'
+TS_SCALE = 'timestamp_scale'
+TS_DECIMAL_PLACES = 'timestamp_decimal_places'
+NANOSECONDS = 'nanoseconds'
+MICROSECONDS = 'microseconds'
+MILLISECONDS = 'milliseconds'
+SECONDS = 'seconds'
+
+# REST-API Standarizaion
+SIDE = 'side'
+AMOUNT = 'amount'
+PRICE = 'price'
+BID_AMOUNT = 'bid_amount'
+BID_PRICE = 'bid_price'
+ASK_AMOUNT = 'ask_amount'
+ASK_PRICE = 'ask_price'
+SYMBOL = 'symbol'
+FEED = 'feed'
+ID = 'id'
+START = 'start'
+END = 'end'
+LIMIT = 'limit'
+
 
 """
 L2 Orderbook Layout

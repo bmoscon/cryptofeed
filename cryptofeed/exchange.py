@@ -10,7 +10,17 @@ import logging
 from datetime import datetime as dt, timezone
 from typing import AsyncGenerator, Dict, Optional, Tuple, Union
 
-from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
+#import new defines
+from cryptofeed.defines import (
+    CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, 
+    POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, 
+    ORDER_INFO, FILLS, BID_PRICE, BID_AMOUNT, ASK_PRICE, ASK_AMOUNT, 
+    START, END, LIMIT, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE,
+    TS_SCALE, TS_DECIMAL_PLACES, NANOSECONDS, MILLISECONDS,
+    MICROSECONDS, SECONDS, TICKER)
+#import the new helper classes
+from cryptofeed.util.payloads import Payload
+from cryptofeed.util.keymapping import Keymap
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
@@ -51,6 +61,27 @@ class Exchange:
     @classmethod
     def timestamp_normalize(cls, ts: dt) -> float:
         return ts.timestamp()
+
+    #introduce functions to convert timestamps back and forth. 
+    @classmethod
+    def exchange_ts_to_std_ts(cls, ts) -> float:
+        divider = {
+            NANOSECONDS     : 1_000_000_000,
+            MICROSECONDS    : 1_000_000,
+            MILLISECONDS    : 1_000,
+            SECONDS         : 1
+        }
+        return round(ts / divider[cls.timestamp[TS_SCALE]], 4)
+  
+    @classmethod
+    def std_ts_to_exchange_ts(cls, ts) -> float:
+        multiplyer = {
+            NANOSECONDS     : 1_000_000_000,
+            MICROSECONDS    : 1_000_000,
+            MILLISECONDS    : 1_000,
+            SECONDS         : 1
+        }
+        return round(ts * multiplyer[cls.timestamp[TS_SCALE]], cls.timestamp[TS_DECIMAL_PLACES])
 
     @classmethod
     def normalize_order_options(cls, option: str):
@@ -139,6 +170,12 @@ class RestExchange:
     sandbox_api = NotImplemented
     rest_channels = NotImplemented
     order_options = NotImplemented
+    '''
+    add new class variables, see the BinanceRestMixin class for a demo 
+    '''
+    api_endpoints = NotImplemented
+    methods = NotImplemented
+    payload_as_params = NotImplemented
 
     def _sync_run_coroutine(self, coroutine):
         loop = asyncio.get_event_loop()
@@ -279,6 +316,139 @@ class RestExchange:
 
     async def ledger(self, aclass=None, asset=None, ledger_type=None, start=None, end=None):
         raise NotImplementedError
+    
+    '''below are the backbone functions. These work by setting the payload class (see payloads.py in cryptofeed.utils),
+    making a request, and post_processing the response'''
+
+    async def _rest_ticker(self, payload : Payload, keymap : Keymap, 
+                symbol : str, retry = None, retry_wait = None) -> dict:
+        payload[SYMBOL] = self.std_symbol_to_exchange_symbol(symbol)
+        ex_response = await self._request(TICKER, payload, retry, retry_wait)
+        return self._process_ticker(ex_response, keymap)
+
+    async def _rest_l2_book(self, payload : Payload, keymap : Keymap, 
+                 symbol : str, limit = None, retry = None, 
+                 retry_wait = None) -> dict:
+        payload[SYMBOL] = self.std_symbol_to_exchange_symbol(symbol)
+        payload[LIMIT] = limit
+        ex_response = await self._request(L2_BOOK, payload, retry, retry_wait)
+        return self._process_L2_book(ex_response, keymap)
+
+    async def _rest_trades(self, payload : Payload, keymap : Keymap, 
+                symbol : str,  limit = None, start = None, 
+                end = None, max_timeframe = None, retry = None, 
+                retry_wait = None) -> list:
+        payload[SYMBOL] = self.std_symbol_to_exchange_symbol(symbol)
+        if start:
+            return self._historical_trades(payload, keymap, symbol, start, end, max_timeframe, 
+                                               retry, retry_wait)
+        else:
+            payload[LIMIT] = limit
+            ex_response = await self._request(TRADES, payload, retry, retry_wait)
+            return self._process_trades(ex_response, keymap)
+
+    '''
+    because reponses are unified within the base RestExchange, methods such as pooling for historical data can 
+    easily be done here.
+    '''
+    async def _historical_trades(self, payload, keymap, 
+                           symbol, start, end, 
+                           max_timeframe, retry, retry_wait):
+        start = start
+        end = time.time() if not end else end
+        end_point = start + max_timeframe if max_timeframe else end
+        payload[START] = self.std_ts_to_exchange_ts(start)
+        payload[END] = self.std_ts_to_exchange_ts(end_point) if payload[END] is not None else None
+        while True:
+            ex_response = await self._request(TRADES, payload, retry, retry_wait)
+            new_data = self._process_trades(ex_response, keymap)
+            if (new_data[-1][TIMESTAMP] == start - 0.0001) or (end  < start + max_timeframe if max_timeframe else False):
+                break
+            yield new_data
+            start = new_data[-1][TIMESTAMP] + 0.0001
+            end_point = start + max_timeframe if max_timeframe else end
+            payload[START] = self.std_ts_to_exchange_ts(start)
+            payload[END] = self.std_ts_to_exchange_ts(end_point) if payload[END] is not None else None
+
+    '''
+    The actual request function is below, most of the requied feilds are defined in dictionaries on the 
+    RestMixin class
+    '''
+
+    async def _request(self, command: str, payload : dict, auth = None, retry=None, retry_wait=0) -> dict:
+
+        @request_retry(self.id, retry, retry_wait)
+        async def helper():
+            if self.payload_as_params[command]:
+                resp = requests.request(url=self.api_endpoints[command], 
+                                        method = self.methods[command], 
+                                        params={} if not payload() else payload(), 
+                                        auth=auth)
+            else:
+                resp = requests.request(url=self.api_endpoints[command], 
+                                        method = self.methods[command], 
+                                        data={} if not payload() else payload(), 
+                                        auth=auth)
+            self._handle_error(resp)
+            return json.loads(resp.text)
+
+        return await helper()
+
+    '''
+    this is really where the magic works, values from the response can easily be extracted using the supplied
+    keymap (see keymaps.py in cryptofeed.util) and some minimal postprocessing is applied to get the data in the wanted 
+    format
+    '''
+
+    def _process_ticker(self, ex_response : dict, keymap : Keymap) -> dict:
+        data = {
+            SYMBOL : None,
+            FEED   : None,
+            BID    : None,
+            ASK    : None
+        }
+        
+        data.update(**keymap(ex_response))
+        data[SYMBOL], data[FEED] = data[SYMBOL][0], data[FEED][0]
+        data[BID], data[ASK] = data[BID][0], data[ASK][0]
+        return data
+    
+    def _process_trades(self, ex_response : dict, keymap : Keymap) -> list:
+        data = {
+            TIMESTAMP   : None,
+            SYMBOL      : None,
+            ID          : None,
+            FEED        : None,
+            SIDE        : None,
+            AMOUNT      : None,
+            PRICE       : None
+            
+        }
+
+        data.update(keymap(ex_response))
+        sequence_length = len(next(val for val in data.values() if type(val) is list))
+        
+        if sequence_length == 0:
+            LOG.warn(
+                f'No data could be retrived for {TRADES} api call to {self.id}... returning an empty list'
+                )
+            return []
+
+        
+        data.update({k : [v for v in range(sequence_length)] for k, v in data.items() if k in keymap.retrive_apriori_data().keys() or v is None})
+        return sorted(
+            [dict(zip(data.keys(), a)) for a in zip(*data.values())],
+            key=operator.itemgetter(TIMESTAMP)
+        )
+        
+    def _process_L2_book(self, ex_resp, keymap : Keymap):
+        unified_resp = keymap(ex_resp) 
+        
+        # zip prices and amounts into sorted dictionary of type bids and asks
+        return {
+            BID : sd({Decimal(a[0]) : Decimal(a[1]) for a in zip(unified_resp[BID_PRICE], unified_resp[BID_AMOUNT])}),
+            ASK : sd({Decimal(a[0]) : Decimal(a[1]) for a in zip(unified_resp[ASK_PRICE], unified_resp[ASK_AMOUNT])})
+        }    
 
     def __getitem__(self, key):
         if key == TRADES:
