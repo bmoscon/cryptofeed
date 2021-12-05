@@ -33,6 +33,11 @@ class Bybit(Feed):
         'USDT': 'wss://stream.bybit.com/realtime_public',
         'USDTP': 'wss://stream.bybit.com/realtime_private'
     }
+    sandbox_endpoint = {
+        'USD': 'wss://stream-testnet.bybit.com/realtime',
+        'USDT': 'wss://stream-testnet.bybit.com/realtime_public',
+        'USDTP': 'wss://stream-testnet.bybit.com/realtime_private'
+    }
     websocket_channels = {
         L2_BOOK: 'orderBook_200.100ms',
         TRADES: 'trade',
