@@ -47,9 +47,10 @@ PHEMEX = 'PHEMEX'
 POLONIEX = 'POLONIEX'
 PROBIT = 'PROBIT'
 UPBIT = 'UPBIT'
+ZB_FUTURES = 'ZB_FUTURES'
 
 
-# Market Data
+#rMarket Data
 L1_BOOK = 'l1_book'
 L2_BOOK = 'l2_book'
 L3_BOOK = 'l3_book'
