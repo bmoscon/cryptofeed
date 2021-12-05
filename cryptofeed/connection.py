@@ -153,7 +153,7 @@ class HTTPAsyncConn(AsyncConnection):
         elif method == POST:
             return await self.write(address=address, header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == DELETE:
-            return await self.delete(address=address, header=header, retry=retry_count, retry_delay=retry_delay)
+            return await self.delete(address=address, header=header, retry_count=retry_count, retry_delay=retry_delay)
 
     async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:
