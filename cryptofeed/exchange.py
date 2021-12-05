@@ -4,11 +4,18 @@ Copyright (C) 2017-2021  Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+#some new imports are required:
+import operator
+import requests
+import json 
+import time
+
 import asyncio
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
 from typing import AsyncGenerator, Dict, Optional, Tuple, Union
+from sortedcontainers.sorteddict import SortedDict as sd
 
 #import new defines
 from cryptofeed.defines import (
@@ -18,17 +25,19 @@ from cryptofeed.defines import (
     START, END, LIMIT, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE,
     TS_SCALE, TS_DECIMAL_PLACES, NANOSECONDS, MILLISECONDS,
     MICROSECONDS, SECONDS, TICKER)
+
 #import the new helper classes
 from cryptofeed.util.payloads import Payload
 from cryptofeed.util.keymapping import Keymap
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
+from cryptofeed.connection import request_retry
 from cryptofeed.config import Config
 
 
 LOG = logging.getLogger('feedhandler')
-
+REST_LOG = logging.getLogger('cryptofeed.rest')
 
 class Exchange:
     id = NotImplemented
