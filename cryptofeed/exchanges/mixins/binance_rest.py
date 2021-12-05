@@ -39,20 +39,10 @@ class BinanceRestMixin(RestExchange):
     basic request data is defined at class level, minimalizes the need to pass
     numerous parameters. 
     ''' 
-    api_endpoints = {
-        TICKER      : 'https://api.binance.com/api/v3/ticker/bookTicker',
-        L2_BOOK     : 'https://api.binance.com/api/v3/depth',
-        TRADES      : 'https://api.binance.com/api/v3/aggTrades',
-    }
-    methods = {
-        TICKER : GET,
-        L2_BOOK : GET,
-        TRADES : GET,
-    }
-    payload_as_params = {
-        TICKER : True, 
-        L2_BOOK : True,
-        TRADES : True,
+    api_calls = {
+        TICKER      : (GET, 'https://api.binance.com/api/v3/ticker/bookTicker'),
+        L2_BOOK     : (GET, 'https://api.binance.com/api/v3/depth'),
+        TRADES      : (GET, 'https://api.binance.com/api/v3/aggTrades'),
     }
     
 

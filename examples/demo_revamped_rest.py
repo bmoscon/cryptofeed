@@ -11,8 +11,7 @@ async def main():
     ticker = await b.ticker('BTC-USDT')
     l2_book = await b.l2_book('BTC-USDT')
     for call in [trades, his_trades, ticker, l2_book]:
-        print(call)
-        
+        print(call) 
         time.sleep(4)
     
 loop = asyncio.get_event_loop()

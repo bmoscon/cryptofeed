@@ -361,8 +361,9 @@ class RestExchange:
 
     async def _request(self, command: str, payload : dict) -> dict:
         payload = payload()
-        resp = await self.http_conn.request(self.api_endpoints[command], 
-                                    method = self.methods[command], 
+        resp = await self.http_conn.request(
+                                    url = self.api_calls[command][1],
+                                    method = self.api_calls[command][0],
                                     payload = payload if payload else None, 
                                     )
         return resp
