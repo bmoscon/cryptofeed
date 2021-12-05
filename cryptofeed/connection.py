@@ -145,15 +145,15 @@ class HTTPAsyncConn(AsyncConnection):
             self.sent = 0
             self.received = 0
     
-    async def request(self, address :str, method : str, payload = None, header = None, retry=0, retry_delay=60):
+    async def request(self, address :str, method : str, payload = None, header = None, retry_count=0, retry_delay=60):
         # mirror the classic request libary
         address = f"{address}?{urlencode(payload)}" if payload else address
         if method == GET:
-            return await self.read(address=address, header=header)
+            return await self.read(address=address, header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == POST:
-            return await self.write(address=address, header=header)
+            return await self.write(address=address, header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == DELETE:
-            return await self.delete(address=address, header=header)
+            return await self.delete(address=address, header=header, retry=retry_count, retry_delay=retry_delay)
 
     async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:

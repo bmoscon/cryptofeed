@@ -20,8 +20,7 @@ from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
 from cryptofeed.defines import (
     ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, 
     L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, 
-    PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED, TS_SCALE,
-    TS_DECIMAL_PLACES, MILLISECONDS
+    PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 )
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -51,14 +50,6 @@ class Binance(Feed, BinanceRestMixin):
         ORDER_INFO: ORDER_INFO
     }
     request_limit = 20
-    '''
-    add timestamp dict class variable with information that can be utilized to employ
-    a std_ts_to_exchange_ts function, and vice, versa. 
-    '''
-    timestamp = {
-        TS_SCALE : MILLISECONDS,
-        TS_DECIMAL_PLACES : 0
-        }
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:

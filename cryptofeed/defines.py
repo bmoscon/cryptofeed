@@ -125,16 +125,8 @@ GET = 'GET'
 DELETE = 'DELETE'
 POST = 'POST'
 
-# Timestamp Standarization
-TIMESTAMP = 'timestamp'
-TS_SCALE = 'timestamp_scale'
-TS_DECIMAL_PLACES = 'timestamp_decimal_places'
-NANOSECONDS = 'nanoseconds'
-MICROSECONDS = 'microseconds'
-MILLISECONDS = 'milliseconds'
-SECONDS = 'seconds'
-
 # REST-API Standarizaion
+TIMESTAMP = 'timestamp'
 SIDE = 'side'
 AMOUNT = 'amount'
 PRICE = 'price'

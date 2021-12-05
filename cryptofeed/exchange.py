@@ -6,8 +6,6 @@ associated with this software.
 '''
 #some new imports are required:
 import operator
-import requests
-import json 
 import time
 
 import asyncio
@@ -21,9 +19,8 @@ from cryptofeed.defines import (
     CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, 
     POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, 
     ORDER_INFO, FILLS, BID_PRICE, BID_AMOUNT, ASK_PRICE, ASK_AMOUNT, 
-    START, END, LIMIT, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE,
-    TS_SCALE, TS_DECIMAL_PLACES, NANOSECONDS, MILLISECONDS,
-    SYMBOL, BID, ASK, FEED, ID, MICROSECONDS, SECONDS, TICKER)
+    START, END, TIMESTAMP, SIDE, AMOUNT, PRICE,
+    SYMBOL, BID, ASK, FEED, ID, TICKER)
 
 #import the new helper classes
 from cryptofeed.util.payloads import Payload

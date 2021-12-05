@@ -16,10 +16,10 @@ from yapic import json
 
 #import new defines
 from cryptofeed.defines import (BALANCES, BUY, CANCEL_ORDER, CANDLES, DELETE, 
-    FILL_OR_KILL, GET, GOOD_TIL_CANCELED, IMMEDIATE_OR_CANCEL, LIMIT, MARKET, 
+    FILL_OR_KILL, GET, GOOD_TIL_CANCELED, IMMEDIATE_OR_CANCEL, MARKET, 
     ORDERS, ORDER_STATUS, PLACE_ORDER, POSITIONS, POST, SELL, TRADES, FEED, 
     SYMBOL, BID, ASK, L2_BOOK, TICKER, BID_PRICE, BID_AMOUNT, ASK_PRICE, ASK_AMOUNT, 
-    START, END, LIMIT, ID, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE)
+    START, END, ID, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE)
 from cryptofeed.exchange import RestExchange
 from cryptofeed.types import Candle
 #import the new helper classes
