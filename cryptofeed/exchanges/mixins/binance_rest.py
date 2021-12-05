@@ -76,8 +76,8 @@ class BinanceRestMixin(RestExchange):
         keymap = Keymap({
             BID_PRICE   : access_route('bids', slice(0, limit), 0, Decimal),
             BID_AMOUNT  : access_route('bids', slice(0, limit), 1, Decimal),
-            ASK_PRICE   : access_route('bids', slice(0, limit), 0, Decimal),
-            ASK_AMOUNT  : access_route('bids', slice(0, limit), 1, Decimal),
+            ASK_PRICE   : access_route('asks', slice(0, limit), 0, Decimal),
+            ASK_AMOUNT  : access_route('asks', slice(0, limit), 1, Decimal),
         })
         return await self._rest_l2_book(payload, keymap, symbol, limit, retry, retry_wait)
     
@@ -86,7 +86,6 @@ class BinanceRestMixin(RestExchange):
             SYMBOL : {'symbol' : None},
             START : {'startTime' : None},
             END :   {'endTime' : None}, 
-            LIMIT : {'limit' : None}
         })
         keymap = Keymap({
             TIMESTAMP   : access_route(slice(None), 'T', self.exchange_ts_to_std_ts),
