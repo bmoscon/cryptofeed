@@ -330,7 +330,6 @@ class RestExchange:
                  symbol : str, limit = None, retry = None, 
                  retry_wait = None) -> dict:
         payload[SYMBOL] = self.std_symbol_to_exchange_symbol(symbol)
-        payload[LIMIT] = limit
         ex_response = await self._request(L2_BOOK, payload, retry, retry_wait)
         return self._process_L2_book(ex_response, keymap)
 
@@ -375,7 +374,7 @@ class RestExchange:
     RestMixin class
     '''
 
-    async def _request(self, command: str, payload : dict, auth = None, retry=None, retry_wait=0) -> dict:
+    async def _request(self, command: str, payload : dict, retry=None, retry_wait=0) -> dict:
 
         @request_retry(self.id, retry, retry_wait)
         async def helper():
@@ -383,12 +382,12 @@ class RestExchange:
                 resp = requests.request(url=self.api_endpoints[command], 
                                         method = self.methods[command], 
                                         params={} if not payload() else payload(), 
-                                        auth=auth)
+                                        )
             else:
                 resp = requests.request(url=self.api_endpoints[command], 
                                         method = self.methods[command], 
                                         data={} if not payload() else payload(), 
-                                        auth=auth)
+                                        )
             self._handle_error(resp)
             return json.loads(resp.text)
 
