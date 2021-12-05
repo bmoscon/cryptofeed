@@ -7,6 +7,7 @@
  * Bugfix: Fix issue in orderbook cross check.
  * Bugfix: Simplify dYdX orderbook logic.
  * Bugfix: Raise error if client tries to subscribe to KuCoin book data without an API key.
+ * Feature: Add ByBit sandbox endpoints.
 
 ### 2.1.1 (2021-11-29)
  * Bugfix: Position data type missing side field.
