@@ -434,7 +434,7 @@ class RestExchange:
             return []
 
         
-        data.update({k : [v for v in range(sequence_length)] for k, v in data.items() if k in keymap.retrive_apriori_data().keys() or v is None})
+        data.update({k : list((*v,) * sequence_length) for k, v in data.items() if k in keymap.retrive_apriori_data().keys() or v is None})
         return sorted(
             [dict(zip(data.keys(), a)) for a in zip(*data.values())],
             key=operator.itemgetter(TIMESTAMP)
