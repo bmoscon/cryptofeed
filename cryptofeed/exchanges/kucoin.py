@@ -38,6 +38,10 @@ class KuCoin(Feed):
     }
 
     @classmethod
+    def is_authenticated_channel(cls, channel: str) -> bool:
+        return channel in (L2_BOOK)
+
+    @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = {'tick_size': {}, 'instrument_type': {}}
