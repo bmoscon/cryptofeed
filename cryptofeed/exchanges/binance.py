@@ -87,6 +87,14 @@ class Binance(Feed, BinanceRestMixin):
             info['tick_size'][s.normalized] = symbol['filters'][0]['tickSize']
             info['instrument_type'][s.normalized] = stype
         return ret, info
+    
+    @classmethod
+    def exchange_ts_to_std_ts(cls, ts) -> float:
+        return ts / 1000
+  
+    @classmethod
+    def std_ts_to_exchange_ts(cls, ts) -> float:
+        return int(round(ts * 1000, 4))
 
     def __init__(self, candle_closed_only=False, depth_interval='100ms', **kwargs):
         """

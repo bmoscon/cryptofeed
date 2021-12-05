@@ -13,6 +13,7 @@ from typing import List, Union, AsyncIterable
 from decimal import Decimal
 import atexit
 from aiohttp.client_reqrep import ClientResponse
+from urllib.parse import urlencode
 
 import requests
 import websockets
@@ -21,6 +22,7 @@ from aiohttp.typedefs import StrOrURL
 from yapic import json as json_parser
 
 from cryptofeed.exceptions import ConnectionClosed
+from cryptofeed.defines import GET, POST, DELETE
 
 
 LOG = logging.getLogger('feedhandler')
@@ -142,6 +144,16 @@ class HTTPAsyncConn(AsyncConnection):
             self.conn = aiohttp.ClientSession()
             self.sent = 0
             self.received = 0
+    
+    async def request(self, address :str, method : str, payload = None, header = None, retry=0, retry_delay=60):
+        # mirror the classic request libary
+        address = f"{address}?{urlencode(payload)}" if payload else address
+        if method == GET:
+            return await self.read(address=address, header=header)
+        elif method == POST:
+            return await self.write(address=address, header=header)
+        elif method == DELETE:
+            return await self.delete(address=address, header=header)
 
     async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:

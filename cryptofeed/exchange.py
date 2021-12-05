@@ -15,7 +15,6 @@ from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
 from typing import AsyncGenerator, Dict, Optional, Tuple, Union
-from sortedcontainers.sorteddict import SortedDict as sd
 
 #import new defines
 from cryptofeed.defines import (
@@ -24,7 +23,7 @@ from cryptofeed.defines import (
     ORDER_INFO, FILLS, BID_PRICE, BID_AMOUNT, ASK_PRICE, ASK_AMOUNT, 
     START, END, LIMIT, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE,
     TS_SCALE, TS_DECIMAL_PLACES, NANOSECONDS, MILLISECONDS,
-    MICROSECONDS, SECONDS, TICKER)
+    SYMBOL, BID, ASK, FEED, ID, MICROSECONDS, SECONDS, TICKER)
 
 #import the new helper classes
 from cryptofeed.util.payloads import Payload
@@ -32,7 +31,6 @@ from cryptofeed.util.keymapping import Keymap
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
-from cryptofeed.connection import request_retry
 from cryptofeed.config import Config
 
 
@@ -74,23 +72,11 @@ class Exchange:
     #introduce functions to convert timestamps back and forth. 
     @classmethod
     def exchange_ts_to_std_ts(cls, ts) -> float:
-        divider = {
-            NANOSECONDS     : 1_000_000_000,
-            MICROSECONDS    : 1_000_000,
-            MILLISECONDS    : 1_000,
-            SECONDS         : 1
-        }
-        return round(ts / divider[cls.timestamp[TS_SCALE]], 4)
+        raise NotImplementedError
   
     @classmethod
     def std_ts_to_exchange_ts(cls, ts) -> float:
-        multiplyer = {
-            NANOSECONDS     : 1_000_000_000,
-            MICROSECONDS    : 1_000_000,
-            MILLISECONDS    : 1_000,
-            SECONDS         : 1
-        }
-        return round(ts * multiplyer[cls.timestamp[TS_SCALE]], cls.timestamp[TS_DECIMAL_PLACES])
+        raise NotImplementedError
 
     @classmethod
     def normalize_order_options(cls, option: str):
@@ -329,46 +315,39 @@ class RestExchange:
     '''below are the backbone functions. These work by setting the payload class (see payloads.py in cryptofeed.utils),
     making a request, and post_processing the response'''
 
-    async def _rest_ticker(self, payload : Payload, keymap : Keymap, 
-                symbol : str, retry = None, retry_wait = None) -> dict:
+    async def _rest_ticker(self, payload : Payload, keymap : Keymap, symbol : str) -> dict:
         payload[SYMBOL] = self.std_symbol_to_exchange_symbol(symbol)
-        ex_response = await self._request(TICKER, payload, retry, retry_wait)
+        ex_response = await self._request(TICKER, payload)
         return self._process_ticker(ex_response, keymap)
 
-    async def _rest_l2_book(self, payload : Payload, keymap : Keymap, 
-                 symbol : str, limit = None, retry = None, 
-                 retry_wait = None) -> dict:
+    async def _rest_l2_book(self, payload : Payload, keymap : Keymap, symbol : str) -> dict:
         payload[SYMBOL] = self.std_symbol_to_exchange_symbol(symbol)
-        ex_response = await self._request(L2_BOOK, payload, retry, retry_wait)
+        ex_response = await self._request(L2_BOOK, payload)
         return self._process_L2_book(ex_response, keymap)
 
-    async def _rest_trades(self, payload : Payload, keymap : Keymap, 
-                symbol : str,  limit = None, start = None, 
-                end = None, max_timeframe = None, retry = None, 
-                retry_wait = None) -> list:
+    async def _rest_trades(self, payload : Payload, keymap : Keymap, symbol : str, start = None, 
+                end = None, max_timeframe = None,) -> list:
         payload[SYMBOL] = self.std_symbol_to_exchange_symbol(symbol)
         if start:
-            return self._historical_trades(payload, keymap, symbol, start, end, max_timeframe, 
-                                               retry, retry_wait)
+            async for data in self._historical_trades(payload, keymap, symbol, start, end, max_timeframe):
+                return data
         else:
-            payload[LIMIT] = limit
-            ex_response = await self._request(TRADES, payload, retry, retry_wait)
+            ex_response = await self._request(TRADES, payload)
             return self._process_trades(ex_response, keymap)
 
     '''
     because reponses are unified within the base RestExchange, methods such as pooling for historical data can 
     easily be done here.
     '''
-    async def _historical_trades(self, payload, keymap, 
-                           symbol, start, end, 
-                           max_timeframe, retry, retry_wait):
+    async def _historical_trades(self, payload, keymap, symbol, start, end, 
+                           max_timeframe):
         start = start
         end = time.time() if not end else end
         end_point = start + max_timeframe if max_timeframe else end
         payload[START] = self.std_ts_to_exchange_ts(start)
         payload[END] = self.std_ts_to_exchange_ts(end_point) if payload[END] is not None else None
         while True:
-            ex_response = await self._request(TRADES, payload, retry, retry_wait)
+            ex_response = await self._request(TRADES, payload)
             new_data = self._process_trades(ex_response, keymap)
             if (new_data[-1][TIMESTAMP] == start - 0.0001) or (end  < start + max_timeframe if max_timeframe else False):
                 break
@@ -383,25 +362,13 @@ class RestExchange:
     RestMixin class
     '''
 
-    async def _request(self, command: str, payload : dict, retry=None, retry_wait=0) -> dict:
-
-        @request_retry(self.id, retry, retry_wait)
-        async def helper():
-            if self.payload_as_params[command]:
-                resp = requests.request(url=self.api_endpoints[command], 
-                                        method = self.methods[command], 
-                                        params={} if not payload() else payload(), 
-                                        )
-            else:
-                resp = requests.request(url=self.api_endpoints[command], 
-                                        method = self.methods[command], 
-                                        data={} if not payload() else payload(), 
-                                        )
-            self._handle_error(resp)
-            return json.loads(resp.text)
-
-        return await helper()
-
+    async def _request(self, command: str, payload : dict) -> dict:
+        payload = payload()
+        resp = await self.http_conn.request(self.api_endpoints[command], 
+                                    method = self.methods[command], 
+                                    payload = payload if payload else None, 
+                                    )
+        return resp
     '''
     this is really where the magic works, values from the response can easily be extracted using the supplied
     keymap (see keymaps.py in cryptofeed.util) and some minimal postprocessing is applied to get the data in the wanted 
@@ -454,8 +421,12 @@ class RestExchange:
         
         # zip prices and amounts into sorted dictionary of type bids and asks
         return {
-            BID : sd({Decimal(a[0]) : Decimal(a[1]) for a in zip(unified_resp[BID_PRICE], unified_resp[BID_AMOUNT])}),
-            ASK : sd({Decimal(a[0]) : Decimal(a[1]) for a in zip(unified_resp[ASK_PRICE], unified_resp[ASK_AMOUNT])})
+            BID : sorted(
+                [{Decimal(a[0]) : Decimal(a[1]) for a in zip(unified_resp[BID_PRICE], unified_resp[BID_AMOUNT])}],
+                ),
+            ASK : sorted( 
+                [{Decimal(a[0]) : Decimal(a[1]) for a in zip(unified_resp[ASK_PRICE], unified_resp[ASK_AMOUNT])}],
+            )
         }    
 
     def __getitem__(self, key):

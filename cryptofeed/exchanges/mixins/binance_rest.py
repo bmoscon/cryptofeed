@@ -19,7 +19,7 @@ from cryptofeed.defines import (BALANCES, BUY, CANCEL_ORDER, CANDLES, DELETE,
     FILL_OR_KILL, GET, GOOD_TIL_CANCELED, IMMEDIATE_OR_CANCEL, LIMIT, MARKET, 
     ORDERS, ORDER_STATUS, PLACE_ORDER, POSITIONS, POST, SELL, TRADES, FEED, 
     SYMBOL, BID, ASK, L2_BOOK, TICKER, BID_PRICE, BID_AMOUNT, ASK_PRICE, ASK_AMOUNT, 
-    START, END, LIMIT, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE)
+    START, END, LIMIT, ID, TIMESTAMP, SIDE, BUY, AMOUNT, PRICE)
 from cryptofeed.exchange import RestExchange
 from cryptofeed.types import Candle
 #import the new helper classes
@@ -57,7 +57,7 @@ class BinanceRestMixin(RestExchange):
     
 
     '''all functions only require the instialization of a Payload and Keymap'''
-    async def ticker(self, symbol: str, retry=None, retry_wait=10):
+    async def ticker(self, symbol: str):
         payload = Payload({
         SYMBOL : {'symbol' : None}
         })
@@ -67,9 +67,9 @@ class BinanceRestMixin(RestExchange):
             BID : access_route('bidPrice', Decimal),
             ASK : access_route('askPrice', Decimal)
         })
-        return await self._rest_ticker(payload, keymap, symbol, retry, retry_wait)
+        return await self._rest_ticker(payload, keymap, symbol)
     
-    async def l2_book(self, symbol: str, retry=None, retry_wait=10):
+    async def l2_book(self, symbol: str):
         payload = Payload({
             SYMBOL : {'symbol' : None},
         })
@@ -79,9 +79,9 @@ class BinanceRestMixin(RestExchange):
             ASK_PRICE   : access_route('asks', slice(None), 0, Decimal),
             ASK_AMOUNT  : access_route('asks', slice(None), 1, Decimal),
         })
-        return await self._rest_l2_book(payload, keymap, symbol, limit, retry, retry_wait)
+        return await self._rest_l2_book(payload, keymap, symbol)
     
-    async def trades(self, symbol, limit=None, start= None, end=None, retry=None, retry_wait=None):
+    async def trades(self, symbol, start= None, end=None):
         payload = Payload({
             SYMBOL : {'symbol' : None},
             START : {'startTime' : None},
@@ -97,9 +97,7 @@ class BinanceRestMixin(RestExchange):
             PRICE       : access_route(slice(None), 'p', Decimal)
             
         })
-        return await self._rest_trades(payload, keymap, symbol, 
-                            limit, start, end, 60*60, retry=retry, 
-                            retry_wait=retry_wait)
+        return await self._rest_trades(payload, keymap, symbol, start, end, 60*60)
 
 
 class BinanceFuturesRestMixin(BinanceRestMixin):
