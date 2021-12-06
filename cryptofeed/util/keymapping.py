@@ -1,5 +1,5 @@
 import json
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
 class access_route(list):
         def __init__(self, *args, **kwargs):
@@ -66,7 +66,7 @@ class Keymap:
     
     allowed_types = (int, str, list, slice, Callable)
     
-    def __init__(self, keymap : dict[Any:access_route]) -> None:
+    def __init__(self, keymap : Dict[str,access_route]) -> None:
         self.keymap = keymap
         self.data = None
     

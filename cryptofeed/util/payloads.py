@@ -50,6 +50,8 @@ class Payload:
     def __setitem__(self, key, value):
         if isinstance(value, dict):
             self.payload[key] = value
+        elif self.payload[key] is None:
+            pass
         elif key in self.payload.keys():
             load = dict() 
             for k in reversed(self.payload[key]):

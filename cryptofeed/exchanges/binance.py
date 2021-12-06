@@ -24,7 +24,9 @@ from cryptofeed.defines import (
 )
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
+'''Give binance experimental Mixin'''
+#from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
+from cryptofeed.exchanges.mixins.experimental.binance_rest import BinanceRestMixin
 from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook, OrderInfo, Balance
 
 REFRESH_SNAPSHOT_MIN_INTERVAL_SECONDS = 60

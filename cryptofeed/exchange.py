@@ -403,9 +403,9 @@ class RestExchange:
         
         if sequence_length == 0:
             LOG.warn(
-                f'No data could be retrived for {TRADES} api call to {self.id}... returning an empty list'
+                f'No data could be retrived for {TRADES} api call to {self.id}... returning data with None values'
                 )
-            return []
+            return [data(*keymap.retrive_apriori_data())]
 
         
         data.update({k : list((*v,) * sequence_length) for k, v in data.items() if k in keymap.retrive_apriori_data().keys() or v is None})

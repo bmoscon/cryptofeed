@@ -17,12 +17,12 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import Trade, OrderBook
-
+from cryptofeed.exchanges.mixins.experimental.ascendex_rest import AscenddexMixin
 
 LOG = logging.getLogger('feedhandler')
 
 
-class AscendEX(Feed):
+class AscendEX(Feed, AscenddexMixin):
     id = ASCENDEX
     symbol_endpoint = 'https://ascendex.com/api/pro/v1/products'
     websocket_endpoint = 'wss://ascendex.com/1/api/pro/v1/stream'
@@ -34,6 +34,14 @@ class AscendEX(Feed):
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
         return ts / 1000.0
+    
+    @classmethod
+    def exchange_ts_to_std_ts(cls, ts) -> float:
+        return ts / 1000
+  
+    @classmethod
+    def std_ts_to_exchange_ts(cls, ts) -> float:
+        return int(round(ts * 1000, 4))
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:

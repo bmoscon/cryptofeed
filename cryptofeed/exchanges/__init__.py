@@ -86,3 +86,10 @@ EXCHANGE_MAP = {
     PROBIT: Probit,
     UPBIT: Upbit,
 }
+
+#define Exchanges using experimental mixins
+#needed for tests
+EXPERIMENTAL_MAP = {
+    ASCENDEX : AscendEX,
+    BINANCE : Binance
+} 
