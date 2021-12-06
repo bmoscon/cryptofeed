@@ -165,9 +165,7 @@ class RestExchange:
     '''
     add new class variables, see the BinanceRestMixin class for a demo 
     '''
-    api_endpoints = NotImplemented
-    methods = NotImplemented
-    payload_as_params = NotImplemented
+    api_calls = NotImplemented
 
     def _sync_run_coroutine(self, coroutine):
         loop = asyncio.get_event_loop()
