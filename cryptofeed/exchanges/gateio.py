@@ -9,11 +9,12 @@ import logging
 from decimal import Decimal
 import time
 from typing import Dict, Tuple
+from types import SimpleNamespace
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
+from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL, BOOK_DELTA
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle
@@ -171,6 +172,20 @@ class Gateio(Feed):
         }
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
+
+        if self.do_deltas:
+            await self.callback(
+                BOOK_DELTA,
+                obj=SimpleNamespace(feed=self.id,
+                symbol=symbol,
+                bids=msg['result']['b'],
+                asks=msg['result']['a'],
+                first_update_id=msg['result']['U'],
+                final_update_id=msg['result']['u'],
+                timestamp=['result']['t'] / 1000),
+                receipt_timestamp=timestamp)
+            return
+        
         if symbol not in self._l2_book:
             await self._snapshot(msg['result']['s'])
 
