@@ -495,7 +495,7 @@ class Binance(Feed, BinanceRestMixin):
             BUY if msg['S'].lower() == 'buy' else SELL,
             msg['x'],
             LIMIT if msg['o'].lower() == 'limit' else MARKET if msg['o'].lower() == 'market' else None,
-            Decimal(msg['Z'] / Decimal(msg['z'])) if not Decimal.is_zero(Decimal(msg['z'])) else None,
+            Decimal(msg['Z']) / Decimal(msg['z']) if not Decimal.is_zero(Decimal(msg['z'])) else None,
             Decimal(msg['q']),
             Decimal(msg['q']) - Decimal(msg['z']),
             self.timestamp_normalize(msg['E']),
