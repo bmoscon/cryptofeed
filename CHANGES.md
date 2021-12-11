@@ -9,6 +9,7 @@
  * Bugfix: Raise error if client tries to subscribe to KuCoin book data without an API key.
  * Feature: Add ByBit sandbox endpoints.
  * Bugfix: Fix calculation in OrderInfo on Binance.
+ * Feature: Support list of bootstrap servers for Kafka backend.
 
 ### 2.1.1 (2021-11-29)
  * Bugfix: Position data type missing side field.
