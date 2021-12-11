@@ -15,6 +15,14 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 class KafkaCallback:
     def __init__(self, bootstrap='127.0.0.1', port=9092, key=None, numeric_type=float, none_to=None, **kwargs):
+        """
+        bootstrap: str, list
+            if a list, should be a list of strings in the format: ip/host:port, i.e.
+                192.1.1.1:9092
+                192.1.1.2:9092
+                etc
+            if a string, should be ip/port only
+        """
         self.bootstrap = bootstrap
         self.port = port
         self.producer = None
@@ -27,7 +35,7 @@ class KafkaCallback:
             loop = asyncio.get_event_loop()
             self.producer = AIOKafkaProducer(acks=0,
                                              loop=loop,
-                                             bootstrap_servers=f'{self.bootstrap}:{self.port}',
+                                             bootstrap_servers=f'{self.bootstrap}:{self.port}' if isinstance(self.bootstrap, str) else self.bootstrap,
                                              client_id='cryptofeed')
             await self.producer.start()
 
