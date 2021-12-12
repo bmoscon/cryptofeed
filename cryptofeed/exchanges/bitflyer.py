@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Bitflyer(Feed):
     id = BITFLYER
-    symbol_endpoint = endpoints = ['https://api.bitflyer.com/v1/getmarkets/eu', 'https://api.bitflyer.com/v1/getmarkets/usa', 'https://api.bitflyer.com/v1/getmarkets']
+    symbol_endpoint = endpoints = ['https://api.bitflyer.com/v1/getmarkets/eu', 'https://api.bitflyer.com/v1/getmarkets/usa', 'https://api.bitflyer.com/v1/getmarkets', 'https://api.bitflyer.com/v1/markets', 'https://api.bitflyer.com/v1/markets/usa', 'https://api.bitflyer.com/v1/markets/eu']
     websocket_endpoint = 'wss://ws.lightstream.bitflyer.com/json-rpc'
     websocket_channels = {
         L2_BOOK: 'lightning_board_{}',

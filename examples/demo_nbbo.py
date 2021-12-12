@@ -13,7 +13,7 @@ def nbbo_update(symbol, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
 
 
 def main():
-    f = FeedHandler()
+    f = FeedHandler(config={'log': {'filename': 'demo.log', 'level': 'DEBUG', 'disabled': False}})
     f.add_nbbo([Coinbase, Kraken, Gemini], ['BTC-USD'], nbbo_update)
     f.run()
 
