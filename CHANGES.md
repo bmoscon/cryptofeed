@@ -10,6 +10,7 @@
  * Feature: Add ByBit sandbox endpoints.
  * Bugfix: Fix calculation in OrderInfo on Binance.
  * Feature: Support list of bootstrap servers for Kafka backend.
+ * Feature: Add OrderInfo and Fills zmq callbacks 
 
 ### 2.1.1 (2021-11-29)
  * Bugfix: Position data type missing side field.
