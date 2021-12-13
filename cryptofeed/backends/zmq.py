@@ -76,3 +76,11 @@ class BalancesZMQ(ZMQCallback, BackendCallback):
 
 class PositionsZMQ(ZMQCallback, BackendCallback):
     default_key = 'positions'
+
+
+class OrderInfoZMQ(ZMQCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class FillsZMQ(ZMQCallback, BackendCallback):
+    default_key = 'fills'
