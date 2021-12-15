@@ -32,7 +32,7 @@ class Huobi(Feed):
         L2_BOOK: 'depth.step0',
         TRADES: 'trade.detail',
         CANDLES: 'kline',
-        TICKER = 'ticker'
+        TICKER: 'ticker'
     }
 
     @classmethod
