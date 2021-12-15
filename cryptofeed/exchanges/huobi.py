@@ -16,7 +16,7 @@ from yapic import json
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES, TICKER
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Candle
+from cryptofeed.types import OrderBook, Trade, Candle, Ticker
 
 
 LOG = logging.getLogger('feedhandler')
