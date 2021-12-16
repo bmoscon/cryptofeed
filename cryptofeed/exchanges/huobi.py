@@ -14,9 +14,9 @@ from decimal import Decimal
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES, TICKER
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Candle
+from cryptofeed.types import OrderBook, Trade, Candle, Ticker
 
 
 LOG = logging.getLogger('feedhandler')
@@ -32,6 +32,7 @@ class Huobi(Feed):
         L2_BOOK: 'depth.step0',
         TRADES: 'trade.detail',
         CANDLES: 'kline',
+        TICKER: 'ticker'
     }
 
     @classmethod
@@ -66,6 +67,38 @@ class Huobi(Feed):
         self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['ts']), raw=msg)
+    
+    async def _ticker(self, msg: dict, timestamp: float):
+        """
+        {
+            "ch":"market.btcusdt.ticker",
+            "ts":1630982370526,
+            "tick":{
+                "open":51732,
+                "high":52785.64,
+                "low":51000,
+                "close":52735.63,
+                "amount":13259.24137056181,
+                "vol":687640987.4125315,
+                "count":448737,
+                "bid":52732.88,
+                "bidSize":0.036,
+                "ask":52732.89,
+                "askSize":0.583653,
+                "lastPrice":52735.63,
+                "lastSize":0.03
+            }
+        }
+        """
+        t = Ticker(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
+            msg['tick']['bid'],
+            msg['tick']['ask'],
+            self.timestamp_normalize(msg['ts']),
+            raw=msg['tick']
+        )
+        await self.callback(TICKER, t, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -152,6 +185,8 @@ class Huobi(Feed):
         elif 'ch' in msg:
             if 'trade' in msg['ch']:
                 await self._trade(msg, timestamp)
+            elif 'tick' in msg['ch']:
+                await self._ticker(msg, timestamp)
             elif 'depth' in msg['ch']:
                 await self._book(msg, timestamp)
             elif 'kline' in msg['ch']:
