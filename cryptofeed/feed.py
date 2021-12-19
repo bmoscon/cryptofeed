@@ -83,6 +83,7 @@ class Feed(Exchange):
         self.start_delay = delay_start
         self.candle_interval = candle_interval
         self.address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
+        self._sequence_no = {}
 
         if self.valid_candle_intervals != NotImplemented:
             if candle_interval not in self.valid_candle_intervals:

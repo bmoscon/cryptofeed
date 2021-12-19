@@ -47,9 +47,9 @@ class HTTPSync(Connection):
             return r.text
         return r
 
-    def read(self, address: str, json=False, text=True, uuid=None):
+    def read(self, address: str, params=None, headers=None, json=False, text=True, uuid=None):
         LOG.debug("HTTPSync: requesting data from %s", address)
-        r = requests.get(address)
+        r = requests.get(address, headers=headers, params=params)
         return self.process_response(r, address, json=json, text=text, uuid=uuid)
 
     def write(self, address: str, data=None, json=False, text=True, uuid=None):

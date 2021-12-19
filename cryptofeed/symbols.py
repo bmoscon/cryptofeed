@@ -54,8 +54,7 @@ class Symbol:
             month = Symbol.month_code(date[2:4])
             day = date[4:]
             return f"{year}{month}{day}"
-
-        if len(date) == 9:
+        if len(date) == 9 or len(date) == 7:
             year, month, day = date[-2:], date[2:5], date[:2]
             months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
             month = Symbol.month_code(months.index(month) + 1)
