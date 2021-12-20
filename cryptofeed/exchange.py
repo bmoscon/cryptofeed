@@ -78,7 +78,7 @@ class Exchange:
     @classmethod
     def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
         return ep.instruments
-    
+
     @classmethod
     def symbol_mapping(cls, refresh=False) -> Dict:
         if Symbols.populated(cls.id) and not refresh:

@@ -4,14 +4,13 @@ Copyright (C) 2021 - STS Digital
 import logging
 from decimal import Decimal
 import time
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Dict, Tuple, Union
 from collections import defaultdict
-from functools import partial
 import hashlib
 import hmac
 
 from yapic import json
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WSAsyncConn, WebsocketEndpoint
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import ASK, BALANCES, BID, BUY, BITDOTCOM, CANCELLED, FILLED, FILLS, FUTURES, L2_BOOK, LIMIT, MARKET, OPEN, OPTION, PENDING, PERPETUAL, SELL, SPOT, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, ORDER_INFO, TRIGGER_LIMIT, TRIGGER_MARKET
 from cryptofeed.exceptions import MissingSequenceNumber

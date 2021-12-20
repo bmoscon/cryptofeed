@@ -11,11 +11,11 @@ import string
 from collections import defaultdict
 import logging
 from decimal import Decimal
-from typing import Dict, Tuple, Callable, List
+from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WSAsyncConn, WebsocketEndpoint
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber

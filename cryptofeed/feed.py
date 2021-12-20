@@ -158,7 +158,7 @@ class Feed(Exchange):
 
     async def _empty_subscribe(self, conn: AsyncConnection, **kwargs):
         return
-    
+
     def _connect_rest(self):
         """
         Child classes should override this method to generate connection objects that
@@ -197,11 +197,11 @@ class Feed(Exchange):
 
             ret.append((WSAsyncConn(addr, self.id, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
-    
+
     @property
     def address(self) -> Union[List, str]:
         if len(self.websocket_endpoints) == 1:
-            return 
+            return
         return [ep.get_address(sandbox=self.sandbox) for ep in self.websocket_endpoints]
 
     async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float, timestamp=None, raw=None, sequence_number=None, checksum=None, delta=None):

@@ -56,7 +56,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         self.ws_defaults['compression'] = None
 
         self.open_interest_interval = open_interest_interval
-    
+
     def _connect_rest(self):
         ret = []
         for chan in set(self.subscription):

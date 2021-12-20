@@ -21,10 +21,10 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     id = BINANCE_DELIVERY
-    
+
     websocket_endpoints = [WebsocketEndpoint('wss://dstream.binance.com')]
     rest_endpoints = [RestEndpoint('https://dapi.binance.com/dapi', routes=Routes('/v1/exchangeInfo', authentication='/v1/listenKey'))]
-    
+
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
     websocket_channels = {
