@@ -15,7 +15,7 @@ from typing import Dict, Tuple, Callable, List
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WSAsyncConn, WebsocketEndpoint
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, BEQUANT, EXPIRED, L2_BOOK, LIMIT, ORDER_INFO, SELL, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, CANDLES, OPEN, PARTIAL, CANCELLED, SUSPENDED, FILLED, TRANSACTIONS, MARKET
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -29,12 +29,14 @@ LOG = logging.getLogger('feedhandler')
 
 class Bequant(Feed):
     id = BEQUANT
-    symbol_endpoint = 'https://api.bequant.io/api/2/public/symbol'
-    websocket_endpoint = {
-        'market': 'wss://api.bequant.io/api/2/ws/public',
-        'trading': 'wss://api.bequant.io/api/2/ws/trading',
-        'account': 'wss://api.bequant.io/api/2/ws/account',
-    }
+
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/public', channel_filter=[L2_BOOK, TRADES, TICKER, CANDLES]),
+        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/trading', channel_filter=[ORDER_INFO]),
+        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/account', channel_filter=[BALANCES, TRANSACTIONS]),
+    ]
+    rest_endpoints = [RestEndpoint('https://api.bequant.io', routes=Routes('/api/2/public/symbol'))]
+
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'}
     candle_interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
     websocket_channels = {
@@ -352,21 +354,6 @@ class Bequant(Feed):
             if 'error' in msg:
                 LOG.error(f"{self.id}: Received error on {conn.uuid}: {msg['error']}")
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-
-        for chan in self.subscription:
-            chan = self.exchange_channel_to_std(chan)
-            if self.is_authenticated_channel(chan):
-                LOG.info(f'{self.id}: {chan} will be authenticated')
-                if chan == ORDER_INFO:
-                    ret.append((WSAsyncConn(self.address['trading'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
-                if chan in [BALANCES, TRANSACTIONS]:
-                    ret.append((WSAsyncConn(self.address['account'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
-            else:
-                ret.append((WSAsyncConn(self.address['market'], self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
-        return ret
-
     async def authenticate(self, conn: AsyncConnection):
         if self.requires_authentication:
             # https://api.bequant.io/#socket-session-authentication
@@ -392,7 +379,7 @@ class Bequant(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        for chan, symbols in self.subscription.items():
+        for chan, symbols in conn.subscription.items():
             # These channel subs fail if provided with symbol data. "params" must be blank.
             if chan in ['subscribeTransactions', 'subscribeBalance', 'subscribeReports']:
                 LOG.debug(f'Subscribing to {chan} with no symbols')
@@ -410,7 +397,7 @@ class Bequant(Feed):
                     }
                     if chan == "subscribeCandles":
                         params['period'] = self.candle_interval_map[self.candle_interval]
-                    LOG.debug(f'{self.id}: Subscribing to "{chan}"" with params {params}')
+                    LOG.debug(f'{self.id}: Subscribing to "{chan}" with params {params}')
                     await conn.write(json.dumps(
                         {
                             "method": chan,

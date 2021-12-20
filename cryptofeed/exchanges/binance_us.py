@@ -6,6 +6,7 @@ associated with this software.
 '''
 import logging
 
+from cryptofeed.connection import RestEndpoint, WebsocketEndpoint, Routes
 from cryptofeed.defines import BINANCE_US
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceUSRestMixin
@@ -16,8 +17,8 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceUS(Binance, BinanceUSRestMixin):
     id = BINANCE_US
-    symbol_endpoint = 'https://api.binance.us/api/v3/exchangeInfo'
-    websocket_endpoint = 'wss://stream.binance.us:9443'
+    websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.us:9443')]
+    rest_endpoints = [RestEndpoint('https://api.binance.us', routes=Routes('/api/v3/exchangeInfo'))]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

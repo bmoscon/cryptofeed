@@ -12,8 +12,9 @@ from contextlib import asynccontextmanager, suppress
 from typing import List, Union, AsyncIterable
 from decimal import Decimal
 import atexit
-from aiohttp.client_reqrep import ClientResponse
+from dataclasses import dataclass
 
+from aiohttp.client_reqrep import ClientResponse
 import requests
 import websockets
 import aiohttp
@@ -61,16 +62,19 @@ class HTTPSync(Connection):
 class AsyncConnection(Connection):
     conn_count: int = 0
 
-    def __init__(self, conn_id: str):
+    def __init__(self, conn_id: str, subscription=None):
         """
         conn_id: str
             the unique identifier for the connection
+        subscription: dict
+            optional connection information
         """
         AsyncConnection.conn_count += 1
         self.id: str = conn_id
         self.received: int = 0
         self.sent: int = 0
         self.last_message = None
+        self.subscription = subscription
         self.conn: Union[websockets.WebSocketClientProtocol, aiohttp.ClientSession] = None
         atexit.register(self.__del__)
 
@@ -275,7 +279,7 @@ class HTTPConcurrentPoll(HTTPPoll):
 
 class WSAsyncConn(AsyncConnection):
 
-    def __init__(self, address: str, conn_id: str, **kwargs):
+    def __init__(self, address: str, conn_id: str, subscription=None, **kwargs):
         """
         address: str
             the websocket address to connect to
@@ -287,7 +291,7 @@ class WSAsyncConn(AsyncConnection):
         if not address.startswith("wss://"):
             raise ValueError(f'Invalid address, must be a wss address. Provided address is: {address!r}')
         self.address = address
-        super().__init__(f'{conn_id}.ws.{self.conn_count}')
+        super().__init__(f'{conn_id}.ws.{self.conn_count}', subscription=subscription)
         self.ws_kwargs = kwargs
 
     @property
@@ -330,3 +334,38 @@ class WSAsyncConn(AsyncConnection):
             await self.raw_data_callback(data, time.time(), self.id, send=self.address)
         await self.conn.send(data)
         self.sent += 1
+
+
+@dataclass
+class WebsocketEndpoint:
+    address: str
+    sandbox: str = None
+    instrument_filter: str = None
+    channel_filter: str = None
+
+    def get_address(self, sandbox=False):
+        if sandbox and self.sandbox:
+            return self.sandbox
+        return self.address
+
+
+@dataclass
+class Routes:
+    instruments: str
+    currencies: str = None
+    funding: str = None
+    open_interest: str = None
+    authentication: str = None
+
+
+@dataclass
+class RestEndpoint:
+    address: str
+    sandbox: str = None
+    instrument_filter: str = None
+    routes: Routes = None
+
+    def __getattr__(self, ep):
+        if self.sandbox:
+            return self.sandbox + self.routes.__getattribute__(ep)
+        return self.address + self.routes.__getattribute__(ep)

@@ -6,7 +6,7 @@ associated with this software.
 '''
 from collections import defaultdict
 from typing import Dict, Tuple
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 import logging
 from decimal import Decimal
 
@@ -24,8 +24,8 @@ LOG = logging.getLogger('feedhandler')
 
 class AscendEX(Feed):
     id = ASCENDEX
-    symbol_endpoint = 'https://ascendex.com/api/pro/v1/products'
-    websocket_endpoint = 'wss://ascendex.com/1/api/pro/v1/stream'
+    websocket_endpoints = [WebsocketEndpoint('wss://ascendex.com/1/api/pro/v1/stream')]
+    rest_endpoints = [RestEndpoint('https://ascendex.com', routes=Routes('/api/pro/v1/products'))]
     websocket_channels = {
         L2_BOOK: 'depth:',
         TRADES: 'trades:',

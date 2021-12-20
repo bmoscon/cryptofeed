@@ -8,7 +8,7 @@ import asyncio
 from collections import defaultdict
 from functools import partial
 import logging
-from typing import Tuple, Callable, List
+from typing import Tuple, Callable, List, Union
 
 from aiohttp.typedefs import StrOrURL
 
@@ -82,7 +82,6 @@ class Feed(Exchange):
         self.http_proxy = http_proxy
         self.start_delay = delay_start
         self.candle_interval = candle_interval
-        self.address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
         self._sequence_no = {}
 
         if self.valid_candle_intervals != NotImplemented:
@@ -115,12 +114,14 @@ class Feed(Exchange):
             # if we dont have a subscription dict, we'll use symbols+channels and build one
             [self._feed_config[channel].extend(symbols) for channel in channels]
             self.normalized_symbols = symbols
+            self.normalized_channels = channels
 
             symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in symbols]
             channels = list(set([self.std_channel_to_exchange(chan) for chan in channels]))
             self.subscription = {chan: symbols for chan in channels}
 
         self._feed_config = dict(self._feed_config)
+        self._auth_token = None
 
         self._l3_book = {}
         self._l2_book = {}
@@ -157,26 +158,51 @@ class Feed(Exchange):
 
     async def _empty_subscribe(self, conn: AsyncConnection, **kwargs):
         return
+    
+    def _connect_rest(self):
+        """
+        Child classes should override this method to generate connection objects that
+        support their polled REST endpoints.
+        """
+        return []
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         """
-        Generic connection method for exchanges. Exchanges that require/support
-        multiple addresses will need to override this method in their specific class
-        unless they use the same subscribe method and message handler for all
-        connections.
+        Generic websocket connection method for exchanges. Uses the websocket endpoints defined in the
+        exchange to determine, based on the subscription information, which endpoints should be used,
+        and what instruments/channels should be enabled on each connection.
 
         Connect returns a list of tuples. Each tuple contains
         1. an AsyncConnection object
         2. the subscribe function pointer associated with this connection
         3. the message handler for this connection
+        4. The authentication method for this connection
         """
-        ret = []
-        if isinstance(self.address, str):
-            return [(WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate)]
+        ret = self._connect_rest()
+        for endpoint in self.websocket_endpoints:
+            addr = endpoint.address if not self.sandbox else endpoint.sandbox
+            if endpoint.instrument_filter is None and endpoint.channel_filter is None:
+                return [(WSAsyncConn(addr, self.id, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate)]
 
-        for _, addr in self.address.items():
-            ret.append((WSAsyncConn(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+            sub = {}
+            for channel in self.subscription:
+                if endpoint.channel_filter is None or self.exchange_channel_to_std(channel) in endpoint.channel_filter:
+                    sub[channel] = []
+                    if endpoint.instrument_filter is None:
+                        sub[channel] = list(self.subscription[channel])
+                    else:
+                        for symbol in self.subscription[channel]:
+                            if self.info()['instrument_type'][self.exchange_symbol_to_std_symbol(symbol)] == endpoint.instrument_filter:
+                                sub[channel].append(symbol)
+
+            ret.append((WSAsyncConn(addr, self.id, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
+    
+    @property
+    def address(self) -> Union[List, str]:
+        if len(self.websocket_endpoints) == 1:
+            return 
+        return [ep.get_address(sandbox=self.sandbox) for ep in self.websocket_endpoints]
 
     async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float, timestamp=None, raw=None, sequence_number=None, checksum=None, delta=None):
         if self.cross_check:

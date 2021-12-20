@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll
+from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -29,9 +29,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Binance(Feed, BinanceRestMixin):
     id = BINANCE
-    symbol_endpoint = 'https://api.binance.com/api/v3/exchangeInfo'
-    websocket_endpoint = 'wss://stream.binance.com:9443'
-    listen_key_endpoint = 'userDataStream'
+    websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443')]
+    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', authentication='/api/v3/userDataStream'))]
+
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
@@ -85,7 +85,6 @@ class Binance(Feed, BinanceRestMixin):
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
 
         super().__init__(**kwargs)
-        self.rest_endpoint = 'https://www.binance.com/api/v3'
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
         self.token = None
@@ -106,7 +105,7 @@ class Binance(Feed, BinanceRestMixin):
         """
         if self.requires_authentication:
             listen_key = self._generate_token()
-            address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
+            address = self.address
             address += '/ws/' + listen_key
         else:
             address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
@@ -161,11 +160,11 @@ class Binance(Feed, BinanceRestMixin):
             if self.token is None:
                 raise ValueError('There is no token to refresh')
             payload = {'listenKey': self.token}
-            r = requests.put(f'{self.api}{self.listen_key_endpoint}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
+            r = requests.put(f'{self.rest_endpoints[0].authentication}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
             r.raise_for_status()
 
     def _generate_token(self) -> str:
-        url = f'{self.api}{self.listen_key_endpoint}'
+        url = self.rest_endpoints[0].authentication
         r = requests.post(url, headers={'X-MBX-APIKEY': self.key_id})
         r.raise_for_status()
         response = r.json()

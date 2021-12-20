@@ -4,14 +4,14 @@ Copyright (C) 2021 - STS Digital
 import logging
 from decimal import Decimal
 import time
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 from collections import defaultdict
 from functools import partial
 import hashlib
 import hmac
 
 from yapic import json
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WSAsyncConn, WebsocketEndpoint
 
 from cryptofeed.defines import ASK, BALANCES, BID, BUY, BITDOTCOM, CANCELLED, FILLED, FILLS, FUTURES, L2_BOOK, LIMIT, MARKET, OPEN, OPTION, PENDING, PERPETUAL, SELL, SPOT, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, ORDER_INFO, TRIGGER_LIMIT, TRIGGER_MARKET
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -25,9 +25,16 @@ LOG = logging.getLogger('feedhandler')
 
 class BitDotCom(Feed):
     id = BITDOTCOM
-    symbol_endpoint = ['https://spot-api.bit.com/spot/v1/instruments'] + [f'https://betaapi.bitexch.dev/v1/instruments?currency={currency}&&active=true' for currency in ('BTC', 'ETH', 'BCH')]
-    websocket_endpoint = {SPOT: 'wss://spot-ws.bit.com', FUTURES: 'wss://ws.bit.com'}
-    sandbox_endpoint = {SPOT: 'wss://betaspot-ws.bitexch.dev', FUTURES: 'wss://betaws.bitexch.dev'}
+
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://spot-ws.bit.com', instrument_filter=SPOT, sandbox='wss://betaspot-ws.bitexch.dev'),
+        WebsocketEndpoint('wss://ws.bit.com', instrument_filter=[FUTURES, OPTION], sandbox='wss://betaws.bitexch.dev'),
+    ]
+    rest_endpoints = [
+        RestEndpoint('https://spot-api.bit.com', instrument_filter=SPOT, sandbox='https://betaspot-api.bitexch.dev', routes=Routes('/spot/v1/instruments')),
+        RestEndpoint('https://betaapi.bitexch.dev', instrument_filter=[OPTION, FUTURES], sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies'))
+    ]
+
     websocket_channels = {
         L2_BOOK: 'depth',
         TRADES: 'trade',
@@ -38,6 +45,13 @@ class BitDotCom(Feed):
         # funding rates paid and received
     }
     request_limit = 10
+
+    @classmethod
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
+        if ep.routes.currencies:
+            ret = cls.http_sync.read(ep.currencies, json=True, uuid=cls.id)
+            return [ep.instruments.format(currency) for currency in ret['data']['currencies']]
+        return ep.instruments
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -80,34 +94,23 @@ class BitDotCom(Feed):
 
         return ret, info
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._auth_token = None
+    def __reset(self):
+        self._l2_book = {}
+        self._sequence_no = defaultdict(int)
 
-    def __reset(self, symbols=None):
-        if symbols:
-            for s in symbols:
-                self._l2_book[s] = {}
-                self._sequence_no[s] = 0
-        else:
-            self._l2_book = {}
-            self._sequence_no = defaultdict(int)
-
-    def encode_list(self, item_list):
+    def encode_list(self, item_list: list):
         list_val = []
         for item in item_list:
             obj_val = self.encode_object(item)
             list_val.append(obj_val)
         output = '&'.join(list_val)
-        output = '[' + output + ']'
-        return output
+        return '[' + output + ']'
 
     def get_signature(self, api_path: str, param_map: dict):
         str_to_sign = api_path + '&' + self.encode_object(param_map)
-        sig = hmac.new(self.key_secret.encode('utf-8'), str_to_sign.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
-        return sig
+        return hmac.new(self.key_secret.encode('utf-8'), str_to_sign.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
 
-    def encode_object(self, param_map):
+    def encode_object(self, param_map: dict):
         sorted_keys = sorted(param_map.keys())
         ret_list = []
         for key in sorted_keys:
@@ -116,7 +119,6 @@ class BitDotCom(Feed):
                 list_val = self.encode_list(val)
                 ret_list.append(f'{key}={list_val}')
             elif isinstance(val, dict):
-                # call encode_object recursively
                 dict_val = self.encode_object(val)
                 ret_list.append(f'{key}={dict_val}')
             elif isinstance(val, bool):
@@ -127,8 +129,7 @@ class BitDotCom(Feed):
                 ret_list.append(f'{key}={general_val}')
 
         sorted_list = sorted(ret_list)
-        output = '&'.join(sorted_list)
-        return output
+        return '&'.join(sorted_list)
 
     async def authenticate(self, connection: AsyncConnection):
         if not self.key_id or not self.key_secret:
@@ -143,34 +144,17 @@ class BitDotCom(Feed):
         token = ret['data']['token']
         self._auth_token = token
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-        spot = []
-        futures = []
+    async def subscribe(self, connection: AsyncConnection):
+        self.__reset()
 
-        info = self.info()
-        for p in self.normalized_symbols:
-            if info['instrument_type'][p] == SPOT:
-                spot.append(self.std_symbol_to_exchange_symbol(p))
-            else:
-                futures.append(self.std_symbol_to_exchange_symbol(p))
-
-        if spot:
-            ret.append((WSAsyncConn(self.address[SPOT], self.id, **self.ws_defaults), partial(self.subscribe, stype=SPOT, symbols=spot), self.message_handler, self.authenticate))
-        if futures:
-            ret.append((WSAsyncConn(self.address[FUTURES], self.id, **self.ws_defaults), partial(self.subscribe, stype=FUTURES, symbols=futures), self.message_handler, self.authenticate))
-
-        return ret
-
-    async def subscribe(self, connection: AsyncConnection, stype: str = None, symbols: list = None):
-        self.__reset(symbols=symbols)
-
-        for chan in self.subscription:
-            syms = [s for s in symbols if s in self.subscription[chan]]
+        for chan, symbols in self.subscription.items():
+            if len(symbols) == 0:
+                continue
+            stype = self.info()['instrument_type'][self.exchange_symbol_to_std_symbol(symbols[0])]
             msg = {
                 'type': 'subscribe',
                 'channels': [chan],
-                'instruments' if stype == FUTURES else 'pairs': syms,
+                'instruments' if stype in {FUTURES, OPTION} else 'pairs': symbols,
             }
             if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 msg['token'] = self._auth_token
