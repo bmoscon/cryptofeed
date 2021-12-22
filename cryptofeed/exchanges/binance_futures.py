@@ -47,14 +47,10 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
 
     def __init__(self, open_interest_interval=1.0, **kwargs):
         """
-        open_interest_interval: flaot
+        open_interest_interval: float
             time in seconds between open_interest polls
         """
         super().__init__(**kwargs)
-        # overwrite values previously set by the super class Binance
-        self.address = self._address()
-        self.ws_defaults['compression'] = None
-
         self.open_interest_interval = open_interest_interval
 
     def _connect_rest(self):
