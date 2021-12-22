@@ -342,6 +342,14 @@ class WebsocketEndpoint:
     sandbox: str = None
     instrument_filter: str = None
     channel_filter: str = None
+    limit: int = None
+    options: dict = None
+
+    def __post_init__(self):
+        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None}
+        if self.options:
+            defaults.update(self.options)
+        self.options = defaults
 
     def get_address(self, sandbox=False):
         if sandbox and self.sandbox:
@@ -351,7 +359,7 @@ class WebsocketEndpoint:
 
 @dataclass
 class Routes:
-    instruments: str
+    instruments: Union[str, list]
     currencies: str = None
     funding: str = None
     open_interest: str = None
@@ -366,6 +374,6 @@ class RestEndpoint:
     routes: Routes = None
 
     def __getattr__(self, ep):
-        if self.sandbox:
-            return self.sandbox + self.routes.__getattribute__(ep)
-        return self.address + self.routes.__getattribute__(ep)
+        endpoint = self.routes.__getattribute__(ep)
+        api = self.address if not self.sandbox else self.sandbox
+        return api + endpoint if isinstance(endpoint, str) else [api + e for e in endpoint]

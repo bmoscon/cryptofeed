@@ -87,9 +87,6 @@ class Binance(Feed, BinanceRestMixin):
         super().__init__(**kwargs)
         self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
-        self.token = None
-        self.address = self._address()
-
         self._open_interest_cache = {}
         self._reset()
 
@@ -157,9 +154,9 @@ class Binance(Feed, BinanceRestMixin):
     async def _refresh_token(self):
         while True:
             await sleep(30 * 60)
-            if self.token is None:
+            if self._auth_token is None:
                 raise ValueError('There is no token to refresh')
-            payload = {'listenKey': self.token}
+            payload = {'listenKey': self._auth_token}
             r = requests.put(f'{self.rest_endpoints[0].authentication}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
             r.raise_for_status()
 
@@ -169,8 +166,8 @@ class Binance(Feed, BinanceRestMixin):
         r.raise_for_status()
         response = r.json()
         if 'listenKey' in response:
-            self.token = response['listenKey']
-            return self.token
+            self._auth_token = response['listenKey']
+            return self._auth_token
         else:
             raise ValueError(f'Unable to retrieve listenKey token from {url}')
 

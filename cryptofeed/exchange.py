@@ -77,6 +77,10 @@ class Exchange:
 
     @classmethod
     def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
+        """
+        override if a specific exchange needs to do something first, like query an API
+        to get a list of currencies, that are then used to build the list of symbol endpoints
+        """
         return ep.instruments
 
     @classmethod

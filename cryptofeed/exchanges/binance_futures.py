@@ -21,7 +21,7 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceFutures(Binance, BinanceFuturesRestMixin):
     id = BINANCE_FUTURES
-    websocket_endpoints = [WebsocketEndpoint('wss://fstream.binance.com', sandbox='wss://stream.binancefuture.com')]
+    websocket_endpoints = [WebsocketEndpoint('wss://fstream.binance.com', sandbox='wss://stream.binancefuture.com', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://fapi.binance.com/fapi', sandbox='https://testnet.binancefuture.com/fapi', routes=Routes('/v1/exchangeInfo', authentication='/v1/listenKey', open_interest='/v1//openInterest?symbol={}'))]
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]

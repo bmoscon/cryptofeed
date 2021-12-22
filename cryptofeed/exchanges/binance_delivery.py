@@ -22,7 +22,7 @@ LOG = logging.getLogger('feedhandler')
 class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     id = BINANCE_DELIVERY
 
-    websocket_endpoints = [WebsocketEndpoint('wss://dstream.binance.com')]
+    websocket_endpoints = [WebsocketEndpoint('wss://dstream.binance.com', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://dapi.binance.com/dapi', routes=Routes('/v1/exchangeInfo', authentication='/v1/listenKey'))]
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
@@ -34,12 +34,6 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         LIQUIDATIONS: 'forceOrder',
         POSITIONS: POSITIONS
     }
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # overwrite values previously set by the super class Binance
-        self.address = self._address()
-        self.ws_defaults['compression'] = None
 
     def _check_update_id(self, pair: str, msg: dict) -> bool:
         if self._l2_book[pair].delta is None and msg['u'] < self.last_update_id[pair]:

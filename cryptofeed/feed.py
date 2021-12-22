@@ -75,7 +75,6 @@ class Feed(Exchange):
         self.previous_book = defaultdict(dict)
         self.origin = origin
         self.checksum_validation = checksum_validation
-        self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
         self.requires_authentication = False
         self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
@@ -178,24 +177,46 @@ class Feed(Exchange):
         3. the message handler for this connection
         4. The authentication method for this connection
         """
+        def limit_sub(subscription: dict, limit: int):
+            ret = []
+            sub = {}
+            for channel in subscription:
+                for pair in subscription[channel]:
+                    if channel not in sub:
+                        sub[channel] = []
+                    sub[channel].append(pair)
+                    if sum(map(len, sub.values())) == limit:
+                        ret.append((WSAsyncConn(addr, self.id, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+                        sub = {}
+
+            if sum(map(len, sub.values())) > 0:
+                ret.append((WSAsyncConn(addr, self.id, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+            return ret
+
         ret = self._connect_rest()
         for endpoint in self.websocket_endpoints:
+            limit = endpoint.limit
             addr = endpoint.address if not self.sandbox else endpoint.sandbox
             if endpoint.instrument_filter is None and endpoint.channel_filter is None:
-                return [(WSAsyncConn(addr, self.id, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate)]
-
-            sub = {}
-            for channel in self.subscription:
-                if endpoint.channel_filter is None or self.exchange_channel_to_std(channel) in endpoint.channel_filter:
-                    sub[channel] = []
-                    if endpoint.instrument_filter is None:
-                        sub[channel] = list(self.subscription[channel])
-                    else:
-                        for symbol in self.subscription[channel]:
-                            if self.info()['instrument_type'][self.exchange_symbol_to_std_symbol(symbol)] == endpoint.instrument_filter:
-                                sub[channel].append(symbol)
-
-            ret.append((WSAsyncConn(addr, self.id, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+                if limit and sum(map(len, self.subscription.values())) > limit:
+                    ret.extend(limit_sub(self.subscription, limit))
+                else:
+                    ret.append((WSAsyncConn(addr, self.id, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+            else:
+                sub = {}
+                for channel in self.subscription:
+                    if endpoint.channel_filter is None or self.exchange_channel_to_std(channel) in endpoint.channel_filter:
+                        sub[channel] = []
+                        if endpoint.instrument_filter is None:
+                            sub[channel] = list(self.subscription[channel])
+                        else:
+                            for symbol in self.subscription[channel]:
+                                if self.info()['instrument_type'][self.exchange_symbol_to_std_symbol(symbol)] == endpoint.instrument_filter:
+                                    sub[channel].append(symbol)
+                if limit and sum(map(len, sub.values())) > limit:
+                    ret.extend(limit_sub(sub, limit))
+                else:
+                    ret.append((WSAsyncConn(addr, self.id, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     @property

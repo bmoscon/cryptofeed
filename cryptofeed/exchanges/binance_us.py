@@ -19,9 +19,3 @@ class BinanceUS(Binance, BinanceUSRestMixin):
     id = BINANCE_US
     websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.us:9443')]
     rest_endpoints = [RestEndpoint('https://api.binance.us', routes=Routes('/api/v3/exchangeInfo'))]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # overwrite values previously set by the super class Binance
-        self.rest_endpoint = 'https://api.binance.us/api/v3'
-        self.address = self._address()
