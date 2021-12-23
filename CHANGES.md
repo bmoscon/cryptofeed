@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.1.2
+### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
  * Feature: Provide sample book schema for Postgres.
  * Feature: Add subaccount info to OrderInfo and Fills data types.
