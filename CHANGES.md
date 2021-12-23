@@ -1,5 +1,9 @@
 ## Changelog
 
+### 2.2.0
+* Feature: New exchange: Bit.com
+* Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
+
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
  * Feature: Provide sample book schema for Postgres.

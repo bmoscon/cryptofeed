@@ -10,7 +10,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, PROBIT, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -22,8 +22,8 @@ LOG = logging.getLogger('feedhandler')
 
 class Probit(Feed):
     id = PROBIT
-    symbol_endpoint = 'https://api.probit.com/api/exchange/v1/market'
-    websocket_endpoint = 'wss://api.probit.com/api/exchange/v1/ws'
+    websocket_endpoints = [WebsocketEndpoint('wss://api.probit.com/api/exchange/v1/ws')]
+    rest_endpoints = [RestEndpoint('https://api.probit.com', routes=Routes('/api/exchange/v1/market'))]
     websocket_channels = {
         L2_BOOK: 'order_books',
         TRADES: 'recent_trades',

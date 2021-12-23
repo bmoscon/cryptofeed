@@ -7,16 +7,15 @@ associated with this software.
 import asyncio
 from collections import defaultdict
 from decimal import Decimal
-from functools import partial
 import logging
 import time
-from typing import Dict, List, Tuple, Callable
+from typing import Dict, Tuple
 import requests
 import hmac
 import base64
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
@@ -29,12 +28,11 @@ LOG = logging.getLogger("feedhandler")
 
 class OKEx(Feed):
     id = OKEX
-    api = 'https://www.okex.com/api/'
-    symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
-    websocket_endpoint = {
-        'public': 'wss://ws.okex.com:8443/ws/v5/public',
-        'private': 'wss://ws.okex.com:8443/ws/v5/private'
-    }
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=[L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS], options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=[ORDER_INFO], options={'compression': None}),
+    ]
+    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']))]
     websocket_channels = {
         L2_BOOK: 'books-l2-tbt',
         TRADES: 'trades',
@@ -80,12 +78,6 @@ class OKEx(Feed):
                 info['instrument_type'][s.normalized] = stype
 
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.ws_defaults['compression'] = None
-        self.instrument_type_map = {'perpetual': 'SWAP',
-                                    'spot': 'MARGIN'}
 
     async def _liquidations(self, pairs: list):
         last_update = defaultdict(dict)
@@ -391,16 +383,6 @@ class OKEx(Feed):
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
-            ret.append((WSAsyncConn(self.address['private'], self.id, **self.ws_defaults),
-                        partial(self.subscribe, private=True), self.message_handler, self.authenticate))
-        if any(not self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
-            ret.append((WSAsyncConn(self.address['public'], self.id, **self.ws_defaults),
-                        partial(self.subscribe, private=False), self.message_handler, self.__no_auth))
-        return ret
-
     async def subscribe(self, connection: AsyncConnection, private: bool = False):
         pri_channels = []
         pub_channels = []
@@ -455,7 +437,7 @@ class OKEx(Feed):
     def inst_type_to_okex_type(self, ticker):
         sym = self.exchange_symbol_to_std_symbol(ticker)
         instrument_type = self.instrument_type(sym)
-        return self.instrument_type_map[instrument_type]
+        return 'SWAP' if instrument_type == 'perpetual' else 'MARGIN'
 
     def _get_server_time(self):
         endpoint = "v5/public/time"

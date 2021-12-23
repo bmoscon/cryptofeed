@@ -24,7 +24,7 @@ LOG = logging.getLogger('feedhandler')
 class Bitflyer(Feed):
     id = BITFLYER
     websocket_endpoints = [WebsocketEndpoint('wss://ws.lightstream.bitflyer.com/json-rpc')]
-    rest_endpoints = [RestEndpoint('https://api.bitflyer.com', routes=Routes( ['/v1/getmarkets/eu', '/v1/getmarkets/usa', '/v1/getmarkets', '/v1/markets', '/v1/markets/usa', '/v1/markets/eu']))]
+    rest_endpoints = [RestEndpoint('https://api.bitflyer.com', routes=Routes(['/v1/getmarkets/eu', '/v1/getmarkets/usa', '/v1/getmarkets', '/v1/markets', '/v1/markets/usa', '/v1/markets/eu']))]
     websocket_channels = {
         L2_BOOK: 'lightning_board_{}',
         TRADES: 'lightning_executions_{}',

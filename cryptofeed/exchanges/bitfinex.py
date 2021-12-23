@@ -8,11 +8,11 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import partial
 import logging
-from typing import Callable, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WSAsyncConn, WebsocketEndpoint
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES, PERPETUAL
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed

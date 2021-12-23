@@ -32,9 +32,9 @@ class Bithumb(Feed):
     We'll just assume that anything USDT is actually KRW. A search on their exchange page
     shows that there is no USDT symbols available. Please be careful when referencing their api_info page
     '''
-    id = BITHUMB    
+    id = BITHUMB
     websocket_endpoints = [WebsocketEndpoint('wss://pubwss.bithumb.com/pub/ws')]
-    rest_endpoints = [RestEndpoint('https://api.bithumb.com', routes=Routes( ['/public/ticker/ALL_BTC', '/public/ticker/ALL_KRW']))]
+    rest_endpoints = [RestEndpoint('https://api.bithumb.com', routes=Routes(['/public/ticker/ALL_BTC', '/public/ticker/ALL_KRW']))]
     websocket_channels = {
         # L2_BOOK: 'orderbookdepth', <-- technically the exchange supports orderbooks but it only provides orderbook deltas, there is
         # no way to synchronize against a rest snapshot, nor request/obtain an orderbook via the websocket, so this isn't really useful
