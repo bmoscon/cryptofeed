@@ -168,7 +168,7 @@ class RestExchange:
         if start:
             start = self._datetime_normalize(start)
             if not end:
-                end = dt.now()
+                end = dt.utcnow()
         if end:
             end = self._datetime_normalize(end)
         return start, end if start else None
