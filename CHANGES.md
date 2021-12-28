@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.2.0
+ * Bugfix: Use UTC for dateimte conversions in REST api
+
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
  * Feature: Provide sample book schema for Postgres.
