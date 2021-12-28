@@ -1,8 +1,9 @@
 ## Changelog
 
 ### 2.2.0
-* Feature: New exchange: Bit.com
-* Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
+ * Feature: New exchange: Bit.com
+ * Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
+ * Bugfix: Use UTC for dateimte conversions in REST api
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
