@@ -168,9 +168,11 @@ class RestExchange:
         if start:
             start = self._datetime_normalize(start)
             if not end:
-                end = dt.now()
+                end = dt.utcnow()
         if end:
             end = self._datetime_normalize(end)
+        if start and start > end:
+            raise ValueError('Start time must be less than or equal to end time') 
         return start, end if start else None
 
     # public / non account specific
