@@ -12,7 +12,7 @@ from typing import Callable, Dict, List, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WSAsyncConn, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -27,11 +27,12 @@ LOG = logging.getLogger('feedhandler')
 
 class Kraken(Feed, KrakenRestMixin):
     id = KRAKEN
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.kraken.com')]
+    rest_endpoints = [RestEndpoint('https://api.kraken.com', routes=Routes('/0/public/AssetPairs'))]
+
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '15d'}
     candle_interval_map = {'1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080, '15d': 21600}
     valid_depths = [10, 25, 100, 500, 1000]
-    symbol_endpoint = 'https://api.kraken.com/0/public/AssetPairs'
-    websocket_endpoint = 'wss://ws.kraken.com'
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',

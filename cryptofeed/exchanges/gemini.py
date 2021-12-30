@@ -7,15 +7,16 @@ associated with this software.
 from collections import defaultdict
 import logging
 from decimal import Decimal
-from typing import Dict, List, Tuple, Callable
+from typing import Dict, Tuple, Union
 import base64
 import hashlib
 import hmac
 import time
+import itertools
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FAILED, FILLED, GEMINI, L2_BOOK, LIMIT, OPEN, SELL, STOP_LIMIT, SUBMITTING, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -28,9 +29,12 @@ LOG = logging.getLogger('feedhandler')
 
 class Gemini(Feed, GeminiRestMixin):
     id = GEMINI
-    symbol_endpoint = {'https://api.gemini.com/v1/symbols': 'https://api.gemini.com/v1/symbols/details/'}
-    websocket_endpoint = {'public': 'wss://api.gemini.com/v2/marketdata/', 'auth': 'wss://api.gemini.com/v1/order/events'}
-    sandbox_endpoint = {'public': 'wss://api.sandbox.gemini.com/v2/marketdata/', 'auth': 'wss://api.sandbox.gemini.com/v1/order/events'}
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://api.gemini.com/v2/marketdata/', sandbox='wss://api.sandbox.gemini.com/v2/marketdata/', channel_filter=[L2_BOOK, TRADES]),
+        WebsocketEndpoint('wss://api.gemini.com/v1/order/events', sandbox='wss://api.sandbox.gemini.com/v1/order/events', channel_filter=[ORDER_INFO], authentication=True)
+    ]
+    rest_endpoints = [RestEndpoint('https://api.gemini.com', routes=Routes('/v1/symbols/details/{}', currencies='/v1/symbols', authentication='/v1/order/events'))]
+
     websocket_channels = {
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
@@ -41,6 +45,11 @@ class Gemini(Feed, GeminiRestMixin):
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
         return ts / 1000.0
+
+    @classmethod
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
+        ret = cls.http_sync.read(ep.currencies, json=True, uuid=cls.id)
+        return [ep.instruments.format(currency) for currency in ret]
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -60,10 +69,10 @@ class Gemini(Feed, GeminiRestMixin):
         for pair in pairs:
             self._l2_book[self.exchange_symbol_to_std_symbol(pair)] = OrderBook(self.id, self.exchange_symbol_to_std_symbol(pair), max_depth=self.max_depth)
 
-    def generate_token(self, request: str, payload=None) -> dict:
+    def generate_token(self, payload=None) -> dict:
         if not payload:
             payload = {}
-        payload['request'] = request
+        payload['request'] = self.rest_endpoints[0].routes.authentication
         payload['nonce'] = int(time.time() * 1000)
 
         if self.account_name:
@@ -186,27 +195,19 @@ class Gemini(Feed, GeminiRestMixin):
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        authenticated = []
-        public = []
-        ret = []
-
+    async def _ws_authentication(self, address: str, options: dict) -> Tuple[str, dict]:
+        header = self.generate_token()
+        symbols = []
         for channel in self.subscription:
             if self.is_authenticated_channel(channel):
-                authenticated.extend(self.subscription.get(channel))
-            else:
-                public.extend(self.subscription.get(channel))
+                symbols.extend(self.subscription.get(channel))
+        symbols = '&'.join([f"symbolFilter={s.lower()}" for s in symbols])  # needs to match REST format (lower case)
+        options['extra_headers'] = header
+        return f'{address}?{symbols}', options
 
-        if authenticated:
-            header = self.generate_token("/v1/order/events")
-            symbols = '&'.join([f"symbolFilter={s.lower()}" for s in authenticated])  # needs to match REST format (lower case)
-
-            ret.append(self._connect_builder(f"{self.address['auth']}?{symbols}", None, header=header, sub=self._empty_subscribe, handler=self.message_handler_orders))
-        if public:
-            ret.append(self._connect_builder(self.address['public'], list(set(public))))
-
-        return ret
-
-    async def subscribe(self, conn: AsyncConnection, options=None):
-        self.__reset(options)
-        await conn.write(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": options}]}))
+    async def subscribe(self, conn: AsyncConnection):
+        if self.std_channel_to_exchange(ORDER_INFO) in conn.subscription:
+            return
+        self.__reset()
+        symbols = itertools.chain(*conn.subscription.values())
+        await conn.write(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": symbols}]}))

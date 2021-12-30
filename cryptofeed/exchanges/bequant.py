@@ -29,7 +29,6 @@ LOG = logging.getLogger('feedhandler')
 
 class Bequant(Feed):
     id = BEQUANT
-
     websocket_endpoints = [
         WebsocketEndpoint('wss://api.bequant.io/api/2/ws/public', channel_filter=[L2_BOOK, TRADES, TICKER, CANDLES]),
         WebsocketEndpoint('wss://api.bequant.io/api/2/ws/trading', channel_filter=[ORDER_INFO]),

@@ -62,10 +62,13 @@ class HTTPSync(Connection):
 class AsyncConnection(Connection):
     conn_count: int = 0
 
-    def __init__(self, conn_id: str, subscription=None):
+    def __init__(self, conn_id: str, authentication=None, subscription=None):
         """
         conn_id: str
             the unique identifier for the connection
+        authentication: Callable
+            function pointer that will be invoked directly before the connection
+            is attempted. Some connections may need to do authentication at this point.
         subscription: dict
             optional connection information
         """
@@ -74,6 +77,7 @@ class AsyncConnection(Connection):
         self.received: int = 0
         self.sent: int = 0
         self.last_message = None
+        self.authentication = authentication
         self.subscription = subscription
         self.conn: Union[websockets.WebSocketClientProtocol, aiohttp.ClientSession] = None
         atexit.register(self.__del__)
@@ -279,7 +283,7 @@ class HTTPConcurrentPoll(HTTPPoll):
 
 class WSAsyncConn(AsyncConnection):
 
-    def __init__(self, address: str, conn_id: str, subscription=None, **kwargs):
+    def __init__(self, address: str, conn_id: str, authentication=None, subscription=None, **kwargs):
         """
         address: str
             the websocket address to connect to
@@ -291,7 +295,7 @@ class WSAsyncConn(AsyncConnection):
         if not address.startswith("wss://"):
             raise ValueError(f'Invalid address, must be a wss address. Provided address is: {address!r}')
         self.address = address
-        super().__init__(f'{conn_id}.ws.{self.conn_count}', subscription=subscription)
+        super().__init__(f'{conn_id}.ws.{self.conn_count}', authentication=authentication, subscription=subscription)
         self.ws_kwargs = kwargs
 
     @property
@@ -305,6 +309,8 @@ class WSAsyncConn(AsyncConnection):
             LOG.debug('%s: connecting to %s', self.id, self.address)
             if self.raw_data_callback:
                 await self.raw_data_callback(None, time.time(), self.id, connect=self.address)
+            if self.authentication:
+                self.address, self.ws_kwargs = await self.authentication(self.address, self.ws_kwargs)
             self.conn = await websockets.connect(self.address, **self.ws_kwargs)
         self.sent = 0
         self.received = 0
@@ -344,6 +350,7 @@ class WebsocketEndpoint:
     channel_filter: str = None
     limit: int = None
     options: dict = None
+    authentication: bool = None
 
     def __post_init__(self):
         defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None}

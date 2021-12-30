@@ -6,7 +6,6 @@ associated with this software.
 '''
 import asyncio
 from collections import defaultdict
-from functools import partial
 import logging
 from typing import Tuple, Callable, List, Union
 
@@ -147,17 +146,6 @@ class Feed(Exchange):
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
-    def _connect_builder(self, address: str, options: list, header=None, sub=None, handler=None, auth=None):
-        """
-        Helper method for building a custom connect tuple
-        """
-        subscribe = partial(self.subscribe if not sub else sub, options=options)
-        conn = WSAsyncConn(address, self.id, extra_headers=header, **self.ws_defaults)
-        return conn, subscribe, handler if handler else self.message_handler, auth if auth else self.authenticate
-
-    async def _empty_subscribe(self, conn: AsyncConnection, **kwargs):
-        return
-
     def _connect_rest(self):
         """
         Child classes should override this method to generate connection objects that
@@ -177,7 +165,7 @@ class Feed(Exchange):
         3. the message handler for this connection
         4. The authentication method for this connection
         """
-        def limit_sub(subscription: dict, limit: int):
+        def limit_sub(subscription: dict, limit: int, auth):
             ret = []
             sub = {}
             for channel in subscription:
@@ -186,22 +174,25 @@ class Feed(Exchange):
                         sub[channel] = []
                     sub[channel].append(pair)
                     if sum(map(len, sub.values())) == limit:
-                        ret.append((WSAsyncConn(addr, self.id, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+                        ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
                         sub = {}
 
             if sum(map(len, sub.values())) > 0:
-                ret.append((WSAsyncConn(addr, self.id, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+                ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
             return ret
 
         ret = self._connect_rest()
         for endpoint in self.websocket_endpoints:
+            auth = None
+            if endpoint.authentication:
+                auth = self._ws_authentication
             limit = endpoint.limit
             addr = endpoint.address if not self.sandbox else endpoint.sandbox
             if endpoint.instrument_filter is None and endpoint.channel_filter is None:
                 if limit and sum(map(len, self.subscription.values())) > limit:
-                    ret.extend(limit_sub(self.subscription, limit))
+                    ret.extend(limit_sub(self.subscription, limit, auth))
                 else:
-                    ret.append((WSAsyncConn(addr, self.id, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+                    ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
             else:
                 sub = {}
                 for channel in self.subscription:
@@ -214,9 +205,9 @@ class Feed(Exchange):
                                 if self.info()['instrument_type'][self.exchange_symbol_to_std_symbol(symbol)] == endpoint.instrument_filter:
                                     sub[channel].append(symbol)
                 if limit and sum(map(len, sub.values())) > limit:
-                    ret.extend(limit_sub(sub, limit))
+                    ret.extend(limit_sub(sub, limit, auth))
                 else:
-                    ret.append((WSAsyncConn(addr, self.id, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+                    ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     @property
