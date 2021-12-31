@@ -67,7 +67,7 @@ class Huobi(Feed):
         self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['ts']), raw=msg)
-    
+
     async def _ticker(self, msg: dict, timestamp: float):
         """
         {

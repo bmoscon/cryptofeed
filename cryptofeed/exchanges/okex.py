@@ -45,6 +45,7 @@ class OKEx(Feed, OKExRestMixin):
         LIQUIDATIONS: LIQUIDATIONS,
         ORDER_INFO: 'orders',
     }
+    request_limit = 20
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:

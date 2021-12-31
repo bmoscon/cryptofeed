@@ -5,15 +5,16 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 @Author: bastien.enjalbert@gmail.com
 '''
+import asyncio
 from datetime import datetime as dt
 from decimal import Decimal
 import logging
-import time
 
 from yapic import json
 
 from cryptofeed.exchange import RestExchange
 from cryptofeed.types import Candle
+from cryptofeed.defines import CANDLES
 from cryptofeed.util.time import timedelta_str_to_sec
 
 LOG = logging.getLogger('feedhandler')
@@ -25,16 +26,13 @@ LOG = logging.getLogger('feedhandler')
 class OKExRestMixin(RestExchange):
     api = "https://okex.com/api/"
     rest_channels = (
-
+        CANDLES,
     )
     order_options = {
 
     }
-    candle_mappings = {'1m': '60', '3m': '180', '5m': '300', '15m': '900', '30m': '1800', '1h': '3600', '2h': '7200', '4h': '14400',
-                       '6h': '21600', '12h': '43200', '1d': '86400', '7d': '604800'}
 
     async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
-        _interval = self.candle_mappings[interval]
         sym = self.std_symbol_to_exchange_symbol(symbol)
         base_endpoint = f"{self.api}spot/v3/instruments/{sym}"
         start, end = self._interval_normalize(start, end)
@@ -58,7 +56,7 @@ class OKExRestMixin(RestExchange):
                 break
             start = data[-1].start + offset
 
-            time.sleep(2) # Hardcoded : TODO : optimize and use the 20 requests per 2 seconds slots
+            await asyncio.sleep(1 / self.request_limit)
 
     def _to_isoformat(self, timestamp):
         """Required for okex (ISO 8601)
