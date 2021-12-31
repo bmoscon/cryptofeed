@@ -17,6 +17,7 @@ from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT
+from cryptofeed.exchanges.mixins.okex_rest import OKExRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
@@ -26,7 +27,7 @@ from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Li
 LOG = logging.getLogger("feedhandler")
 
 
-class OKEx(Feed):
+class OKEx(Feed, OKExRestMixin):
     id = OKEX
     websocket_endpoints = [
         WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=[L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS], options={'compression': None}),
@@ -42,6 +43,7 @@ class OKEx(Feed):
         LIQUIDATIONS: LIQUIDATIONS,
         ORDER_INFO: 'orders',
     }
+    request_limit = 20
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:

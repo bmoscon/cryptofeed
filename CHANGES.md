@@ -4,6 +4,8 @@
  * Feature: New exchange: Bit.com
  * Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
  * Bugfix: Use UTC for dateimte conversions in REST api
+ * Bugfix: Funding rate of 0 was being converted to None when to_dict was called
+ * Feature: Add OKEx restpoint api and implement candle function
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
