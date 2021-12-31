@@ -2,6 +2,7 @@
 
 ### 2.2.0
  * Bugfix: Use UTC for dateimte conversions in REST api
+ * Bugfix: Funding rate of 0 was being converted to None when to_dict was called
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
