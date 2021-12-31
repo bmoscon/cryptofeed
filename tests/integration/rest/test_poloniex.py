@@ -36,10 +36,10 @@ class TestPoloniexRest:
 
     def test_trade_history(self):
         trade_history = []
-        for trade in poloniex.trades_sync('ETH-BTC', start='2020-12-30 00:00:00', end='2020-12-31 00:00:00'):
+        for trade in poloniex.trades_sync('ETH-BTC', start='2021-12-29 00:00:00', end='2021-12-30 00:00:00'):
             trade_history.extend(trade)
         assert len(trade_history) == 4000
-        assert trade_history[0]['amount'] == Decimal('0.00001152')
+        assert trade_history[0]['amount'] == Decimal('0.00918097')
         assert trade_history[0]['symbol'] == 'ETH-BTC'
 
 
