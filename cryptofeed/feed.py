@@ -188,26 +188,11 @@ class Feed(Exchange):
                 auth = self._ws_authentication
             limit = endpoint.limit
             addr = endpoint.address if not self.sandbox else endpoint.sandbox
-            if endpoint.instrument_filter is None and endpoint.channel_filter is None:
-                if limit and sum(map(len, self.subscription.values())) > limit:
-                    ret.extend(limit_sub(self.subscription, limit, auth))
-                else:
-                    ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=self.subscription, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+            filtered_sub = endpoint.subscription_filter(self.subscription)
+            if limit and sum(map(len, filtered_sub.values())) > limit:
+                ret.extend(limit_sub(filtered_sub, limit, auth))
             else:
-                sub = {}
-                for channel in self.subscription:
-                    if endpoint.channel_filter is None or self.exchange_channel_to_std(channel) in endpoint.channel_filter:
-                        sub[channel] = []
-                        if endpoint.instrument_filter is None:
-                            sub[channel] = list(self.subscription[channel])
-                        else:
-                            for symbol in self.subscription[channel]:
-                                if self.info()['instrument_type'][self.exchange_symbol_to_std_symbol(symbol)] == endpoint.instrument_filter:
-                                    sub[channel].append(symbol)
-                if limit and sum(map(len, sub.values())) > limit:
-                    ret.extend(limit_sub(sub, limit, auth))
-                else:
-                    ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+                ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=filtered_sub, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
         return ret
 
     @property

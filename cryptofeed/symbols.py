@@ -119,3 +119,26 @@ class _Symbols:
 
 
 Symbols = _Symbols()
+
+
+def str_to_symbol(symbol: str) -> Symbol:
+    '''
+    symbol: str
+        the symbol string must already be in correctly normalized format or this will fail
+    '''
+    values = symbol.split(Symbol.symbol_sep)
+    if len(values) == 1:
+        return Symbol(values[0], values[0], type=CURRENCY)
+    if len(values) == 2:
+        return Symbol(values[0], values[1], type=SPOT)
+    if values[-1] == 'PERP':
+        return Symbol(values[0], values[1], type=PERPETUAL)
+    if len(values) == 5:
+        s = Symbol(values[0], values[1], type=OPTION, strike_price=values[2], option_type=values[4])
+        s.expiry_date = values[3]
+        return s
+    if len(values) == 3:
+        s = Symbol(values[0], values[1], type=FUTURES)
+        s.expiry_date = values[2]
+        return s
+    raise ValueError('Invalid symbol')

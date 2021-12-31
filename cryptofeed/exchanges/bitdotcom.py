@@ -26,12 +26,12 @@ class BitDotCom(Feed):
     id = BITDOTCOM
 
     websocket_endpoints = [
-        WebsocketEndpoint('wss://spot-ws.bit.com', instrument_filter=SPOT, sandbox='wss://betaspot-ws.bitexch.dev'),
-        WebsocketEndpoint('wss://ws.bit.com', instrument_filter=[FUTURES, OPTION], sandbox='wss://betaws.bitexch.dev'),
+        WebsocketEndpoint('wss://spot-ws.bit.com', instrument_filter=('TYPE', (SPOT)), sandbox='wss://betaspot-ws.bitexch.dev'),
+        WebsocketEndpoint('wss://ws.bit.com', instrument_filter=('TYPE', (FUTURES, OPTION)), sandbox='wss://betaws.bitexch.dev'),
     ]
     rest_endpoints = [
-        RestEndpoint('https://spot-api.bit.com', instrument_filter=SPOT, sandbox='https://betaspot-api.bitexch.dev', routes=Routes('/spot/v1/instruments')),
-        RestEndpoint('https://betaapi.bitexch.dev', instrument_filter=[OPTION, FUTURES], sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies'))
+        RestEndpoint('https://spot-api.bit.com', instrument_filter=('TYPE', (SPOT)), sandbox='https://betaspot-api.bitexch.dev', routes=Routes('/spot/v1/instruments')),
+        RestEndpoint('https://betaapi.bitexch.dev', instrument_filter=('TYPE', (OPTION, FUTURES)), sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies'))
     ]
 
     websocket_channels = {

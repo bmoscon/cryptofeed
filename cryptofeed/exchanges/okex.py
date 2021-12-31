@@ -29,11 +29,6 @@ LOG = logging.getLogger("feedhandler")
 
 class OKEx(Feed, OKExRestMixin):
     id = OKEX
-    websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=[L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS], options={'compression': None}),
-        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=[ORDER_INFO], options={'compression': None}),
-    ]
-    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']))]
     websocket_channels = {
         L2_BOOK: 'books-l2-tbt',
         TRADES: 'trades',
@@ -43,6 +38,11 @@ class OKEx(Feed, OKExRestMixin):
         LIQUIDATIONS: LIQUIDATIONS,
         ORDER_INFO: 'orders',
     }
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=[websocket_channels[c] for c in [L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS]], options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=[websocket_channels[ORDER_INFO]], options={'compression': None}),
+    ]
+    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']))]
     request_limit = 20
 
     @classmethod
@@ -422,9 +422,6 @@ class OKEx(Feed, OKExRestMixin):
         timestamp, sign = self._generate_token(key_id, key_secret)
         login_param = {"op": "login", "args": [{"apiKey": self.key_id, "passphrase": self.config.okex.key_passphrase, "timestamp": timestamp, "sign": sign.decode("utf-8")}]}
         return login_param
-
-    async def __no_auth(self, conn: AsyncConnection):
-        pass
 
     def build_subscription(self, channel: str, ticker: str) -> dict:
         if channel in ['positions', 'orders']:

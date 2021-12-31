@@ -29,13 +29,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Bequant(Feed):
     id = BEQUANT
-    websocket_endpoints = [
-        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/public', channel_filter=[L2_BOOK, TRADES, TICKER, CANDLES]),
-        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/trading', channel_filter=[ORDER_INFO]),
-        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/account', channel_filter=[BALANCES, TRANSACTIONS]),
-    ]
     rest_endpoints = [RestEndpoint('https://api.bequant.io', routes=Routes('/api/2/public/symbol'))]
-
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'}
     candle_interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
     websocket_channels = {
@@ -47,6 +41,11 @@ class Bequant(Feed):
         TICKER: 'subscribeTicker',
         CANDLES: 'subscribeCandles'
     }
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/public', channel_filter=[websocket_channels[c] for c in [L2_BOOK, TRADES, TICKER, CANDLES]]),
+        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/trading', channel_filter=[websocket_channels[ORDER_INFO]]),
+        WebsocketEndpoint('wss://api.bequant.io/api/2/ws/account', channel_filter=[websocket_channels[BALANCES], websocket_channels[TRANSACTIONS]]),
+    ]
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:

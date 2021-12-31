@@ -29,17 +29,16 @@ LOG = logging.getLogger('feedhandler')
 
 class Gemini(Feed, GeminiRestMixin):
     id = GEMINI
-    websocket_endpoints = [
-        WebsocketEndpoint('wss://api.gemini.com/v2/marketdata/', sandbox='wss://api.sandbox.gemini.com/v2/marketdata/', channel_filter=[L2_BOOK, TRADES]),
-        WebsocketEndpoint('wss://api.gemini.com/v1/order/events', sandbox='wss://api.sandbox.gemini.com/v1/order/events', channel_filter=[ORDER_INFO], authentication=True)
-    ]
-    rest_endpoints = [RestEndpoint('https://api.gemini.com', routes=Routes('/v1/symbols/details/{}', currencies='/v1/symbols', authentication='/v1/order/events'))]
-
     websocket_channels = {
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
         ORDER_INFO: ORDER_INFO
     }
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://api.gemini.com/v2/marketdata/', sandbox='wss://api.sandbox.gemini.com/v2/marketdata/', channel_filter=[websocket_channels[L2_BOOK], websocket_channels[TRADES]]),
+        WebsocketEndpoint('wss://api.gemini.com/v1/order/events', sandbox='wss://api.sandbox.gemini.com/v1/order/events', channel_filter=[websocket_channels[ORDER_INFO]], authentication=True)
+    ]
+    rest_endpoints = [RestEndpoint('https://api.gemini.com', routes=Routes('/v1/symbols/details/{}', currencies='/v1/symbols', authentication='/v1/order/events'))]
     request_limit = 1
 
     @classmethod

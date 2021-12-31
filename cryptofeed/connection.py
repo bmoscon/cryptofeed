@@ -22,6 +22,7 @@ from aiohttp.typedefs import StrOrURL
 from yapic import json as json_parser
 
 from cryptofeed.exceptions import ConnectionClosed
+from cryptofeed.symbols import str_to_symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -357,6 +358,25 @@ class WebsocketEndpoint:
         if self.options:
             defaults.update(self.options)
         self.options = defaults
+
+    def subscription_filter(self, sub: dict) -> dict:
+        if not self.instrument_filter and not self.channel_filter:
+            return sub
+        ret = {}
+        for chan, syms in sub.items():
+            if self.channel_filter and chan not in self.channel_filter:
+                continue
+            ret[chan] = []
+            if not self.instrument_filter:
+                ret[chan].extend(sub[chan])
+            else:
+                if self.instrument_filter[0] == 'TYPE':
+                    ret[chan].extend([s for s in syms if str_to_symbol(s).type in self.instrument_filter[1]])
+                elif self.instrument_filter[0] == 'QUOTE':
+                    ret[chan].extend([s for s in syms if str_to_symbol(s).quote in self.instrument_filter[1]])
+                else:
+                    raise ValueError('Invalid instrument filter type specified')
+        return ret
 
     def get_address(self, sandbox=False):
         if sandbox and self.sandbox:
