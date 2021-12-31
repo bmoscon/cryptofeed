@@ -5,12 +5,22 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 @Author: bastien.enjalbert@gmail.com
 '''
+import asyncio
 from decimal import Decimal
 
 from cryptofeed.exchanges import OKEx
 from cryptofeed.types import Candle
 
 o = OKEx()
+
+
+def teardown_module(module):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    loop.run_until_complete(o.shutdown())
+
 
 class TestOKExRest:
 
