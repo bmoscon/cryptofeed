@@ -180,7 +180,7 @@ cdef class Funding:
         if numeric_type is None:
             data = {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': self.mark_price, 'rate': self.rate, 'next_funding_time': self.next_funding_time, 'predicted_rate': self.predicted_rate, 'timestamp': self.timestamp}
         else:
-            data = {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': numeric_type(self.mark_price) if self.mark_price else None, 'rate': numeric_type(self.rate), 'next_funding_time': self.next_funding_time, 'predicted_rate': numeric_type(self.predicted_rate) if self.predicted_rate else None, 'timestamp': self.timestamp}
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'mark_price': numeric_type(self.mark_price) if self.mark_price else None, 'rate': numeric_type(self.rate), 'next_funding_time': self.next_funding_time, 'predicted_rate': numeric_type(self.predicted_rate) if self.predicted_rate is not None else None, 'timestamp': self.timestamp}
         return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
