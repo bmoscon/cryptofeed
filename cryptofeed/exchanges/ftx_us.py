@@ -6,6 +6,7 @@ associated with this software.
 '''
 import logging
 
+from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import FTX_US, L2_BOOK, ORDER_INFO, TICKER, TRADES, FILLS
 from cryptofeed.exchanges.ftx import FTX
 from cryptofeed.exchanges.mixins.ftx_rest_us import FTXUSRestMixin
@@ -16,8 +17,9 @@ LOG = logging.getLogger('feedhandler')
 
 class FTXUS(FTX, FTXUSRestMixin):
     id = FTX_US
-    symbol_endpoint = 'https://ftx.us/api/markets'
-    websocket_endpoint = 'wss://ftx.us/ws/'
+    websocket_endpoints = [WebsocketEndpoint('wss://ftx.us/ws/', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://ftx.us', routes=Routes('/api/markets'))]
+
     websocket_channels = {
         L2_BOOK: 'orderbook',
         TRADES: 'trades',

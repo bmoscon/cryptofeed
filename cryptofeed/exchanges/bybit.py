@@ -82,14 +82,9 @@ class Bybit(Feed):
         super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
 
-    def __reset(self, quote=None):
+    def __reset(self):
         self._instrument_info_cache = {}
-        if quote is None:
-            self._l2_book = {}
-        else:
-            rem = [symbol for symbol in self._l2_book if quote in symbol]
-            for symbol in rem:
-                del self._l2_book[symbol]
+        self._l2_book = {}
 
     async def _candle(self, msg: dict, timestamp: float):
         '''

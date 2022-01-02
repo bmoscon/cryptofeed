@@ -11,6 +11,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
+from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, FMFW as FMFW_id, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -24,8 +25,9 @@ LOG = logging.getLogger('feedhandler')
 
 class FMFW(Feed):
     id = FMFW_id
-    symbol_endpoint = 'https://api.fmfw.io/api/3/public/symbol'
-    websocket_endpoint = 'wss://api.fmfw.io/api/3/ws/public'
+    websocket_endpoints = [WebsocketEndpoint('wss://api.fmfw.io/api/3/ws/public')]
+    rest_endpoints = [RestEndpoint('https://api.fmfw.io', routes=Routes('/api/3/public/symbol'))]
+
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'}
     candle_interval_map = {'1m': 'M1', '3m': 'M3', '5m': 'M5', '15m': 'M15', '30m': 'M30', '1h': 'H1', '4h': 'H4', '1d': 'D1', '1w': 'D7', '1M': '1M'}
     websocket_channels = {

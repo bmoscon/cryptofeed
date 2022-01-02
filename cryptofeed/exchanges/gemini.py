@@ -71,7 +71,7 @@ class Gemini(Feed, GeminiRestMixin):
     def generate_token(self, payload=None) -> dict:
         if not payload:
             payload = {}
-        payload['request'] = self.rest_endpoints[0].routes.authentication
+        payload['request'] = self.rest_endpoints[0].authentication
         payload['nonce'] = int(time.time() * 1000)
 
         if self.account_name:
