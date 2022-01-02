@@ -52,11 +52,13 @@ class OKExRestMixin(RestExchange):
                            True, self._datetime_normalize(e[0]), raw=e) for e in data]
 
             yield data
-            if not end or len(data) < 10000:
+            if not end or len(data) < 300:
                 break
-            start = data[-1].start + offset
+            end = data[-1].stop - offset
 
-            await asyncio.sleep(1 / self.request_limit)
+            # TODO : optimize and use the 20 requests per 2 seconds slots
+            # TODO : Need to calculate current number of requests per 2 seconds slot and wait enough to start other requests
+            await asyncio.sleep(2)
 
     def _to_isoformat(self, timestamp):
         """Required for okex (ISO 8601)
