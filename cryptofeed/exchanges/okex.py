@@ -17,8 +17,7 @@ import base64
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT
-from cryptofeed.exchanges.mixins.okex_rest import OKExRestMixin
+from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT,POSITIONS
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
@@ -28,13 +27,17 @@ from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Li
 LOG = logging.getLogger("feedhandler")
 
 
-class OKEx(Feed, OKExRestMixin):
+class OKEx(Feed):
     id = OKEX
     api = 'https://www.okex.com/api/'
     symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
     websocket_endpoint = {
         'public': 'wss://ws.okex.com:8443/ws/v5/public',
         'private': 'wss://ws.okex.com:8443/ws/v5/private'
+    }
+    sandbox_endpoint = {
+        'public': 'wss://ws.okex.com:8443/ws/v5/public?brokerId=9999',
+        'private': 'wss://ws.okex.com:8443/ws/v5/private?brokerId=9999'
     }
     websocket_channels = {
         L2_BOOK: 'books-l2-tbt',
@@ -44,8 +47,8 @@ class OKEx(Feed, OKExRestMixin):
         OPEN_INTEREST: 'open-interest',
         LIQUIDATIONS: LIQUIDATIONS,
         ORDER_INFO: 'orders',
+        POSITIONS : 'positions'
     }
-    request_limit = 20
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -86,9 +89,10 @@ class OKEx(Feed, OKExRestMixin):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ws_defaults['compression'] = None
-        self.instrument_type_map = {'perpetual': 'SWAP',
+        self.instrument_type_map_ord = {'perpetual': 'SWAP',
+                                    'spot': 'SPOT'}
+        self.instrument_type_map_pos = {'perpetual': 'SWAP',
                                     'spot': 'MARGIN'}
-
     async def _liquidations(self, pairs: list):
         last_update = defaultdict(dict)
         """
@@ -343,7 +347,6 @@ class OKEx(Feed, OKExRestMixin):
             o_type = IMMEDIATE_OR_CANCEL
         elif o_type == 'limit':
             o_type = LIMIT
-
         oi = OrderInfo(
             self.id,
             self.exchange_symbol_to_std_symbol(msg['data'][0]['instId'].upper()),
@@ -351,14 +354,37 @@ class OKEx(Feed, OKExRestMixin):
             BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
             status,
             o_type,
-            Decimal(msg['data'][0]['fillPx']) if msg['data'][0]['fillPx'] else Decimal(0),
-            Decimal(msg['data'][0]['fillSz']) if msg['data'][0]['fillSz'] else Decimal(0),
-            Decimal(msg['data'][0]['sz']) - Decimal(msg['data'][0]['accFillSz']) if msg['data'][0]['accFillSz'] else Decimal(0),
+            Decimal(msg['data'][0]['px']) if msg['data'][0]['px'] else Decimal(0),
+            Decimal(msg['data'][0]['sz']) if msg['data'][0]['sz'] else Decimal(0),
+            Decimal(msg['data'][0]['sz']) - Decimal(msg['data'][0]['fillSz']) if msg['data'][0]['fillSz'] else Decimal(0),
             self.timestamp_normalize(int(msg['data'][0]['uTime'])),
             raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
+        
+    async def _position(self, msg: dict, timestamp: float):
+        '''
+        Positions---> OrderId, Symbol, Amount, Price, Side(Buy/Sell), PnL, timestamp
+        posId=21312423432423
+        instId='BTC-USD-SWAP'
+        pos=1  (availPos)
+        avgPx=55555.55
+        posSide=long
+        upl=-0.32423
+        cTime/pTime
+        '''
 
+        #print(msg)
+        if msg.get('data'):
+            pos_info = {'exchange':self.id,
+                        'symbol':self.exchange_symbol_to_std_symbol(msg['data'][0]['instId']),
+                        'amount': Decimal(msg['data'][0]['pos']),
+                        'avgPrice': msg['data'][0]['avgPx'],
+                        'side': msg['data'][0]['posSide'],
+                        'pnl': msg['data'][0]['upl'],
+                        'timestamp': self.timestamp_normalize(int(msg['data'][0]['uTime']))}
+        else: pos_info = {'exchange':self.id}
+        await self.callback(POSITIONS, pos_info, timestamp)
     async def _login(self, msg: dict, timestamp: float):
         LOG.debug('%s: Websocket logged in? %s', self.id, msg['code'])
 
@@ -390,6 +416,8 @@ class OKEx(Feed, OKExRestMixin):
                 await self._order(msg, timestamp)
             elif 'open-interest' in msg['arg']['channel']:
                 await self._open_interest(msg, timestamp)
+            elif 'positions' in msg['arg']['channel']:
+                await self._position(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
@@ -446,18 +474,22 @@ class OKEx(Feed, OKExRestMixin):
 
     def build_subscription(self, channel: str, ticker: str) -> dict:
         if channel in ['positions', 'orders']:
+            #print(channel)
             subscription_dict = {"channel": channel,
-                                 "instType": self.inst_type_to_okex_type(ticker),
+                                 "instType": self.inst_type_to_okex_type(ticker,channel),
                                  "instId": ticker}
         else:
             subscription_dict = {"channel": channel,
                                  "instId": ticker}
         return subscription_dict
 
-    def inst_type_to_okex_type(self, ticker):
+    def inst_type_to_okex_type(self, ticker,channel):
         sym = self.exchange_symbol_to_std_symbol(ticker)
         instrument_type = self.instrument_type(sym)
-        return self.instrument_type_map[instrument_type]
+        if channel=='orders':
+            return self.instrument_type_map_ord[instrument_type]
+        else:
+            return self.instrument_type_map_pos[instrument_type]
 
     def _get_server_time(self):
         endpoint = "v5/public/time"
