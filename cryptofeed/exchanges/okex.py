@@ -39,10 +39,10 @@ class OKEx(Feed, OKExRestMixin):
         ORDER_INFO: 'orders',
     }
     websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=[websocket_channels[c] for c in [L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS]], options={'compression': None}),
-        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=[websocket_channels[ORDER_INFO]], options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=(websocket_channels[c] for c in (L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS)), options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=(websocket_channels[ORDER_INFO]), options={'compression': None}),
     ]
-    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], Liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
+    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
     request_limit = 20
 
     @classmethod

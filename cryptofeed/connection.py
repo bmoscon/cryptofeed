@@ -391,6 +391,7 @@ class Routes:
     funding: str = None
     open_interest: str = None
     liquidations: str = None
+    stats: str = None
     authentication: str = None
     l2book: str = None
     l3book: str = None
