@@ -26,7 +26,7 @@ LOG = logging.getLogger('feedhandler')
 class HuobiSwap(HuobiDM):
     id = HUOBI_SWAP
     websocket_endpoints = [WebsocketEndpoint('wss://api.hbdm.com/swap-ws')]
-    rest_endpoints = [RestEndpoint('https://api.hbdm.com', routes=Routes('/swap-api/v1/swap_contract_info'))]
+    rest_endpoints = [RestEndpoint('https://api.hbdm.com', routes=Routes('/swap-api/v1/swap_contract_info', funding='/swap-api/v1/swap_funding_rate?contract_code={}'))]
 
     websocket_channels = {
         **HuobiDM.websocket_channels,
@@ -70,7 +70,7 @@ class HuobiSwap(HuobiDM):
         """
         while True:
             for pair in pairs:
-                data = await self.http_conn.read(f'https://api.hbdm.com/swap-api/v1/swap_funding_rate?contract_code={pair}')
+                data = await self.http_conn.read(self.rest_endpoints[0].funding.format(pair))
                 data = json.loads(data, parse_float=Decimal)
                 received = time.time()
                 update = (data['data']['funding_rate'], self.timestamp_normalize(int(data['data']['next_funding_time'])))

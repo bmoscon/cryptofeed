@@ -30,7 +30,7 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443')]
-    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', authentication='/api/v3/userDataStream'))]
+    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/depth?symbol={}&limit={}', authentication='/api/v3/userDataStream'))]
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
@@ -282,8 +282,7 @@ class Binance(Feed, BinanceRestMixin):
                     max_depth = d
                     break
 
-        url = f'{self.rest_endpoint}/depth?symbol={pair}&limit={max_depth}'
-        resp = await self.http_conn.read(url)
+        resp = await self.http_conn.read(self.rest_endpoints[0].l2book.format(pair, max_depth))
         resp = json.loads(resp, parse_float=Decimal)
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)

@@ -27,7 +27,7 @@ LOG = logging.getLogger('feedhandler')
 class Coinbase(Feed, CoinbaseRestMixin):
     id = COINBASE
     websocket_endpoints = [WebsocketEndpoint('wss://ws-feed.pro.coinbase.com', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://api.pro.coinbase.com', routes=Routes('/products'))]
+    rest_endpoints = [RestEndpoint('https://api.pro.coinbase.com', routes=Routes('/products', l3book='/products/{}/book?level=3'))]
 
     websocket_channels = {
         L2_BOOK: 'level2',
@@ -206,8 +206,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         # the subsequent messages, causing a seq no mismatch.
         await asyncio.sleep(2)
 
-        url = 'https://api.pro.coinbase.com/products/{}/book?level=3'
-        urls = [url.format(pair) for pair in pairs]
+        urls = [self.rest_endpoints[0].l3book.format(pair) for pair in pairs]
 
         results = []
         for url in urls:

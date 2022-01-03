@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class Bittrex(Feed):
     id = BITTREX
     websocket_endpoints = [WebsocketEndpoint('wss://www.bitmex.com/realtime', authentication=True)]
-    rest_endpoints = [RestEndpoint('https://api.bittrex.com', routes=Routes('/v3/markets'))]
+    rest_endpoints = [RestEndpoint('https://api.bittrex.com', routes=Routes('/v3/markets', l2book='/v3/markets/{}/orderbook?depth={}'))]
 
     valid_candle_intervals = {'1m', '5m', '1h', '1d'}
     valid_depths = [1, 25, 500]
@@ -147,7 +147,7 @@ class Bittrex(Feed):
 
     async def _snapshot(self, symbol: str, sequence_number: int):
         while True:
-            ret, headers = await self.http_conn.read(f'https://api.bittrex.com/v3/markets/{symbol}/orderbook?depth={self.__depth()}', return_headers=True)
+            ret, headers = await self.http_conn.read(self.rest_endpoints[0].l2book.format(symbol, self.__depth()), return_headers=True)
             seq = int(headers['Sequence'])
             if seq >= sequence_number:
                 break

@@ -42,7 +42,7 @@ class OKEx(Feed, OKExRestMixin):
         WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=[websocket_channels[c] for c in [L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS]], options={'compression': None}),
         WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=[websocket_channels[ORDER_INFO]], options={'compression': None}),
     ]
-    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']))]
+    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], Liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
     request_limit = 20
 
     @classmethod
@@ -98,8 +98,7 @@ class OKEx(Feed, OKExRestMixin):
                     continue
 
                 for status in (FILLED, UNFILLED):
-                    end_point = f"{self.api}v5/public/liquidation-orders?instType={instrument_type}&limit=100&state={status}&uly={uly}"
-                    data = await self.http_conn.read(end_point)
+                    data = await self.http_conn.read(self.rest_endpoints[0].liquidations.format(instrument_type, status, uly))
                     data = json.loads(data, parse_float=Decimal)
                     timestamp = time.time()
                     if len(data['data'][0]['details']) == 0 or (len(data['data'][0]['details']) > 0 and last_update.get(pair) == data['data'][0]['details'][0]):

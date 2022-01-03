@@ -26,7 +26,7 @@ LOG = logging.getLogger('feedhandler')
 class Gateio(Feed):
     id = GATEIO
     websocket_endpoints = [WebsocketEndpoint('wss://api.gateio.ws/ws/v4/', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/spot/currency_pairs'))]
+    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/spot/currency_pairs', l2book='/api/v4/spot/order_book?currency_pair={}&limit=100&with_id=true'))]
 
     valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d'}
     websocket_channels = {
@@ -120,8 +120,7 @@ class Gateio(Feed):
             "bids": [[price, amount], [...], ...]
         }
         """
-        url = f'https://api.gateio.ws/api/v4/spot/order_book?currency_pair={symbol}&limit=100&with_id=true'
-        ret = await self.http_conn.read(url)
+        ret = await self.http_conn.read(self.rest_endpoints[0].l2_book.format(symbol))
         data = json.loads(ret, parse_float=Decimal)
 
         symbol = self.exchange_symbol_to_std_symbol(symbol)

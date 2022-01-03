@@ -28,7 +28,7 @@ LOG = logging.getLogger('feedhandler')
 class KuCoin(Feed):
     id = KUCOIN
     websocket_endpoints = None
-    rest_endpoints = [RestEndpoint('https://api.kucoin.com', routes=Routes('/api/v1/symbols'))]
+    rest_endpoints = [RestEndpoint('https://api.kucoin.com', routes=Routes('/api/v1/symbols', l2book='/api/v3/market/orderbook/level2?symbol={}'))]
     valid_candle_intervals = {'1m', '3m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w'}
     candle_interval_map = {'1m': '1min', '3m': '3min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week'}
     websocket_channels = {
@@ -180,10 +180,9 @@ class KuCoin(Feed):
         return header
 
     async def _snapshot(self, symbol: str):
-        url = f"https://api.kucoin.com/api/v3/market/orderbook/level2?symbol={symbol}"
-        str_to_sign = "GET" + f"/api/v3/market/orderbook/level2?symbol={symbol}"
+        str_to_sign = "GET" + self.rest_endpoints[0].routes.l2book.format(symbol)
         headers = self.generate_token(str_to_sign)
-        data = await self.http_conn.read(url, header=headers)
+        data = await self.http_conn.read(self.rest_endpoints[0].l2book.format(symbol), header=headers)
         timestamp = time.time()
         data = json.loads(data, parse_float=Decimal)
         data = data['data']

@@ -6,18 +6,16 @@ associated with this software.
 '''
 from decimal import Decimal
 from collections import defaultdict
-from functools import partial
 import logging
-from typing import Callable, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WSAsyncConn, WebsocketEndpoint
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.util.split import list_by_max_items
 from cryptofeed.exchanges.mixins.kraken_rest import KrakenRestMixin
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 
@@ -27,7 +25,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Kraken(Feed, KrakenRestMixin):
     id = KRAKEN
-    websocket_endpoints = [WebsocketEndpoint('wss://ws.kraken.com')]
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.kraken.com', limit=20)]
     rest_endpoints = [RestEndpoint('https://api.kraken.com', routes=Routes('/0/public/AssetPairs'))]
 
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '15d'}
@@ -66,26 +64,6 @@ class Kraken(Feed, KrakenRestMixin):
 
     def __reset(self):
         self._l2_book = {}
-
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        """
-        Per Kraken Tech Support, subscribing to more than 20 symbols in a single request can lead
-        to data loss. Furthermore, too many symbols on a single connection can cause data loss as well.
-        """
-        self.__reset()
-        ret = []
-
-        def build(options: list):
-            subscribe = partial(self.subscribe, options=options)
-            conn = WSAsyncConn(self.address, self.id, **self.ws_defaults)
-            return conn, subscribe, self.message_handler, self.authenticate
-
-        for chan in self.subscription:
-            symbols = list(self.subscription[chan])
-            for subset in list_by_max_items(symbols, 20):
-                ret.append(build((chan, subset)))
-
-        return ret
 
     async def subscribe(self, conn: AsyncConnection, options: Tuple[str, List[str]] = None):
         chan = options[0]
