@@ -197,7 +197,7 @@ class Feed(Exchange):
 
     @property
     def address(self) -> Union[List, str]:
-        if len(self.websocket_endpoints) == 1:
+        if len(self.websocket_endpoints) == 0:
             return
         addrs = [ep.get_address(sandbox=self.sandbox) for ep in self.websocket_endpoints]
         return addrs[0] if len(addrs) == 1 else addrs
