@@ -199,7 +199,8 @@ class Feed(Exchange):
     def address(self) -> Union[List, str]:
         if len(self.websocket_endpoints) == 1:
             return
-        return [ep.get_address(sandbox=self.sandbox) for ep in self.websocket_endpoints]
+        addrs = [ep.get_address(sandbox=self.sandbox) for ep in self.websocket_endpoints]
+        return addrs[0] if len(addrs) == 1 else addrs
 
     async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float, timestamp=None, raw=None, sequence_number=None, checksum=None, delta=None):
         if self.cross_check:

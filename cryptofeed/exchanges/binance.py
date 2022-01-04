@@ -105,7 +105,7 @@ class Binance(Feed, BinanceRestMixin):
             address = self.address
             address += '/ws/' + listen_key
         else:
-            address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
+            address = self.address
             address += '/stream?streams='
         subs = []
 

@@ -99,7 +99,7 @@ class Exchange:
                     LOG.debug("%s: reading symbol information from %s", cls.id, addr)
                     data.append(cls.http_sync.read(addr, json=True, uuid=cls.id))
 
-            syms, info = cls._parse_symbol_data(data)
+            syms, info = cls._parse_symbol_data(data if len(data) > 1 else data[0])
             Symbols.set(cls.id, syms, info)
             return syms
         except Exception as e:
