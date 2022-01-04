@@ -12,10 +12,7 @@ from decimal import Decimal
 
 from yapic import json
 
-from cryptofeed.defines import (
-    BID, ASK, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES, MARKET, LIMIT,
-    MARGIN_LIMIT, MARGIN_MARKET, CANCEL_ORDER, PLACE_ORDER,
-)
+from cryptofeed.defines import BID, ASK, L2_BOOK, L3_BOOK, BUY, SELL, TICKER, TRADES, MARKET, LIMIT, MARGIN_LIMIT, MARGIN_MARKET, CANCEL_ORDER, PLACE_ORDER, ORDERS, BALANCES, POSITIONS
 from cryptofeed.exchange import RestExchange
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.types import OrderBook, Candle
@@ -25,7 +22,7 @@ class BitfinexRestMixin(RestExchange):
     api = "https://api-pub.bitfinex.com/v2/"
     auth_api = 'https://api.bitfinex.com'
     rest_channels = (
-        TRADES, TICKER, L2_BOOK, L3_BOOK, CANCEL_ORDER, PLACE_ORDER
+        TRADES, TICKER, L2_BOOK, L3_BOOK, CANCEL_ORDER, PLACE_ORDER, ORDERS, BALANCES, POSITIONS
     )
     order_options = {
         LIMIT: 'EXCHANGE LIMIT',
@@ -43,12 +40,11 @@ class BitfinexRestMixin(RestExchange):
             body = json.dumps({})
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        key_secret = self.config['BITFINEX']['key_secret'].encode('utf8')
-        h = hmac.new(key_secret, signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
         return {
             "bfx-nonce": nonce,
-            "bfx-apikey": self.config['BITFINEX']['key_id'],
+            "bfx-apikey": self.key_id,
             "bfx-signature": signature,
             "content-type": "application/json"
         }
@@ -220,9 +216,7 @@ class BitfinexRestMixin(RestExchange):
         data = await self.http_conn.write(url, msg=query_string, header=headers)
         return json.loads(data, parse_float=Decimal)
 
-    async def place_order(
-            self, symbol: str, side: str, order_type: str, amount: Decimal,
-            price=None, time_in_force=None, test=False):
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, time_in_force=None, test=False):
         if order_type == MARKET and price:
             raise ValueError('Cannot specify price on a market order')
         if order_type == LIMIT:
@@ -247,9 +241,9 @@ class BitfinexRestMixin(RestExchange):
         data = await self._post_private(endpoint, payload=parameters)
         return data
 
-    async def cancel_order(self, order_id, **kwargs):
+    async def cancel_order(self, order_id: str, **kwargs):
         endpoint = "v2/auth/w/order/cancel"
-        data = await self._post_private(endpoint, payload={'id': order_id})
+        data = await self._post_private(endpoint, payload={'id': int(order_id)})
         return data
 
     async def orders(self, symbol: str = None):
