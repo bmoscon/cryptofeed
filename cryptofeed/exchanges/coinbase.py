@@ -59,24 +59,17 @@ class Coinbase(Feed, CoinbaseRestMixin):
             self.keep_l3_book = True
         self.__reset()
 
-    def __reset(self, symbol=None):
-        if symbol:
-            self.seq_no[symbol] = None
-            self.order_map.pop(symbol, None)
-            self.order_type_map.pop(symbol, None)
-            self._l3_book.pop(symbol, None)
-            self._l2_book.pop(symbol, None)
-        else:
-            self.order_map = {}
-            self.order_type_map = {}
-            self.seq_no = None
-            # sequence number validation only works when the FULL data stream is enabled
-            chan = self.std_channel_to_exchange(L3_BOOK)
-            if chan in self.subscription:
-                pairs = self.subscription[chan]
-                self.seq_no = {pair: None for pair in pairs}
-            self._l3_book = {}
-            self._l2_book = {}
+    def __reset(self):
+        self.order_map = {}
+        self.order_type_map = {}
+        self.seq_no = None
+        # sequence number validation only works when the FULL data stream is enabled
+        chan = self.std_channel_to_exchange(L3_BOOK)
+        if chan in self.subscription:
+            pairs = self.subscription[chan]
+            self.seq_no = {pair: None for pair in pairs}
+        self._l3_book = {}
+        self._l2_book = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''
@@ -206,7 +199,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         # the subsequent messages, causing a seq no mismatch.
         await asyncio.sleep(2)
 
-        urls = [self.rest_endpoints[0].l3book.format(pair) for pair in pairs]
+        urls = [self.rest_endpoints[0].route('l3book', self.sandbox).format(pair) for pair in pairs]
 
         results = []
         for url in urls:
@@ -379,8 +372,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
             # PERF perf_end(self.id, 'msg')
             # PERF perf_log(self.id, 'msg')
 
-    async def subscribe(self, conn: AsyncConnection, symbol=None):
-        self.__reset(symbol=symbol)
+    async def subscribe(self, conn: AsyncConnection):
+        self.__reset()
 
         for chan in self.subscription:
             await conn.write(json.dumps({"type": "subscribe",

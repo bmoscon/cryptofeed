@@ -22,7 +22,7 @@ LOG = logging.getLogger('feedhandler')
 class BinanceFutures(Binance, BinanceFuturesRestMixin):
     id = BINANCE_FUTURES
     websocket_endpoints = [WebsocketEndpoint('wss://fstream.binance.com', sandbox='wss://stream.binancefuture.com', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://fapi.binance.com/fapi', sandbox='https://testnet.binancefuture.com/fapi', routes=Routes('/v1/exchangeInfo', authentication='/v1/listenKey', open_interest='/v1//openInterest?symbol={}'))]
+    rest_endpoints = [RestEndpoint('https://fapi.binance.com', sandbox='https://testnet.binancefuture.com', routes=Routes('/fapi/v1/exchangeInfo', l2book='/fapi/v1/depth?symbol={}&limit={}', authentication='/fapi/v1/listenKey', open_interest='/fapi/v1//openInterest?symbol={}'))]
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
@@ -57,7 +57,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         ret = []
         for chan in set(self.subscription):
             if chan == 'open_interest':
-                addrs = [self.rest_endpoints[0].open_interest.format(pair) for pair in self.subscription[chan]]
+                addrs = [self.rest_endpoints[0].route('open_interest', sanxbox=self.sandbox).format(pair) for pair in self.subscription[chan]]
                 ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=self.open_interest_interval, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
         return ret
 

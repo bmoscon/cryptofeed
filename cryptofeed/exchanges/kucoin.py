@@ -182,7 +182,7 @@ class KuCoin(Feed):
     async def _snapshot(self, symbol: str):
         str_to_sign = "GET" + self.rest_endpoints[0].routes.l2book.format(symbol)
         headers = self.generate_token(str_to_sign)
-        data = await self.http_conn.read(self.rest_endpoints[0].l2book.format(symbol), header=headers)
+        data = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol), header=headers)
         timestamp = time.time()
         data = json.loads(data, parse_float=Decimal)
         data = data['data']

@@ -160,7 +160,7 @@ class FTX(Feed, FTXRestMixin):
                 # OI only for perp and futures, so check for / in pair name indicating spot
                 if '/' in pair:
                     continue
-                data = await self.http_conn.read(self.rest_endpoints[0].open_interest.format(pair))
+                data = await self.http_conn.read(self.rest_endpoints[0].route('l2book', sanxbox=self.sandbox).format(pair))
                 received = time()
                 data = json.loads(data, parse_float=Decimal)
                 if 'result' in data:
@@ -195,9 +195,9 @@ class FTX(Feed, FTXRestMixin):
             for pair in pairs:
                 if '-PERP' not in pair:
                     continue
-                data = await self.http_conn.read(self.rest_endpoints[0].funding.format(pair))
+                data = await self.http_conn.read(self.rest_endpoints[0].route('funding', sanxbox=self.sandbox).format(pair))
                 data = json.loads(data, parse_float=Decimal)
-                data2 = await self.http_conn.read(self.rest_endpoints[0].stats.format(pair))
+                data2 = await self.http_conn.read(self.rest_endpoints[0].route('stats', sanxbox=self.sandbox).format(pair))
                 data2 = json.loads(data2, parse_float=Decimal)
                 received = time()
                 data['predicted_rate'] = Decimal(data2['result']['nextFundingRate'])

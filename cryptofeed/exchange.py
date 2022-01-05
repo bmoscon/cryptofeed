@@ -81,7 +81,7 @@ class Exchange:
         override if a specific exchange needs to do something first, like query an API
         to get a list of currencies, that are then used to build the list of symbol endpoints
         """
-        return ep.instruments
+        return ep.route('instruments')
 
     @classmethod
     def symbol_mapping(cls, refresh=False) -> Dict:

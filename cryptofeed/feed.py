@@ -187,8 +187,12 @@ class Feed(Exchange):
             if endpoint.authentication:
                 auth = self._ws_authentication
             limit = endpoint.limit
-            addr = endpoint.address if not self.sandbox else endpoint.sandbox
-            filtered_sub = endpoint.subscription_filter(self.subscription)
+            addr = endpoint.get_address(self.sandbox)
+            # filtering can only be done on normalized symbols, but this subscription needs to have the raw/exchange specific
+            # subscription, so we need to temporarily convert the symbols back and forth. It has to be done here
+            # while in the context of the class
+            temp_sub = {chan: [self.exchange_symbol_to_std_symbol(s) for s in symbols] for chan, symbols in self.subscription.items()}
+            filtered_sub = {chan: [self.std_symbol_to_exchange_symbol(s) for s in symbols] for chan, symbols in endpoint.subscription_filter(temp_sub).items()}
             if limit and sum(map(len, filtered_sub.values())) > limit:
                 ret.extend(limit_sub(filtered_sub, limit, auth, endpoint.options))
             else:
@@ -227,11 +231,7 @@ class Feed(Exchange):
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         raise NotImplementedError
 
-    async def subscribe(self, connection: AsyncConnection, **kwargs):
-        """
-        kwargs will not be passed from anywhere, if you need to supply extra data to
-        your subscribe, bind the data to the method with a partial
-        """
+    async def subscribe(self, connection: AsyncConnection):
         raise NotImplementedError
 
     async def authenticate(self, connection: AsyncConnection):

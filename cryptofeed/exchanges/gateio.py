@@ -120,7 +120,7 @@ class Gateio(Feed):
             "bids": [[price, amount], [...], ...]
         }
         """
-        ret = await self.http_conn.read(self.rest_endpoints[0].l2_book.format(symbol))
+        ret = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol))
         data = json.loads(ret, parse_float=Decimal)
 
         symbol = self.exchange_symbol_to_std_symbol(symbol)

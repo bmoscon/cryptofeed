@@ -13,7 +13,7 @@ from cryptofeed.defines import FUTURES, FX, OPTION, PERPETUAL, SPOT, CALL, PUT, 
 class Symbol:
     symbol_sep = '-'
 
-    def __init__(self, base: str, quote: str, type=SPOT, strike_price=None, option_type=None, expiry_date=None):
+    def __init__(self, base: str, quote: str, type=SPOT, strike_price=None, option_type=None, expiry_date=None, expiry_normalize=True):
         if type == OPTION:
             if option_type not in (CALL, PUT):
                 raise ValueError("option_type must be either CALL or PUT")
@@ -28,7 +28,7 @@ class Symbol:
         self.option_type = option_type
         self.strike_price = strike_price
 
-        if expiry_date:
+        if expiry_date and expiry_normalize:
             self.expiry_date = self.date_format(expiry_date)
 
     @staticmethod
@@ -47,7 +47,7 @@ class Symbol:
             return f"{year}{month}{day}"
 
         if len(date) == 4:
-            year = str(dt.now().year)[2:]
+            year = str(dt.utcnow().year)[2:]
             date = year + date
         if len(date) == 6:
             year = date[:2]
@@ -134,11 +134,9 @@ def str_to_symbol(symbol: str) -> Symbol:
     if values[-1] == 'PERP':
         return Symbol(values[0], values[1], type=PERPETUAL)
     if len(values) == 5:
-        s = Symbol(values[0], values[1], type=OPTION, strike_price=values[2], option_type=values[4])
-        s.expiry_date = values[3]
+        s = Symbol(values[0], values[1], type=OPTION, strike_price=values[2], option_type=values[4], expiry_date=values[3], expiry_normalize=False)
         return s
     if len(values) == 3:
-        s = Symbol(values[0], values[1], type=FUTURES)
-        s.expiry_date = values[2]
+        s = Symbol(values[0], values[1], type=FUTURES, expiry_date=values[2], expiry_normalize=False)
         return s
-    raise ValueError('Invalid symbol')
+    raise ValueError(f'Invalid symbol: {symbol}')

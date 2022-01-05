@@ -631,10 +631,10 @@ class Phemex(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", conn.uuid, msg)
 
-    async def subscribe(self, conn: AsyncConnection, subs=None):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        for chan, symbol in subs:
+        for chan, symbol in conn.subscription.items():
             if not self.exchange_channel_to_std(chan) == BALANCES:
                 msg = {"id": 1, "method": chan, "params": [symbol]}
                 if self.exchange_channel_to_std(chan) == CANDLES:

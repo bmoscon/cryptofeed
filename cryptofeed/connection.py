@@ -404,7 +404,7 @@ class RestEndpoint:
     instrument_filter: str = None
     routes: Routes = None
 
-    def __getattr__(self, ep):
+    def route(self, ep, sandbox=False):
         endpoint = self.routes.__getattribute__(ep)
-        api = self.address if not self.sandbox else self.sandbox
+        api = self.sandbox if sandbox and self.sandbox else self.address
         return api + endpoint if isinstance(endpoint, str) else [api + e for e in endpoint]

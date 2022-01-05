@@ -30,7 +30,7 @@ LOG = logging.getLogger('feedhandler')
 class Binance(Feed, BinanceRestMixin):
     id = BINANCE
     websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443')]
-    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/depth?symbol={}&limit={}', authentication='/api/v3/userDataStream'))]
+    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}', authentication='/api/v3/userDataStream'))]
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
@@ -157,11 +157,11 @@ class Binance(Feed, BinanceRestMixin):
             if self._auth_token is None:
                 raise ValueError('There is no token to refresh')
             payload = {'listenKey': self._auth_token}
-            r = requests.put(f'{self.rest_endpoints[0].authentication}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
+            r = requests.put(f'{self.rest_endpoints[0].route("authentication", sandbox=self.sandbox)}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
             r.raise_for_status()
 
     def _generate_token(self) -> str:
-        url = self.rest_endpoints[0].authentication
+        url = self.rest_endpoints[0].route('authentication', sandbox=self.sandbox)
         r = requests.post(url, headers={'X-MBX-APIKEY': self.key_id})
         r.raise_for_status()
         response = r.json()
@@ -282,7 +282,7 @@ class Binance(Feed, BinanceRestMixin):
                     max_depth = d
                     break
 
-        resp = await self.http_conn.read(self.rest_endpoints[0].l2book.format(pair, max_depth))
+        resp = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(pair, max_depth))
         resp = json.loads(resp, parse_float=Decimal)
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)

@@ -189,7 +189,7 @@ class Delta(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, conn: AsyncConnection, **kwargs):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
         await conn.write(json.dumps({

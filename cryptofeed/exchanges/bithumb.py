@@ -55,10 +55,14 @@ class Bithumb(Feed):
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
-            LOG.debug("%s: reading symbol information from %s", cls.id, cls.symbol_endpoint)
+            LOG.debug("%s: reading symbol information from %s", cls.id, cls.rest_endpoints[0].route('instruments'))
             data = {}
-            for ep, quote_curr in cls.symbol_endpoint:
-                data[quote_curr] = cls.http_sync.read(ep, json=True, uuid=cls.id)
+            for ep in cls.rest_endpoints[0].route('instruments'):
+                ret = cls.http_sync.read(ep, json=True, uuid=cls.id)
+                if 'BTC' in ep:
+                    data['BTC'] = ret
+                else:
+                    data['KRW'] = ret
 
             syms, info = cls._parse_symbol_data(data)
             Symbols.set(cls.id, syms, info)

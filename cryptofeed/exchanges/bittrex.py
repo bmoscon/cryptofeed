@@ -147,7 +147,7 @@ class Bittrex(Feed):
 
     async def _snapshot(self, symbol: str, sequence_number: int):
         while True:
-            ret, headers = await self.http_conn.read(self.rest_endpoints[0].l2book.format(symbol, self.__depth()), return_headers=True)
+            ret, headers = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol, self.__depth()), return_headers=True)
             seq = int(headers['Sequence'])
             if seq >= sequence_number:
                 break

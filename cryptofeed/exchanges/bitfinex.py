@@ -8,7 +8,7 @@ from collections import defaultdict
 from decimal import Decimal
 from functools import partial
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 from yapic import json
 
@@ -369,27 +369,29 @@ class Bitfinex(Feed, BitfinexRestMixin):
                   '='.join(list(msg.items())[-1]), handler.__name__ if hasattr(handler, '__name__') else handler.func.__name__)
         self.handlers[msg['chanId']] = handler
 
-    async def subscribe(self, connection: AsyncConnection, options: List[Tuple[str, str]] = None):
+    async def subscribe(self, connection: AsyncConnection):
         self.__reset()
         await connection.write(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL
         }))
 
-        for pair, chan in options:
-            message = {'event': 'subscribe',
-                       'channel': chan,
-                       'symbol': pair
-                       }
-            if 'book' in chan:
-                parts = chan.split('-')
-                if len(parts) != 1:
-                    message['channel'] = 'book'
-                    try:
-                        message['prec'] = parts[1]
-                        message['freq'] = self.book_frequency
-                        message['len'] = self.number_of_price_points
-                    except IndexError:
-                        # any non specified params will be defaulted
-                        pass
-            await connection.write(json.dumps(message))
+        for chan, pairs in connection.subscription.items():
+            for pair in pairs:
+                message = {'event': 'subscribe',
+                           'channel': chan,
+                           'symbol': pair
+                           }
+                if 'book' in chan:
+                    parts = chan.split('-')
+                    if len(parts) != 1:
+                        message['channel'] = 'book'
+                        try:
+                            message['prec'] = parts[1]
+                            message['freq'] = self.book_frequency
+                            message['len'] = self.number_of_price_points
+                        except IndexError:
+                            # any non specified params will be defaulted
+                            pass
+
+                await connection.write(json.dumps(message))

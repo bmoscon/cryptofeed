@@ -7,7 +7,7 @@ associated with this software.
 from decimal import Decimal
 from collections import defaultdict
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 from yapic import json
 
@@ -65,27 +65,27 @@ class Kraken(Feed, KrakenRestMixin):
     def __reset(self):
         self._l2_book = {}
 
-    async def subscribe(self, conn: AsyncConnection, options: Tuple[str, List[str]] = None):
-        chan = options[0]
-        symbols = options[1]
-        sub = {"name": chan}
-        if self.exchange_channel_to_std(chan) == L2_BOOK:
-            max_depth = self.max_depth if self.max_depth else 1000
-            if max_depth not in self.valid_depths:
-                for d in self.valid_depths:
-                    if d > max_depth:
-                        max_depth = d
-                        break
+    async def subscribe(self, conn: AsyncConnection):
+        self.__reset()
+        for chan, symbols in conn.subscription.items():
+            sub = {"name": chan}
+            if self.exchange_channel_to_std(chan) == L2_BOOK:
+                max_depth = self.max_depth if self.max_depth else 1000
+                if max_depth not in self.valid_depths:
+                    for d in self.valid_depths:
+                        if d > max_depth:
+                            max_depth = d
+                            break
 
-            sub['depth'] = max_depth
-        if self.exchange_channel_to_std(chan) == CANDLES:
-            sub['interval'] = self.candle_interval_map[self.candle_interval]
+                sub['depth'] = max_depth
+            if self.exchange_channel_to_std(chan) == CANDLES:
+                sub['interval'] = self.candle_interval_map[self.candle_interval]
 
-        await conn.write(json.dumps({
-            "event": "subscribe",
-            "pair": symbols,
-            "subscription": sub
-        }))
+            await conn.write(json.dumps({
+                "event": "subscribe",
+                "pair": symbols,
+                "subscription": sub
+            }))
 
     async def _trade(self, msg: dict, pair: str, timestamp: float):
         """

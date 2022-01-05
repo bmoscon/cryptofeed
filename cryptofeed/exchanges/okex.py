@@ -39,7 +39,7 @@ class OKEx(Feed, OKExRestMixin):
         ORDER_INFO: 'orders',
     }
     websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=(websocket_channels[c] for c in (L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS)), options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]), options={'compression': None}),
         WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=(websocket_channels[ORDER_INFO]), options={'compression': None}),
     ]
     rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
@@ -98,7 +98,7 @@ class OKEx(Feed, OKExRestMixin):
                     continue
 
                 for status in (FILLED, UNFILLED):
-                    data = await self.http_conn.read(self.rest_endpoints[0].liquidations.format(instrument_type, status, uly))
+                    data = await self.http_conn.read(self.rest_endpoints[0].route('liquidations', sanxbox=self.sandbox).format(instrument_type, status, uly))
                     data = json.loads(data, parse_float=Decimal)
                     timestamp = time.time()
                     if len(data['data'][0]['details']) == 0 or (len(data['data'][0]['details']) > 0 and last_update.get(pair) == data['data'][0]['details'][0]):
@@ -384,30 +384,13 @@ class OKEx(Feed, OKExRestMixin):
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
-    async def subscribe(self, connection: AsyncConnection, private: bool = False):
-        pri_channels = []
-        pub_channels = []
-        if private:
-            for chan in self.subscription:
-                if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                    for pair in self.subscription[chan]:
-                        pri_channels.append(self.build_subscription(chan, pair))
-        else:
-            for chan in self.subscription:
-                if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                    for pair in self.subscription[chan]:
-                        pub_channels.append(self.build_subscription(chan, pair))
+    async def subscribe(self, connection: AsyncConnection):
+        channels = []
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
+                channels.append(self.build_subscription(chan, pair))
 
-        if pri_channels:
-            msg = {"op": "subscribe",
-                   "args": pri_channels}
-            LOG.debug(f'{connection.uuid}: Subscribing to private channels with message {msg}')
-            await connection.write(json.dumps(msg))
-
-        if pub_channels:
-            msg = {"op": "subscribe",
-                   "args": pub_channels}
-            LOG.debug(f'{connection.uuid}: Subscribing to public channels with message {msg}')
+            msg = {"op": "subscribe", "args": channels}
             await connection.write(json.dumps(msg))
 
     async def authenticate(self, conn: AsyncConnection):

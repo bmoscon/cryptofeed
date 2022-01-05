@@ -18,4 +18,4 @@ LOG = logging.getLogger('feedhandler')
 class BinanceUS(Binance, BinanceUSRestMixin):
     id = BINANCE_US
     websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.us:9443')]
-    rest_endpoints = [RestEndpoint('https://api.binance.us', routes=Routes('/api/v3/exchangeInfo'))]
+    rest_endpoints = [RestEndpoint('https://api.binance.us', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}'))]

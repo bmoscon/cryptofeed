@@ -15,7 +15,7 @@ from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, Websock
 from cryptofeed.defines import ASK, BALANCES, BID, BUY, BITDOTCOM, CANCELLED, FILLED, FILLS, FUTURES, L2_BOOK, LIMIT, MARKET, OPEN, OPTION, PENDING, PERPETUAL, SELL, SPOT, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, ORDER_INFO, TRIGGER_LIMIT, TRIGGER_MARKET
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.symbols import Symbol
+from cryptofeed.symbols import Symbol, str_to_symbol
 from cryptofeed.types import Trade, Ticker, OrderBook, OrderInfo, Balance, Fill
 
 
@@ -31,7 +31,7 @@ class BitDotCom(Feed):
     ]
     rest_endpoints = [
         RestEndpoint('https://spot-api.bit.com', instrument_filter=('TYPE', (SPOT)), sandbox='https://betaspot-api.bitexch.dev', routes=Routes('/spot/v1/instruments')),
-        RestEndpoint('https://betaapi.bitexch.dev', instrument_filter=('TYPE', (OPTION, FUTURES)), sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies'))
+        RestEndpoint('https://api.bit.com', instrument_filter=('TYPE', (OPTION, FUTURES)), sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies'))
     ]
 
     websocket_channels = {
@@ -48,9 +48,9 @@ class BitDotCom(Feed):
     @classmethod
     def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
         if ep.routes.currencies:
-            ret = cls.http_sync.read(ep.currencies, json=True, uuid=cls.id)
-            return [ep.instruments.format(currency) for currency in ret['data']['currencies']]
-        return ep.instruments
+            ret = cls.http_sync.read(ep.route('currencies'), json=True, uuid=cls.id)
+            return [ep.route('instruments').format(currency) for currency in ret['data']['currencies']]
+        return ep.route('instruments')
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -146,10 +146,10 @@ class BitDotCom(Feed):
     async def subscribe(self, connection: AsyncConnection):
         self.__reset()
 
-        for chan, symbols in self.subscription.items():
+        for chan, symbols in connection.subscription.items():
             if len(symbols) == 0:
                 continue
-            stype = self.info()['instrument_type'][self.exchange_symbol_to_std_symbol(symbols[0])]
+            stype = str_to_symbol(self.exchange_symbol_to_std_symbol(symbols[0])).type
             msg = {
                 'type': 'subscribe',
                 'channels': [chan],
@@ -157,7 +157,6 @@ class BitDotCom(Feed):
             }
             if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 msg['token'] = self._auth_token
-            print(msg)
             await connection.write(json.dumps(msg))
 
     async def _trade(self, data: dict, timestamp: float):

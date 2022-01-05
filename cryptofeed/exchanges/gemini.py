@@ -47,8 +47,8 @@ class Gemini(Feed, GeminiRestMixin):
 
     @classmethod
     def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
-        ret = cls.http_sync.read(ep.currencies, json=True, uuid=cls.id)
-        return [ep.instruments.format(currency) for currency in ret]
+        ret = cls.http_sync.read(ep.route('currencies'), json=True, uuid=cls.id)
+        return [ep.route('instruments').format(currency) for currency in ret]
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -71,7 +71,7 @@ class Gemini(Feed, GeminiRestMixin):
     def generate_token(self, payload=None) -> dict:
         if not payload:
             payload = {}
-        payload['request'] = self.rest_endpoints[0].authentication
+        payload['request'] = self.rest_endpoints[0].routes.authentication
         payload['nonce'] = int(time.time() * 1000)
 
         if self.account_name:
@@ -207,6 +207,8 @@ class Gemini(Feed, GeminiRestMixin):
     async def subscribe(self, conn: AsyncConnection):
         if self.std_channel_to_exchange(ORDER_INFO) in conn.subscription:
             return
-        self.__reset()
+
         symbols = itertools.chain(*conn.subscription.values())
+        self.__reset(symbols)
+
         await conn.write(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": symbols}]}))
