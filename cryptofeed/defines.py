@@ -97,6 +97,8 @@ IMMEDIATE_OR_CANCEL = 'immediate-or-cancel'
 GOOD_TIL_CANCELED = 'good-til-canceled'
 TRIGGER_LIMIT = 'trigger-limit'
 TRIGGER_MARKET = 'trigger-market'
+MARGIN_LIMIT = 'margin-limit'
+MARGIN_MARKET = 'margin-market'
 
 OPEN = 'open'
 PENDING = 'pending'
