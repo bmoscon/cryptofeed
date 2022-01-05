@@ -312,6 +312,7 @@ class WSAsyncConn(AsyncConnection):
                 await self.raw_data_callback(None, time.time(), self.id, connect=self.address)
             if self.authentication:
                 self.address, self.ws_kwargs = await self.authentication(self.address, self.ws_kwargs)
+
             self.conn = await websockets.connect(self.address, **self.ws_kwargs)
         self.sent = 0
         self.received = 0

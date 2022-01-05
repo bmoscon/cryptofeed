@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 
 class Blockchain(Feed):
     id = BLOCKCHAIN
-    websocket_endpoints = [WebsocketEndpoint('wss://ws.prod.blockchain.info/mercury-gateway/v1/ws', options={'origin': 'https://exchange.blockchain.com'})]
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.blockchain.info/mercury-gateway/v1/ws', options={'origin': 'https://exchange.blockchain.com'})]
     rest_endpoints = [RestEndpoint('https://api.blockchain.com', routes=Routes('/mercury-gateway/v1/instruments'))]
 
     websocket_channels = {

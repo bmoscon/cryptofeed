@@ -160,7 +160,7 @@ class FTX(Feed, FTXRestMixin):
                 # OI only for perp and futures, so check for / in pair name indicating spot
                 if '/' in pair:
                     continue
-                data = await self.http_conn.read(self.rest_endpoints[0].route('l2book', sandbox=self.sandbox).format(pair))
+                data = await self.http_conn.read(self.rest_endpoints[0].route('open_interest', sandbox=self.sandbox).format(pair))
                 received = time()
                 data = json.loads(data, parse_float=Decimal)
                 if 'result' in data:

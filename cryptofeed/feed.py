@@ -24,7 +24,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
         candle_interval: str
             the candle interval. See the specific exchange to see what intervals they support
@@ -46,8 +46,6 @@ class Feed(Exchange):
         cross_check: bool
             Toggle a check for a crossed book. Should not be needed on exchanges that support
             checksums or provide message sequence numbers.
-        origin: str
-            Passed into websocket connect. Sets the origin header.
         exceptions: list of exceptions
             These exceptions will not be handled internally and will be passed to the asyncio exception handler. To
             handle them feedhandler will need to be supplied with a custom exception handler. See the `run` method
@@ -72,7 +70,6 @@ class Feed(Exchange):
         self.normalized_symbols = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
-        self.origin = origin
         self.checksum_validation = checksum_validation
         self.requires_authentication = False
         self._feed_config = defaultdict(list)

@@ -55,7 +55,6 @@ class Bithumb(Feed):
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
-            LOG.debug("%s: reading symbol information from %s", cls.id, cls.rest_endpoints[0].route('instruments'))
             data = {}
             for ep in cls.rest_endpoints[0].route('instruments'):
                 ret = cls.http_sync.read(ep, json=True, uuid=cls.id)

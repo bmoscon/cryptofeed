@@ -70,7 +70,7 @@ class HuobiSwap(HuobiDM):
         """
         while True:
             for pair in pairs:
-                data = await self.http_conn.read(self.rest_endpoints[0].funding.format(pair))
+                data = await self.http_conn.read(self.rest_endpoints[0].route('funding').format(pair))
                 data = json.loads(data, parse_float=Decimal)
                 received = time.time()
                 update = (data['data']['funding_rate'], self.timestamp_normalize(int(data['data']['next_funding_time'])))
