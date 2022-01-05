@@ -145,7 +145,7 @@ class Binance(Feed, BinanceRestMixin):
                 for i in range(0, len(_list), n):
                     yield _list[i:i + n]
 
-            return {chunk[0]: address + '/'.join(chunk) for chunk in split_list(subs, 200)}
+            return [address + '/'.join(chunk) for chunk in split_list(subs, 200)]
 
     def _reset(self):
         self._l2_book = {}

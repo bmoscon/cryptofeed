@@ -166,29 +166,24 @@ class Gemini(Feed, GeminiRestMixin):
         )
         await self.callback(ORDER_INFO, oi, timestamp)
 
-    async def message_handler_orders(self, msg: str, conn: AsyncConnection, timestamp: float):
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
             for entry in msg:
                 await self._order(entry, timestamp)
-        elif isinstance(msg, dict):
-            if msg['type'] == 'subscription_ack':
-                LOG.info('%s: Authenticated successfully', self.id)
-            elif msg['type'] == 'heartbeat':
-                return
-            else:
-                await self._order(msg, timestamp)
+            return
 
-    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
-        msg = json.loads(msg, parse_float=Decimal)
-
-        if msg['type'] == 'l2_updates':
+        if 'type' not in msg:
+            LOG.warning('%s: Error from exchange %s', self.id, msg)
+        elif msg['type'] == 'l2_updates':
             await self._book(msg, timestamp)
         elif msg['type'] == 'trade':
             await self._trade(msg, timestamp)
         elif msg['type'] == 'heartbeat':
             return
+        elif msg['type'] == 'subscription_ack':
+            LOG.info('%s: Authenticated successfully', self.id)
         elif msg['type'] == 'auction_result' or msg['type'] == 'auction_indicative' or msg['type'] == 'auction_open':
             return
         else:
@@ -208,7 +203,6 @@ class Gemini(Feed, GeminiRestMixin):
         if self.std_channel_to_exchange(ORDER_INFO) in conn.subscription:
             return
 
-        symbols = itertools.chain(*conn.subscription.values())
+        symbols = list(set(itertools.chain(*conn.subscription.values())))
         self.__reset(symbols)
-
         await conn.write(json.dumps({"type": "subscribe", "subscriptions": [{"name": "l2", "symbols": symbols}]}))

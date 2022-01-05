@@ -93,7 +93,7 @@ class Exchange:
                 addr = cls._symbol_endpoint_prepare(ep)
                 if isinstance(addr, list):
                     for ep in addr:
-                        LOG.debug("%s: reading symbol information from %s", cls.id, addr)
+                        LOG.debug("%s: reading symbol information from %s", cls.id, ep)
                         data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
                 else:
                     LOG.debug("%s: reading symbol information from %s", cls.id, addr)

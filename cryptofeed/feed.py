@@ -185,19 +185,39 @@ class Feed(Exchange):
         for endpoint in self.websocket_endpoints:
             auth = None
             if endpoint.authentication:
+                # if a class has an endpoint with the authentication flag set to true, this
+                # method must be define. The method will be called immediately before connecting
+                # to authenticate the connection. _ws_authentication returns a tuple of address and ws options
                 auth = self._ws_authentication
             limit = endpoint.limit
-            addr = endpoint.get_address(self.sandbox)
+            addr = self._address()
+            addr = endpoint.get_address(self.sandbox) if addr is None else addr
+
             # filtering can only be done on normalized symbols, but this subscription needs to have the raw/exchange specific
             # subscription, so we need to temporarily convert the symbols back and forth. It has to be done here
             # while in the context of the class
             temp_sub = {chan: [self.exchange_symbol_to_std_symbol(s) for s in symbols] for chan, symbols in self.subscription.items()}
             filtered_sub = {chan: [self.std_symbol_to_exchange_symbol(s) for s in symbols] for chan, symbols in endpoint.subscription_filter(temp_sub).items()}
+            if not filtered_sub:
+                continue
             if limit and sum(map(len, filtered_sub.values())) > limit:
                 ret.extend(limit_sub(filtered_sub, limit, auth, endpoint.options))
             else:
                 ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler, self.authenticate))
         return ret
+
+    def _ws_authentication(self, address: str, ws_options: dict) -> Tuple[str, dict]:
+        '''
+        Used to do authentication immediately before connecting. Takes the address and the websocket options as
+        arguments and returns a new address and new websocket options that will be used to connect.
+        '''
+        raise NotImplementedError
+
+    def _address(self):
+        '''
+        If you need to dynamically calculate the address before connecting, overload this method in the exchange object.
+        '''
+        return None
 
     @property
     def address(self) -> Union[List, str]:

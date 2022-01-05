@@ -57,7 +57,7 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         ret = []
         for chan in set(self.subscription):
             if chan == 'open_interest':
-                addrs = [self.rest_endpoints[0].route('open_interest', sanxbox=self.sandbox).format(pair) for pair in self.subscription[chan]]
+                addrs = [self.rest_endpoints[0].route('open_interest', sandbox=self.sandbox).format(pair) for pair in self.subscription[chan]]
                 ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=self.open_interest_interval, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
         return ret
 

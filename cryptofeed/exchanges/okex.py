@@ -98,7 +98,7 @@ class OKEx(Feed, OKExRestMixin):
                     continue
 
                 for status in (FILLED, UNFILLED):
-                    data = await self.http_conn.read(self.rest_endpoints[0].route('liquidations', sanxbox=self.sandbox).format(instrument_type, status, uly))
+                    data = await self.http_conn.read(self.rest_endpoints[0].route('liquidations', sandbox=self.sandbox).format(instrument_type, status, uly))
                     data = json.loads(data, parse_float=Decimal)
                     timestamp = time.time()
                     if len(data['data'][0]['details']) == 0 or (len(data['data'][0]['details']) > 0 and last_update.get(pair) == data['data'][0]['details'][0]):
