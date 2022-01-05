@@ -4,7 +4,7 @@ Copyright (C) 2021 - STS Digital
 import logging
 from decimal import Decimal
 import time
-from typing import Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
 from collections import defaultdict
 import hashlib
 import hmac
@@ -46,7 +46,7 @@ class BitDotCom(Feed):
     request_limit = 10
 
     @classmethod
-    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[List[str], str]:
         if ep.routes.currencies:
             ret = cls.http_sync.read(ep.route('currencies'), json=True, uuid=cls.id)
             return [ep.route('instruments').format(currency) for currency in ret['data']['currencies']]

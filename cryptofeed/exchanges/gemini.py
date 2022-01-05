@@ -7,7 +7,7 @@ associated with this software.
 from collections import defaultdict
 import logging
 from decimal import Decimal
-from typing import Dict, Tuple, Union
+from typing import Dict, List, Tuple, Union
 import base64
 import hashlib
 import hmac
@@ -46,7 +46,7 @@ class Gemini(Feed, GeminiRestMixin):
         return ts / 1000.0
 
     @classmethod
-    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[List[str], str]:
         ret = cls.http_sync.read(ep.route('currencies'), json=True, uuid=cls.id)
         return [ep.route('instruments').format(currency) for currency in ret]
 

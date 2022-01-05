@@ -8,7 +8,7 @@ import asyncio
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
-from typing import AsyncGenerator, Dict, Optional, Tuple, Union
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Union
 
 from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
 from cryptofeed.symbols import Symbol, Symbols
@@ -76,7 +76,7 @@ class Exchange:
         return list(cls.symbol_mapping(refresh=refresh).keys())
 
     @classmethod
-    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[list[str], str]:
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[List[str], str]:
         """
         override if a specific exchange needs to do something first, like query an API
         to get a list of currencies, that are then used to build the list of symbol endpoints
