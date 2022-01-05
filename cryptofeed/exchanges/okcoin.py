@@ -12,7 +12,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BID, BUY, L2_BOOK, OKCOIN, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
@@ -24,8 +24,8 @@ LOG = logging.getLogger('feedhandler')
 
 class OKCoin(Feed):
     id = OKCOIN
-    symbol_endpoint = 'https://www.okcoin.com/api/spot/v3/instruments'
-    websocket_endpoint = 'wss://real.okcoin.com:8443/ws/v3'
+    websocket_endpoints = [WebsocketEndpoint('wss://real.okcoin.com:8443/ws/v3')]
+    rest_endpoints = [RestEndpoint('https://www.okcoin.com', routes=Routes('/api/spot/v3/instruments'))]
     websocket_channels = {
         L2_BOOK: 'spot/depth_l2_tbt',
         TRADES: 'spot/trade',
@@ -136,9 +136,6 @@ class OKCoin(Feed):
                     raise BadChecksum
                 await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(update['timestamp']), raw=msg, delta=delta, checksum=update['checksum'] & 0xFFFFFFFF)
 
-    async def _login(self, msg: dict, timestamp: float):
-        LOG.debug('%s: Websocket logged in? %s', self.id, msg['success'])
-
     async def message_handler(self, msg: str, conn, timestamp: float):
         # DEFLATE compression, no header
         msg = zlib.decompress(msg, -15)
@@ -149,8 +146,6 @@ class OKCoin(Feed):
                 LOG.error("%s: Error: %s", self.id, msg)
             elif msg['event'] == 'subscribe':
                 pass
-            elif msg['event'] == 'login':
-                await self._login(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'table' in msg:

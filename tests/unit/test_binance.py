@@ -28,9 +28,9 @@ def test_binance_address_generation():
                 syms.append(sym)
                 chans.append(chan)
         else:
-            assert isinstance(addr, dict)
+            assert isinstance(addr, list)
 
-            for _, value in addr.items():
+            for value in addr:
                 value = value.split("=", 1)[1]
                 value = value.split("/")
                 for entry in value:

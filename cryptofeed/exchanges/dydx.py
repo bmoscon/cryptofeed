@@ -12,7 +12,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, DYDX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges.mixins.dydx_rest import dYdXRestMixin
@@ -23,8 +23,9 @@ LOG = logging.getLogger('feedhandler')
 
 class dYdX(Feed, dYdXRestMixin):
     id = DYDX
-    symbol_endpoint = 'https://api.dydx.exchange/v3/markets'
-    websocket_endpoint = 'wss://api.dydx.exchange/v3/ws'
+    websocket_endpoints = [WebsocketEndpoint('wss://api.dydx.exchange/v3/ws')]
+    rest_endpoints = [RestEndpoint('https://api.dydx.exchange', routes=Routes('/v3/markets'))]
+
     websocket_channels = {
         L2_BOOK: 'v3_orderbook',
         TRADES: 'v3_trades',

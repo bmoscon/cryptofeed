@@ -13,7 +13,7 @@ import time
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.exchanges.mixins.bitstamp_rest import BitstampRestMixin
@@ -25,9 +25,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Bitstamp(Feed, BitstampRestMixin):
     id = BITSTAMP
-    symbol_endpoint = "https://www.bitstamp.net/api/v2/trading-pairs-info/"
     # API documentation: https://www.bitstamp.net/websocket/v2/
-    websocket_endpoint = 'wss://ws.bitstamp.net/'
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.bitstamp.net/', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://www.bitstamp.net', routes=Routes('/api/v2/trading-pairs-info/', l2book='/api/v2/order_book/{}'))]
     websocket_channels = {
         L3_BOOK: 'detail_order_book',
         L2_BOOK: 'diff_order_book',
@@ -54,10 +54,6 @@ class Bitstamp(Feed, BitstampRestMixin):
             info['instrument_type'][s.normalized] = s.type
 
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.ws_defaults['compression'] = None
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
         data = msg['data']
@@ -163,7 +159,7 @@ class Bitstamp(Feed, BitstampRestMixin):
 
     async def _snapshot(self, pairs: list, conn: AsyncConnection):
         await asyncio.sleep(5)
-        urls = [f'https://www.bitstamp.net/api/v2/order_book/{sym}' for sym in pairs]
+        urls = [self.rest_endpoints[0].route('l2book', self.sandbox).format(sym) for sym in pairs]
         results = [await self.http_conn.read(url) for url in urls]
         results = [json.loads(resp, parse_float=Decimal) for resp in results]
 

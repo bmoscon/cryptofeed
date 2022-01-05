@@ -10,7 +10,7 @@ from typing import Dict, Tuple
 from collections import defaultdict
 
 from yapic import json
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import BUY, CALL, CANDLES, DELTA, FUTURES, L2_BOOK, OPTION, PERPETUAL, PUT, SELL, SPOT, TRADES
 from cryptofeed.feed import Feed
@@ -24,9 +24,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Delta(Feed):
     id = DELTA
-    symbol_endpoint = 'https://api.delta.exchange/v2/products'
-    websocket_endpoint = 'wss://socket.delta.exchange'
-    sandbox_endpoint = 'wss://testnet-socket.delta.exchange'
+    websocket_endpoints = [WebsocketEndpoint('wss://socket.delta.exchange', sandbox='wss://testnet-socket.delta.exchange')]
+    rest_endpoints = [RestEndpoint('https://api.delta.exchange', routes=Routes('/v2/products'))]
+
     websocket_channels = {
         L2_BOOK: 'l2_orderbook',
         TRADES: 'all_trades',
@@ -189,7 +189,7 @@ class Delta(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def subscribe(self, conn: AsyncConnection, **kwargs):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
         await conn.write(json.dumps({

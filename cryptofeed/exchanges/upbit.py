@@ -16,6 +16,7 @@ from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.upbit_rest import UpbitRestMixin
+from cryptofeed.connection import WebsocketEndpoint, RestEndpoint, Routes
 from cryptofeed.types import OrderBook, Trade
 
 
@@ -24,9 +25,8 @@ LOG = logging.getLogger('feedhandler')
 
 class Upbit(Feed, UpbitRestMixin):
     id = UPBIT
-    api = 'https://api.upbit.com/v1/'
-    symbol_endpoint = 'https://api.upbit.com/v1/market/all'
-    websocket_endpoint = 'wss://api.upbit.com/websocket/v1'
+    websocket_endpoints = [WebsocketEndpoint('wss://api.upbit.com/websocket/v1')]
+    rest_endpoints = [RestEndpoint('https://api.upbit.com', routes=Routes('/v1/market/all'))]
     websocket_channels = {
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,

@@ -6,11 +6,11 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
-from typing import List, Tuple, Callable, Dict
+from typing import Tuple, Dict
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll
+from cryptofeed.connection import AsyncConnection, HTTPPoll, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
@@ -21,10 +21,9 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceFutures(Binance, BinanceFuturesRestMixin):
     id = BINANCE_FUTURES
-    symbol_endpoint = 'https://fapi.binance.com/fapi/v1/exchangeInfo'
-    websocket_endpoint = 'wss://fstream.binance.com'
-    sandbox_endpoint = "wss://stream.binancefuture.com"
-    listen_key_endpoint = 'listenKey'
+    websocket_endpoints = [WebsocketEndpoint('wss://fstream.binance.com', sandbox='wss://stream.binancefuture.com', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://fapi.binance.com', sandbox='https://testnet.binancefuture.com', routes=Routes('/fapi/v1/exchangeInfo', l2book='/fapi/v1/depth?symbol={}&limit={}', authentication='/fapi/v1/listenKey', open_interest='/fapi/v1//openInterest?symbol={}'))]
+
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
     websocket_channels = {
@@ -48,16 +47,19 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
 
     def __init__(self, open_interest_interval=1.0, **kwargs):
         """
-        open_interest_interval: flaot
+        open_interest_interval: float
             time in seconds between open_interest polls
         """
         super().__init__(**kwargs)
-        # overwrite values previously set by the super class Binance
-        self.rest_endpoint = 'https://fapi.binance.com/fapi/v1' if not self.sandbox else "https://testnet.binancefuture.com/fapi/v1"
-        self.address = self._address()
-        self.ws_defaults['compression'] = None
-
         self.open_interest_interval = open_interest_interval
+
+    def _connect_rest(self):
+        ret = []
+        for chan in set(self.subscription):
+            if chan == 'open_interest':
+                addrs = [self.rest_endpoints[0].route('open_interest', sandbox=self.sandbox).format(pair) for pair in self.subscription[chan]]
+                ret.append((HTTPPoll(addrs, self.id, delay=60.0, sleep=self.open_interest_interval, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
+        return ret
 
     def _check_update_id(self, pair: str, msg: dict) -> bool:
         if self._l2_book[pair].delta is None and msg['u'] < self.last_update_id[pair]:
@@ -93,17 +95,6 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
             )
             await self.callback(OPEN_INTEREST, o, timestamp)
             self._open_interest_cache[pair] = oi
-
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-        if self.address:
-            ret = super().connect()
-        PollCls = HTTPPoll
-        for chan in set(self.subscription):
-            if chan == 'open_interest':
-                addrs = [f"{self.rest_endpoint}/openInterest?symbol={pair}" for pair in self.subscription[chan]]
-                ret.append((PollCls(addrs, self.id, delay=60.0, sleep=self.open_interest_interval, proxy=self.http_proxy), self.subscribe, self.message_handler, self.authenticate))
-        return ret
 
     async def _account_update(self, msg: dict, timestamp: float):
         """

@@ -6,9 +6,8 @@ associated with this software.
 '''
 import asyncio
 from collections import defaultdict
-from functools import partial
 import logging
-from typing import Tuple, Callable, List
+from typing import Tuple, Callable, List, Union
 
 from aiohttp.typedefs import StrOrURL
 
@@ -25,7 +24,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, origin=None, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
         candle_interval: str
             the candle interval. See the specific exchange to see what intervals they support
@@ -47,8 +46,6 @@ class Feed(Exchange):
         cross_check: bool
             Toggle a check for a crossed book. Should not be needed on exchanges that support
             checksums or provide message sequence numbers.
-        origin: str
-            Passed into websocket connect. Sets the origin header.
         exceptions: list of exceptions
             These exceptions will not be handled internally and will be passed to the asyncio exception handler. To
             handle them feedhandler will need to be supplied with a custom exception handler. See the `run` method
@@ -73,16 +70,14 @@ class Feed(Exchange):
         self.normalized_symbols = []
         self.max_depth = max_depth
         self.previous_book = defaultdict(dict)
-        self.origin = origin
         self.checksum_validation = checksum_validation
-        self.ws_defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'origin': self.origin}
         self.requires_authentication = False
         self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
         self.http_proxy = http_proxy
         self.start_delay = delay_start
         self.candle_interval = candle_interval
-        self.address = self.websocket_endpoint if not self.sandbox else self.sandbox_endpoint
+        self._sequence_no = {}
 
         if self.valid_candle_intervals != NotImplemented:
             if candle_interval not in self.valid_candle_intervals:
@@ -114,12 +109,14 @@ class Feed(Exchange):
             # if we dont have a subscription dict, we'll use symbols+channels and build one
             [self._feed_config[channel].extend(symbols) for channel in channels]
             self.normalized_symbols = symbols
+            self.normalized_channels = channels
 
             symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in symbols]
             channels = list(set([self.std_channel_to_exchange(chan) for chan in channels]))
             self.subscription = {chan: symbols for chan in channels}
 
         self._feed_config = dict(self._feed_config)
+        self._auth_token = None
 
         self._l3_book = {}
         self._l2_book = {}
@@ -146,36 +143,85 @@ class Feed(Exchange):
             if not isinstance(callback, list):
                 self.callbacks[key] = [callback]
 
-    def _connect_builder(self, address: str, options: list, header=None, sub=None, handler=None, auth=None):
+    def _connect_rest(self):
         """
-        Helper method for building a custom connect tuple
+        Child classes should override this method to generate connection objects that
+        support their polled REST endpoints.
         """
-        subscribe = partial(self.subscribe if not sub else sub, options=options)
-        conn = WSAsyncConn(address, self.id, extra_headers=header, **self.ws_defaults)
-        return conn, subscribe, handler if handler else self.message_handler, auth if auth else self.authenticate
-
-    async def _empty_subscribe(self, conn: AsyncConnection, **kwargs):
-        return
+        return []
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         """
-        Generic connection method for exchanges. Exchanges that require/support
-        multiple addresses will need to override this method in their specific class
-        unless they use the same subscribe method and message handler for all
-        connections.
+        Generic websocket connection method for exchanges. Uses the websocket endpoints defined in the
+        exchange to determine, based on the subscription information, which endpoints should be used,
+        and what instruments/channels should be enabled on each connection.
 
         Connect returns a list of tuples. Each tuple contains
         1. an AsyncConnection object
         2. the subscribe function pointer associated with this connection
         3. the message handler for this connection
+        4. The authentication method for this connection
         """
-        ret = []
-        if isinstance(self.address, str):
-            return [(WSAsyncConn(self.address, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate)]
+        def limit_sub(subscription: dict, limit: int, auth, options: dict):
+            ret = []
+            sub = {}
+            for channel in subscription:
+                for pair in subscription[channel]:
+                    if channel not in sub:
+                        sub[channel] = []
+                    sub[channel].append(pair)
+                    if sum(map(len, sub.values())) == limit:
+                        ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **options), self.subscribe, self.message_handler, self.authenticate))
+                        sub = {}
 
-        for _, addr in self.address.items():
-            ret.append((WSAsyncConn(addr, self.id, **self.ws_defaults), self.subscribe, self.message_handler, self.authenticate))
+            if sum(map(len, sub.values())) > 0:
+                ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **options), self.subscribe, self.message_handler, self.authenticate))
+            return ret
+
+        ret = self._connect_rest()
+        for endpoint in self.websocket_endpoints:
+            auth = None
+            if endpoint.authentication:
+                # if a class has an endpoint with the authentication flag set to true, this
+                # method must be define. The method will be called immediately before connecting
+                # to authenticate the connection. _ws_authentication returns a tuple of address and ws options
+                auth = self._ws_authentication
+            limit = endpoint.limit
+            addr = self._address()
+            addr = endpoint.get_address(self.sandbox) if addr is None else addr
+
+            # filtering can only be done on normalized symbols, but this subscription needs to have the raw/exchange specific
+            # subscription, so we need to temporarily convert the symbols back and forth. It has to be done here
+            # while in the context of the class
+            temp_sub = {chan: [self.exchange_symbol_to_std_symbol(s) for s in symbols] for chan, symbols in self.subscription.items()}
+            filtered_sub = {chan: [self.std_symbol_to_exchange_symbol(s) for s in symbols] for chan, symbols in endpoint.subscription_filter(temp_sub).items()}
+            if not filtered_sub:
+                continue
+            if limit and sum(map(len, filtered_sub.values())) > limit:
+                ret.extend(limit_sub(filtered_sub, limit, auth, endpoint.options))
+            else:
+                ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler, self.authenticate))
         return ret
+
+    def _ws_authentication(self, address: str, ws_options: dict) -> Tuple[str, dict]:
+        '''
+        Used to do authentication immediately before connecting. Takes the address and the websocket options as
+        arguments and returns a new address and new websocket options that will be used to connect.
+        '''
+        raise NotImplementedError
+
+    def _address(self):
+        '''
+        If you need to dynamically calculate the address before connecting, overload this method in the exchange object.
+        '''
+        return None
+
+    @property
+    def address(self) -> Union[List, str]:
+        if len(self.websocket_endpoints) == 0:
+            return
+        addrs = [ep.get_address(sandbox=self.sandbox) for ep in self.websocket_endpoints]
+        return addrs[0] if len(addrs) == 1 else addrs
 
     async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float, timestamp=None, raw=None, sequence_number=None, checksum=None, delta=None):
         if self.cross_check:
@@ -202,11 +248,7 @@ class Feed(Exchange):
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         raise NotImplementedError
 
-    async def subscribe(self, connection: AsyncConnection, **kwargs):
-        """
-        kwargs will not be passed from anywhere, if you need to supply extra data to
-        your subscribe, bind the data to the method with a partial
-        """
+    async def subscribe(self, connection: AsyncConnection):
         raise NotImplementedError
 
     async def authenticate(self, connection: AsyncConnection):

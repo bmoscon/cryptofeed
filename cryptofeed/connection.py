@@ -12,8 +12,9 @@ from contextlib import asynccontextmanager, suppress
 from typing import List, Union, AsyncIterable
 from decimal import Decimal
 import atexit
-from aiohttp.client_reqrep import ClientResponse
+from dataclasses import dataclass
 
+from aiohttp.client_reqrep import ClientResponse
 import requests
 import websockets
 import aiohttp
@@ -21,6 +22,7 @@ from aiohttp.typedefs import StrOrURL
 from yapic import json as json_parser
 
 from cryptofeed.exceptions import ConnectionClosed
+from cryptofeed.symbols import str_to_symbol
 
 
 LOG = logging.getLogger('feedhandler')
@@ -47,9 +49,9 @@ class HTTPSync(Connection):
             return r.text
         return r
 
-    def read(self, address: str, json=False, text=True, uuid=None):
+    def read(self, address: str, params=None, headers=None, json=False, text=True, uuid=None):
         LOG.debug("HTTPSync: requesting data from %s", address)
-        r = requests.get(address)
+        r = requests.get(address, headers=headers, params=params)
         return self.process_response(r, address, json=json, text=text, uuid=uuid)
 
     def write(self, address: str, data=None, json=False, text=True, uuid=None):
@@ -61,16 +63,23 @@ class HTTPSync(Connection):
 class AsyncConnection(Connection):
     conn_count: int = 0
 
-    def __init__(self, conn_id: str):
+    def __init__(self, conn_id: str, authentication=None, subscription=None):
         """
         conn_id: str
             the unique identifier for the connection
+        authentication: Callable
+            function pointer that will be invoked directly before the connection
+            is attempted. Some connections may need to do authentication at this point.
+        subscription: dict
+            optional connection information
         """
         AsyncConnection.conn_count += 1
         self.id: str = conn_id
         self.received: int = 0
         self.sent: int = 0
         self.last_message = None
+        self.authentication = authentication
+        self.subscription = subscription
         self.conn: Union[websockets.WebSocketClientProtocol, aiohttp.ClientSession] = None
         atexit.register(self.__del__)
 
@@ -275,7 +284,7 @@ class HTTPConcurrentPoll(HTTPPoll):
 
 class WSAsyncConn(AsyncConnection):
 
-    def __init__(self, address: str, conn_id: str, **kwargs):
+    def __init__(self, address: str, conn_id: str, authentication=None, subscription=None, **kwargs):
         """
         address: str
             the websocket address to connect to
@@ -287,7 +296,7 @@ class WSAsyncConn(AsyncConnection):
         if not address.startswith("wss://"):
             raise ValueError(f'Invalid address, must be a wss address. Provided address is: {address!r}')
         self.address = address
-        super().__init__(f'{conn_id}.ws.{self.conn_count}')
+        super().__init__(f'{conn_id}.ws.{self.conn_count}', authentication=authentication, subscription=subscription)
         self.ws_kwargs = kwargs
 
     @property
@@ -301,6 +310,9 @@ class WSAsyncConn(AsyncConnection):
             LOG.debug('%s: connecting to %s', self.id, self.address)
             if self.raw_data_callback:
                 await self.raw_data_callback(None, time.time(), self.id, connect=self.address)
+            if self.authentication:
+                self.address, self.ws_kwargs = await self.authentication(self.address, self.ws_kwargs)
+
             self.conn = await websockets.connect(self.address, **self.ws_kwargs)
         self.sent = 0
         self.received = 0
@@ -330,3 +342,70 @@ class WSAsyncConn(AsyncConnection):
             await self.raw_data_callback(data, time.time(), self.id, send=self.address)
         await self.conn.send(data)
         self.sent += 1
+
+
+@dataclass
+class WebsocketEndpoint:
+    address: str
+    sandbox: str = None
+    instrument_filter: str = None
+    channel_filter: str = None
+    limit: int = None
+    options: dict = None
+    authentication: bool = None
+
+    def __post_init__(self):
+        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None}
+        if self.options:
+            defaults.update(self.options)
+        self.options = defaults
+
+    def subscription_filter(self, sub: dict) -> dict:
+        if not self.instrument_filter and not self.channel_filter:
+            return sub
+        ret = {}
+        for chan, syms in sub.items():
+            if self.channel_filter and chan not in self.channel_filter:
+                continue
+            ret[chan] = []
+            if not self.instrument_filter:
+                ret[chan].extend(sub[chan])
+            else:
+                if self.instrument_filter[0] == 'TYPE':
+                    ret[chan].extend([s for s in syms if str_to_symbol(s).type in self.instrument_filter[1]])
+                elif self.instrument_filter[0] == 'QUOTE':
+                    ret[chan].extend([s for s in syms if str_to_symbol(s).quote in self.instrument_filter[1]])
+                else:
+                    raise ValueError('Invalid instrument filter type specified')
+        return ret
+
+    def get_address(self, sandbox=False):
+        if sandbox and self.sandbox:
+            return self.sandbox
+        return self.address
+
+
+@dataclass
+class Routes:
+    instruments: Union[str, list]
+    currencies: str = None
+    funding: str = None
+    open_interest: str = None
+    liquidations: str = None
+    stats: str = None
+    authentication: str = None
+    l2book: str = None
+    l3book: str = None
+
+
+@dataclass
+class RestEndpoint:
+    address: str
+    sandbox: str = None
+    instrument_filter: str = None
+    routes: Routes = None
+
+    def route(self, ep, sandbox=False):
+        endpoint = self.routes.__getattribute__(ep)
+        api = self.sandbox if sandbox and self.sandbox else self.address
+        return api + endpoint if isinstance(endpoint, str) else [api + e for e in endpoint]

@@ -34,8 +34,8 @@ class TestDeribitRest:
 
     def test_trades(self):
         ret = []
-        start = dt.now() - timedelta(days=5)
-        end = dt.now() - timedelta(days=4, hours=18)
+        start = dt.utcnow() - timedelta(days=5)
+        end = dt.utcnow() - timedelta(days=4, hours=18)
 
         for data in d.trades_sync('BTC-USD-PERP', start=start, end=end):
             ret.extend(data)

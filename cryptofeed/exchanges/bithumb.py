@@ -13,7 +13,7 @@ from datetime import timedelta
 from yapic import json
 
 from cryptofeed.symbols import Symbol, Symbols
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BUY, BITHUMB, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.types import Trade
@@ -33,12 +33,8 @@ class Bithumb(Feed):
     shows that there is no USDT symbols available. Please be careful when referencing their api_info page
     '''
     id = BITHUMB
-    api = "https://api.bithumb.com/public"
-    symbol_endpoint = [
-        ('https://api.bithumb.com/public/ticker/ALL_BTC', 'BTC'),
-        ('https://api.bithumb.com/public/ticker/ALL_KRW', 'KRW')
-    ]
-    websocket_endpoint = "wss://pubwss.bithumb.com/pub/ws"
+    websocket_endpoints = [WebsocketEndpoint('wss://pubwss.bithumb.com/pub/ws')]
+    rest_endpoints = [RestEndpoint('https://api.bithumb.com', routes=Routes(['/public/ticker/ALL_BTC', '/public/ticker/ALL_KRW']))]
     websocket_channels = {
         # L2_BOOK: 'orderbookdepth', <-- technically the exchange supports orderbooks but it only provides orderbook deltas, there is
         # no way to synchronize against a rest snapshot, nor request/obtain an orderbook via the websocket, so this isn't really useful
@@ -59,10 +55,13 @@ class Bithumb(Feed):
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
-            LOG.debug("%s: reading symbol information from %s", cls.id, cls.symbol_endpoint)
             data = {}
-            for ep, quote_curr in cls.symbol_endpoint:
-                data[quote_curr] = cls.http_sync.read(ep, json=True, uuid=cls.id)
+            for ep in cls.rest_endpoints[0].route('instruments'):
+                ret = cls.http_sync.read(ep, json=True, uuid=cls.id)
+                if 'BTC' in ep:
+                    data['BTC'] = ret
+                else:
+                    data['KRW'] = ret
 
             syms, info = cls._parse_symbol_data(data)
             Symbols.set(cls.id, syms, info)

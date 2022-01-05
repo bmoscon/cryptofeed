@@ -10,7 +10,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BLOCKCHAIN, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -23,8 +23,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Blockchain(Feed):
     id = BLOCKCHAIN
-    symbol_endpoint = "https://api.blockchain.com/mercury-gateway/v1/instruments"
-    websocket_endpoint = "wss://ws.prod.blockchain.info/mercury-gateway/v1/ws"
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.blockchain.info/mercury-gateway/v1/ws', options={'origin': 'https://exchange.blockchain.com'})]
+    rest_endpoints = [RestEndpoint('https://api.blockchain.com', routes=Routes('/mercury-gateway/v1/instruments'))]
+
     websocket_channels = {
         L3_BOOK: 'l3',
         L2_BOOK: 'l2',
@@ -43,10 +44,6 @@ class Blockchain(Feed):
             ret[s.normalized] = entry['symbol']
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__(origin="https://exchange.blockchain.com", **kwargs)
-        self.__reset()
 
     def __reset(self):
         self.seq_no = None

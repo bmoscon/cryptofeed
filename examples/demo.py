@@ -10,6 +10,7 @@ from cryptofeed import FeedHandler
 from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, FUNDING, GEMINI, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, TICKER, TRADES, INDEX
 from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
                                   HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKEx, Poloniex, Bybit, KuCoin, Bequant, Upbit, Probit)
+from cryptofeed.exchanges.bitdotcom import BitDotCom
 from cryptofeed.exchanges.cryptodotcom import CryptoDotCom
 from cryptofeed.exchanges.delta import Delta
 from cryptofeed.exchanges.fmfw import FMFW
@@ -119,6 +120,8 @@ def main():
     f.add_feed(Upbit(subscription={TRADES: ['BTC-USDT'], L2_BOOK: ['BTC-USDT']}, callbacks={TRADES: trade, L2_BOOK: book}))
     f.add_feed(CryptoDotCom(symbols=['BTC-USDT'], channels=[L2_BOOK, TICKER, CANDLES, TRADES], callbacks={TRADES: trade, CANDLES: candle_callback, TICKER: ticker, L2_BOOK: book}))
     f.add_feed(Delta(symbols=['BTC-USDT', 'BTC-USDT-PERP'], channels=[L2_BOOK, TRADES, CANDLES], callbacks={TRADES: trade, CANDLES: candle_callback, L2_BOOK: book}))
+    f.add_feed(BitDotCom(config="config.yaml", sandbox=True, symbols=['BTC-USDT', 'BTC-USD-PERP'], channels=[TICKER, TRADES, L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker}))
+
     f.run()
 
 

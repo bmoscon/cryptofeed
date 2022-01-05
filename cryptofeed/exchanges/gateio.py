@@ -12,7 +12,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -25,8 +25,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Gateio(Feed):
     id = GATEIO
-    symbol_endpoint = "https://api.gateio.ws/api/v4/spot/currency_pairs"
-    websocket_endpoint = 'wss://api.gateio.ws/ws/v4/'
+    websocket_endpoints = [WebsocketEndpoint('wss://api.gateio.ws/ws/v4/', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/spot/currency_pairs', l2book='/api/v4/spot/order_book?currency_pair={}&limit=100&with_id=true'))]
+
     valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d'}
     websocket_channels = {
         L2_BOOK: 'spot.order_book_update',
@@ -47,10 +48,6 @@ class Gateio(Feed):
             ret[s.normalized] = entry['id']
             info['instrument_type'][s.normalized] = s.type
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.ws_defaults['compression'] = None
 
     def _reset(self):
         self._l2_book = {}
@@ -123,8 +120,7 @@ class Gateio(Feed):
             "bids": [[price, amount], [...], ...]
         }
         """
-        url = f'https://api.gateio.ws/api/v4/spot/order_book?currency_pair={symbol}&limit=100&with_id=true'
-        ret = await self.http_conn.read(url)
+        ret = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol))
         data = json.loads(ret, parse_float=Decimal)
 
         symbol = self.exchange_symbol_to_std_symbol(symbol)

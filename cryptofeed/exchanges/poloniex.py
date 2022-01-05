@@ -10,7 +10,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -24,8 +24,8 @@ LOG = logging.getLogger('feedhandler')
 
 class Poloniex(Feed, PoloniexRestMixin):
     id = POLONIEX
-    symbol_endpoint = 'https://poloniex.com/public?command=returnTicker'
-    websocket_endpoint = 'wss://api2.poloniex.com'
+    websocket_endpoints = [WebsocketEndpoint('wss://api2.poloniex.com')]
+    rest_endpoints = [RestEndpoint('https://poloniex.com', routes=Routes('/public?command=returnTicker'))]
     _channel_map = {}
     websocket_channels = {
         L2_BOOK: L2_BOOK,

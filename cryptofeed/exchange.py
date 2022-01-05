@@ -8,11 +8,11 @@ import asyncio
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
-from typing import AsyncGenerator, Dict, Optional, Tuple, Union
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Union
 
 from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
 from cryptofeed.symbols import Symbol, Symbols
-from cryptofeed.connection import HTTPSync
+from cryptofeed.connection import HTTPSync, RestEndpoint
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
 from cryptofeed.config import Config
 
@@ -22,9 +22,8 @@ LOG = logging.getLogger('feedhandler')
 
 class Exchange:
     id = NotImplemented
-    symbol_endpoint = NotImplemented
-    websocket_endpoint = NotImplemented
-    sandbox_endpoint = NotImplemented
+    websocket_endpoints = NotImplemented
+    rest_endpoints = NotImplemented
     _parse_symbol_data = NotImplemented
     websocket_channels = NotImplemented
     request_limit = NotImplemented
@@ -77,24 +76,30 @@ class Exchange:
         return list(cls.symbol_mapping(refresh=refresh).keys())
 
     @classmethod
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[List[str], str]:
+        """
+        override if a specific exchange needs to do something first, like query an API
+        to get a list of currencies, that are then used to build the list of symbol endpoints
+        """
+        return ep.route('instruments')
+
+    @classmethod
     def symbol_mapping(cls, refresh=False) -> Dict:
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
-            LOG.debug("%s: reading symbol information from %s", cls.id, cls.symbol_endpoint)
-            if isinstance(cls.symbol_endpoint, list):
-                data = []
-                for ep in cls.symbol_endpoint:
-                    data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
-            elif isinstance(cls.symbol_endpoint, dict):
-                data = []
-                for input, output in cls.symbol_endpoint.items():
-                    for d in cls.http_sync.read(input, json=True, uuid=cls.id):
-                        data.append(cls.http_sync.read(f"{output}{d}", json=True, uuid=cls.id))
-            else:
-                data = cls.http_sync.read(cls.symbol_endpoint, json=True, uuid=cls.id)
+            data = []
+            for ep in cls.rest_endpoints:
+                addr = cls._symbol_endpoint_prepare(ep)
+                if isinstance(addr, list):
+                    for ep in addr:
+                        LOG.debug("%s: reading symbol information from %s", cls.id, ep)
+                        data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
+                else:
+                    LOG.debug("%s: reading symbol information from %s", cls.id, addr)
+                    data.append(cls.http_sync.read(addr, json=True, uuid=cls.id))
 
-            syms, info = cls._parse_symbol_data(data)
+            syms, info = cls._parse_symbol_data(data if len(data) > 1 else data[0])
             Symbols.set(cls.id, syms, info)
             return syms
         except Exception as e:

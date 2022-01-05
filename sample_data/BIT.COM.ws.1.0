@@ -1,0 +1,8 @@
+wss://spot-ws.bit.com <-> 1641346078.888644
+wss://spot-ws.bit.com <- 1641346079.979785: {"type":"subscribe","channels":["ticker"],"instruments":["BCH-7JAN22-650-P","ETH-21JAN22-3000-C","ETH-5JAN22-3700-C","BTC-28JAN22-60000-P","ETH-6JAN22-3600-C","ETH-28JAN22-5500-C","ETH-25FEB22-2800-P","BTC-14JAN22-56000-C","ETH-21JAN22-5500-C","ETH-5JAN22-4100-C"]}
+wss://spot-ws.bit.com <- 1641346079.97998: {"type":"subscribe","channels":["trade"],"instruments":["BCH-7JAN22-650-P","ETH-21JAN22-3000-C","ETH-5JAN22-3700-C","BTC-28JAN22-60000-P","ETH-6JAN22-3600-C","ETH-28JAN22-5500-C","ETH-25FEB22-2800-P","BTC-14JAN22-56000-C","ETH-21JAN22-5500-C","ETH-5JAN22-4100-C"]}
+wss://spot-ws.bit.com <- 1641346079.980084: {"type":"subscribe","channels":["depth"],"instruments":["BCH-7JAN22-650-P","ETH-21JAN22-3000-C","ETH-5JAN22-3700-C","BTC-28JAN22-60000-P","ETH-6JAN22-3600-C","ETH-28JAN22-5500-C","ETH-25FEB22-2800-P","BTC-14JAN22-56000-C","ETH-21JAN22-5500-C","ETH-5JAN22-4100-C"]}
+1641346080.254834: {"channel":"subscription","timestamp":1641346080206,"data":{"code":0,"subscription":["ticker"]}}
+1641346080.254882: {"channel":"subscription","timestamp":1641346080206,"data":{"code":0,"subscription":["trade"]}}
+1641346080.2549: {"channel":"subscription","timestamp":1641346080206,"data":{"code":0,"subscription":["depth"]}}
+

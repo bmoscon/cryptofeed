@@ -12,7 +12,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
@@ -24,8 +24,8 @@ LOG = logging.getLogger('feedhandler')
 
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
-    symbol_endpoint = 'https://futures.kraken.com/derivatives/api/v3/instruments'
-    websocket_endpoint = 'wss://futures.kraken.com/ws/v1'
+    websocket_endpoints = [WebsocketEndpoint('wss://futures.kraken.com/ws/v1')]
+    rest_endpoints = [RestEndpoint('https://futures.kraken.com', routes=Routes('/derivatives/api/v3/instruments'))]
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',

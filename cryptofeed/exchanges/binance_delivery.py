@@ -8,6 +8,7 @@ from decimal import Decimal
 import logging
 
 from yapic import json
+from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
 from cryptofeed.exchanges.binance import Binance
@@ -20,9 +21,10 @@ LOG = logging.getLogger('feedhandler')
 
 class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     id = BINANCE_DELIVERY
-    symbol_endpoint = 'https://dapi.binance.com/dapi/v1/exchangeInfo'
-    websocket_endpoint = 'wss://dstream.binance.com'
-    listen_key_endpoint = 'listenKey'
+
+    websocket_endpoints = [WebsocketEndpoint('wss://dstream.binance.com', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://dapi.binance.com', routes=Routes('/dapi/v1/exchangeInfo', l2book='/dapi/v1/depth?symbol={}&limit={}', authentication='/dapi/v1/listenKey'))]
+
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
     websocket_channels = {
@@ -32,13 +34,6 @@ class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
         LIQUIDATIONS: 'forceOrder',
         POSITIONS: POSITIONS
     }
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # overwrite values previously set by the super class Binance
-        self.rest_endpoint = 'https://dapi.binance.com/dapi/v1'
-        self.address = self._address()
-        self.ws_defaults['compression'] = None
 
     def _check_update_id(self, pair: str, msg: dict) -> bool:
         if self._l2_book[pair].delta is None and msg['u'] < self.last_update_id[pair]:

@@ -7,16 +7,15 @@ associated with this software.
 import hmac
 import time
 from collections import defaultdict
-from cryptofeed.symbols import Symbol
+from cryptofeed.symbols import Symbol, str_to_symbol
 import logging
 from decimal import Decimal
-from functools import partial
-from typing import Dict, List, Callable, Tuple, Union
+from typing import Dict, Tuple, Union
 from datetime import datetime as dt
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation
@@ -27,17 +26,6 @@ LOG = logging.getLogger('feedhandler')
 
 class Bybit(Feed):
     id = BYBIT
-    symbol_endpoint = 'https://api.bybit.com/v2/public/symbols'
-    websocket_endpoint = {
-        'USD': 'wss://stream.bybit.com/realtime',
-        'USDT': 'wss://stream.bybit.com/realtime_public',
-        'USDTP': 'wss://stream.bybit.com/realtime_private'
-    }
-    sandbox_endpoint = {
-        'USD': 'wss://stream-testnet.bybit.com/realtime',
-        'USDT': 'wss://stream-testnet.bybit.com/realtime_public',
-        'USDTP': 'wss://stream-testnet.bybit.com/realtime_private'
-    }
     websocket_channels = {
         L2_BOOK: 'orderBook_200.100ms',
         TRADES: 'trade',
@@ -48,8 +36,13 @@ class Bybit(Feed):
         FUNDING: 'instrument_info.100ms',
         CANDLES: 'klineV2',
         LIQUIDATIONS: 'liquidation'
-        # BALANCES: 'position' removing temporarily, this is a position, not a balance
     }
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://stream.bybit.com/realtime', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS]), instrument_filter=('QUOTE', ('USD')), sandbox='wss://stream-testnet.bybit.com/realtime', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/realtime_public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS]), instrument_filter=('QUOTE', ('USDT')), sandbox='wss://stream-testnet.bybit.com/realtime_public', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/realtime_private', channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]), instrument_filter=('QUOTE', ('USDT')), sandbox='wss://stream-testnet.bybit.com/realtime_private', options={'compression': None}),
+    ]
+    rest_endpoints = [RestEndpoint('https://api.bybit.com', routes=Routes('/v2/public/symbols'))]
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '1w', '1M'}
     candle_interval_map = {'1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '2h': '120', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W', '1M': 'M'}
 
@@ -85,18 +78,9 @@ class Bybit(Feed):
 
         return ret, info
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.ws_defaults['compression'] = None
-
-    def __reset(self, quote=None):
+    def __reset(self):
         self._instrument_info_cache = {}
-        if quote is None:
-            self._l2_book = {}
-        else:
-            rem = [symbol for symbol in self._l2_book if quote in symbol]
-            for symbol in rem:
-                del self._l2_book[symbol]
+        self._l2_book = {}
 
     async def _candle(self, msg: dict, timestamp: float):
         '''
@@ -197,56 +181,18 @@ class Bybit(Feed):
         else:
             LOG.warning("%s: Unhandled message type %s", conn.uuid, msg)
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        '''
-            Linear PERPETUAL (USDT) public goes to USDT endpoint
-            Linear PERPETUAL (USDT) private goes to USDTP endpoint
-            Inverse PERPETUAL and FUTURES (USD) both private and public goes to USD endpoint
-        '''
-        ret = []
-        if any(pair.split('-')[1] == 'USDT' for pair in self.normalized_symbols):
-            if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
-                ret.append((WSAsyncConn(self.address['USDTP'], self.id, **self.ws_defaults),
-                            partial(self.subscribe, quote='USDTP'), self.message_handler, self.authenticate))
-            if any(not self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
-                ret.append((WSAsyncConn(self.address['USDT'], self.id, **self.ws_defaults),
-                            partial(self.subscribe, quote='USDT'), self.message_handler, self.__no_auth))
-        if any(pair.split('-')[1] == 'USD' for pair in self.normalized_symbols):
-            ret.append((WSAsyncConn(self.address['USD'], self.id, **self.ws_defaults),
-                        partial(self.subscribe, quote='USD'), self.message_handler, self.authenticate))
-        return ret
-
-    async def subscribe(self, connection: AsyncConnection, quote: str = None):
-        if quote == 'USD' or quote == 'USDTP':
-            channels = []
-            for chan in self.subscription:
-                if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                    channels.append(chan)
-            if channels:
-                await connection.write(json.dumps({"op": "subscribe", "args": channels}))
-                LOG.debug(f'{connection.uuid}: Subscribing to auth, quote: {quote}, channels: {channels}')
-
-        if quote == 'USDTP':
-            return
-
-        self.__reset(quote=quote)
-
+    async def subscribe(self, connection: AsyncConnection):
+        self.__reset()
         for chan in self.subscription:
             if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 for pair in self.subscription[chan]:
-                    # Bybit uses separate addresses for difference quote currencies
-                    if 'USDT' not in pair and quote == 'USDT':
-                        continue
-                    if 'USDT' in pair and quote == 'USD':
-                        continue
-
+                    sym = str_to_symbol(pair)
                     await connection.write(json.dumps(
                         {
                             "op": "subscribe",
-                            "args": [f"{chan}.{pair}"] if self.exchange_channel_to_std(chan) != CANDLES else [f"{chan if quote == 'USD' else 'candle'}.{self.candle_interval_map[self.candle_interval]}.{pair}"]
+                            "args": [f"{chan}.{pair}"] if self.exchange_channel_to_std(chan) != CANDLES else [f"{chan if sym.quote == 'USD' else 'candle'}.{self.candle_interval_map[self.candle_interval]}.{pair}"]
                         }
                     ))
-                    LOG.debug(f'{connection.uuid}: Subscribing to public, quote: {quote}, {chan}.{pair}')
 
     async def _instrument_info(self, msg: dict, timestamp: float):
         """
@@ -555,6 +501,3 @@ class Bybit(Feed):
         expires = int((time.time() + 60)) * 1000
         signature = str(hmac.new(bytes(key_secret, 'utf-8'), bytes(f'GET/realtime{expires}', 'utf-8'), digestmod='sha256').hexdigest())
         return json.dumps({'op': 'auth', 'args': [key_id, expires, signature]})
-
-    async def __no_auth(self, conn: AsyncConnection):
-        pass

@@ -8,7 +8,7 @@ from datetime import datetime
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TAKER, TICKER, TRADES, FILLED
 from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, FILLS, L1_BOOK
 from cryptofeed.feed import Feed
@@ -22,8 +22,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Deribit(Feed, DeribitRestMixin):
     id = DERIBIT
-    symbol_endpoint = ['https://www.deribit.com/api/v2/public/get_instruments?currency=BTC', 'https://www.deribit.com/api/v2/public/get_instruments?currency=ETH']
-    websocket_endpoint = 'wss://www.deribit.com/ws/api/v2'
+    websocket_endpoints = [WebsocketEndpoint('wss://www.deribit.com/ws/api/v2')]
+    rest_endpoints = [RestEndpoint('https://www.deribit.com', routes=Routes(['/api/v2/public/get_instruments?currency=BTC', '/api/v2/public/get_instruments?currency=ETH']))]
+
     websocket_channels = {
         L1_BOOK: 'quote',
         L2_BOOK: 'book',
@@ -318,8 +319,8 @@ class Deribit(Feed, DeribitRestMixin):
                     LOG.debug("%s: %s", conn.uuid, result)
                 elif id.startswith('auth') and "access_token" in result:
                     '''
-                        Access token is another way to be authenticated while sending messages to Deribit.
-                        In this implementation 'scope session' method is used instead of 'acces token' method.
+                    Access token is another way to be authenticated while sending messages to Deribit.
+                    In this implementation 'scope session' method is used instead of 'acces token' method.
                     '''
                     LOG.debug(f"{conn.uuid}: Access token received")
                 else:

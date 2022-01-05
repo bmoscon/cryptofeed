@@ -13,7 +13,7 @@ from collections import defaultdict
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -26,8 +26,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Coinbase(Feed, CoinbaseRestMixin):
     id = COINBASE
-    symbol_endpoint = 'https://api.pro.coinbase.com/products'
-    websocket_endpoint = 'wss://ws-feed.pro.coinbase.com'
+    websocket_endpoints = [WebsocketEndpoint('wss://ws-feed.pro.coinbase.com', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://api.pro.coinbase.com', routes=Routes('/products', l3book='/products/{}/book?level=3'))]
+
     websocket_channels = {
         L2_BOOK: 'level2',
         L3_BOOK: 'full',
@@ -50,7 +51,6 @@ class Coinbase(Feed, CoinbaseRestMixin):
 
     def __init__(self, callbacks=None, **kwargs):
         super().__init__(callbacks=callbacks, **kwargs)
-        self.ws_defaults['compression'] = None
         # we only keep track of the L3 order book if we have at least one subscribed order-book callback.
         # use case: subscribing to the L3 book plus Trade type gives you order_type information (see _received below),
         # and we don't need to do the rest of the book-keeping unless we have an active callback
@@ -59,24 +59,17 @@ class Coinbase(Feed, CoinbaseRestMixin):
             self.keep_l3_book = True
         self.__reset()
 
-    def __reset(self, symbol=None):
-        if symbol:
-            self.seq_no[symbol] = None
-            self.order_map.pop(symbol, None)
-            self.order_type_map.pop(symbol, None)
-            self._l3_book.pop(symbol, None)
-            self._l2_book.pop(symbol, None)
-        else:
-            self.order_map = {}
-            self.order_type_map = {}
-            self.seq_no = None
-            # sequence number validation only works when the FULL data stream is enabled
-            chan = self.std_channel_to_exchange(L3_BOOK)
-            if chan in self.subscription:
-                pairs = self.subscription[chan]
-                self.seq_no = {pair: None for pair in pairs}
-            self._l3_book = {}
-            self._l2_book = {}
+    def __reset(self):
+        self.order_map = {}
+        self.order_type_map = {}
+        self.seq_no = None
+        # sequence number validation only works when the FULL data stream is enabled
+        chan = self.std_channel_to_exchange(L3_BOOK)
+        if chan in self.subscription:
+            pairs = self.subscription[chan]
+            self.seq_no = {pair: None for pair in pairs}
+        self._l3_book = {}
+        self._l2_book = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         '''
@@ -206,8 +199,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
         # the subsequent messages, causing a seq no mismatch.
         await asyncio.sleep(2)
 
-        url = 'https://api.pro.coinbase.com/products/{}/book?level=3'
-        urls = [url.format(pair) for pair in pairs]
+        urls = [self.rest_endpoints[0].route('l3book', self.sandbox).format(pair) for pair in pairs]
 
         results = []
         for url in urls:
@@ -380,8 +372,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
             # PERF perf_end(self.id, 'msg')
             # PERF perf_log(self.id, 'msg')
 
-    async def subscribe(self, conn: AsyncConnection, symbol=None):
-        self.__reset(symbol=symbol)
+    async def subscribe(self, conn: AsyncConnection):
+        self.__reset()
 
         for chan in self.subscription:
             await conn.write(json.dumps({"type": "subscribe",

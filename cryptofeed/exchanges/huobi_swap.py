@@ -14,7 +14,7 @@ from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL
 from cryptofeed.exchanges.huobi_dm import HuobiDM
 from cryptofeed.types import Funding
@@ -25,8 +25,9 @@ LOG = logging.getLogger('feedhandler')
 
 class HuobiSwap(HuobiDM):
     id = HUOBI_SWAP
-    symbol_endpoint = 'https://api.hbdm.com/swap-api/v1/swap_contract_info'
-    websocket_endpoint = 'wss://api.hbdm.com/swap-ws'
+    websocket_endpoints = [WebsocketEndpoint('wss://api.hbdm.com/swap-ws')]
+    rest_endpoints = [RestEndpoint('https://api.hbdm.com', routes=Routes('/swap-api/v1/swap_contract_info', funding='/swap-api/v1/swap_funding_rate?contract_code={}'))]
+
     websocket_channels = {
         **HuobiDM.websocket_channels,
         FUNDING: 'funding'
@@ -69,7 +70,7 @@ class HuobiSwap(HuobiDM):
         """
         while True:
             for pair in pairs:
-                data = await self.http_conn.read(f'https://api.hbdm.com/swap-api/v1/swap_funding_rate?contract_code={pair}')
+                data = await self.http_conn.read(self.rest_endpoints[0].route('funding').format(pair))
                 data = json.loads(data, parse_float=Decimal)
                 received = time.time()
                 update = (data['data']['funding_rate'], self.timestamp_normalize(int(data['data']['next_funding_time'])))

@@ -9,7 +9,7 @@ from decimal import Decimal
 import requests
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -22,7 +22,9 @@ LOG = logging.getLogger('feedhandler')
 
 class Bittrex(Feed):
     id = BITTREX
-    symbol_endpoint = 'https://api.bittrex.com/v3/markets'
+    websocket_endpoints = [WebsocketEndpoint('wss://www.bitmex.com/realtime', authentication=True)]
+    rest_endpoints = [RestEndpoint('https://api.bittrex.com', routes=Routes('/v3/markets', l2book='/v3/markets/{}/orderbook?depth={}'))]
+
     valid_candle_intervals = {'1m', '5m', '1h', '1d'}
     valid_depths = [1, 25, 500]
     websocket_channels = {
@@ -44,13 +46,13 @@ class Bittrex(Feed):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        r = requests.get('https://socket-v3.bittrex.com/signalr/negotiate', params={'connectionData': json.dumps([{'name': 'c3'}]), 'clientProtocol': 1.5})
-        token = r.json()['ConnectionToken']
+    async def _ws_authentication(self, address: str, options: dict) -> Tuple[str, dict]:
+        # Technically this isnt authentication, its the negotiation step for SignalR that
+        # we are performing here since this method is called right before connecting
+        r = self.http_sync.read('https://socket-v3.bittrex.com/signalr/negotiate', params={'connectionData': json.dumps([{'name': 'c3'}]), 'clientProtocol': 1.5}, json=True)
+        token = r['ConnectionToken']
         url = requests.Request('GET', 'https://socket-v3.bittrex.com/signalr/connect', params={'transport': 'webSockets', 'connectionToken': token, 'connectionData': json.dumps([{"name": "c3"}]), 'clientProtocol': 1.5}).prepare().url
-        url = url.replace('https://', 'wss://')
-        self.address = url
+        return url.replace('https://', 'wss://'), options
 
     def __reset(self):
         self._l2_book = {}
@@ -145,7 +147,7 @@ class Bittrex(Feed):
 
     async def _snapshot(self, symbol: str, sequence_number: int):
         while True:
-            ret, headers = await self.http_conn.read(f'https://api.bittrex.com/v3/markets/{symbol}/orderbook?depth={self.__depth()}', return_headers=True)
+            ret, headers = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol, self.__depth()), return_headers=True)
             seq = int(headers['Sequence'])
             if seq >= sequence_number:
                 break

@@ -18,7 +18,7 @@ from yapic import json
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.exchanges.mixins.bitmex_rest import BitmexRestMixin
 from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation
 
@@ -27,9 +27,8 @@ LOG = logging.getLogger('feedhandler')
 
 class Bitmex(Feed, BitmexRestMixin):
     id = BITMEX
-    symbol_endpoint = "https://www.bitmex.com/api/v1/instrument/active"
-    websocket_endpoint = 'wss://www.bitmex.com/realtime'
-    sandbox_endpoint = 'wss://testnet.bitmex.com/realtime'
+    websocket_endpoints = [WebsocketEndpoint('wss://www.bitmex.com/realtime', sandbox='wss://testnet.bitmex.com/realtime', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://www.bitmex.com', routes=Routes('/api/v1/instrument/active'))]
     websocket_channels = {
         L2_BOOK: 'orderBookL2',
         TRADES: 'trade',
@@ -59,11 +58,6 @@ class Bitmex(Feed, BitmexRestMixin):
             info['instrument_type'][s.normalized] = stype
 
         return ret, info
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.ws_defaults['compression'] = None
-        self._reset()
 
     def _reset(self):
         self.partial_received = defaultdict(bool)

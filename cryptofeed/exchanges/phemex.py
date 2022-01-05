@@ -8,14 +8,13 @@ import hmac
 import time
 from collections import defaultdict
 from cryptofeed.symbols import Symbol
-from functools import partial
 import logging
 from decimal import Decimal
-from typing import Callable, Dict, List, Tuple
+from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Candle, Balance
@@ -25,9 +24,8 @@ LOG = logging.getLogger('feedhandler')
 
 class Phemex(Feed):
     id = PHEMEX
-    symbol_endpoint = 'https://api.phemex.com/exchange/public/cfg/v2/products'
-    websocket_endpoint = 'wss://phemex.com/ws'
-    sandbox_endpoint = 'wss://testnet.phemex.com/ws'
+    websocket_endpoints = [WebsocketEndpoint('wss://phemex.com/ws', sandbox='wss://testnet.phemex.com/ws', limit=20)]
+    rest_endpoints = [RestEndpoint('https://api.phemex.com', routes=Routes('/exchange/public/cfg/v2/products'))]
     price_scale = {}
     valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
     candle_interval_map = {interval: second for interval, second in zip(valid_candle_intervals, [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000])}
@@ -66,8 +64,7 @@ class Phemex(Feed):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Phemex only allows 5 connections, with 20 subscriptions per connection, check we arent over the limit
-        items = len(self.subscription.keys()) * sum(len(v) for v in self.subscription.values())
-        if items > 100:
+        if sum(map(len, self.subscription.values())) > 100:
             raise ValueError(f"{self.id} only allows a maximum of 100 symbol/channel subscriptions")
 
         self.__reset()
@@ -599,31 +596,6 @@ class Phemex(Feed):
             )
             await self.callback(BALANCES, b, timestamp)
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        # Phemex only allows 5 connections, with 20 subscriptions per connection, so split the subscription into separate
-        # connections if necessary
-        ret = []
-        sub_pair = []
-
-        if self.std_channel_to_exchange(BALANCES) in self.subscription:
-            sub_pair.append([self.std_channel_to_exchange(BALANCES), BALANCES])
-
-        for chan, symbols in self.subscription.items():
-            if self.exchange_channel_to_std(chan) == BALANCES:
-                continue
-            for sym in symbols:
-                sub_pair.append([chan, sym])
-                if len(sub_pair) == 20:
-                    func = partial(self.subscribe, subs=sub_pair)
-                    ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), func, self.message_handler, self.authenticate))
-                    sub_pair = []
-
-        if len(sub_pair) > 0:
-            func = partial(self.subscribe, subs=sub_pair)
-            ret.append((WSAsyncConn(self.address, self.id, **self.ws_defaults), func, self.message_handler, self.authenticate))
-
-        return ret
-
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -659,10 +631,10 @@ class Phemex(Feed):
         else:
             LOG.warning("%s: Invalid message type %s", conn.uuid, msg)
 
-    async def subscribe(self, conn: AsyncConnection, subs=None):
+    async def subscribe(self, conn: AsyncConnection):
         self.__reset()
 
-        for chan, symbol in subs:
+        for chan, symbol in conn.subscription.items():
             if not self.exchange_channel_to_std(chan) == BALANCES:
                 msg = {"id": 1, "method": chan, "params": [symbol]}
                 if self.exchange_channel_to_std(chan) == CANDLES:
