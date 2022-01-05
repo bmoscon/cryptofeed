@@ -12,7 +12,7 @@ from decimal import Decimal
 
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, L2_BOOK, L3_BOOK, BUY, SELL, TICKER, TRADES, MARKET, LIMIT, MARGIN_LIMIT, MARGIN_MARKET, CANCEL_ORDER, PLACE_ORDER, ORDERS, BALANCES, POSITIONS
 from cryptofeed.exchange import RestExchange
 from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.types import OrderBook, Candle
@@ -20,23 +20,31 @@ from cryptofeed.types import OrderBook, Candle
 
 class BitfinexRestMixin(RestExchange):
     api = "https://api-pub.bitfinex.com/v2/"
+    auth_api = 'https://api.bitfinex.com'
     rest_channels = (
-        TRADES, TICKER, L2_BOOK, L3_BOOK
+        TRADES, TICKER, L2_BOOK, L3_BOOK, CANCEL_ORDER, PLACE_ORDER, ORDERS, BALANCES, POSITIONS
     )
+    order_options = {
+        LIMIT: 'EXCHANGE LIMIT',
+        MARKET: 'EXCHANGE MARKET',
+        MARGIN_LIMIT: 'LIMIT',
+        MARGIN_MARKET: 'MARKET'
+    }
     candle_mappings = {'1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '3h': '3h', '6h': '6h', '12h': '12h', '1d': '1D', '1w': '7D', '2w': '14D', '1M': '1M'}
 
     def _nonce(self):
-        return str(int(round(time.time() * 1000)))
+        return str(int(round(time.time() * 1000000)))
 
-    def _generate_signature(self, url: str, body=json.dumps({})):
+    def _generate_signature(self, url: str, body=None):
+        if not body:
+            body = json.dumps({})
         nonce = self._nonce()
         signature = "/api/" + url + nonce + body
-        h = hmac.new(self.config.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
+        h = hmac.new(self.key_secret.encode('utf8'), signature.encode('utf8'), hashlib.sha384)
         signature = h.hexdigest()
-
         return {
             "bfx-nonce": nonce,
-            "bfx-apikey": self.config.key_id,
+            "bfx-apikey": self.key_id,
             "bfx-signature": signature,
             "content-type": "application/json"
         }
@@ -194,3 +202,64 @@ class BitfinexRestMixin(RestExchange):
             if not end or len(data) < 10000:
                 break
             start = data[-1].start + offset
+
+    # Trading APIs
+
+    async def _post_private(self, endpoint: str, payload=None, api=None):
+        if not payload:
+            payload = {}
+        query_string = json.dumps(payload)
+        if not api:
+            api = self.auth_api
+        url = f'{api}/{endpoint}'
+        headers = self._generate_signature(endpoint, query_string)
+        data = await self.http_conn.write(url, msg=query_string, header=headers)
+        return json.loads(data, parse_float=Decimal)
+
+    async def place_order(self, symbol: str, side: str, order_type: str, amount: Decimal, price=None, time_in_force=None, test=False):
+        if order_type == MARKET and price:
+            raise ValueError('Cannot specify price on a market order')
+        if order_type == LIMIT:
+            if not price:
+                raise ValueError('Must specify price on a limit order')
+        if side is SELL:
+            amount = amount * -1
+        cid = int(round(time.time() * 1000))
+        ot = self.normalize_order_options(order_type)
+        sym = self.std_symbol_to_exchange_symbol(symbol)
+        parameters = {
+            'cid': cid,
+            'type': ot,
+            'symbol': sym,
+            'amount': str(amount),
+        }
+        if price:
+            parameters['price'] = str(price)
+        if time_in_force:
+            parameters['tif'] = time_in_force
+        endpoint = "v2/auth/w/order/submit"
+        data = await self._post_private(endpoint, payload=parameters)
+        return data
+
+    async def cancel_order(self, order_id: str, **kwargs):
+        endpoint = "v2/auth/w/order/cancel"
+        data = await self._post_private(endpoint, payload={'id': int(order_id)})
+        return data
+
+    async def orders(self, symbol: str = None):
+        endpoint = "v2/auth/r/orders"
+        if symbol:
+            sym = self.std_symbol_to_exchange_symbol(symbol)
+            endpoint = "v2/auth/r/orders/{}".format(sym)
+        data = await self._post_private(endpoint, payload={})
+        return data
+
+    async def balances(self):
+        endpoint = "v2/auth/r/wallets"
+        data = await self._post_private(endpoint, payload={})
+        return data
+
+    async def positions(self):
+        endpoint = "v2/auth/r/positions"
+        data = await self._post_private(endpoint, payload={})
+        return data
