@@ -132,7 +132,7 @@ class LiquidationsPostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         exchange, symbol, timestamp, receipt, data = data
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['price']},'{data['side']}',{data['quantity']},{data['price']},'{data['id']}','{data['status']}')"
+        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['quantity']},{data['price']},'{data['id']}','{data['status']}')"
 
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
