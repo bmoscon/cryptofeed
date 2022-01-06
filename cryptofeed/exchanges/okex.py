@@ -395,10 +395,11 @@ class OKEx(Feed, OKExRestMixin):
 
     async def authenticate(self, conn: AsyncConnection):
         if self.requires_authentication:
-            auth = self._auth(self.key_id, self.key_secret)
-            LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
-            await conn.write(json.dumps(auth))
-            await asyncio.sleep(1)
+            if any([self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription]):
+                auth = self._auth(self.key_id, self.key_secret)
+                LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
+                await conn.write(json.dumps(auth))
+                await asyncio.sleep(1)
 
     def _auth(self, key_id, key_secret) -> str:
         timestamp, sign = self._generate_token(key_id, key_secret)
