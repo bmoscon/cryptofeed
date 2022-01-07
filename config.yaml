@@ -7,6 +7,9 @@ log:
 uvloop: True
 
 # Secrets for exchanges
+bit.com:
+    key_id: null
+    key_secret: null
 bitmex:
     key_id: null
     key_secret: null

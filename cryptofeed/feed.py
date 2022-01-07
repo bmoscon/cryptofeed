@@ -195,9 +195,11 @@ class Feed(Exchange):
             # while in the context of the class
             temp_sub = {chan: [self.exchange_symbol_to_std_symbol(s) for s in symbols] for chan, symbols in self.subscription.items()}
             filtered_sub = {chan: [self.std_symbol_to_exchange_symbol(s) for s in symbols] for chan, symbols in endpoint.subscription_filter(temp_sub).items()}
-            if not filtered_sub:
+            count = sum(map(len, filtered_sub.values()))
+
+            if not filtered_sub or count == 0:
                 continue
-            if limit and sum(map(len, filtered_sub.values())) > limit:
+            if limit and count > limit:
                 ret.extend(limit_sub(filtered_sub, limit, auth, endpoint.options))
             else:
                 ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler, self.authenticate))

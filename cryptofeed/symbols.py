@@ -31,6 +31,12 @@ class Symbol:
         if expiry_date and expiry_normalize:
             self.expiry_date = self.date_format(expiry_date)
 
+    def __repr__(self) -> str:
+        return self.normalized
+
+    def __str__(self) -> str:
+        return self.normalized
+
     @staticmethod
     def month_code(month: str) -> str:
         ret = ['F', 'G', 'H', 'J', 'K', 'M', 'N', 'Q', 'U', 'V', 'X', 'Z']

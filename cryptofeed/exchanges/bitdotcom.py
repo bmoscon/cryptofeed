@@ -136,7 +136,7 @@ class BitDotCom(Feed):
             return
         if any([self.is_authenticated_channel(self.exchange_channel_to_std(c)) for c in connection.subscription]):
             symbols = list(set(itertools.chain(*connection.subscription.values())))
-            sym = str_to_symbol(symbols[0])
+            sym = str_to_symbol(self.exchange_symbol_to_std_symbol(symbols[0]))
             for ep in self.rest_endpoints:
                 if sym.type in ep.instrument_filter[1]:
                     ts = int(round(time.time() * 1000))
