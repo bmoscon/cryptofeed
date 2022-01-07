@@ -1,6 +1,7 @@
 '''
 Copyright (C) 2021 - STS Digital
 '''
+import itertools
 import logging
 from decimal import Decimal
 import time
@@ -27,11 +28,11 @@ class BitDotCom(Feed):
 
     websocket_endpoints = [
         WebsocketEndpoint('wss://spot-ws.bit.com', instrument_filter=('TYPE', (SPOT)), sandbox='wss://betaspot-ws.bitexch.dev'),
-        WebsocketEndpoint('wss://ws.bit.com', instrument_filter=('TYPE', (FUTURES, OPTION)), sandbox='wss://betaws.bitexch.dev'),
+        WebsocketEndpoint('wss://ws.bit.com', instrument_filter=('TYPE', (FUTURES, OPTION, PERPETUAL)), sandbox='wss://betaws.bitexch.dev'),
     ]
     rest_endpoints = [
-        RestEndpoint('https://spot-api.bit.com', instrument_filter=('TYPE', (SPOT)), sandbox='https://betaspot-api.bitexch.dev', routes=Routes('/spot/v1/instruments')),
-        RestEndpoint('https://api.bit.com', instrument_filter=('TYPE', (OPTION, FUTURES)), sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies'))
+        RestEndpoint('https://spot-api.bit.com', instrument_filter=('TYPE', (SPOT)), sandbox='https://betaspot-api.bitexch.dev', routes=Routes('/spot/v1/instruments', authentication='/spot/v1/ws/auth')),
+        RestEndpoint('https://api.bit.com', instrument_filter=('TYPE', (OPTION, FUTURES, PERPETUAL)), sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies', authentication='/v1/ws/auth'))
     ]
 
     websocket_channels = {
@@ -133,15 +134,19 @@ class BitDotCom(Feed):
     async def authenticate(self, connection: AsyncConnection):
         if not self.key_id or not self.key_secret:
             return
-        ts = int(round(time.time() * 1000))
-        signature = self.get_signature('/v1/ws/auth', {'timestamp': ts})
-        api = 'https://api.bit.com' if not self.sandbox else 'https://betaapi.bitexch.dev'
-        params = {'timestamp': ts, 'signature': signature}
-        ret = self.http_sync.read(f"{api}/v1/ws/auth", params=params, headers={'X-Bit-Access-Key': self.key_id}, json=True)
-        if ret['code'] != 0 or 'token' not in ret['data']:
-            LOG.warning('%s: authentication failed: %s', ret)
-        token = ret['data']['token']
-        self._auth_token = token
+        if any([self.is_authenticated_channel(self.exchange_channel_to_std(c)) for c in connection.subscription]):
+            sym = str_to_symbol(symbols[0])
+            for ep in self.rest_endpoints:
+                if sym.type in ep.instrument_filter[1]:
+                    ts = int(round(time.time() * 1000))
+                    signature = self.get_signature('/v1/ws/auth', {'timestamp': ts})
+                    params = {'timestamp': ts, 'signature': signature}
+                    ret = self.http_sync.read(ep.route('authentication', sandbox=self.sandbox), params=params, headers={'X-Bit-Access-Key': self.key_id}, json=True)
+                    if ret['code'] != 0 or 'token' not in ret['data']:
+                        LOG.warning('%s: authentication failed: %s', ret)
+                    token = ret['data']['token']
+                    self._auth_token = token
+                    return
 
     async def subscribe(self, connection: AsyncConnection):
         self.__reset()
