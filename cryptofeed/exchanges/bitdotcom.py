@@ -140,7 +140,7 @@ class BitDotCom(Feed):
             for ep in self.rest_endpoints:
                 if sym.type in ep.instrument_filter[1]:
                     ts = int(round(time.time() * 1000))
-                    signature = self.get_signature('/v1/ws/auth', {'timestamp': ts})
+                    signature = self.get_signature(ep.routes.authentication, {'timestamp': ts})
                     params = {'timestamp': ts, 'signature': signature}
                     ret = self.http_sync.read(ep.route('authentication', sandbox=self.sandbox), params=params, headers={'X-Bit-Access-Key': self.key_id}, json=True)
                     if ret['code'] != 0 or 'token' not in ret['data']:
@@ -384,6 +384,7 @@ class BitDotCom(Feed):
 
     async def _balances(self, msg: dict, timestamp: float):
         '''
+        Futures/Options
         {
             "channel":"account",
             "timestamp":1589031930115,
@@ -423,15 +424,49 @@ class BitDotCom(Feed):
                 }
             }
         }
+
+        Spot
+        {
+            'channel': 'account',
+            'timestamp': 1641516119102,
+            'data': {
+                'user_id': '979394',
+                'balances': [
+                    {
+                        'currency': 'BTC',
+                        'available': '31.02527500',
+                        'frozen': '0.00000000'
+                    },
+                    {
+                        'currency': 'ETH',
+                        'available': '110.00000000',
+                        'frozen': '0.00000000'
+                    }
+                ]
+            }
+        }
         '''
-        b = Balance(
-            self.id,
-            msg['data']['currency'],
-            Decimal(msg['data']['cash_balance']),
-            Decimal(msg['data']['cash_balance']) - Decimal(msg['data']['available_balance']),
-            raw=msg
-        )
-        await self.callback(BALANCES, b, timestamp)
+        print(msg)
+        if 'balances' in msg['data']:
+            # Spot
+            for balance in msg['data']['balances']:
+                b = Balance(
+                    self.id,
+                    balance['currency'],
+                    Decimal(balance['available']),
+                    Decimal(balance['frozen']),
+                    raw=msg
+                )
+                await self.callback(BALANCES, b, timestamp)
+        else:
+            b = Balance(
+                self.id,
+                msg['data']['currency'],
+                Decimal(msg['data']['cash_balance']),
+                Decimal(msg['data']['cash_balance']) - Decimal(msg['data']['available_balance']),
+                raw=msg
+            )
+            await self.callback(BALANCES, b, timestamp)
 
     async def _fill(self, msg: dict, timestamp: float):
         '''
