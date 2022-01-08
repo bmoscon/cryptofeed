@@ -7,17 +7,17 @@ associated with this software.
 import asyncio
 from collections import defaultdict
 from decimal import Decimal
-from functools import partial
 import logging
 import time
-from typing import Dict, List, Tuple, Callable
+from typing import Dict, Tuple
 import requests
 import hmac
 import base64
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, WSAsyncConn
-from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT,POSITIONS
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
+from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT, POSITIONS
+from cryptofeed.exchanges.mixins.okex_rest import OKExRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
@@ -27,18 +27,8 @@ from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Li
 LOG = logging.getLogger("feedhandler")
 
 
-class OKEx(Feed):
+class OKEx(Feed, OKExRestMixin):
     id = OKEX
-    api = 'https://www.okex.com/api/'
-    symbol_endpoint = ['https://www.okex.com/api/v5/public/instruments?instType=SPOT', 'https://www.okex.com/api/v5/public/instruments?instType=SWAP', 'https://www.okex.com/api/v5/public/instruments?instType=FUTURES', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', 'https://www.okex.com/api/v5/public/instruments?instType=OPTION&uly=ETH-USD']
-    websocket_endpoint = {
-        'public': 'wss://ws.okex.com:8443/ws/v5/public',
-        'private': 'wss://ws.okex.com:8443/ws/v5/private'
-    }
-    sandbox_endpoint = {
-        'public': 'wss://ws.okex.com:8443/ws/v5/public?brokerId=9999',
-        'private': 'wss://ws.okex.com:8443/ws/v5/private?brokerId=9999'
-    }
     websocket_channels = {
         L2_BOOK: 'books-l2-tbt',
         TRADES: 'trades',
@@ -47,8 +37,14 @@ class OKEx(Feed):
         OPEN_INTEREST: 'open-interest',
         LIQUIDATIONS: LIQUIDATIONS,
         ORDER_INFO: 'orders',
-        POSITIONS : 'positions'
+        POSITIONS: 'positions'
     }
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]),sandbox='wss://ws.okex.com:8443/ws/v5/public?brokerId=9999', options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=(websocket_channels[ORDER_INFO]), sandbox = 'wss://ws.okex.com:8443/ws/v5/private?brokerId=9999',options={'compression': None}),
+    ]
+    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
+    request_limit = 20
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -86,13 +82,6 @@ class OKEx(Feed):
 
         return ret, info
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.ws_defaults['compression'] = None
-        self.instrument_type_map_ord = {'perpetual': 'SWAP',
-                                    'spot': 'SPOT'}
-        self.instrument_type_map_pos = {'perpetual': 'SWAP',
-                                    'spot': 'MARGIN'}
     async def _liquidations(self, pairs: list):
         last_update = defaultdict(dict)
         """
@@ -110,8 +99,7 @@ class OKEx(Feed):
                     continue
 
                 for status in (FILLED, UNFILLED):
-                    end_point = f"{self.api}v5/public/liquidation-orders?instType={instrument_type}&limit=100&state={status}&uly={uly}"
-                    data = await self.http_conn.read(end_point)
+                    data = await self.http_conn.read(self.rest_endpoints[0].route('liquidations', sandbox=self.sandbox).format(instrument_type, status, uly))
                     data = json.loads(data, parse_float=Decimal)
                     timestamp = time.time()
                     if len(data['data'][0]['details']) == 0 or (len(data['data'][0]['details']) > 0 and last_update.get(pair) == data['data'][0]['details'][0]):
@@ -361,7 +349,7 @@ class OKEx(Feed):
             raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
-        
+
     async def _position(self, msg: dict, timestamp: float):
         '''
         Positions---> OrderId, Symbol, Amount, Price, Side(Buy/Sell), PnL, timestamp
@@ -385,6 +373,7 @@ class OKEx(Feed):
                         'timestamp': self.timestamp_normalize(int(msg['data'][0]['uTime']))}
         else: pos_info = {'exchange':self.id}
         await self.callback(POSITIONS, pos_info, timestamp)
+
     async def _login(self, msg: dict, timestamp: float):
         LOG.debug('%s: Websocket logged in? %s', self.id, msg['code'])
 
@@ -421,60 +410,31 @@ class OKEx(Feed):
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
-    def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
-        ret = []
-        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
-            ret.append((WSAsyncConn(self.address['private'], self.id, **self.ws_defaults),
-                        partial(self.subscribe, private=True), self.message_handler, self.authenticate))
-        if any(not self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
-            ret.append((WSAsyncConn(self.address['public'], self.id, **self.ws_defaults),
-                        partial(self.subscribe, private=False), self.message_handler, self.__no_auth))
-        return ret
+    async def subscribe(self, connection: AsyncConnection):
+        channels = []
+        for chan in self.subscription:
+            for pair in self.subscription[chan]:
+                channels.append(self.build_subscription(chan, pair))
 
-    async def subscribe(self, connection: AsyncConnection, private: bool = False):
-        pri_channels = []
-        pub_channels = []
-        if private:
-            for chan in self.subscription:
-                if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                    for pair in self.subscription[chan]:
-                        pri_channels.append(self.build_subscription(chan, pair))
-        else:
-            for chan in self.subscription:
-                if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                    for pair in self.subscription[chan]:
-                        pub_channels.append(self.build_subscription(chan, pair))
-
-        if pri_channels:
-            msg = {"op": "subscribe",
-                   "args": pri_channels}
-            LOG.debug(f'{connection.uuid}: Subscribing to private channels with message {msg}')
-            await connection.write(json.dumps(msg))
-
-        if pub_channels:
-            msg = {"op": "subscribe",
-                   "args": pub_channels}
-            LOG.debug(f'{connection.uuid}: Subscribing to public channels with message {msg}')
+            msg = {"op": "subscribe", "args": channels}
             await connection.write(json.dumps(msg))
 
     async def authenticate(self, conn: AsyncConnection):
         if self.requires_authentication:
-            auth = self._auth(self.key_id, self.key_secret)
-            LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
-            await conn.write(json.dumps(auth))
-            await asyncio.sleep(1)
+            if any([self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription]):
+                auth = self._auth(self.key_id, self.key_secret)
+                LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
+                print(auth)
+                await conn.write(json.dumps(auth))
+                await asyncio.sleep(1)
 
     def _auth(self, key_id, key_secret) -> str:
         timestamp, sign = self._generate_token(key_id, key_secret)
         login_param = {"op": "login", "args": [{"apiKey": self.key_id, "passphrase": self.config.okex.key_passphrase, "timestamp": timestamp, "sign": sign.decode("utf-8")}]}
         return login_param
 
-    async def __no_auth(self, conn: AsyncConnection):
-        pass
-
     def build_subscription(self, channel: str, ticker: str) -> dict:
         if channel in ['positions', 'orders']:
-            #print(channel)
             subscription_dict = {"channel": channel,
                                  "instType": self.inst_type_to_okex_type(ticker,channel),
                                  "instId": ticker}
@@ -486,10 +446,9 @@ class OKEx(Feed):
     def inst_type_to_okex_type(self, ticker,channel):
         sym = self.exchange_symbol_to_std_symbol(ticker)
         instrument_type = self.instrument_type(sym)
-        if channel=='orders':
-            return self.instrument_type_map_ord[instrument_type]
-        else:
-            return self.instrument_type_map_pos[instrument_type]
+        #if channel=='positions':
+        #    return 'SWAP' if instrument_type == 'perpetual' else 'MARGIN'
+        return 'SWAP' if instrument_type == 'perpetual' else 'SPOT'
 
     def _get_server_time(self):
         endpoint = "v5/public/time"
