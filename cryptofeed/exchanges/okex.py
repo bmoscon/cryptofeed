@@ -362,7 +362,6 @@ class OKEx(Feed, OKExRestMixin):
         cTime/pTime
         '''
 
-        #print(msg)
         if msg.get('data'):
             pos_info = {'exchange':self.id,
                         'symbol':self.exchange_symbol_to_std_symbol(msg['data'][0]['instId']),
@@ -424,9 +423,8 @@ class OKEx(Feed, OKExRestMixin):
             if any([self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription]):
                 auth = self._auth(self.key_id, self.key_secret)
                 LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
-                print(auth)
                 await conn.write(json.dumps(auth))
-                await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
 
     def _auth(self, key_id, key_secret) -> str:
         timestamp, sign = self._generate_token(key_id, key_secret)
