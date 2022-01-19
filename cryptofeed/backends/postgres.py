@@ -6,6 +6,7 @@ associated with this software.
 '''
 from collections import defaultdict
 from datetime import datetime as dt
+import threading
 from typing import Tuple
 
 import asyncpg
@@ -14,9 +15,11 @@ from yapic import json
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
 from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, INDEX
 
+from icecream import ic
+
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, fields: dict = None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
         """
         host: str
             Database host address
@@ -28,11 +31,15 @@ class PostgresCallback(BackendQueue):
             Password to be used for authentication, if the server requires one.
         table: str
             Table name to insert into. Defaults to default_table that should be specified in child class
+        fields: dict
+            An dictionary map of Cryptofeed's data type fields to Postgres's table column names, e.g. {'price': 'price', 'amount': 'size'}
+            Can be a subset of the available fields and in any order
         max_batch: int
-            maximum batch size to use when writing rows to postgres
+            Maximum batch size to use when writing rows to postgres
         """
         self.conn = None
         self.table = table if table else self.default_table
+        self.fields = fields
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.user = user
@@ -73,25 +80,41 @@ class PostgresCallback(BackendQueue):
 
         async with self.conn.transaction():
             try:
-                await self.conn.execute(f"INSERT INTO {self.table} VALUES {args_str}")
+                if self.fields:
+                    await self.conn.execute(f"INSERT INTO {self.table} ({','.join([v for v in self.fields.values()])}) VALUES {args_str}")
+                else:
+                    await self.conn.execute(f"INSERT INTO {self.table} VALUES {args_str}")
             except asyncpg.UniqueViolationError:
                 # when restarting a subscription, some exchanges will re-publish a few messages
                 pass
 
     async def stop(self):
         if self.queue.qsize() > 0:
-            async with self.read_many_queue(self.queue.qsize()) as updates:
+            async with self.read_many_queue(self.queue.qsize
+                                            ()) as updates:
                 await self.write_batch(updates)
 
 
 class TradePostgres(PostgresCallback, BackendCallback):
     default_table = TRADES
 
-    def format(self, data: Tuple):
-        exchange, symbol, timestamp, receipt, data = data
-        id = f"'{data['id']}'" if data['id'] else 'NULL'
-        otype = f"'{data['type']}'" if data['type'] else 'NULL'
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['amount']},{data['price']},{id},{otype})"
+    def format(self, data: Tuple):        
+        if self.fields:
+            individuals = {
+                'exchange': data[0],
+                'symbol': data[1],
+                'timestamp': data[2],
+                'receipt': data[3],
+            }
+            data = individuals | data[4]
+            sql_string = str([data[field] if data[field] else 'NULL' for field in self.fields.keys()])[1:-1]
+            ic(sql_string)
+            return sql_string
+        else:
+            exchange, symbol, timestamp, receipt, data = data
+            id = f"'{data['id']}'" if data['id'] else 'NULL'
+            otype = f"'{data['type']}'" if data['type'] else 'NULL'
+            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['amount']},{data['price']},{id},{otype})"
 
 
 class FundingPostgres(PostgresCallback, BackendCallback):
