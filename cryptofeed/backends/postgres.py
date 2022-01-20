@@ -15,8 +15,6 @@ from yapic import json
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
 from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, INDEX
 
-from icecream import ic
-
 
 class PostgresCallback(BackendQueue):
     def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, fields: dict = None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
@@ -81,6 +79,7 @@ class PostgresCallback(BackendQueue):
         async with self.conn.transaction():
             try:
                 if self.fields:
+                    # List user's required table fields and present the data in the same order. 
                     await self.conn.execute(f"INSERT INTO {self.table} ({','.join([v for v in self.fields.values()])}) VALUES ({args_str})")
                 else:
                     await self.conn.execute(f"INSERT INTO {self.table} VALUES {args_str}")
@@ -107,9 +106,8 @@ class TradePostgres(PostgresCallback, BackendCallback):
                 'receipt': data[3],
             }
             data = individuals | data[4]
-            
+            # Cross-ref data dict with user fields from fields dict, inserting NULL if requested data point not present 
             sql_string = str([data[field] if data[field] else 'NULL' for field in self.fields.keys()])[1:-1]
-            ic(sql_string)
             return sql_string
         else:
             exchange, symbol, timestamp, receipt, data = data
