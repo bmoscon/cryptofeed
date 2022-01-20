@@ -81,7 +81,7 @@ class PostgresCallback(BackendQueue):
         async with self.conn.transaction():
             try:
                 if self.fields:
-                    await self.conn.execute(f"INSERT INTO {self.table} ({','.join([v for v in self.fields.values()])}) VALUES {args_str}")
+                    await self.conn.execute(f"INSERT INTO {self.table} ({','.join([v for v in self.fields.values()])}) VALUES ({args_str})")
                 else:
                     await self.conn.execute(f"INSERT INTO {self.table} VALUES {args_str}")
             except asyncpg.UniqueViolationError:
@@ -98,7 +98,7 @@ class PostgresCallback(BackendQueue):
 class TradePostgres(PostgresCallback, BackendCallback):
     default_table = TRADES
 
-    def format(self, data: Tuple):        
+    def format(self, data: Tuple):
         if self.fields:
             individuals = {
                 'exchange': data[0],
@@ -107,6 +107,7 @@ class TradePostgres(PostgresCallback, BackendCallback):
                 'receipt': data[3],
             }
             data = individuals | data[4]
+            
             sql_string = str([data[field] if data[field] else 'NULL' for field in self.fields.keys()])[1:-1]
             ic(sql_string)
             return sql_string
