@@ -1,0 +1,62 @@
+# Example Config File
+log:
+    filename: feedhandler.log
+    level: WARNING
+
+# Enable UVLoop (if not installed, will not cause errors)
+uvloop: True
+
+# Secrets for exchanges
+bit.com:
+    key_id: null
+    key_secret: null
+bitmex:
+    key_id: null
+    key_secret: null
+bitfinex:
+    key_id: null
+    key_secret: null
+coinbase:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+poloniex:
+    key_id: null
+    key_secret: null
+gemini:
+    key_id: null
+    key_secret: null
+    account_name: null   # this is an optional param needed only when using a master api key
+kraken:
+    key_id: null
+    key_secret: null
+deribit:
+    key_id: TestID
+    key_secret: ClientSecret
+ftx:
+    example_subaccount_name_1:   # subaccounts are supported on FTX
+        key_id: null
+        key_secret: null
+    example_subaccount_name_2:
+        key_id: null
+        key_secret: null
+    key_id: null
+    key_secret: null
+binance_futures:
+    key_id: null
+    key_secret: null
+binance_delivery:
+    key_id: null
+    key_secret: null
+okcoin:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+okex:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
+kucoin:
+    key_id: test
+    key_secret: test
+    key_passphrase: test
