@@ -7,6 +7,8 @@
  * Bugfix: Funding rate of 0 was being converted to None when to_dict was called
  * Feature: Add OKEx restpoint api and implement candle function
  * Feature: Added trading endpoints to Bitfinex REST mixin
+ * Bugfix: Change to Okex to allow futures and options subscriptions
+ * Update: Deribit ticker, trades, and orderbook channels now require authentication
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
