@@ -57,6 +57,6 @@ okex:
     key_secret: null
     key_passphrase: null
 kucoin:
-    key_id: test
-    key_secret: test
-    key_passphrase: test
+    key_id: null
+    key_secret: null
+    key_passphrase: null
