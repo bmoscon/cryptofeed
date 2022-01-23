@@ -419,7 +419,13 @@ class OKEx(Feed, OKExRestMixin):
     def inst_type_to_okex_type(self, ticker):
         sym = self.exchange_symbol_to_std_symbol(ticker)
         instrument_type = self.instrument_type(sym)
-        return 'SWAP' if instrument_type == 'perpetual' else 'MARGIN'
+        instrument_type_map = {
+                'perpetual': 'SWAP',
+                'spot': 'MARGIN',
+                'futures': 'FUTURES',
+                'option': 'OPTION'
+                }
+        return instrument_type_map.get(instrument_type, 'MARGIN')
 
     def _get_server_time(self):
         endpoint = "v5/public/time"
