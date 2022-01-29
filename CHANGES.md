@@ -9,6 +9,7 @@
  * Feature: Added trading endpoints to Bitfinex REST mixin
  * Bugfix: Change to Okex to allow futures and options subscriptions
  * Update: Deribit ticker, trades, and orderbook channels now require authentication
+ * Bugfix: Fix candle backend for InfluxDB
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
