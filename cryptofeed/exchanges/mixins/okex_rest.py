@@ -55,7 +55,7 @@ class OKExRestMixin(RestExchange):
                 break
             end = data[-1].stop - offset
 
-           await asyncio.sleep(1 / self.request_limit)
+            await asyncio.sleep(1 / self.request_limit)
 
     def _to_isoformat(self, timestamp):
         """Required for okex (ISO 8601)
