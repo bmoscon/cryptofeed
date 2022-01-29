@@ -3,9 +3,9 @@
 ### 2.2.0
  * Feature: New exchange: Bit.com
  * Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
- * Bugfix: Use UTC for dateimte conversions in REST api
+ * Bugfix: Use UTC for datetime conversions in REST api
  * Bugfix: Funding rate of 0 was being converted to None when to_dict was called
- * Feature: Add OKEx restpoint api and implement candle function
+ * Feature: Add OKEx REST API and implement candle function
  * Feature: Added trading endpoints to Bitfinex REST mixin
  * Bugfix: Change to Okex to allow futures and options subscriptions
  * Update: Deribit ticker, trades, and orderbook channels now require authentication
