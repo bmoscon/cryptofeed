@@ -41,8 +41,7 @@ class OKExRestMixin(RestExchange):
         while True:
             if start and end:
                 # maximum candle limit is 300
-                endpoint = f"{base_endpoint}/history/candles?start={self._to_isoformat(end)}&end={self._to_isoformat(start)}"\
-                           f"&granularity={offset}&limit=300"
+                endpoint = f"{base_endpoint}/history/candles?start={self._to_isoformat(end)}&end={self._to_isoformat(start)}&granularity={offset}&limit=300"
             r = await self.http_conn.read(endpoint, retry_delay=retry_delay, retry_count=retry_count)
             data = json.loads(r, parse_float=Decimal)
             if not isinstance(data[0], list):
