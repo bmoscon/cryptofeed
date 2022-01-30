@@ -344,7 +344,7 @@ class OKEx(Feed, OKExRestMixin):
             o_type,
             Decimal(msg['data'][0]['px']) if msg['data'][0]['px'] else Decimal(0),
             Decimal(msg['data'][0]['sz']) if msg['data'][0]['sz'] else Decimal(0),
-            Decimal(msg['data'][0]['sz']) - Decimal(msg['data'][0]['fillSz']) if msg['data'][0]['fillSz'] else Decimal(0),
+            Decimal(msg['data'][0]['sz']) - Decimal(msg['data'][0]['accFillSz']) if msg['data'][0]['accFillSz'] else Decimal(0),
             self.timestamp_normalize(int(msg['data'][0]['uTime'])),
             raw=msg
         )
@@ -383,6 +383,7 @@ class OKEx(Feed, OKExRestMixin):
         msg = json.loads(msg, parse_float=Decimal)
 
         if 'event' in msg:
+            print(msg)
             if msg['event'] == 'error':
                 LOG.error("%s: Error: %s", self.id, msg)
             elif msg['event'] == 'subscribe':
@@ -434,22 +435,26 @@ class OKEx(Feed, OKExRestMixin):
     def build_subscription(self, channel: str, ticker: str) -> dict:
         if channel in ['positions', 'orders']:
             subscription_dict = {"channel": channel,
-                                 "instType": self.inst_type_to_okex_type(ticker,channel),
+                                 "instType": self.inst_type_to_okex_type(ticker),
                                  "instId": ticker}
         else:
             subscription_dict = {"channel": channel,
                                  "instId": ticker}
         return subscription_dict
 
-    def inst_type_to_okex_type(self, ticker,channel):
+    def inst_type_to_okex_type(self, ticker):
         sym = self.exchange_symbol_to_std_symbol(ticker)
         instrument_type = self.instrument_type(sym)
-        #if channel=='positions':
-        #    return 'SWAP' if instrument_type == 'perpetual' else 'MARGIN'
-        return 'SWAP' if instrument_type == 'perpetual' else 'SPOT'
+        instrument_type_map = {
+            'perpetual': 'SWAP',
+            'spot': 'MARGIN',
+            'futures': 'FUTURES',
+            'option': 'OPTION'
+        }
+        return instrument_type_map.get(instrument_type, 'MARGIN')
 
     def _get_server_time(self):
-        endpoint = "v5/public/time"
+        endpoint = "/api/v5/public/time"
         response = requests.get(self.api + endpoint)
         if response.status_code == 200:
             return response.json()['data'][0]['ts']
