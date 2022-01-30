@@ -17,7 +17,7 @@ from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, 
 
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, fields: dict = None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, column_map: dict = None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
         """
         host: str
             Database host address
@@ -29,15 +29,15 @@ class PostgresCallback(BackendQueue):
             Password to be used for authentication, if the server requires one.
         table: str
             Table name to insert into. Defaults to default_table that should be specified in child class
-        fields: dict
-            An dictionary map of Cryptofeed's data type fields to Postgres's table column names, e.g. {'price': 'price', 'amount': 'size'}
-            Can be a subset of the available fields and in any order
+        column_map: dict
+            A dictionary map of Cryptofeed's data type fields to Postgres's table column names, e.g. {'price': 'price', 'amount': 'size'}
+            Can be a subset of the available fields, and in any order
         max_batch: int
             Maximum batch size to use when writing rows to postgres
         """
         self.conn = None
         self.table = table if table else self.default_table
-        self.fields = fields
+        self.column_map = column_map
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.user = user
@@ -46,6 +46,8 @@ class PostgresCallback(BackendQueue):
         self.host = host
         self.port = port
         self.max_batch = max_batch
+        # Prepare INSERT statement with user-specified column names
+        self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.column_map.values()])}) VALUES " if column_map else None
 
     async def _connect(self):
         if self.conn is None:
@@ -78,11 +80,11 @@ class PostgresCallback(BackendQueue):
 
         async with self.conn.transaction():
             try:
-                if self.fields:
-                    # List user's required table fields and present the data in the same order. 
-                    await self.conn.execute(f"INSERT INTO {self.table} ({','.join([v for v in self.fields.values()])}) VALUES ({args_str})")
+                if self.column_map:
+                    await self.conn.execute(self.insert_statement + args_str)
                 else:
-                    await self.conn.execute(f"INSERT INTO {self.table} VALUES {args_str}")
+                    insert_statement = f"INSERT INTO {self.table} VALUES {args_str}"
+                    await self.conn.execute(insert_statement)
             except asyncpg.UniqueViolationError:
                 # when restarting a subscription, some exchanges will re-publish a few messages
                 pass
@@ -98,17 +100,18 @@ class TradePostgres(PostgresCallback, BackendCallback):
     default_table = TRADES
 
     def format(self, data: Tuple):
-        if self.fields:
-            individuals = {
+        if self.column_map:
+            d = data[4] | {
                 'exchange': data[0],
                 'symbol': data[1],
                 'timestamp': data[2],
                 'receipt': data[3],
             }
-            data = individuals | data[4]
-            # Cross-ref data dict with user fields from fields dict, inserting NULL if requested data point not present 
-            sql_string = str([data[field] if data[field] else 'NULL' for field in self.fields.keys()])[1:-1]
-            return sql_string
+            # Cross-ref data dict with user column names from column_map dict, inserting NULL if requested data point not present 
+            sequence_gen = (d[field] if d[field] else 'NULL' for field in self.column_map.keys())
+            # Iterate through the generator and surround everything except prices & amounts in single quotes
+            sql_string = ','.join(str(s) if isinstance(s, float) else "'" + str(s) + "'" for s in sequence_gen)
+            return f"({sql_string})"
         else:
             exchange, symbol, timestamp, receipt, data = data
             id = f"'{data['id']}'" if data['id'] else 'NULL'
