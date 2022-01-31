@@ -17,7 +17,7 @@ from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, 
 
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, column_map: dict = None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, custom_columns: dict = None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
         """
         host: str
             Database host address
@@ -29,15 +29,15 @@ class PostgresCallback(BackendQueue):
             Password to be used for authentication, if the server requires one.
         table: str
             Table name to insert into. Defaults to default_table that should be specified in child class
-        column_map: dict
-            A dictionary map of Cryptofeed's data type fields to Postgres's table column names, e.g. {'price': 'price', 'amount': 'size'}
-            Can be a subset of the available fields, and in any order
+        custom_columns: dict
+            A dictionary which maps Cryptofeed's data type fields to Postgres's table column names, e.g. {'price': 'price', 'amount': 'size'}
+            Can be a subset of Cryptofeed's available fields, and in any order
         max_batch: int
             Maximum batch size to use when writing rows to postgres
         """
         self.conn = None
         self.table = table if table else self.default_table
-        self.column_map = column_map
+        self.custom_columns = custom_columns
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.user = user
@@ -47,7 +47,7 @@ class PostgresCallback(BackendQueue):
         self.port = port
         self.max_batch = max_batch
         # Prepare INSERT statement with user-specified column names
-        self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.column_map.values()])}) VALUES " if column_map else None
+        self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
 
     async def _connect(self):
         if self.conn is None:
@@ -61,6 +61,20 @@ class PostgresCallback(BackendQueue):
         data = data[4]
 
         return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
+    
+    def custom_format(self, data: Tuple, channel: str):
+        d = data[4] | {
+            'exchange': data[0],
+            'symbol': data[1],
+            'timestamp': data[2],
+            'receipt': data[3],
+        }
+        # Cross-ref data dict with user column names from custom_columns dict, inserting NULL if requested data point not present 
+        sequence_gen = (d[field] if d[field] else 'NULL' for field in self.custom_columns.keys())
+        # Iterate through the generator and surround everything except prices & amounts in single quotes
+        sql_string = ','.join(str(s) if isinstance(s, float) else "'" + str(s) + "'" for s in sequence_gen)
+        return f"({sql_string})"
+        
 
     async def writer(self):
         while True:
@@ -80,7 +94,7 @@ class PostgresCallback(BackendQueue):
 
         async with self.conn.transaction():
             try:
-                if self.column_map:
+                if self.custom_columns:
                     await self.conn.execute(self.insert_statement + args_str)
                 else:
                     insert_statement = f"INSERT INTO {self.table} VALUES {args_str}"
@@ -100,18 +114,8 @@ class TradePostgres(PostgresCallback, BackendCallback):
     default_table = TRADES
 
     def format(self, data: Tuple):
-        if self.column_map:
-            d = data[4] | {
-                'exchange': data[0],
-                'symbol': data[1],
-                'timestamp': data[2],
-                'receipt': data[3],
-            }
-            # Cross-ref data dict with user column names from column_map dict, inserting NULL if requested data point not present 
-            sequence_gen = (d[field] if d[field] else 'NULL' for field in self.column_map.keys())
-            # Iterate through the generator and surround everything except prices & amounts in single quotes
-            sql_string = ','.join(str(s) if isinstance(s, float) else "'" + str(s) + "'" for s in sequence_gen)
-            return f"({sql_string})"
+        if self.custom_columns:
+            return self.custom_format(data, TRADES)
         else:
             exchange, symbol, timestamp, receipt, data = data
             id = f"'{data['id']}'" if data['id'] else 'NULL'
