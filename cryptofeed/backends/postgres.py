@@ -63,16 +63,24 @@ class PostgresCallback(BackendQueue):
         return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
     
     def custom_format(self, data: Tuple, channel: str):
-        d = data[4] | {
+        extras = {
+            CANDLES: {
+                'start': dt.utcfromtimestamp(data[4]['start']),
+                'stop': dt.utcfromtimestamp(data[4]['stop']),
+            },
+        }
+        
+        d = data[4] | extras[channel] | {
             'exchange': data[0],
             'symbol': data[1],
             'timestamp': data[2],
             'receipt': data[3],
         }
+        
         # Cross-ref data dict with user column names from custom_columns dict, inserting NULL if requested data point not present 
         sequence_gen = (d[field] if d[field] else 'NULL' for field in self.custom_columns.keys())
-        # Iterate through the generator and surround everything except prices & amounts in single quotes
-        sql_string = ','.join(str(s) if isinstance(s, float) else "'" + str(s) + "'" for s in sequence_gen)
+        # Iterate through the generator and surround everything except floats and NULL in single quotes
+        sql_string = ','.join(str(s) if isinstance(s, float) or s == 'NULL' else "'" + str(s) + "'" for s in sequence_gen)
         return f"({sql_string})"
         
 
@@ -191,8 +199,11 @@ class CandlesPostgres(PostgresCallback, BackendCallback):
     default_table = CANDLES
 
     def format(self, data: Tuple):
-        exchange, symbol, timestamp, receipt, data = data
+        if self.custom_columns:
+            return self.custom_format(data, CANDLES)
+        else:
+            exchange, symbol, timestamp, receipt, data = data
 
-        open_ts = dt.utcfromtimestamp(data['start'])
-        close_ts = dt.utcfromtimestamp(data['stop'])
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{open_ts}','{close_ts}','{data['interval']}',{data['trades'] if data['trades'] is not None else 'NULL'},{data['open']},{data['close']},{data['high']},{data['low']},{data['volume']},{data['closed'] if data['closed'] else 'NULL'})"
+            open_ts = dt.utcfromtimestamp(data['start'])
+            close_ts = dt.utcfromtimestamp(data['stop'])
+            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{open_ts}','{close_ts}','{data['interval']}',{data['trades'] if data['trades'] is not None else 'NULL'},{data['open']},{data['close']},{data['high']},{data['low']},{data['volume']},{data['closed'] if data['closed'] else 'NULL'})"
