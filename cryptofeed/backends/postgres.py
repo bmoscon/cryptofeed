@@ -47,6 +47,7 @@ class PostgresCallback(BackendQueue):
         self.port = port
         self.max_batch = max_batch
         # Parse INSERT statement with user-specified column names
+        # Performed at init to avoid repeated list joins 
         self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
 
     async def _connect(self):
@@ -62,7 +63,7 @@ class PostgresCallback(BackendQueue):
 
         return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
     
-    def custom_format(self, data: Tuple):
+    def _custom_format(self, data: Tuple):
         
         d = {**data[4] , **{
             'exchange': data[0],
@@ -107,8 +108,7 @@ class PostgresCallback(BackendQueue):
 
     async def stop(self):
         if self.queue.qsize() > 0:
-            async with self.read_many_queue(self.queue.qsize
-                                            ()) as updates:
+            async with self.read_many_queue(self.queue.qsize()) as updates:
                 await self.write_batch(updates)
 
 
@@ -117,7 +117,7 @@ class TradePostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         if self.custom_columns:
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
             id = f"'{data['id']}'" if data['id'] else 'NULL'
@@ -132,7 +132,7 @@ class FundingPostgres(PostgresCallback, BackendCallback):
         if self.custom_columns:
             if data[4]['next_funding_time']:
                 data[4]['next_funding_time'] = dt.utcfromtimestamp(data[4]['next_funding_time'])
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
             ts = dt.utcfromtimestamp(data['next_funding_time']) if data['next_funding_time'] else 'NULL'
@@ -144,7 +144,7 @@ class TickerPostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         if self.custom_columns:
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
             return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['bid']},{data['ask']})"
@@ -155,7 +155,7 @@ class OpenInterestPostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         if self.custom_columns:
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
             return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['open_interest']})"
@@ -166,7 +166,7 @@ class IndexPostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         if self.custom_columns:
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
             return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['price']})"
@@ -177,7 +177,7 @@ class LiquidationsPostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         if self.custom_columns:
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
             return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['quantity']},{data['price']},'{data['id']}','{data['status']}')"
@@ -198,7 +198,7 @@ class BookPostgres(PostgresCallback, BackendBookCallback):
                 data[4]['data'] = json.dumps({'snapshot': data[4]['book']})
             else:
                 data[4]['data'] = json.dumps({'delta': data[4]['delta']})
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             feed = data[0]
             symbol = data[1]
@@ -220,7 +220,7 @@ class CandlesPostgres(PostgresCallback, BackendCallback):
         if self.custom_columns:
             data[4]['start'] = dt.utcfromtimestamp(data[4]['start'])
             data[4]['stop'] = dt.utcfromtimestamp(data[4]['stop'])
-            return self.custom_format(data)
+            return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
 
