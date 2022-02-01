@@ -64,12 +64,12 @@ class PostgresCallback(BackendQueue):
     
     def custom_format(self, data: Tuple):
         
-        d = data[4] | {
+        d = {**data[4] , **{
             'exchange': data[0],
             'symbol': data[1],
             'timestamp': data[2],
             'receipt': data[3],
-        }
+        }}
         
         # Cross-ref data dict with user column names from custom_columns dict, inserting NULL if requested data point not present 
         sequence_gen = (d[field] if d[field] else 'NULL' for field in self.custom_columns.keys())
