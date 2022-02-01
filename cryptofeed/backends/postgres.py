@@ -99,8 +99,8 @@ class PostgresCallback(BackendQueue):
                 if self.custom_columns:
                     await self.conn.execute(self.insert_statement + args_str)
                 else:
-                    insert_statement = f"INSERT INTO {self.table} VALUES {args_str}"
-                    await self.conn.execute(insert_statement)
+                    await self.conn.execute(f"INSERT INTO {self.table} VALUES {args_str}")
+
             except asyncpg.UniqueViolationError:
                 # when restarting a subscription, some exchanges will re-publish a few messages
                 pass
