@@ -6,7 +6,6 @@ associated with this software.
 '''
 from collections import defaultdict
 from datetime import datetime as dt
-import threading
 from typing import Tuple
 
 import asyncpg
@@ -30,8 +29,9 @@ class PostgresCallback(BackendQueue):
         table: str
             Table name to insert into. Defaults to default_table that should be specified in child class
         custom_columns: dict
-            A dictionary which maps Cryptofeed's data type fields to Postgres's table column names, e.g. {'price': 'price', 'amount': 'size'}
-            Can be a subset of Cryptofeed's available fields, and in any order
+            A dictionary which maps Cryptofeed's data type fields to Postgres's table column names, e.g. {'symbol': 'instrument', 'price': 'price', 'amount': 'size'}
+            Can be a subset of Cryptofeed's available fields (see the cdefs listed under each data type in types.pyx). Can be listed any order.
+            Note: to store BOOK data in a JSONB column, include a 'data' field, e.g. {'symbol': 'symbol', 'data': 'json_data'}
         max_batch: int
             Maximum batch size to use when writing rows to postgres
         """
@@ -46,7 +46,7 @@ class PostgresCallback(BackendQueue):
         self.host = host
         self.port = port
         self.max_batch = max_batch
-        # Prepare INSERT statement with user-specified column names
+        # Parse INSERT statement with user-specified column names
         self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
 
     async def _connect(self):
@@ -62,15 +62,9 @@ class PostgresCallback(BackendQueue):
 
         return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
     
-    def custom_format(self, data: Tuple, channel: str):
-        extras = {
-            CANDLES: {
-                'start': dt.utcfromtimestamp(data[4]['start']),
-                'stop': dt.utcfromtimestamp(data[4]['stop']),
-            },
-        }
+    def custom_format(self, data: Tuple):
         
-        d = data[4] | extras[channel] | {
+        d = data[4] | {
             'exchange': data[0],
             'symbol': data[1],
             'timestamp': data[2],
@@ -123,7 +117,7 @@ class TradePostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         if self.custom_columns:
-            return self.custom_format(data, TRADES)
+            return self.custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
             id = f"'{data['id']}'" if data['id'] else 'NULL'
@@ -135,41 +129,58 @@ class FundingPostgres(PostgresCallback, BackendCallback):
     default_table = FUNDING
 
     def format(self, data: Tuple):
-        exchange, symbol, timestamp, receipt, data = data
-        ts = dt.utcfromtimestamp(data['next_funding_time']) if data['next_funding_time'] else 'NULL'
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['mark_price'] if data['mark_price'] else 'NULL'},{data['rate']},'{ts}',{data['predicted_rate']})"
+        if self.custom_columns:
+            if data[4]['next_funding_time']:
+                data[4]['next_funding_time'] = dt.utcfromtimestamp(data[4]['next_funding_time'])
+            return self.custom_format(data)
+        else:
+            exchange, symbol, timestamp, receipt, data = data
+            ts = dt.utcfromtimestamp(data['next_funding_time']) if data['next_funding_time'] else 'NULL'
+            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['mark_price'] if data['mark_price'] else 'NULL'},{data['rate']},'{ts}',{data['predicted_rate']})"
 
 
 class TickerPostgres(PostgresCallback, BackendCallback):
     default_table = TICKER
 
     def format(self, data: Tuple):
-        exchange, symbol, timestamp, receipt, data = data
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['bid']},{data['ask']})"
+        if self.custom_columns:
+            return self.custom_format(data)
+        else:
+            exchange, symbol, timestamp, receipt, data = data
+            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['bid']},{data['ask']})"
 
 
 class OpenInterestPostgres(PostgresCallback, BackendCallback):
     default_table = OPEN_INTEREST
 
     def format(self, data: Tuple):
-        exchange, symbol, timestamp, receipt, data = data
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['open_interest']})"
+        if self.custom_columns:
+            return self.custom_format(data)
+        else:
+            exchange, symbol, timestamp, receipt, data = data
+            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['open_interest']})"
 
 
 class IndexPostgres(PostgresCallback, BackendCallback):
     default_table = INDEX
 
     def format(self, data: Tuple):
-        exchange, symbol, timestamp, receipt, data = data
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['price']})"
+        if self.custom_columns:
+            return self.custom_format(data)
+        else:
+            exchange, symbol, timestamp, receipt, data = data
+            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['price']})"
 
 
 class LiquidationsPostgres(PostgresCallback, BackendCallback):
     default_table = LIQUIDATIONS
 
     def format(self, data: Tuple):
-        exchange, symbol, timestamp, receipt, data = data
-        return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['quantity']},{data['price']},'{data['id']}','{data['status']}')"
+        if self.custom_columns:
+            return self.custom_format(data)
+        else:
+            exchange, symbol, timestamp, receipt, data = data
+            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['quantity']},{data['price']},'{data['id']}','{data['status']}')"
 
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
@@ -182,17 +193,24 @@ class BookPostgres(PostgresCallback, BackendBookCallback):
         super().__init__(*args, **kwargs)
 
     def format(self, data: Tuple):
-        feed = data[0]
-        symbol = data[1]
-        timestamp = data[2]
-        receipt_timestamp = data[3]
-        data = data[4]
-        if 'book' in data:
-            data = {'snapshot': data['book']}
+        if self.custom_columns:
+            if 'book' in data[4]:
+                data[4]['data'] = json.dumps({'snapshot': data[4]['book']})
+            else:
+                data[4]['data'] = json.dumps({'delta': data[4]['delta']})
+            return self.custom_format(data)
         else:
-            data = {'delta': data['delta']}
+            feed = data[0]
+            symbol = data[1]
+            timestamp = data[2]
+            receipt_timestamp = data[3]
+            data = data[4]
+            if 'book' in data:
+                data = {'snapshot': data['book']}
+            else:
+                data = {'delta': data['delta']}
 
-        return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
+            return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
 
 
 class CandlesPostgres(PostgresCallback, BackendCallback):
@@ -200,7 +218,9 @@ class CandlesPostgres(PostgresCallback, BackendCallback):
 
     def format(self, data: Tuple):
         if self.custom_columns:
-            return self.custom_format(data, CANDLES)
+            data[4]['start'] = dt.utcfromtimestamp(data[4]['start'])
+            data[4]['stop'] = dt.utcfromtimestamp(data[4]['stop'])
+            return self.custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
 
