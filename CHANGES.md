@@ -11,6 +11,7 @@
  * Update: Deribit ticker, trades, and orderbook channels now require authentication
  * Bugfix: Fix candle backend for InfluxDB
  * Bugfix: OKEx REST candle fix
+ * Feature: Added ability to use your own Postgres table layouts
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.

@@ -21,3 +21,6 @@ CREATE TABLE IF NOT EXISTS liquidations (id serial PRIMARY KEY, timestamp TIMEST
 
 -- book
 CREATE TABLE IF NOT EXISTS l2_book (id serial PRIMARY KEY, timestamp TIMESTAMP, receipt_timestamp TIMESTAMP, exchange VARCHAR(32), symbol VARCHAR(32), data JSONB);
+
+-- custom candles table, used to demonstrate custom_columns in demo_postgres.py
+CREATE TABLE IF NOT EXISTS custom_candles (ts TIMESTAMP, received TIMESTAMP, exch VARCHAR(32), pair VARCHAR(32), start TIMESTAMP, stop TIMESTAMP, o NUMERIC(64, 32), h NUMERIC(64, 32), l NUMERIC(64, 32), c NUMERIC(64, 32), v NUMERIC(64, 32), closed BOOLEAN);
