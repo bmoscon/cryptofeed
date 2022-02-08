@@ -43,6 +43,20 @@ extension = Extension("cryptofeed.types", ["cryptofeed/types.pyx"],
                       extra_compile_args=extra_compile_args,
                       define_macros=define_macros)
 
+install_requires = []
+
+with open('requirements.txt') as f:
+    for line in f.read().splitlines():
+        line = line.strip()
+        if not line.startswith('#'):
+            name = line
+            # https://stackoverflow.com/a/54216163
+            if name.startswith('git+'):
+                pkgname = name.split('=')[1]
+                install_requires.append(f"{pkgname} @ {name}")
+            else:
+                install_requires.append(name)
+
 setup(
     name="cryptofeed",
     ext_modules=cythonize([extension], language_level=3, force=True),
@@ -70,22 +84,12 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
         "Framework :: AsyncIO",
     ],
     tests_require=["pytest"],
-    install_requires=[
-        "requests>=2.18.4",
-        "websockets>=10.0",
-        "pyyaml",
-        "aiohttp==3.8.1",
-        "aiofile>=2.0.0",
-        "yapic.json>=1.6.3",
-        'uvloop ; platform_system!="Windows"',
-        # Two (optional) dependencies that speed up Cryptofeed:
-        "aiodns>=1.1",  # aiodns speeds up DNS resolving
-        "cchardet",  # cchardet is a faster replacement for chardet
-        "order_book>=0.4.1"
-    ],
+    install_requires=install_requires,
     extras_require={
         "arctic": ["arctic", "pandas"],
         "gcp_pubsub": ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"],

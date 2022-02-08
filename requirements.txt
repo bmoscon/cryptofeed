@@ -3,9 +3,9 @@ websockets>=7.0
 pyyaml
 aiohttp==3.8.1
 aiofile>=2.0.0
-yapic.json>=1.6.3
+yapic.json>=1.6.3; platform_python_implementation=='CPython'
 aiodns>=1.1  # aiodns speeds up DNS resolving
 cchardet
-uvloop
+uvloop; platform_system!='Windows'
 cython
 order_book==0.4.1
