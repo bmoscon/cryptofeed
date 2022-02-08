@@ -9,7 +9,10 @@ import asyncio
 import logging
 from textwrap import wrap
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, BackendCallback
 

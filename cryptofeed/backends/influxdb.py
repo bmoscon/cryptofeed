@@ -7,7 +7,10 @@ associated with this software.
 from collections import defaultdict
 import logging
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 from cryptofeed.backends.http import HTTPCallback

@@ -10,7 +10,10 @@ from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, Websock
 import logging
 from decimal import Decimal
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber

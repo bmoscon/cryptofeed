@@ -10,7 +10,10 @@ import hmac
 import time
 from urllib.parse import urlparse
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exchange import RestExchange

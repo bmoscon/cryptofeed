@@ -9,7 +9,11 @@ from datetime import datetime as dt
 from typing import Tuple
 
 import asyncpg
-from yapic import json
+
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
 from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, LIQUIDATIONS, INDEX
@@ -47,7 +51,7 @@ class PostgresCallback(BackendQueue):
         self.port = port
         self.max_batch = max_batch
         # Parse INSERT statement with user-specified column names
-        # Performed at init to avoid repeated list joins 
+        # Performed at init to avoid repeated list joins
         self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
 
     async def _connect(self):
@@ -62,22 +66,22 @@ class PostgresCallback(BackendQueue):
         data = data[4]
 
         return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
-    
+
     def _custom_format(self, data: Tuple):
-        
+
         d = {**data[4] , **{
             'exchange': data[0],
             'symbol': data[1],
             'timestamp': data[2],
             'receipt': data[3],
         }}
-        
-        # Cross-ref data dict with user column names from custom_columns dict, inserting NULL if requested data point not present 
+
+        # Cross-ref data dict with user column names from custom_columns dict, inserting NULL if requested data point not present
         sequence_gen = (d[field] if d[field] else 'NULL' for field in self.custom_columns.keys())
         # Iterate through the generator and surround everything except floats and NULL in single quotes
         sql_string = ','.join(str(s) if isinstance(s, float) or s == 'NULL' else "'" + str(s) + "'" for s in sequence_gen)
         return f"({sql_string})"
-        
+
 
     async def writer(self):
         while True:

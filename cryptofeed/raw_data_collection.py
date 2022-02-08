@@ -10,7 +10,11 @@ from collections import defaultdict
 import functools
 import ast
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
+
 from aiofile import AIOFile
 
 from cryptofeed.defines import HUOBI, UPBIT, OKEX, OKCOIN

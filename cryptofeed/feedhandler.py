@@ -19,7 +19,10 @@ try:
 except ImportError:
     SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.config import Config
 from cryptofeed.defines import L2_BOOK

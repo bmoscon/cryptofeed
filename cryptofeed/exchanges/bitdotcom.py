@@ -10,7 +10,11 @@ from collections import defaultdict
 import hashlib
 import hmac
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
+
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import ASK, BALANCES, BID, BUY, BITDOTCOM, CANCELLED, FILLED, FILLS, FUTURES, L2_BOOK, LIMIT, MARKET, OPEN, OPTION, PENDING, PERPETUAL, SELL, SPOT, STOP_LIMIT, STOP_MARKET, TICKER, TRADES, ORDER_INFO, TRIGGER_LIMIT, TRIGGER_MARKET

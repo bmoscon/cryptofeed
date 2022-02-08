@@ -7,7 +7,11 @@ import zlib
 from decimal import Decimal
 
 import requests
-from yapic import json
+
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES

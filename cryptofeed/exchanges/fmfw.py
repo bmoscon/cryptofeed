@@ -9,7 +9,10 @@ from decimal import Decimal
 import logging
 from typing import Dict, Tuple
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, FMFW as FMFW_id, L2_BOOK, SELL, TICKER, TRADES

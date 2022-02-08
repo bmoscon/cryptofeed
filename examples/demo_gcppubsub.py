@@ -9,7 +9,11 @@ import asyncio
 
 import aiohttp
 from gcloud.aio.pubsub import subscribe, PublisherClient, SubscriberClient, SubscriberMessage
-from yapic import json
+
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.gcppubsub import TradeGCPPubSub

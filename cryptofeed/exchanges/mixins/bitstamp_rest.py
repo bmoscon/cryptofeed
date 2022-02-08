@@ -8,7 +8,10 @@ import asyncio
 from decimal import Decimal
 import logging
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.defines import CANDLES
 from cryptofeed.exchange import RestExchange

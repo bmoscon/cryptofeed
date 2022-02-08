@@ -8,7 +8,11 @@ from collections import defaultdict
 import asyncio
 
 import aioredis
-from yapic import json
+
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
 

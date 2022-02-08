@@ -9,7 +9,11 @@ from decimal import Decimal
 from typing import Dict, Tuple
 from collections import defaultdict
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
+
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import BUY, CALL, CANDLES, DELTA, FUTURES, L2_BOOK, OPTION, PERPETUAL, PUT, SELL, SPOT, TRADES

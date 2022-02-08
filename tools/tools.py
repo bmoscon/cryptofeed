@@ -7,7 +7,11 @@ associated with this software.
 from urllib.request import urlopen
 
 import requests
-from yapic import json
+
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 
 """

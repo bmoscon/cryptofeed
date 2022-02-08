@@ -7,7 +7,11 @@ associated with this software.
 from decimal import Decimal
 import logging
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
+
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL

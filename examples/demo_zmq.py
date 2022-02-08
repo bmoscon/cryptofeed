@@ -6,7 +6,10 @@ associated with this software.
 '''
 from multiprocessing import Process
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.zmq import BookZMQ, TickerZMQ

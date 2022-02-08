@@ -8,7 +8,11 @@ from collections import defaultdict
 import asyncio
 
 from aiokafka import AIOKafkaProducer
-from yapic import json
+
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 

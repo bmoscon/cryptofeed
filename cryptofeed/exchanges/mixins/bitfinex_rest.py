@@ -10,7 +10,10 @@ import hmac
 import time
 from decimal import Decimal
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.defines import BID, ASK, L2_BOOK, L3_BOOK, BUY, SELL, TICKER, TRADES, MARKET, LIMIT, MARGIN_LIMIT, MARGIN_MARKET, CANCEL_ORDER, PLACE_ORDER, ORDERS, BALANCES, POSITIONS
 from cryptofeed.exchange import RestExchange

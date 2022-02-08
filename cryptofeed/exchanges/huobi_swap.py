@@ -12,7 +12,10 @@ import time
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL

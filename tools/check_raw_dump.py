@@ -8,7 +8,10 @@ import ast
 import sys
 import zlib
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 
 def bytes_string_to_bytes(string):

@@ -10,7 +10,10 @@ import logging
 from datetime import datetime as dt
 from datetime import timezone as tz
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.backends._util import book_flatten
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback

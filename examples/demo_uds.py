@@ -9,7 +9,10 @@ import os
 from decimal import Decimal
 from multiprocessing import Process
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.socket import TickerSocket, TradeSocket

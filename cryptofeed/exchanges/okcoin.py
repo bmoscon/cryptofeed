@@ -10,7 +10,10 @@ import logging
 import zlib
 from typing import Dict, Tuple
 
-from yapic import json
+try:
+    from yapic import json
+except ModuleNotFoundError:
+    import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BID, BUY, L2_BOOK, OKCOIN, SELL, TICKER, TRADES
