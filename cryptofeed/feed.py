@@ -189,6 +189,8 @@ class Feed(Exchange):
             limit = endpoint.limit
             addr = self._address()
             addr = endpoint.get_address(self.sandbox) if addr is None else addr
+            if not addr:
+                continue
 
             # filtering can only be done on normalized symbols, but this subscription needs to have the raw/exchange specific
             # subscription, so we need to temporarily convert the symbols back and forth. It has to be done here
@@ -203,6 +205,7 @@ class Feed(Exchange):
                 ret.extend(limit_sub(filtered_sub, limit, auth, endpoint.options))
             else:
                 ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler, self.authenticate))
+
         return ret
 
     def _ws_authentication(self, address: str, ws_options: dict) -> Tuple[str, dict]:
