@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
+from cryptofeed.defines import BID, ASK, BITMEX, BUY, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
@@ -34,6 +34,7 @@ class Bitmex(Feed, BitmexRestMixin):
         TRADES: 'trade',
         TICKER: 'quote',
         FUNDING: 'funding',
+        ORDER_INFO: 'order',
         OPEN_INTEREST: 'instrument',
         LIQUIDATIONS: 'liquidation'
     }
@@ -65,6 +66,15 @@ class Bitmex(Feed, BitmexRestMixin):
         for pair in self.normalized_symbols:
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             self.order_id[pair] = defaultdict(dict)
+
+    async def _order(self, msg: dict, timestamp: float):
+        """
+        order msg example
+
+        {
+        }
+        """
+        pass
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -498,6 +508,8 @@ class Bitmex(Feed, BitmexRestMixin):
         if 'table' in msg:
             if msg['table'] == 'trade':
                 await self._trade(msg, timestamp)
+            elif msg['table'] == 'order':
+                await self._order(msg, timestamp)
             elif msg['table'] == 'orderBookL2':
                 await self._book(msg, timestamp)
             elif msg['table'] == 'funding':
