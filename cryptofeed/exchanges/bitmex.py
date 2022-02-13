@@ -150,7 +150,7 @@ class Bitmex(Feed, BitmexRestMixin):
             "workingIndicator": "grouped"
           },
           "filter": {
-            "account": 1693073,
+            "account": 1600000,
             "symbol": "ETHUSDTH22"
           },
           "data": [
