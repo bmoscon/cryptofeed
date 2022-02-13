@@ -85,7 +85,7 @@ class Bitmex(Feed, BitmexRestMixin):
             BUY if o['side'] == 'Buy' else SELL,
             self.normalize_order_status(o['ordStatus']),
             LIMIT if o['ordType'].lower() == 'limit' else MARKET if o['ordType'].lower() == 'market' else None,
-            Decimal(o['price']) if o['price'] else None,
+            Decimal(o['avgPx']) if o['avgPx'] else Decimal(o['price']),
             Decimal(o['orderQty']),
             Decimal(o['leavesQty']),
             self.timestamp_normalize(o['timestamp']),
@@ -308,8 +308,9 @@ class Bitmex(Feed, BitmexRestMixin):
                         info['status'] = self.normalize_order_status(o['ordStatus'])
                     if 'leaveQty' in o:
                         info['remaining'] = Decimal(o['leavesQty'])
-                    if 'price' in o:
-                        info['price'] = o  # Not sure if this is needed
+                    if 'avgPx' in o:
+                        info['price'] = Decimal(o['avgPx'])
+                    info['raw'] = str(o)    # Not sure if this is needed
                     new_oi = OrderInfo(**info)
                     if new_oi.status in (FILLED, CANCELLED):
                         self.open_orders.pop(new_oi.id)
