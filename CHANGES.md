@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.2.0
+### 2.2.0 (2021-02-15)
  * Feature: New exchange: Bit.com
  * Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
  * Bugfix: Use UTC for datetime conversions in REST api
