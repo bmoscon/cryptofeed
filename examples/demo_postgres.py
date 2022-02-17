@@ -15,7 +15,7 @@ postgres_cfg = {'host': '127.0.0.1', 'user': 'postgres', 'db': 'cryptofeed', 'pw
 """
 Sample SQL file to create tables for demo in postgres_tables.sql
 
-If you prefer not to use the pre-defined tables, or you have a pre-existing database schema, Cryptofeed can map its data elements to your own table layout. 
+If you prefer not to use the pre-defined tables, or you have a pre-existing database schema, Cryptofeed can map its data elements to your own table layout.
 Create a dictionary which maps Cryptofeed's data names to your column names, and provide it to the custom_columns kwarg.
 The dictionary can include any of the data names listed under each data type (class) in types.pyx.
 Note: to insert book data in a JSONB column you need to include a 'data' key (not listed in types.pyx), e.g. {'data': 'json_book_update'}
@@ -23,18 +23,18 @@ You don't have to include all of the data elements and they can be listed in any
 """
 
 column_mappings = {
-    # cf_name   : your_column_name
-    'symbol'    : 'pair',
-    'open'      : 'o',
-    'high'      : 'h',
-    'low'       : 'l',
-    'close'     : 'c',
-    'volume'    : 'v',
-    'timestamp' : 'ts',
-    'start'     : 'start',
-    'stop'      : 'stop',
-    'closed'    : 'closed',
+    'symbol': 'pair',
+    'open': 'o',
+    'high': 'h',
+    'low': 'l',
+    'close': 'c',
+    'volume': 'v',
+    'timestamp': 'ts',
+    'start': 'start',
+    'stop': 'stop',
+    'closed': 'closed',
 }
+
 
 def main():
     f = FeedHandler()

@@ -420,11 +420,11 @@ class OKEx(Feed, OKExRestMixin):
         sym = self.exchange_symbol_to_std_symbol(ticker)
         instrument_type = self.instrument_type(sym)
         instrument_type_map = {
-                'perpetual': 'SWAP',
-                'spot': 'MARGIN',
-                'futures': 'FUTURES',
-                'option': 'OPTION'
-                }
+            'perpetual': 'SWAP',
+            'spot': 'MARGIN',
+            'futures': 'FUTURES',
+            'option': 'OPTION'
+        }
         return instrument_type_map.get(instrument_type, 'MARGIN')
 
     def _get_server_time(self):
