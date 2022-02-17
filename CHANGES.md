@@ -14,6 +14,7 @@
  * Feature: Added ability to use your own Postgres table layouts
  * Bugfix: Binance connections that do not require websocket were failing on connect
  * Feature: Write native datetimes to Mongo
+ * Feature: Mongo backend now supports bulk writes + queuing of messages
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
