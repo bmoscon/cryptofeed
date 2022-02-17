@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from datetime import timezone, datetime as dt
 
 import bson
 import motor.motor_asyncio
@@ -21,6 +22,9 @@ class MongoCallback:
         self.collection = key if key else self.default_key
 
     async def write(self, data: dict):
+        data['timestamp'] = dt.fromtimestamp(data['timestamp'], tz=timezone.utc) if data['timestamp'] else None
+        data['receipt_timestamp'] = dt.fromtimestamp(data['receipt_timestamp'], tz=timezone.utc) if data['receipt_timestamp'] else None
+
         if 'book' in data:
             d = {'exchange': data['exchange'], 'symbol': data['symbol'], 'timestamp': data['timestamp'], 'receipt_timestamp': data['receipt_timestamp'], 'delta': 'delta' in data, 'bid': bson.BSON.encode(data['book']['bid'] if 'delta' not in data else data['delta']['bid']), 'ask': bson.BSON.encode(data['book']['ask'] if 'delta' not in data else data['delta']['ask'])}
             await self.db[self.collection].insert_one(d)
