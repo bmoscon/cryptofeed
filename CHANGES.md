@@ -2,6 +2,7 @@
 
 ### 2.2.1
  * Feature: Support for Order info stream on BitMex
+ * Bugfix: Datetime/Timestamp conversion fixes.
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
