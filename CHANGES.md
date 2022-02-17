@@ -13,6 +13,7 @@
  * Bugfix: OKEx REST candle fix
  * Feature: Added ability to use your own Postgres table layouts
  * Bugfix: Binance connections that do not require websocket were failing on connect
+ * Feature: Write native datetimes to Mongo
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
