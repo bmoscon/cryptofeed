@@ -4,7 +4,7 @@ Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from datetime import datetime as dt
+from datetime import datetime as dt, timezone
 from typing import Dict, Tuple, Union
 
 from cryptofeed.defines import FUTURES, FX, OPTION, PERPETUAL, SPOT, CALL, PUT, CURRENCY
@@ -45,7 +45,7 @@ class Symbol:
     @staticmethod
     def date_format(date):
         if isinstance(date, (int, float)):
-            date = dt.fromtimestamp(date)
+            date = dt.fromtimestamp(date, tz=timezone.utc)
         if isinstance(date, dt):
             year = str(date.year)[2:]
             month = Symbol.month_code(date.month)

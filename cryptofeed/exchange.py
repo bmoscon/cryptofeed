@@ -49,7 +49,7 @@ class Exchange:
 
     @classmethod
     def timestamp_normalize(cls, ts: dt) -> float:
-        return ts.timestamp()
+        return ts.astimezone(timezone.utc).timestamp()
 
     @classmethod
     def normalize_order_options(cls, option: str):
@@ -162,7 +162,8 @@ class RestExchange:
         if isinstance(timestamp, (float, int)):
             return timestamp
         if isinstance(timestamp, dt):
-            return timestamp.replace(tzinfo=timezone.utc).timestamp()
+            return timestamp.astimezone(timezone.utc).timestamp()
+
         if isinstance(timestamp, str):
             try:
                 return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=timezone.utc).timestamp()
