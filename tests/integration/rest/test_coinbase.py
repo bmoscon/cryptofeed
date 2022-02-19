@@ -9,9 +9,9 @@ from decimal import Decimal
 
 import pytest
 
-from cryptofeed.defines import BID, ASK, BUY, LIMIT
+from cryptofeed.defines import BUY, LIMIT
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.types import Candle
+from cryptofeed.types import Candle, Ticker, Trade
 
 
 public = Coinbase(config='config.yaml')
@@ -31,9 +31,7 @@ def teardown_module(module):
 class TestCoinbaseRest:
     def test_ticker(self):
         ticker = public.ticker_sync('BTC-USD')
-
-        assert BID in ticker
-        assert ASK in ticker
+        assert isinstance(ticker, Ticker)
 
 
     def test_order_book(self):
@@ -54,17 +52,20 @@ class TestCoinbaseRest:
     def test_trade_history_specific_time(self):
         expected = {'timestamp': 1550062756.744,
                     'symbol': 'BTC-USD',
-                    'id': 59158401,
-                    'feed': 'COINBASE',
+                    'id': '59158401',
+                    'exchange': 'COINBASE',
                     'side': 'buy',
                     'amount': Decimal('0.00514473'),
-                    'price': Decimal('3580.07')}
+                    'price': Decimal('3580.07000000'),
+                    'type': None
+                    }
         ret = []
         for data in public.trades_sync('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
             ret.extend(data)
 
+        assert isinstance(ret[0], Trade)
         assert len(ret) == 1
-        assert ret[0] == expected
+        assert ret[0].to_dict() == expected
 
 
     def test_candle_history(self):
