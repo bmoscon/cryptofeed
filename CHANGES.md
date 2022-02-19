@@ -3,6 +3,7 @@
 ### 2.2.1
  * Feature: Support for Order info stream on BitMex
  * Bugfix: Datetime/Timestamp conversion fixes.
+ * Feature: Add support for Huobi Linear Swaps
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
