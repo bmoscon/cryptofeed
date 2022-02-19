@@ -5,6 +5,7 @@
  * Bugfix: Datetime/Timestamp conversion fixes
  * Feature: Add support for Huobi Linear Swaps
  * Update: Change Coinbase REST calls to use Ticker and Trade data types
+ * Bugfix: Instrument and channel filtering sometimes matched incorrectly when creating connection specific subscriptions
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
