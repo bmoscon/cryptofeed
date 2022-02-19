@@ -135,14 +135,13 @@ class HuobiDM(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in self.subscription:
-            if chan == FUNDING:
-                continue
-            for pair in self.subscription[chan]:
+
+        for chan, symbols in conn.subscription.items():
+            for symbol in symbols:
                 client_id += 1
                 await conn.write(json.dumps(
                     {
-                        "sub": f"market.{pair}.{chan}",
+                        "sub": f"market.{symbol}.{chan}",
                         "id": str(client_id)
                     }
                 ))

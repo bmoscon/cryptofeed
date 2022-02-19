@@ -7,7 +7,6 @@ associated with this software.
 from cryptofeed.defines import *
 from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str, FMFW as FMFW_str
 from .bitdotcom import BitDotCom
-from .huobi_linear_swap import HuobiLinearSwap
 from .phemex import Phemex
 from .ascendex import AscendEX
 from .bequant import Bequant
@@ -78,7 +77,6 @@ EXCHANGE_MAP = {
     HITBTC: HitBTC,
     HUOBI_DM: HuobiDM,
     HUOBI_SWAP: HuobiSwap,
-    HUOBI_LINEAR_SWAP: HuobiLinearSwap,
     HUOBI: Huobi,
     KRAKEN_FUTURES: KrakenFutures,
     KRAKEN: Kraken,

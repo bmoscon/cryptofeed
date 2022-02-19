@@ -26,7 +26,7 @@ class HitBTC(Bequant):
     }
     websocket_endpoints = [
         WebsocketEndpoint('wss://api.hitbtc.com/api/2/ws/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[CANDLES])),
-        WebsocketEndpoint('wss://api.hitbtc.com/api/2/ws/trading', channel_filter=(websocket_channels[ORDER_INFO])),
+        WebsocketEndpoint('wss://api.hitbtc.com/api/2/ws/trading', channel_filter=(websocket_channels[ORDER_INFO],)),
         WebsocketEndpoint('wss://api.hitbtc.com/api/2/ws/account', channel_filter=(websocket_channels[BALANCES], websocket_channels[TRANSACTIONS])),
     ]
     rest_endpoints = [RestEndpoint('https://api.hitbtc.com', routes=Routes('/api/2/public/symbol'))]
