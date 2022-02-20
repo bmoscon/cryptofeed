@@ -310,7 +310,7 @@ class Huobi(Feed):
 
         order = msg['data']
         if not order['eventType'] in ['creation', 'cancellation', 'trade']:
-            LOG.warning(
+            LOG.debug(
                 'wrong eventType (does not handle trigger orders yet): %s',
                 msg)
 
@@ -425,7 +425,7 @@ class Huobi(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        # wait for auth to be received before subscribing
+        # wait for auth to be received before subscribing because otherwise we cannot sub to auth chans
         await asyncio.sleep(2)
         for chan in self.subscription:
             for pair in self.subscription[chan]:

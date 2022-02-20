@@ -7,7 +7,8 @@
  * Update: Change Coinbase REST calls to use Ticker and Trade data types
  * Bugfix: Instrument and channel filtering sometimes matched incorrectly when creating connection specific subscriptions
  * Bugfix: retry kwargs were not correctly passed through to the async HTTP connection handler in Coinbase REST methods
- 
+ * Feature: Add support for ORDER_INFO and FILLS for huobi spot
+
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
  * Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
@@ -34,7 +35,7 @@
  * Feature: Add ByBit sandbox endpoints.
  * Bugfix: Fix calculation in OrderInfo on Binance.
  * Feature: Support list of bootstrap servers for Kafka backend.
- * Feature: Add OrderInfo and Fills zmq callbacks 
+ * Feature: Add OrderInfo and Fills zmq callbacks
 
 ### 2.1.1 (2021-11-29)
  * Bugfix: Position data type missing side field.
