@@ -13,14 +13,14 @@ from datetime import datetime as dt
 from decimal import Decimal
 import logging
 import time
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 from yapic import json
 
 from cryptofeed.defines import BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
 from cryptofeed.exceptions import UnexpectedMessage
 from cryptofeed.exchange import RestExchange
-from cryptofeed.types import OrderBook, Candle, Trade, Ticker
+from cryptofeed.types import OrderBook, Candle, Trade, Ticker, OrderInfo, Balance
 
 
 LOG = logging.getLogger('feedhandler')
@@ -60,32 +60,35 @@ class CoinbaseRestMixin(RestExchange):
         else:
             price = Decimal(data['price'])
 
-        return {
-            'order_id': data['id'],
-            'symbol': data['product_id'],
-            'side': BUY if data['side'] == 'buy' else SELL,
-            'order_type': LIMIT if data['type'] == 'limit' else MARKET,
-            'price': price,
-            'total': Decimal(data['size']),
-            'executed': Decimal(data['filled_size']),
-            'pending': Decimal(data['size']) - Decimal(data['filled_size']),
-            'timestamp': data['done_at'].timestamp() if 'done_at' in data else data['created_at'].timestamp(),
-            'order_status': status
-        }
+        # exchange, symbol, id, side, status, type, price, amount, remaining, timestamp, account=None, raw=None):
+        return OrderInfo(
+            self.id,
+            data['product_id'],
+            data['id'],
+            BUY if data['side'] == 'buy' else SELL,
+            status,
+            LIMIT if data['type'] == 'limit' else MARKET,
+            price,
+            Decimal(data['size']),
+            Decimal(data['size']) - Decimal(data['filled_size']),
+            data['done_at'].timestamp() if 'done_at' in data else data['created_at'].timestamp(),
+            raw=data
+        )
 
     def _generate_signature(self, endpoint: str, method: str, body=''):
         timestamp = str(time.time())
         message = ''.join([timestamp, method, endpoint, body])
-        hmac_key = base64.b64decode(self.config.key_secret)
+        hmac_key = base64.b64decode(self.key_secret)
         signature = hmac.new(hmac_key, message.encode('ascii'), hashlib.sha256)
         signature_b64 = base64.b64encode(signature.digest()).decode('utf-8')
 
         return {
-            'CB-ACCESS-KEY': self.config.key_id,  # The api key as a string.
+            'CB-ACCESS-KEY': self.key_id,  # The api key as a string.
             'CB-ACCESS-SIGN': signature_b64,  # The base64-encoded signature (see Signing a Message).
             'CB-ACCESS-TIMESTAMP': timestamp,  # A timestamp for your request.
             'CB-ACCESS-PASSPHRASE': self.key_passphrase,  # The passphrase you specified when creating the API key
-            'Content-Type': 'Application/JSON',
+            "Accept": "application/json",
+            "Content-Type": "application/json"
         }
 
     async def _request(self, method: str, endpoint: str, auth: bool = False, body=None, retry_count=1, retry_delay=60):
@@ -97,7 +100,7 @@ class CoinbaseRestMixin(RestExchange):
         if method == "GET":
             data = await self.http_conn.read(f'{api}{endpoint}', header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == 'POST':
-            data = await self.http_conn.write(f'{api}{endpoint}', msg=body, header=header, retry_count=retry_count, retry_delay=retry_delay)
+            data = await self.http_conn.write(f'{api}{endpoint}', msg=json.dumps(body), header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == 'DELETE':
             data = await self.http_conn.delete(f'{api}{endpoint}', header=header, retry_count=retry_count, retry_delay=retry_delay)
         return json.loads(data, parse_float=Decimal)
@@ -198,15 +201,17 @@ class CoinbaseRestMixin(RestExchange):
                     ret.book[side][price] = {order_id: size}
         return ret
 
-    async def balances(self):
+    async def balances(self) -> List[Balance]:
         data = await self._request('GET', "/accounts", auth=True)
-        return {
-            entry['currency']: {
-                'total': Decimal(entry['balance']),
-                'available': Decimal(entry['available'])
-            }
-            for entry in data
-        }
+        #    def __init__(self, exchange, currency, balance, reserved, raw=None):
+
+        return [Balance(
+            self.id,
+            entry['currency'],
+            Decimal(entry['balance']),
+            Decimal(entry['balance']) - Decimal(entry['available']),
+            raw=entry
+        ) for entry in data]
 
     async def orders(self):
         data = await self._request("GET", "/orders", auth=True)
@@ -242,10 +247,12 @@ class CoinbaseRestMixin(RestExchange):
     async def cancel_order(self, order_id: str):
         order = await self.order_status(order_id)
         data = await self._request("DELETE", f"/orders/{order_id}", auth=True)
-        if data[0] == order['order_id']:
-            order['status'] = CANCELLED
+        if data == order_id:
+            order.set_status(CANCELLED)
             return order
-        return data
+        # shouldn't happen, if the order cannot be canceled it will return an HTTP 404 error
+        # with response ('message': 'NotFound') or something similar.
+        return None
 
     async def trade_history(self, symbol: str, start=None, end=None):
         data = await self._request("GET", f"/orders?product_id={symbol}&status=done", auth=True)

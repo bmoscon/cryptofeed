@@ -9,7 +9,7 @@ from decimal import Decimal
 
 import pytest
 
-from cryptofeed.defines import BUY, LIMIT
+from cryptofeed.defines import BUY, CANCELLED, LIMIT, PENDING
 from cryptofeed.exchanges import Coinbase
 from cryptofeed.types import Candle, Ticker, Trade
 
@@ -124,32 +124,33 @@ class TestCoinbaseRest:
             order_type=LIMIT,
             amount='1.0',
             price='622.13',
-            client_order_id='1'
         )
-        assert 'order_id' in order_resp
-        cancel_resp = sandbox.cancel_order_sync({'order_id': order_resp['order_id']})
-        assert 'order_id' in cancel_resp
+
+        assert order_resp.id is not None
+        assert order_resp.status == PENDING
+        assert order_resp.type == LIMIT
+        cancel_resp = sandbox.cancel_order_sync(order_resp.id)
+        assert cancel_resp.id == order_resp.id
+        assert cancel_resp.status == CANCELLED     
 
 
     @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
     def test_order_status(self):
         order_resp = sandbox.place_order_sync(
-            symbol='btcusd',
-            side='buy',
-            type='LIMIT',
+            symbol='BTC-USD',
+            side=BUY,
+            order_type=LIMIT,
             amount='1.0',
-            price='1.13',
-            client_order_id='1'
+            price='1.13'
         )
-        status = sandbox.order_status({'order_id': order_resp['order_id']})
+        status = sandbox.order_status_sync(order_resp.id)
 
-        assert status['symbol'] == 'btcusd'
-        assert status['side'] == 'buy'
-        sandbox.cancel_order_sync({'order_id': order_resp['order_id']})
+        assert status.symbol == 'BTC-USD'
+        assert status.side == BUY
+        sandbox.cancel_order_sync(order_resp.id)
 
 
     @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
     def test_balances(self):
         balances = sandbox.balances_sync()
-
         assert len(balances) > 0

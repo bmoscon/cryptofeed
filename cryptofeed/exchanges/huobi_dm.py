@@ -14,7 +14,7 @@ from decimal import Decimal
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BUY, FUNDING, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BUY, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade
 

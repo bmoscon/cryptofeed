@@ -417,6 +417,9 @@ cdef class OrderInfo:
         self.timestamp = timestamp
         self.raw = raw
 
+    cpdef set_status(self, status: str):
+        self.status = status
+
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
             data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'account': self.account, 'timestamp': self.timestamp}
