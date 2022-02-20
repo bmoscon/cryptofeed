@@ -6,6 +6,7 @@
  * Feature: Add support for Huobi Linear Swaps
  * Update: Change Coinbase REST calls to use Ticker and Trade data types
  * Bugfix: Instrument and channel filtering sometimes matched incorrectly when creating connection specific subscriptions
+ * Bugfix: retry kwargs were not correctly passed through to the async HTTP connection handler in Coinbase REST methods
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
