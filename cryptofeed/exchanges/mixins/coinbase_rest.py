@@ -95,11 +95,11 @@ class CoinbaseRestMixin(RestExchange):
             header = self._generate_signature(endpoint, method, body=json.dumps(body) if body else '')
 
         if method == "GET":
-            data = await self.http_conn.read(f'{api}{endpoint}', header=header)
+            data = await self.http_conn.read(f'{api}{endpoint}', header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == 'POST':
-            data = await self.http_conn.write(f'{api}{endpoint}', msg=body, header=header)
+            data = await self.http_conn.write(f'{api}{endpoint}', msg=body, header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == 'DELETE':
-            data = await self.http_conn.delete(f'{api}{endpoint}', header=header)
+            data = await self.http_conn.delete(f'{api}{endpoint}', header=header, retry_count=retry_count, retry_delay=retry_delay)
         return json.loads(data, parse_float=Decimal)
 
     async def _date_to_trade(self, symbol: str, timestamp: float) -> int:
