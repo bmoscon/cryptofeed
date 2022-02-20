@@ -35,21 +35,8 @@ class Huobi(Feed):
                      routes=Routes('/v1/common/symbols'))
     ]
 
-    valid_candle_intervals = {
-        '1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'
-    }
-    candle_interval_map = {
-        '1m': '1min',
-        '5m': '5min',
-        '15m': '15min',
-        '30m': '30min',
-        '1h': '60min',
-        '4h': '4hour',
-        '1d': '1day',
-        '1M': '1mon',
-        '1w': '1week',
-        '1Y': '1year'
-    }
+    valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'}
+    candle_interval_map = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1M': '1mon', '1w': '1week', '1Y': '1year'}
     websocket_channels = {
         L2_BOOK: 'depth.step0',
         TRADES: 'trade.detail',
@@ -109,11 +96,7 @@ class Huobi(Feed):
             for price, amount in data['asks']
         }
 
-        await self.book_callback(L2_BOOK,
-                                 self._l2_book[pair],
-                                 timestamp,
-                                 timestamp=self.timestamp_normalize(msg['ts']),
-                                 raw=msg)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['ts']), raw=msg)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -168,8 +151,7 @@ class Huobi(Feed):
         """
         for trade in msg['tick']['data']:
             t = Trade(self.id,
-                      self.exchange_symbol_to_std_symbol(
-                          msg['ch'].split('.')[1]),
+                      self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
                       BUY if trade['direction'] == 'buy' else SELL,
                       Decimal(trade['amount']),
                       Decimal(trade['price']),
@@ -178,8 +160,7 @@ class Huobi(Feed):
                       raw=trade)
             await self.callback(TRADES, t, timestamp)
 
-    async def _candles(self, msg: dict, symbol: str, interval: str,
-                       timestamp: float):
+    async def _candles(self, msg: dict, symbol: str, interval: str, timestamp: float):
         """
         {
             'ch': 'market.btcusdt.kline.1min',
@@ -253,8 +234,8 @@ class Huobi(Feed):
                  Decimal(fill['transactFee']),
                  str(fill['tradeId']),
                  str(fill['orderId']),
-                 MARKET if fill['aggressor'] == True else LIMIT,
-                 TAKER if fill['aggressor'] == True else MAKER,
+                 MARKET if fill['aggressor'] is True else LIMIT,
+                 TAKER if fill['aggressor'] is True else MAKER,
                  self.timestamp_normalize(fill['tradeTime']),
                  account=self.subaccount,
                  raw=msg)
@@ -310,9 +291,7 @@ class Huobi(Feed):
 
         order = msg['data']
         if not order['eventType'] in ['creation', 'cancellation', 'trade']:
-            LOG.debug(
-                'wrong eventType (does not handle trigger orders yet): %s',
-                msg)
+            LOG.debug('wrong eventType (does not handle trigger orders yet): %s', msg)
 
         status = order['orderStatus']
         if status == 'new':
@@ -322,8 +301,7 @@ class Huobi(Feed):
         elif status == 'closed':
             status = CLOSED
 
-        ts = (order.get('orderCreateTime') or order.get('tradeTime')
-              or order.get('lastActTime'))
+        ts = order.get('orderCreateTime') or order.get('tradeTime') or order.get('lastActTime')
         oi = OrderInfo(
             self.id,
             self.exchange_symbol_to_std_symbol(order['symbol']),
@@ -342,16 +320,10 @@ class Huobi(Feed):
         method, host, path = 'GET', conn.conn.host, conn.conn.path
         ts = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
 
-        params = {
-            'accessKey': self.key_id,
-            'signatureMethod': 'HmacSHA256',
-            'signatureVersion': '2.1',
-            'timestamp': ts
-        }
+        params = {'accessKey': self.key_id, 'signatureMethod': 'HmacSHA256', 'signatureVersion': '2.1', 'timestamp': ts}
 
         payload = '\n'.join([method, host, path, urlencode(params)])
-        digest = hmac.new(self.key_secret.encode(), payload.encode(),
-                          hashlib.sha256).digest()
+        digest = hmac.new(self.key_secret.encode(), payload.encode(), hashlib.sha256).digest()
 
         signature = base64.b64encode(digest).decode()
         msg = {
@@ -367,20 +339,13 @@ class Huobi(Feed):
         return msg
 
     async def authenticate(self, conn: AsyncConnection):
-        if self.requires_authentication and any(
-                self.is_authenticated_channel(
-                    self.exchange_channel_to_std(chan))
-                for chan in conn.subscription):
+        if self.requires_authentication and any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription):
             auth = self._auth(conn)
             LOG.debug(f"{conn.uuid}: Authenticating with message: {auth}")
             await conn.write(json.dumps(auth))
 
-    async def message_handler(self, msg: str, conn: AsyncConnection,
-                              timestamp: float):
-        if not any(
-                self.is_authenticated_channel(
-                    self.exchange_channel_to_std(chan))
-                for chan in conn.subscription):
+    async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
+        if not any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription):
             # unzip message if its from a compressed channel
             msg = zlib.decompress(msg, 16 + zlib.MAX_WBITS)
         msg = json.loads(msg, parse_float=Decimal)
@@ -398,8 +363,7 @@ class Huobi(Feed):
             if msg['code'] != 200:
                 LOG.warning("%s: Error with sub %s", self.id, msg)
             else:
-                LOG.debug("%s: Successfully subscribed to %s", self.id,
-                          msg['ch'])
+                LOG.debug("%s: Successfully subscribed to %s", self.id, msg['ch'])
         elif 'ch' in msg:
             if 'orders' in msg['ch']:
                 await self._order(msg, timestamp)
@@ -431,8 +395,7 @@ class Huobi(Feed):
             for pair in self.subscription[chan]:
                 client_id += 1
                 normalized_chan = self.exchange_channel_to_std(chan)
-                if self.is_authenticated_channel(
-                        self.exchange_channel_to_std(chan)):
+                if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                     sub = f'{chan}#{pair}'
                     if normalized_chan == FILLS:
                         # mode fills only https://huobiapi.github.io/docs/spot/v1/en/#subscribe-trade-details-amp-order-cancellation-post-clearing
