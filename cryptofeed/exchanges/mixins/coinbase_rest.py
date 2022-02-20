@@ -20,7 +20,7 @@ from yapic import json
 from cryptofeed.defines import BUY, CANCELLED, FILLED, FILL_OR_KILL, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OPEN, PARTIAL, PENDING, SELL, TRADES, TICKER, L2_BOOK, L3_BOOK, ORDER_INFO, ORDER_STATUS, CANDLES, CANCEL_ORDER, PLACE_ORDER, BALANCES, TRADE_HISTORY, LIMIT
 from cryptofeed.exceptions import UnexpectedMessage
 from cryptofeed.exchange import RestExchange
-from cryptofeed.types import OrderBook, Candle
+from cryptofeed.types import OrderBook, Candle, Trade, Ticker
 
 
 LOG = logging.getLogger('feedhandler')
@@ -95,11 +95,11 @@ class CoinbaseRestMixin(RestExchange):
             header = self._generate_signature(endpoint, method, body=json.dumps(body) if body else '')
 
         if method == "GET":
-            data = await self.http_conn.read(f'{api}{endpoint}', header=header)
+            data = await self.http_conn.read(f'{api}{endpoint}', header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == 'POST':
-            data = await self.http_conn.write(f'{api}{endpoint}', msg=body, header=header)
+            data = await self.http_conn.write(f'{api}{endpoint}', msg=body, header=header, retry_count=retry_count, retry_delay=retry_delay)
         elif method == 'DELETE':
-            data = await self.http_conn.delete(f'{api}{endpoint}', header=header)
+            data = await self.http_conn.delete(f'{api}{endpoint}', header=header, retry_count=retry_count, retry_delay=retry_delay)
         return json.loads(data, parse_float=Decimal)
 
     async def _date_to_trade(self, symbol: str, timestamp: float) -> int:
@@ -131,15 +131,15 @@ class CoinbaseRestMixin(RestExchange):
             await asyncio.sleep(1 / self.request_limit)
 
     def _trade_normalize(self, symbol: str, data: dict) -> dict:
-        return {
-            'timestamp': data['time'].timestamp(),
-            'symbol': symbol,
-            'id': data['trade_id'],
-            'feed': self.id,
-            'side': SELL if data['side'] == 'buy' else BUY,
-            'amount': Decimal(data['size']),
-            'price': Decimal(data['price']),
-        }
+        return Trade(
+            self.id,
+            symbol,
+            SELL if data['side'] == 'buy' else BUY,
+            Decimal(data['size']),
+            Decimal(data['price']),
+            data['time'].timestamp(),
+            id=str(data['trade_id']),
+            raw=data)
 
     async def trades(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
         start, end = self._interval_normalize(start, end)
@@ -168,11 +168,14 @@ class CoinbaseRestMixin(RestExchange):
 
     async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         data = await self._request('GET', f'/products/{symbol}/ticker', retry_count=retry_count, retry_delay=retry_delay)
-        return {'symbol': symbol,
-                'feed': self.id,
-                'bid': Decimal(data['bid']),
-                'ask': Decimal(data['ask'])
-                }
+        return Ticker(
+            self.id,
+            symbol,
+            Decimal(data['bid']),
+            Decimal(data['ask']),
+            data['time'].timestamp(),
+            raw=data
+        )
 
     async def l2_book(self, symbol: str, retry_count=1, retry_delay=60):
         data = await self._request('GET', f'/products/{symbol}/book?level=2', retry_count=retry_count, retry_delay=retry_delay)

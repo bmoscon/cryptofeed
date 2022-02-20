@@ -38,8 +38,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [HitBTC](https://hitbtc.com/)
 * [Huobi](https://www.hbg.com/)
 * [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
-* Huobi Swap
-* Huobi Linear Swaps
+* Huobi Swap (Coin-M and USDT-M)
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)

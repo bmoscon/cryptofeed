@@ -42,7 +42,6 @@ class TestOKExRest:
         )
         ret = []
         for data in o.candles_sync('BTC-USDT', start='2021-01-01 00:00:00', end='2021-01-01 00:00:59', interval='1m'):
-            print(data)
             ret.extend(data)
 
         assert len(ret) == 1
