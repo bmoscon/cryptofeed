@@ -62,7 +62,7 @@ setup(
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),
     cmdclass={'test': Test},
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     classifiers=[
         "Intended Audience :: Developers",
         "Development Status :: 4 - Beta",
