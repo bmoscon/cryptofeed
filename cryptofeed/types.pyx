@@ -420,6 +420,22 @@ cdef class OrderInfo:
     cpdef set_status(self, status: str):
         self.status = status
 
+    @staticmethod
+    def from_dict(data: dict) -> OrderInfo:
+        return OrderInfo(
+            data['exchange'],
+            data['symbol'],
+            data['id'],
+            data['side'],
+            data['status'],
+            data['type'],
+            Decimal(data['price']),
+            Decimal(data['amount']),
+            Decimal(data['remaining']) if data['remaining'] else data['remaining'],
+            data['timestamp'],
+            account=data['account']
+        )
+
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
             data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'account': self.account, 'timestamp': self.timestamp}
