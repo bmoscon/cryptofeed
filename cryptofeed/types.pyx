@@ -4,6 +4,7 @@ Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+cimport cython
 from decimal import Decimal
 
 from cryptofeed.defines import BID, ASK
@@ -29,6 +30,7 @@ cdef dict convert_none_values(d: dict, s: str):
     return d
 
 
+@cython.freelist(128)
 cdef class Trade:
     cdef readonly str exchange
     cdef readonly str symbol
@@ -53,6 +55,19 @@ cdef class Trade:
         self.id = id
         self.type = type
         self.raw = raw
+
+    @staticmethod
+    def from_dict(data: dict) -> Trade:
+        return Trade(
+            data['exchange'],
+            data['symbol'],
+            data['side'],
+            Decimal(data['amount']),
+            Decimal(data['price']),
+            data['timestamp'],
+            id=data['id'],
+            type=data['type']
+        )
 
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
@@ -340,6 +355,14 @@ cdef class OrderBook:
         self.sequence_number = None
         self.checksum = None
         self.raw = None
+
+    @staticmethod
+    def from_dict(data: dict) -> OrderBook:
+        ob = OrderBook(data['exchange'], data['symbol'], bids=data['book'][BID], asks=data['book'][ASK])
+        ob.timestamp = data['timestamp']
+        if 'delta' in data:
+            ob.delta = data['delta']
+        return ob
 
     def _delta(self, numeric_type) -> dict:
         return {
