@@ -1,13 +1,14 @@
 ## Changelog
 
 ### 2.2.1
- * Feature: Support for Order info stream on BitMex
+ * Feature: Support for order info stream on BitMex
  * Bugfix: Datetime/Timestamp conversion fixes
  * Feature: Add support for Huobi Linear Swaps
  * Update: Change Coinbase REST calls to use Ticker and Trade data types
  * Bugfix: Instrument and channel filtering sometimes matched incorrectly when creating connection specific subscriptions
  * Bugfix: retry kwargs were not correctly passed through to the async HTTP connection handler in Coinbase REST methods
  * Update: Revamp Coinbase authenticated REST endpoints; change to use the Cython data types
+ * Feature: Add from_dict static method in Cython types to support creation of object from dict (for serialization/deserialization)
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
