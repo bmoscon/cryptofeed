@@ -8,8 +8,8 @@ from decimal import Decimal
 from time import time
 import json
 
-from cryptofeed.types import OrderInfo, OrderBook, Trade
-from cryptofeed.defines import BUY, PENDING, LIMIT
+from cryptofeed.types import OrderInfo, OrderBook, Trade, Ticker, Liquidation, Funding, Candle
+from cryptofeed.defines import BUY, PENDING, LIMIT, UNFILLED
 
 
 def test_order_info():
@@ -61,4 +61,76 @@ def test_trade():
     d = json.dumps(d)
     d = json.loads(d)
     t2 = Trade.from_dict(d)
+    assert t == t2
+
+
+def test_ticker():
+    t = Ticker(
+        'COINBASE',
+        'BTC-USD',
+        Decimal(10),
+        Decimal(100),
+        time(),
+    )
+    d = t.to_dict(numeric_type=str)
+    d = json.dumps(d)
+    d = json.loads(d)
+    t2 = Ticker.from_dict(d)
+    assert t == t2
+
+
+def test_liquidation():
+    t = Liquidation(
+        'BINANCE_FUTURES',
+        'BTC-USD-PERP',
+        BUY,
+        Decimal(10),
+        Decimal(100),
+        '1234-abcd-6789-1234',
+        UNFILLED,
+        time(),
+    )
+    d = t.to_dict(numeric_type=str)
+    d = json.dumps(d)
+    d = json.loads(d)
+    t2 = Liquidation.from_dict(d)
+    assert t == t2
+
+
+def test_funding():
+    t = Funding(
+        'BINANCE_FUTURES',
+        'BTC-USD-PERP',
+        Decimal(10),
+        Decimal(100),
+        time(),
+        time(),
+    )
+    d = t.to_dict(numeric_type=str)
+    d = json.dumps(d)
+    d = json.loads(d)
+    t2 = Funding.from_dict(d)
+    assert t == t2
+
+
+def test_candle():
+    t = Candle(
+        'BINANCE_FUTURES',
+        'BTC-USD-PERP',
+        time(),
+        time() + 60,
+        '1m',
+        54,
+        Decimal(10),
+        Decimal(100),
+        Decimal(200),
+        Decimal(10),
+        Decimal(1234.5432),
+        True,
+        time(),
+    )
+    d = t.to_dict(numeric_type=str)
+    d = json.dumps(d)
+    d = json.loads(d)
+    t2 = Candle.from_dict(d)
     assert t == t2

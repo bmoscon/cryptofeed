@@ -106,6 +106,16 @@ cdef class Ticker:
         self.timestamp = timestamp
         self.raw = raw
 
+    @staticmethod
+    def from_dict(data: dict) -> Ticker:
+        return Ticker(
+            data['exchange'],
+            data['symbol'],
+            Decimal(data['bid']),
+            Decimal(data['ask']),
+            data['timestamp']
+        )
+
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
             data = {'exchange': self.exchange, 'symbol': self.symbol, 'bid': self.bid, 'ask': self.ask, 'timestamp': self.timestamp}
@@ -149,6 +159,19 @@ cdef class Liquidation:
         self.timestamp = timestamp
         self.raw = raw
 
+    @staticmethod
+    def from_dict(data: dict) -> Liquidation:
+        return Liquidation(
+            data['exchange'],
+            data['symbol'],
+            data['side'],
+            Decimal(data['quantity']),
+            Decimal(data['price']),
+            data['id'],
+            data['status'],
+            data['timestamp'],
+        )
+
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
             data = {'exchange': self.exchange, 'symbol': self.symbol, 'side': self.side, 'quantity': self.quantity, 'price': self.price, 'id': self.id, 'status': self.status, 'timestamp': self.timestamp}
@@ -190,6 +213,18 @@ cdef class Funding:
         self.next_funding_time = next_funding_time
         self.timestamp = timestamp
         self.raw = raw
+
+    @staticmethod
+    def from_dict(data: dict) -> Funding:
+        return Funding(
+            data['exchange'],
+            data['symbol'],
+            Decimal(data['mark_price']) if data['mark_price'] else data['mark_price'],
+            Decimal(data['rate']) if data['rate'] else data['rate'],
+            data['next_funding_time'],
+            data['timestamp'],
+            predicted_rate=Decimal(data['predicted_rate']) if data['predicted_rate'] else data['predicted_rate'],
+        )
 
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
@@ -247,6 +282,24 @@ cdef class Candle:
         self.closed = closed
         self.timestamp = timestamp
         self.raw = raw
+
+    @staticmethod
+    def from_dict(data: dict) -> Candle:
+        return Candle(
+            data['exchange'],
+            data['symbol'],
+            data['start'],
+            data['stop'],
+            data['interval'],
+            data['trades'],
+            Decimal(data['open']),
+            Decimal(data['close']),
+            Decimal(data['high']),
+            Decimal(data['low']),
+            Decimal(data['volume']),
+            data['closed'],
+            data['timestamp'],
+        )
 
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
