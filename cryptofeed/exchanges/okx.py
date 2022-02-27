@@ -16,8 +16,8 @@ import base64
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKEX, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT
-from cryptofeed.exchanges.mixins.okex_rest import OKExRestMixin
+from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKX as OKX_str, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT
+from cryptofeed.exchanges.mixins.okx_rest import OKXRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
@@ -27,8 +27,8 @@ from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Li
 LOG = logging.getLogger("feedhandler")
 
 
-class OKEx(Feed, OKExRestMixin):
-    id = OKEX
+class OKX(Feed, OKXRestMixin):
+    id = OKX_str
     websocket_channels = {
         L2_BOOK: 'books-l2-tbt',
         TRADES: 'trades',
@@ -39,10 +39,10 @@ class OKEx(Feed, OKExRestMixin):
         ORDER_INFO: 'orders',
     }
     websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]), options={'compression': None}),
-        WebsocketEndpoint('wss://ws.okex.com:8443/ws/v5/private', channel_filter=(websocket_channels[ORDER_INFO],), options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]), options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/private', channel_filter=(websocket_channels[ORDER_INFO],), options={'compression': None}),
     ]
-    rest_endpoints = [RestEndpoint('https://www.okex.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
+    rest_endpoints = [RestEndpoint('https://www.okx.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
     request_limit = 20
 
     @classmethod
@@ -403,20 +403,20 @@ class OKEx(Feed, OKExRestMixin):
 
     def _auth(self, key_id, key_secret) -> str:
         timestamp, sign = self._generate_token(key_id, key_secret)
-        login_param = {"op": "login", "args": [{"apiKey": self.key_id, "passphrase": self.config.okex.key_passphrase, "timestamp": timestamp, "sign": sign.decode("utf-8")}]}
+        login_param = {"op": "login", "args": [{"apiKey": self.key_id, "passphrase": self.key_passphrase, "timestamp": timestamp, "sign": sign.decode("utf-8")}]}
         return login_param
 
     def build_subscription(self, channel: str, ticker: str) -> dict:
         if channel in ['positions', 'orders']:
             subscription_dict = {"channel": channel,
-                                 "instType": self.inst_type_to_okex_type(ticker),
+                                 "instType": self.inst_type_to_okx_type(ticker),
                                  "instId": ticker}
         else:
             subscription_dict = {"channel": channel,
                                  "instId": ticker}
         return subscription_dict
 
-    def inst_type_to_okex_type(self, ticker):
+    def inst_type_to_okx_type(self, ticker):
         sym = self.exchange_symbol_to_std_symbol(ticker)
         instrument_type = self.instrument_type(sym)
         instrument_type_map = {

@@ -13,7 +13,7 @@ import ast
 from yapic import json
 from aiofile import AIOFile
 
-from cryptofeed.defines import HUOBI, UPBIT, OKEX, OKCOIN
+from cryptofeed.defines import HUOBI, UPBIT, OKX, OKCOIN
 from cryptofeed.exchanges import EXCHANGE_MAP
 
 
@@ -120,7 +120,7 @@ async def _playback(feed: str, filenames: list, callbacks: dict, config: str):
                     timestamp, message = line.split(": ", 1)
                     counter += 1
 
-                    if OKCOIN in filename or OKEX in filename:
+                    if OKCOIN in filename or OKX in filename:
                         if message.startswith('b\'') or message.startswith('b"'):
                             message = bytes_string_to_bytes(message)
                     elif HUOBI in filename:

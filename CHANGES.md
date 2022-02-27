@@ -242,7 +242,7 @@
   * Bugfix: Fix issue using AsyncFile callback to store raw data
   * Testing: Add exchange tests for Deribit and Binance
   * Bugfix: Fix symbol issue in Bitmex when initializing the orderbook
-  * Bugfix: Fix various issues with FTX, OKCOIN/OKEX and Huobi symbol generation
+  * Bugfix: Fix various issues with FTX, OKCOIN/OKX and Huobi symbol generation
   * Testing: Overhaul exchange tests, all exchanges are now tested with real data. Fixed various bugs as a result of this testing. Revamped AsyncFileCallback.
              Added new tool to generate test data for testing.
   * Bugfix: Improve connection cleanup in AsyncConnection object
@@ -250,7 +250,7 @@
   * Bugfix: Fix redis backends that can't handle None
   * Bugfix: Connection exceptions being ignored in Feedhandler
   * Bugfix: Binance address generation correction
-  * Bugfix: OKEX symbol generation incorrect + validate symbols used for channels that dont support all types
+  * Bugfix: OKX symbol generation incorrect + validate symbols used for channels that dont support all types
   * Breaking Change: Large rewrite of Feedhandler, Connection, and Feed. Many timeout related options moved from feedhandler to Feed. Symbol specific code
                      moved to exchange class. Rewrite of raw data collection.
   * Feature: Candle support for Huobi
@@ -287,7 +287,7 @@
   * Bugfix: Ignore untradeable symbols in Binance symbol generation
   * Feature: Add backend support for queues in Postgres. Rework postgres backend and supply example SQL file to create tables for demo
   * Bugfix: Fix ByBit symbol generation
-  * Feature: Authenticated channel support for OKEX/OKCOIN
+  * Feature: Authenticated channel support for OKX/OKCOIN
   * Update: Poloniex changed signaure of ticker data
   * Feature: Candles for Binance Futures
   * Feature: Premium Index Candle support for Binance Futures
@@ -345,9 +345,9 @@
   * Feature: KrakenFutures sequence number check added
   * Feature: Add optional caching to postgres backend
   * Feature: New Exchange - Binance Delivery
-  * Feature: Liquidation for OKEX
+  * Feature: Liquidation for OKX
   * Bugfix: Adjust ping interval on websocket connection, some exchanges require pings more frequently
-  * Feature: Checksum validation for orderbooks on OKEX and OKCoin
+  * Feature: Checksum validation for orderbooks on OKX and OKCoin
   * Feature: Use rotating log handler
   * Bugfix: Later versions of aiokafka break kafka backend
   * Bugfix: Huobi sends empty book updates for delisted pairs
@@ -458,7 +458,7 @@
   * Feature: Deribit Funding
   * Bugfix: Deribit subscriptions using config subscribed to symbols incorrectly
   * Bugfix: Some RabbitMQ messages were missing symbol and exchange data
-  * Feature: Open interest data for OKEX swaps
+  * Feature: Open interest data for OKX swaps
 
 ### 1.1.0 (2019-11-14)
   * Feature: User enabled logging of exchange messages on error

@@ -38,7 +38,7 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Kraken Futures|               | x                |                |       |
 | KuCoin        |               | x                |                |       |
 | OKCoin        |  x            |                  |                |       |
-| OKEX          |  x            |                  |                |       |
+| OKX          |  x            |                  |                |       |
 | Phemex        |               |                  |                |       |
 | Poloniex      |               | x                |                |       |
 | Probit        |               |                  |                |       |

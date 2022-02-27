@@ -58,7 +58,7 @@ setup(
               "fmfw.io", "Bitfinex", "bitFlyer", "AscendEX", "Bitstamp", "Bittrex", "Blockchain.com", "Bybit",
               "Binance", "Binance Delivery", "Binance Futures", "Binance US", "BitMEX", "Coinbase", "Deribit", "EXX",
               "FTX", "FTX US", "Gate.io", "Gemini", "HitBTC", "Huobi", "Huobi DM", "Huobi Swap", "Kraken",
-              "Kraken Futures", "OKCoin", "OKEx", "Poloniex", "ProBit", "Upbit"],
+              "Kraken Futures", "OKCoin", "OKX", "Poloniex", "ProBit", "Upbit"],
     url="https://github.com/bmoscon/cryptofeed",
     packages=find_packages(exclude=['tests*']),
     cmdclass={'test': Test},
