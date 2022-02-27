@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.2.1
+### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMex
  * Bugfix: Datetime/Timestamp conversion fixes
  * Feature: Add support for Huobi Linear Swaps
@@ -10,6 +10,9 @@
  * Update: Revamp Coinbase authenticated REST endpoints; change to use the Cython data types
  * Feature: Add from_dict static method in Cython types to support creation of object from dict (for serialization/deserialization)
  * Feature: New QuestDB backend
+ * Update: Exchange name change OKEx -> OKX
+ * Bugfix: OKX candle REST code was setting values incorrectly
+ * Update: OKX now uses v5 for all connections (REST and WS). Update endpoints to new exchange name: okexx.com -> okx.com
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
