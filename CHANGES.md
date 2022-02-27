@@ -12,7 +12,7 @@
  * Feature: New QuestDB backend
  * Update: Exchange name change OKEx -> OKX
  * Bugfix: OKX candle REST code was setting values incorrectly
- * Update: OKX now uses v5 for all connections (REST and WS). Update endpoints to new exchange name: okexx.com -> okx.com
+ * Update: OKX now uses v5 for all connections (REST and WS). Update endpoints to new exchange name: okex.com -> okx.com
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
