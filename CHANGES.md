@@ -1,7 +1,7 @@
 ## Changelog
 
 ### 2.2.1 (2022-02-27)
- * Feature: Support for order info stream on BitMex
+ * Feature: Support for order info stream on BitMEX
  * Bugfix: Datetime/Timestamp conversion fixes
  * Feature: Add support for Huobi Linear Swaps
  * Update: Change Coinbase REST calls to use Ticker and Trade data types
