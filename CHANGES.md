@@ -9,6 +9,7 @@
  * Bugfix: retry kwargs were not correctly passed through to the async HTTP connection handler in Coinbase REST methods
  * Update: Revamp Coinbase authenticated REST endpoints; change to use the Cython data types
  * Feature: Add from_dict static method in Cython types to support creation of object from dict (for serialization/deserialization)
+ * Feature: New QuestDB backend
  
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
