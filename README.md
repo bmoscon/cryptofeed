@@ -144,6 +144,7 @@ Supported Backends:
 * PostgreSQL
 * GCP Pub/Sub
 * [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)
+* [QuestDB](https://questdb.io/)
 
 
 ## Installation
