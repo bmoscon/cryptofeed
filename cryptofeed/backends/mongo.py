@@ -25,11 +25,6 @@ class MongoCallback(BackendQueue):
         self.exited = False
         self.writer_interval = writer_interval
 
-    async def stop(self):
-        self.running = False
-        while not self.exited:
-            await asyncio.sleep(0.1)
-
     async def write(self, data: dict):
         data['timestamp'] = dt.fromtimestamp(data['timestamp'], tz=timezone.utc) if data['timestamp'] else None
         data['receipt_timestamp'] = dt.fromtimestamp(data['receipt_timestamp'], tz=timezone.utc) if data['receipt_timestamp'] else None
@@ -41,15 +36,11 @@ class MongoCallback(BackendQueue):
 
     async def writer(self):
         while self.running:
-            count = self.queue.qsize()
-            if count == 0:
-                await asyncio.sleep(self.writer_interval)
-            elif count > 1:
-                async with self.read_many_queue(count) as updates:
-                    await self.db[self.collection].insert_many(updates)
-            else:
-                async with self.read_queue() as update:
-                    await self.db[self.collection].insert_one(update)
+            async with self.read_queue() as updates:
+                if updates[-1] == 'STOP':
+                    self.running = False
+                    break
+                await self.db[self.collection].insert_many(updates)
         self.exited = True
 
 

@@ -6,40 +6,92 @@ associated with this software.
 '''
 import asyncio
 from asyncio.queues import Queue
+from multiprocessing import Pipe, Process
 from contextlib import asynccontextmanager
+from signal import SIGABRT, SIGINT, SIGTERM
+
+try:
+    # unix / macos only
+    from signal import SIGHUP
+    SIGNALS = (SIGABRT, SIGINT, SIGTERM, SIGHUP)
+except ImportError:
+    SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
 
 class BackendQueue:
-    def start(self, loop: asyncio.AbstractEventLoop):
+    def start(self, loop: asyncio.AbstractEventLoop, multiprocess=False):
         if hasattr(self, 'started') and self.started:
             # prevent a backend callback from starting more than 1 writer and creating more than 1 queue
             return
-        self.queue = Queue()
-        loop.create_task(self.writer())
+        print("multiprocess", multiprocess)
+        self.multiprocess = multiprocess
+        if self.multiprocess:
+            self.queue = Pipe(duplex=False)
+            self.worker = Process(target=BackendQueue.worker, args=(self.writer,), daemon=True)
+            self.worker.start()
+        else:
+            self.queue = Queue()
+            self.worker = loop.create_task(self.writer())
         self.started = True
+    
+    async def stop(self):
+        print("Calling Stop")
+        if self.multiprocess:
+            self.queue[1].send('STOP')
+            print("Join")
+            self.worker.join()
+            print("Joined")
+        else:
+            self.queue.put("STOP")
+        self.running = False
+    
+    @staticmethod
+    def worker(writer):
+        def setup_signal_handlers(loop):
+            def handle_stop_signals(*args):
+                print("RCVD SIGNAL")
+                pass
+            
+            for sig in SIGNALS:
+                loop.add_signal_handler(sig, handle_stop_signals)
+        try:
+            loop = asyncio.new_event_loop()
+            setup_signal_handlers(loop)
+            loop.run_until_complete(writer())
+        except KeyboardInterrupt:
+            pass
 
     async def writer(self):
         raise NotImplementedError
+    
+    async def write(self, data):
+        if self.multiprocess:
+            self.queue[1].send(data)
+        else:
+            await self.queue.put(data)
 
     @asynccontextmanager
-    async def read_queue(self):
-        update = await self.queue.get()
-        yield update
-        self.queue.task_done()
+    async def read_queue(self) -> list:
+        if self.multiprocess:
+            yield [self.queue[0].recv()]
+        else:
+            current_depth = self.queue.qsize()
+            if current_depth == 0:
+                update = await self.queue.get()
+                yield [update]
+                self.queue.task_done()
+            else:
+                ret = []
+                count = 0
+                while current_depth > count:
+                    update = await self.queue.get()
+                    ret.append(update)
+                    count += 1
 
-    @asynccontextmanager
-    async def read_many_queue(self, count: int):
-        ret = []
-        counter = 0
-        while counter < count:
-            update = await self.queue.get()
-            ret.append(update)
-            counter += 1
+                yield ret
 
-        yield ret
-
-        for _ in range(count):
-            self.queue.task_done()
+                for _ in range(count):
+                    self.queue.task_done()
 
 
 class BackendCallback:

@@ -69,21 +69,26 @@ class SocketCallback(BackendQueue):
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.key = key if key else self.default_key
+        self.running = True
 
     async def writer(self):
-        while True:
+        while self.running:
             await self.connect()
-            async with self.read_queue() as update:
-                if self.conn_type == 'udp://':
-                    if len(update) > self.mtu:
-                        chunks = wrap(update, self.mtu)
-                        for chunk in chunks:
-                            msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
-                            self.conn.sendto(msg)
+            async with self.read_queue() as updates:
+                for update in updates:
+                    if update == 'STOP':
+                        self.running = False
+                        continue
+                    if self.conn_type == 'udp://':
+                        if len(update) > self.mtu:
+                            chunks = wrap(update, self.mtu)
+                            for chunk in chunks:
+                                msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
+                                self.conn.sendto(msg)
+                        else:
+                            self.conn.sendto(update.encode())
                     else:
-                        self.conn.sendto(update.encode())
-                else:
-                    self.conn.write(update.encode())
+                        self.conn.write(update.encode())
 
     async def connect(self):
         if not self.conn:

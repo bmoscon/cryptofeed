@@ -23,6 +23,7 @@ class ZMQCallback(BackendQueue):
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.dynamic_key = dynamic_key
+        self.running = True
 
     async def write(self, data: dict):
         if self.dynamic_key:
@@ -31,9 +32,13 @@ class ZMQCallback(BackendQueue):
             await self.queue.put(f'{self.key} {json.dumps(data)}')
 
     async def writer(self):
-        while True:
-            async with self.read_queue() as update:
-                await self.con.send_string(update)
+        while self.running:
+            async with self.read_queue() as updates:
+                for update in updates:
+                    if update == 'STOP':
+                        self.running = False
+                        continue
+                    await self.con.send_string(update)
 
 
 class TradeZMQ(ZMQCallback, BackendCallback):

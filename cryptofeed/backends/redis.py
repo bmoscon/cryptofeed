@@ -28,18 +28,13 @@ class RedisCallback(BackendQueue):
         if socket:
             prefix = 'unix://'
 
-        self.redis = aioredis.from_url(f"{prefix}{host}:{port}")
+        self.redis = f"{prefix}{host}:{port}"
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.running = True
         self.exited = False
         self.writer_interval = writer_interval
-
-    async def stop(self):
-        self.running = False
-        while not self.exited:
-            await asyncio.sleep(0.1)
 
 
 class RedisZSetCallback(RedisCallback):
@@ -53,53 +48,42 @@ class RedisZSetCallback(RedisCallback):
         self.score_key = score_key
         super().__init__(host=host, port=port, socket=socket, key=key, numeric_type=numeric_type, **kwargs)
 
-    async def write(self, data: dict):
-        score = data[self.score_key]
-        await self.queue.put({'score': score, 'data': data})
-
     async def writer(self):
-        while self.running:
+        conn = aioredis.from_url(self.redis)
 
-            count = self.queue.qsize()
-            if count == 0:
-                await asyncio.sleep(self.writer_interval)
-            elif count > 1:
-                async with self.read_many_queue(count) as updates:
-                    async with self.redis.pipeline(transaction=False) as pipe:
-                        for update in updates:
-                            pipe = pipe.zadd(f"{self.key}-{update['data']['exchange']}-{update['data']['symbol']}", {json.dumps(update['data']): update['score']}, nx=True)
-                        await pipe.execute()
-            else:
-                async with self.read_queue() as update:
-                    await self.redis.zadd(f"{self.key}-{update['data']['exchange']}-{update['data']['symbol']}", {json.dumps(update['data']): update['score']}, nx=True)
-
-        await self.redis.close()
-        await self.redis.connection_pool.disconnect()
+        while self.running:   
+            async with self.read_queue() as updates:
+                async with conn.pipeline(transaction=False) as pipe:
+                    for update in updates:
+                        if update == 'STOP':
+                            print("GOT EXIT MSG")
+                            self.running = False
+                            continue
+                        pipe = pipe.zadd(f"{self.key}-{update['exchange']}-{update['symbol']}", {json.dumps(update): update[self.score_key]}, nx=True)
+                    await pipe.execute()
+        print("Exiting")
+           
+        await conn.close()
+        await conn.connection_pool.disconnect()
         self.exited = True
 
 
 class RedisStreamCallback(RedisCallback):
-    async def write(self, data: dict):
-        await self.queue.put(data)
-
     async def writer(self):
+        conn = aioredis.from_url(self.redis)
+
         while self.running:
+            async with self.read_queue() as updates:
+                async with conn.pipeline(transaction=False) as pipe:
+                    for update in updates:
+                        if update == 'STOP':
+                            self.running = False
+                            continue
+                        pipe = pipe.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
+                    await pipe.execute()
 
-            count = self.queue.qsize()
-            if count == 0:
-                await asyncio.sleep(self.writer_interval)
-            elif count > 1:
-                async with self.read_many_queue(count) as updates:
-                    async with self.redis.pipeline(transaction=False) as pipe:
-                        for update in updates:
-                            pipe = pipe.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
-                        await pipe.execute()
-            else:
-                async with self.read_queue() as update:
-                    await self.redis.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
-
-        await self.redis.close()
-        await self.redis.connection_pool.disconnect()
+        await conn.close()
+        await conn.connection_pool.disconnect()
         self.exited = True
 
 

@@ -21,14 +21,12 @@ class QuestCallback(SocketCallback):
         self.none_to = None
 
     async def writer(self):
+        await self.connect()
         while True:
-            await self.connect()
-            count = self.queue.qsize()
-            if count == 0:
-                count = 1
-
-            async with self.read_many_queue(count) as update:
-                update = "\n".join(update) + "\n"
+            async with self.read_queue() as updates:
+                if updates[-1] == 'STOP':
+                    break
+                update = "\n".join(updates) + "\n"
                 self.conn.write(update.encode())
 
     async def write(self, data):

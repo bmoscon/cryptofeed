@@ -16,7 +16,7 @@ from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, 
 
 
 class PostgresCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, custom_columns: dict = None, none_to=None, numeric_type=float, max_batch=100, **kwargs):
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, custom_columns: dict = None, none_to=None, numeric_type=float, **kwargs):
         """
         host: str
             Database host address
@@ -32,8 +32,6 @@ class PostgresCallback(BackendQueue):
             A dictionary which maps Cryptofeed's data type fields to Postgres's table column names, e.g. {'symbol': 'instrument', 'price': 'price', 'amount': 'size'}
             Can be a subset of Cryptofeed's available fields (see the cdefs listed under each data type in types.pyx). Can be listed any order.
             Note: to store BOOK data in a JSONB column, include a 'data' field, e.g. {'symbol': 'symbol', 'data': 'json_data'}
-        max_batch: int
-            Maximum batch size to use when writing rows to postgres
         """
         self.conn = None
         self.table = table if table else self.default_table
@@ -45,10 +43,10 @@ class PostgresCallback(BackendQueue):
         self.pw = pw
         self.host = host
         self.port = port
-        self.max_batch = max_batch
         # Parse INSERT statement with user-specified column names
         # Performed at init to avoid repeated list joins
         self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
+        self.running = True
 
     async def _connect(self):
         if self.conn is None:
@@ -82,10 +80,10 @@ class PostgresCallback(BackendQueue):
         return f"({sql_string})"
 
     async def writer(self):
-        while True:
-            size = max(self.queue.qsize(), 1)
-            size = min(self.max_batch, size)
-            async with self.read_many_queue(size) as updates:
+        while self.running:
+            async with self.read_queue() as updates:
+                if updates[-1] == 'STOP':
+                    break
                 await self.write_batch(updates)
 
     async def write(self, data: dict):
@@ -107,11 +105,6 @@ class PostgresCallback(BackendQueue):
             except asyncpg.UniqueViolationError:
                 # when restarting a subscription, some exchanges will re-publish a few messages
                 pass
-
-    async def stop(self):
-        if self.queue.qsize() > 0:
-            async with self.read_many_queue(self.queue.qsize()) as updates:
-                await self.write_batch(updates)
 
 
 class TradePostgres(PostgresCallback, BackendCallback):
