@@ -32,7 +32,7 @@ class ZMQCallback(BackendQueue):
                     if self.dynamic_key:
                         update = f'{update["exchange"]}-{self.key}-{update["symbol"]} {json.dumps(update)}'
                     else:
-                       update = f'{self.key} {json.dumps(update)}'
+                        update = f'{self.key} {json.dumps(update)}'
                     await con.send_string(update)
 
 

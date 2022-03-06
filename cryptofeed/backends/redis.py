@@ -13,15 +13,11 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, Ba
 
 
 class RedisCallback(BackendQueue):
-    def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, none_to='None', numeric_type=float, writer_interval=0.01, **kwargs):
+    def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, none_to='None', numeric_type=float, **kwargs):
         """
         setting key lets you override the prefix on the
         key used in redis. The defaults are related to the data
         being stored, i.e. trade, funding, etc
-
-        writer_interval: float
-            the frequency writer sleeps when there is nothing in the queue.
-            0 consumes a lot of CPU, while large interval puts pressure on queue.
         """
         prefix = 'redis://'
         if socket:
@@ -32,7 +28,6 @@ class RedisCallback(BackendQueue):
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.running = True
-        self.writer_interval = writer_interval
 
 
 class RedisZSetCallback(RedisCallback):
@@ -49,13 +44,13 @@ class RedisZSetCallback(RedisCallback):
     async def writer(self):
         conn = aioredis.from_url(self.redis)
 
-        while self.running:   
+        while self.running:
             async with self.read_queue() as updates:
                 async with conn.pipeline(transaction=False) as pipe:
                     for update in updates:
                         pipe = pipe.zadd(f"{self.key}-{update['exchange']}-{update['symbol']}", {json.dumps(update): update[self.score_key]}, nx=True)
                     await pipe.execute()
-           
+
         await conn.close()
         await conn.connection_pool.disconnect()
 
@@ -115,7 +110,7 @@ class BookStream(RedisStreamCallback, BackendBookCallback):
         self.snapshots_only = snapshots_only
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
-        super().__init__(*args, **kwargs)        
+        super().__init__(*args, **kwargs)
 
 
 class TickerRedis(RedisZSetCallback, BackendCallback):

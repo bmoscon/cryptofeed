@@ -73,7 +73,7 @@ class InfluxCallback(HTTPCallback):
             else:
                 ret.append(f'{key}={value}')
         return ','.join(ret)
-    
+
     async def writer(self):
         while self.running:
             async with self.read_queue() as updates:
@@ -81,7 +81,7 @@ class InfluxCallback(HTTPCallback):
                     d = self.format(update)
                     timestamp = update["timestamp"]
                     timestamp_str = f',timestamp={timestamp}' if timestamp is not None else ''
-                    
+
                     if 'interval' in update:
                         trades = f',trades={update["trades"]},' if update['trades'] else ','
                         update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]},interval={update["interval"]} start={update["start"]},stop={update["stop"]}{trades}open={update["open"]},close={update["close"]},high={update["high"]},low={update["low"]},volume={update["volume"]}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
@@ -90,7 +90,7 @@ class InfluxCallback(HTTPCallback):
 
                     await self.http_write(update, headers=self.headers)
         await self.session.close()
-         
+
 
 class TradeInflux(InfluxCallback, BackendCallback):
     default_key = 'trades'

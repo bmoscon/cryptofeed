@@ -76,7 +76,7 @@ class SocketCallback(BackendQueue):
             await self.connect()
             async with self.read_queue() as updates:
                 for update in updates:
-                    data = {'type': self.key, 'data': data}
+                    data = {'type': self.key, 'data': update}
                     data = json.dumps(data)
                     if self.conn_type == 'udp://':
                         if len(update) > self.mtu:
@@ -98,7 +98,7 @@ class SocketCallback(BackendQueue):
             elif self.conn_type == 'tcp://':
                 _, self.conn = await asyncio.open_connection(host=self.addr, port=self.port)
             elif self.conn_type == 'uds://':
-                _, self.conn = await asyncio.open_unix_connection(path=self.addr)       
+                _, self.conn = await asyncio.open_unix_connection(path=self.addr)
 
 
 class TradeSocket(SocketCallback, BackendCallback):

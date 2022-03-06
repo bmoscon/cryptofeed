@@ -36,7 +36,7 @@ class BackendQueue:
             self.queue = Queue()
             self.worker = loop.create_task(self.writer())
         self.started = True
-    
+
     async def stop(self):
         print("Calling Stop")
         if self.multiprocess:
@@ -47,14 +47,14 @@ class BackendQueue:
         else:
             await self.queue.put(SHUTDOWN_SENTINEL)
         self.running = False
-    
+
     @staticmethod
     def worker(writer):
         def setup_signal_handlers(loop):
             def handle_stop_signals(*args):
                 print("RCVD SIGNAL")
                 pass
-            
+
             for sig in SIGNALS:
                 loop.add_signal_handler(sig, handle_stop_signals)
         try:
@@ -66,7 +66,7 @@ class BackendQueue:
 
     async def writer(self):
         raise NotImplementedError
-    
+
     async def write(self, data):
         if self.multiprocess:
             self.queue[1].send(data)

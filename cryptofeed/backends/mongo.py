@@ -4,7 +4,6 @@ Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 from collections import defaultdict
 from datetime import timezone, datetime as dt
 
@@ -15,7 +14,7 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, Ba
 
 
 class MongoCallback(BackendQueue):
-    def __init__(self, db, host='127.0.0.1', port=27017, key=None, none_to=None, numeric_type=str, writer_interval=0.01, **kwargs):
+    def __init__(self, db, host='127.0.0.1', port=27017, key=None, none_to=None, numeric_type=str, **kwargs):
         self.host = host
         self.port = port
         self.db = db
@@ -23,7 +22,6 @@ class MongoCallback(BackendQueue):
         self.none_to = none_to
         self.collection = key if key else self.default_key
         self.running = True
-        self.writer_interval = writer_interval       
 
     async def writer(self):
         conn = motor.motor_asyncio.AsyncIOMotorClient(self.host, self.port)

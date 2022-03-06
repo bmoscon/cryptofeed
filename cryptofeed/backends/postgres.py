@@ -88,7 +88,7 @@ class PostgresCallback(BackendQueue):
                         ts = dt.utcfromtimestamp(data['timestamp']) if data['timestamp'] else None
                         rts = dt.utcfromtimestamp(data['receipt_timestamp'])
                         batch.append((data['exchange'], data['symbol'], ts, rts, data))
-                    await self.write_batch(batch)        
+                    await self.write_batch(batch)
 
     async def write_batch(self, updates: list):
         await self._connect()
