@@ -82,14 +82,13 @@ class PostgresCallback(BackendQueue):
     async def writer(self):
         while self.running:
             async with self.read_queue() as updates:
-                if updates[-1] == 'STOP':
-                    break
-                await self.write_batch(updates)
-
-    async def write(self, data: dict):
-        ts = dt.utcfromtimestamp(data['timestamp']) if data['timestamp'] else None
-        rts = dt.utcfromtimestamp(data['receipt_timestamp'])
-        await self.queue.put((data['exchange'], data['symbol'], ts, rts, data))
+                if len(updates) > 0:
+                    batch = []
+                    for data in updates:
+                        ts = dt.utcfromtimestamp(data['timestamp']) if data['timestamp'] else None
+                        rts = dt.utcfromtimestamp(data['receipt_timestamp'])
+                        batch.append((data['exchange'], data['symbol'], ts, rts, data))
+                    await self.write_batch(batch)        
 
     async def write_batch(self, updates: list):
         await self._connect()

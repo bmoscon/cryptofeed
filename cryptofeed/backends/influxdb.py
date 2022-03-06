@@ -61,6 +61,7 @@ class InfluxCallback(HTTPCallback):
         self.key = key if key else self.default_key
         self.numeric_type = float
         self.none_to = None
+        self.running = True
 
     def format(self, data):
         ret = []
@@ -72,14 +73,24 @@ class InfluxCallback(HTTPCallback):
             else:
                 ret.append(f'{key}={value}')
         return ','.join(ret)
+    
+    async def writer(self):
+        while self.running:
+            async with self.read_queue() as updates:
+                for update in updates:
+                    d = self.format(update)
+                    timestamp = update["timestamp"]
+                    timestamp_str = f',timestamp={timestamp}' if timestamp is not None else ''
+                    
+                    if 'interval' in update:
+                        trades = f',trades={update["trades"]},' if update['trades'] else ','
+                        update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]},interval={update["interval"]} start={update["start"]},stop={update["stop"]}{trades}open={update["open"]},close={update["close"]},high={update["high"]},low={update["low"]},volume={update["volume"]}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
+                    else:
+                        update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]} {d}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
 
-    async def write(self, data):
-        d = self.format(data)
-        timestamp = data["timestamp"]
-        timestamp_str = f',timestamp={timestamp}' if timestamp is not None else ''
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]} {d}{timestamp_str},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1000000)}'
-        await self.queue.put({'data': update, 'headers': self.headers})
-
+                    await self.http_write(update, headers=self.headers)
+        await self.session.close()
+         
 
 class TradeInflux(InfluxCallback, BackendCallback):
     default_key = 'trades'
@@ -124,10 +135,3 @@ class LiquidationsInflux(InfluxCallback, BackendCallback):
 
 class CandlesInflux(InfluxCallback, BackendCallback):
     default_key = 'candles'
-
-    async def write(self, data):
-        timestamp = data["timestamp"]
-        timestamp_str = f',timestamp={timestamp}' if timestamp is not None else ''
-        trades = f',trades={data["trades"]},' if data['trades'] else ','
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},interval={data["interval"]} start={data["start"]},stop={data["stop"]}{trades}open={data["open"]},close={data["close"]},high={data["high"]},low={data["low"]},volume={data["volume"]}{timestamp_str},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1000000)}'
-        await self.queue.put({'data': update, 'headers': self.headers})

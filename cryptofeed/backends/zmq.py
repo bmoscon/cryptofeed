@@ -15,30 +15,25 @@ from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, Backe
 
 class ZMQCallback(BackendQueue):
     def __init__(self, host='127.0.0.1', port=5555, none_to=None, numeric_type=float, key=None, dynamic_key=True, **kwargs):
-        url = "tcp://{}:{}".format(host, port)
-        ctx = zmq.asyncio.Context.instance()
-        self.con = ctx.socket(zmq.PUB)
-        self.con.connect(url)
+        self.url = "tcp://{}:{}".format(host, port)
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.dynamic_key = dynamic_key
         self.running = True
 
-    async def write(self, data: dict):
-        if self.dynamic_key:
-            await self.queue.put(f'{data["exchange"]}-{self.key}-{data["symbol"]} {json.dumps(data)}')
-        else:
-            await self.queue.put(f'{self.key} {json.dumps(data)}')
-
     async def writer(self):
+        ctx = zmq.asyncio.Context.instance()
+        con = ctx.socket(zmq.PUB)
+        con.connect(self.url)
         while self.running:
             async with self.read_queue() as updates:
                 for update in updates:
-                    if update == 'STOP':
-                        self.running = False
-                        continue
-                    await self.con.send_string(update)
+                    if self.dynamic_key:
+                        update = f'{update["exchange"]}-{self.key}-{update["symbol"]} {json.dumps(update)}'
+                    else:
+                       update = f'{self.key} {json.dumps(update)}'
+                    await con.send_string(update)
 
 
 class TradeZMQ(ZMQCallback, BackendCallback):

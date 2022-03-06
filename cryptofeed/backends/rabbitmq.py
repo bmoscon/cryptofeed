@@ -27,7 +27,7 @@ class RabbitCallback:
             name of AMQP exchange
         exchange_type: str
             exchange type
-            String values must be one of ‘fanout’, ‘direct’, ‘topic’, ‘headers’, ‘x-delayed-message’, ‘x-consistent-hash'
+            String values must be one of 'fanout', 'direct', 'topic', 'headers', 'x-delayed-message', 'x-consistent-hash'
         routing_key: str
             definable amqp routing key
         """

@@ -5,7 +5,6 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
-import asyncio
 
 import aioredis
 from yapic import json
@@ -33,7 +32,6 @@ class RedisCallback(BackendQueue):
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.running = True
-        self.exited = False
         self.writer_interval = writer_interval
 
 
@@ -55,17 +53,11 @@ class RedisZSetCallback(RedisCallback):
             async with self.read_queue() as updates:
                 async with conn.pipeline(transaction=False) as pipe:
                     for update in updates:
-                        if update == 'STOP':
-                            print("GOT EXIT MSG")
-                            self.running = False
-                            continue
                         pipe = pipe.zadd(f"{self.key}-{update['exchange']}-{update['symbol']}", {json.dumps(update): update[self.score_key]}, nx=True)
                     await pipe.execute()
-        print("Exiting")
            
         await conn.close()
         await conn.connection_pool.disconnect()
-        self.exited = True
 
 
 class RedisStreamCallback(RedisCallback):
@@ -76,15 +68,18 @@ class RedisStreamCallback(RedisCallback):
             async with self.read_queue() as updates:
                 async with conn.pipeline(transaction=False) as pipe:
                     for update in updates:
-                        if update == 'STOP':
-                            self.running = False
-                            continue
+                        if 'delta' in update:
+                            update['delta'] = json.dumps(update['delta'])
+                        elif 'book' in update:
+                            update['book'] = json.dumps(update['book'])
+                        elif 'closed' in update:
+                            update['closed'] = str(update['closed'])
+
                         pipe = pipe.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
                     await pipe.execute()
 
         await conn.close()
         await conn.connection_pool.disconnect()
-        self.exited = True
 
 
 class TradeRedis(RedisZSetCallback, BackendCallback):
@@ -120,15 +115,7 @@ class BookStream(RedisStreamCallback, BackendBookCallback):
         self.snapshots_only = snapshots_only
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
-        super().__init__(*args, **kwargs)
-
-    async def write(self, data: dict):
-        if 'delta' in data:
-            data['delta'] = json.dumps(data['delta'])
-        elif 'book' in data:
-            data['book'] = json.dumps(data['book'])
-
-        await super().write(data)
+        super().__init__(*args, **kwargs)        
 
 
 class TickerRedis(RedisZSetCallback, BackendCallback):
@@ -161,7 +148,3 @@ class CandlesRedis(RedisZSetCallback, BackendCallback):
 
 class CandlesStream(RedisStreamCallback, BackendCallback):
     default_key = 'candles'
-
-    async def write(self, data: dict):
-        data['closed'] = str(data['closed'])
-        await super().write(data)

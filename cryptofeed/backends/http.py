@@ -20,16 +20,6 @@ class HTTPCallback(BackendQueue):
         self.session = None
         self.running = True
 
-    async def writer(self):
-        while self.running:
-            async with self.read_queue() as updates:
-                for update in updates:
-                    if update == 'STOP':
-                        self.running = False
-                        break
-                    await self.http_write(update['data'], headers=update['headers'])
-        await self.session.close()
-
     async def http_write(self, data, headers=None):
         if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()

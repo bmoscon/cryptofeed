@@ -16,32 +16,28 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, Ba
 
 class MongoCallback(BackendQueue):
     def __init__(self, db, host='127.0.0.1', port=27017, key=None, none_to=None, numeric_type=str, writer_interval=0.01, **kwargs):
-        self.conn = motor.motor_asyncio.AsyncIOMotorClient(host, port)
-        self.db = self.conn[db]
+        self.host = host
+        self.port = port
+        self.db = db
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.collection = key if key else self.default_key
         self.running = True
-        self.exited = False
-        self.writer_interval = writer_interval
-
-    async def write(self, data: dict):
-        data['timestamp'] = dt.fromtimestamp(data['timestamp'], tz=timezone.utc) if data['timestamp'] else None
-        data['receipt_timestamp'] = dt.fromtimestamp(data['receipt_timestamp'], tz=timezone.utc) if data['receipt_timestamp'] else None
-
-        if 'book' in data:
-            data = {'exchange': data['exchange'], 'symbol': data['symbol'], 'timestamp': data['timestamp'], 'receipt_timestamp': data['receipt_timestamp'], 'delta': 'delta' in data, 'bid': bson.BSON.encode(data['book']['bid'] if 'delta' not in data else data['delta']['bid']), 'ask': bson.BSON.encode(data['book']['ask'] if 'delta' not in data else data['delta']['ask'])}
-
-        await self.queue.put(data)
+        self.writer_interval = writer_interval       
 
     async def writer(self):
+        conn = motor.motor_asyncio.AsyncIOMotorClient(self.host, self.port)
+        db = conn[self.db]
         while self.running:
             async with self.read_queue() as updates:
-                if updates[-1] == 'STOP':
-                    self.running = False
-                    break
-                await self.db[self.collection].insert_many(updates)
-        self.exited = True
+                for index in range(len(updates)):
+                    updates[index]['timestamp'] = dt.fromtimestamp(updates[index]['timestamp'], tz=timezone.utc) if updates[index]['timestamp'] else None
+                    updates[index]['receipt_timestamp'] = dt.fromtimestamp(updates[index]['receipt_timestamp'], tz=timezone.utc) if updates[index]['receipt_timestamp'] else None
+
+                    if 'book' in updates[index]:
+                        updates[index] = {'exchange': updates[index]['exchange'], 'symbol': updates[index]['symbol'], 'timestamp': updates[index]['timestamp'], 'receipt_timestamp': updates[index]['receipt_timestamp'], 'delta': 'delta' in updates[index], 'bid': bson.BSON.encode(updates[index]['book']['bid'] if 'delta' not in updates[index] else updates[index]['delta']['bid']), 'ask': bson.BSON.encode(updates[index]['book']['ask'] if 'delta' not in updates[index] else updates[index]['delta']['ask'])}
+
+                await db[self.collection].insert_many(updates)
 
 
 class TradeMongo(MongoCallback, BackendCallback):

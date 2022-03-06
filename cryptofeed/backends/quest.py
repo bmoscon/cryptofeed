@@ -19,22 +19,25 @@ class QuestCallback(SocketCallback):
         self.key = key if key else self.default_key
         self.numeric_type = float
         self.none_to = None
+        self.running = True
 
     async def writer(self):
         await self.connect()
-        while True:
+        while self.running:
             async with self.read_queue() as updates:
-                if updates[-1] == 'STOP':
-                    break
-                update = "\n".join(updates) + "\n"
-                self.conn.write(update.encode())
-
-    async def write(self, data):
-        d = self.format(data)
-        timestamp = data["timestamp"]
-        timestamp_str = f',timestamp={int(timestamp * 1_000_000_000)}i' if timestamp is not None else ''
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]} {d}{timestamp_str},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1_000_000_000)}'
-        await self.queue.put(update)
+                if len(updates) > 0:
+                    batch = []
+                    for i in range(len(updates)):
+                        d = self.format(updates[i])
+                        timestamp = updates[i]["timestamp"]
+                        timestamp_str = f',timestamp={int(timestamp * 1_000_000_000)}i' if timestamp is not None else ''
+                        if 'interval' in updates[i]:
+                            trades = f',trades={updates[i]["trades"]},' if updates[i]['trades'] else ','
+                            batch.append(f'{self.key}-{updates[i]["exchange"]},symbol={updates[i]["symbol"]},interval={updates[i]["interval"]} start={updates[i]["start"]},stop={updates[i]["stop"]}{trades}open={updates[i]["open"]},close={updates[i]["close"]},high={updates[i]["high"]},low={updates[i]["low"]},volume={updates[i]["volume"]}{timestamp_str},receipt_timestamp={updates[i]["receipt_timestamp"]} {int(updates[i]["receipt_timestamp"] * 1_000_000_000)}')
+                        else:
+                            batch.append(f'{self.key}-{updates[i]["exchange"]},symbol={updates[i]["symbol"]} {d}{timestamp_str},receipt_timestamp={updates[i]["receipt_timestamp"]} {int(updates[i]["receipt_timestamp"] * 1_000_000_000)}')
+                    update = "\n".join(batch) + "\n"
+                    self.conn.write(update.encode())
 
     def format(self, data):
         ret = []
@@ -62,17 +65,6 @@ class FundingQuest(QuestCallback, BackendCallback):
 class BookQuest(QuestCallback):
     default_key = 'book'
 
-    def __init__(self, *args, depth=10, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.depth = depth
-
-    async def __call__(self, book, receipt_timestamp: float):
-        vals = ','.join([f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(self.depth)] + [f"ask{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(self.depth)])
-        timestamp = book.timestamp
-        timestamp_str = f',timestamp={int(timestamp * 1_000_000_000)}i' if timestamp is not None else ''
-        update = f'{self.key}-{book.exchange},symbol={book.symbol} {vals}{timestamp_str},receipt_timestamp={receipt_timestamp} {int(receipt_timestamp * 1_000_000_000)}'
-        await self.queue.put(update)
-
 
 class TickerQuest(QuestCallback, BackendCallback):
     default_key = 'ticker'
@@ -88,10 +80,3 @@ class LiquidationsQuest(QuestCallback, BackendCallback):
 
 class CandlesQuest(QuestCallback, BackendCallback):
     default_key = 'candles'
-
-    async def write(self, data):
-        timestamp = data["timestamp"]
-        timestamp_str = f',timestamp={int(timestamp * 1_000_000_000)}i' if timestamp is not None else ''
-        trades = f',trades={data["trades"]},' if data['trades'] else ','
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},interval={data["interval"]} start={data["start"]},stop={data["stop"]}{trades}open={data["open"]},close={data["close"]},high={data["high"]},low={data["low"]},volume={data["volume"]}{timestamp_str},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1_000_000_000)}'
-        await self.queue.put(update)

@@ -18,6 +18,9 @@ except ImportError:
     SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
 
+SHUTDOWN_SENTINEL = 'STOP'
+
+
 class BackendQueue:
     def start(self, loop: asyncio.AbstractEventLoop, multiprocess=False):
         if hasattr(self, 'started') and self.started:
@@ -37,12 +40,12 @@ class BackendQueue:
     async def stop(self):
         print("Calling Stop")
         if self.multiprocess:
-            self.queue[1].send('STOP')
+            self.queue[1].send(SHUTDOWN_SENTINEL)
             print("Join")
             self.worker.join()
             print("Joined")
         else:
-            self.queue.put("STOP")
+            await self.queue.put(SHUTDOWN_SENTINEL)
         self.running = False
     
     @staticmethod
@@ -73,20 +76,31 @@ class BackendQueue:
     @asynccontextmanager
     async def read_queue(self) -> list:
         if self.multiprocess:
-            yield [self.queue[0].recv()]
+            msg = self.queue[0].recv()
+            if msg == SHUTDOWN_SENTINEL:
+                self.running = False
+                yield []
+            else:
+                yield [msg]
         else:
             current_depth = self.queue.qsize()
             if current_depth == 0:
                 update = await self.queue.get()
-                yield [update]
+                if update == SHUTDOWN_SENTINEL:
+                    yield []
+                else:
+                    yield [update]
                 self.queue.task_done()
             else:
                 ret = []
                 count = 0
                 while current_depth > count:
                     update = await self.queue.get()
-                    ret.append(update)
                     count += 1
+                    if update == SHUTDOWN_SENTINEL:
+                        self.running = False
+                        break
+                    ret.append(update)
 
                 yield ret
 
