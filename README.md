@@ -149,7 +149,7 @@ Supported Backends:
 
 ## Installation
 
-**Note:** cryptofeed requires Python 3.7+
+**Note:** cryptofeed requires Python 3.8+
 
 Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
 
