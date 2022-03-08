@@ -342,9 +342,9 @@ class OKX(Feed, OKXRestMixin):
             BUY if msg['data'][0]['side'].lower() == 'buy' else SELL,
             status,
             o_type,
-            Decimal(msg['data'][0]['fillPx']) if msg['data'][0]['fillPx'] else Decimal(0),
-            Decimal(msg['data'][0]['fillSz']) if msg['data'][0]['fillSz'] else Decimal(0),
-            Decimal(msg['data'][0]['sz']) - Decimal(msg['data'][0]['accFillSz']) if msg['data'][0]['accFillSz'] else Decimal(0),
+            Decimal(msg['data'][0]['px']) if msg['data'][0]['px'] else Decimal(msg['data'][0]['avgPx']),
+            Decimal(msg['data'][0]['sz']),
+            Decimal(msg['data'][0]['sz']) - Decimal(msg['data'][0]['accFillSz']) if msg['data'][0]['accFillSz'] else Decimal(msg['data'][0]['sz']),
             self.timestamp_normalize(int(msg['data'][0]['uTime'])),
             raw=msg
         )
@@ -428,7 +428,7 @@ class OKX(Feed, OKXRestMixin):
         return instrument_type_map.get(instrument_type, 'MARGIN')
 
     def _get_server_time(self):
-        endpoint = "v5/public/time"
+        endpoint = "public/time"
         response = requests.get(self.api + endpoint)
         if response.status_code == 200:
             return response.json()['data'][0]['ts']
