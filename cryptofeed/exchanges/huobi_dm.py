@@ -14,7 +14,7 @@ from decimal import Decimal
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BUY, FUNDING, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BUY, FUTURES, HUOBI_DM, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade
 
@@ -135,14 +135,13 @@ class HuobiDM(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         client_id = 0
-        for chan in self.subscription:
-            if chan == FUNDING:
-                continue
-            for pair in self.subscription[chan]:
+
+        for chan, symbols in conn.subscription.items():
+            for symbol in symbols:
                 client_id += 1
                 await conn.write(json.dumps(
                     {
-                        "sub": f"market.{pair}.{chan}",
+                        "sub": f"market.{symbol}.{chan}",
                         "id": str(client_id)
                     }
                 ))

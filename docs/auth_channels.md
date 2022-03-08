@@ -5,7 +5,7 @@ Cryptofeed has support for authenticated exchanges and authenticated data channe
 | Exchange | Auth Channel | Notes |
 | ---------|--------------|-------|
 | Gemini   | ORDER_INFO   | Information about user's orders |
-| OKEX/OKCOIN | ORDER_INFO | Information about user's orders |
+| OKX/OKCOIN | ORDER_INFO | Information about user's orders |
 | Kucoin   | L2_BOOK      | Auth required to get book snapshot |
 | FTX      | FILLS        | User's filled orders |
 | Bequant, HitBTC | ORDER_INFO | User's order updates: new, suspended, partially filled, filled, cancelled, expired |

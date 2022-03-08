@@ -1,6 +1,20 @@
 ## Changelog
 
-### 2.2.0
+### 2.2.1 (2022-02-27)
+ * Feature: Support for order info stream on BitMEX
+ * Bugfix: Datetime/Timestamp conversion fixes
+ * Feature: Add support for Huobi Linear Swaps
+ * Update: Change Coinbase REST calls to use Ticker and Trade data types
+ * Bugfix: Instrument and channel filtering sometimes matched incorrectly when creating connection specific subscriptions
+ * Bugfix: retry kwargs were not correctly passed through to the async HTTP connection handler in Coinbase REST methods
+ * Update: Revamp Coinbase authenticated REST endpoints; change to use the Cython data types
+ * Feature: Add from_dict static method in Cython types to support creation of object from dict (for serialization/deserialization)
+ * Feature: New QuestDB backend
+ * Update: Exchange name change OKEx -> OKX
+ * Bugfix: OKX candle REST code was setting values incorrectly
+ * Update: OKX now uses v5 for all connections (REST and WS). Update endpoints to new exchange name: okex.com -> okx.com
+ 
+### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
  * Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
  * Bugfix: Use UTC for datetime conversions in REST api
@@ -13,6 +27,8 @@
  * Bugfix: OKEx REST candle fix
  * Feature: Added ability to use your own Postgres table layouts
  * Bugfix: Binance connections that do not require websocket were failing on connect
+ * Feature: Write native datetimes to Mongo
+ * Feature: Mongo backend now supports bulk writes + queuing of messages
 
 ### 2.1.2 (2021-12-23)
  * Feature: Tweak Postgres backend to not store duplicated data for orderbooks.
@@ -230,7 +246,7 @@
   * Bugfix: Fix issue using AsyncFile callback to store raw data
   * Testing: Add exchange tests for Deribit and Binance
   * Bugfix: Fix symbol issue in Bitmex when initializing the orderbook
-  * Bugfix: Fix various issues with FTX, OKCOIN/OKEX and Huobi symbol generation
+  * Bugfix: Fix various issues with FTX, OKCOIN/OKX and Huobi symbol generation
   * Testing: Overhaul exchange tests, all exchanges are now tested with real data. Fixed various bugs as a result of this testing. Revamped AsyncFileCallback.
              Added new tool to generate test data for testing.
   * Bugfix: Improve connection cleanup in AsyncConnection object
@@ -238,7 +254,7 @@
   * Bugfix: Fix redis backends that can't handle None
   * Bugfix: Connection exceptions being ignored in Feedhandler
   * Bugfix: Binance address generation correction
-  * Bugfix: OKEX symbol generation incorrect + validate symbols used for channels that dont support all types
+  * Bugfix: OKX symbol generation incorrect + validate symbols used for channels that dont support all types
   * Breaking Change: Large rewrite of Feedhandler, Connection, and Feed. Many timeout related options moved from feedhandler to Feed. Symbol specific code
                      moved to exchange class. Rewrite of raw data collection.
   * Feature: Candle support for Huobi
@@ -275,7 +291,7 @@
   * Bugfix: Ignore untradeable symbols in Binance symbol generation
   * Feature: Add backend support for queues in Postgres. Rework postgres backend and supply example SQL file to create tables for demo
   * Bugfix: Fix ByBit symbol generation
-  * Feature: Authenticated channel support for OKEX/OKCOIN
+  * Feature: Authenticated channel support for OKX/OKCOIN
   * Update: Poloniex changed signaure of ticker data
   * Feature: Candles for Binance Futures
   * Feature: Premium Index Candle support for Binance Futures
@@ -333,9 +349,9 @@
   * Feature: KrakenFutures sequence number check added
   * Feature: Add optional caching to postgres backend
   * Feature: New Exchange - Binance Delivery
-  * Feature: Liquidation for OKEX
+  * Feature: Liquidation for OKX
   * Bugfix: Adjust ping interval on websocket connection, some exchanges require pings more frequently
-  * Feature: Checksum validation for orderbooks on OKEX and OKCoin
+  * Feature: Checksum validation for orderbooks on OKX and OKCoin
   * Feature: Use rotating log handler
   * Bugfix: Later versions of aiokafka break kafka backend
   * Bugfix: Huobi sends empty book updates for delisted pairs
@@ -446,7 +462,7 @@
   * Feature: Deribit Funding
   * Bugfix: Deribit subscriptions using config subscribed to symbols incorrectly
   * Bugfix: Some RabbitMQ messages were missing symbol and exchange data
-  * Feature: Open interest data for OKEX swaps
+  * Feature: Open interest data for OKX swaps
 
 ### 1.1.0 (2019-11-14)
   * Feature: User enabled logging of exchange messages on error

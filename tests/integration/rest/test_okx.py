@@ -8,10 +8,10 @@ associated with this software.
 import asyncio
 from decimal import Decimal
 
-from cryptofeed.exchanges import OKEx
+from cryptofeed.exchanges import OKX
 from cryptofeed.types import Candle
 
-o = OKEx()
+o = OKX()
 
 
 def teardown_module(module):
@@ -22,7 +22,7 @@ def teardown_module(module):
     loop.run_until_complete(o.shutdown())
 
 
-class TestOKExRest:
+class TestOKXRest:
 
     def test_candles(self):
         expected = Candle(
@@ -32,17 +32,16 @@ class TestOKExRest:
             1609459260.0,
             '1m',
             None,
-            Decimal('28914.8'),
-            Decimal('28959.1'),
-            Decimal('28914.8'),
-            Decimal('28959.1'),
-            Decimal('13.22459039'),
+            Decimal('28914.8'),      # open
+            Decimal('28959.1'),      # close
+            Decimal('28959.1'),      # high
+            Decimal('28914.8'),      # low
+            Decimal('13.22459039'),  # volume
             True,
             1609459200.0
         )
         ret = []
-        for data in o.candles_sync('BTC-USDT', start='2021-01-01 00:00:00', end='2021-01-01 00:00:59', interval='1m'):
-            print(data)
+        for data in o.candles_sync('BTC-USDT', start='2021-01-01 00:00:00', end='2021-01-01 00:00:01', interval='1m'):
             ret.extend(data)
 
         assert len(ret) == 1

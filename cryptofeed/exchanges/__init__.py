@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.defines import *
-from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str, FMFW as FMFW_str
+from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str, FMFW as FMFW_str, OKX as OKX_str
 from .bitdotcom import BitDotCom
 from .phemex import Phemex
 from .ascendex import AscendEX
@@ -41,7 +41,7 @@ from .kraken import Kraken
 from .kraken_futures import KrakenFutures
 from .kucoin import KuCoin
 from .okcoin import OKCoin
-from .okex import OKEx
+from .okx import OKX
 from .poloniex import Poloniex
 from .probit import Probit
 from .upbit import Upbit
@@ -82,7 +82,7 @@ EXCHANGE_MAP = {
     KRAKEN: Kraken,
     KUCOIN: KuCoin,
     OKCOIN: OKCoin,
-    OKEX: OKEx,
+    OKX_str: OKX,
     PHEMEX: Phemex,
     POLONIEX: Poloniex,
     PROBIT: Probit,

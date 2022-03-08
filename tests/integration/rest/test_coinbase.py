@@ -9,9 +9,9 @@ from decimal import Decimal
 
 import pytest
 
-from cryptofeed.defines import BID, ASK, BUY, LIMIT
+from cryptofeed.defines import BUY, CANCELLED, LIMIT, PENDING
 from cryptofeed.exchanges import Coinbase
-from cryptofeed.types import Candle
+from cryptofeed.types import Candle, Ticker, Trade
 
 
 public = Coinbase(config='config.yaml')
@@ -31,9 +31,7 @@ def teardown_module(module):
 class TestCoinbaseRest:
     def test_ticker(self):
         ticker = public.ticker_sync('BTC-USD')
-
-        assert BID in ticker
-        assert ASK in ticker
+        assert isinstance(ticker, Ticker)
 
 
     def test_order_book(self):
@@ -54,17 +52,20 @@ class TestCoinbaseRest:
     def test_trade_history_specific_time(self):
         expected = {'timestamp': 1550062756.744,
                     'symbol': 'BTC-USD',
-                    'id': 59158401,
-                    'feed': 'COINBASE',
+                    'id': '59158401',
+                    'exchange': 'COINBASE',
                     'side': 'buy',
                     'amount': Decimal('0.00514473'),
-                    'price': Decimal('3580.07')}
+                    'price': Decimal('3580.07000000'),
+                    'type': None
+                    }
         ret = []
         for data in public.trades_sync('BTC-USD', start='2019-02-13 12:59:10', end='2019-02-13 12:59:17'):
             ret.extend(data)
 
+        assert isinstance(ret[0], Trade)
         assert len(ret) == 1
-        assert ret[0] == expected
+        assert ret[0].to_dict() == expected
 
 
     def test_candle_history(self):
@@ -123,32 +124,33 @@ class TestCoinbaseRest:
             order_type=LIMIT,
             amount='1.0',
             price='622.13',
-            client_order_id='1'
         )
-        assert 'order_id' in order_resp
-        cancel_resp = sandbox.cancel_order_sync({'order_id': order_resp['order_id']})
-        assert 'order_id' in cancel_resp
+
+        assert order_resp.id is not None
+        assert order_resp.status == PENDING
+        assert order_resp.type == LIMIT
+        cancel_resp = sandbox.cancel_order_sync(order_resp.id)
+        assert cancel_resp.id == order_resp.id
+        assert cancel_resp.status == CANCELLED     
 
 
     @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
     def test_order_status(self):
         order_resp = sandbox.place_order_sync(
-            symbol='btcusd',
-            side='buy',
-            type='LIMIT',
+            symbol='BTC-USD',
+            side=BUY,
+            order_type=LIMIT,
             amount='1.0',
-            price='1.13',
-            client_order_id='1'
+            price='1.13'
         )
-        status = sandbox.order_status({'order_id': order_resp['order_id']})
+        status = sandbox.order_status_sync(order_resp.id)
 
-        assert status['symbol'] == 'btcusd'
-        assert status['side'] == 'buy'
-        sandbox.cancel_order_sync({'order_id': order_resp['order_id']})
+        assert status.symbol == 'BTC-USD'
+        assert status.side == BUY
+        sandbox.cancel_order_sync(order_resp.id)
 
 
     @pytest.mark.skipif(sandbox.key_id is None or sandbox.key_secret is None, reason="No api key provided")
     def test_balances(self):
         balances = sandbox.balances_sync()
-
         assert len(balances) > 0

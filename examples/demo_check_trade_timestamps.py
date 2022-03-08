@@ -28,7 +28,7 @@ Starting: 1562808668.105481
 [12]: Subscribing to OKCoin
 [13]: Subscribing to OKEx
 [14]: Subscribing to Poloniex
-Added OKEX.
+Added OKX.
 Added EXX.
 Added OKCOIN.
 Added HUOBI.
@@ -56,7 +56,7 @@ HITBTC      : timestamp:1562808491.473       <class 'float'> 2019-07-11 09:28:11
 HUOBI       : timestamp:1562808675.644       <class 'float'> 2019-07-11 09:31:15.644000
 KRAKEN      : timestamp:1562808676.238593    <class 'float'> 2019-07-11 09:31:16.238593
 OKCOIN      : timestamp:1562808671.739       <class 'float'> 2019-07-11 09:31:11.739000
-OKEX        : timestamp:1562808675.317       <class 'float'> 2019-07-11 09:31:15.317000
+OKX        : timestamp:1562808675.317       <class 'float'> 2019-07-11 09:31:15.317000
 POLONIEX    : timestamp:1562808726.0         <class 'float'> 2019-07-11 09:32:06
 Ending: 1562808727.693259
 '''
@@ -96,7 +96,7 @@ def main():
     exch_sym_map['Huobi'] = ['BTC-USDT']
     exch_sym_map['Kraken'] = ['BTC-USD']
     exch_sym_map['OKCoin'] = ['BTC-USD']
-    exch_sym_map['OKEx'] = ['BTC-USDT']
+    exch_sym_map['OKX'] = ['BTC-USDT']
     exch_sym_map['Poloniex'] = ['BTC-USDT']
 
     global exchanges

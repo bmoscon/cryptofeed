@@ -38,12 +38,12 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [HitBTC](https://hitbtc.com/)
 * [Huobi](https://www.hbg.com/)
 * [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
-* Huobi Swap
+* Huobi Swap (Coin-M and USDT-M)
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)
 * [OKCoin](http://okcoin.com/)
-* [OKEx](https://www.okex.com/)
+* [OKX](https://www.okx.com/)
 * [Phemex](https://phemex.com/)
 * [Poloniex](https://www.poloniex.com/)
 * [ProBit](https://www.probit.com/)
@@ -78,7 +78,7 @@ fh.run()
 Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage.
 
 
-To see an example of an application using cryptofeed to aggregate and store cryptocurrency data to a database, please look at [Cryptostore](https://github.com/bmoscon/cryptostore).
+For an example of a containerized application using cryptofeed to store data to a backend, please see [Cryptostore](https://github.com/bmoscon/cryptostore).
 
 
 ## National Best Bid/Offer (NBBO)
@@ -144,11 +144,12 @@ Supported Backends:
 * PostgreSQL
 * GCP Pub/Sub
 * [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)
+* [QuestDB](https://questdb.io/)
 
 
 ## Installation
 
-**Note:** cryptofeed requires Python 3.7+
+**Note:** cryptofeed requires Python 3.8+
 
 Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
 
@@ -172,7 +173,7 @@ See more discussion of package installation in [INSTALL.md](https://github.com/b
 
 ## Rest API
 
-Cryptofeed supports some REST interfaces for retrieving real-time and historical data, as well as order placement and account management. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange.
+Cryptofeed supports some REST interfaces for retrieving real-time and historical data, as well as order placement and account management. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange. The methods for interacting with the exchange RET endpoints exist in two flavors, the synchronous methods (suffixed with `_sync`) as well as the asynchronous which can be utilized with asyncio. For more information see the [documentation](docs/rest.md).
 
 
 ## Future Work
