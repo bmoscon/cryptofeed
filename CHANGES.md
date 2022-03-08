@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.2.2
+ * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
+
 ### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMEX
  * Bugfix: Datetime/Timestamp conversion fixes
