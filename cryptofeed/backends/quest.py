@@ -74,10 +74,10 @@ class BookQuest(QuestCallback):
         super().__init__(*args, **kwargs)
         self.depth = depth
 
-    async def __call__(self, book, receipt_timestamp_int: float):
+    async def __call__(self, book, receipt_timestamp: float):
         vals = ','.join([f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(self.depth)] + [f"ask{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(self.depth)])
         timestamp = book.timestamp
-        receipt_timestamp_int = int(receipt_timestamp_int * 1_000_000)
+        receipt_timestamp_int = int(receipt_timestamp * 1_000_000)
         timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else receipt_timestamp_int * 1000
         update = f'{self.key}-{book.exchange},symbol={book.symbol} {vals},receipt_timestamp={receipt_timestamp_int}t {timestamp_int}'
         await self.queue.put(update)
