@@ -201,7 +201,6 @@ class Bybit(Feed):
                     }
                 ))
 
-
     async def _instrument_info(self, msg: dict, timestamp: float):
         """
         ### Snapshot type update
