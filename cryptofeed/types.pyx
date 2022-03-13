@@ -459,6 +459,63 @@ cdef class OrderBook:
     def __hash__(self):
         return hash(self.__repr__())
 
+cdef class Order:
+    cdef readonly str symbol
+    cdef readonly str client_order_id
+    cdef readonly str side
+    cdef readonly str type
+    cdef readonly object price
+    cdef readonly object amount
+    cdef readonly str account
+    cdef readonly object timestamp
+
+    def __init__(self, symbol, client_order_id, side, type, price, amount, timestamp, account=None, exchange=None):
+        assert isinstance(price, Decimal)
+        assert isinstance(amount, Decimal)
+        assert timestamp is None or isinstance(timestamp, float)
+
+        self.symbol = symbol
+        self.client_order_id = client_order_id
+        self.side = side
+        self.type = type
+        self.price = price
+        self.amount = amount
+        self.account = account
+        self.exchange = exchange
+        self.timestamp = timestamp
+
+    @staticmethod
+    def from_dict(data: dict) -> Order:
+        return Order(
+            data['symbol'],
+            data['client_order_id'],
+            data['side'],
+            data['type'],
+            Decimal(data['price']),
+            Decimal(data['amount']),
+            data['timestamp'],
+            account=data['account'],
+            exchange=data['exchange']
+        )
+
+    cpdef dict to_dict(self, numeric_type=None, none_to=False):
+        if numeric_type is None:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'client_order_id': self.client_order_id, 'side': self.side, 'type': self.type, 'price': self.price, 'amount': self.amount, 'account': self.account, 'timestamp': self.timestamp}
+        else:
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'client_order_id': self.client_order_id, 'side': self.side, 'type': self.type, 'price': numeric_type(self.price), 'amount': numeric_type(self.amount), 'account': self.account, 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
+
+    def __repr__(self):
+        return f'exchange: {self.exchange} symbol: {self.symbol} client_order_id: {self.client_order_id} side: {self.side} type: {self.type} price: {self.price} amount: {self.amount} account: {self.account} timestamp: {self.timestamp}'
+
+    def __eq__(self, cmp):
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.type == cmp.type and self.price == cmp.price and self.amount == cmp.amount and self.timestamp == cmp.timestamp and self.account == cmp.account and self.client_order_id == cmp.client_order_id
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+
+
 
 cdef class OrderInfo:
     cdef readonly str exchange
