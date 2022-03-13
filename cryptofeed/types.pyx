@@ -464,6 +464,7 @@ cdef class OrderInfo:
     cdef readonly str exchange
     cdef readonly str symbol
     cdef readonly str id
+    cdef readonly str client_order_id
     cdef readonly str side
     cdef readonly str status
     cdef readonly str type
@@ -474,7 +475,7 @@ cdef class OrderInfo:
     cdef readonly object timestamp
     cdef readonly object raw  # Can be dict or list
 
-    def __init__(self, exchange, symbol, id, side, status, type, price, amount, remaining, timestamp, account=None, raw=None):
+    def __init__(self, exchange, symbol, id, side, status, type, price, amount, remaining, timestamp, client_order_id=None, account=None, raw=None):
         assert isinstance(price, Decimal)
         assert isinstance(amount, Decimal)
         assert remaining is None or isinstance(remaining, Decimal)
@@ -483,6 +484,7 @@ cdef class OrderInfo:
         self.exchange = exchange
         self.symbol = symbol
         self.id = id
+        self.client_order_id = client_order_id
         self.side = side
         self.status = status
         self.type = type
@@ -509,21 +511,22 @@ cdef class OrderInfo:
             Decimal(data['amount']),
             Decimal(data['remaining']) if data['remaining'] else data['remaining'],
             data['timestamp'],
-            account=data['account']
+            account=data['account'],
+            client_order_id=data['client_order_id']
         )
 
     cpdef dict to_dict(self, numeric_type=None, none_to=False):
         if numeric_type is None:
-            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'account': self.account, 'timestamp': self.timestamp}
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'client_order_id': self.client_order_id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': self.price, 'amount': self.amount, 'remaining': self.remaining, 'account': self.account, 'timestamp': self.timestamp}
         else:
-            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': numeric_type(self.price), 'amount': numeric_type(self.amount), 'remaining': numeric_type(self.remaining), 'account': self.account, 'timestamp': self.timestamp}
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'id': self.id, 'client_order_id': self.client_order_id, 'side': self.side, 'status': self.status, 'type': self.type, 'price': numeric_type(self.price), 'amount': numeric_type(self.amount), 'remaining': numeric_type(self.remaining), 'account': self.account, 'timestamp': self.timestamp}
         return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
-        return f'exchange: {self.exchange} symbol: {self.symbol} id: {self.id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} account: {self.account} timestamp: {self.timestamp}'
+        return f'exchange: {self.exchange} symbol: {self.symbol} id: {self.id} client_order_id: {self.client_order_id} side: {self.side} status: {self.status} type: {self.type} price: {self.price} amount: {self.amount} remaining: {self.remaining} account: {self.account} timestamp: {self.timestamp}'
 
     def __eq__(self, cmp):
-        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.id == cmp.id and self.status == cmp.status and self.type == cmp.type and self.price == cmp.price and self.amount == cmp.amount and self.remaining == cmp.remaining and self.timestamp == cmp.timestamp and self.account == cmp.account
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.id == cmp.id and self.status == cmp.status and self.type == cmp.type and self.price == cmp.price and self.amount == cmp.amount and self.remaining == cmp.remaining and self.timestamp == cmp.timestamp and self.account == cmp.account and self.client_order_id == cmp.client_order_id
 
     def __hash__(self):
         return hash(self.__repr__())
