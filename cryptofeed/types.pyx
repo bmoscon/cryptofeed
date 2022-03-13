@@ -460,6 +460,7 @@ cdef class OrderBook:
         return hash(self.__repr__())
 
 cdef class Order:
+    cdef readonly str exchange
     cdef readonly str symbol
     cdef readonly str client_order_id
     cdef readonly str side
