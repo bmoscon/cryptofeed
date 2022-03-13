@@ -183,7 +183,7 @@ class Bybit(Feed):
 
     async def subscribe(self, connection: AsyncConnection):
         self.__reset()
-        for chan in self.subscription:
+        for chan in connection.subscription:
             if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 for pair in self.subscription[chan]:
                     sym = str_to_symbol(pair)
@@ -193,6 +193,13 @@ class Bybit(Feed):
                             "args": [f"{chan}.{pair}"] if self.exchange_channel_to_std(chan) != CANDLES else [f"{chan if sym.quote == 'USD' else 'candle'}.{self.candle_interval_map[self.candle_interval]}.{pair}"]
                         }
                     ))
+            else:
+                await connection.write(json.dumps(
+                    {
+                        "op": "subscribe",
+                        "args": [f"{chan}"]
+                    }
+                ))
 
     async def _instrument_info(self, msg: dict, timestamp: float):
         """
@@ -490,7 +497,7 @@ class Bybit(Feed):
     #        await self.callback(BALANCES, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
 
     async def authenticate(self, conn: AsyncConnection):
-        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
+        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription):
             auth = self._auth(self.key_id, self.key_secret)
             LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
             await conn.write(auth)
