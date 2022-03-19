@@ -72,6 +72,7 @@ class CoinbaseRestMixin(RestExchange):
             Decimal(data['size']),
             Decimal(data['size']) - Decimal(data['filled_size']),
             data['done_at'].timestamp() if 'done_at' in data else data['created_at'].timestamp(),
+            client_order_id=data['client_oid'],
             raw=data
         )
 
