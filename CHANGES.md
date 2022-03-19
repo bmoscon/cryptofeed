@@ -4,6 +4,8 @@
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
  * Bugfix: Tweak QuestDB coulmn types and layout
  * Bugfix: Fix Bybit Private Channel connections / subscriptions
+ * Bugfix: Return client order id in OrderInfo object returned by Coinbase
+ * Feature: Add Order type
 
 ### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMEX
