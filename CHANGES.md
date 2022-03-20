@@ -6,6 +6,7 @@
  * Bugfix: Fix Bybit Private Channel connections / subscriptions
  * Bugfix: Return client order id in OrderInfo object returned by Coinbase
  * Feature: Add Order type
+ * Feature: Add support for closed candles only in Bybit
 
 ### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMEX
