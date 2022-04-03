@@ -325,14 +325,13 @@ class Binance(Feed, BinanceRestMixin):
             for update in msg[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
+                delta[side].append((price, amount))
 
                 if amount == 0:
                     if price in self._l2_book[pair].book[side]:
                         del self._l2_book[pair].book[side][price]
-                        delta[side].append((price, amount))
                 else:
                     self._l2_book[pair].book[side][price] = amount
-                    delta[side].append((price, amount))
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['E']), raw=msg, delta=delta, sequence_number=self.last_update_id[pair])
 

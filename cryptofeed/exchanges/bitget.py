@@ -12,10 +12,10 @@ from collections import defaultdict
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BITGET, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import ASK, BID, BITGET, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Ticker, Trade, Candle
+from cryptofeed.types import Ticker, Trade, Candle, OrderBook
 from cryptofeed.util.time import timedelta_str_to_sec
 
 
@@ -95,6 +95,9 @@ class Bitget(Feed):
         }
         """
         for entry in msg['data']:
+            # sometimes snapshots do not have bids/asks in them
+            if 'bestBid' not in entry or 'bestAsk' not in entry:
+                continue
             t = Ticker(
                 self.id,
                 self.exchange_symbol_to_std_symbol(entry['instId']),
@@ -162,6 +165,68 @@ class Bitget(Feed):
             )
             await self.callback(CANDLES, t, timestamp)
 
+    async def _book(self, msg: dict, timestamp: float):
+        sym = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
+        data = msg['data'][0]
+
+        if msg['action'] == 'snapshot':
+            '''
+            {
+                'action': 'snapshot',
+                'arg': {
+                    'instType': 'sp',
+                    'channel': 'books',
+                    'instId': 'BTCUSDT'
+                },
+                'data': [
+                    {
+                        'asks': [['46700.38', '0.0554'], ['46701.25', '0.0147'], ...
+                        'bids': [['46686.68', '0.0032'], ['46684.75', '0.0161'], ...
+                        'checksum': -393656186,
+                        'ts': '1649021358917'
+                    }
+                ]
+            }
+            '''
+            bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+            asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
+            self._l2_book[sym] = OrderBook(self.id, sym, max_depth=self.max_depth, bids=bids, asks=asks)
+
+            await self.book_callback(L2_BOOK, self._l2_book[sym], timestamp, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
+
+        else:
+            '''
+            {
+                'action': 'update',
+                'arg': {
+                    'instType': 'sp',
+                    'channel': 'books',
+                    'instId': 'BTCUSDT'
+                },
+                'data': [
+                    {
+                        'asks': [['46701.25', '0'], ['46701.46', '0.0054'], ...
+                        'bids': [['46687.67', '0.0531'], ['46686.22', '0'], ...
+                        'checksum': -750266015,
+                        'ts': '1649021359467'
+                    }
+                ]
+            }
+            '''
+            delta = {BID: [], ASK: []}
+            for side, key in ((BID, 'bids'), (ASK, 'asks')):
+                for price, size in data[key]:
+                    price = Decimal(price)
+                    size = Decimal(size)
+                    delta[side].append((price, size))
+
+                    if size == 0:
+                        del self._l2_book[sym].book[side][price]
+                    else:
+                        self._l2_book[sym].book[side][price] = size
+
+            await self.book_callback(L2_BOOK, self._l2_book[sym], timestamp, delta=delta, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
+
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
@@ -173,7 +238,9 @@ class Bitget(Feed):
                 LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
                 return
 
-        if msg['arg']['channel'] == 'ticker':
+        if msg['arg']['channel'] == 'books':
+            await self._book(msg, timestamp)
+        elif msg['arg']['channel'] == 'ticker':
             await self._ticker(msg, timestamp)
         elif msg['arg']['channel'] == 'trade':
             await self._trade(msg, timestamp)
