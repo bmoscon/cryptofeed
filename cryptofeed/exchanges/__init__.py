@@ -17,6 +17,7 @@ from .binance_us import BinanceUS
 from .fmfw import FMFW
 from .bitfinex import Bitfinex
 from .bitflyer import Bitflyer
+from .bitget import Bitget
 from .bithumb import Bithumb
 from .bitmex import Bitmex
 from .bitstamp import Bitstamp
@@ -37,6 +38,7 @@ from .hitbtc import HitBTC
 from .huobi import Huobi
 from .huobi_dm import HuobiDM
 from .huobi_swap import HuobiSwap
+from .independent_reserve import IndependentReserve
 from .kraken import Kraken
 from .kraken_futures import KrakenFutures
 from .kucoin import KuCoin
@@ -58,6 +60,7 @@ EXCHANGE_MAP = {
     BITDOTCOM: BitDotCom,
     BITFINEX: Bitfinex,
     BITFLYER: Bitflyer,
+    BITGET: Bitget,
     BITHUMB: Bithumb,
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
@@ -78,6 +81,7 @@ EXCHANGE_MAP = {
     HUOBI_DM: HuobiDM,
     HUOBI_SWAP: HuobiSwap,
     HUOBI: Huobi,
+    INDEPENDENT_RESERVE: IndependentReserve,
     KRAKEN_FUTURES: KrakenFutures,
     KRAKEN: Kraken,
     KUCOIN: KuCoin,

@@ -31,7 +31,7 @@ class OKXRestMixin(RestExchange):
         sym = self.std_symbol_to_exchange_symbol(symbol)
         base_endpoint = f"{self.api}market/history-candles?instId={sym}"
         start, end = self._interval_normalize(start, end)
-        end += 1 # timestamps querying is not inclusive on OKX
+        end += 1  # timestamps querying is not inclusive on OKX
         start -= 1
         offset = timedelta_str_to_sec(interval)
 
