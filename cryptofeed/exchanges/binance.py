@@ -285,7 +285,7 @@ class Binance(Feed, BinanceRestMixin):
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
         self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
-        await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), timestamp=None, raw=resp, sequence_number=self.last_update_id[std_pair])
+        await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), timestamp=self.timestamp_normalize(resp.get('E')), raw=resp, sequence_number=self.last_update_id[std_pair])
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
