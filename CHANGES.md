@@ -10,6 +10,9 @@
  * Update: Kraken Futures new instrument type: Perpetual Linear Multi-collateral Futures
  * New Exchange: Bitget
  * New Exchange: Independent Reserve
+ * Feature: Add perpetuals to Bitget
+ * Update: Add indicator in symbol info if instrument is a qunto
+ * Feature: Configuration option to allow invalid symbols
 
 ### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMEX

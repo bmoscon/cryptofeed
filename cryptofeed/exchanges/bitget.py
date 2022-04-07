@@ -6,15 +6,15 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple, Union
 from collections import defaultdict
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import ASK, BID, BITGET, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import ASK, BID, BITGET, BUY, CANDLES, L2_BOOK, PERPETUAL, SELL, SPOT, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.symbols import Symbol
+from cryptofeed.symbols import Symbol, str_to_symbol
 from cryptofeed.types import Ticker, Trade, Candle, OrderBook
 from cryptofeed.util.time import timedelta_str_to_sec
 
@@ -24,8 +24,15 @@ LOG = logging.getLogger('feedhandler')
 
 class Bitget(Feed):
     id = BITGET
-    websocket_endpoints = [WebsocketEndpoint('wss://ws.bitget.com/spot/v1/stream')]
-    rest_endpoints = [RestEndpoint('https://api.bitget.com', routes=Routes('/api/spot/v1/public/products'))]
+    websocket_endpoints = [
+        WebsocketEndpoint('wss://ws.bitget.com/spot/v1/stream', instrument_filter=('TYPE', (SPOT,))),
+        WebsocketEndpoint('wss://ws.bitget.com/mix/v1/stream', instrument_filter=('TYPE', (PERPETUAL,))),
+    ]
+    rest_endpoints = [
+        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (SPOT,)), routes=Routes('/api/spot/v1/public/products')),
+        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (PERPETUAL,)), routes=Routes(['/api/mix/v1/market/contracts?productType=umcbl', '/api/mix/v1/market/contracts?productType=dmcbl'])),
+    ]
+
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '12h', '1d', '1w'}
     websocket_channels = {
         L2_BOOK: 'books',
@@ -40,35 +47,54 @@ class Bitget(Feed):
         return ts / 1000
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: Union[List, Dict]) -> Tuple[Dict, Dict]:
+        """
+        contract types
+
+        umcbl	USDT Unified Contract
+        dmcbl	Quanto Swap Contract
+        sumcbl	USDT Unified Contract Analog disk (naming makes no sense, but these are basically testnet coins)
+        sdmcbl	Quanto Swap Contract Analog disk (naming makes no sense, but these are basically testnet coins)
+        """
         ret = {}
         info = defaultdict(dict)
 
-        for entry in data['data']:
-            """
-            {
-                "baseCoin":"ALPHA",
-                "makerFeeRate":"0.001",
-                "maxTradeAmount":"0",
-                "minTradeAmount":"2",
-                "priceScale":"4",
-                "quantityScale":"4",
-                "quoteCoin":"USDT",
-                "status":"online",
-                "symbol":"ALPHAUSDT_SPBL",
-                "symbolName":"ALPHAUSDT",
-                "takerFeeRate":"0.001"
-            }
-            """
-            sym = Symbol(entry['baseCoin'], entry['quoteCoin'])
-            info['instrument_type'][sym.normalized] = sym.type
-            ret[sym.normalized] = entry['symbolName']
+        if isinstance(data, dict):
+            data = [data]
+        for d in data:
+            for entry in d['data']:
+                """
+                Spot
+
+                {
+                    "baseCoin":"ALPHA",
+                    "makerFeeRate":"0.001",
+                    "maxTradeAmount":"0",
+                    "minTradeAmount":"2",
+                    "priceScale":"4",
+                    "quantityScale":"4",
+                    "quoteCoin":"USDT",
+                    "status":"online",
+                    "symbol":"ALPHAUSDT_SPBL",
+                    "symbolName":"ALPHAUSDT",
+                    "takerFeeRate":"0.001"
+                }
+                """
+                if "symbolName" in entry:
+                    sym = Symbol(entry['baseCoin'], entry['quoteCoin'])
+                    ret[sym.normalized] = entry['symbolName']
+                else:
+                    sym = Symbol(entry['baseCoin'], entry['quoteCoin'], type=PERPETUAL)
+                    ret[sym.normalized] = entry['symbol']
+                info['instrument_type'][sym.normalized] = sym.type
+                info['is_quanto'][sym.normalized] = 'dmcbl' in entry['symbol'].lower()
+
         return ret, info
 
     def __reset(self):
         self._l2_book = {}
 
-    async def _ticker(self, msg: dict, timestamp: float):
+    async def _ticker(self, msg: dict, timestamp: float, symbol: str):
         """
         {
             'action': 'snapshot',
@@ -94,21 +120,25 @@ class Bitget(Feed):
             ]
         }
         """
+        key = 'ts'
+        if msg['arg']['instType'] == 'mc':
+            key = 'systemTime'
+
         for entry in msg['data']:
             # sometimes snapshots do not have bids/asks in them
             if 'bestBid' not in entry or 'bestAsk' not in entry:
                 continue
             t = Ticker(
                 self.id,
-                self.exchange_symbol_to_std_symbol(entry['instId']),
+                symbol,
                 Decimal(entry['bestBid']),
                 Decimal(entry['bestAsk']),
-                self.timestamp_normalize(entry['ts']),
+                self.timestamp_normalize(entry[key]),
                 raw=entry
             )
             await self.callback(TICKER, t, timestamp)
 
-    async def _trade(self, msg: dict, timestamp: float):
+    async def _trade(self, msg: dict, timestamp: float, symbol: str):
         """
         {
             'action': 'update',
@@ -125,7 +155,7 @@ class Bitget(Feed):
         for entry in msg['data']:
             t = Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(msg['arg']['instId']),
+                symbol,
                 SELL if entry[3] == 'sell' else BUY,
                 Decimal(entry[2]),
                 Decimal(entry[1]),
@@ -134,7 +164,7 @@ class Bitget(Feed):
             )
             await self.callback(TRADES, t, timestamp)
 
-    async def _candle(self, msg: dict, timestamp: float):
+    async def _candle(self, msg: dict, timestamp: float, symbol: str):
         '''
         {
             'action': 'update',
@@ -149,7 +179,7 @@ class Bitget(Feed):
         for entry in msg['data']:
             t = Candle(
                 self.id,
-                self.exchange_symbol_to_std_symbol(msg['arg']['instId']),
+                symbol,
                 self.timestamp_normalize(int(entry[0])),
                 self.timestamp_normalize(int(entry[0])) + timedelta_str_to_sec(self.candle_interval),
                 self.candle_interval,
@@ -165,8 +195,7 @@ class Bitget(Feed):
             )
             await self.callback(CANDLES, t, timestamp)
 
-    async def _book(self, msg: dict, timestamp: float):
-        sym = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
+    async def _book(self, msg: dict, timestamp: float, symbol: str):
         data = msg['data'][0]
 
         if msg['action'] == 'snapshot':
@@ -190,9 +219,9 @@ class Bitget(Feed):
             '''
             bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
             asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-            self._l2_book[sym] = OrderBook(self.id, sym, max_depth=self.max_depth, bids=bids, asks=asks)
+            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
 
-            await self.book_callback(L2_BOOK, self._l2_book[sym], timestamp, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
+            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
 
         else:
             '''
@@ -221,11 +250,11 @@ class Bitget(Feed):
                     delta[side].append((price, size))
 
                     if size == 0:
-                        del self._l2_book[sym].book[side][price]
+                        del self._l2_book[symbol].book[side][price]
                     else:
-                        self._l2_book[sym].book[side][price] = size
+                        self._l2_book[symbol].book[side][price] = size
 
-            await self.book_callback(L2_BOOK, self._l2_book[sym], timestamp, delta=delta, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
+            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -238,14 +267,22 @@ class Bitget(Feed):
                 LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
                 return
 
+        if msg['arg']['instType'] == 'mc':
+            if msg['arg']['instId'].endswith('T'):
+                symbol = self.exchange_symbol_to_std_symbol(msg['arg']['instId'] + "_UMCBL")
+            else:
+                symbol = self.exchange_symbol_to_std_symbol(msg['arg']['instId'] + "_DMCBL")
+        else:
+            symbol = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
+
         if msg['arg']['channel'] == 'books':
-            await self._book(msg, timestamp)
+            await self._book(msg, timestamp, symbol)
         elif msg['arg']['channel'] == 'ticker':
-            await self._ticker(msg, timestamp)
+            await self._ticker(msg, timestamp, symbol)
         elif msg['arg']['channel'] == 'trade':
-            await self._trade(msg, timestamp)
+            await self._trade(msg, timestamp, symbol)
         elif msg['arg']['channel'].startswith('candle'):
-            await self._candle(msg, timestamp)
+            await self._candle(msg, timestamp, symbol)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
@@ -259,8 +296,19 @@ class Bitget(Feed):
 
         for chan, symbols in conn.subscription.items():
             for s in symbols:
+                sym = str_to_symbol(self.exchange_symbol_to_std_symbol(s))
+                if sym.type == SPOT:
+                    itype = 'SPBL' if self.is_authenticated_channel(self.exchange_channel_to_std(chan)) else 'SP'
+                else:
+                    if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
+                        itype = s.split('_')[-1]
+                    else:
+                        itype = 'MC'
+
+                    s = s.split("_")[0]
+
                 d = {
-                    'instType': 'SPBL' if self.is_authenticated_channel(self.exchange_channel_to_std(chan)) else 'SP',
+                    'instType': itype,
                     'channel': chan if chan != 'candle' else 'candle' + interval,
                     'instId': s
                 }

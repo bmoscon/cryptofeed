@@ -446,7 +446,6 @@ class BitDotCom(Feed):
             }
         }
         '''
-        print(msg)
         if 'balances' in msg['data']:
             # Spot
             for balance in msg['data']['balances']:

@@ -57,6 +57,7 @@ class Bitmex(Feed, BitmexRestMixin):
             ret[s.normalized] = entry['symbol']
             info['tick_size'][s.normalized] = entry['tickSize']
             info['instrument_type'][s.normalized] = stype
+            info['is_quanto'][s.normalized] = entry['isQuanto']
 
         return ret, info
 
