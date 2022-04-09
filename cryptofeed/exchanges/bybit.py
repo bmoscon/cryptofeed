@@ -82,6 +82,7 @@ class Bybit(Feed):
     def __reset(self):
         self._instrument_info_cache = {}
         self._l2_book = {}
+        self._l3_book = {}
 
     async def _candle(self, msg: dict, timestamp: float):
         '''
@@ -356,27 +357,34 @@ class Bybit(Feed):
             await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[-1])
+        msg_topic = msg['topic'].split('.')
+        pair = msg_topic[-1]
+        prefix = msg_topic[0]
+        orderbook = self._l2_book if prefix == 'orderBookL2_25' else self._l3_book
+        cb_label = L2_BOOK if prefix == 'orderBookL2_25' else L3_BOOK
+        await self._process_book(msg, timestamp, orderbook, pair, cb_label)
+
+    async def _process_book(self, msg: dict, timestamp: float, orderbook: dict, pair: str, cb_label: str):
         update_type = msg['type']
         data = msg['data']
         delta = {BID: [], ASK: []}
 
         if update_type == 'snapshot':
             delta = None
-            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            orderbook[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             # the USDT perpetual data is under the order_book key
             if 'order_book' in data:
                 data = data['order_book']
 
             for update in data:
                 side = BID if update['side'] == 'Buy' else ASK
-                self._l2_book[pair].book[side][Decimal(update['price'])] = Decimal(update['size'])
+                orderbook[pair].book[side][Decimal(update['price'])] = Decimal(update['size'])
         else:
             for delete in data['delete']:
                 side = BID if delete['side'] == 'Buy' else ASK
                 price = Decimal(delete['price'])
                 delta[side].append((price, 0))
-                del self._l2_book[pair].book[side][price]
+                del orderbook[pair].book[side][price]
 
             for utype in ('update', 'insert'):
                 for update in data[utype]:
@@ -384,13 +392,13 @@ class Bybit(Feed):
                     price = Decimal(update['price'])
                     amount = Decimal(update['size'])
                     delta[side].append((price, amount))
-                    self._l2_book[pair].book[side][price] = amount
+                    orderbook[pair].book[side][price] = amount
 
         # timestamp is in microseconds
         ts = msg['timestamp_e6']
         if isinstance(ts, str):
             ts = int(ts)
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts / 1000000, raw=msg, delta=delta)
+        await self.book_callback(cb_label, orderbook[pair], timestamp, timestamp=ts / 1000000, raw=msg, delta=delta)
 
     async def _order(self, msg: dict, timestamp: float):
         """
