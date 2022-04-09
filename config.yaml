@@ -6,6 +6,9 @@ log:
 # Enable UVLoop (if not installed, will not cause errors)
 uvloop: True
 
+# Ignore invalid symbols/instruments
+ignore_invalid_instruments: False
+
 # Secrets for exchanges
 bit.com:
     key_id: null

@@ -1,0 +1,3 @@
+https://api.independentreserve.com/Public/GetValidPrimaryCurrencyCodes -> 1649023806.800066: ["Xbt","Eth","Xrp","Usdt","Ada","Aave","Bat","Bch","Comp","Dai","Doge","Dot","Eos","Etc","Grt","Link","Ltc","Mana","Matic","Mkr","Omg","Pmgt","Snx","Uni","Usdc","Xlm","Yfi","Zrx"]
+https://api.independentreserve.com/Public/GetValidSecondaryCurrencyCodes -> 1649023807.983466: ["Aud","Usd","Nzd","Sgd"]
+configuration: {"l3_book":["PMGT-NZD","ETC-AUD","EOS-NZD","SNX-AUD","BCH-SGD","EOS-SGD","ETH-AUD","ETC-SGD","MATIC-USD","DOT-NZD"],"trades":["PMGT-NZD","ETC-AUD","EOS-NZD","SNX-AUD","BCH-SGD","EOS-SGD","ETH-AUD","ETC-SGD","MATIC-USD","DOT-NZD"]}

@@ -34,8 +34,9 @@ class QuestCallback(SocketCallback):
     async def write(self, data):
         d = self.format(data)
         timestamp = data["timestamp"]
-        timestamp_str = f',timestamp={int(timestamp * 1_000_000_000)}i' if timestamp is not None else ''
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]} {d}{timestamp_str},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1_000_000_000)}'
+        received_timestamp_int = int(data["receipt_timestamp"] * 1_000_000)
+        timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else received_timestamp_int * 1000
+        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]} {d},receipt_timestamp={received_timestamp_int}t {timestamp_int}'
         await self.queue.put(update)
 
     def format(self, data):
@@ -53,8 +54,13 @@ class QuestCallback(SocketCallback):
 class TradeQuest(QuestCallback, BackendCallback):
     default_key = 'trades'
 
-    def format(self, data):
-        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",type="{str(data["type"])}"'
+    async def write(self, data):
+        timestamp = data["timestamp"]
+        received_timestamp_int = int(data["receipt_timestamp"] * 1_000_000)
+        timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else received_timestamp_int * 1000
+        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},side={data["side"]},type={data["type"]} ' \
+                 f'price={data["price"]},amount={data["amount"]},id={data["id"]}i,receipt_timestamp={received_timestamp_int}t {timestamp_int}'
+        await self.queue.put(update)
 
 
 class FundingQuest(QuestCallback, BackendCallback):
@@ -71,8 +77,9 @@ class BookQuest(QuestCallback):
     async def __call__(self, book, receipt_timestamp: float):
         vals = ','.join([f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(self.depth)] + [f"ask{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(self.depth)])
         timestamp = book.timestamp
-        timestamp_str = f',timestamp={int(timestamp * 1_000_000_000)}i' if timestamp is not None else ''
-        update = f'{self.key}-{book.exchange},symbol={book.symbol} {vals}{timestamp_str},receipt_timestamp={receipt_timestamp} {int(receipt_timestamp * 1_000_000_000)}'
+        receipt_timestamp_int = int(receipt_timestamp * 1_000_000)
+        timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else receipt_timestamp_int * 1000
+        update = f'{self.key}-{book.exchange},symbol={book.symbol} {vals},receipt_timestamp={receipt_timestamp_int}t {timestamp_int}'
         await self.queue.put(update)
 
 
@@ -95,5 +102,5 @@ class CandlesQuest(QuestCallback, BackendCallback):
         timestamp = data["timestamp"]
         timestamp_str = f',timestamp={int(timestamp * 1_000_000_000)}i' if timestamp is not None else ''
         trades = f',trades={data["trades"]},' if data['trades'] else ','
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},interval={data["interval"]} start={data["start"]},stop={data["stop"]}{trades}open={data["open"]},close={data["close"]},high={data["high"]},low={data["low"]},volume={data["volume"]}{timestamp_str},receipt_timestamp={data["receipt_timestamp"]} {int(data["receipt_timestamp"] * 1_000_000_000)}'
+        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},interval={data["interval"]} start={data["start"]},stop={data["stop"]}{trades}open={data["open"]},close={data["close"]},high={data["high"]},low={data["low"]},volume={data["volume"]}{timestamp_str},receipt_timestamp={int(data["receipt_timestamp"]) * 1_000_000}t {int(data["receipt_timestamp"] * 1_000_000_000)}'
         await self.queue.put(update)
