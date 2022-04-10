@@ -24,10 +24,12 @@ LOG = logging.getLogger('feedhandler')
 
 
 class Feed(Exchange):
-    def __init__(self, candle_interval='1m', timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, candle_interval='1m', candle_closed_only=True, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
         """
         candle_interval: str
             the candle interval. See the specific exchange to see what intervals they support
+        candle_closed_only: bool
+            returns only closed/completed candles (if supported by exchange).
         timeout: int
             Time, in seconds, between message to wait before a feed is considered dead and will be restarted.
             Set to -1 for infinite.
@@ -77,6 +79,7 @@ class Feed(Exchange):
         self.http_proxy = http_proxy
         self.start_delay = delay_start
         self.candle_interval = candle_interval
+        self.candle_closed_only = candle_closed_only
         self._sequence_no = {}
 
         if self.valid_candle_intervals != NotImplemented:
@@ -291,4 +294,4 @@ class Feed(Exchange):
                     cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
                     LOG.info('%s: starting backend task %s', self.id, cb_name)
                     # Backends start tasks to write messages
-                    callback.start(loop, multiprocess=True)
+                    callback.start(loop, multiprocess=self.config.backend_multiprocessing)

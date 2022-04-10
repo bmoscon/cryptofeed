@@ -11,9 +11,11 @@ from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, FUNDING, GEMINI, L
 from cryptofeed.exchanges import (FTX, Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
                                   HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKX, Poloniex, Bybit, KuCoin, Bequant, Upbit, Probit)
 from cryptofeed.exchanges.bitdotcom import BitDotCom
+from cryptofeed.exchanges.bitget import Bitget
 from cryptofeed.exchanges.cryptodotcom import CryptoDotCom
 from cryptofeed.exchanges.delta import Delta
 from cryptofeed.exchanges.fmfw import FMFW
+from cryptofeed.exchanges.independent_reserve import IndependentReserve
 from cryptofeed.exchanges.kraken_futures import KrakenFutures
 from cryptofeed.exchanges.blockchain import Blockchain
 from cryptofeed.exchanges.bithumb import Bithumb
@@ -95,7 +97,7 @@ def main():
     f.add_feed(Bittrex(subscription={L2_BOOK: ['BTC-USDT'], CANDLES: ['BTC-USDT', 'ETH-USDT'], TRADES: ['ETH-USDT', 'BTC-USDT'], TICKER: ['ETH-USDT']}, callbacks={CANDLES: candle_callback, L2_BOOK: book, TICKER: ticker, TRADES: trade}))
     f.add_feed(BLOCKCHAIN, subscription={L2_BOOK: ['BTC-USD'], TRADES: Blockchain.symbols()}, callbacks={L2_BOOK: book, TRADES: trade})
     f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[INDEX, FUNDING, OPEN_INTEREST], callbacks={OPEN_INTEREST: oi, INDEX: index, FUNDING: funding}))
-    f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[CANDLES, TRADES, L2_BOOK], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book}))
+    f.add_feed(Bybit(candle_closed_only=True, symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[CANDLES, TRADES, L2_BOOK], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book}))
     f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], TICKER: ['BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker}))
     f.add_feed(Coinbase(subscription={L3_BOOK: ['LTC-USD']}, callbacks={L3_BOOK: book}))
     f.add_feed(Deribit(symbols=['BTC-USD-PERP'], channels=[L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS], callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker, OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
@@ -109,7 +111,7 @@ def main():
     pairs = ['BTC-USD-PERP', 'ETH-USD-PERP', 'EOS-USD-PERP', 'BCH-USD-PERP', 'BSV-USD-PERP', 'LTC-USD-PERP']
     f.add_feed(HuobiSwap(symbols=pairs, channels=[TRADES, L2_BOOK, FUNDING], callbacks={FUNDING: funding, TRADES: trade, L2_BOOK: book}))
     f.add_feed(KrakenFutures(symbols=KrakenFutures.symbols(), channels=[L2_BOOK, TICKER, TRADES, OPEN_INTEREST, FUNDING], callbacks={L2_BOOK: book, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade, TICKER: ticker}))
-    f.add_feed(Kraken(checksum_validation=True, subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], CANDLES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
+    f.add_feed(Kraken(config='config.yaml', checksum_validation=True, subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], CANDLES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
     f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[TICKER, TRADES, CANDLES], callbacks={CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
     f.add_feed(OKX(checksum_validation=True, symbols=['BTC-USDT-PERP'], channels=[TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, LIQUIDATIONS: liquidations, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade}))
     f.add_feed(OKCoin(checksum_validation=True, symbols=['BTC-USD'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
@@ -121,6 +123,8 @@ def main():
     f.add_feed(CryptoDotCom(symbols=['BTC-USDT'], channels=[L2_BOOK, TICKER, CANDLES, TRADES], callbacks={TRADES: trade, CANDLES: candle_callback, TICKER: ticker, L2_BOOK: book}))
     f.add_feed(Delta(symbols=['BTC-USDT', 'BTC-USDT-PERP'], channels=[L2_BOOK, TRADES, CANDLES], callbacks={TRADES: trade, CANDLES: candle_callback, L2_BOOK: book}))
     f.add_feed(BitDotCom(config="config.yaml", sandbox=True, symbols=['BTC-USDT', 'BTC-USD-PERP'], channels=[TICKER, TRADES, L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker}))
+    f.add_feed(Bitget(config='config.yaml', symbols=['BTC-USD-PERP', 'BTC-USDT-PERP', 'BTC-USDT'], channels=[L2_BOOK, TICKER, CANDLES, TRADES], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book, TICKER: ticker}))
+    f.add_feed(IndependentReserve(symbols=['BTC-USD'], channels=[L3_BOOK, TRADES], callbacks={TRADES: trade, L3_BOOK: book}))
 
     f.run()
 

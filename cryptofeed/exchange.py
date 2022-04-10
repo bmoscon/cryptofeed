@@ -42,6 +42,8 @@ class Exchange:
         self.key_passphrase = keys.key_passphrase
         self.account_name = keys.account_name
 
+        self.ignore_invalid_instruments = self.config.ignore_invalid_instruments
+
         if not Symbols.populated(self.id):
             self.symbol_mapping()
         self.normalized_symbol_mapping, _ = Symbols.get(self.id)
@@ -128,6 +130,9 @@ class Exchange:
         try:
             return self.exchange_symbol_mapping[symbol]
         except KeyError:
+            if self.ignore_invalid_instruments:
+                LOG.warning('Invalid symbol %s configured for %s', symbol, self.id)
+                return symbol
             raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
     def std_symbol_to_exchange_symbol(self, symbol: Union[str, Symbol]) -> str:
@@ -136,6 +141,9 @@ class Exchange:
         try:
             return self.normalized_symbol_mapping[symbol]
         except KeyError:
+            if self.ignore_invalid_instruments:
+                LOG.warning('Invalid symbol %s configured for %s', symbol, self.id)
+                return symbol
             raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
 
 

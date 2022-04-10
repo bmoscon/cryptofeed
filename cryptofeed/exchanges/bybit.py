@@ -95,7 +95,7 @@ class Bybit(Feed):
                 "low": 9196,                            //min price
                 "volume": 81790,                        //volume
                 "turnover": 8.889247899999999,          //turnover
-                "confirm": False,                       //snapshot flag
+                "confirm": False,                       //snapshot flag (indicates if candle is closed or not)
                 "cross_seq": 297503466,
                 "timestamp": 1572425676958323           //cross time
             }],
@@ -106,12 +106,14 @@ class Bybit(Feed):
         ts = msg['timestamp_e6'] / 1_000_000
 
         for entry in msg['data']:
+            if self.candle_closed_only and not entry['confirm']:
+                continue
             c = Candle(self.id,
                        symbol,
                        entry['start'],
                        entry['end'],
                        self.candle_interval,
-                       None,
+                       entry['confirm'],
                        Decimal(entry['open']),
                        Decimal(entry['close']),
                        Decimal(entry['high']),
@@ -183,16 +185,25 @@ class Bybit(Feed):
 
     async def subscribe(self, connection: AsyncConnection):
         self.__reset()
-        for chan in self.subscription:
+        for chan in connection.subscription:
             if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                for pair in self.subscription[chan]:
-                    sym = str_to_symbol(pair)
-                    await connection.write(json.dumps(
-                        {
-                            "op": "subscribe",
-                            "args": [f"{chan}.{pair}"] if self.exchange_channel_to_std(chan) != CANDLES else [f"{chan if sym.quote == 'USD' else 'candle'}.{self.candle_interval_map[self.candle_interval]}.{pair}"]
-                        }
-                    ))
+                for pair in connection.subscription[chan]:
+                    sym = str_to_symbol(self.exchange_symbol_to_std_symbol(pair))
+
+                    if self.exchange_channel_to_std(chan) == CANDLES:
+                        c = chan if sym.quote == 'USD' else 'candle'
+                        sub = [f"{c}.{self.candle_interval_map[self.candle_interval]}.{pair}"]
+                    else:
+                        sub = [f"{chan}.{pair}"]
+
+                    await connection.write(json.dumps({"op": "subscribe", "args": sub}))
+            else:
+                await connection.write(json.dumps(
+                    {
+                        "op": "subscribe",
+                        "args": [f"{chan}"]
+                    }
+                ))
 
     async def _instrument_info(self, msg: dict, timestamp: float):
         """
@@ -490,7 +501,7 @@ class Bybit(Feed):
     #        await self.callback(BALANCES, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
 
     async def authenticate(self, conn: AsyncConnection):
-        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
+        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription):
             auth = self._auth(self.key_id, self.key_secret)
             LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
             await conn.write(auth)

@@ -23,6 +23,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Binance Futures](https://www.binance.com/en/futures)
 * [Binance US](https://www.binance.us/en)
 * [Bit.com](https://www.bit.com)
+* [Bitget](https://www.bitget.com/)
 * [BitMEX](https://www.bitmex.com/)
 * [Coinbase](https://www.coinbase.com/)
 * [Crypto.com](https://www.crypto.com)
@@ -39,6 +40,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Huobi](https://www.hbg.com/)
 * [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
 * Huobi Swap (Coin-M and USDT-M)
+* [Independent Reserve](https://www.independentreserve.com/) 
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)
@@ -147,7 +149,7 @@ Supported Backends:
 
 ## Installation
 
-**Note:** cryptofeed requires Python 3.7+
+**Note:** cryptofeed requires Python 3.8+
 
 Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
 

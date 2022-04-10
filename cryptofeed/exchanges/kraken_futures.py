@@ -44,6 +44,7 @@ class KrakenFutures(Feed):
             'FI': 'Inverse Futures',
             'FV': 'Vanilla Futures',
             'PI': 'Perpetual Inverse Futures',
+            'PF': 'Perpetual Linear Multi-Collateral Futures',
             'PV': 'Perpetual Vanilla Futures',
             'IN': 'Real Time Index',
             'RR': 'Reference Rate',
@@ -68,7 +69,7 @@ class KrakenFutures(Feed):
 
             info['tick_size'][s.normalized] = entry['tickSize']
             info['contract_size'][s.normalized] = entry['contractSize']
-            info['underlying'][s.normalized] = entry['underlying']
+            info['underlying'][s.normalized] = entry.get('underlying')
             info['product_type'][s.normalized] = _kraken_futures_product_type[ftype]
             info['instrument_type'][s.normalized] = stype
             ret[s.normalized] = entry['symbol']

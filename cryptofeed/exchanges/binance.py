@@ -74,10 +74,8 @@ class Binance(Feed, BinanceRestMixin):
             info['instrument_type'][s.normalized] = stype
         return ret, info
 
-    def __init__(self, candle_closed_only=False, depth_interval='100ms', **kwargs):
+    def __init__(self, depth_interval='100ms', **kwargs):
         """
-        candle_closed_only: bool
-            return only closed candles, i.e. no updates in between intervals.
         depth_interval: str
             time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
         """
@@ -85,7 +83,6 @@ class Binance(Feed, BinanceRestMixin):
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
 
         super().__init__(**kwargs)
-        self.candle_closed_only = candle_closed_only
         self.depth_interval = depth_interval
         self._open_interest_cache = {}
         self._reset()
@@ -328,14 +325,13 @@ class Binance(Feed, BinanceRestMixin):
             for update in msg[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
+                delta[side].append((price, amount))
 
                 if amount == 0:
                     if price in self._l2_book[pair].book[side]:
                         del self._l2_book[pair].book[side][price]
-                        delta[side].append((price, amount))
                 else:
                     self._l2_book[pair].book[side][price] = amount
-                    delta[side].append((price, amount))
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['E']), raw=msg, delta=delta, sequence_number=self.last_update_id[pair])
 
