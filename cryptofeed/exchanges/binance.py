@@ -279,14 +279,9 @@ class Binance(Feed, BinanceRestMixin):
                     max_depth = d
                     break
 
-        req_time = time.time()
         resp = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(pair, max_depth))
         resp = json.loads(resp, parse_float=Decimal)
-        if 'E' not in resp:
-            resp_time = time.time()
-            timestamp = req_time + (resp_time - req_time) / 2
-        else:
-            timestamp = self.timestamp_normalize(resp['E'])
+        timestamp = self.timestamp_normalize(resp['E']) if 'E' in resp else None
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         self.last_update_id[std_pair] = resp['lastUpdateId']
