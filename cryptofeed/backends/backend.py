@@ -8,14 +8,6 @@ import asyncio
 from asyncio.queues import Queue
 from multiprocessing import Pipe, Process
 from contextlib import asynccontextmanager
-from signal import SIGABRT, SIGINT, SIGTERM
-
-try:
-    # unix / macos only
-    from signal import SIGHUP
-    SIGNALS = (SIGABRT, SIGINT, SIGTERM, SIGHUP)
-except ImportError:
-    SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
 
 SHUTDOWN_SENTINEL = 'STOP'
@@ -26,7 +18,6 @@ class BackendQueue:
         if hasattr(self, 'started') and self.started:
             # prevent a backend callback from starting more than 1 writer and creating more than 1 queue
             return
-        print("multiprocess", multiprocess)
         self.multiprocess = multiprocess
         if self.multiprocess:
             self.queue = Pipe(duplex=False)
@@ -38,28 +29,17 @@ class BackendQueue:
         self.started = True
 
     async def stop(self):
-        print("Calling Stop")
         if self.multiprocess:
             self.queue[1].send(SHUTDOWN_SENTINEL)
-            print("Join")
             self.worker.join()
-            print("Joined")
         else:
             await self.queue.put(SHUTDOWN_SENTINEL)
         self.running = False
 
     @staticmethod
     def worker(writer):
-        def setup_signal_handlers(loop):
-            def handle_stop_signals(*args):
-                print("RCVD SIGNAL")
-                pass
-
-            for sig in SIGNALS:
-                loop.add_signal_handler(sig, handle_stop_signals)
         try:
             loop = asyncio.new_event_loop()
-            setup_signal_handlers(loop)
             loop.run_until_complete(writer())
         except KeyboardInterrupt:
             pass
