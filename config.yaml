@@ -9,6 +9,9 @@ uvloop: True
 # Ignore invalid symbols/instruments
 ignore_invalid_instruments: False
 
+# Use multiprocessing for backends
+backend_multiprocessing: False
+
 # Secrets for exchanges
 bit.com:
     key_id: null

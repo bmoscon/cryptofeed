@@ -141,11 +141,9 @@ Supported Backends:
 * [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
-* Elastic Search
 * RabbitMQ
 * PostgreSQL
 * GCP Pub/Sub
-* [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)
 * [QuestDB](https://questdb.io/)
 
 

@@ -19,16 +19,13 @@ class QuestCallback(SocketCallback):
         self.key = key if key else self.default_key
         self.numeric_type = float
         self.none_to = None
+        self.running = True
 
     async def writer(self):
         while True:
             await self.connect()
-            count = self.queue.qsize()
-            if count == 0:
-                count = 1
-
-            async with self.read_many_queue(count) as update:
-                update = "\n".join(update) + "\n"
+            async with self.read_queue() as updates:
+                update = "\n".join(updates) + "\n"
                 self.conn.write(update.encode())
 
     async def write(self, data):

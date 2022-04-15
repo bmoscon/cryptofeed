@@ -292,6 +292,6 @@ class Feed(Exchange):
             for callback in callbacks:
                 if hasattr(callback, 'start'):
                     cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
-                    LOG.info('%s: starting backend task %s', self.id, cb_name)
+                    LOG.info('%s: starting backend task %s with multiprocessing=%s', self.id, cb_name, 'True' if self.config.backend_multiprocessing else 'False')
                     # Backends start tasks to write messages
-                    callback.start(loop)
+                    callback.start(loop, multiprocess=self.config.backend_multiprocessing)
