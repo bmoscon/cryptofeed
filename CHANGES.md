@@ -14,6 +14,8 @@
  * Update: Add indicator in symbol info if instrument is a qunto
  * Feature: Configuration option to allow invalid symbols
  * Bugfix: use supplied timestamp from snapshot in Binance
+ * Feature: Optional multiprocessing support for backends
+ * Update: Remove unsupported backends
 
 ### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMEX
