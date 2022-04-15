@@ -17,7 +17,7 @@ def main():
     f.add_feed(Bitfinex(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
     f.add_feed(Coinbase(config=config, channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
     f.add_feed(Coinbase(channels=[L2_BOOK], symbols=['BTC-USD'], callbacks={L2_BOOK: BookStream()}))
-    #f.add_feed(Gemini(symbols=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
+    f.add_feed(Gemini(symbols=['BTC-USD'], callbacks={TRADES: TradeRedis()}))
     f.add_feed(Binance(candle_closed_only=True, symbols=['BTC-USDT'], channels=[CANDLES], callbacks={CANDLES: CandlesRedis(score_key='start')}))
     f.add_feed(Binance(max_depth=10, symbols=['BTC-USDT'], channels=[L2_BOOK], callbacks={L2_BOOK: BookRedis(snapshots_only=True)}))
 
