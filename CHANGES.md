@@ -16,6 +16,7 @@
  * Bugfix: use supplied timestamp from snapshot in Binance
  * Feature: Optional multiprocessing support for backends
  * Update: Remove unsupported backends
+ * Feature: Support checksum validation on Bitget orderbooks
 
 ### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMEX
