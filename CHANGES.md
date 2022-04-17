@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.2.2
+### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
  * Bugfix: Tweak QuestDB coulmn types and layout
  * Bugfix: Fix Bybit Private Channel connections / subscriptions
