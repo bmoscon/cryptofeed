@@ -229,7 +229,7 @@ class OKX(Feed, OKXRestMixin):
             for update in msg['data']:
                 bids = {Decimal(price): Decimal(amount) for price, amount, *_ in update['bids']}
                 asks = {Decimal(price): Decimal(amount) for price, amount, *_ in update['asks']}
-                self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, checksum_format='OKEX', bids=bids, asks=asks)
+                self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, checksum_format=self.id, bids=bids, asks=asks)
 
                 if self.checksum_validation and self._l2_book[pair].book.checksum() != (update['checksum'] & 0xFFFFFFFF):
                     raise BadChecksum

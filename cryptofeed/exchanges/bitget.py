@@ -13,6 +13,7 @@ from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BID, BITGET, BUY, CANDLES, L2_BOOK, PERPETUAL, SELL, SPOT, TICKER, TRADES
+from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol, str_to_symbol
 from cryptofeed.types import Ticker, Trade, Candle, OrderBook
@@ -219,8 +220,10 @@ class Bitget(Feed):
             '''
             bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
             asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
+            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks, checksum_format=self.id)
 
+            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data['checksum'] & 0xFFFFFFFF):
+                raise BadChecksum
             await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
 
         else:
@@ -254,6 +257,8 @@ class Bitget(Feed):
                     else:
                         self._l2_book[symbol].book[side][price] = size
 
+            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data['checksum'] & 0xFFFFFFFF):
+                raise BadChecksum
             await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
