@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.2.3
+ * Feature: Authenticated channel support for Bitget
+
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
  * Bugfix: Tweak QuestDB coulmn types and layout
