@@ -493,7 +493,7 @@ class Bitget(Feed):
         if symbol != 'default':
             if msg['arg']['instType'] == 'mc':
                 if symbol.endswith('T'):
-                    symbol = self.exchange_symbol_to_std_symbol(symbol + "_UUMCBL")
+                    symbol = self.exchange_symbol_to_std_symbol(symbol + "_UMCBL")
                 else:
                     symbol = self.exchange_symbol_to_std_symbol(symbol + "_DMCBL")
             elif msg['arg']['instType'] in {'dmcbl', 'umcbl'}:
