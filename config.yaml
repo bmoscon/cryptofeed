@@ -13,9 +13,19 @@ ignore_invalid_instruments: False
 backend_multiprocessing: False
 
 # Secrets for exchanges
+binance_futures:
+    key_id: null
+    key_secret: null
+binance_delivery:
+    key_id: null
+    key_secret: null
 bit.com:
     key_id: null
     key_secret: null
+bitget:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
 bitmex:
     key_id: null
     key_secret: null
@@ -26,16 +36,6 @@ coinbase:
     key_id: null
     key_secret: null
     key_passphrase: null
-poloniex:
-    key_id: null
-    key_secret: null
-gemini:
-    key_id: null
-    key_secret: null
-    account_name: null   # this is an optional param needed only when using a master api key
-kraken:
-    key_id: null
-    key_secret: null
 deribit:
     key_id: null
     key_secret: null
@@ -48,12 +48,17 @@ ftx:
         key_secret: null
     key_id: null
     key_secret: null
-binance_futures:
+gemini:
     key_id: null
     key_secret: null
-binance_delivery:
+    account_name: null   # this is an optional param needed only when using a master api key
+kraken:
     key_id: null
     key_secret: null
+kucoin:
+    key_id: null
+    key_secret: null
+    key_passphrase: null
 okcoin:
     key_id: null
     key_secret: null
@@ -62,7 +67,6 @@ okx:
     key_id: null
     key_secret: null
     key_passphrase: null
-kucoin:
+poloniex:
     key_id: null
     key_secret: null
-    key_passphrase: null

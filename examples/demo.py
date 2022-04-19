@@ -123,7 +123,7 @@ def main():
     f.add_feed(CryptoDotCom(symbols=['BTC-USDT'], channels=[L2_BOOK, TICKER, CANDLES, TRADES], callbacks={TRADES: trade, CANDLES: candle_callback, TICKER: ticker, L2_BOOK: book}))
     f.add_feed(Delta(symbols=['BTC-USDT', 'BTC-USDT-PERP'], channels=[L2_BOOK, TRADES, CANDLES], callbacks={TRADES: trade, CANDLES: candle_callback, L2_BOOK: book}))
     f.add_feed(BitDotCom(config="config.yaml", sandbox=True, symbols=['BTC-USDT', 'BTC-USD-PERP'], channels=[TICKER, TRADES, L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker}))
-    f.add_feed(Bitget(checksum_validation=True, config='config.yaml', symbols=['BTC-USDT', 'BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[L2_BOOK], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book, TICKER: ticker}))
+    f.add_feed(Bitget(checksum_validation=True, config='config.yaml', symbols=['BTC-USDT', 'BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[L2_BOOK, TRADES, TICKER, CANDLES], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book, TICKER: ticker}))
     f.add_feed(IndependentReserve(symbols=['BTC-USD'], channels=[L3_BOOK, TRADES], callbacks={TRADES: trade, L3_BOOK: book}))
 
     f.run()
