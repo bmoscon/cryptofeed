@@ -1,6 +1,9 @@
 ## Changelog
 
-### 2.2.2
+### 2.2.3
+ * Feature: Authenticated channel support for Bitget
+
+### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
  * Bugfix: Tweak QuestDB coulmn types and layout
  * Bugfix: Fix Bybit Private Channel connections / subscriptions
@@ -13,6 +16,10 @@
  * Feature: Add perpetuals to Bitget
  * Update: Add indicator in symbol info if instrument is a qunto
  * Feature: Configuration option to allow invalid symbols
+ * Bugfix: use supplied timestamp from snapshot in Binance
+ * Feature: Optional multiprocessing support for backends
+ * Update: Remove unsupported backends
+ * Feature: Support checksum validation on Bitget orderbooks
 
 ### 2.2.1 (2022-02-27)
  * Feature: Support for order info stream on BitMEX

@@ -38,7 +38,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
     request_limit = 10
 
     @classmethod
-    def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+    def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
 
