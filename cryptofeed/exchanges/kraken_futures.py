@@ -262,3 +262,27 @@ class KrakenFutures(Feed):
                 await self._book(msg, pair, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
+
+    async def book_callback(
+            self,
+            book_type: str,
+            book: OrderBook,
+            receipt_timestamp: float,
+            timestamp=None,
+            raw=None,
+            sequence_number=None,
+            checksum=None,
+            delta=None
+    ):
+        if self.cross_check:
+            self.check_bid_ask_overlapping(book)
+
+        # See, https://docs.kraken.com/websockets/#message-trade
+        book.timestamp = timestamp if timestamp is not None \
+            else self.timestamp_normalize(raw["timestamp"]) if "timestamp" in raw \
+            else None
+        book.raw = raw
+        book.sequence_number = sequence_number
+        book.delta = delta
+        book.checksum = checksum
+        await self.callback(book_type, book, receipt_timestamp)
