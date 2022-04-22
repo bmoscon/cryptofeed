@@ -2,6 +2,14 @@
 
 ### 2.2.3
  * Feature: Authenticated channel support for Bitget
+ * New Exchange: AscendEX Futures
+ * Update: AscendEX, add sandbox endpoint. Add channel filter.
+ * Update: Binance, add sandbox endpoint.
+ * Update: Binance Delivery, add sandbox endpoint.
+ * Update: Bitmex, add sandbox endpoint.
+ * Update: KrakenFutures, add sandbox endpoint.
+ * Bugfix: Bitmex, timestamp was not returned in book.
+ * Bugfix: KrakenFutures, timestamp was not returned in book.
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
