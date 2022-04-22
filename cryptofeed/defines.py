@@ -10,6 +10,7 @@ as well as some documentation (in comment form) regarding
 the book definitions and structure
 '''
 ASCENDEX = 'ASCENDEX'
+ASCENDEX_FUTURES = 'ASCENDEX_FUTURES'
 BEQUANT = 'BEQUANT'
 BITFINEX = 'BITFINEX'
 BITHUMB = 'BITHUMB'
