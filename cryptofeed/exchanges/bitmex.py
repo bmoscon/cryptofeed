@@ -361,6 +361,7 @@ class Bitmex(Feed, BitmexRestMixin):
     async def _book(self, msg: dict, timestamp: float):
         """
         the Full bitmex book
+        Docs, https://www.bitmex.com/app/wsAPI
         """
         # PERF perf_start(self.id, 'book_msg')
 
@@ -428,6 +429,10 @@ class Bitmex(Feed, BitmexRestMixin):
             return
         # PERF perf_end(self.id, 'book_msg')
         # PERF perf_log(self.id, 'book_msg')
+
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg["data"][0]["timestamp"]) \
+            if "data" in msg and isinstance(msg["data"], list) and msg["data"] and "timestamp" in msg["data"][0] \
+            else None
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta)
 
@@ -810,21 +815,3 @@ class Bitmex(Feed, BitmexRestMixin):
             msg = f'GET/realtime{expires}'.encode('utf-8')
             signature = hmac.new(self.key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
             await conn.write(json.dumps({'op': 'authKeyExpires', 'args': [self.key_id, expires, signature]}))
-
-    async def book_callback(self, book_type: str, book: OrderBook, receipt_timestamp: float, timestamp=None, raw=None,
-                            sequence_number=None, checksum=None, delta=None):
-        if self.cross_check:
-            self.check_bid_ask_overlapping(book)
-
-        # See, https://www.bitmex.com/app/wsAPI
-        book.timestamp = timestamp if timestamp is not None \
-            else self.timestamp_normalize(raw["data"][0]["timestamp"]) if "data" in raw \
-                                                                          and isinstance(raw["data"], list) \
-                                                                          and raw["data"] \
-                                                                          and "timestamp" in raw["data"][0] \
-            else None
-        book.raw = raw
-        book.sequence_number = sequence_number
-        book.delta = delta
-        book.checksum = checksum
-        await self.callback(book_type, book, receipt_timestamp)

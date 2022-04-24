@@ -174,6 +174,9 @@ class KrakenFutures(Feed):
             self._l2_book[pair].book.asks = asks
         else:
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
+
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg["timestamp"]) if "timestamp" in msg else None
+
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, sequence_number=msg['seq'])
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
@@ -204,6 +207,8 @@ class KrakenFutures(Feed):
         else:
             delta[s].append((price, amount))
             self._l2_book[pair].book[s][price] = amount
+
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg["timestamp"]) if "timestamp" in msg else None
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, sequence_number=msg['seq'], raw=msg)
 
@@ -262,27 +267,3 @@ class KrakenFutures(Feed):
                 await self._book(msg, pair, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
-
-    async def book_callback(
-            self,
-            book_type: str,
-            book: OrderBook,
-            receipt_timestamp: float,
-            timestamp=None,
-            raw=None,
-            sequence_number=None,
-            checksum=None,
-            delta=None
-    ):
-        if self.cross_check:
-            self.check_bid_ask_overlapping(book)
-
-        # See, https://docs.kraken.com/websockets/#message-trade
-        book.timestamp = timestamp if timestamp is not None \
-            else self.timestamp_normalize(raw["timestamp"]) if "timestamp" in raw \
-            else None
-        book.raw = raw
-        book.sequence_number = sequence_number
-        book.delta = delta
-        book.checksum = checksum
-        await self.callback(book_type, book, receipt_timestamp)
