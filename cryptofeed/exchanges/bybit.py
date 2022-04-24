@@ -446,7 +446,7 @@ class Bybit(Feed):
                 order_status[data["order_status"]],
                 LIMIT if data['order_type'] == 'Limit' else MARKET,
                 Decimal(data['price']),
-                Decimal(data['cum_exec_qty']),
+                Decimal(data['qty']),
                 Decimal(data['qty']) - Decimal(data['cum_exec_qty']),
                 self.timestamp_normalize(data.get('update_time') or data.get('O') or data.get('timestamp')),
                 raw=data,
