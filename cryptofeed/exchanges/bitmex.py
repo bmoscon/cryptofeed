@@ -28,7 +28,7 @@ LOG = logging.getLogger('feedhandler')
 class Bitmex(Feed, BitmexRestMixin):
     id = BITMEX
     websocket_endpoints = [WebsocketEndpoint('wss://www.bitmex.com/realtime', sandbox='wss://testnet.bitmex.com/realtime', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://www.bitmex.com', routes=Routes('/api/v1/instrument/active'))]
+    rest_endpoints = [RestEndpoint('https://www.bitmex.com', routes=Routes('/api/v1/instrument/active'), sandbox='https://testnet.bitmex.com')]
     websocket_channels = {
         L2_BOOK: 'orderBookL2',
         TRADES: 'trade',
@@ -355,6 +355,7 @@ class Bitmex(Feed, BitmexRestMixin):
     async def _book(self, msg: dict, timestamp: float):
         """
         the Full bitmex book
+        Docs, https://www.bitmex.com/app/wsAPI
         """
         # PERF perf_start(self.id, 'book_msg')
 
@@ -422,6 +423,10 @@ class Bitmex(Feed, BitmexRestMixin):
             return
         # PERF perf_end(self.id, 'book_msg')
         # PERF perf_log(self.id, 'book_msg')
+
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg["data"][0]["timestamp"]) \
+            if "data" in msg and isinstance(msg["data"], list) and msg["data"] and "timestamp" in msg["data"][0] \
+            else None
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta)
 

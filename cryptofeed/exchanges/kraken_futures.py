@@ -24,8 +24,8 @@ LOG = logging.getLogger('feedhandler')
 
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
-    websocket_endpoints = [WebsocketEndpoint('wss://futures.kraken.com/ws/v1')]
-    rest_endpoints = [RestEndpoint('https://futures.kraken.com', routes=Routes('/derivatives/api/v3/instruments'))]
+    websocket_endpoints = [WebsocketEndpoint('wss://futures.kraken.com/ws/v1', sandbox='wss://demo-futures.kraken.com/ws/v1')]
+    rest_endpoints = [RestEndpoint('https://futures.kraken.com', routes=Routes('/derivatives/api/v3/instruments'), sandbox='https://demo-futures.kraken.com')]
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',
@@ -167,6 +167,9 @@ class KrakenFutures(Feed):
             self._l2_book[pair].book.asks = asks
         else:
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
+
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg["timestamp"]) if "timestamp" in msg else None
+
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, sequence_number=msg['seq'])
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
@@ -197,6 +200,8 @@ class KrakenFutures(Feed):
         else:
             delta[s].append((price, amount))
             self._l2_book[pair].book[s][price] = amount
+
+        self._l2_book[pair].timestamp = self.timestamp_normalize(msg["timestamp"]) if "timestamp" in msg else None
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, sequence_number=msg['seq'], raw=msg)
 

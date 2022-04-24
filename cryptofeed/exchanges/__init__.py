@@ -9,6 +9,7 @@ from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str, FMFW as FMFW_str,
 from .bitdotcom import BitDotCom
 from .phemex import Phemex
 from .ascendex import AscendEX
+from .ascendex_futures import AscendEXFutures
 from .bequant import Bequant
 from .binance import Binance
 from .binance_delivery import BinanceDelivery
@@ -51,6 +52,7 @@ from .upbit import Upbit
 # Maps string name to class name for use with config
 EXCHANGE_MAP = {
     ASCENDEX: AscendEX,
+    ASCENDEX_FUTURES: AscendEXFutures,
     BEQUANT: Bequant,
     BINANCE_DELIVERY: BinanceDelivery,
     BINANCE_FUTURES: BinanceFutures,

@@ -24,12 +24,14 @@ LOG = logging.getLogger('feedhandler')
 
 class AscendEX(Feed):
     id = ASCENDEX
-    websocket_endpoints = [WebsocketEndpoint('wss://ascendex.com/1/api/pro/v1/stream')]
-    rest_endpoints = [RestEndpoint('https://ascendex.com', routes=Routes('/api/pro/v1/products'))]
+    rest_endpoints = [RestEndpoint('https://ascendex.com', routes=Routes('/api/pro/v1/products'), sandbox='https://api-test.ascendex-sandbox.com')]
     websocket_channels = {
         L2_BOOK: 'depth:',
         TRADES: 'trades:',
     }
+    # Docs, https://ascendex.github.io/ascendex-pro-api/#websocket-authentication
+    # noinspection PyTypeChecker
+    websocket_endpoints = [WebsocketEndpoint('wss://ascendex.com/1/api/pro/v1/stream', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES],), sandbox='wss://api-test.ascendex-sandbox.com/1/api/pro/v1/stream',)]
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:

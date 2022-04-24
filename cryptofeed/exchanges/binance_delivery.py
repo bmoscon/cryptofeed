@@ -22,8 +22,9 @@ LOG = logging.getLogger('feedhandler')
 class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
     id = BINANCE_DELIVERY
 
-    websocket_endpoints = [WebsocketEndpoint('wss://dstream.binance.com', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://dapi.binance.com', routes=Routes('/dapi/v1/exchangeInfo', l2book='/dapi/v1/depth?symbol={}&limit={}', authentication='/dapi/v1/listenKey'))]
+    # https://binance-docs.github.io/apidocs/delivery/en/#testnet
+    websocket_endpoints = [WebsocketEndpoint('wss://dstream.binance.com', options={'compression': None}, sandbox='wss://dstream.binancefuture.com')]
+    rest_endpoints = [RestEndpoint('https://dapi.binance.com', routes=Routes('/dapi/v1/exchangeInfo', l2book='/dapi/v1/depth?symbol={}&limit={}', authentication='/dapi/v1/listenKey'), sandbox='https://testnet.binancefuture.com')]
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
