@@ -27,14 +27,8 @@ LOG = logging.getLogger('feedhandler')
 
 class Bitmex(Feed, BitmexRestMixin):
     id = BITMEX
-    websocket_endpoints = [WebsocketEndpoint(
-        'wss://www.bitmex.com/realtime',
-        sandbox='wss://testnet.bitmex.com/realtime', options={'compression': None})]
-    rest_endpoints = [RestEndpoint(
-        'https://www.bitmex.com',
-        routes=Routes('/api/v1/instrument/active'),
-        sandbox='https://testnet.bitmex.com'
-    )]
+    websocket_endpoints = [WebsocketEndpoint('wss://www.bitmex.com/realtime', sandbox='wss://testnet.bitmex.com/realtime', options={'compression': None})]
+    rest_endpoints = [RestEndpoint('https://www.bitmex.com', routes=Routes('/api/v1/instrument/active'), sandbox='https://testnet.bitmex.com')]
     websocket_channels = {
         L2_BOOK: 'orderBookL2',
         TRADES: 'trade',

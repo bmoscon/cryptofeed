@@ -24,15 +24,8 @@ LOG = logging.getLogger('feedhandler')
 
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
-    websocket_endpoints = [WebsocketEndpoint(
-        'wss://futures.kraken.com/ws/v1',
-        sandbox='wss://demo-futures.kraken.com/ws/v1'
-    )]
-    rest_endpoints = [RestEndpoint(
-        'https://futures.kraken.com',
-        routes=Routes('/derivatives/api/v3/instruments'),
-        sandbox='https://demo-futures.kraken.com'
-    )]
+    websocket_endpoints = [WebsocketEndpoint('wss://futures.kraken.com/ws/v1', sandbox='wss://demo-futures.kraken.com/ws/v1')]
+    rest_endpoints = [RestEndpoint('https://futures.kraken.com', routes=Routes('/derivatives/api/v3/instruments'), sandbox='https://demo-futures.kraken.com')]
     websocket_channels = {
         L2_BOOK: 'book',
         TRADES: 'trade',

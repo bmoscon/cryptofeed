@@ -19,20 +19,9 @@ class AscendEXFutures(AscendEX):
     }
     # Docs, https://ascendex.github.io/ascendex-futures-pro-api-v2/#how-to-connect
     # noinspection PyTypeChecker
-    websocket_endpoints = [WebsocketEndpoint(
-        'wss://ascendex.com:443/api/pro/v2/stream',
-        channel_filter=(
-            websocket_channels[L2_BOOK],
-            websocket_channels[TRADES],
-        ),
-        sandbox='wss://api-test.ascendex-sandbox.com:443/api/pro/v2/stream',
-    )]
+    websocket_endpoints = [WebsocketEndpoint('wss://ascendex.com:443/api/pro/v2/stream', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES],), sandbox='wss://api-test.ascendex-sandbox.com:443/api/pro/v2/stream')]
     # Docs, https://ascendex.github.io/ascendex-futures-pro-api-v2/#futures-contracts-info
-    rest_endpoints = [RestEndpoint(
-        'https://ascendex.com',
-        routes=Routes('/api/pro/v2/futures/contract'),
-        sandbox='https://api-test.ascendex-sandbox.com'
-    )]
+    rest_endpoints = [RestEndpoint('https://ascendex.com', routes=Routes('/api/pro/v2/futures/contract'), sandbox='https://api-test.ascendex-sandbox.com')]
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
