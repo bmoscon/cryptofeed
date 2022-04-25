@@ -8,8 +8,10 @@
  * Update: Binance Delivery, add sandbox endpoint.
  * Update: Bitmex, add sandbox endpoint.
  * Update: KrakenFutures, add sandbox endpoint.
+ * Bugfix: Bybit, the quantity for order_info stream was incorrect.
  * Bugfix: Bitmex, timestamp was not returned in book.
  * Bugfix: KrakenFutures, timestamp was not returned in book.
+ * Bugfix: Phemex, websocket subscription error.
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
