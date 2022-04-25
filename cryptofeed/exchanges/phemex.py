@@ -636,9 +636,9 @@ class Phemex(Feed):
 
         for chan, symbol in conn.subscription.items():
             if not self.exchange_channel_to_std(chan) == BALANCES:
-                msg = {"id": 1, "method": chan, "params": [symbol]}
+                msg = {"id": 1, "method": chan, "params": symbol}
                 if self.exchange_channel_to_std(chan) == CANDLES:
-                    msg['params'] = [symbol, self.candle_interval_map[self.candle_interval]]
+                    msg['params'] = [*symbol, self.candle_interval_map[self.candle_interval]]
                 LOG.debug(f"{conn.uuid}: Sending subscribe request to public channel: {msg}")
                 await conn.write(json.dumps(msg))
 
