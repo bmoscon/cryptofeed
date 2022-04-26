@@ -42,7 +42,7 @@ class OKX(Feed, OKXRestMixin):
         WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]), options={'compression': None}),
         WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/private', channel_filter=(websocket_channels[ORDER_INFO],), options={'compression': None}),
     ]
-    rest_endpoints = [RestEndpoint('https://www.okx.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
+    rest_endpoints = [RestEndpoint('https://www.okx.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/api/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
     request_limit = 20
 
     @classmethod
@@ -91,7 +91,7 @@ class OKX(Feed, OKXRestMixin):
 
         while True:
             for pair in pairs:
-                if 'PERP' in pair:
+                if 'SWAP' in pair:
                     instrument_type = 'SWAP'
                     uly = pair.split("-")[0] + "-" + pair.split("-")[1]
                 else:
@@ -112,10 +112,11 @@ class OKX(Feed, OKXRestMixin):
                             self.id,
                             pair,
                             BUY if entry['side'] == 'buy' else SELL,
-                            None,
+                            Decimal(entry['sz']),
                             Decimal(entry['bkPx']),
-                            status,
                             None,
+                            status,
+                            self.timestamp_normalize(int(entry['ts'])),
                             raw=data
                         )
                         await self.callback(LIQUIDATIONS, liq, timestamp)
@@ -387,6 +388,9 @@ class OKX(Feed, OKXRestMixin):
     async def subscribe(self, connection: AsyncConnection):
         channels = []
         for chan in self.subscription:
+            if chan == LIQUIDATIONS:
+                asyncio.create_task(self._liquidations(self.subscription[chan]))
+                continue
             for pair in self.subscription[chan]:
                 channels.append(self.build_subscription(chan, pair))
 
