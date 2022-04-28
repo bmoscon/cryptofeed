@@ -2,6 +2,7 @@
 
 ### 2.2.3
  * Feature: Authenticated channel support for Bitget
+ * New Exchange: FTX TR
  * New Exchange: AscendEX Futures
  * Update: AscendEX, add sandbox endpoint. Add channel filter.
  * Update: Binance, add sandbox endpoint.
