@@ -14,6 +14,7 @@
  * Bugfix: KrakenFutures, timestamp was not returned in book.
  * Bugfix: Phemex, websocket subscription error.
  * Bugfix: OKX, liquidations subscription was never called.
+ * Bugfix: Kucoin, limit websocket connections for candles to 100.
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
