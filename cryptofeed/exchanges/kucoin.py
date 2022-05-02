@@ -62,8 +62,8 @@ class KuCoin(Feed):
         address = f"{address}?token={token}"
         self.websocket_endpoints = [WebsocketEndpoint(address, options={'ping_interval': address_info['data']['instanceServers'][0]['pingInterval'] / 2000})]
         super().__init__(**kwargs)
-        if any([len(self.subscription[chan]) > 300 for chan in self.subscription]):
-            raise ValueError("Kucoin has a limit of 300 symbols per connection")
+        if any([len(self.subscription[chan]) > 300 if chan != self.websocket_channels.get(CANDLES) else 100 for chan in self.subscription]):
+            raise ValueError("Kucoin has a limit of symbols per websocket connection: 100 symbols for CANDLES, 300 symbols in general")
         self.__reset()
 
     def __reset(self):
