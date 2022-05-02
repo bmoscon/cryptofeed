@@ -6,6 +6,7 @@ associated with this software.
 '''
 from collections import defaultdict
 import asyncio
+from typing import Optional
 
 from aiokafka import AIOKafkaProducer
 from yapic import json
@@ -14,7 +15,7 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class KafkaCallback:
-    def __init__(self, bootstrap='127.0.0.1', port=9092, key=None, numeric_type=float, none_to=None, **kwargs):
+    def __init__(self, bootstrap='127.0.0.1', port=9092, key=None, numeric_type=float, none_to=None, acks=0, client_id='cryptofeed', **kwargs):
         """
         bootstrap: str, list
             if a list, should be a list of strings in the format: ip/host:port, i.e.
@@ -29,20 +30,30 @@ class KafkaCallback:
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to
+        self.acks = acks
+        self.client_id = client_id
 
     async def __connect(self):
         if not self.producer:
             loop = asyncio.get_event_loop()
-            self.producer = AIOKafkaProducer(acks=0,
+            self.producer = AIOKafkaProducer(acks=self.acks,
                                              loop=loop,
                                              bootstrap_servers=f'{self.bootstrap}:{self.port}' if isinstance(self.bootstrap, str) else self.bootstrap,
-                                             client_id='cryptofeed')
+                                             client_id=self.client_id)
             await self.producer.start()
+
+    def topic(self, data: dict) -> str:
+        return f"{self.key}-{data['exchange']}-{data['symbol']}"
+
+    def partition_key(self, data: dict) -> Optional[bytes]:
+        return None
+
+    def partition(self, data: dict) -> Optional[int]:
+        return None
 
     async def write(self, data: dict):
         await self.__connect()
-        topic = f"{self.key}-{data['exchange']}-{data['symbol']}"
-        await self.producer.send_and_wait(topic, json.dumps(data).encode('utf-8'))
+        await self.producer.send_and_wait(self.topic(data), json.dumps(data).encode('utf-8'), self.partition_key(data), self.partition(data))
 
 
 class TradeKafka(KafkaCallback, BackendCallback):
