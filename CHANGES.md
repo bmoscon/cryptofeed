@@ -14,6 +14,7 @@
  * Bugfix: KrakenFutures, timestamp was not returned in book.
  * Bugfix: Phemex, websocket subscription error.
  * Bugfix: OKX, liquidations subscription was never called.
+ * Update: OKX, use publicly available channel for book updates.
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
