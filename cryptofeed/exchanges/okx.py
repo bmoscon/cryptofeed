@@ -30,7 +30,7 @@ LOG = logging.getLogger("feedhandler")
 class OKX(Feed, OKXRestMixin):
     id = OKX_str
     websocket_channels = {
-        L2_BOOK: 'books-l2-tbt',
+        L2_BOOK: 'books',
         TRADES: 'trades',
         TICKER: 'tickers',
         FUNDING: 'funding-rate',
@@ -370,17 +370,17 @@ class OKX(Feed, OKXRestMixin):
             else:
                 LOG.warning("%s: Unhandled event %s", self.id, msg)
         elif 'arg' in msg:
-            if 'books-l2-tbt' in msg['arg']['channel']:
+            if self.websocket_channels[L2_BOOK] in msg['arg']['channel']:
                 await self._book(msg, timestamp)
-            elif 'tickers' in msg['arg']['channel']:
+            elif self.websocket_channels[TICKER] in msg['arg']['channel']:
                 await self._ticker(msg, timestamp)
-            elif 'trades' in msg['arg']['channel']:
+            elif self.websocket_channels[TRADES] in msg['arg']['channel']:
                 await self._trade(msg, timestamp)
-            elif 'funding-rate' in msg['arg']['channel']:
+            elif self.websocket_channels[FUNDING] in msg['arg']['channel']:
                 await self._funding(msg, timestamp)
-            elif 'orders' in msg['arg']['channel']:
+            elif self.websocket_channels[ORDER_INFO] in msg['arg']['channel']:
                 await self._order(msg, timestamp)
-            elif 'open-interest' in msg['arg']['channel']:
+            elif self.websocket_channels[OPEN_INTEREST] in msg['arg']['channel']:
                 await self._open_interest(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
