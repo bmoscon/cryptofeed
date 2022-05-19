@@ -170,7 +170,7 @@ class BitDotCom(Feed):
             msg = {
                 'type': 'subscribe',
                 'channels': [chan],
-                'instruments' if stype in {FUTURES, OPTION} else 'pairs': symbols,
+                'instruments' if stype in {PERPETUAL, FUTURES, OPTION} else 'pairs': symbols,
             }
             if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 msg['token'] = self._auth_token

@@ -17,6 +17,7 @@
  * Update: OKX, use publicly available channel for book updates.
  * Bugfix: Fix race condition when resetting feeds with multiple connections
  * Update: Send Phemex subscriptions one symbol at a time
+ * Bugfix: BitDotCom, the subscription message for perpetuals was incorrect
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
