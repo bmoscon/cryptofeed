@@ -78,9 +78,15 @@ class Bybit(Feed):
 
         return ret, info
 
-    def __reset(self):
+    def __reset(self, conn: AsyncConnection):
+        if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:
+            for pair in conn.subscription[self.std_channel_to_exchange(L2_BOOK)]:
+                std_pair = self.exchange_symbol_to_std_symbol(pair)
+
+                if std_pair in self._l2_book:
+                    del self._l2_book[std_pair]
+
         self._instrument_info_cache = {}
-        self._l2_book = {}
 
     async def _candle(self, msg: dict, timestamp: float):
         '''
@@ -184,7 +190,7 @@ class Bybit(Feed):
             LOG.warning("%s: Unhandled message type %s", conn.uuid, msg)
 
     async def subscribe(self, connection: AsyncConnection):
-        self.__reset()
+        self.__reset(connection)
         for chan in connection.subscription:
             if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
                 for pair in connection.subscription[chan]:
