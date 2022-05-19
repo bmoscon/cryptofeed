@@ -639,11 +639,12 @@ class Phemex(Feed):
 
         for chan, symbols in conn.subscription.items():
             if not self.exchange_channel_to_std(chan) == BALANCES:
-                msg = {"id": 1, "method": chan, "params": symbols}
-                if self.exchange_channel_to_std(chan) == CANDLES:
-                    msg['params'] = [*symbols, self.candle_interval_map[self.candle_interval]]
-                LOG.debug(f"{conn.uuid}: Sending subscribe request to public channel: {msg}")
-                await conn.write(json.dumps(msg))
+                for sym in symbols:
+                    msg = {"id": 1, "method": chan, "params": [sym]}
+                    if self.exchange_channel_to_std(chan) == CANDLES:
+                        msg['params'] = [*[sym], self.candle_interval_map[self.candle_interval]]
+                    LOG.debug(f"{conn.uuid}: Sending subscribe request to public channel: {msg}")
+                    await conn.write(json.dumps(msg))
 
     async def authenticate(self, conn: AsyncConnection):
         if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in self.subscription):
