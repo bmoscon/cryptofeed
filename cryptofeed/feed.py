@@ -202,7 +202,7 @@ class Feed(Exchange):
             filtered_sub = {chan: [self.std_symbol_to_exchange_symbol(s) for s in symbols] for chan, symbols in endpoint.subscription_filter(temp_sub).items()}
             count = sum(map(len, filtered_sub.values()))
 
-            if not filtered_sub or count == 0:
+            if not self.allow_empty_subscriptions and (not filtered_sub or count == 0):
                 continue
             if limit and count > limit:
                 ret.extend(limit_sub(filtered_sub, limit, auth, endpoint.options))
