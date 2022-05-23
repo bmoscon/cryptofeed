@@ -161,11 +161,11 @@ class TransactionsStream(RedisStreamCallback, BackendCallback):
     default_key = 'transactions'
 
 
-class TransactionsRedis(RedisZSetCallback, BackendCallback):
+class BalancesRedis(RedisZSetCallback, BackendCallback):
     default_key = 'balances'
 
 
-class TransactionsStream(RedisStreamCallback, BackendCallback):
+class BalancesStream(RedisStreamCallback, BackendCallback):
     default_key = 'balances'
 
 
