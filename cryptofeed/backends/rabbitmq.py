@@ -7,6 +7,8 @@ associated with this software.
 import asyncio
 from collections import defaultdict
 
+from parso import ParserSyntaxError
+
 import aio_pika
 from yapic import json
 
@@ -100,4 +102,20 @@ class LiquidationsRabbit(RabbitCallback, BackendCallback):
 
 
 class CandlesRabbit(RabbitCallback, BackendCallback):
+    pass
+
+
+class OrderInfoRabbit(RabbitCallback, BackendCallback):
+    pass
+
+
+class TransactionsRabbit(RabbitCallback, BackendCallback):
+    pass
+
+
+class BalancesRabbit(RabbitCallback, BackendCallback):
+    pass
+
+
+class FillsRabbit(RabbitCallback, BackendCallback):
     pass

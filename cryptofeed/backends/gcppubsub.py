@@ -131,3 +131,18 @@ class LiquidationsGCPPubSub(GCPPubSubCallback, BackendCallback):
 
 class CandlesGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'candles'
+
+class OrderInfoGCPPubSub(GCPPubSubCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class TransactionsGCPPubSub(GCPPubSubCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class BalancesGCPPubSub(GCPPubSubCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class FillsGCPPubSub(GCPPubSubCallback, BackendCallback):
+    default_key = 'fills'
