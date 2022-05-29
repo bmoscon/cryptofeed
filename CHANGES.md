@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.2.3
+### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
  * New Exchange: FTX TR
  * New Exchange: AscendEX Futures
