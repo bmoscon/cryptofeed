@@ -19,6 +19,7 @@
  * Update: Send Phemex subscriptions one symbol at a time
  * Bugfix: BitDotCom, the subscription message for perpetuals was incorrect
  * Bugfix: Allow empty subscriptions (channel with no symbols) for FTX
+ * Update: Add SOL and USDC to Deribit symbol mapping
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo
