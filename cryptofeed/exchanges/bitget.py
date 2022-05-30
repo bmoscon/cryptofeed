@@ -98,8 +98,13 @@ class Bitget(Feed):
 
         return ret, info
 
-    def __reset(self):
-        self._l2_book = {}
+    def __reset(self, conn: AsyncConnection):
+        if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:
+            for pair in conn.subscription[self.std_channel_to_exchange(L2_BOOK)]:
+                std_pair = self.exchange_symbol_to_std_symbol(pair)
+
+                if std_pair in self._l2_book:
+                    del self._l2_book[std_pair]
 
     async def _ticker(self, msg: dict, timestamp: float, symbol: str):
         """
@@ -540,7 +545,7 @@ class Bitget(Feed):
     async def subscribe(self, conn: AsyncConnection):
         if self.key_id and self.key_passphrase and self.key_secret:
             await self._login(conn)
-        self.__reset()
+        self.__reset(conn)
         args = []
 
         interval = self.candle_interval

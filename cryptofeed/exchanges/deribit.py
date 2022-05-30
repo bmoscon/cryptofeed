@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class Deribit(Feed, DeribitRestMixin):
     id = DERIBIT
     websocket_endpoints = [WebsocketEndpoint('wss://www.deribit.com/ws/api/v2', sandbox='wss://test.deribit.com/ws/api/v2')]
-    rest_endpoints = [RestEndpoint('https://www.deribit.com', sandbox='https://test.deribit.com', routes=Routes(['/api/v2/public/get_instruments?currency=BTC', '/api/v2/public/get_instruments?currency=ETH']))]
+    rest_endpoints = [RestEndpoint('https://www.deribit.com', sandbox='https://test.deribit.com', routes=Routes(['/api/v2/public/get_instruments?currency=BTC', '/api/v2/public/get_instruments?currency=ETH', '/api/v2/public/get_instruments?currency=USDC', '/api/v2/public/get_instruments?currency=SOL']))]
 
     websocket_channels = {
         L1_BOOK: 'quote',
