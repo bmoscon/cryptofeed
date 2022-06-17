@@ -10,11 +10,11 @@ import requests
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BITTREX, BUY, CANDLES, L2_BOOK, SELL, TICKER, TRADES, BALANCES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exceptions import MissingSequenceNumber
-from cryptofeed.types import OrderBook, Trade, Ticker, Candle
+from cryptofeed.types import OrderBook, Trade, Ticker, Candle, Balance
 
 
 LOG = logging.getLogger('feedhandler')
@@ -31,7 +31,8 @@ class Bittrex(Feed):
         L2_BOOK: 'orderbook_{}_{}',
         TRADES: 'trade_{}',
         TICKER: 'ticker_{}',
-        CANDLES: 'candle_{}_{}'
+        CANDLES: 'candle_{}_{}',
+        BALANCES: 'balance'
     }
 
     @classmethod
@@ -238,6 +239,32 @@ class Bittrex(Feed):
         )
         await self.callback(CANDLES, c, timestamp)
 
+    async def balances(self, msg: dict, timestamp: float):
+        """
+        {
+            'accountId': '123456',
+            'sequence': '1',
+            'delta': {
+                'currencySymbol': 'ETH',
+                'total': '13',
+                'available': '11',
+                'updatedAt': 'datetime.datetime(2022, 3, 14, 1, 12, tzinfo=datetime.timezone.utc),'
+            }
+        }
+        """        
+        for balance in msg['delta']:
+            total = balance['total']
+            available = balance['available']
+            locked = Decimal(total) - Decimal(available)
+
+            b = Balance(
+                self.id,
+                balance['currencySymbol'],
+                Decimal(available),
+                Decimal(locked),
+                raw=msg)
+            await self.callback(BALANCES, b, timestamp)
+
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg)
         if 'M' in msg and len(msg['M']) > 0:
@@ -258,6 +285,10 @@ class Bittrex(Feed):
                     for message in update['A']:
                         data = json.loads(zlib.decompress(base64.b64decode(message), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
                         await self.candle(data, timestamp)
+                elif update['M'] == 'balance':
+                    for message in update['A']:
+                        data = json.loads(zlib.decompress(base64.b64decode(message), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
+                        await self.candle(data, timestamp)
                 else:
                     LOG.warning("%s: Invalid message type %s", self.id, msg)
         elif 'E' in msg:
@@ -275,7 +306,7 @@ class Bittrex(Feed):
             for symbol in self.subscription[chan]:
                 if channel == L2_BOOK:
                     msg = {'A': ([chan.format(symbol, self.__depth())],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
-                elif channel in (TRADES, TICKER):
+                elif channel in (TRADES, TICKER, BALANCES):
                     msg = {'A': ([chan.format(symbol)],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
                 elif channel == CANDLES:
                     interval = None
