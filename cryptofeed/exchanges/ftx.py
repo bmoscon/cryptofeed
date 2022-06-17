@@ -393,7 +393,7 @@ class FTX(Feed, FTXRestMixin):
         oi = OrderInfo(
             self.id,
             self.exchange_symbol_to_std_symbol(order['market']),
-            str(order['id']),
+            str(order['id']),            
             BUY if order['side'].lower() == 'buy' else SELL,
             status,
             LIMIT if order['type'] == 'limit' else MARKET,
