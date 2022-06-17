@@ -400,7 +400,7 @@ class FTX(Feed, FTXRestMixin):
             Decimal(order['price']) if order['price'] else None,
             Decimal(order['filledSize']),
             Decimal(order['remainingSize']),
-            None,
+            timestap=str(order['createdAt']),
             client_order_id=str(order['clientId']),
             account=self.subaccount,
             raw=msg
