@@ -401,6 +401,7 @@ class FTX(Feed, FTXRestMixin):
             Decimal(order['filledSize']),
             Decimal(order['remainingSize']),
             None,
+            client_order_id=str(order['clientId']),
             account=self.subaccount,
             raw=msg
         )
