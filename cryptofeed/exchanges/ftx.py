@@ -31,6 +31,7 @@ LOG = logging.getLogger('feedhandler')
 
 class FTX(Feed, FTXRestMixin):
     id = FTX_id
+    allow_empty_subscriptions = True
     websocket_endpoints = [WebsocketEndpoint('wss://ftx.com/ws/', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://ftx.com', routes=Routes('/api/markets', open_interest='/api/futures/{}/stats', funding='/api/funding_rates?future={}', stats='/api/futures/{}/stats'))]
 
@@ -399,7 +400,8 @@ class FTX(Feed, FTXRestMixin):
             Decimal(order['price']) if order['price'] else None,
             Decimal(order['filledSize']),
             Decimal(order['remainingSize']),
-            None,
+            timestamp=str(order['createdAt']),
+            client_order_id=str(order['clientId']),
             account=self.subaccount,
             raw=msg
         )

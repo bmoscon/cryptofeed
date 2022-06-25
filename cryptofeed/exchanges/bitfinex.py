@@ -113,14 +113,31 @@ class Bitfinex(Feed, BitfinexRestMixin):
                     exch_sym = self.std_symbol_to_exchange_symbol(pair)
                     if (exch_sym[0] == 'f') == (chan != FUNDING):
                         LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
-        self.__reset()
 
-    def __reset(self):
-        self._l2_book = {}
-        self._l3_book = {}
         self.handlers = {}  # maps a channel id (int) to a function
         self.order_map = defaultdict(dict)
         self.seq_no = defaultdict(int)
+
+    def __reset(self, conn: AsyncConnection):
+        if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:
+            for pair in conn.subscription[self.std_channel_to_exchange(L2_BOOK)]:
+                std_pair = self.exchange_symbol_to_std_symbol(pair)
+
+                if std_pair in self._l2_book:
+                    del self._l2_book[std_pair]
+
+        if conn.uuid in self.seq_no:
+            del self.seq_no[conn.uuid]
+
+        if self.std_channel_to_exchange(L3_BOOK) in conn.subscription:
+            for pair in conn.subscription[self.std_channel_to_exchange(L3_BOOK)]:
+                std_pair = self.exchange_symbol_to_std_symbol(pair)
+
+                if std_pair in self._l3_book:
+                    del self._l3_book[std_pair]
+
+                if std_pair in self.order_map:
+                    del self.order_map[std_pair]
 
     async def _ticker(self, pair: str, msg: list, timestamp: float):
         if msg[1] == 'hb':
@@ -370,7 +387,7 @@ class Bitfinex(Feed, BitfinexRestMixin):
         self.handlers[msg['chanId']] = handler
 
     async def subscribe(self, connection: AsyncConnection):
-        self.__reset()
+        self.__reset(connection)
         await connection.write(json.dumps({
             'event': "conf",
             'flags': SEQ_ALL

@@ -62,11 +62,16 @@ class Kraken(Feed, KrakenRestMixin):
     def __init__(self, max_depth=1000, **kwargs):
         super().__init__(max_depth=max_depth, **kwargs)
 
-    def __reset(self):
-        self._l2_book = {}
+    def __reset(self, conn: AsyncConnection):
+        if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:
+            for pair in conn.subscription[self.std_channel_to_exchange(L2_BOOK)]:
+                std_pair = self.exchange_symbol_to_std_symbol(pair)
+
+                if std_pair in self._l2_book:
+                    del self._l2_book[std_pair]
 
     async def subscribe(self, conn: AsyncConnection):
-        self.__reset()
+        self.__reset(conn)
         for chan, symbols in conn.subscription.items():
             sub = {"name": chan}
             if self.exchange_channel_to_std(chan) == L2_BOOK:

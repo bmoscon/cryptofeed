@@ -1,7 +1,25 @@
 ## Changelog
 
-### 2.2.3
+### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
+ * New Exchange: FTX TR
+ * New Exchange: AscendEX Futures
+ * Update: AscendEX, add sandbox endpoint. Add channel filter.
+ * Update: Binance, add sandbox endpoint.
+ * Update: Binance Delivery, add sandbox endpoint.
+ * Update: Bitmex, add sandbox endpoint.
+ * Update: KrakenFutures, add sandbox endpoint.
+ * Bugfix: Bybit, the quantity for order_info stream was incorrect.
+ * Bugfix: Bitmex, timestamp was not returned in book.
+ * Bugfix: KrakenFutures, timestamp was not returned in book.
+ * Bugfix: Phemex, websocket subscription error.
+ * Bugfix: OKX, liquidations subscription was never called.
+ * Update: OKX, use publicly available channel for book updates.
+ * Bugfix: Fix race condition when resetting feeds with multiple connections
+ * Update: Send Phemex subscriptions one symbol at a time
+ * Bugfix: BitDotCom, the subscription message for perpetuals was incorrect
+ * Bugfix: Allow empty subscriptions (channel with no symbols) for FTX
+ * Update: Add SOL and USDC to Deribit symbol mapping
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo

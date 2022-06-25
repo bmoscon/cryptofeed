@@ -30,6 +30,7 @@ class Exchange:
     valid_candle_intervals = NotImplemented
     candle_interval_map = NotImplemented
     http_sync = HTTPSync()
+    allow_empty_subscriptions = False
 
     def __init__(self, config=None, sandbox=False, subaccount=None, **kwargs):
         self.config = Config(config=config)
