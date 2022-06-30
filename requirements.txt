@@ -4,7 +4,6 @@ aiohttp==3.8.1
 cchardet
 cython
 order_book==0.4.3
-pytimeparse
 pyyaml
 requests>=2.18.4
 uvloop

@@ -6,7 +6,6 @@ associated with this software.
 '''
 from collections import defaultdict
 from decimal import Decimal
-from pytimeparse.timeparse import timeparse
 from typing import Dict, Tuple
 from yapic import json
 import asyncio
@@ -30,7 +29,8 @@ LOG = logging.getLogger("feedhandler")
 
 class OKX(Feed, OKXRestMixin):
     id = OKX_str
-    valid_candle_intervals = {'1Y', '6M', '3M', '1M', '1W', '1D', '2D', '3D', '5D', '12H', '6H', '4H', '2H', '1H', '30m', '15m', '5m', '3m', '1m'}
+    valid_candle_intervals = {'1M', '1W', '1D', '12H', '6H', '4H', '2H', '1H', '30m', '15m', '5m', '3m', '1m'}
+    candle_interval_map = {'1M': 2630000, '1W': 604800, '1D': 86400, '12H': 43200, '6H': 21600, '4H': 14400, '2H': 7200, '1H': 3600, '30m': 1800, '15m': 900, '5m': 300, '3m': 180, '1m': 60}
     websocket_channels = {
         L2_BOOK: 'books',
         TRADES: 'trades',
@@ -162,7 +162,7 @@ class OKX(Feed, OKXRestMixin):
                 self.id,
                 symbol,
                 ts,
-                ts + timeparse(self.candle_interval),
+                ts + self.candle_interval_map[self.candle_interval],
                 self.candle_interval,
                 1,  # Assume 1 trade per candle
                 Decimal(entry[1]),
