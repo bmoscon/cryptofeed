@@ -164,14 +164,14 @@ class OKX(Feed, OKXRestMixin):
                 ts,
                 ts + self.candle_interval_map[self.candle_interval],
                 self.candle_interval,
-                1,  # Assume 1 trade per candle
+                None,
                 Decimal(entry[1]),
                 Decimal(entry[2]),
                 Decimal(entry[3]),
                 Decimal(entry[4]),
                 Decimal(entry[5]),
                 Decimal(entry[6]),
-                ts,
+                None,
                 raw=msg
             )
             await self.callback(CANDLES, candle, timestamp)
