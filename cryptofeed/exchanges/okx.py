@@ -171,7 +171,7 @@ class OKX(Feed, OKXRestMixin):
                 Decimal(entry[4]),
                 Decimal(entry[5]),
                 Decimal(entry[6]),
-                None,
+                timestamp,
                 raw=msg
             )
             await self.callback(CANDLES, candle, timestamp)
