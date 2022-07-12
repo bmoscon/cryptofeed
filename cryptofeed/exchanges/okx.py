@@ -153,7 +153,7 @@ class OKX(Feed, OKXRestMixin):
                 ]
             ]
         }
-        ''' 
+        '''
         symbol = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
         ts = int(msg['data'][0][0]) / 1_000
 
@@ -175,7 +175,6 @@ class OKX(Feed, OKXRestMixin):
                 raw=msg
             )
             await self.callback(CANDLES, candle, timestamp)
-       
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
