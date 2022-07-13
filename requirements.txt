@@ -1,11 +1,11 @@
-requests>=2.18.4
-websockets>=7.0
-pyyaml
-aiohttp==3.8.1
-aiofile>=2.0.0
-yapic.json>=1.6.3
 aiodns>=1.1  # aiodns speeds up DNS resolving
+aiofile>=2.0.0
+aiohttp==3.8.1
 cchardet
-uvloop
 cython
 order_book==0.4.3
+pyyaml
+requests>=2.18.4
+uvloop
+websockets>=7.0
+yapic.json>=1.6.3
