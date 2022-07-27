@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.3.0
+ * Feature: Add support for OKx streaming candles
+
 ### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
  * New Exchange: FTX TR
