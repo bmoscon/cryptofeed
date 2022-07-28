@@ -143,3 +143,35 @@ class CandlesRedis(RedisZSetCallback, BackendCallback):
 
 class CandlesStream(RedisStreamCallback, BackendCallback):
     default_key = 'candles'
+
+
+class OrderInfoRedis(RedisZSetCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class OrderInfoStream(RedisStreamCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class TransactionsRedis(RedisZSetCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class TransactionsStream(RedisStreamCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class BalancesRedis(RedisZSetCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class BalancesStream(RedisStreamCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class FillsRedis(RedisZSetCallback, BackendCallback):
+    default_key = 'fills'
+
+
+class FillsStream(RedisStreamCallback, BackendCallback):
+    default_key = 'fills'
