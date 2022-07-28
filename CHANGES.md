@@ -3,6 +3,8 @@
 ### 2.3.0
  * Bugfix: added list and str support to websocket_endpoint creation (allows more than 200 symbols on Binance)
  * Feature: Add support for OKx streaming candles
+ * Bugfix: Binance Futures, double slash in open interest url
+ * Update: Set 'next_funding_rate' to None in Bybit if not present
  * Bugfix: Bitget, bug in subscribe method.
 
 ### 2.2.3 (2022-05-29)
