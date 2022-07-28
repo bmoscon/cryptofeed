@@ -7,8 +7,6 @@ associated with this software.
 import asyncio
 from collections import defaultdict
 
-from parso import ParserSyntaxError
-
 import aio_pika
 from yapic import json
 
