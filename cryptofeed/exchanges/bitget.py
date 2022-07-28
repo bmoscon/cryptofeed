@@ -550,7 +550,7 @@ class Bitget(Feed):
 
         interval = self.candle_interval
         if interval[-1] != 'm':
-            interval[-1] = interval[-1].upper()
+            interval = f"{interval[:-1]}{interval[-1].upper()}"
 
         for chan, symbols in conn.subscription.items():
             for s in symbols:
