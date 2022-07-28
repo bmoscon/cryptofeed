@@ -2,6 +2,7 @@
 
 ### 2.3.0
  * Feature: Add support for OKx streaming candles
+ * Bugfix: Bitget, bug in subscribe method.
 
 ### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
