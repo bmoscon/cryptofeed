@@ -320,7 +320,7 @@ class Bybit(Feed):
                     self.exchange_symbol_to_std_symbol(info['symbol']),
                     None,
                     Decimal(info['funding_rate_e6']) * Decimal('1e-6'),
-                    info['next_funding_time'].timestamp(),
+                    info['next_funding_time'].timestamp() if 'next_funding_time' in info else None,
                     ts,
                     predicted_rate=Decimal(info['predicted_funding_rate_e6']) * Decimal('1e-6'),
                     raw=info

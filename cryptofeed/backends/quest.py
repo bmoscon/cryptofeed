@@ -101,3 +101,19 @@ class CandlesQuest(QuestCallback, BackendCallback):
         trades = f',trades={data["trades"]},' if data['trades'] else ','
         update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},interval={data["interval"]} start={data["start"]},stop={data["stop"]}{trades}open={data["open"]},close={data["close"]},high={data["high"]},low={data["low"]},volume={data["volume"]}{timestamp_str},receipt_timestamp={int(data["receipt_timestamp"]) * 1_000_000}t {int(data["receipt_timestamp"] * 1_000_000_000)}'
         await self.queue.put(update)
+
+
+class OrderInfoQuest(QuestCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class TransactionsQuest(QuestCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class BalancesQuest(QuestCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class FillsQuest(QuestCallback, BackendCallback):
+    default_key = 'fills'

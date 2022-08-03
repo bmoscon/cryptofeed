@@ -88,3 +88,19 @@ class LiquidationsKafka(KafkaCallback, BackendCallback):
 
 class CandlesKafka(KafkaCallback, BackendCallback):
     default_key = 'candles'
+
+
+class OrderInfoKafka(KafkaCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class TransactionsKafka(KafkaCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class BalancesKafka(KafkaCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class FillsKafka(KafkaCallback, BackendCallback):
+    default_key = 'fills'

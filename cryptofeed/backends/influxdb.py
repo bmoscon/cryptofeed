@@ -135,3 +135,19 @@ class LiquidationsInflux(InfluxCallback, BackendCallback):
 
 class CandlesInflux(InfluxCallback, BackendCallback):
     default_key = 'candles'
+
+
+class OrderInfoInflux(InfluxCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class TransactionsInflux(InfluxCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class BalancesInflux(InfluxCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class FillsInflux(InfluxCallback, BackendCallback):
+    default_key = 'fills'
