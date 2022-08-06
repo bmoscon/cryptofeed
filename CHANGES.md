@@ -6,6 +6,7 @@
  * Bugfix: Binance Futures, double slash in open interest url
  * Update: Set 'next_funding_rate' to None in Bybit if not present
  * Bugfix: Bitget, bug in subscribe method.
+ * Feature: Added authentication to private channels of Bittrex. ORDER_INFO and BALANCES implemented.
 
 ### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
