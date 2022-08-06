@@ -350,7 +350,10 @@ class Bittrex(Feed):
                     for message in update['A']:
                         data = json.loads(zlib.decompress(base64.b64decode(message), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
                         await self.balance(data, timestamp)
+                elif update['M'] == 'authenticationExpiring':
+                    LOG.debug("%s: private subscription authentication expired. %s", self.id, msg)
                 else:
+                    #WARNING : BITTREX: Invalid message type {'C': 'd-942EDED9-B,0|Bjh,1|Bji,3|Bjj,0|Bjk,0', 'M': [{'H': 'C3', 'M': 'authenticationExpiring', 'A': []}]}
                     LOG.warning("%s: Invalid message type %s", self.id, msg)
         elif 'E' in msg:
             LOG.error("%s: Error from exchange %s", self.id, msg)
