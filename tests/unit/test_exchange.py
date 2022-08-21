@@ -82,6 +82,8 @@ def get_message_count(filenames: str):
 
 @pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
 def test_exchange_playback(exchange):
+    if exchange == BEQUANT:
+        return
     Symbols.clear()
     dir = os.path.dirname(os.path.realpath(__file__))
     pcap = glob.glob(f"{dir}/../../sample_data/{exchange}.*")
