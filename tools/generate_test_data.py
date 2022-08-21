@@ -82,4 +82,4 @@ def main(only_exchange=None):
 
 
 if __name__ == '__main__':
-    main('POLONIEX')
+    main()
