@@ -11,18 +11,17 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.poloniex_rest import PoloniexRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Poloniex(Feed, PoloniexRestMixin):
+class Poloniex(Feed):
     id = POLONIEX
     websocket_endpoints = [WebsocketEndpoint('wss://ws.poloniex.com/ws/public')]
     rest_endpoints = [RestEndpoint('https://api.poloniex.com', routes=Routes('/markets'))]
