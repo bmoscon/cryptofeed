@@ -5,6 +5,7 @@
  * Feature: Add support for OKx streaming candles
  * Bugfix: Binance Futures, double slash in open interest url
  * Update: Set 'next_funding_rate' to None in Bybit if not present
+ * Feature: Added authentication to private channels of Bittrex. ORDER_INFO and BALANCES implemented.
  * Bugfix: Bitget, bug in subscribe method
  * Update: Poloniex API update
 
