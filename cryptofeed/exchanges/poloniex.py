@@ -112,7 +112,7 @@ class Poloniex(Feed):
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        
+
         event = msg.get('event')
         if event == 'error':
             LOG.error("%s: Error from exchange: %s", self.id, msg)
