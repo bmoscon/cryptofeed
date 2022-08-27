@@ -6,7 +6,10 @@ associated with this software.
 '''
 from collections import defaultdict
 from datetime import datetime as dt
+import time
 from typing import Tuple
+
+import traceback
 
 from aioch import Client
 from yapic import json
@@ -34,15 +37,16 @@ class ClickHouseCallback(BackendQueue):
             Note: to store BOOK data in a JSONB column, include a 'data' field, e.g. {'symbol': 'symbol', 'data': 'json_data'}
         """
         self.conn = None
+        self.last_id = 0
         self.table = table if table else self.default_table
         self.custom_columns = custom_columns
         self.numeric_type = numeric_type
         self.none_to = none_to
-        self.user = user
-        self.db = db
-        self.pw = pw
+        self.user = user if user else 'default'
+        self.db = db if db else ''
+        self.pw = pw if pw else ''
         self.host = host
-        self.port = port if port else 8123
+        self.port = port if port else 9000
         # Parse INSERT statement with user-specified column names
         # Performed at init to avoid repeated list joins
         self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
@@ -60,7 +64,7 @@ class ClickHouseCallback(BackendQueue):
         receipt_timestamp = data[3]
         data = data[4]
 
-        return ("DEFAULT", timestamp, receipt_timestamp, feed, symbol, json.dumps(data))
+        return (("DEFAULT", ), (time.mktime(timestamp.timetuple()), ), (time.mktime(receipt_timestamp.timetuple()) ,), (feed ,), (symbol ,), (json.dumps(data), ))
 
     def _custom_format(self, data: Tuple):
 
@@ -94,23 +98,18 @@ class ClickHouseCallback(BackendQueue):
 
     async def write_batch(self, updates: list):
         await self._connect()
-        args_str = ','.join([self.format(u) for u in updates])
-
+        args = [self.format(u) for u in updates]
         try:
-            for u in updates:
-                print(u)
-                if self.custom_columns:
-                    await self.conn.execute(self.insert_statement + args_str)
-                else:
-                    res = await self.conn.execute(f"INSERT INTO {self.table} (x) VALUES", u)
-                    # res = await self.conn.execute("INSERT INTO " + self.table + " VALUES " + args_str)
-                    # res = await self.conn.execute("INSERT INTO ticker (*) VALUES", args_list)
-                    print(res)
+            if self.custom_columns:
+                await self.conn.execute(self.insert_statement + args_str)
+            else:
+                res = await self.conn.execute(f"INSERT INTO {self.table} VALUES", args)
+                # res = await self.conn.execute("INSERT INTO " + self.table + " VALUES " + args_str)
+                # res = await self.conn.execute("INSERT INTO ticker (*) VALUES", args_list)
 
-        except Exception as e:
+        except Exception:
             # when restarting a subscription, some exchanges will re-publish a few messages
-            print(e)
-            print(e.__traceback__.tb_lineno)
+            traceback.print_exc()
 
 
 class TradeClickHouse(ClickHouseCallback, BackendCallback):
@@ -123,7 +122,7 @@ class TradeClickHouse(ClickHouseCallback, BackendCallback):
             exchange, symbol, timestamp, receipt, data = data
             id = f"'{data['id']}'" if data['id'] else 'NULL'
             otype = f"'{data['type']}'" if data['type'] else 'NULL'
-            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['amount']},{data['price']},{id},{otype})"
+            return (("DEFAULT", ), (timestamp, ), (receipt, ), (exchange, ), (symbol, ), (data['side'], ), (data['amount'], ), (data['price'], ), (id, ), (otype, ))
 
 
 class FundingClickHouse(ClickHouseCallback, BackendCallback):
@@ -147,8 +146,9 @@ class TickerClickHouse(ClickHouseCallback, BackendCallback):
         if self.custom_columns:
             return self._custom_format(data)
         else:
+            self.last_id += 1
             exchange, symbol, timestamp, receipt, data = data
-            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['bid']},{data['ask']})"
+            return (self.last_id - 1, timestamp, receipt, exchange, symbol, data['bid'], data['ask'])
 
 
 class OpenInterestClickHouse(ClickHouseCallback, BackendCallback):

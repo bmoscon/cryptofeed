@@ -39,12 +39,12 @@ column_mappings = {
 def main():
     f = FeedHandler()
     print('Initializing FeedHandler')
-    f.add_feed(Bybit(channels=[CANDLES, TRADES, OPEN_INTEREST, INDEX, LIQUIDATIONS, FUNDING], symbols=['BTC-USD-PERP'], callbacks={FUNDING: FundingClickHouse(**ClickHouse_cfg), LIQUIDATIONS: LiquidationsClickHouse(**ClickHouse_cfg), CANDLES: CandlesClickHouse(**ClickHouse_cfg), OPEN_INTEREST: OpenInterestClickHouse(**ClickHouse_cfg), INDEX: IndexClickHouse(**ClickHouse_cfg), TRADES: TradeClickHouse(**ClickHouse_cfg)}))
-    print("Added Bybit")
+    # f.add_feed(Bybit(channels=[CANDLES, TRADES, OPEN_INTEREST, INDEX, LIQUIDATIONS, FUNDING], symbols=['BTC-USD-PERP'], callbacks={FUNDING: FundingClickHouse(**ClickHouse_cfg), LIQUIDATIONS: LiquidationsClickHouse(**ClickHouse_cfg), CANDLES: CandlesClickHouse(**ClickHouse_cfg), OPEN_INTEREST: OpenInterestClickHouse(**ClickHouse_cfg), INDEX: IndexClickHouse(**ClickHouse_cfg), TRADES: TradeClickHouse(**ClickHouse_cfg)}))
+    # print("Added Bybit")
     f.add_feed(Binance(channels=[TICKER], symbols=['BTC-USDT'], callbacks={TICKER: TickerClickHouse(**ClickHouse_cfg)}))
-    f.add_feed(Binance(channels=[L2_BOOK], symbols=['LTC-USDT'], callbacks={L2_BOOK: BookClickHouse(snapshot_interval=100, table='l2_book', **ClickHouse_cfg)}))
+    # f.add_feed(Binance(channels=[L2_BOOK], symbols=['LTC-USDT'], callbacks={L2_BOOK: BookClickHouse(snapshot_interval=100, table='l2_book', **ClickHouse_cfg)}))
     # The following feed shows custom_columns and uses the custom_candles table example from the bottom of ClickHouse_tables.sql. Obviously you can swap this out for your own table layout, just update the dictionary above
-    f.add_feed(Binance(channels=[CANDLES], symbols=['FTM-USDT'], callbacks={CANDLES: CandlesClickHouse(**ClickHouse_cfg, custom_columns=column_mappings, table='custom_candles')}))
+    # f.add_feed(Binance(channels=[CANDLES], symbols=['FTM-USDT'], callbacks={CANDLES: CandlesClickHouse(**ClickHouse_cfg, custom_columns=column_mappings, table='custom_candles')}))
     print('Starting feed handler')
     f.run()
 
