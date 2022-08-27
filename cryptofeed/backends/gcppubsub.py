@@ -132,6 +132,7 @@ class LiquidationsGCPPubSub(GCPPubSubCallback, BackendCallback):
 class CandlesGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'candles'
 
+
 class OrderInfoGCPPubSub(GCPPubSubCallback, BackendCallback):
     default_key = 'order_info'
 
