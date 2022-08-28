@@ -145,6 +145,7 @@ Supported Backends:
 * PostgreSQL
 * GCP Pub/Sub
 * [QuestDB](https://questdb.io/)
+* [ClickHouse](https://clickhouse.com/)
 
 
 ## Installation
