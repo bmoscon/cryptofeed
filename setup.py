@@ -92,6 +92,7 @@ setup(
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
+        "clickhouse": ["aioch"],
         "rabbit": ["aio_pika", "pika"],
         "redis": ["hiredis", "aioredis>=2.0.0"],
         "zmq": ["pyzmq"],

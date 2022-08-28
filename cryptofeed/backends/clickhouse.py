@@ -8,9 +8,7 @@ from collections import defaultdict
 from datetime import datetime as dt
 import time
 from typing import Tuple
-
-import traceback
-
+import uuid
 from aioch import Client
 from yapic import json
 
@@ -24,7 +22,7 @@ class ClickHouseCallback(BackendQueue):
         host: str
             Database host address
         user: str
-            The name of the database role used for authentication.
+            The name of the database role used for authentication, defaults to 'default'.
         db: str
             The name of the database to connect to.
         pw: str
@@ -37,7 +35,6 @@ class ClickHouseCallback(BackendQueue):
             Note: to store BOOK data in a JSONB column, include a 'data' field, e.g. {'symbol': 'symbol', 'data': 'json_data'}
         """
         self.conn = None
-        self.last_id = 0
         self.table = table if table else self.default_table
         self.custom_columns = custom_columns
         self.numeric_type = numeric_type
@@ -49,12 +46,11 @@ class ClickHouseCallback(BackendQueue):
         self.port = port if port else 9000
         # Parse INSERT statement with user-specified column names
         # Performed at init to avoid repeated list joins
-        self.insert_statement = f"INSERT INTO {self.table} ({','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
+        self.insert_statement = f"INSERT INTO {self.table} (id, {','.join([v for v in self.custom_columns.values()])}) VALUES " if custom_columns else None
         self.running = True
 
     async def _connect(self):
         if self.conn is None:
-            print(f"Connecting to {self.host}:{self.port}")
             self.conn = Client(self.host, self.port, self.db, self.user, self.pw)
 
     def format(self, data: Tuple):
@@ -64,7 +60,8 @@ class ClickHouseCallback(BackendQueue):
         receipt_timestamp = data[3]
         data = data[4]
 
-        return (("DEFAULT", ), (time.mktime(timestamp.timetuple()), ), (time.mktime(receipt_timestamp.timetuple()) ,), (feed ,), (symbol ,), (json.dumps(data), ))
+        # Clickhouse doesn't support autoincrementing ids like Postgres, so we generate a random uuid
+        return (uuid.uuid4(), time.mktime(timestamp.timetuple()), time.mktime(receipt_timestamp.timetuple()), feed, symbol, json.dumps(data))
 
     def _custom_format(self, data: Tuple):
 
@@ -79,10 +76,9 @@ class ClickHouseCallback(BackendQueue):
         }
 
         # Cross-ref data dict with user column names from custom_columns dict, inserting NULL if requested data point not present
-        sequence_gen = (d[field] if d[field] else 'NULL' for field in self.custom_columns.keys())
+        sequence_gen = (d[field] if d[field] else None for field in self.custom_columns.keys())
         # Iterate through the generator and surround everything except floats and NULL in single quotes
-        sql_string = ','.join(str(s) if isinstance(s, float) or s == 'NULL' else "'" + str(s) + "'" for s in sequence_gen)
-        return f"({sql_string})"
+        return (uuid.uuid4(), *sequence_gen)
 
     async def writer(self):
         while self.running:
@@ -94,22 +90,14 @@ class ClickHouseCallback(BackendQueue):
                         rts = dt.utcfromtimestamp(data['receipt_timestamp'])
                         batch.append((data['exchange'], data['symbol'], ts, rts, data))
                     await self.write_batch(batch)
-                    print(f"{len(updates)} messages written to {self.table}")
 
     async def write_batch(self, updates: list):
         await self._connect()
         args = [self.format(u) for u in updates]
-        try:
-            if self.custom_columns:
-                await self.conn.execute(self.insert_statement + args_str)
-            else:
-                res = await self.conn.execute(f"INSERT INTO {self.table} VALUES", args)
-                # res = await self.conn.execute("INSERT INTO " + self.table + " VALUES " + args_str)
-                # res = await self.conn.execute("INSERT INTO ticker (*) VALUES", args_list)
-
-        except Exception:
-            # when restarting a subscription, some exchanges will re-publish a few messages
-            traceback.print_exc()
+        if self.custom_columns:
+            await self.conn.execute(self.insert_statement, args)
+        else:
+            await self.conn.execute(f"INSERT INTO {self.table} VALUES", args)
 
 
 class TradeClickHouse(ClickHouseCallback, BackendCallback):
@@ -120,9 +108,10 @@ class TradeClickHouse(ClickHouseCallback, BackendCallback):
             return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
-            id = f"'{data['id']}'" if data['id'] else 'NULL'
-            otype = f"'{data['type']}'" if data['type'] else 'NULL'
-            return (("DEFAULT", ), (timestamp, ), (receipt, ), (exchange, ), (symbol, ), (data['side'], ), (data['amount'], ), (data['price'], ), (id, ), (otype, ))
+            # NULL values have to be expressed as None, not 'NULL'
+            id = f"'{data['id']}'" if data['id'] else None
+            otype = f"'{data['type']}'" if data['type'] else None
+            return (uuid.uuid4(), timestamp, receipt, exchange, symbol, data['side'], data['amount'], data['price'], id, otype)
 
 
 class FundingClickHouse(ClickHouseCallback, BackendCallback):
@@ -135,8 +124,8 @@ class FundingClickHouse(ClickHouseCallback, BackendCallback):
             return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
-            ts = dt.utcfromtimestamp(data['next_funding_time']) if data['next_funding_time'] else 'NULL'
-            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['mark_price'] if data['mark_price'] else 'NULL'},{data['rate']},'{ts}',{data['predicted_rate']})"
+            ts = dt.utcfromtimestamp(data['next_funding_time']) if data['next_funding_time'] else None
+            return (uuid.uuid4(), timestamp, receipt, exchange, symbol, data['mark_price'] if data['mark_price'] else None, data['rate'], ts, data['predicted_rate'])
 
 
 class TickerClickHouse(ClickHouseCallback, BackendCallback):
@@ -146,9 +135,8 @@ class TickerClickHouse(ClickHouseCallback, BackendCallback):
         if self.custom_columns:
             return self._custom_format(data)
         else:
-            self.last_id += 1
             exchange, symbol, timestamp, receipt, data = data
-            return (self.last_id - 1, timestamp, receipt, exchange, symbol, data['bid'], data['ask'])
+            return (uuid.uuid4(), timestamp, receipt, exchange, symbol, data['bid'], data['ask'])
 
 
 class OpenInterestClickHouse(ClickHouseCallback, BackendCallback):
@@ -159,7 +147,7 @@ class OpenInterestClickHouse(ClickHouseCallback, BackendCallback):
             return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
-            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['open_interest']})"
+            return (uuid.uuid4(), timestamp, receipt, exchange, symbol, int(data['open_interest']))
 
 
 class IndexClickHouse(ClickHouseCallback, BackendCallback):
@@ -170,7 +158,7 @@ class IndexClickHouse(ClickHouseCallback, BackendCallback):
             return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
-            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}',{data['price']})"
+            return (uuid.uuid4(), timestamp, receipt, exchange, symbol, data['price'])
 
 
 class LiquidationsClickHouse(ClickHouseCallback, BackendCallback):
@@ -181,7 +169,7 @@ class LiquidationsClickHouse(ClickHouseCallback, BackendCallback):
             return self._custom_format(data)
         else:
             exchange, symbol, timestamp, receipt, data = data
-            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{data['side']}',{data['quantity']},{data['price']},'{data['id']}','{data['status']}')"
+            return (uuid.uuid4(), timestamp, receipt, exchange, symbol, data['side'], data['quantity'], data['price'], data['id'], data['status'])
 
 
 class BookClickHouse(ClickHouseCallback, BackendBookCallback):
@@ -211,7 +199,7 @@ class BookClickHouse(ClickHouseCallback, BackendBookCallback):
             else:
                 data = {'delta': data['delta']}
 
-            return f"(DEFAULT,'{timestamp}','{receipt_timestamp}','{feed}','{symbol}','{json.dumps(data)}')"
+            return (uuid.uuid4(), timestamp, receipt_timestamp, feed, symbol, json.dumps(data))
 
 
 class CandlesClickHouse(ClickHouseCallback, BackendCallback):
@@ -227,4 +215,4 @@ class CandlesClickHouse(ClickHouseCallback, BackendCallback):
 
             open_ts = dt.utcfromtimestamp(data['start'])
             close_ts = dt.utcfromtimestamp(data['stop'])
-            return f"(DEFAULT,'{timestamp}','{receipt}','{exchange}','{symbol}','{open_ts}','{close_ts}','{data['interval']}',{data['trades'] if data['trades'] is not None else 'NULL'},{data['open']},{data['close']},{data['high']},{data['low']},{data['volume']},{data['closed'] if data['closed'] else 'NULL'})"
+            return (uuid.uuid4(), timestamp, receipt, exchange, symbol, open_ts, close_ts, data['interval'], data['trades'] if data['trades'] is not None else None, data['open'], data['close'], data['high'], data['low'], data['volume'], data['closed'] if data['closed'] else None)
