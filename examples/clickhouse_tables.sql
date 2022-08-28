@@ -1,3 +1,5 @@
+CREATE DATABASE IF NOT EXISTS cryptofeed
+
 CREATE TABLE IF NOT EXISTS cryptofeed.candles (id UUID, timestamp TIMESTAMP, receipt_timestamp TIMESTAMP, exchange String, symbol String, candle_start TIMESTAMP, candle_stop TIMESTAMP, interval String, trades Nullable(INTEGER), open Float64, close Float64, high Float64, low Float64, volume Float64, closed Nullable(UInt8)) ENGINE = MergeTree() PRIMARY KEY(id) ORDER BY (id);
 
 CREATE TABLE IF NOT EXISTS cryptofeed.ticker (id UUID, timestamp TIMESTAMP, receipt_timestamp TIMESTAMP, exchange String, symbol String, bid Float64, ask Float64) ENGINE = MergeTree() PRIMARY KEY(id) ORDER BY (id);
