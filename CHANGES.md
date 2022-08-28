@@ -8,6 +8,7 @@
  * Feature: Added authentication to private channels of Bittrex. ORDER_INFO and BALANCES implemented.
  * Bugfix: Bitget, bug in subscribe method
  * Update: Poloniex API update
+ * Feature: Add support for ClickHouse backend
 
 ### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
