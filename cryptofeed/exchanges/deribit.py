@@ -61,6 +61,8 @@ class Deribit(Feed, DeribitRestMixin):
                 quote = e['quote_currency']
                 stype = e['kind'] if e['settlement_period'] != 'perpetual' else PERPETUAL
                 otype = e.get('option_type')
+                if stype in ('option_combo', 'future_combo'):
+                    continue
                 strike_price = e.get('strike')
                 strike_price = int(strike_price) if strike_price else None
                 expiry = e['expiration_timestamp'] / 1000

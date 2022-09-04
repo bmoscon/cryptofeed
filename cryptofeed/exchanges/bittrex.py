@@ -242,7 +242,7 @@ class Bittrex(Feed):
             raw=msg
         )
         await self.callback(CANDLES, c, timestamp)
-    
+
     async def order(self, msg: dict, timestamp: float):
         """
         example message:
@@ -270,7 +270,7 @@ class Bittrex(Feed):
         status = order['status']
         if status == 'new':
             status = SUBMITTING
-            # There was no obsevation made, that there are more than "OPEN" and "CLOSED". Needs Support clarification with BITTREX.
+            # There was no observation made, that there are more than "OPEN" and "CLOSED". Needs Support clarification with BITTREX.
         elif status == 'OPEN':
             status = OPEN
         elif status == 'CLOSED':
@@ -286,11 +286,11 @@ class Bittrex(Feed):
             status,
             LIMIT if order['type'].lower() == 'limit' else MARKET,
             Decimal(order['limit']) if 'limit' in order else None,
-            Decimal(order['fillQuantity']), # the filled Size
-            remainingSize, # the remaining Size
+            Decimal(order['fillQuantity']),  # the filled Size
+            remainingSize,  # the remaining Size
             timestamp=str(order['createdAt']),
-            client_order_id= order['clientOrderId'] if 'clientOrderId' in order else None,
-            #account=self.subaccount,
+            client_order_id=order['clientOrderId'] if 'clientOrderId' in order else None,
+            # account=self.subaccount,
             raw=msg
         )
         await self.callback(ORDER_INFO, oi, timestamp)
@@ -351,9 +351,9 @@ class Bittrex(Feed):
                         data = json.loads(zlib.decompress(base64.b64decode(message), -zlib.MAX_WBITS).decode(), parse_float=Decimal)
                         await self.balance(data, timestamp)
                 elif update['M'] == 'authenticationExpiring':
-                    #WARNING : BITTREX: Invalid message type {'C': 'd-942EDED9-B,0|Bjh,1|Bji,3|Bjj,0|Bjk,0', 'M': [{'H': 'C3', 'M': 'authenticationExpiring', 'A': []}]}
+                    # WARNING : BITTREX: Invalid message type {'C': 'd-942EDED9-B,0|Bjh,1|Bji,3|Bjj,0|Bjk,0', 'M': [{'H': 'C3', 'M': 'authenticationExpiring', 'A': []}]}
                     LOG.debug("%s: private subscription authentication expired. %s", self.id, msg)
-                else:                    
+                else:
                     LOG.warning("%s: Invalid message type %s", self.id, msg)
         elif 'E' in msg:
             LOG.error("%s: Error from exchange %s", self.id, msg)
@@ -364,7 +364,7 @@ class Bittrex(Feed):
         content = timestamp + random_content
         signed_content = hmac.new(self.key_secret.encode(), content.encode(), hashlib.sha512).hexdigest()
 
-        msg = {'A': [self.key_id, timestamp, random_content, signed_content], 'H': 'c3', 'I': 0, 'M': 'Authenticate'}        
+        msg = {'A': [self.key_id, timestamp, random_content, signed_content], 'H': 'c3', 'I': 0, 'M': 'Authenticate'}
         # There is only subacounts on BITTREX for institutional customers.
         # if self.subaccount:
         #     msg['args']['subaccount'] = self.subaccount
@@ -373,7 +373,7 @@ class Bittrex(Feed):
     async def authenticate(self, conn: AsyncConnection):
         if self.requires_authentication:
             await self.generate_token(conn)
-            
+
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         # H: Hub, M: Message, A: Args, I: Internal ID
@@ -384,12 +384,12 @@ class Bittrex(Feed):
             channel = self.exchange_channel_to_std(chan)
             i = 1
             # If we subscribe to ORDER_INFO, then that is registered for all symbols in our account.
-            ##if channel in (ORDER_INFO, BALANCES):            
+            # if channel in (ORDER_INFO, BALANCES):
             if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                msg = {'A': ([chan],) , 'H': 'c3', 'I': i, 'M': 'Subscribe'} 
+                msg = {'A': ([chan],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
                 await conn.write(json.dumps(msg))
                 i += 1
-            else:                                        
+            else:
                 for symbol in self.subscription[chan]:
                     if channel == L2_BOOK:
                         msg = {'A': ([chan.format(symbol, self.__depth())],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
@@ -406,9 +406,8 @@ class Bittrex(Feed):
                             interval = 'HOUR_1'
                         elif self.candle_interval == '1d':
                             interval = 'DAY_1'
-                        msg = {'A': ([chan.format(symbol, interval)],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}                
+                        msg = {'A': ([chan.format(symbol, interval)],), 'H': 'c3', 'I': i, 'M': 'Subscribe'}
                     else:
                         LOG.error("%s: invalid subscription for channel %s", channel)
                     await conn.write(json.dumps(msg))
                     i += 1
-            
