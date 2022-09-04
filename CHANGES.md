@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.3.0
+### 2.3.0 (2022-09-04)
  * Bugfix: added list and str support to websocket_endpoint creation (allows more than 200 symbols on Binance)
  * Feature: Add support for OKx streaming candles
  * Bugfix: Binance Futures, double slash in open interest url
