@@ -1,5 +1,14 @@
 ## Changelog
 
+### 2.3.0 (2022-09-04)
+ * Bugfix: added list and str support to websocket_endpoint creation (allows more than 200 symbols on Binance)
+ * Feature: Add support for OKx streaming candles
+ * Bugfix: Binance Futures, double slash in open interest url
+ * Update: Set 'next_funding_rate' to None in Bybit if not present
+ * Feature: Added authentication to private channels of Bittrex. ORDER_INFO and BALANCES implemented.
+ * Bugfix: Bitget, bug in subscribe method
+ * Update: Poloniex API update
+
 ### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
  * New Exchange: FTX TR

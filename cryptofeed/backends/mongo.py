@@ -70,3 +70,19 @@ class LiquidationsMongo(MongoCallback, BackendCallback):
 
 class CandlesMongo(MongoCallback, BackendCallback):
     default_key = 'candles'
+
+
+class OrderInfoMongo(MongoCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class TransactionsMongo(MongoCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class BalancesMongo(MongoCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class FillsMongo(MongoCallback, BackendCallback):
+    default_key = 'fills'

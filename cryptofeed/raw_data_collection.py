@@ -185,6 +185,7 @@ class AsyncFileCallback:
             if header:
                 self.data[uuid].append(f"{endpoint} -> {timestamp}: {data} header: {json.dumps(header)}")
             else:
+                data = data.replace("\n", "")
                 self.data[uuid].append(f"{endpoint} -> {timestamp}: {data}")
         elif send:
             self.data[uuid].append(f"{send} <- {timestamp}: {data}")
@@ -201,6 +202,7 @@ class AsyncFileCallback:
             if header:
                 w = w = f"{endpoint} -> {timestamp}: {data} header: {json.dumps(header)}"
             else:
+                data = data.replace("\n", "")
                 w = f"{endpoint} -> {timestamp}: {data}"
         elif send:
             w = f"{send} <- {timestamp}: {data}"

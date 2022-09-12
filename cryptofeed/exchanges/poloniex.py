@@ -11,37 +11,38 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.poloniex_rest import PoloniexRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker
+from cryptofeed.types import OrderBook, Trade
 
 
 LOG = logging.getLogger('feedhandler')
 
 
-class Poloniex(Feed, PoloniexRestMixin):
+class Poloniex(Feed):
     id = POLONIEX
-    websocket_endpoints = [WebsocketEndpoint('wss://api2.poloniex.com')]
-    rest_endpoints = [RestEndpoint('https://poloniex.com', routes=Routes('/public?command=returnTicker'))]
-    _channel_map = {}
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.poloniex.com/ws/public')]
+    rest_endpoints = [RestEndpoint('https://api.poloniex.com', routes=Routes('/markets'))]
     websocket_channels = {
-        L2_BOOK: L2_BOOK,
+        L2_BOOK: 'book_lv2',
         TRADES: TRADES,
-        TICKER: 1002,
     }
     request_limit = 6
+
+    @classmethod
+    def timestamp_normalize(cls, ts: float) -> float:
+        return ts / 1000.0
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = {'instrument_type': {}}
-        for symbol in data:
-            cls._channel_map[data[symbol]['id']] = symbol
+        for entry in data:
+            symbol = entry['symbol']
             std = symbol.replace("STR", "XLM")
-            quote, base = std.split("_")
+            base, quote = std.split("_")
             s = Symbol(base, quote)
             ret[s.normalized] = symbol
             info['instrument_type'][s.normalized] = s.type
@@ -51,126 +52,83 @@ class Poloniex(Feed, PoloniexRestMixin):
         self._l2_book = {}
         self.seq_no = {}
 
-    async def _ticker(self, msg: dict, timestamp: float):
+    async def _trade(self, msg: dict, timestamp: float):
         """
-        Format:
-
-        currencyPair, last, lowestAsk, highestBid, percentChange, baseVolume,
-        quoteVolume, isFrozen, 24hrHigh, 24hrLow, postOnly, maintenance mode
-
-        The postOnly field indicates that new orders posted to the market must be non-matching orders (no taker orders).
-        Any orders that would match will be rejected. Maintenance mode indicates that maintenace is being performed
-        and orders will be rejected
+        {
+            'channel': 'trades',
+            'data': [{
+                'symbol': 'BTC_USDT',
+                'amount': '364.89973',
+                'quantity': '0.017',
+                'takerSide': 'sell',
+                'createTime': 1661120814818,
+                'price': '21464.69',
+                'id': '60183607',
+                'ts': 1661120814823
+            }]
+        }
         """
-        pair_id, _, ask, bid, _, _, _, _, _, _, _, _ = msg
-        if pair_id not in self._channel_map:
-            # Ignore new trading pairs that are added during long running sessions
-            return
-        pair = self.exchange_symbol_to_std_symbol(self._channel_map[pair_id])
-        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
-        await self.callback(TICKER, t, timestamp)
+        price = Decimal(msg['data'][0]['price'])
+        amount = Decimal(msg['data'][0]['amount'])
+        t = Trade(
+            msg['data'][0]['id'],
+            self.exchange_symbol_to_std_symbol(msg['data'][0]['symbol']),
+            SELL if msg['data'][0]['takerSide'] == 'sell' else BUY,
+            amount,
+            price,
+            self.timestamp_normalize(msg['data'][0]['ts']),
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
-    async def _book(self, msg: dict, chan_id: int, timestamp: float):
-        delta = {BID: [], ASK: []}
-        msg_type = msg[0][0]
-        pair = None
-        # initial update (i.e. snapshot)
-        if msg_type == 'i':
-            delta = None
-            pair = msg[0][1]['currencyPair']
-            pair = self.exchange_symbol_to_std_symbol(pair)
-            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
-            # 0 is asks, 1 is bids
-            order_book = msg[0][1]['orderBook']
-            for index, side in enumerate([ASK, BID]):
-                for key in order_book[index]:
-                    amount = Decimal(order_book[index][key])
-                    price = Decimal(key)
-                    self._l2_book[pair].book[side][price] = amount
+    async def _book(self, msg: dict, timestamp: float):
+        data = msg['data'][0]
+        pair = self.exchange_symbol_to_std_symbol(data['symbol'])
+
+        if msg['action'] == 'snapshot':
+            bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+            asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
+            self.seq_no[pair] = data['id']
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, timestamp=self.timestamp_normalize(data['ts']))
         else:
-            pair = self._channel_map[chan_id]
-            pair = self.exchange_symbol_to_std_symbol(pair)
-            for update in msg:
-                msg_type = update[0]
-                # order book update
-                if msg_type == 'o':
-                    side = ASK if update[1] == 0 else BID
-                    price = Decimal(update[2])
-                    amount = Decimal(update[3])
-                    if amount == 0:
-                        delta[side].append((price, 0))
-                        del self._l2_book[pair].book[side][price]
-                    else:
-                        delta[side].append((price, amount))
-                        self._l2_book[pair].book[side][price] = amount
-                elif msg_type == 't':
-                    # index 1 is trade id, 2 is side, 3 is price, 4 is amount, 5 is timestamp, 6 is timestamp ms
-                    _, order_id, _, price, amount, server_ts, _ = update
+            if data['lastId'] != self.seq_no[pair]:
+                raise MissingSequenceNumber
+
+            delta = {BID: [], ASK: []}
+            for side in ('bids', 'asks'):
+                for price, amount in data[side]:
                     price = Decimal(price)
                     amount = Decimal(amount)
-                    t = Trade(
-                        self.id,
-                        pair,
-                        BUY if update[2] == 1 else SELL,
-                        amount,
-                        price,
-                        float(server_ts),
-                        id=order_id,
-                        raw=msg
-                    )
-                    await self.callback(TRADES, t, timestamp)
-                else:
-                    LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg)
+                    if amount == 0:
+                        del self._l2_book[pair].book[side][price]
+                        delta[side[:-1]].append((price, 0))
+                    else:
+                        self._l2_book[pair].book[side][price] = amount
+                        delta[side[:-1]].append((price, amount))
+            self.seq_no[pair] = data['id']
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(data['ts']), raw=msg, delta=delta)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
-        if 'error' in msg:
+
+        event = msg.get('event')
+        if event == 'error':
             LOG.error("%s: Error from exchange: %s", self.id, msg)
             return
+        elif event == 'subscribe':
+            return
 
-        chan_id = msg[0]
-        if chan_id == 1002:
-            # the ticker channel doesn't have sequence ids
-            # so it should be None, except for the subscription
-            # ack, in which case its 1
-            seq_id = msg[1]
-            if seq_id is None and self._channel_map[msg[2][0]] in self.subscription[1002]:
-                await self._ticker(msg[2], timestamp)
-        elif chan_id < 1000:
-            # order book updates - the channel id refers to
-            # the trading pair being updated
-            seq_no = msg[1]
-
-            if chan_id not in self.seq_no:
-                self.seq_no[chan_id] = seq_no
-            elif self.seq_no[chan_id] + 1 != seq_no and msg[2][0][0] != 'i':
-                LOG.warning("%s: missing sequence number. Received %d, expected %d", self.id, seq_no, self.seq_no[chan_id] + 1)
-                raise MissingSequenceNumber
-            self.seq_no[chan_id] = seq_no
-            if msg[2][0][0] == 'i':
-                del self.seq_no[chan_id]
-            symbol = self._channel_map[chan_id]
-            if symbol in self._trade_book_symbols:
-                await self._book(msg[2], chan_id, timestamp)
-        elif chan_id == 1010:
-            # heartbeat - ignore
-            pass
+        channel = msg.get('channel')
+        if channel == 'trades':
+            await self._trade(msg, timestamp)
+        elif channel == 'book_lv2':
+            await self._book(msg, timestamp)
         else:
             LOG.warning('%s: Invalid message type %s', self.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
-        self._trade_book_symbols = []
-        for chan in self.subscription:
-            if chan == L2_BOOK or chan == TRADES:
-                for symbol in self.subscription[chan]:
-                    if symbol in self._trade_book_symbols:
-                        continue
-                    self._trade_book_symbols.append(symbol)
-                    await conn.write(json.dumps({"command": "subscribe", "channel": symbol}))
-            else:
-                await conn.write(json.dumps({"command": "subscribe", "channel": chan}))
-        self._trade_book_symbols = set(self._trade_book_symbols)
+        for chan, symbols in self.subscription.items():
+            await conn.write(json.dumps({"event": "subscribe", "channel": [chan], "symbols": symbols}))

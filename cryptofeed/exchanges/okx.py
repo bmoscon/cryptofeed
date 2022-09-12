@@ -4,24 +4,24 @@ Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 from collections import defaultdict
 from decimal import Decimal
-import logging
-import time
 from typing import Dict, Tuple
-import requests
-import hmac
-import base64
 from yapic import json
+import asyncio
+import base64
+import hmac
+import logging
+import requests
+import time
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKX as OKX_str, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, SPOT, UNFILLED, LIMIT
+from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKX as OKX_str, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, CANDLES, SPOT, UNFILLED, LIMIT
 from cryptofeed.exchanges.mixins.okx_rest import OKXRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Candle
 
 
 LOG = logging.getLogger("feedhandler")
@@ -29,6 +29,8 @@ LOG = logging.getLogger("feedhandler")
 
 class OKX(Feed, OKXRestMixin):
     id = OKX_str
+    valid_candle_intervals = {'1M', '1W', '1D', '12H', '6H', '4H', '2H', '1H', '30m', '15m', '5m', '3m', '1m'}
+    candle_interval_map = {'1M': 2630000, '1W': 604800, '1D': 86400, '12H': 43200, '6H': 21600, '4H': 14400, '2H': 7200, '1H': 3600, '30m': 1800, '15m': 900, '5m': 300, '3m': 180, '1m': 60}
     websocket_channels = {
         L2_BOOK: 'books',
         TRADES: 'trades',
@@ -37,9 +39,10 @@ class OKX(Feed, OKXRestMixin):
         OPEN_INTEREST: 'open-interest',
         LIQUIDATIONS: LIQUIDATIONS,
         ORDER_INFO: 'orders',
+        CANDLES: 'candle'
     }
     websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]), options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS], websocket_channels[CANDLES]), options={'compression': None}),
         WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/private', channel_filter=(websocket_channels[ORDER_INFO],), options={'compression': None}),
     ]
     rest_endpoints = [RestEndpoint('https://www.okx.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES', '/api/v5/public/instruments?instType=OPTION&uly=BTC-USD', '/api/v5/public/instruments?instType=OPTION&uly=ETH-USD'], liquidations='/api/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}'))]
@@ -130,6 +133,48 @@ class OKX(Feed, OKXRestMixin):
     @classmethod
     def instrument_type(cls, symbol: str):
         return cls.info()['instrument_type'][symbol]
+
+    async def _candle(self, msg: dict, timestamp: float):
+        '''
+        {
+            "arg": {
+                "channel": "candle1D",
+                "instId": "BTC-USD-191227"
+            },
+            "data": [
+                [
+                    "1597026383085",     // ts
+                    "8533.02",           // open
+                    "8553.74",           // high
+                    "8527.17",           // low
+                    "8548.26",           // close
+                    "45247",             // contracts, spot/margin -> amount of base ccy, derivatives -> contracts,
+                    "529.5858061"        // currency, spot/margin -> amount of quote ccy, derivatives -> amount of base ccy
+                ]
+            ]
+        }
+        '''
+        symbol = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
+        ts = int(msg['data'][0][0]) / 1_000
+
+        for entry in msg['data']:
+            candle = Candle(
+                self.id,
+                symbol,
+                ts,
+                ts + self.candle_interval_map[self.candle_interval],
+                self.candle_interval,
+                None,
+                Decimal(entry[1]),
+                Decimal(entry[4]),
+                Decimal(entry[2]),
+                Decimal(entry[3]),
+                Decimal(entry[5]),
+                Decimal(entry[6]),
+                timestamp,
+                raw=msg
+            )
+            await self.callback(CANDLES, candle, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -382,6 +427,8 @@ class OKX(Feed, OKXRestMixin):
                 await self._order(msg, timestamp)
             elif self.websocket_channels[OPEN_INTEREST] in msg['arg']['channel']:
                 await self._open_interest(msg, timestamp)
+            elif self.websocket_channels[CANDLES] in msg['arg']['channel']:
+                await self._candle(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
@@ -414,6 +461,9 @@ class OKX(Feed, OKXRestMixin):
         if channel in ['positions', 'orders']:
             subscription_dict = {"channel": channel,
                                  "instType": self.inst_type_to_okx_type(ticker),
+                                 "instId": ticker}
+        elif channel in ['candle']:
+            subscription_dict = {"channel": f"{channel}{self.candle_interval}",
                                  "instId": ticker}
         else:
             subscription_dict = {"channel": channel,

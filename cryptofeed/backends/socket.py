@@ -133,3 +133,19 @@ class LiquidationsSocket(SocketCallback, BackendCallback):
 
 class CandlesSocket(SocketCallback, BackendCallback):
     default_key = 'candles'
+
+
+class OrderInfoSocket(SocketCallback, BackendCallback):
+    default_key = 'order_info'
+
+
+class TransactionsSocket(SocketCallback, BackendCallback):
+    default_key = 'transactions'
+
+
+class BalancesSocket(SocketCallback, BackendCallback):
+    default_key = 'balances'
+
+
+class FillsSocket(SocketCallback, BackendCallback):
+    default_key = 'fills'
