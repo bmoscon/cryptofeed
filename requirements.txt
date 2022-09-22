@@ -1,6 +1,6 @@
 aiodns>=1.1  # aiodns speeds up DNS resolving
 aiofile>=2.0.0
-aiohttp==3.8.1
+aiohttp==3.8.3
 cchardet
 cython
 order_book==0.5.0
