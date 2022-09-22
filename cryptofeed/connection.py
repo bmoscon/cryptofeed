@@ -151,6 +151,7 @@ class HTTPAsyncConn(AsyncConnection):
             self.conn = aiohttp.ClientSession()
             self.sent = 0
             self.received = 0
+            self.last_message = None
 
     async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:
