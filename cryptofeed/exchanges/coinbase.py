@@ -105,7 +105,9 @@ class Coinbase(Feed, CoinbaseRestMixin):
             'last_size': '0.00241692'
         }
         '''
-        await self.callback(TICKER, Ticker(self.id, self.exchange_symbol_to_std_symbol(msg['product_id']), Decimal(msg['best_bid']), Decimal(msg['best_ask']), self.timestamp_normalize(msg['time']), raw=msg), timestamp)
+
+        ts = self.timestamp_normalize(msg['time']) if 'time' in msg else None
+        await self.callback(TICKER, Ticker(self.id, self.exchange_symbol_to_std_symbol(msg['product_id']), Decimal(msg['best_bid']), Decimal(msg['best_ask']), ts, raw=msg), timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
         '''
