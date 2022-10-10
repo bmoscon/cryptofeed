@@ -46,6 +46,8 @@ class ArcticCallback:
         df['date'] = pd.to_datetime(df.timestamp, unit='s')
         df['receipt_timestamp'] = pd.to_datetime(df.receipt_timestamp, unit='s')
         df.set_index(['date'], inplace=True)
+        if 'type' in df and df.type.isna().any():
+            df.drop(columns=['type'], inplace=True)
         df.drop(columns=['timestamp'], inplace=True)
         self.lib.append(self.key, df, upsert=True)
 
