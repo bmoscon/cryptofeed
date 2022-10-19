@@ -50,8 +50,8 @@ class Phemex(Feed):
             if entry['status'] != 'Listed':
                 continue
             stype = entry['type'].lower()
-            base, quote = entry['displaySymbol'].split(" / ")
-            s = Symbol(base, quote, type=stype)
+            base, quote = entry['displaySymbol'].split("/")
+            s = Symbol(base.strip(), quote.strip(), type=stype)
             ret[s.normalized] = entry['symbol']
             info['tick_size'][s.normalized] = entry['tickSize'] if 'tickSize' in entry else entry['quoteTickSize']
             info['instrument_type'][s.normalized] = stype
