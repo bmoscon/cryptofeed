@@ -356,7 +356,7 @@ class WebsocketEndpoint:
     authentication: bool = None
 
     def __post_init__(self):
-        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None}
+        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'read_limit': 2**18}
         if self.options:
             defaults.update(self.options)
         self.options = defaults
