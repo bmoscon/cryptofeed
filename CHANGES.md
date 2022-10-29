@@ -6,6 +6,7 @@
  * Bugfix: Timestamp sometimes not present in Coinbase ticker updates
  * Bugfix: Phemex, symbols parsing
  * Bugfix: OKx - handle empty liquidations correctly
+ * Bugfix: fix QuestDB comma seperated insertion (#879)
 
 ### 2.3.0 (2022-09-04)
  * Bugfix: added list and str support to websocket_endpoint creation (allows more than 200 symbols on Binance)
