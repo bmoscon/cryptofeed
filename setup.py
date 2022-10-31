@@ -46,7 +46,7 @@ extension = Extension("cryptofeed.types", ["cryptofeed/types.pyx"],
 setup(
     name="cryptofeed",
     ext_modules=cythonize([extension], language_level=3, force=True),
-    version="2.3.1",
+    version="2.3.2",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
