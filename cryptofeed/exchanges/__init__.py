@@ -41,6 +41,7 @@ from .huobi import Huobi
 from .huobi_dm import HuobiDM
 from .huobi_swap import HuobiSwap
 from .independent_reserve import IndependentReserve
+from .inlock import Inlock
 from .kraken import Kraken
 from .kraken_futures import KrakenFutures
 from .kucoin import KuCoin
@@ -86,6 +87,7 @@ EXCHANGE_MAP = {
     HUOBI_SWAP: HuobiSwap,
     HUOBI: Huobi,
     INDEPENDENT_RESERVE: IndependentReserve,
+    INLOCK: Inlock,
     KRAKEN_FUTURES: KrakenFutures,
     KRAKEN: Kraken,
     KUCOIN: KuCoin,
