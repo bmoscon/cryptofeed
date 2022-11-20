@@ -2,6 +2,7 @@
 
 ### 2.3.2
  * Bugfix: Fix AUCTION symbol parsing on Coinbase
+ * Bugfix: Fix PERPETUAL symbol parsing on Phemex
 
 ### 2.3.1 (2022-10-31)
  * Bugfix: timestamp not reset correctly on reconnect
