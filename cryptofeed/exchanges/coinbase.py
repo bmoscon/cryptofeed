@@ -43,7 +43,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
         info = defaultdict(dict)
 
         for entry in data:
-            sym = Symbol(entry['base_currency'], entry['quote_currency'])
+            base, quote = entry['id'].split("-")
+            sym = Symbol(base, quote)
             info['tick_size'][sym.normalized] = entry['quote_increment']
             info['instrument_type'][sym.normalized] = sym.type
             ret[sym.normalized] = entry['id']
