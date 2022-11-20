@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.3.2
+ * Bugfix: Fix AUCTION symbol parsing on Coinbase
+
 ### 2.3.1 (2022-10-31)
  * Bugfix: timestamp not reset correctly on reconnect
  * Bugfix: Arctic backend failing to write Trades when trade type was not present in data
