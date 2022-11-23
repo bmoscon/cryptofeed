@@ -13,6 +13,10 @@ import numpy as np
 class AggregateCallback:
     def __init__(self, handler):
         self.handler = handler
+        if hasattr(self.handler, '__class__'):
+            setattr(self, 'start', self.handler.start)
+            setattr(self, 'stop', self.handler.stop)
+            self.__name__ = self.handler.__class__
 
 
 class Throttle(AggregateCallback):
