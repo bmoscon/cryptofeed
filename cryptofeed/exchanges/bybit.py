@@ -454,59 +454,59 @@ class Bybit(Feed):
         data = msg["data"]
         delta = {BID: [], ASK: []}
 
-        if update_type == "snapshot":
-            delta = None
-            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
-            # the USDT perpetual data is under the order_book key
-            if "order_book" in data:
-                data = data["order_book"]
+        if msg["topic"].startswith("orderbook"):
+            # SPOT
+            if "PERP" in pair:
+                # Convert to spot symbol
+                pair = "-".join(pair.split("-")[:-1])
 
-            for update in data:
-                side = BID if update["side"] == "Buy" else ASK
-                self._l2_book[pair].book[side][Decimal(update["price"])] = Decimal(
-                    update["size"]
-                )
+        sym = str_to_symbol(pair)
 
-        elif update_type == "delta":
+        if sym.type == SPOT:
             # Spot book snapshot
             delta = None
+
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
-            self._l2_book[pair].book[BID] = {
-                Decimal(price): size for price, size in data["b"]
-            }
-            self._l2_book[pair].book[ASK] = {
-                Decimal(price): size for price, size in data["a"]
-            }
+            self._l2_book[pair].book[BID] = {Decimal(price): size for price, size in data["b"]}
+            self._l2_book[pair].book[ASK] = {Decimal(price): size for price, size in data["a"]}
 
         else:
-            for delete in data["delete"]:
-                side = BID if delete["side"] == "Buy" else ASK
-                price = Decimal(delete["price"])
-                delta[side].append((price, 0))
-                del self._l2_book[pair].book[side][price]
+            # PERPETUAL & FUTURES
+            if update_type == "snapshot":
+                delta = None
+                self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+                # the USDT perpetual data is under the order_book key
+                if "order_book" in data:
+                    data = data["order_book"]
 
-            for utype in ("update", "insert"):
-                for update in data[utype]:
+                for update in data:
                     side = BID if update["side"] == "Buy" else ASK
-                    price = Decimal(update["price"])
-                    amount = Decimal(update["size"])
-                    delta[side].append((price, amount))
-                    self._l2_book[pair].book[side][price] = amount
+                    self._l2_book[pair].book[side][Decimal(update["price"])] = Decimal(
+                        update["size"]
+                    )
+
+            else:
+                for delete in data["delete"]:
+                    side = BID if delete["side"] == "Buy" else ASK
+                    price = Decimal(delete["price"])
+                    delta[side].append((price, 0))
+                    del self._l2_book[pair].book[side][price]
+
+                for utype in ("update", "insert"):
+                    for update in data[utype]:
+                        side = BID if update["side"] == "Buy" else ASK
+                        price = Decimal(update["price"])
+                        amount = Decimal(update["size"])
+                        delta[side].append((price, amount))
+                        self._l2_book[pair].book[side][price] = amount
 
         # timestamp_e6 is in microseconds
         ts = msg["timestamp_e6"] if "timestamp_e6" in msg else msg["data"]["t"] * 1e3
         if isinstance(ts, str):
             ts = int(ts)
 
-        await self.book_callback(
-            L2_BOOK,
-            self._l2_book[pair],
-            timestamp,
-            timestamp=ts / 1000000,
-            raw=msg,
-            delta=delta,
-        )
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts / 1000000, raw=msg, delta=delta)
 
     async def _order(self, msg: dict, timestamp: float):
         """
