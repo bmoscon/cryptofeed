@@ -364,6 +364,10 @@ class Bybit(Feed):
                 for pair in connection.subscription[chan]:
                     sym = str_to_symbol(self.exchange_symbol_to_std_symbol(pair))
 
+                    if sym.type == SPOT:
+                        # Convert back to standard form
+                        pair = "".join(pair.split("/"))
+
                     if self.exchange_channel_to_std(chan) == CANDLES:
                         c = chan if sym.quote == "USD" else "candle"
                         sub = [
