@@ -123,7 +123,7 @@ class Bybit(Feed):
         WebsocketEndpoint(
             "wss://stream.bybit.com/spot/public/v3",
             instrument_filter=("TYPE", (SPOT,)),
-            channel_filter=(websocket_channels[L2_BOOK]),
+            channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES]),
             sandbox="wss://stream-testnet.bybit.com/spot/public/v3",
             options={"compression": None},
         ),
@@ -524,21 +524,47 @@ class Bybit(Feed):
                 "cross_seq":163261271}]}
         """
         data = msg["data"]
-        for trade in data:
-            if isinstance(trade["trade_time_ms"], str):
-                ts = int(trade["trade_time_ms"])
-            else:
-                ts = trade["trade_time_ms"]
+        if isinstance(data, list):
+            # PERPETUAL & FUTURES
+            for trade in data:
+                if isinstance(trade["trade_time_ms"], str):
+                    ts = int(trade["trade_time_ms"])
+                else:
+                    ts = trade["trade_time_ms"]
 
+                t = Trade(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(trade["symbol"]),
+                    BUY if trade["side"] == "Buy" else SELL,
+                    Decimal(trade["size"]),
+                    Decimal(trade["price"]),
+                    self.timestamp_normalize(ts),
+                    id=trade["trade_id"],
+                    raw=trade,
+                )
+                await self.callback(TRADES, t, timestamp)
+        else:
+            # SPOT
+            exchange_symbol = msg["topic"].split(".")[-1]
+
+            # Need to match to a symbol with a slash (per spot)
+            adj_symbol = self.exchange_symbol_to_std_symbol(exchange_symbol)
+
+            if "PERP" in adj_symbol:
+                # Convert to spot symbol
+                adj_symbol = "/".join(adj_symbol.split("-")[:-1])
+
+            ts = data["t"]
+            side = BUY if data["m"] else SELL
             t = Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(trade["symbol"]),
-                BUY if trade["side"] == "Buy" else SELL,
-                Decimal(trade["size"]),
-                Decimal(trade["price"]),
+                self.exchange_symbol_to_std_symbol(adj_symbol),
+                side,
+                Decimal(data["q"]),
+                Decimal(data["p"]),
                 self.timestamp_normalize(ts),
-                id=trade["trade_id"],
-                raw=trade,
+                id=data["v"],
+                raw=msg,
             )
             await self.callback(TRADES, t, timestamp)
 
