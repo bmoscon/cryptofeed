@@ -1,9 +1,9 @@
-'''
+"""
 Copyright (C) 2018-2022 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
 import hmac
 import time
 from collections import defaultdict
@@ -15,36 +15,158 @@ from datetime import datetime as dt
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
+from cryptofeed.connection import (
+    AsyncConnection,
+    RestEndpoint,
+    Routes,
+    WebsocketEndpoint,
+)
+from cryptofeed.defines import (
+    BID,
+    ASK,
+    BUY,
+    BYBIT,
+    CANCELLED,
+    CANCELLING,
+    CANDLES,
+    FAILED,
+    FILLED,
+    FUNDING,
+    L2_BOOK,
+    LIMIT,
+    LIQUIDATIONS,
+    MAKER,
+    MARKET,
+    OPEN,
+    PARTIAL,
+    SELL,
+    SUBMITTING,
+    TAKER,
+    TRADES,
+    OPEN_INTEREST,
+    INDEX,
+    ORDER_INFO,
+    FILLS,
+    FUTURES,
+    PERPETUAL,
+    SPOT,
+)
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation
+from cryptofeed.types import (
+    OrderBook,
+    Trade,
+    Index,
+    OpenInterest,
+    Funding,
+    OrderInfo,
+    Fill,
+    Candle,
+    Liquidation,
+)
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class Bybit(Feed):
     id = BYBIT
     websocket_channels = {
-        L2_BOOK: 'orderBook_200.100ms',
-        TRADES: 'trade',
-        FILLS: 'execution',
-        ORDER_INFO: 'order',
-        INDEX: 'instrument_info.100ms',
-        OPEN_INTEREST: 'instrument_info.100ms',
-        FUNDING: 'instrument_info.100ms',
-        CANDLES: 'klineV2',
-        LIQUIDATIONS: 'liquidation'
+        L2_BOOK: "{}",  # Assigned in self.subscribe
+        TRADES: "trade",
+        FILLS: "execution",
+        ORDER_INFO: "order",
+        INDEX: "instrument_info.100ms",
+        OPEN_INTEREST: "instrument_info.100ms",
+        FUNDING: "instrument_info.100ms",
+        CANDLES: "klineV2",
+        LIQUIDATIONS: "liquidation",
     }
     websocket_endpoints = [
-        WebsocketEndpoint('wss://stream.bybit.com/realtime', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS]), instrument_filter=('QUOTE', ('USD',)), sandbox='wss://stream-testnet.bybit.com/realtime', options={'compression': None}),
-        WebsocketEndpoint('wss://stream.bybit.com/realtime_public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS]), instrument_filter=('QUOTE', ('USDT',)), sandbox='wss://stream-testnet.bybit.com/realtime_public', options={'compression': None}),
-        WebsocketEndpoint('wss://stream.bybit.com/realtime_private', channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]), instrument_filter=('QUOTE', ('USDT',)), sandbox='wss://stream-testnet.bybit.com/realtime_private', options={'compression': None}),
+        WebsocketEndpoint(
+            "wss://stream.bybit.com/realtime",
+            instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
+            channel_filter=(
+                websocket_channels[L2_BOOK],
+                websocket_channels[TRADES],
+                websocket_channels[INDEX],
+                websocket_channels[OPEN_INTEREST],
+                websocket_channels[FUNDING],
+                websocket_channels[CANDLES],
+                websocket_channels[LIQUIDATIONS],
+            ),
+            # instrument_filter=("QUOTE", ("USD",)),
+            sandbox="wss://stream-testnet.bybit.com/realtime",
+            options={"compression": None},
+        ),
+        WebsocketEndpoint(
+            "wss://stream.bybit.com/realtime_public",
+            instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
+            channel_filter=(
+                websocket_channels[L2_BOOK],
+                websocket_channels[TRADES],
+                websocket_channels[INDEX],
+                websocket_channels[OPEN_INTEREST],
+                websocket_channels[FUNDING],
+                websocket_channels[CANDLES],
+                websocket_channels[LIQUIDATIONS],
+            ),
+            # instrument_filter=("QUOTE", ("USDT",)),
+            sandbox="wss://stream-testnet.bybit.com/realtime_public",
+            options={"compression": None},
+        ),
+        WebsocketEndpoint(
+            "wss://stream.bybit.com/realtime_private",
+            instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
+            channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]),
+            # instrument_filter=("QUOTE", ("USDT",)),
+            sandbox="wss://stream-testnet.bybit.com/realtime_private",
+            options={"compression": None},
+        ),
+        WebsocketEndpoint(
+            "wss://stream.bybit.com/spot/public/v3",
+            instrument_filter=("TYPE", (SPOT,)),
+            channel_filter=(websocket_channels[L2_BOOK]),
+            sandbox="wss://stream-testnet.bybit.com/spot/public/v3",
+            options={"compression": None},
+        ),
     ]
-    rest_endpoints = [RestEndpoint('https://api.bybit.com', routes=Routes('/v2/public/symbols'))]
-    valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '1w', '1M'}
-    candle_interval_map = {'1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '2h': '120', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W', '1M': 'M'}
+    rest_endpoints = [
+        RestEndpoint("https://api.bybit.com", routes=Routes("/v2/public/symbols")),
+        RestEndpoint(
+            "https://api.bybit.com",
+            instrument_filter=("TYPE", (SPOT,)),
+            routes=Routes("/spot/v3/public/symbols"),
+        )
+        # RestEndpoint('https://api.bybit.com', routes=Routes(['/v2/public/symbols', '/spot/v3/public/symbols'])),
+    ]
+    valid_candle_intervals = {
+        "1m",
+        "3m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "4h",
+        "6h",
+        "1d",
+        "1w",
+        "1M",
+    }
+    candle_interval_map = {
+        "1m": "1",
+        "3m": "3",
+        "5m": "5",
+        "15m": "15",
+        "30m": "30",
+        "1h": "60",
+        "2h": "120",
+        "4h": "240",
+        "6h": "360",
+        "1d": "D",
+        "1w": "W",
+        "1M": "M",
+    }
 
     @classmethod
     def timestamp_normalize(cls, ts: Union[int, dt]) -> float:
@@ -58,23 +180,45 @@ class Bybit(Feed):
         ret = {}
         info = defaultdict(dict)
 
-        # PERPETUAL & FUTURES
-        for symbol in data['result']:
-            base = symbol['base_currency']
-            quote = symbol['quote_currency']
+        for msg in data:
+            if isinstance(msg["result"], dict):
+                # SPOT
+                for symbol in msg["result"]["list"]:
+                    base = symbol["baseCoin"]
+                    quote = symbol["quoteCoin"]
 
-            stype = PERPETUAL
-            expiry = None
-            if not symbol['name'].endswith(quote):
-                stype = FUTURES
-                year = symbol['name'].replace(base + quote, '')[-2:]
-                expiry = year + symbol['alias'].replace(base + quote, '')[-4:]
+                    stype = SPOT
+                    expiry = None
 
-            s = Symbol(base, quote, type=stype, expiry_date=expiry)
+                    s = Symbol(base, quote, type=stype, expiry_date=expiry)
 
-            ret[s.normalized] = symbol['name']
-            info['tick_size'][s.normalized] = symbol['price_filter']['tick_size']
-            info['instrument_type'][s.normalized] = stype
+                    # Bybit spot and perps share the same symbol["name"], so
+                    # here it is formed using the base and quote coins, separated
+                    # by a slash. This is consistent with the UI.
+                    ret[s.normalized] = f"{base}/{quote}"
+                    info["tick_size"][s.normalized] = symbol["minPricePrecision"]
+                    info["instrument_type"][s.normalized] = stype
+
+            else:
+                # PERPETUAL & FUTURES
+                for symbol in msg["result"]:
+                    base = symbol["base_currency"]
+                    quote = symbol["quote_currency"]
+
+                    stype = PERPETUAL
+                    expiry = None
+                    if not symbol["name"].endswith(quote):
+                        stype = FUTURES
+                        year = symbol["name"].replace(base + quote, "")[-2:]
+                        expiry = year + symbol["alias"].replace(base + quote, "")[-4:]
+
+                    s = Symbol(base, quote, type=stype, expiry_date=expiry)
+
+                    ret[s.normalized] = symbol["name"]
+                    info["tick_size"][s.normalized] = symbol["price_filter"][
+                        "tick_size"
+                    ]
+                    info["instrument_type"][s.normalized] = stype
 
         return ret, info
 
@@ -89,7 +233,7 @@ class Bybit(Feed):
         self._instrument_info_cache = {}
 
     async def _candle(self, msg: dict, timestamp: float):
-        '''
+        """
         {
             "topic": "klineV2.1.BTCUSD",                //topic name
             "data": [{
@@ -107,31 +251,33 @@ class Bybit(Feed):
             }],
             "timestamp_e6": 1572425677047994            //server time
         }
-        '''
-        symbol = self.exchange_symbol_to_std_symbol(msg['topic'].split(".")[-1])
-        ts = msg['timestamp_e6'] / 1_000_000
+        """
+        symbol = self.exchange_symbol_to_std_symbol(msg["topic"].split(".")[-1])
+        ts = msg["timestamp_e6"] / 1_000_000
 
-        for entry in msg['data']:
-            if self.candle_closed_only and not entry['confirm']:
+        for entry in msg["data"]:
+            if self.candle_closed_only and not entry["confirm"]:
                 continue
-            c = Candle(self.id,
-                       symbol,
-                       entry['start'],
-                       entry['end'],
-                       self.candle_interval,
-                       entry['confirm'],
-                       Decimal(entry['open']),
-                       Decimal(entry['close']),
-                       Decimal(entry['high']),
-                       Decimal(entry['low']),
-                       Decimal(entry['volume']),
-                       None,
-                       ts,
-                       raw=entry)
+            c = Candle(
+                self.id,
+                symbol,
+                entry["start"],
+                entry["end"],
+                self.candle_interval,
+                entry["confirm"],
+                Decimal(entry["open"]),
+                Decimal(entry["close"]),
+                Decimal(entry["high"]),
+                Decimal(entry["low"]),
+                Decimal(entry["volume"]),
+                None,
+                ts,
+                raw=entry,
+            )
             await self.callback(CANDLES, c, timestamp)
 
     async def _liquidation(self, msg: dict, timestamp: float):
-        '''
+        """
         {
             'topic': 'liquidation.EOSUSDT',
             'data': {
@@ -142,17 +288,17 @@ class Bybit(Feed):
                 'time': 1632586154956
             }
         }
-        '''
+        """
         liq = Liquidation(
             self.id,
-            self.exchange_symbol_to_std_symbol(msg['data']['symbol']),
-            BUY if msg['data']['side'] == 'Buy' else SELL,
-            Decimal(msg['data']['qty']),
-            Decimal(msg['data']['price']),
+            self.exchange_symbol_to_std_symbol(msg["data"]["symbol"]),
+            BUY if msg["data"]["side"] == "Buy" else SELL,
+            Decimal(msg["data"]["qty"]),
+            Decimal(msg["data"]["price"]),
             None,
             None,
-            self.timestamp_normalize(msg['data']['time']),
-            raw=msg
+            self.timestamp_normalize(msg["data"]["time"]),
+            raw=msg,
         )
         await self.callback(LIQUIDATIONS, liq, timestamp)
 
@@ -161,20 +307,42 @@ class Bybit(Feed):
         msg = json.loads(msg, parse_float=Decimal)
 
         if "success" in msg:
-            if msg['success']:
-                if msg['request']['op'] == 'auth':
-                    LOG.debug("%s: Authenticated successful", conn.uuid)
-                elif msg['request']['op'] == 'subscribe':
-                    LOG.debug("%s: Subscribed to channels: %s", conn.uuid, msg['request']['args'])
+            if msg["success"]:
+                if "request" in msg:
+                    # PERPETUAL & FUTURES
+                    if msg["request"]["op"] == "auth":
+                        LOG.debug("%s: Authenticated successful", conn.uuid)
+                    elif msg["request"]["op"] == "subscribe":
+                        LOG.debug(
+                            "%s: Subscribed to channels: %s",
+                            conn.uuid,
+                            msg["request"]["args"],
+                        )
+                    else:
+                        LOG.warning(
+                            "%s: Unhandled 'successs' message received", conn.uuid
+                        )
                 else:
-                    LOG.warning("%s: Unhandled 'successs' message received", conn.uuid)
+                    # SPOT
+                    if msg["op"] == "auth":
+                        LOG.debug("%s: Authenticated successful", conn.uuid)
+                    elif msg["op"] == "subscribe":
+                        LOG.debug("%s: Subscribed to channel", conn.uuid)
+                    else:
+                        LOG.warning(
+                            "%s: Unhandled 'successs' message received", conn.uuid
+                        )
+
             else:
                 LOG.error("%s: Error from exchange %s", conn.uuid, msg)
-        elif msg["topic"].startswith('trade'):
+        elif msg["topic"].startswith("trade"):
             await self._trade(msg, timestamp)
-        elif msg["topic"].startswith('orderBook'):
+        elif msg["topic"].startswith("orderBook"):
             await self._book(msg, timestamp)
-        elif msg['topic'].startswith('liquidation'):
+        elif msg["topic"].startswith("orderbook"):
+            # Spot orderbook
+            await self._book(msg, timestamp)
+        elif msg["topic"].startswith("liquidation"):
             await self._liquidation(msg, timestamp)
         elif "instrument_info" in msg["topic"]:
             await self._instrument_info(msg, timestamp)
@@ -182,7 +350,7 @@ class Bybit(Feed):
             await self._order(msg, timestamp)
         elif "execution" in msg["topic"]:
             await self._execution(msg, timestamp)
-        elif 'klineV2' in msg['topic'] or 'candle' in msg['topic']:
+        elif "klineV2" in msg["topic"] or "candle" in msg["topic"]:
             await self._candle(msg, timestamp)
         # elif "position" in msg["topic"]:
         #     await self._balances(msg, timestamp)
@@ -197,19 +365,25 @@ class Bybit(Feed):
                     sym = str_to_symbol(self.exchange_symbol_to_std_symbol(pair))
 
                     if self.exchange_channel_to_std(chan) == CANDLES:
-                        c = chan if sym.quote == 'USD' else 'candle'
-                        sub = [f"{c}.{self.candle_interval_map[self.candle_interval]}.{pair}"]
+                        c = chan if sym.quote == "USD" else "candle"
+                        sub = [
+                            f"{c}.{self.candle_interval_map[self.candle_interval]}.{pair}"
+                        ]
+                    elif self.exchange_channel_to_std(chan) == L2_BOOK:
+                        l2_book_channel = {
+                            SPOT: "orderbook.40",
+                            FUTURES: "orderBook_200.100ms",
+                            PERPETUAL: "orderBook_200.100ms",
+                        }
+                        sub = [f"{l2_book_channel[sym.type]}.{pair}"]
                     else:
                         sub = [f"{chan}.{pair}"]
 
                     await connection.write(json.dumps({"op": "subscribe", "args": sub}))
             else:
-                await connection.write(json.dumps(
-                    {
-                        "op": "subscribe",
-                        "args": [f"{chan}"]
-                    }
-                ))
+                await connection.write(
+                    json.dumps({"op": "subscribe", "args": [f"{chan}"]})
+                )
 
     async def _instrument_info(self, msg: dict, timestamp: float):
         """
@@ -279,51 +453,57 @@ class Bybit(Feed):
         "timestamp_e6": 1578853525691123
         }
         """
-        update_type = msg['type']
+        update_type = msg["type"]
 
-        if update_type == 'snapshot':
-            updates = [msg['data']]
+        if update_type == "snapshot":
+            updates = [msg["data"]]
         else:
-            updates = msg['data']['update']
+            updates = msg["data"]["update"]
 
         for info in updates:
-            if msg['topic'] in self._instrument_info_cache and self._instrument_info_cache[msg['topic']] == updates:
+            if (
+                msg["topic"] in self._instrument_info_cache
+                and self._instrument_info_cache[msg["topic"]] == updates
+            ):
                 continue
             else:
-                self._instrument_info_cache[msg['topic']] = updates
+                self._instrument_info_cache[msg["topic"]] = updates
 
-            ts = int(msg['timestamp_e6']) / 1_000_000
+            ts = int(msg["timestamp_e6"]) / 1_000_000
 
-            if 'open_interest' in info:
+            if "open_interest" in info:
                 oi = OpenInterest(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(info['symbol']),
-                    Decimal(info['open_interest']),
+                    self.exchange_symbol_to_std_symbol(info["symbol"]),
+                    Decimal(info["open_interest"]),
                     ts,
-                    raw=info
+                    raw=info,
                 )
                 await self.callback(OPEN_INTEREST, oi, timestamp)
 
-            if 'index_price_e4' in info:
+            if "index_price_e4" in info:
                 i = Index(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(info['symbol']),
-                    Decimal(info['index_price_e4']) * Decimal('1e-4'),
+                    self.exchange_symbol_to_std_symbol(info["symbol"]),
+                    Decimal(info["index_price_e4"]) * Decimal("1e-4"),
                     ts,
-                    raw=info
+                    raw=info,
                 )
                 await self.callback(INDEX, i, timestamp)
 
-            if 'funding_rate_e6' in info:
+            if "funding_rate_e6" in info:
                 f = Funding(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(info['symbol']),
+                    self.exchange_symbol_to_std_symbol(info["symbol"]),
                     None,
-                    Decimal(info['funding_rate_e6']) * Decimal('1e-6'),
-                    info['next_funding_time'].timestamp() if 'next_funding_time' in info else None,
+                    Decimal(info["funding_rate_e6"]) * Decimal("1e-6"),
+                    info["next_funding_time"].timestamp()
+                    if "next_funding_time" in info
+                    else None,
                     ts,
-                    predicted_rate=Decimal(info['predicted_funding_rate_e6']) * Decimal('1e-6'),
-                    raw=info
+                    predicted_rate=Decimal(info["predicted_funding_rate_e6"])
+                    * Decimal("1e-6"),
+                    raw=info,
                 )
                 await self.callback(FUNDING, f, timestamp)
 
@@ -341,61 +521,84 @@ class Bybit(Feed):
                 "trade_id":"9d229f26-09a8-42f8-aff3-0ba047b0449d",
                 "cross_seq":163261271}]}
         """
-        data = msg['data']
+        data = msg["data"]
         for trade in data:
-            if isinstance(trade['trade_time_ms'], str):
-                ts = int(trade['trade_time_ms'])
+            if isinstance(trade["trade_time_ms"], str):
+                ts = int(trade["trade_time_ms"])
             else:
-                ts = trade['trade_time_ms']
+                ts = trade["trade_time_ms"]
 
             t = Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(trade['symbol']),
-                BUY if trade['side'] == 'Buy' else SELL,
-                Decimal(trade['size']),
-                Decimal(trade['price']),
+                self.exchange_symbol_to_std_symbol(trade["symbol"]),
+                BUY if trade["side"] == "Buy" else SELL,
+                Decimal(trade["size"]),
+                Decimal(trade["price"]),
                 self.timestamp_normalize(ts),
-                id=trade['trade_id'],
-                raw=trade
+                id=trade["trade_id"],
+                raw=trade,
             )
             await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
-        pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[-1])
-        update_type = msg['type']
-        data = msg['data']
+        pair = self.exchange_symbol_to_std_symbol(msg["topic"].split(".")[-1])
+        update_type = msg["type"]
+        data = msg["data"]
         delta = {BID: [], ASK: []}
 
-        if update_type == 'snapshot':
+        if update_type == "snapshot":
             delta = None
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
             # the USDT perpetual data is under the order_book key
-            if 'order_book' in data:
-                data = data['order_book']
+            if "order_book" in data:
+                data = data["order_book"]
 
             for update in data:
-                side = BID if update['side'] == 'Buy' else ASK
-                self._l2_book[pair].book[side][Decimal(update['price'])] = Decimal(update['size'])
+                side = BID if update["side"] == "Buy" else ASK
+                self._l2_book[pair].book[side][Decimal(update["price"])] = Decimal(
+                    update["size"]
+                )
+
+        elif update_type == "delta":
+            # Spot book snapshot
+            delta = None
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+
+            self._l2_book[pair].book[BID] = {
+                Decimal(price): size for price, size in data["b"]
+            }
+            self._l2_book[pair].book[ASK] = {
+                Decimal(price): size for price, size in data["a"]
+            }
+
         else:
-            for delete in data['delete']:
-                side = BID if delete['side'] == 'Buy' else ASK
-                price = Decimal(delete['price'])
+            for delete in data["delete"]:
+                side = BID if delete["side"] == "Buy" else ASK
+                price = Decimal(delete["price"])
                 delta[side].append((price, 0))
                 del self._l2_book[pair].book[side][price]
 
-            for utype in ('update', 'insert'):
+            for utype in ("update", "insert"):
                 for update in data[utype]:
-                    side = BID if update['side'] == 'Buy' else ASK
-                    price = Decimal(update['price'])
-                    amount = Decimal(update['size'])
+                    side = BID if update["side"] == "Buy" else ASK
+                    price = Decimal(update["price"])
+                    amount = Decimal(update["size"])
                     delta[side].append((price, amount))
                     self._l2_book[pair].book[side][price] = amount
 
-        # timestamp is in microseconds
-        ts = msg['timestamp_e6']
+        # timestamp_e6 is in microseconds
+        ts = msg["timestamp_e6"] if "timestamp_e6" in msg else msg["data"]["t"] * 1e3
         if isinstance(ts, str):
             ts = int(ts)
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts / 1000000, raw=msg, delta=delta)
+
+        await self.book_callback(
+            L2_BOOK,
+            self._l2_book[pair],
+            timestamp,
+            timestamp=ts / 1000000,
+            raw=msg,
+            delta=delta,
+        )
 
     async def _order(self, msg: dict, timestamp: float):
         """
@@ -432,35 +635,37 @@ class Bybit(Feed):
         }
         """
         order_status = {
-            'Created': SUBMITTING,
-            'Rejected': FAILED,
-            'New': OPEN,
-            'PartiallyFilled': PARTIAL,
-            'Filled': FILLED,
-            'Cancelled': CANCELLED,
-            'PendingCancel': CANCELLING
+            "Created": SUBMITTING,
+            "Rejected": FAILED,
+            "New": OPEN,
+            "PartiallyFilled": PARTIAL,
+            "Filled": FILLED,
+            "Cancelled": CANCELLED,
+            "PendingCancel": CANCELLING,
         }
 
-        for i in range(len(msg['data'])):
-            data = msg['data'][i]
+        for i in range(len(msg["data"])):
+            data = msg["data"][i]
 
             oi = OrderInfo(
                 self.id,
-                self.exchange_symbol_to_std_symbol(data['symbol']),
+                self.exchange_symbol_to_std_symbol(data["symbol"]),
                 data["order_id"],
-                BUY if data["side"] == 'Buy' else SELL,
+                BUY if data["side"] == "Buy" else SELL,
                 order_status[data["order_status"]],
-                LIMIT if data['order_type'] == 'Limit' else MARKET,
-                Decimal(data['price']),
-                Decimal(data['qty']),
-                Decimal(data['qty']) - Decimal(data['cum_exec_qty']),
-                self.timestamp_normalize(data.get('update_time') or data.get('O') or data.get('timestamp')),
+                LIMIT if data["order_type"] == "Limit" else MARKET,
+                Decimal(data["price"]),
+                Decimal(data["qty"]),
+                Decimal(data["qty"]) - Decimal(data["cum_exec_qty"]),
+                self.timestamp_normalize(
+                    data.get("update_time") or data.get("O") or data.get("timestamp")
+                ),
                 raw=data,
             )
             await self.callback(ORDER_INFO, oi, timestamp)
 
     async def _execution(self, msg: dict, timestamp: float):
-        '''
+        """
         {
             "topic": "execution",
             "data": [
@@ -481,22 +686,22 @@ class Bybit(Feed):
                 }
             ]
         }
-        '''
-        for entry in msg['data']:
-            symbol = self.exchange_symbol_to_std_symbol(entry['symbol'])
+        """
+        for entry in msg["data"]:
+            symbol = self.exchange_symbol_to_std_symbol(entry["symbol"])
             f = Fill(
                 self.id,
                 symbol,
-                BUY if entry['side'] == 'Buy' else SELL,
-                Decimal(entry['exec_qty']),
-                Decimal(entry['price']),
-                Decimal(entry['exec_fee']),
-                entry['exec_id'],
-                entry['order_id'],
+                BUY if entry["side"] == "Buy" else SELL,
+                Decimal(entry["exec_qty"]),
+                Decimal(entry["price"]),
+                Decimal(entry["exec_fee"]),
+                entry["exec_id"],
+                entry["order_id"],
                 None,
-                MAKER if entry['is_maker'] else TAKER,
-                entry['trade_time'].timestamp(),
-                raw=entry
+                MAKER if entry["is_maker"] else TAKER,
+                entry["trade_time"].timestamp(),
+                raw=entry,
             )
             await self.callback(FILLS, f, timestamp)
 
@@ -507,14 +712,25 @@ class Bybit(Feed):
     #        await self.callback(BALANCES, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
 
     async def authenticate(self, conn: AsyncConnection):
-        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription):
+        if any(
+            self.is_authenticated_channel(self.exchange_channel_to_std(chan))
+            for chan in conn.subscription
+        ):
             auth = self._auth(self.key_id, self.key_secret)
-            LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
+            LOG.debug(
+                f"{conn.uuid}: Sending authentication request with message {auth}"
+            )
             await conn.write(auth)
 
     def _auth(self, key_id: str, key_secret: str) -> str:
         # https://bybit-exchange.github.io/docs/inverse/#t-websocketauthentication
 
         expires = int((time.time() + 60)) * 1000
-        signature = str(hmac.new(bytes(key_secret, 'utf-8'), bytes(f'GET/realtime{expires}', 'utf-8'), digestmod='sha256').hexdigest())
-        return json.dumps({'op': 'auth', 'args': [key_id, expires, signature]})
+        signature = str(
+            hmac.new(
+                bytes(key_secret, "utf-8"),
+                bytes(f"GET/realtime{expires}", "utf-8"),
+                digestmod="sha256",
+            ).hexdigest()
+        )
+        return json.dumps({"op": "auth", "args": [key_id, expires, signature]})
