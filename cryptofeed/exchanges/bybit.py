@@ -15,54 +15,10 @@ from datetime import datetime as dt
 
 from yapic import json
 
-from cryptofeed.connection import (
-    AsyncConnection,
-    RestEndpoint,
-    Routes,
-    WebsocketEndpoint,
-)
-from cryptofeed.defines import (
-    BID,
-    ASK,
-    BUY,
-    BYBIT,
-    CANCELLED,
-    CANCELLING,
-    CANDLES,
-    FAILED,
-    FILLED,
-    FUNDING,
-    L2_BOOK,
-    LIMIT,
-    LIQUIDATIONS,
-    MAKER,
-    MARKET,
-    OPEN,
-    PARTIAL,
-    SELL,
-    SUBMITTING,
-    TAKER,
-    TRADES,
-    OPEN_INTEREST,
-    INDEX,
-    ORDER_INFO,
-    FILLS,
-    FUTURES,
-    PERPETUAL,
-    SPOT,
-)
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL, SPOT
 from cryptofeed.feed import Feed
-from cryptofeed.types import (
-    OrderBook,
-    Trade,
-    Index,
-    OpenInterest,
-    Funding,
-    OrderInfo,
-    Fill,
-    Candle,
-    Liquidation,
-)
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation
 
 
 LOG = logging.getLogger("feedhandler")
@@ -82,89 +38,17 @@ class Bybit(Feed):
         LIQUIDATIONS: "liquidation",
     }
     websocket_endpoints = [
-        WebsocketEndpoint(
-            "wss://stream.bybit.com/realtime",
-            # instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
-            channel_filter=(
-                websocket_channels[L2_BOOK],
-                websocket_channels[TRADES],
-                websocket_channels[INDEX],
-                websocket_channels[OPEN_INTEREST],
-                websocket_channels[FUNDING],
-                websocket_channels[CANDLES],
-                websocket_channels[LIQUIDATIONS],
-            ),
-            instrument_filter=("QUOTE", ("USD",)),
-            sandbox="wss://stream-testnet.bybit.com/realtime",
-            options={"compression": None},
-        ),
-        WebsocketEndpoint(
-            "wss://stream.bybit.com/realtime_public",
-            instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
-            channel_filter=(
-                websocket_channels[L2_BOOK],
-                websocket_channels[TRADES],
-                websocket_channels[INDEX],
-                websocket_channels[OPEN_INTEREST],
-                websocket_channels[FUNDING],
-                websocket_channels[CANDLES],
-                websocket_channels[LIQUIDATIONS],
-            ),
-            sandbox="wss://stream-testnet.bybit.com/realtime_public",
-            options={"compression": None},
-        ),
-        WebsocketEndpoint(
-            "wss://stream.bybit.com/realtime_private",
-            instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
-            channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]),
-            sandbox="wss://stream-testnet.bybit.com/realtime_private",
-            options={"compression": None},
-        ),
-        WebsocketEndpoint(
-            "wss://stream.bybit.com/spot/public/v3",
-            instrument_filter=("TYPE", (SPOT,)),
-            channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES]),
-            sandbox="wss://stream-testnet.bybit.com/spot/public/v3",
-            options={"compression": None},
-        ),
+        WebsocketEndpoint("wss://stream.bybit.com/realtime", channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS]), instrument_filter=("QUOTE", ("USD",)), sandbox="wss://stream-testnet.bybit.com/realtime", options={"compression": None}),
+        WebsocketEndpoint("wss://stream.bybit.com/realtime_public", instrument_filter=("TYPE", (FUTURES, PERPETUAL)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS]), sandbox="wss://stream-testnet.bybit.com/realtime_public", options={"compression": None}),
+        WebsocketEndpoint("wss://stream.bybit.com/realtime_private", instrument_filter=("TYPE", (FUTURES, PERPETUAL)), channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]), sandbox="wss://stream-testnet.bybit.com/realtime_private", options={"compression": None}),
+        WebsocketEndpoint("wss://stream.bybit.com/spot/public/v3", instrument_filter=("TYPE", (SPOT,)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES]), sandbox="wss://stream-testnet.bybit.com/spot/public/v3", options={"compression": None}),
     ]
     rest_endpoints = [
         RestEndpoint("https://api.bybit.com", routes=Routes("/v2/public/symbols")),
-        RestEndpoint(
-            "https://api.bybit.com",
-            instrument_filter=("TYPE", (SPOT,)),
-            routes=Routes("/spot/v3/public/symbols"),
-        )
-        # RestEndpoint('https://api.bybit.com', routes=Routes(['/v2/public/symbols', '/spot/v3/public/symbols'])),
+        RestEndpoint("https://api.bybit.com", instrument_filter=("TYPE", (SPOT,)), routes=Routes("/spot/v3/public/symbols"))
     ]
-    valid_candle_intervals = {
-        "1m",
-        "3m",
-        "5m",
-        "15m",
-        "30m",
-        "1h",
-        "2h",
-        "4h",
-        "6h",
-        "1d",
-        "1w",
-        "1M",
-    }
-    candle_interval_map = {
-        "1m": "1",
-        "3m": "3",
-        "5m": "5",
-        "15m": "15",
-        "30m": "30",
-        "1h": "60",
-        "2h": "120",
-        "4h": "240",
-        "6h": "360",
-        "1d": "D",
-        "1w": "W",
-        "1M": "M",
-    }
+    valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '1w', '1M'}
+    candle_interval_map = {'1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '2h': '120', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W', '1M': 'M'}
 
     @classmethod
     def timestamp_normalize(cls, ts: Union[int, dt]) -> float:
@@ -463,10 +347,7 @@ class Bybit(Feed):
             updates = msg["data"]["update"]
 
         for info in updates:
-            if (
-                msg["topic"] in self._instrument_info_cache
-                and self._instrument_info_cache[msg["topic"]] == updates
-            ):
+            if msg["topic"] in self._instrument_info_cache and self._instrument_info_cache[msg["topic"]] == updates:
                 continue
             else:
                 self._instrument_info_cache[msg["topic"]] = updates
@@ -503,8 +384,7 @@ class Bybit(Feed):
                     if "next_funding_time" in info
                     else None,
                     ts,
-                    predicted_rate=Decimal(info["predicted_funding_rate_e6"])
-                    * Decimal("1e-6"),
+                    predicted_rate=Decimal(info["predicted_funding_rate_e6"]) * Decimal("1e-6"),
                     raw=info,
                 )
                 await self.callback(FUNDING, f, timestamp)
