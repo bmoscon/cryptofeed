@@ -84,7 +84,7 @@ class Bybit(Feed):
     websocket_endpoints = [
         WebsocketEndpoint(
             "wss://stream.bybit.com/realtime",
-            instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
+            # instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
             channel_filter=(
                 websocket_channels[L2_BOOK],
                 websocket_channels[TRADES],
@@ -94,7 +94,7 @@ class Bybit(Feed):
                 websocket_channels[CANDLES],
                 websocket_channels[LIQUIDATIONS],
             ),
-            # instrument_filter=("QUOTE", ("USD",)),
+            instrument_filter=("QUOTE", ("USD",)),
             sandbox="wss://stream-testnet.bybit.com/realtime",
             options={"compression": None},
         ),
@@ -110,7 +110,6 @@ class Bybit(Feed):
                 websocket_channels[CANDLES],
                 websocket_channels[LIQUIDATIONS],
             ),
-            # instrument_filter=("QUOTE", ("USDT",)),
             sandbox="wss://stream-testnet.bybit.com/realtime_public",
             options={"compression": None},
         ),
@@ -118,7 +117,6 @@ class Bybit(Feed):
             "wss://stream.bybit.com/realtime_private",
             instrument_filter=("TYPE", (FUTURES, PERPETUAL)),
             channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]),
-            # instrument_filter=("QUOTE", ("USDT",)),
             sandbox="wss://stream-testnet.bybit.com/realtime_private",
             options={"compression": None},
         ),
