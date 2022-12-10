@@ -19,7 +19,7 @@ class KafkaCallback:
         """
         producer_config: dict
             A dictionary of configuration settings for AIOKafkaProducer.
-            A 'value_serializer' option allows use of various alternative schemas such as Protobuf, Avro, etc. 
+            A 'value_serializer' option allows use of other schemas such as Avro, Protobuf etc. 
             The default serialization is JSON Bytes
             A full list of configuration parameters can be found at https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer  
             Example:
@@ -38,7 +38,7 @@ class KafkaCallback:
         self.numeric_type = numeric_type
         self.none_to = none_to
 
-    async def __connect(self):
+    async def _connect(self):
         if not self.producer:
             loop = asyncio.get_event_loop()
             self.producer = AIOKafkaProducer(**self.producer_config, loop=loop)
@@ -47,14 +47,8 @@ class KafkaCallback:
     def topic(self, data: dict) -> str:
         return f"{self.key}-{data['exchange']}-{data['symbol']}"
 
-    def partition_key(self, data: dict) -> Optional[bytes]:
-        return None
-
-    def partition(self, data: dict) -> Optional[int]:
-        return None
-
     async def write(self, data: dict):
-        await self.__connect()
+        await self._connect()
         await self.producer.send_and_wait(self.topic(data), json.dumps(data).encode('utf-8'), self.partition_key(data), self.partition(data))
 
 
