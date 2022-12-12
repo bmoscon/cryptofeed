@@ -140,21 +140,20 @@ class Bybit(Feed):
         for entry in msg['data']:
             if self.candle_closed_only and not entry['confirm']:
                 continue
-            c = Candle(
-                self.id,
-                symbol,
-                entry['start'],
-                entry['end'],
-                self.candle_interval,
-                entry['confirm'],
-                Decimal(entry['open']),
-                Decimal(entry['close']),
-                Decimal(entry['high']),
-                Decimal(entry['low']),
-                Decimal(entry['volume']),
-                None,
-                ts,
-                raw=entry)
+            c = Candle(self.id,
+                       symbol,
+                       entry['start'],
+                       entry['end'],
+                       self.candle_interval,
+                       entry['confirm'],
+                       Decimal(entry['open']),
+                       Decimal(entry['close']),
+                       Decimal(entry['high']),
+                       Decimal(entry['low']),
+                       Decimal(entry['volume']),
+                       None,
+                       ts,
+                       raw=entry)
             await self.callback(CANDLES, c, timestamp)
 
     async def _liquidation(self, msg: dict, timestamp: float):
