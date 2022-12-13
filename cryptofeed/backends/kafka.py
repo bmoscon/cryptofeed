@@ -18,7 +18,6 @@ from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, Ba
 LOG = logging.getLogger('feedhandler')
 
 
-
 class KafkaCallback(BackendQueue):
     def __init__(self, producer_config: Optional[DefaultDict[str, str | List | int | Callable]] = None, key=None, numeric_type=float, none_to=None, **kwargs):
         """
@@ -75,6 +74,7 @@ class KafkaCallback(BackendQueue):
 
     async def writer(self):
         await self._connect()
+        LOG.info(f'{self.__class__.__name__}: {self.producer.client._client_id} connected to cluster containing {str(self.producer.client.cluster)[16:-1]}')
         while self.running:
             async with self.read_queue() as updates:
                 for index in range(len(updates)):
@@ -85,10 +85,10 @@ class KafkaCallback(BackendQueue):
                     try:
                         await self.producer.send_and_wait(topic, value, key, partition)
                     except RequestTimedOutError:
-                        LOG.error(f'Kafka: No response received from server within {self.producer._request_timeout_ms} ms. Messages may not have been delivered')
+                        LOG.error(f'{self.__class__.name}: No response received from server within {self.producer._request_timeout_ms} ms. Messages may not have been delivered')
                     except Exception as e:
-                        LOG.info(f'Kafka: Encountered an error:{chr(10)}{e}')
-        LOG.info("KAFKA: Sending last messages and closing connection")
+                        LOG.info(f'{self.__class__.name}: Encountered an error:{chr(10)}{e}')
+        LOG.info(f"{self.__class__.__name__}: sending last messages and closing connection '{self.producer.client._client_id}'")
         await self.producer.stop()
 
 
