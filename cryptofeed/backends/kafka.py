@@ -7,7 +7,7 @@ associated with this software.
 from collections import defaultdict
 import asyncio
 import logging
-from typing import Optional, DefaultDict, List, Callable, ByteString
+from typing import Optional, List, Callable, ByteString
 
 from aiokafka import AIOKafkaProducer
 from aiokafka.errors import RequestTimedOutError
@@ -19,7 +19,7 @@ LOG = logging.getLogger('feedhandler')
 
 
 class KafkaCallback(BackendQueue):
-    def __init__(self, producer_config: Optional[DefaultDict[str, str | List | int | Callable]] = None, key=None, numeric_type=float, none_to=None, **kwargs):
+    def __init__(self, producer_config: Optional[dict[str, str | List | int | Callable]] = None, key=None, numeric_type=float, none_to=None, **kwargs):
         """
         producer_config: dict
             A dictionary of configuration settings for AIOKafkaProducer.
@@ -36,7 +36,7 @@ class KafkaCallback(BackendQueue):
                 'acks': 1,
                 'value_serializer': your_serialization_function}
                 
-            (the event loop is provided by Cryptofeed)
+            (Passing the event loop is already handled)
         """
         self.producer_config = producer_config or {
             'bootstrap_servers': '127.0.0.1:9092',
@@ -85,9 +85,9 @@ class KafkaCallback(BackendQueue):
                     try:
                         await self.producer.send_and_wait(topic, value, key, partition)
                     except RequestTimedOutError:
-                        LOG.error(f'{self.__class__.name}: No response received from server within {self.producer._request_timeout_ms} ms. Messages may not have been delivered')
+                        LOG.error(f'{self.__class__.__name__}: No response received from server within {self.producer._request_timeout_ms} ms. Messages may not have been delivered')
                     except Exception as e:
-                        LOG.info(f'{self.__class__.name}: Encountered an error:{chr(10)}{e}')
+                        LOG.info(f'{self.__class__.__name__}: Encountered an error:{chr(10)}{e}')
         LOG.info(f"{self.__class__.__name__}: sending last messages and closing connection '{self.producer.client._client_id}'")
         await self.producer.stop()
 
