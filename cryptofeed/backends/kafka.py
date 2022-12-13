@@ -41,7 +41,7 @@ class KafkaCallback(BackendQueue):
         self.producer_config = producer_config or {
             'bootstrap_servers': '127.0.0.1:9092',
             'client_id': 'cryptofeed',
-            'acks': 0
+            'acks': 1
         }
         self.producer = None
         self.key: str = key or self.default_key
@@ -57,7 +57,7 @@ class KafkaCallback(BackendQueue):
         else:
             raise TypeError(f'{type(to_bytes)} is not a valid Serialization type')
 
-    async def __connect(self):
+    async def _connect(self):
         if not self.producer:
             loop = asyncio.get_event_loop()
             self.producer = AIOKafkaProducer(**self.producer_config, loop=loop)
