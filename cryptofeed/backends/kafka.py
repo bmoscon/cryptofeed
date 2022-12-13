@@ -57,7 +57,7 @@ class KafkaCallback(BackendQueue):
         else:
             raise TypeError(f'{type(to_bytes)} is not a valid Serialization type')
 
-    async def _connect(self):
+    async def __connect(self):
         if not self.producer:
             loop = asyncio.get_event_loop()
             self.producer = AIOKafkaProducer(**self.producer_config, loop=loop)
