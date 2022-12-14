@@ -10,7 +10,7 @@ import logging
 from typing import Optional, ByteString
 
 from aiokafka import AIOKafkaProducer
-from aiokafka.errors import RequestTimedOutError
+from aiokafka.errors import RequestTimedOutError, KafkaConnectionError, NodeNotReadyError
 from yapic import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
@@ -22,20 +22,20 @@ class KafkaCallback(BackendQueue):
     def __init__(self, key=None, numeric_type=float, none_to=None, **kwargs):
         """
         You can pass configuration options to AIOKafkaProducer as kwargs.
-            A full list of configuration parameters can be found at
-            https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer  
-            
-            A 'value_serializer' option allows use of other schemas such as Avro, Protobuf etc. 
-            The default serialization is JSON Bytes
-            
-            Example:
-            
+        A full list of configuration parameters can be found at
+        https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer  
+        
+        A 'value_serializer' option allows use of other schemas such as Avro, Protobuf etc. 
+        The default serialization is JSON Bytes
+        
+        Example:
+        
             **{'bootstrap_servers': '127.0.0.1:9092',
-                'client_id': 'cryptofeed',
-                'acks': 1,
-                'value_serializer': your_serialization_function}
-                
-            (Passing the event loop is already handled)
+            'client_id': 'cryptofeed',
+            'acks': 1,
+            'value_serializer': your_serialization_function}
+            
+        (Passing the event loop is already handled)
         """
         self.producer_config = dict(**kwargs)
         self.producer = None
@@ -59,7 +59,7 @@ class KafkaCallback(BackendQueue):
             try:
                 config_keys = ', '.join([k for k in self.producer_config.keys()])
                 LOG.info(f'{self.__class__.__name__}: Configuring AIOKafka with the following parameters: {config_keys}')
-            self.producer = AIOKafkaProducer(**self.producer_config, loop=loop)
+                self.producer = AIOKafkaProducer(**self.producer_config, loop=loop)
             # Quit if invalid config option passed to AIOKafka
             except (TypeError, ValueError) as e:
                 LOG.error(f'{self.__class__.__name__}: Invalid AIOKafka configuration: {e.args}{chr(10)}See https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer for list of configuration options')
@@ -67,7 +67,7 @@ class KafkaCallback(BackendQueue):
             else:
                 while not self.running:
                     try:
-            await self.producer.start()
+                        await self.producer.start()
                     except KafkaConnectionError:
                         LOG.error(f'{self.__class__.__name__}: Unable to bootstrap from host(s)')
                         await asyncio.sleep(10)
@@ -91,13 +91,17 @@ class KafkaCallback(BackendQueue):
             async with self.read_queue() as updates:
                 for index in range(len(updates)):
                     topic = self.topic(updates[index])
+                    # Check for user-provided serializers, otherwise use default
                     value = updates[index] if self.producer_config.get('value_serializer') else self._default_serializer(updates[index])
                     key = self.key if self.producer_config.get('key_serializer') else self._default_serializer(self.key)
                     partition = self.partition(updates[index])
                     try:
-                        await self.producer.send_and_wait(topic, value, key, partition)
+                        send_future = await self.producer.send(topic, value, key, partition)
+                        await send_future
                     except RequestTimedOutError:
                         LOG.error(f'{self.__class__.__name__}: No response received from server within {self.producer._request_timeout_ms} ms. Messages may not have been delivered')
+                    except NodeNotReadyError:
+                        LOG.error(f'{self.__class__.__name__}: Node not ready')
                     except Exception as e:
                         LOG.info(f'{self.__class__.__name__}: Encountered an error:{chr(10)}{e}')
         LOG.info(f"{self.__class__.__name__}: sending last messages and closing connection '{self.producer.client._client_id}'")
