@@ -21,7 +21,8 @@ LOG = logging.getLogger('feedhandler')
 class KafkaCallback(BackendQueue):
     def __init__(self, key=None, numeric_type=float, none_to=None, **kwargs):
         """
-        You can pass configuration options to AIOKafkaProducer as kwargs.
+        You can pass configuration options to AIOKafkaProducer as keyword arguments.
+        (either individual kwargs, an unpacked dictionary `**config_dict`, or both)
         A full list of configuration parameters can be found at
         https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer  
         
@@ -37,7 +38,7 @@ class KafkaCallback(BackendQueue):
             
         (Passing the event loop is already handled)
         """
-        self.producer_config = dict(**kwargs)
+        self.producer_config = kwargs
         self.producer = None
         self.key: str = key or self.default_key
         self.numeric_type = numeric_type
