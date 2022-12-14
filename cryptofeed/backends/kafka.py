@@ -7,7 +7,7 @@ associated with this software.
 from collections import defaultdict
 import asyncio
 import logging
-from typing import Optional, List, Callable, ByteString
+from typing import Optional, ByteString
 
 from aiokafka import AIOKafkaProducer
 from aiokafka.errors import RequestTimedOutError
@@ -19,10 +19,9 @@ LOG = logging.getLogger('feedhandler')
 
 
 class KafkaCallback(BackendQueue):
-    def __init__(self, producer_config: Optional[dict[str, str | List | int | Callable]] = None, key=None, numeric_type=float, none_to=None, **kwargs):
+    def __init__(self, key=None, numeric_type=float, none_to=None, **kwargs):
         """
-        producer_config: dict
-            A dictionary of configuration settings for AIOKafkaProducer.
+        You can pass configuration options to AIOKafkaProducer as kwargs.
             A full list of configuration parameters can be found at
             https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer  
             
@@ -31,18 +30,14 @@ class KafkaCallback(BackendQueue):
             
             Example:
             
-                {'bootstrap_servers': '127.0.0.1:9092',
+            **{'bootstrap_servers': '127.0.0.1:9092',
                 'client_id': 'cryptofeed',
                 'acks': 1,
                 'value_serializer': your_serialization_function}
                 
             (Passing the event loop is already handled)
         """
-        self.producer_config = producer_config or {
-            'bootstrap_servers': '127.0.0.1:9092',
-            'client_id': 'cryptofeed',
-            'acks': 1
-        }
+        self.producer_config = dict(**kwargs)
         self.producer = None
         self.key: str = key or self.default_key
         self.numeric_type = numeric_type
