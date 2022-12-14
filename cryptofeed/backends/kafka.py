@@ -42,7 +42,8 @@ class KafkaCallback(BackendQueue):
         self.key: str = key or self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to
-        self.running = True
+        # Do not allow writer to send messages until connection confirmed
+        self.running = False
     
     def _default_serializer(self, to_bytes: dict | str) -> ByteString:
         if isinstance(to_bytes, dict):
@@ -55,8 +56,25 @@ class KafkaCallback(BackendQueue):
     async def _connect(self):
         if not self.producer:
             loop = asyncio.get_event_loop()
+            try:
+                config_keys = ', '.join([k for k in self.producer_config.keys()])
+                LOG.info(f'{self.__class__.__name__}: Configuring AIOKafka with the following parameters: {config_keys}')
             self.producer = AIOKafkaProducer(**self.producer_config, loop=loop)
+            # Quit if invalid config option passed to AIOKafka
+            except (TypeError, ValueError) as e:
+                LOG.error(f'{self.__class__.__name__}: Invalid AIOKafka configuration: {e.args}{chr(10)}See https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer for list of configuration options')
+                raise SystemExit
+            else:
+                while not self.running:
+                    try:
             await self.producer.start()
+                    except KafkaConnectionError:
+                        LOG.error(f'{self.__class__.__name__}: Unable to bootstrap from host(s)')
+                        await asyncio.sleep(10)
+                    else:
+                        LOG.info(f'{self.__class__.__name__}: "{self.producer.client._client_id}" connected to cluster containing {len(self.producer.client.cluster.brokers())} broker(s)')
+                        self.running = True
+
 
     def topic(self, data: dict) -> str:
         return f"{self.key}-{data['exchange']}-{data['symbol']}"
@@ -69,7 +87,6 @@ class KafkaCallback(BackendQueue):
 
     async def writer(self):
         await self._connect()
-        LOG.info(f'{self.__class__.__name__}: {self.producer.client._client_id} connected to cluster containing {str(self.producer.client.cluster)[16:-1]}')
         while self.running:
             async with self.read_queue() as updates:
                 for index in range(len(updates)):
