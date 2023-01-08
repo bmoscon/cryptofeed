@@ -24,18 +24,18 @@ class KafkaCallback(BackendQueue):
         You can pass configuration options to AIOKafkaProducer as keyword arguments.
         (either individual kwargs, an unpacked dictionary `**config_dict`, or both)
         A full list of configuration parameters can be found at
-        https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer  
-        
-        A 'value_serializer' option allows use of other schemas such as Avro, Protobuf etc. 
+        https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer
+
+        A 'value_serializer' option allows use of other schemas such as Avro, Protobuf etc.
         The default serialization is JSON Bytes
-        
+
         Example:
-        
+
             **{'bootstrap_servers': '127.0.0.1:9092',
             'client_id': 'cryptofeed',
             'acks': 1,
             'value_serializer': your_serialization_function}
-            
+
         (Passing the event loop is already handled)
         """
         self.producer_config = kwargs
@@ -45,7 +45,7 @@ class KafkaCallback(BackendQueue):
         self.none_to = none_to
         # Do not allow writer to send messages until connection confirmed
         self.running = False
-    
+
     def _default_serializer(self, to_bytes: dict | str) -> ByteString:
         if isinstance(to_bytes, dict):
             return json.dumpb(to_bytes)
@@ -75,7 +75,6 @@ class KafkaCallback(BackendQueue):
                     else:
                         LOG.info(f'{self.__class__.__name__}: "{self.producer.client._client_id}" connected to cluster containing {len(self.producer.client.cluster.brokers())} broker(s)')
                         self.running = True
-
 
     def topic(self, data: dict) -> str:
         return f"{self.key}-{data['exchange']}-{data['symbol']}"

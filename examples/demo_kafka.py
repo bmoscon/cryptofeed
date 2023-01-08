@@ -15,7 +15,7 @@ from cryptofeed.exchanges import Coinbase
 The AIOKafkaProducer accepts configuration options passed as kwargs to the Kafka callback(s)
 either as individual kwargs, an unpacked dictionary `**config_dict`, or both, as in the example below.
 The full list of configuration parameters can be found at
-https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer  
+https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer
 
 You can run a Kafka consumer in the console with the following command
 (assuminng the defaults for the consumer group and bootstrap server)
@@ -39,7 +39,7 @@ def main():
         'request_timeout_ms': 10000,
         'connections_max_idle_ms': 20000,
     }
-    f = FeedHandler({'log':{'filename': 'feedhandler.log', 'level': 'INFO'}})
+    f = FeedHandler({'log': {'filename': 'feedhandler.log', 'level': 'INFO'}})
     cbs = {TRADES: CustomTradeKafka(client_id='Coinbase Trades', **common_kafka_config), L2_BOOK: BookKafka(client_id='Coinbase Book', **common_kafka_config)}
 
     f.add_feed(Coinbase(max_depth=10, channels=[TRADES, L2_BOOK], symbols=['BTC-USD'], callbacks=cbs))
