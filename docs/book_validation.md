@@ -26,8 +26,6 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | dYdX          |               |                  |                | x <sup>2</sup> |
 | EXX           |               |                  |                |       |
 | FMFW.io       |               | x                |                |       |
-| FTX           | x             |                  |                |       |
-| FTX US        | x             |                  |                |       |
 | Gate.io       |               |                  |                |       |
 | Gemini        |               |                  |                |       |
 | HitBTC        |               |  x               |                |       |

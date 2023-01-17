@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.defines import *
-from cryptofeed.defines import FTX as FTX_str, EXX as EXX_str, FMFW as FMFW_str, OKX as OKX_str
+from cryptofeed.defines import EXX as EXX_str, FMFW as FMFW_str, OKX as OKX_str
 from .bitdotcom import BitDotCom
 from .phemex import Phemex
 from .ascendex import AscendEX
@@ -31,9 +31,6 @@ from .delta import Delta
 from .deribit import Deribit
 from .dydx import dYdX
 from .exx import EXX
-from .ftx import FTX
-from .ftx_us import FTXUS
-from .ftx_tr import FTXTR
 from .gateio import Gateio
 from .gemini import Gemini
 from .hitbtc import HitBTC
@@ -76,9 +73,6 @@ EXCHANGE_MAP = {
     DELTA: Delta,
     DYDX: dYdX,
     EXX_str: EXX,
-    FTX_str: FTX,
-    FTX_US: FTXUS,
-    FTX_TR: FTXTR,
     GATEIO: Gateio,
     GEMINI: Gemini,
     HITBTC: HitBTC,

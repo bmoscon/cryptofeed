@@ -304,6 +304,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
         Not all done or change messages will result in changing the order book. These messages will
         be sent for received orders which are not yet on the order book. Do not alter
         the order book for such messages, otherwise your order book will be incorrect.
+
+        {'price': '16556.88', 'old_size': '0.24076471', 'new_size': '0.04076471', 'order_id': '9675d63e-0432-413d-a3f3-f30d7df39614', 'reason': 'STP', 'type': 'change', 'side': 'buy', 'product_id': 'BTC-USD', 'time': datetime.datetime(2022, 11, 24, 0, 35, 28, 904847, tzinfo=datetime.timezone.utc), 'sequence': 50703787284}
         """
         if not self.keep_l3_book:
             return

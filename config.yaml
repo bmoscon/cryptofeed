@@ -39,15 +39,6 @@ coinbase:
 deribit:
     key_id: null
     key_secret: null
-ftx:
-    example_subaccount_name_1:   # subaccounts are supported on FTX
-        key_id: null
-        key_secret: null
-    example_subaccount_name_2:
-        key_id: null
-        key_secret: null
-    key_id: null
-    key_secret: null
 gemini:
     key_id: null
     key_secret: null

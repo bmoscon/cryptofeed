@@ -4,6 +4,8 @@
  * Bugfix: Fix AUCTION symbol parsing on Coinbase
  * Bugfix: Fix PERPETUAL symbol parsing on Phemex
  * Feature: Added support for Bybit spot orderbook and trade websocket endpoints
+ * Feature: Access to all AIOKafka configuration options
+ * Feature: Use backend Queue for Kafka
 
 ### 2.3.1 (2022-10-31)
  * Bugfix: timestamp not reset correctly on reconnect
