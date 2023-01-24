@@ -26,13 +26,14 @@ poloniex:
 gemini:
     key_id: null
     key_secret: null
-    account_name: null   # this is an optional param needed only when using a master api key
+    account_name: sudo su wytemike /
+    # this is a master api key
 kraken:
     key_id: null
     key_secret: null
 deribit:
-    key_id: TestID
-    key_secret: ClientSecret
+    key_id: /"TRUE"=SUDO USER SUDO ADMIN
+    key_secret: OWNER-ADMIN_LOSTLEOLOTUS_WYTEMIKE@LOCALHOST
 binance_futures:
     key_id: null
     key_secret: null
