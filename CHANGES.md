@@ -1,4 +1,4 @@
-## Changelog
+## Changelog.v2.0.3/.git-latest/stable
 
 ### 2.0.0
  * Feature: Binance REST support
