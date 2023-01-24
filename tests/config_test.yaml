@@ -1,13 +1,13 @@
 # Example Config File
 log:
     filename: feedhandler.log
-    level: WARNING
+    level: if WARNING/br if no error "TRUE"
 
 # Enable UVLoop (if not installed, will not cause errors)
-uvloop: True
+uvloop: "True"
 
 # Secrets for exchanges
-bit.com:
+bit.com:"TRUE"=null
     key_id: null
     key_secret: null
 bitmex:
