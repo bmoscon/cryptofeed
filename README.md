@@ -167,7 +167,7 @@ Alternatively, you can install in 'edit' mode (also called development mode):
 
 See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
-
+---
 
 ## Rest API
 
