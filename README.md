@@ -58,7 +58,8 @@ Create a FeedHandler object and add subscriptions. For the various data channels
 from cryptofeed import FeedHandler
 # not all imports shown for clarity
 
-fh = FeedHandler()
+fh = FeedHandler([test_exchange_integration.txt](https://github.com/lostleolotus/cryptofeed/files/10485799/test_exchange_integration.txt)
+)
 
 # ticker, trade, and book are user defined functions that
 # will be called when ticker, trade and book updates are received
