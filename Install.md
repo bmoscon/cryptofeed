@@ -1,1 +1,1 @@
-python setup.py develop
+python setup.py develop@lostleolotus/cryptofeed-UNLOCKED/install.md
