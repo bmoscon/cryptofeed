@@ -129,7 +129,7 @@ class BookStream(RedisStreamCallback, BackendBookCallback):
         super().__init__(*args, **kwargs)
 
 
-class BookSnapshot(RedisKeyCallback, BackendBookCallback):
+class BookSnapshotRedisKey(RedisKeyCallback, BackendBookCallback):
     default_key = 'book'
 
     def __init__(self, *args, snapshot_interval=1000, score_key='receipt_timestamp', **kwargs):
