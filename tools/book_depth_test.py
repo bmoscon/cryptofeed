@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -25,7 +25,7 @@ async def book(feed, symbol, book, timestamp):
         print("\n\n")
         print("Previous")
         print(PREV)
-    assert(book != PREV)
+    assert book != PREV
     PREV = deepcopy(book)
     counter += 1
     if counter % 10 == 0:

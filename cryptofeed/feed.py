@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -273,8 +273,7 @@ class Feed(Exchange):
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'stop'):
-                    cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
-                    LOG.info('%s: stopping backend %s', self.id, cb_name)
+                    LOG.info('%s: stopping backend %s', self.id, self.backend_name(callback))
                     await callback.stop()
         for c in self.connection_handlers:
             await c.conn.close()
@@ -295,7 +294,13 @@ class Feed(Exchange):
         for callbacks in self.callbacks.values():
             for callback in callbacks:
                 if hasattr(callback, 'start'):
-                    cb_name = callback.__class__.__name__ if hasattr(callback, '__class__') else callback.__name__
-                    LOG.info('%s: starting backend task %s with multiprocessing=%s', self.id, cb_name, 'True' if self.config.backend_multiprocessing else 'False')
+                    LOG.info('%s: starting backend task %s with multiprocessing=%s', self.id, self.backend_name(callback), 'True' if self.config.backend_multiprocessing else 'False')
                     # Backends start tasks to write messages
                     callback.start(loop, multiprocess=self.config.backend_multiprocessing)
+
+    def backend_name(self, callback):
+        if hasattr(callback, '__class__'):
+            if hasattr(callback, 'handler'):
+                return callback.handler.__class__.__name__ + "+" + callback.__class__.__name__
+            return callback.__class__.__name__
+        return callback.__name__

@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -15,7 +15,7 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, PERPETUAL
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Candle, Balance
 
@@ -50,8 +50,10 @@ class Phemex(Feed):
             if entry['status'] != 'Listed':
                 continue
             stype = entry['type'].lower()
-            base, quote = entry['displaySymbol'].split(" / ")
-            s = Symbol(base, quote, type=stype)
+            if "perpetual" in stype:    # can be "perpetualv2"
+                stype = PERPETUAL
+            base, quote = entry['displaySymbol'].split("/")
+            s = Symbol(base.strip(), quote.strip(), type=stype)
             ret[s.normalized] = entry['symbol']
             info['tick_size'][s.normalized] = entry['tickSize'] if 'tickSize' in entry else entry['quoteTickSize']
             info['instrument_type'][s.normalized] = stype

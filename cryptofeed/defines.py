@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -32,9 +32,6 @@ DELTA = 'DELTA'
 DERIBIT = 'DERIBIT'
 DYDX = 'DYDX'
 EXX = 'EXX'
-FTX = 'FTX'
-FTX_US = 'FTX_US'
-FTX_TR = 'FTX_TR'
 FMFW = 'FMFW'
 GATEIO = 'GATEIO'
 GEMINI = 'GEMINI'

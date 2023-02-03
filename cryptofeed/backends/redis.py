@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -22,8 +22,9 @@ class RedisCallback(BackendQueue):
         prefix = 'redis://'
         if socket:
             prefix = 'unix://'
+            port = None
 
-        self.redis = f"{prefix}{host}:{port}"
+        self.redis = f"{prefix}{host}" + f":{port}" if port else ""
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to

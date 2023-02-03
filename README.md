@@ -32,8 +32,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [dYdX](https://dydx.exchange/)
 * [FMFW.io](https://www.fmfw.io/)
 * [EXX](https://www.exx.com/)
-* [FTX](https://ftx.com/)
-* [FTX US](https://ftx.us/)
 * [Gate.io](https://www.gate.io/)
 * [Gemini](https://gemini.com/)
 * [HitBTC](https://hitbtc.com/)

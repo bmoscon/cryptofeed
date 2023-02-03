@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -43,7 +43,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
         info = defaultdict(dict)
 
         for entry in data:
-            sym = Symbol(entry['base_currency'], entry['quote_currency'])
+            base, quote = entry['id'].split("-")
+            sym = Symbol(base, quote)
             info['tick_size'][sym.normalized] = entry['quote_increment']
             info['instrument_type'][sym.normalized] = sym.type
             ret[sym.normalized] = entry['id']
@@ -105,7 +106,9 @@ class Coinbase(Feed, CoinbaseRestMixin):
             'last_size': '0.00241692'
         }
         '''
-        await self.callback(TICKER, Ticker(self.id, self.exchange_symbol_to_std_symbol(msg['product_id']), Decimal(msg['best_bid']), Decimal(msg['best_ask']), self.timestamp_normalize(msg['time']), raw=msg), timestamp)
+
+        ts = self.timestamp_normalize(msg['time']) if 'time' in msg else None
+        await self.callback(TICKER, Ticker(self.id, self.exchange_symbol_to_std_symbol(msg['product_id']), Decimal(msg['best_bid']), Decimal(msg['best_ask']), ts, raw=msg), timestamp)
 
     async def _book_update(self, msg: dict, timestamp: float):
         '''
@@ -301,6 +304,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
         Not all done or change messages will result in changing the order book. These messages will
         be sent for received orders which are not yet on the order book. Do not alter
         the order book for such messages, otherwise your order book will be incorrect.
+
+        {'price': '16556.88', 'old_size': '0.24076471', 'new_size': '0.04076471', 'order_id': '9675d63e-0432-413d-a3f3-f30d7df39614', 'reason': 'STP', 'type': 'change', 'side': 'buy', 'product_id': 'BTC-USD', 'time': datetime.datetime(2022, 11, 24, 0, 35, 28, 904847, tzinfo=datetime.timezone.utc), 'sequence': 50703787284}
         """
         if not self.keep_l3_book:
             return

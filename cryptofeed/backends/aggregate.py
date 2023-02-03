@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -13,6 +13,10 @@ import numpy as np
 class AggregateCallback:
     def __init__(self, handler):
         self.handler = handler
+        if hasattr(self.handler, '__class__'):
+            setattr(self, 'start', self.handler.start)
+            setattr(self, 'stop', self.handler.stop)
+            self.__name__ = self.handler.__class__
 
 
 class Throttle(AggregateCallback):
