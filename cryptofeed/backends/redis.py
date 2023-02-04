@@ -133,7 +133,7 @@ class BookSnapshotRedisKey(RedisKeyCallback, BackendBookCallback):
     default_key = 'book'
 
     def __init__(self, *args, snapshot_interval=1000, score_key='receipt_timestamp', **kwargs):
-        kwargs['snapshots_only'] = self.snapshots_only = True
+        kwargs['snapshots_only'] = self.snapshots_only
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
         super().__init__(*args, score_key=score_key, **kwargs)
