@@ -5,6 +5,7 @@
  * Bugfix: Fix PERPETUAL symbol parsing on Phemex
  * Feature: Access to all AIOKafka configuration options
  * Feature: Use backend Queue for Kafka
+ * Feature: Add support for storing book snapshots in Redis as key-value
 
 ### 2.3.1 (2022-10-31)
  * Bugfix: timestamp not reset correctly on reconnect
