@@ -6,7 +6,7 @@ associated with this software.
 '''
 from collections import defaultdict
 
-import aioredis
+from redis import asyncio as aioredis
 from yapic import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
@@ -133,7 +133,7 @@ class BookSnapshotRedisKey(RedisKeyCallback, BackendBookCallback):
     default_key = 'book'
 
     def __init__(self, *args, snapshot_interval=1000, score_key='receipt_timestamp', **kwargs):
-        kwargs['snapshots_only'] = self.snapshots_only
+        kwargs['snapshots_only'] = True
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
         super().__init__(*args, score_key=score_key, **kwargs)

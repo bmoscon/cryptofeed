@@ -93,7 +93,7 @@ setup(
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
         "rabbit": ["aio_pika", "pika"],
-        "redis": ["hiredis", "aioredis>=2.0.0"],
+        "redis": ["hiredis", "redis>=4.5.1"],
         "zmq": ["pyzmq"],
         "all": [
             "arctic",
@@ -105,7 +105,7 @@ setup(
             "aio_pika",
             "pika",
             "hiredis",
-            "aioredis>=2.0.0",
+            "redis>=4.5.1",
             "pyzmq",
         ],
     },
