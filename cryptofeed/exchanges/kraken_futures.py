@@ -63,7 +63,7 @@ class KrakenFutures(Feed):
                 stype = FUTURES
                 symbol, expiry = symbol.split("_")
             symbol = symbol.replace('XBT', 'BTC')
-            base, quote = symbol[:3], symbol[3:]
+            base, quote = symbol[:len(symbol) - 3], symbol[-3:]
 
             s = Symbol(base, quote, type=stype, expiry_date=expiry)
 

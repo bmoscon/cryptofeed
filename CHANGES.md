@@ -3,6 +3,7 @@
 ### 2.3.2
  * Bugfix: Fix AUCTION symbol parsing on Coinbase
  * Bugfix: Fix PERPETUAL symbol parsing on Phemex
+ * Bugfix: Fix PERPETUAL symbol parsing on Kraken Futures
  * Feature: Access to all AIOKafka configuration options
  * Feature: Use backend Queue for Kafka
  * Feature: Add support for storing book snapshots in Redis as key-value
