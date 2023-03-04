@@ -9,6 +9,7 @@
  * Feature: Add support for storing book snapshots in Redis as key-value
  * Update: Switch from unmaintained aioredis to redis-py
  * Bugfix: Correct value for Crypto.com Ask price
+ * Update: Remove cChardet dependency
 
 ### 2.3.1 (2022-10-31)
  * Bugfix: timestamp not reset correctly on reconnect
