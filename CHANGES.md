@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 2.3.2
+ * Bugfix: Fix Socket backend
  * Bugfix: Fix AUCTION symbol parsing on Coinbase
  * Bugfix: Fix PERPETUAL symbol parsing on Phemex
  * Bugfix: Fix PERPETUAL symbol parsing on Kraken Futures
