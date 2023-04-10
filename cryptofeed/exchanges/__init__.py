@@ -15,6 +15,7 @@ from .binance import Binance
 from .binance_delivery import BinanceDelivery
 from .binance_futures import BinanceFutures
 from .binance_us import BinanceUS
+from .binance_tr import BinanceTR
 from .fmfw import FMFW
 from .bitfinex import Bitfinex
 from .bitflyer import Bitflyer
@@ -55,6 +56,7 @@ EXCHANGE_MAP = {
     BINANCE_DELIVERY: BinanceDelivery,
     BINANCE_FUTURES: BinanceFutures,
     BINANCE_US: BinanceUS,
+    BINANCE_TR: BinanceTR,
     BINANCE: Binance,
     FMFW_str: FMFW,
     BITDOTCOM: BitDotCom,
