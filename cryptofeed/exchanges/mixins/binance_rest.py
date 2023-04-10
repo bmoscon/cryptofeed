@@ -221,6 +221,7 @@ class BinanceUSRestMixin(BinanceRestMixin):
         TRADES
     )
 
+
 class BinanceTRRestMixin(BinanceRestMixin):
     api = 'https://api.binance.me/api/v3/'
     rest_channels = (
