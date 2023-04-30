@@ -11,6 +11,7 @@
  * Update: Switch from unmaintained aioredis to redis-py
  * Bugfix: Correct value for Crypto.com Ask price
  * Update: Remove cChardet dependency
+ * Feature: Binance TR support
 
 ### 2.3.1 (2022-10-31)
  * Bugfix: timestamp not reset correctly on reconnect
