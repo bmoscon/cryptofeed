@@ -59,7 +59,7 @@ class Deribit(Feed, DeribitRestMixin):
                 if base not in currencies:
                     currencies.append(base)
                 quote = e['quote_currency']
-                stype = e['kind'] if e['settlement_period'] != 'perpetual' else PERPETUAL
+                stype = e['kind'] if e.get('settlement_period') != 'perpetual' else PERPETUAL
                 otype = e.get('option_type')
                 if stype in ('option_combo', 'future_combo'):
                     continue
