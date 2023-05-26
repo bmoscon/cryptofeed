@@ -77,27 +77,10 @@ class GateioFutures(Gateio):
             self.exchange_symbol_to_std_symbol(msg['result']['s']),
             Decimal(msg['result']['b']),
             Decimal(msg['result']['a']),
-            float(msg['result']["t"]/1000),
+            float(msg['result']["t"] / 1000),
             raw=msg
         )
-        # for entry in msg['result']:
-        #     t = Ticker(
-        #         self.id,
-        #         self.exchange_symbol_to_std_symbol(entry['contract']),
-        #         Decimal(entry['last']),
-        #         Decimal(entry['last']),
-        #         float(msg['time']),
-        #         raw=msg
-        #     )
-        #     await self.callback(TICKER, t, timestamp)
-        # t = Ticker(
-        #     self.id,
-        #     self.exchange_symbol_to_std_symbol(msg['result']['currency_pair']),
-        #     Decimal(msg['result']['highest_bid']),
-        #     Decimal(msg['result']['lowest_ask']),
-        #     float(msg['time']),
-        #     raw=msg
-        # )
+
         await self.callback(TICKER, t, timestamp)
 
     async def _candles(self, msg: dict, timestamp: float):
@@ -145,7 +128,7 @@ class GateioFutures(Gateio):
                 float(entry['l']),
                 float(entry['v']),
                 None,
-                float(msg['time_ms']/1000),
+                float(msg['time_ms'] / 1000),
                 raw=entry
             )
             await self.callback(CANDLES, c, timestamp)
@@ -278,12 +261,11 @@ class GateioFutures(Gateio):
                 SELL if entry['size'] < 0 else BUY,
                 Decimal(abs(entry['size'])),
                 Decimal(entry['price']),
-                float(entry['create_time_ms']/1000),
+                float(entry['create_time_ms'] / 1000),
                 id=str(entry['id']),
                 raw=entry
             )
             await self.callback(TRADES, t, timestamp)
-
 
     async def _tickers(self, msg: dict, timestamp: float):
         """
