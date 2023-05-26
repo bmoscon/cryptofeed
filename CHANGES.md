@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 2.3.2
+ * New Exchange: GateIO Futures
  * Bugfix: Fix Socket backend
  * Bugfix: Fix AUCTION symbol parsing on Coinbase
  * Bugfix: Fix PERPETUAL symbol parsing on Phemex

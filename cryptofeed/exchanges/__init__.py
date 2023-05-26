@@ -33,6 +33,7 @@ from .deribit import Deribit
 from .dydx import dYdX
 from .exx import EXX
 from .gateio import Gateio
+from .gateio_futures import GateioFutures
 from .gemini import Gemini
 from .hitbtc import HitBTC
 from .huobi import Huobi
@@ -76,6 +77,7 @@ EXCHANGE_MAP = {
     DYDX: dYdX,
     EXX_str: EXX,
     GATEIO: Gateio,
+    GATEIO_FUTURES: GateioFutures,
     GEMINI: Gemini,
     HITBTC: HitBTC,
     HUOBI_DM: HuobiDM,
