@@ -22,7 +22,7 @@ jobs:
           pip install flake8 pytest cython
           pip install aiohttp==3.8.1
           pip install pyyaml
-          python setup.py install
+          python setup.py develop
       - name: Test with pytest
         run: |
           pytest tests/
