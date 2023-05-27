@@ -6,9 +6,12 @@ associated with this software.
 '''
 import random
 
+import pytest
+
 from cryptofeed.exchanges import Binance
 
 
+@pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
 def test_binance_address_generation():
     symbols = Binance.symbols()
     channels = [channel for channel in Binance.info()['channels']['websocket'] if not Binance.is_authenticated_channel(channel)]
