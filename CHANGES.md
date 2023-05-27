@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.3.2
+### 2.3.2 (2023-05-27)
  * Bugfix: Fix Socket backend
  * Bugfix: Fix AUCTION symbol parsing on Coinbase
  * Bugfix: Fix PERPETUAL symbol parsing on Phemex
