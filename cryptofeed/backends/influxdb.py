@@ -68,7 +68,7 @@ class InfluxCallback(HTTPCallback):
         for key, value in data.items():
             if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp'}:
                 continue
-            if isinstance(value, str):
+            if isinstance(value, str) or value is None:
                 ret.append(f'{key}="{value}"')
             else:
                 ret.append(f'{key}={value}')
