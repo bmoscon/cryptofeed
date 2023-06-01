@@ -4,6 +4,7 @@
  * Update: Fix tests
  * Update: Okcoin moved to v5 API used by OKX
  * Bugfix: InfluxDB none type conversions
+ * New Exchange: GateIO Futures
 
 ### 2.3.2 (2023-05-27)
  * Bugfix: Fix Socket backend
