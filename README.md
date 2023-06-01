@@ -32,6 +32,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [FMFW.io](https://www.fmfw.io/)
 * [EXX](https://www.exx.com/)
 * [Gate.io](https://www.gate.io/)
+* [Gate.io Futures](https://www.gate.io/futures_center)
 * [Gemini](https://gemini.com/)
 * [HitBTC](https://hitbtc.com/)
 * [Huobi](https://www.hbg.com/)
