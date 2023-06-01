@@ -43,8 +43,8 @@ from .independent_reserve import IndependentReserve
 from .kraken import Kraken
 from .kraken_futures import KrakenFutures
 from .kucoin import KuCoin
-from .okcoin import OKCoin
 from .okx import OKX
+from .okcoin import OKCoin
 from .poloniex import Poloniex
 from .probit import Probit
 from .upbit import Upbit

@@ -9,7 +9,7 @@ from datetime import datetime
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TAKER, TICKER, TRADES, FILLED
+from cryptofeed.defines import BID, ASK, BUY, CANCELLED, DERIBIT, FAILED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, OPEN_INTEREST, PERPETUAL, SELL, STOP_LIMIT, STOP_MARKET, TAKER, TICKER, TRADES, FILLED, SPOT
 from cryptofeed.defines import CURRENCY, BALANCES, ORDER_INFO, FILLS, L1_BOOK
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import MissingSequenceNumber
@@ -59,7 +59,11 @@ class Deribit(Feed, DeribitRestMixin):
                 if base not in currencies:
                     currencies.append(base)
                 quote = e['quote_currency']
-                stype = e['kind'] if e['settlement_period'] != 'perpetual' else PERPETUAL
+                if 'settlement_period' not in e:
+                    stype = SPOT
+                else:
+                    stype = e['kind'] if e['settlement_period'] != 'perpetual' else PERPETUAL
+
                 otype = e.get('option_type')
                 if stype in ('option_combo', 'future_combo'):
                     continue
