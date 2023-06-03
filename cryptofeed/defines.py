@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -17,6 +17,7 @@ BITHUMB = 'BITHUMB'
 BITMEX = 'BITMEX'
 BINANCE = 'BINANCE'
 BINANCE_US = 'BINANCE_US'
+BINANCE_TR = 'BINANCE_TR'
 BINANCE_FUTURES = 'BINANCE_FUTURES'
 BINANCE_DELIVERY = 'BINANCE_DELIVERY'
 BITDOTCOM = 'BIT.COM'
@@ -34,6 +35,7 @@ DYDX = 'DYDX'
 EXX = 'EXX'
 FMFW = 'FMFW'
 GATEIO = 'GATEIO'
+GATEIO_FUTURES = 'GATEIO_FUTURES'
 GEMINI = 'GEMINI'
 HITBTC = 'HITBTC'
 HUOBI = 'HUOBI'

@@ -1,7 +1,6 @@
 # Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
-[![Build Status](https://travis-ci.com/bmoscon/cryptofeed.svg?branch=master)](https://travis-ci.com/bmoscon/cryptofeed)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
 
@@ -33,6 +32,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [FMFW.io](https://www.fmfw.io/)
 * [EXX](https://www.exx.com/)
 * [Gate.io](https://www.gate.io/)
+* [Gate.io Futures](https://www.gate.io/futures_center)
 * [Gemini](https://gemini.com/)
 * [HitBTC](https://hitbtc.com/)
 * [Huobi](https://www.hbg.com/)

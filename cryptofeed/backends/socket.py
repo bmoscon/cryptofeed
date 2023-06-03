@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -85,9 +85,9 @@ class SocketCallback(BackendQueue):
                                 msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
                                 self.conn.sendto(msg)
                         else:
-                            self.conn.sendto(update.encode())
+                            self.conn.sendto(data.encode())
                     else:
-                        self.conn.write(update.encode())
+                        self.conn.write(data.encode())
 
     async def connect(self):
         if not self.conn:

@@ -1,12 +1,12 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
 
-import aioredis
+from redis import asyncio as aioredis
 from yapic import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
@@ -78,6 +78,21 @@ class RedisStreamCallback(RedisCallback):
         await conn.connection_pool.disconnect()
 
 
+class RedisKeyCallback(RedisCallback):
+
+    async def writer(self):
+        conn = aioredis.from_url(self.redis)
+
+        while self.running:
+            async with self.read_queue() as updates:
+                update = list(updates)[-1]
+                if update:
+                    await conn.set(f"{self.key}-{update['exchange']}-{update['symbol']}", json.dumps(update))
+
+        await conn.close()
+        await conn.connection_pool.disconnect()
+
+
 class TradeRedis(RedisZSetCallback, BackendCallback):
     default_key = 'trades'
 
@@ -112,6 +127,16 @@ class BookStream(RedisStreamCallback, BackendBookCallback):
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
         super().__init__(*args, **kwargs)
+
+
+class BookSnapshotRedisKey(RedisKeyCallback, BackendBookCallback):
+    default_key = 'book'
+
+    def __init__(self, *args, snapshot_interval=1000, score_key='receipt_timestamp', **kwargs):
+        kwargs['snapshots_only'] = True
+        self.snapshot_interval = snapshot_interval
+        self.snapshot_count = defaultdict(int)
+        super().__init__(*args, score_key=score_key, **kwargs)
 
 
 class TickerRedis(RedisZSetCallback, BackendCallback):

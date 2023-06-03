@@ -38,6 +38,7 @@ The backends are defined [here](../cryptofeed/backends/). Currently the followin
 * Kafka
 * MongoDB
 * Postgres
+* QuestDB
 * RabbitMQ
 * Redis
 * Redis Streams

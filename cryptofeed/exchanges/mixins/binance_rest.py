@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -217,6 +217,13 @@ class BinanceDeliveryRestMixin(BinanceRestMixin):
 
 class BinanceUSRestMixin(BinanceRestMixin):
     api = 'https://api.binance.us/api/v3/'
+    rest_channels = (
+        TRADES
+    )
+
+
+class BinanceTRRestMixin(BinanceRestMixin):
+    api = 'https://api.binance.me/api/v3/'
     rest_channels = (
         TRADES
     )

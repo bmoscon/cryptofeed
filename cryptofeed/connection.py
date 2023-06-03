@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -42,6 +42,7 @@ class HTTPSync(Connection):
     def process_response(self, r, address, json=False, text=False, uuid=None):
         if self.raw_data_callback:
             self.raw_data_callback.sync_callback(r.text, time.time(), str(uuid), endpoint=address)
+
         r.raise_for_status()
         if json:
             return json_parser.loads(r.text, parse_float=Decimal)

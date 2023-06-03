@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -109,7 +109,7 @@ class CryptoDotCom(Feed):
         }
         '''
         for entry in msg['data']:
-            await self.callback(TICKER, Ticker(self.id, self.exchange_symbol_to_std_symbol(entry['i']), entry['b'], entry['a'], self.timestamp_normalize(entry['t']), raw=entry), timestamp)
+            await self.callback(TICKER, Ticker(self.id, self.exchange_symbol_to_std_symbol(entry['i']), entry['b'], entry['k'], self.timestamp_normalize(entry['t']), raw=entry), timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
         '''

@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -68,7 +68,7 @@ class InfluxCallback(HTTPCallback):
         for key, value in data.items():
             if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp'}:
                 continue
-            if isinstance(value, str):
+            if isinstance(value, str) or value is None:
                 ret.append(f'{key}="{value}"')
             else:
                 ret.append(f'{key}={value}')
