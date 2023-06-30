@@ -43,7 +43,7 @@ CHECKSUM = 131072
 class Bitfinex(Feed, BitfinexRestMixin):
     id = BITFINEX
 
-    websocket_endpoints = [WebsocketEndpoint('wss://api.bitfinex.com/ws/2', limit=25)]
+    websocket_endpoints = [WebsocketEndpoint('wss://api-pub.bitfinex.com/ws/2', limit=20)]
     rest_endpoints = [RestEndpoint('https://api-pub.bitfinex.com', routes=Routes(['/v2/conf/pub:list:pair:exchange', '/v2/conf/pub:list:currency', '/v2/conf/pub:list:pair:futures']))]
     websocket_channels = {
         L3_BOOK: 'book-R0-{}-{}',
