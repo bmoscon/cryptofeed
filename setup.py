@@ -77,7 +77,7 @@ setup(
         "requests>=2.18.4",
         "websockets>=10.0",
         "pyyaml",
-        "aiohttp==3.8.4",
+        "aiohttp==3.8.5",
         "aiofile>=2.0.0",
         "yapic.json>=1.6.3",
         'uvloop ; platform_system!="Windows"',
