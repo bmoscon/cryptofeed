@@ -37,6 +37,9 @@ class TickerQuasar(QuasarCallback, BackendCallback):
                 
 class TradeQuasar(QuasarCallback, BackendCallback):
     default_table = "Trades"
+    
+    def _set_table_name(self, data: dict):
+        self.table = f"{data['exchange'].capitalize()}/{self.table_prefix}/{data['symbol']}/{data['side']}"
         
 class CandlesQuasar(QuasarCallback, BackendCallback):
     default_table = "Candles"
@@ -45,4 +48,18 @@ class CandlesQuasar(QuasarCallback, BackendCallback):
         data = super().format(data)
         data['start'] = datetime.utcfromtimestamp(data['start'])
         data['stop'] = datetime.utcfromtimestamp(data['stop'])
+        return data
+    
+class LiquidationsQuasar(QuasarCallback, BackendCallback):
+    default_table = "Liquidations"
+    
+class IndexQuasar(QuasarCallback, BackendCallback):
+    default_table = "Index"
+    
+class FundingQuasar(QuasarCallback, BackendCallback):
+    default_table = "Funding"
+    
+    def format(self, data: dict):
+        data = super().format(data)
+        data['next_funding_time'] = datetime.utcfromtimestamp(data['next_funding_time'])
         return data
