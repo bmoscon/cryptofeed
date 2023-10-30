@@ -9,13 +9,13 @@ class QuasarCallback(BackendQueue):
         self.table = ""
         self.running = True
         self.url = f"qdb://{host}:{port}"
+        self.username = username
+        self.user_private_key = private_key
+        self.cluster_public_key = public_key
         self.none_to = none_to
         self.columns=[]
         self.shard_size = shard_size
-        
-        with quasardb.Cluster(self.url, user_name=username, user_private_key=private_key, cluster_public_key=public_key) as conn:
-            self.conn = conn
-    
+            
     def format(self, data:dict):
         self.columns = list(data.keys())
         self.columns.remove('timestamp')
@@ -34,7 +34,8 @@ class QuasarCallback(BackendQueue):
         data = self.format(data)
         df = qdbpd.DataFrame(data, columns=self.columns, index=[data['timestamp']])
         # write to table, if table doesnt exist it will be created with specified shard_size value
-        qdbpd.write_dataframe(df, self.conn, self.conn.table(self.table), fast=True, _async=True, create=True, shard_size=self.shard_size)
+        with quasardb.Cluster(self.url, user_name=self.username, user_private_key=self.user_private_key, cluster_public_key=self.cluster_public_key) as conn:
+            qdbpd.write_dataframe(df, conn, conn.table(self.table), fast=True, _async=True, create=True, shard_size=self.shard_size)
 
 class TickerQuasar(QuasarCallback, BackendCallback):
     table_prefix = "ticker"
@@ -48,3 +49,14 @@ class TradeQuasar(QuasarCallback, BackendCallback):
         # eg. trade/coinbase/btc-usd/buy
         super()._set_table_name(data)
         self.table = f"{self.table}/{data['side'].lower()}"
+
+
+class CandlesQuasar(QuasarCallback, BackendCallback):
+    table_prefix = "candles"
+    
+    def format(self, data: dict):
+        data = super().format(data)
+        data['start'] = datetime.utcfromtimestamp(data['start'])
+        data['stop'] = datetime.utcfromtimestamp(data['stop'])
+        data['closed'] = int(data['closed'])
+        return data
