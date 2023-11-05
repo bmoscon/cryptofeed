@@ -6,6 +6,8 @@
  * Bugfix: InfluxDB none type conversions
  * New Exchange: GateIO Futures
  * Feature: Added support for Bybit spot orderbook and trade websocket endpoints
+ * Bugfix: Fix instrument types in symbol parsing on Bitmex
+ * Bugfix: fix crash issue when init symbol data on Kraken Futures
 
 ### 2.3.2 (2023-05-27)
  * Bugfix: Fix Socket backend

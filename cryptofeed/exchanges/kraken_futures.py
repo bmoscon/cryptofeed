@@ -40,10 +40,12 @@ class KrakenFutures(Feed):
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
+        # Docs, https://support.kraken.com/hc/en-us/articles/360022835891-Ticker-symbols
         _kraken_futures_product_type = {
             'FI': 'Inverse Futures',
             'FV': 'Vanilla Futures',
             'PI': 'Perpetual Inverse Futures',
+            'FF': 'Fixed Maturity Linear Futures',
             'PF': 'Perpetual Linear Multi-Collateral Futures',
             'PV': 'Perpetual Vanilla Futures',
             'IN': 'Real Time Index',
@@ -63,7 +65,7 @@ class KrakenFutures(Feed):
                 stype = FUTURES
                 symbol, expiry = symbol.split("_")
             symbol = symbol.replace('XBT', 'BTC')
-            base, quote = symbol[:len(symbol) - 3], symbol[-3:]
+            base, quote = symbol[:-3], symbol[-3:]
 
             s = Symbol(base, quote, type=stype, expiry_date=expiry)
 

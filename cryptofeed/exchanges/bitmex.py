@@ -15,7 +15,7 @@ from decimal import Decimal
 
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITMEX, BUY, CANCELLED, FILLED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, TICKER, TRADES, UNFILLED
+from cryptofeed.defines import BID, ASK, BITMEX, BUY, CANCELLED, FILLED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, SPOT, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
@@ -49,15 +49,23 @@ class Bitmex(Feed, BitmexRestMixin):
             base = entry['rootSymbol'].replace("XBT", "BTC")
             quote = entry['quoteCurrency'].replace("XBT", "BTC")
 
-            stype = PERPETUAL
-            if entry['expiry']:
+            if entry['typ'] == 'FFWCSX':
+                stype = PERPETUAL
+            elif entry['typ'] == 'FFCCSX':
                 stype = FUTURES
+            elif entry['typ'] == 'IFXXXP':
+                stype = SPOT
+            else:
+                LOG.info('Unsupported type %s for instrument %s', entry['typ'], entry['symbol'])
 
             s = Symbol(base, quote, type=stype, expiry_date=entry['expiry'])
-            ret[s.normalized] = entry['symbol']
-            info['tick_size'][s.normalized] = entry['tickSize']
-            info['instrument_type'][s.normalized] = stype
-            info['is_quanto'][s.normalized] = entry['isQuanto']
+            if s.normalized not in ret:
+                ret[s.normalized] = entry['symbol']
+                info['tick_size'][s.normalized] = entry['tickSize']
+                info['instrument_type'][s.normalized] = stype
+                info['is_quanto'][s.normalized] = entry['isQuanto']
+            else:
+                LOG.info('Ignoring duplicate symbol mapping %s<=>%s', s.normalized, entry['symbol'])
 
         return ret, info
 
