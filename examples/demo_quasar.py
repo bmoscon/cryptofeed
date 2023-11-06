@@ -15,10 +15,17 @@ async def candle_info(candle, receipt_timestamp):
 def main():
     f = FeedHandler()
     
-    f.add_feed(Binance(candle_closed_only=False, channels=[CANDLES], symbols=['BTC-USDT'], callbacks={CANDLES: CandlesQuasar(), CANDLES: candle_info}))
-    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeQuasar(), TRADES: trade_info}))
-    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: TickerQuasar(), TICKER: ticker_info}))
-    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: TradeQuasar(), TRADES: trade_info}))
+    # print to console
+    f.add_feed(Binance(candle_closed_only=False, channels=[CANDLES], symbols=['BTC-USDT'], callbacks={CANDLES: candle_info}))
+    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade_info}))
+    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: ticker_info}))
+    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade_info}))
+    
+    # save to database
+    f.add_feed(Binance(candle_closed_only=False, channels=[CANDLES], symbols=['BTC-USDT'], callbacks={CANDLES: CandlesQuasar()}))
+    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: TradeQuasar()}))
+    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: TickerQuasar()}))
+    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: TradeQuasar()}))
 
     f.run()
 
