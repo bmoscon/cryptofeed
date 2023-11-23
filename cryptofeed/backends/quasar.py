@@ -54,14 +54,14 @@ class TickerQuasar(QuasarCallback, BackendCallback):
     table_prefix = "ticker"
     
     def _create_query(self):
-        self.query = f'CREATE TABLE "{self.table}" (exchange STRING, symbol SYMBOL(currency), bid DOUBLE, ask DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
+        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), bid DOUBLE, ask DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
 class TradeQuasar(QuasarCallback, BackendCallback):
     table_prefix = "trades"
     
     def _create_query(self):
-        self.query = f'CREATE TABLE "{self.table}" (exchange STRING, symbol SYMBOL(currency), side STRING, amount DOUBLE, price DOUBLE, id STRING, type STRING, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
+        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), side STRING, amount DOUBLE, price DOUBLE, id STRING, type STRING, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
 class CandlesQuasar(QuasarCallback, BackendCallback):
@@ -75,4 +75,4 @@ class CandlesQuasar(QuasarCallback, BackendCallback):
         return data
     
     def _create_query(self):
-        self.query = f'CREATE TABLE "{self.table}" (exchange STRING, symbol SYMBOL(currency), start TIMESTAMP, stop TIMESTAMP, interval STRING, trades STRING, open DOUBLE, close DOUBLE, high DOUBLE, low DOUBLE, volume DOUBLE, closed INT64) SHARD_SIZE = {self.shard_size}'
+        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), start TIMESTAMP, stop TIMESTAMP, interval STRING, trades STRING, open DOUBLE, close DOUBLE, high DOUBLE, low DOUBLE, volume DOUBLE, closed INT64) SHARD_SIZE = {self.shard_size}'
