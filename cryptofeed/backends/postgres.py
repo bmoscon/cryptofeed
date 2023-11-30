@@ -8,6 +8,7 @@ from collections import defaultdict
 from datetime import datetime as dt
 from typing import Tuple
 
+import logging
 import asyncpg
 from yapic import json
 
@@ -91,7 +92,13 @@ class PostgresCallback(BackendQueue):
                     await self.write_batch(batch)
 
     async def write_batch(self, updates: list):
-        await self._connect()
+        logger = logging.getLogger()
+        try:
+            await self._connect()
+        except Exception as e:
+            logger.error(f"Failed to connect to PSQL, internal error: {e}")
+            return
+
         args_str = ','.join([self.format(u) for u in updates])
 
         async with self.conn.transaction():
@@ -104,6 +111,8 @@ class PostgresCallback(BackendQueue):
             except asyncpg.UniqueViolationError:
                 # when restarting a subscription, some exchanges will re-publish a few messages
                 pass
+            except Exception as e:
+                logger.error(f"Error writing to PSQL, internal error: {e}")
 
 
 class TradePostgres(PostgresCallback, BackendCallback):
