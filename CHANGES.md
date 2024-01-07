@@ -1,12 +1,13 @@
 ## Changelog
 
-### 2.4.0
+### 2.4.0 (2024-01-07)
  * Update: Fix tests
  * Update: Okcoin moved to v5 API used by OKX
  * Bugfix: InfluxDB none type conversions
  * New Exchange: GateIO Futures
  * Bugfix: Fix instrument types in symbol parsing on Bitmex
  * Bugfix: fix crash issue when init symbol data on Kraken Futures
+ * Updates: Remove closed exchanges, clean up feeds (update APIs, adjust symbol parsing, etc)
 
 ### 2.3.2 (2023-05-27)
  * Bugfix: Fix Socket backend
