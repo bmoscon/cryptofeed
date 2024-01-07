@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -56,7 +56,7 @@ class Delta(Feed):
             elif entry['contract_type'] == 'call_options' or entry['contract_type'] == 'put_options':
                 otype = PUT if entry['contract_type'].startswith('put') else CALL
                 sym = Symbol(base, quote, type=OPTION, strike_price=entry['strike_price'], expiry_date=entry['settlement_time'], option_type=otype)
-            elif entry['contract_type'] in {'interest_rate_swaps', 'spreads'}:
+            elif entry['contract_type'] in {'interest_rate_swaps', 'spreads', 'options_combos'}:
                 continue
             else:
                 raise ValueError(entry['contract_type'])
