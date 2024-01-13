@@ -266,7 +266,7 @@ class OKX(Feed, OKXRestMixin):
                 Decimal(update['fundingRate']),
                 None,
                 self.timestamp_normalize(int(update['fundingTime'])),
-                predicted_rate=Decimal(update['nextFundingRate']),
+                predicted_rate=Decimal(update['nextFundingRate']) if update['nextFundingRate'] != '' else None,
                 raw=update
             )
             await self.callback(FUNDING, f, timestamp)

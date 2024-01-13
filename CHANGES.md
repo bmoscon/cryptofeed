@@ -1,5 +1,8 @@
 ## Changelog
 
+### 2.4.1
+ * Bugfix: Handle empty nextFundingRate in OKX
+
 ### 2.4.0 (2024-01-07)
  * Update: Fix tests
  * Update: Okcoin moved to v5 API used by OKX
