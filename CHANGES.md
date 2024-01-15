@@ -2,6 +2,7 @@
 
 ### 2.4.1
  * Bugfix: Handle empty nextFundingRate in OKX
+ * Bugfix: Handle null next_funding_time and estimated_rate in HuobiSwap funding
 
 ### 2.4.0 (2024-01-07)
  * Update: Fix tests

@@ -86,7 +86,7 @@ class HuobiSwap(HuobiDM):
                 data = await self.http_conn.read(endpoint)
                 data = json.loads(data, parse_float=Decimal)
                 received = time.time()
-                update = (data['data']['funding_rate'], self.timestamp_normalize(int(data['data']['next_funding_time'])))
+                update = (data['data']['funding_rate'], self.timestamp_normalize(int(data['data']['funding_time'])))
                 if pair in self.funding_updates and self.funding_updates[pair] == update:
                     await asyncio.sleep(1)
                     continue
@@ -97,9 +97,9 @@ class HuobiSwap(HuobiDM):
                     self.exchange_symbol_to_std_symbol(pair),
                     None,
                     Decimal(data['data']['funding_rate']),
-                    self.timestamp_normalize(int(data['data']['next_funding_time'])),
+                    self.timestamp_normalize(int(data['data']['next_funding_time'])) if data['data']['next_funding_time'] else None,
                     self.timestamp_normalize(int(data['data']['funding_time'])),
-                    predicted_rate=Decimal(data['data']['estimated_rate']),
+                    predicted_rate=Decimal(data['data']['estimated_rate']) if data['data']['estimated_rate'] is not None else None,
                     raw=data
                 )
                 await self.callback(FUNDING, f, received)
