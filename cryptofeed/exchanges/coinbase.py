@@ -17,11 +17,11 @@ from yapic import json
 
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES, CANDLES, ORDERS
+from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.exchanges.mixins.coinbase_rest import CoinbaseRestMixin
-from cryptofeed.types import OrderBook, Ticker, Trade
+from cryptofeed.types import OrderBook, Trade
 
 LOG = logging.getLogger('feedhandler')
 
