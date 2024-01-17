@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+import datetime
 import hashlib
 import hmac
 import logging
@@ -143,10 +144,9 @@ class Coinbase(Feed, CoinbaseRestMixin):
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg)
 
-    async def _pair_level2_update(self, msg: dict, timestamp: float):
+    async def _pair_level2_update(self, msg: dict, timestamp: float, ts: datetime):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         delta = {BID: [], ASK: []}
-        ts = self.timestamp_normalize(msg['timestamp'])
         for update in msg['updates']:
             side = BID if update['side'] == 'bid' else ASK
             price = Decimal(update['price_level'])
@@ -226,7 +226,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
                         pass  # TODO: do we want to implement trades snapshots?
                 elif msg['channel'] == 'l2_data':
                     if event.get('type') == 'update':
-                        await self._pair_level2_update(event, timestamp)
+                        await self._pair_level2_update(event, timestamp, msg['timestamp'])
                     elif event.get('type') == 'snapshot':
                         await self._pair_level2_snapshot(event, timestamp)
                 elif msg['channel'] == 'subscriptions':
