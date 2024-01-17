@@ -15,6 +15,7 @@ from collections import defaultdict
 
 from yapic import json
 
+from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES, CANDLES, ORDERS
 from cryptofeed.feed import Feed
@@ -25,11 +26,33 @@ from cryptofeed.types import OrderBook, Ticker, Trade
 LOG = logging.getLogger('feedhandler')
 
 
+def get_private_parameters(config: Config, chan: str = None, product_ids_str: list = None,
+                           rest_api: bool = False, endpoint: str = None) -> dict:
+    timestamp = str(int(time.time()))
+    if rest_api:
+        base_endpoint = '/api/v3/brokerage/'
+        endpoint = base_endpoint + endpoint
+        message = f'{timestamp}GET{endpoint}'
+    else:
+        product_ids_str = ",".join(product_ids_str)
+        message = f"{timestamp}{chan}{product_ids_str}"
+    signature = hmac.new(
+        config["coinbase"]["key_secret"].encode("utf-8"),
+        message.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+    if rest_api:
+        return {'CB-ACCESS-KEY': config["coinbase"]["key_id"], 'CB-ACCESS-TIMESTAMP': timestamp,
+                'CB-ACCESS-SIGN': signature}
+    else:
+        return {'api_key': config["coinbase"]["key_id"], 'timestamp': timestamp, 'signature': signature}
+
+
 class Coinbase(Feed, CoinbaseRestMixin):
     id = COINBASE
     websocket_endpoints = [WebsocketEndpoint('wss://advanced-trade-ws.coinbase.com', options={'compression': None})]
     rest_endpoints = [
-        RestEndpoint('https://api.pro.coinbase.com', routes=Routes('/products', l3book='/products/{}/book?level=3'))]
+        RestEndpoint('https://api.coinbase.com/api/v3/brokerage', routes=Routes('/products', l3book='/product_book?product_id={}'))]
 
     # TODO: implement candles and user channels
     websocket_channels = {
@@ -43,13 +66,20 @@ class Coinbase(Feed, CoinbaseRestMixin):
         ret = {}
         info = defaultdict(dict)
 
-        for entry in data:
-            base, quote = entry['id'].split("-")
-            sym = Symbol(base, quote)
+        for entry in data['products']:
+            sym = Symbol(entry['base_currency_id'], entry['quote_currency_id'])
             info['tick_size'][sym.normalized] = entry['quote_increment']
             info['instrument_type'][sym.normalized] = sym.type
-            ret[sym.normalized] = entry['id']
+            ret[sym.normalized] = entry['product_id']
         return ret, info
+
+    @classmethod
+    def symbols(cls, config: dict = None, refresh=False) -> list:
+        config = Config(config)
+        if 'coinbase' not in config or 'key_id' not in config['coinbase'] or 'key_secret' not in config['coinbase']:
+            raise ValueError('You must provide key_id and key_secret in config to retrieve symbols from Coinbase.')
+        headers = get_private_parameters(config, rest_api=True, endpoint='products')
+        return list(cls.symbol_mapping(refresh=refresh, headers=headers).keys())
 
     def __init__(self, callbacks=None, **kwargs):
         super().__init__(callbacks=callbacks, **kwargs)
@@ -139,12 +169,12 @@ class Coinbase(Feed, CoinbaseRestMixin):
         # the subsequent messages, causing a seq no mismatch.
         await asyncio.sleep(2)
 
-        # TODO: not yet updated
         urls = [self.rest_endpoints[0].route('l3book', self.sandbox).format(pair) for pair in pairs]
 
         results = []
+        headers = get_private_parameters(self.config, rest_api=True, endpoint='product_book')
         for url in urls:
-            ret = await self.http_conn.read(url)
+            ret = await self.http_conn.read(url, header=headers)
             results.append(ret)
             # rate limit - 3 per second
             await asyncio.sleep(0.3)
@@ -153,18 +183,19 @@ class Coinbase(Feed, CoinbaseRestMixin):
         for res, pair in zip(results, pairs):
             orders = json.loads(res, parse_float=Decimal)
             npair = self.exchange_symbol_to_std_symbol(pair)
-            self._l3_book[npair] = OrderBook(self.id, pair, max_depth=self.max_depth)
-            self.seq_no[npair] = orders['sequence']
+            self._l2_book[npair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            # self.seq_no[npair] = orders['sequence'] # TODO: no longer available post transition to Coinbase Advanced Trade
             for side in (BID, ASK):
-                for price, size, order_id in orders[side + 's']:
-                    price = Decimal(price)
-                    size = Decimal(size)
-                    if price in self._l3_book[npair].book[side]:
-                        self._l3_book[npair].book[side][price][order_id] = size
+                for order in orders['pricebook'][side + 's']:
+                    price = Decimal(order['price'])
+                    size = Decimal(order['size'])
+                    order_id = f'{side}@{size}@{price}'
+                    if price in self._l2_book[npair].book[side]:
+                        self._l2_book[npair].book[side][price][order_id] = size
                     else:
-                        self._l3_book[npair].book[side][price] = {order_id: size}
+                        self._l2_book[npair].book[side][price] = {order_id: size}
                     self.order_map[order_id] = (price, size)
-            await self.book_callback(L3_BOOK, self._l3_book[npair], timestamp, raw=orders)
+            await self.book_callback(L2_BOOK, self._l2_book[npair], timestamp, raw=orders)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         # PERF perf_start(self.id, 'msg')
@@ -205,17 +236,6 @@ class Coinbase(Feed, CoinbaseRestMixin):
                 # PERF perf_end(self.id, 'msg')
                 # PERF perf_log(self.id, 'msg')
 
-    async def get_private_parameters(self, chan: str, product_ids_str: list) -> dict:
-        timestamp = str(int(time.time()))
-        product_ids_str = ",".join(product_ids_str)
-        message = f"{timestamp}{chan}{product_ids_str}"
-        signature = hmac.new(
-            self.config["coinbase"]["key_secret"].encode("utf-8"),
-            message.encode("utf-8"),
-            digestmod=hashlib.sha256,
-        ).hexdigest()
-        return dict(api_key=self.config["coinbase"]["key_id"], timestamp=timestamp, signature=signature)
-
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         all_pairs = list()
@@ -225,7 +245,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
                       "product_ids": product_ids,
                       "channel": chan
                       }
-            private_params = await self.get_private_parameters(chan, product_ids)
+            private_params = get_private_parameters(self.config, chan, product_ids)
             if private_params:
                 params = {**params, **private_params}
             await conn.write(json.dumps(params))
