@@ -93,6 +93,11 @@ class Coinbase(Feed, CoinbaseRestMixin):
         self.order_map = {}
         self.order_type_map = {}
         self.seq_no = None
+        # sequence number validation only works when the FULL data stream is enabled
+        chan = self.std_channel_to_exchange(L2_BOOK)
+        if chan in self.subscription:
+            pairs = self.subscription[chan]
+            self.seq_no = {pair: None for pair in pairs}
         self._l2_book = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
@@ -255,4 +260,4 @@ class Coinbase(Feed, CoinbaseRestMixin):
             await _subscribe(channel, self.subscription[channel])
         all_pairs = list(dict.fromkeys(all_pairs))
         await _subscribe('heartbeat', all_pairs)
-        # Implementing heartbase as per Best Practices doc: https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-best-practices
+        # Implementing heartbeat as per Best Practices doc: https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-best-practices
