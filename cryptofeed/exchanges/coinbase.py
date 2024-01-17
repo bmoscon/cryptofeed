@@ -146,8 +146,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
     async def _pair_level2_update(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         delta = {BID: [], ASK: []}
+        ts = self.timestamp_normalize(msg['timestamp'])
         for update in msg['updates']:
-            ts = self.timestamp_normalize(update['event_time'])
             side = BID if update['side'] == 'bid' else ASK
             price = Decimal(update['price_level'])
             amount = Decimal(update['new_quantity'])
@@ -160,7 +160,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
                 self._l2_book[pair].book[side][price] = amount
                 delta[side].append((price, amount))
 
-            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts, raw=msg, delta=delta)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts, raw=msg, delta=delta)
 
     async def _book_snapshot(self, pairs: list):
         # Coinbase needs some time to send messages to us

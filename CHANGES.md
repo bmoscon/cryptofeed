@@ -1,7 +1,7 @@
 ## Changelog
 
 ### 2.5.0
- * Update: transitioned from Coinbase Pro (retired) to Coinbase Advanced Trades
+ * Update: transitioned from Coinbase Pro (retired) to Coinbase Advanced Trade
 
 ### 2.4.1
  * Bugfix: Handle empty nextFundingRate in OKX
