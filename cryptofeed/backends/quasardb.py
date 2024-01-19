@@ -95,6 +95,7 @@ class BookQuasar(QuasarCallback, BackendCallback):
 
     def format(self, data: dict):
         data = super().format(data)
+        # store only best bid and best ask
         if not data['book']:
             best_bid = max(data["delta"]["bid"], key=lambda x: x[0])
             best_ask = min(data["delta"]["ask"], key=lambda x: x[0])
