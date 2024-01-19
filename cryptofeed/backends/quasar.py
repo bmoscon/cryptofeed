@@ -90,6 +90,25 @@ class FundingQuasar(QuasarCallback, BackendCallback):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), mark_price DOUBLE, rate DOUBLE, next_funding_time TIMESTAMP, predicted_rate DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
+class BookQuasar(QuasarCallback, BackendCallback):
+    table_prefix = "book"
+
+    def format(self, data: dict):
+        import json
+        data = super().format(data)
+        if 'book' in data:
+            data['data'] = json.dumps({'snapshot': data['book']})
+        else:
+            data['data'] = json.dumps({'delta': data['delta']})
+        self.columns = list(data.keys())
+        self.columns.remove('book')
+        self.columns.remove('delta')
+        return data
+
+    def _create_query(self):
+        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), data BLOB, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
+
+
 class LiquidationsQuasar(QuasarCallback, BackendCallback):
     table_prefix = "liquidations"
 
