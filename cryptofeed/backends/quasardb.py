@@ -94,19 +94,30 @@ class BookQuasar(QuasarCallback, BackendCallback):
     table_prefix = "book"
 
     def format(self, data: dict):
-        import json
         data = super().format(data)
-        if 'book' in data:
-            data['data'] = json.dumps({'snapshot': data['book']})
+        if not data['book']:
+            best_bid = max(data["delta"]["bid"], key=lambda x: x[0])
+            best_ask = min(data["delta"]["ask"], key=lambda x: x[0])
+
+            data['best_bid_price'] = best_bid[0]
+            data['best_bid_amount'] = best_bid[1]
+            data['best_ask_price'] = best_ask[0]
+            data['best_ask_amount'] = best_ask[0]
         else:
-            data['data'] = json.dumps({'delta': data['delta']})
+            best_bid = max(data["book"]["bid"].keys())
+            best_ask = min(data["book"]["ask"].keys())
+
+            data['best_bid_price'] = best_bid
+            data['best_bid_amount'] = data["book"]["bid"][best_bid]
+            data['best_ask_price'] = best_ask
+            data['best_ask_amount'] = data["book"]["ask"][best_ask]
         self.columns = list(data.keys())
         self.columns.remove('book')
         self.columns.remove('delta')
         return data
 
     def _create_query(self):
-        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), data STRING, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
+        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), best_bid_price DOUBLE, best_bid_amount DOUBLE, best_ask_price DOUBLE, best_ask_amount DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
 class LiquidationsQuasar(QuasarCallback, BackendCallback):
