@@ -102,7 +102,7 @@ class BookQuasar(QuasarCallback, BackendCallback):
             data['best_bid_price'] = best_bid[0]
             data['best_bid_amount'] = best_bid[1]
             data['best_ask_price'] = best_ask[0]
-            data['best_ask_amount'] = best_ask[0]
+            data['best_ask_amount'] = best_ask[1]
         else:
             best_bid = max(data["book"]["bid"].keys())
             best_ask = min(data["book"]["ask"].keys())
