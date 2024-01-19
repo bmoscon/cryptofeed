@@ -1,6 +1,6 @@
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import *
-from cryptofeed.backends.quasar import *
+from cryptofeed.backends.quasardb import *
 
 
 async def ticker_info(ticker, receipt_timestamp):
