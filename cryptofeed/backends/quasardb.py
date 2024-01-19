@@ -106,7 +106,7 @@ class BookQuasar(QuasarCallback, BackendCallback):
         return data
 
     def _create_query(self):
-        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), data BLOB, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
+        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), data STRING, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
 class LiquidationsQuasar(QuasarCallback, BackendCallback):
