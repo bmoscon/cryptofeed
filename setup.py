@@ -90,6 +90,7 @@ setup(
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
+        "quasardb": ["quasardb", "pandas"],
         "rabbit": ["aio_pika", "pika"],
         "redis": ["hiredis", "redis>=4.5.1"],
         "zmq": ["pyzmq"],
