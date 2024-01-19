@@ -47,7 +47,7 @@ for the exhaustive list of these *extra* dependencies.
 
          pip install --user --upgrade cryptofeed[postgres]
 
-* Arctic backend  
+* QuasarDb backend  
   To install Cryptofeed along with [QuasarDb](https://quasar.ai/) in one bundle:
 
          pip install --user --upgrade cryptofeed[quasardb]
