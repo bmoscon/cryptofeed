@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import quasardb.pool as pool
-import quasardb.pandas as qdbpd
 import quasardb.numpy as qdbnp
+import numpy as np
 from cryptofeed.backends.backend import (BackendCallback, BackendQueue)
 
 
@@ -11,7 +11,6 @@ class QuasarCallback(BackendQueue):
         self.table = ""
         self.running = True
         self.none_to = none_to
-        self.columns = []
         self.shard_size = self._get_str_timedelta(shard_size)
         url = f"qdb://{host}:{port}"
 
@@ -24,11 +23,11 @@ class QuasarCallback(BackendQueue):
         return f"{int(hours)}hour {int(minutes)}min {int(seconds)}s"
 
     def format(self, data: dict):
-        self.columns = list(data.keys())
-        self.columns.remove('timestamp')
         data['timestamp'] = datetime.utcfromtimestamp(data['timestamp'])
         data['receipt_timestamp'] = datetime.utcfromtimestamp(data['receipt_timestamp'])
-        return data
+        index = np.datetime64(data['timestamp'], 'ns')
+        data.pop('timestamp')
+        return index, data
 
     def _set_table_name(self, data: dict):
         # setting table name
@@ -39,16 +38,21 @@ class QuasarCallback(BackendQueue):
     def _create_table(self, conn):
         if not conn.table(self.table).exists():
             conn.query(self.query)
-
+            
+    def _insert_format(self, data:dict):
+        for key, value in data.items():
+            data[key] = np.array([value])
+        return data
+            
     async def write(self, data: dict):
         self._set_table_name(data)
         self._create_query()
-        data = self.format(data)
-        df = qdbpd.DataFrame(data, columns=self.columns, index=[data['timestamp']])
+        idx, data = self.format(data)
+        np_array = self._insert_format(data)
         # write to table, if table doesnt exist it will be created with specified shard_size value
         with pool.instance().connect() as conn:
             self._create_table(conn)
-            qdbpd.write_dataframe(df, conn, conn.table(self.table), fast=True, _async=True)
+            qdbnp.write_arrays(np_array, conn, conn.table(self.table), index=np.array([idx]), fast=True, _async=True)
 
 
 class TickerQuasar(QuasarCallback, BackendCallback):
@@ -69,11 +73,11 @@ class CandlesQuasar(QuasarCallback, BackendCallback):
     table_prefix = "candles"
 
     def format(self, data: dict):
-        data = super().format(data)
+        index, data = super().format(data)
         data['start'] = datetime.utcfromtimestamp(data['start'])
         data['stop'] = datetime.utcfromtimestamp(data['stop'])
         data['closed'] = int(data['closed'])
-        return data
+        return index, data
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), start TIMESTAMP, stop TIMESTAMP, interval STRING, trades STRING, open DOUBLE, close DOUBLE, high DOUBLE, low DOUBLE, volume DOUBLE, closed INT64, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
@@ -83,9 +87,9 @@ class FundingQuasar(QuasarCallback, BackendCallback):
     table_prefix = "funding"
 
     def format(self, data: dict):
-        data = super().format(data)
+        index, data = super().format(data)
         data['next_funding_time'] = datetime.utcfromtimestamp(data['next_funding_time'])
-        return data
+        return index, data
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), mark_price DOUBLE, rate DOUBLE, next_funding_time TIMESTAMP, predicted_rate DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
@@ -95,7 +99,7 @@ class BookQuasar(QuasarCallback, BackendCallback):
     table_prefix = "book"
 
     def format(self, data: dict):
-        data = super().format(data)
+        index, data = super().format(data)
         # store only best bid and best ask
         if not data['book']:
             best_bid = max(data["delta"]["bid"], key=lambda x: x[0])
@@ -105,6 +109,7 @@ class BookQuasar(QuasarCallback, BackendCallback):
             data['best_bid_amount'] = best_bid[1]
             data['best_ask_price'] = best_ask[0]
             data['best_ask_amount'] = best_ask[1]
+            data.pop('delta')
         else:
             best_bid = max(data["book"]["bid"].keys())
             best_ask = min(data["book"]["ask"].keys())
@@ -113,10 +118,8 @@ class BookQuasar(QuasarCallback, BackendCallback):
             data['best_bid_amount'] = data["book"]["bid"][best_bid]
             data['best_ask_price'] = best_ask
             data['best_ask_amount'] = data["book"]["ask"][best_ask]
-        self.columns = list(data.keys())
-        self.columns.remove('book')
-        self.columns.remove('delta')
-        return data
+            data.pop('book')
+        return index, data
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), best_bid_price DOUBLE, best_bid_amount DOUBLE, best_ask_price DOUBLE, best_ask_amount DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
@@ -133,7 +136,7 @@ class OpenInterestQuasar(QuasarCallback, BackendCallback):
     table_prefix = "open_intrerest"
 
     def _create_query(self):
-        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), open_interest INT64, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
+        self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), open_interest FLOAT, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
 class OrderInfoQuasar(QuasarCallback, BackendCallback):
