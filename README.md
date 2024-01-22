@@ -141,7 +141,7 @@ Supported Backends:
 * Kafka
 * RabbitMQ
 * PostgreSQL
-* [QuasarDb](https://quasar.ai/)
+* [QuasarDB](https://quasar.ai/)
 * GCP Pub/Sub
 * [QuestDB](https://questdb.io/)
 
