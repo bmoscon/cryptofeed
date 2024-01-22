@@ -23,9 +23,10 @@ class QuasarCallback(BackendQueue):
         return f"{int(hours)}hour {int(minutes)}min {int(seconds)}s"
 
     def format(self, data: dict):
-        data['timestamp'] = datetime.utcfromtimestamp(data['timestamp'])
-        data['receipt_timestamp'] = datetime.utcfromtimestamp(data['receipt_timestamp'])
-        index = np.datetime64(data['timestamp'], 'ns')
+        data['timestamp'] = np.datetime64(datetime.utcfromtimestamp(data['timestamp']), 'ns')
+        data['receipt_timestamp'] = np.datetime64(datetime.utcfromtimestamp(data['receipt_timestamp']), 'ns')
+        data['timestamp'], data['receipt_timestamp'] = data['receipt_timestamp'], data['timestamp']
+        index = data['timestamp']
         data.pop('timestamp')
         return index, data
 
@@ -38,21 +39,22 @@ class QuasarCallback(BackendQueue):
     def _create_table(self, conn):
         if not conn.table(self.table).exists():
             conn.query(self.query)
-            
-    def _insert_format(self, data:dict):
+
+    def _insert_format(self, date: np.datetime64, data: dict):
+        # converts values to np.array
         for key, value in data.items():
             data[key] = np.array([value])
-        return data
-            
+        return np.array([date]), data
+
     async def write(self, data: dict):
         self._set_table_name(data)
         self._create_query()
-        idx, data = self.format(data)
-        np_array = self._insert_format(data)
+        index, data = self.format(data)
+        idx, np_array = self._insert_format(index, data)
         # write to table, if table doesnt exist it will be created with specified shard_size value
         with pool.instance().connect() as conn:
             self._create_table(conn)
-            qdbnp.write_arrays(np_array, conn, conn.table(self.table), index=np.array([idx]), fast=True, _async=True)
+            qdbnp.write_arrays(np_array, conn, conn.table(self.table), index=idx, fast=True, _async=True)
 
 
 class TickerQuasar(QuasarCallback, BackendCallback):
