@@ -88,14 +88,6 @@ class Coinbase(Feed, CoinbaseRestMixin):
     def __reset(self):
         self._l2_book = {}
 
-    async def _ticker(self, msg: dict, timestamp: float):
-        # TODO: The ticker endpoint payload has been updated and no longer includes best ask and bid.
-        #  Do we want to:
-        #  1. get rid of that callback
-        #  2. implement ticker based on l2 book sub
-        #  3. implement a new ticker callback (will be different from other exchanges)
-        raise NotImplementedError
-
     async def _trade_update(self, msg: dict, timestamp: float):
         '''
         {

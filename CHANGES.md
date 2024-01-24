@@ -1,6 +1,6 @@
 ## Changelog
 
-### 2.5.0
+### 2.4.2
  * Update: transitioned from Coinbase Pro (retired) to Coinbase Advanced Trade
 
 ### 2.4.1
