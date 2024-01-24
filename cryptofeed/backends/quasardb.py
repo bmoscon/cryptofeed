@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 import quasardb.pool as pool
 import quasardb.numpy as qdbnp
 import numpy as np
-from cryptofeed.backends.backend import (BackendCallback, BackendQueue)
+from cryptofeed.backends.backend import BackendCallback
 
 
-class QuasarCallback(BackendQueue):
+class QuasarCallback(BackendCallback):
     def __init__(self, host="127.0.0.1", port=2836, username: str = "", private_key: str = "", public_key: str = "", none_to=None, shard_size: timedelta = timedelta(minutes=15)):
         self.numeric_type = float
         self.table = ""
@@ -57,21 +57,21 @@ class QuasarCallback(BackendQueue):
             qdbnp.write_arrays(np_array, conn, conn.table(self.table), index=idx, fast=True, _async=True)
 
 
-class TickerQuasar(QuasarCallback, BackendCallback):
+class TickerQuasar(QuasarCallback):
     table_prefix = "ticker"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), bid DOUBLE, ask DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class TradeQuasar(QuasarCallback, BackendCallback):
+class TradeQuasar(QuasarCallback):
     table_prefix = "trades"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), side SYMBOL(side), amount DOUBLE, price DOUBLE, id STRING, type SYMBOL(type), receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class CandlesQuasar(QuasarCallback, BackendCallback):
+class CandlesQuasar(QuasarCallback):
     table_prefix = "candles"
 
     def format(self, data: dict):
@@ -85,7 +85,7 @@ class CandlesQuasar(QuasarCallback, BackendCallback):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), start TIMESTAMP, stop TIMESTAMP, interval STRING, trades STRING, open DOUBLE, close DOUBLE, high DOUBLE, low DOUBLE, volume DOUBLE, closed INT64, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class FundingQuasar(QuasarCallback, BackendCallback):
+class FundingQuasar(QuasarCallback):
     table_prefix = "funding"
 
     def format(self, data: dict):
@@ -97,7 +97,7 @@ class FundingQuasar(QuasarCallback, BackendCallback):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), mark_price DOUBLE, rate DOUBLE, next_funding_time TIMESTAMP, predicted_rate DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class BookQuasar(QuasarCallback, BackendCallback):
+class BookQuasar(QuasarCallback):
     table_prefix = "book"
 
     def format(self, data: dict):
@@ -127,49 +127,49 @@ class BookQuasar(QuasarCallback, BackendCallback):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), best_bid_price DOUBLE, best_bid_amount DOUBLE, best_ask_price DOUBLE, best_ask_amount DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class LiquidationsQuasar(QuasarCallback, BackendCallback):
+class LiquidationsQuasar(QuasarCallback):
     table_prefix = "liquidations"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), side SYMBOL(side), quantity DOUBLE, price DOUBLE, id STRING, status SYMBOL(type), receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class OpenInterestQuasar(QuasarCallback, BackendCallback):
-    table_prefix = "open_intrerest"
+class OpenInterestQuasar(QuasarCallback):
+    table_prefix = "open_interest"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), open_interest FLOAT, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class OrderInfoQuasar(QuasarCallback, BackendCallback):
+class OrderInfoQuasar(QuasarCallback):
     table_prefix = "order_info"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), id STRING, client_order_id STRING, side SYMBOL(side), status SYMBOL(type), type SYMBOL(type), price DOUBLE, amount DOUBLE, remaining DOUBLE, account STRING, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class TransactionsQuasar(QuasarCallback, BackendCallback):
+class TransactionsQuasar(QuasarCallback):
     table_prefix = "transactions"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), currency SYMBOL(currency), type SYMBOL(type), status SYMBOL(type), amount DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class BalancesQuasar(QuasarCallback, BackendCallback):
+class BalancesQuasar(QuasarCallback):
     table_prefix = "balances"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), currency SYMBOL(currency), balance DOUBLE, reserved DOUBLE, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class FillsQuasar(QuasarCallback, BackendCallback):
+class FillsQuasar(QuasarCallback):
     table_prefix = "fills"
 
     def _create_query(self):
         self.query = f'CREATE TABLE "{self.table}" (exchange SYMBOL(exchange), symbol SYMBOL(symbol), price DOUBLE, amount DOUBLE, side SYMBOL(side), fee DOUBLE, id STRING, order_id STRING, liquidity DOUBLE, type SYMBOL(type), account STRING, receipt_timestamp TIMESTAMP) SHARD_SIZE = {self.shard_size}'
 
 
-class IndexQuasar(QuasarCallback, BackendCallback):
+class IndexQuasar(QuasarCallback):
     table_prefix = "index"
 
     def _create_query(self):
