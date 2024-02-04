@@ -87,7 +87,7 @@ class Exchange:
         return ep.route('instruments')
 
     @classmethod
-    def symbol_mapping(cls, refresh=False) -> Dict:
+    def symbol_mapping(cls, refresh=False, headers: dict = None) -> Dict:
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         try:
@@ -97,10 +97,10 @@ class Exchange:
                 if isinstance(addr, list):
                     for ep in addr:
                         LOG.debug("%s: reading symbol information from %s", cls.id, ep)
-                        data.append(cls.http_sync.read(ep, json=True, uuid=cls.id))
+                        data.append(cls.http_sync.read(ep, json=True, headers=headers, uuid=cls.id))
                 else:
                     LOG.debug("%s: reading symbol information from %s", cls.id, addr)
-                    data.append(cls.http_sync.read(addr, json=True, uuid=cls.id))
+                    data.append(cls.http_sync.read(addr, json=True, headers=headers, uuid=cls.id))
 
             syms, info = cls._parse_symbol_data(data if len(data) > 1 else data[0])
             Symbols.set(cls.id, syms, info)
