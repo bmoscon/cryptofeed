@@ -11,7 +11,7 @@ def main():
     f = FeedHandler()
 
     # save to database
-    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: TickerQuasar()}))
+    f.add_feed(Binance(channels=[TICKER], symbols=['BTC-USDT'], callbacks={TICKER: TickerQuasar()}))
     f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: TradeQuasar()}))
     f.add_feed(Bybit(channels=[CANDLES], symbols=['BTC-USD-PERP'], callbacks={CANDLES: CandlesQuasar()}))
     f.add_feed(Bybit(channels=[OPEN_INTEREST], symbols=['BTC-USD-PERP'], callbacks={OPEN_INTEREST: OpenInterestQuasar()}))
@@ -19,7 +19,7 @@ def main():
     f.add_feed(Bybit(channels=[LIQUIDATIONS], symbols=['BTC-USD-PERP'], callbacks={LIQUIDATIONS: LiquidationsQuasar()}))
 
     # print to console
-    f.add_feed(Coinbase(channels=[TICKER], symbols=['BTC-USD'], callbacks={TICKER: feed_info}))
+    f.add_feed(Binance(channels=[TICKER], symbols=['BTC-USDT'], callbacks={TICKER: feed_info}))
     f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks={TRADES: feed_info}))
     f.add_feed(Bybit(channels=[CANDLES], symbols=['BTC-USD-PERP'], callbacks={CANDLES: feed_info}))
     f.add_feed(Bybit(channels=[OPEN_INTEREST], symbols=['BTC-USD-PERP'], callbacks={OPEN_INTEREST: feed_info}))
