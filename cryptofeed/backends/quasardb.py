@@ -6,15 +6,14 @@ from cryptofeed.backends.backend import BackendCallback
 
 
 class QuasarCallback(BackendCallback):
-    def __init__(self, host="127.0.0.1", port=2836, username: str = "", private_key: str = "", public_key: str = "", none_to=None, shard_size: timedelta = timedelta(minutes=15)):
+    def __init__(self, uri="qdb://127.0.0.1:2836", username: str = "", private_key: str = "", public_key: str = "", none_to=None, shard_size: timedelta = timedelta(minutes=15)):
         self.numeric_type = float
         self.table = ""
         self.running = True
         self.none_to = none_to
         self.shard_size = self._get_str_timedelta(shard_size)
-        url = f"qdb://{host}:{port}"
 
-        pool.initialize(uri=url, user_name=username, user_private_key=private_key, cluster_public_key=public_key)
+        pool.initialize(uri=uri, user_name=username, user_private_key=private_key, cluster_public_key=public_key)
 
     def _get_str_timedelta(self, delta: timedelta):
         # calculate the number of hours, minutes, and remaining seconds from timedelta, return it in correct format for query
