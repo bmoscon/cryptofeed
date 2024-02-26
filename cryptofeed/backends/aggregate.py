@@ -13,9 +13,13 @@ import numpy as np
 class AggregateCallback:
     def __init__(self, handler):
         self.handler = handler
-        if not callable(self.handler):
-            setattr(self, 'start', self.handler.start)
-            setattr(self, 'stop', self.handler.stop)
+        if (
+            hasattr(self.handler, "__class__")
+            and hasattr(self.handler, "start")
+            and hasattr(self.handler, "stop")
+        ):
+            setattr(self, "start", self.handler.start)
+            setattr(self, "stop", self.handler.stop)
             self.__name__ = self.handler.__class__
 
 
