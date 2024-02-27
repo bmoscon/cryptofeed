@@ -47,6 +47,11 @@ for the exhaustive list of these *extra* dependencies.
 
          pip install --user --upgrade cryptofeed[postgres]
 
+* QuasarDB backend  
+  To install Cryptofeed along with [QuasarDB](https://quasar.ai/) in one bundle:
+
+         pip install --user --upgrade cryptofeed[quasardb]
+
 * RabbitMQ backend
 
          pip install --user --upgrade cryptofeed[rabbit]
