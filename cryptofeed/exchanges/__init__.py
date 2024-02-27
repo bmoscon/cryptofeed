@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -23,7 +23,6 @@ from .bitget import Bitget
 from .bithumb import Bithumb
 from .bitmex import Bitmex
 from .bitstamp import Bitstamp
-from .bittrex import Bittrex
 from .blockchain import Blockchain
 from .bybit import Bybit
 from .coinbase import Coinbase
@@ -67,7 +66,6 @@ EXCHANGE_MAP = {
     BITHUMB: Bithumb,
     BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
-    BITTREX: Bittrex,
     BLOCKCHAIN: Blockchain,
     BYBIT: Bybit,
     COINBASE: Coinbase,

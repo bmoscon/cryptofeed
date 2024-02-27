@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2018-2023 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2018-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -13,8 +13,8 @@ from cryptofeed.exchanges.binance import Binance
 
 INFLUX_ADDR = 'http://localhost:8086'
 ORG = 'cryptofeed'
-BUCKET = 'cryptofeed'
-TOKEN = 'XXXXXXXXXX'
+BUCKET = 'crypto'
+TOKEN = 'TOKEN'
 
 
 def main():
