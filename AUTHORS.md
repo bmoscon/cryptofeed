@@ -15,3 +15,4 @@ Cryptofeed was originally created by Bryant Moscon, but many others have contrib
 * [Bastien Enjalbert](https://github.com/bastienjalbert) - <bastienjalbert@gmail.com>
 * [Jonggyun Kim](https://github.com/gyunt) - <truth0233@gmail.com>
 * [QuasarDB](https://quasar.ai/)
+* [Thomas Bouamoud](https://github.com/thomasbs17) - <thomasbs17@yahoo.fr>

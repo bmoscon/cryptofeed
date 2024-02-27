@@ -11,7 +11,6 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | Bequant       |               | x                |                |       |
 | Bitfinex      |               | x                |                |       |
 | Bitstamp      |               |                  | x              |       |
-| Bittrex       |               | x                |                |       |
 | Blockchain.com|               | x                |                |       |
 | Bybit         |               |                  |   x            |       |
 | Binance       |               |   x              |                |       |
