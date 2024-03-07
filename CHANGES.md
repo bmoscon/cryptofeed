@@ -4,6 +4,8 @@
  * Bugfix: Handle empty nextFundingRate in OKX
  * Bugfix: Handle null next_funding_time and estimated_rate in HuobiSwap funding
  * Update: transitioned from Coinbase Pro (retired) to Coinbase Advanced Trade
+ * Feature: Bybit spot support
+ * Update: Bybit migrate to API V5 for public streams
 
 ### 2.4.0 (2024-01-07)
  * Update: Fix tests
