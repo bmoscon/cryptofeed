@@ -41,7 +41,10 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         for symbol, orig in base.items():
             if "_" in orig:
                 continue
-            add[f"{symbol.replace('PERP', 'PINDEX')}"] = f"p{orig}"
+            if orig == 'all':
+                add['all'] = 'all'
+            else:
+                add[f"{symbol.replace('PERP', 'PINDEX')}"] = f"p{orig}"
         base.update(add)
         return base, info
 

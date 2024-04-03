@@ -54,6 +54,10 @@ class Binance(Feed, BinanceRestMixin):
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
+
+        ret['all'] = 'all'
+        info['instrument_type']['all'] = PERPETUAL
+
         for symbol in data['symbols']:
             if symbol.get('status', 'TRADING') != "TRADING":
                 continue
@@ -133,7 +137,16 @@ class Binance(Feed, BinanceRestMixin):
                         raise ValueError("Premium Index Symbols only allowed on Candle data feed")
                 else:
                     pair = pair.lower()
-                subs.append(f"{pair}@{stream}")
+
+                if pair == 'all':
+                    if chan == 'forceOrder':
+                        subs.append('!forceOrder@arr')
+                    elif chan == 'markPrice':
+                        subs.append('!markPrice@arr')
+                    else:
+                        raise Exception("error chan %s for all symbols" % chan)
+                else:
+                    subs.append(f"{pair}@{stream}")
 
         if 0 < len(subs) < 200:
             return address + '/'.join(subs)
