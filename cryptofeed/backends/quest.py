@@ -54,9 +54,12 @@ class TradeQuest(QuestCallback, BackendCallback):
     async def write(self, data):
         timestamp = data["timestamp"]
         received_timestamp_int = int(data["receipt_timestamp"] * 1_000_000)
+        id_field = f'id={data["id"]}i,' if data["id"] is not None else ''
         timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else received_timestamp_int * 1000
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},side={data["side"]},type={data["type"]} ' \
-                 f'price={data["price"]},amount={data["amount"]},id={data["id"]}i,receipt_timestamp={received_timestamp_int}t {timestamp_int}'
+        update = (
+            f'{self.key}-{data["exchange"]},symbol={data["symbol"]},side={data["side"]},type={data["type"]} '
+            f'price={data["price"]},amount={data["amount"]},{id_field}receipt_timestamp={received_timestamp_int}t {timestamp_int}'
+        )
         await self.queue.put(update)
 
 
