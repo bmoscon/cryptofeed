@@ -7,6 +7,7 @@
  * Feature: Bybit spot support
  * Update: Bybit migrate to API V5 for public streams
  * Bugfix: Handle None ids for Kraken trades in QuestDB
+ * Bugfix: Handle OrderChanged event in IndependentReserve
 
 ### 2.4.0 (2024-01-07)
  * Update: Fix tests
