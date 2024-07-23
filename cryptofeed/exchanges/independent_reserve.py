@@ -159,7 +159,7 @@ class IndependentReserve(Feed):
                         self._l3_book[instrument].book[side][price] = {uuid: size}
                     delta[side].append((uuid, price, size))
 
-                elif msg['event'] == 'OrderChanged':
+                elif msg['Event'] == 'OrderChanged':
                     uuid = msg['Data']['OrderGuid']
                     size = msg['Data']['Volume']
                     side = BID if msg['Data']['OrderType'].endswith('Bid') else ASK
