@@ -167,11 +167,11 @@ class IndependentReserve(Feed):
                         price, side = self._order_ids[instrument][uuid]
 
                         if size == 0:
-                            del self._l3_book[instrument][side][price][uuid]
-                            if len(self._l3_book[instrument][side][price]) == 0:
-                                del self._l3_book[instrument][side][price]
+                            del self._l3_book[instrument].book[side][price][uuid]
+                            if len(self._l3_book[instrument].book[side][price]) == 0:
+                                del self._l3_book[instrument].book[side][price]
                         else:
-                            self._l3_book[instrument][side][price][uuid] = size
+                            self._l3_book[instrument].book[side][price][uuid] = size
 
                         del self._order_ids[instrument][uuid]
                         delta[side].append((uuid, price, size))
