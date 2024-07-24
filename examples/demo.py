@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from cryptofeed import FeedHandler
 from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, FUNDING, GEMINI, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, TICKER, TRADES, INDEX
-from cryptofeed.exchanges import (Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Bittrex, Coinbase, Gateio,
+from cryptofeed.exchanges import (Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Coinbase, Gateio,
                                   HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKX, Poloniex, Bybit, KuCoin, Bequant, Upbit, Probit)
 from cryptofeed.exchanges.bitdotcom import BitDotCom
 from cryptofeed.exchanges.bitget import Bitget
@@ -94,7 +94,6 @@ def main():
     f.add_feed(Bithumb(symbols=['BTC-KRW'], channels=[TRADES], callbacks={TRADES: trade}))
     f.add_feed(Bitmex(timeout=5000, symbols=Bitmex.symbols(), channels=[LIQUIDATIONS], callbacks={LIQUIDATIONS: liquidations, OPEN_INTEREST: oi, FUNDING: funding}))
     f.add_feed(Bitstamp(channels=[L2_BOOK, TRADES], symbols=['BTC-USD'], callbacks={L2_BOOK: book, TRADES: trade}))
-    f.add_feed(Bittrex(subscription={L2_BOOK: ['BTC-USDT'], CANDLES: ['BTC-USDT', 'ETH-USDT'], TRADES: ['ETH-USDT', 'BTC-USDT'], TICKER: ['ETH-USDT']}, callbacks={CANDLES: candle_callback, L2_BOOK: book, TICKER: ticker, TRADES: trade}))
     f.add_feed(BLOCKCHAIN, subscription={L2_BOOK: ['BTC-USD'], TRADES: Blockchain.symbols()}, callbacks={L2_BOOK: book, TRADES: trade})
     f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[INDEX, FUNDING, OPEN_INTEREST], callbacks={OPEN_INTEREST: oi, INDEX: index, FUNDING: funding}))
     f.add_feed(Bybit(candle_closed_only=True, symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[CANDLES, TRADES, L2_BOOK], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book}))

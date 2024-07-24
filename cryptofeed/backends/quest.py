@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -54,9 +54,12 @@ class TradeQuest(QuestCallback, BackendCallback):
     async def write(self, data):
         timestamp = data["timestamp"]
         received_timestamp_int = int(data["receipt_timestamp"] * 1_000_000)
+        id_field = f'id={data["id"]}i,' if data["id"] is not None else ''
         timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else received_timestamp_int * 1000
-        update = f'{self.key}-{data["exchange"]},symbol={data["symbol"]},side={data["side"]},type={data["type"]} ' \
-                 f'price={data["price"]},amount={data["amount"]},id={data["id"]}i,receipt_timestamp={received_timestamp_int}t {timestamp_int}'
+        update = (
+            f'{self.key}-{data["exchange"]},symbol={data["symbol"]},side={data["side"]},type={data["type"]} '
+            f'price={data["price"]},amount={data["amount"]},{id_field}receipt_timestamp={received_timestamp_int}t {timestamp_int}'
+        )
         await self.queue.put(update)
 
 
@@ -72,7 +75,7 @@ class BookQuest(QuestCallback):
         self.depth = depth
 
     async def __call__(self, book, receipt_timestamp: float):
-        vals = ','.join([f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(self.depth)] + [f"ask{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(self.depth)])
+        vals = ','.join([f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(self.depth)] + [f"ask_{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(self.depth)])
         timestamp = book.timestamp
         receipt_timestamp_int = int(receipt_timestamp * 1_000_000)
         timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else receipt_timestamp_int * 1000

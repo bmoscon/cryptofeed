@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -31,7 +31,7 @@ def teardown_module(module):
 
 
 class TestBinanceRest:
-    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
+    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
     def test_trade(self):
         ret = []
         for data in b.trades_sync('BTC-USDT'):
@@ -44,7 +44,7 @@ class TestBinanceRest:
         assert isinstance(ret[0]['amount'], Decimal)
         assert isinstance(ret[0]['timestamp'], float)
 
-    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
+    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
     def test_trades(self):
         expected = {'timestamp': 1577836800.594,
                     'symbol': 'BTC-USDT',
@@ -61,7 +61,7 @@ class TestBinanceRest:
         assert ret[0] == expected
         assert ret[0]['timestamp'] < ret[-1]['timestamp']
     
-    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
+    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
     def test_candles(self):
         expected = Candle(
             b.id,
@@ -85,7 +85,7 @@ class TestBinanceRest:
         assert len(ret) == 1
         assert ret[0] == expected    
 
-    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
+    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
     def test_bf_trade(self):
         expected = {'timestamp': 1577836801.481,
                     'symbol': 'BTC-USDT-PERP',
@@ -102,7 +102,7 @@ class TestBinanceRest:
         assert len(ret) == 3
         assert ret[0] == expected
 
-    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
+    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
     def test_bf_trades(self):
         ret = []
         for data in bf.trades_sync('BTC-USDT-PERP', start='2020-01-01 00:00:00', end='2020-01-01 1:00:00'):
@@ -110,7 +110,7 @@ class TestBinanceRest:
 
         assert len(ret) == 2588
 
-    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
+    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
     def test_bd_trade(self):
         expected = {'timestamp': 1609459200.567,
                     'symbol': 'BTC-USD-PERP',
@@ -127,7 +127,7 @@ class TestBinanceRest:
         assert len(ret) == 2
         assert ret[0] == expected
 
-    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If not in the USA this should pass")
+    @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
     def test_bd_trades(self):
         ret = []
         for data in bd.trades_sync('BTC-USD-PERP', start='2021-01-01 00:00:00', end='2021-01-01 1:00:00'):

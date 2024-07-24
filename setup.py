@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2023 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -46,7 +46,7 @@ extension = Extension("cryptofeed.types", ["cryptofeed/types.pyx"],
 setup(
     name="cryptofeed",
     ext_modules=cythonize([extension], language_level=3, force=True),
-    version="2.4.0",
+    version="2.4.1",
     author="Bryant Moscon",
     author_email="bmoscon@gmail.com",
     description="Cryptocurrency Exchange Websocket Data Feed Handler",
@@ -55,7 +55,7 @@ setup(
     license="XFree86",
     keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data", "crypto assets",
               "Trades", "Tickers", "BBO", "Funding", "Open Interest", "Liquidation", "Order book", "Bid", "Ask",
-              "fmfw.io", "Bitfinex", "bitFlyer", "AscendEX", "Bitstamp", "Bittrex", "Blockchain.com", "Bybit",
+              "fmfw.io", "Bitfinex", "bitFlyer", "AscendEX", "Bitstamp", "Blockchain.com", "Bybit",
               "Binance", "Binance Delivery", "Binance Futures", "Binance US", "BitMEX", "Coinbase", "Deribit", "EXX",
               "Gate.io", "Gemini", "HitBTC", "Huobi", "Huobi DM", "Huobi Swap", "Kraken",
               "Kraken Futures", "OKCoin", "OKX", "Poloniex", "ProBit", "Upbit"],
@@ -67,9 +67,10 @@ setup(
         "Intended Audience :: Developers",
         "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Framework :: AsyncIO",
     ],
     tests_require=["pytest"],
@@ -77,7 +78,7 @@ setup(
         "requests>=2.18.4",
         "websockets>=10.0",
         "pyyaml",
-        "aiohttp==3.8.4",
+        "aiohttp>=3.9.4",
         "aiofile>=2.0.0",
         "yapic.json>=1.6.3",
         'uvloop ; platform_system!="Windows"',
@@ -90,6 +91,7 @@ setup(
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
+        "quasardb": ["quasardb", "numpy"],
         "rabbit": ["aio_pika", "pika"],
         "redis": ["hiredis", "redis>=4.5.1"],
         "zmq": ["pyzmq"],

@@ -14,7 +14,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [bitFlyer](https://bitflyer.com/)
 * [Bithumb](https://en.bithumb.com/)
 * [Bitstamp](https://www.bitstamp.net/)
-* [Bittrex](https://global.bittrex.com/)
 * [Blockchain.com](https://www.blockchain.com/)
 * [Bybit](https://www.bybit.com/)
 * [Binance](https://www.binance.com/en)
@@ -141,6 +140,7 @@ Supported Backends:
 * Kafka
 * RabbitMQ
 * PostgreSQL
+* [QuasarDB](https://quasar.ai/)
 * GCP Pub/Sub
 * [QuestDB](https://questdb.io/)
 
