@@ -22,7 +22,7 @@ class QuestCallback(SocketCallback):
         self.running = True
 
     async def writer(self):
-        while True:
+        while self.running:
             await self.connect()
             async with self.read_queue() as updates:
                 update = "\n".join(updates) + "\n"
