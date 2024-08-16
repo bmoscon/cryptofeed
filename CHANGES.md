@@ -8,6 +8,8 @@
  * Update: Bybit migrate to API V5 for public streams
  * Bugfix: Handle None ids for Kraken trades in QuestDB
  * Bugfix: Handle OrderChanged event in IndependentReserve
+ * Bugfix: Remove deprecated `USD` currency from bit.com
+ * Bugfix: Make `entry` key optional when retrieving symbols for BitMex  
 
 ### 2.4.0 (2024-01-07)
  * Update: Fix tests
