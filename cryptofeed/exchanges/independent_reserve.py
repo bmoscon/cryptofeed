@@ -159,7 +159,7 @@ class IndependentReserve(Feed):
                         self._l3_book[instrument].book[side][price] = {uuid: size}
                     delta[side].append((uuid, price, size))
 
-                elif msg['event'] == 'OrderChanged':
+                elif msg['Event'] == 'OrderChanged':
                     uuid = msg['Data']['OrderGuid']
                     size = msg['Data']['Volume']
                     side = BID if msg['Data']['OrderType'].endswith('Bid') else ASK
@@ -167,11 +167,11 @@ class IndependentReserve(Feed):
                         price, side = self._order_ids[instrument][uuid]
 
                         if size == 0:
-                            del self._l3_book[instrument][side][price][uuid]
-                            if len(self._l3_book[instrument][side][price]) == 0:
-                                del self._l3_book[instrument][side][price]
+                            del self._l3_book[instrument].book[side][price][uuid]
+                            if len(self._l3_book[instrument].book[side][price]) == 0:
+                                del self._l3_book[instrument].book[side][price]
                         else:
-                            self._l3_book[instrument][side][price][uuid] = size
+                            self._l3_book[instrument].book[side][price][uuid] = size
 
                         del self._order_ids[instrument][uuid]
                         delta[side].append((uuid, price, size))
