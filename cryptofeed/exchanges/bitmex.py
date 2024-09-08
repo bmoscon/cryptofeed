@@ -58,7 +58,7 @@ class Bitmex(Feed, BitmexRestMixin):
             else:
                 LOG.info('Unsupported type %s for instrument %s', entry['typ'], entry['symbol'])
 
-            s = Symbol(base, quote, type=stype, expiry_date=entry['expiry'])
+            s = Symbol(base, quote, type=stype, expiry_date=entry.get('expiry'))
             if s.normalized not in ret:
                 ret[s.normalized] = entry['symbol']
                 info['tick_size'][s.normalized] = entry['tickSize']

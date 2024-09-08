@@ -5,7 +5,7 @@ import itertools
 import logging
 from decimal import Decimal
 import time
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Tuple
 from collections import defaultdict
 import hashlib
 import hmac
@@ -51,9 +51,9 @@ class BitDotCom(Feed):
         self._sequence_no = defaultdict(int)
 
     @classmethod
-    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[List[str], str]:
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> str:
         if ep.routes.currencies:
-            return [ep.route('instruments').format(currency) for currency in ('USD', 'USDT')]
+            return ep.route('instruments').format('USDT')
         return ep.route('instruments')
 
     @classmethod
