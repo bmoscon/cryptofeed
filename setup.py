@@ -1,16 +1,15 @@
-'''
+"""
 Copyright (C) 2017-2024 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
 import os
 import sys
 
-from setuptools import Extension, setup
-from setuptools import find_packages
-from setuptools.command.test import test as TestCommand
 from Cython.Build import cythonize
+from setuptools import Extension, find_packages, setup
+from setuptools.command.test import test as TestCommand
 
 
 def get_long_description():
@@ -95,6 +94,7 @@ setup(
         "rabbit": ["aio_pika", "pika"],
         "redis": ["hiredis", "redis>=4.5.1"],
         "zmq": ["pyzmq"],
+        "deltalake": ["deltalake>=0.6.1", "pandas"],
         "all": [
             "arctic",
             "google_cloud_pubsub>=2.4.1",
@@ -107,6 +107,7 @@ setup(
             "hiredis",
             "redis>=4.5.1",
             "pyzmq",
+            "deltalake>=0.6.1",
         ],
     },
 )
