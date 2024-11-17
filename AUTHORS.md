@@ -18,3 +18,4 @@ Cryptofeed was originally created by Bryant Moscon, but many others have contrib
 * [Thomas Bouamoud](https://github.com/thomasbs17) - <thomasbs17@yahoo.fr>
 * [Carlo Eugster](https://github.com/carloe) - <carlo@relaun.ch>
 * [Marten Schlüter](https://github.com/maschlr)
+* [Kanta | 5000e12](https://github.com/otomarukanta)

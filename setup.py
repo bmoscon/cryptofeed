@@ -76,7 +76,7 @@ setup(
     tests_require=["pytest"],
     install_requires=[
         "requests>=2.18.4",
-        "websockets>=10.0",
+        "websockets>=10.0,<14.0",
         "pyyaml",
         "aiohttp==3.10.5",
         "aiofile>=2.0.0",
