@@ -6,7 +6,6 @@ associated with this software.
 '''
 import asyncio
 import logging
-import random
 from socket import error as socket_error
 import time
 from typing import Awaitable
@@ -51,7 +50,6 @@ class ConnectionHandler:
     async def _create_connection(self):
         await asyncio.sleep(self.start_delay)
         retries = 0
-        rate_limited = 1
         delay = 1
         while (retries <= self.retries or self.retries == -1) and self.running:
             try:
@@ -60,7 +58,6 @@ class ConnectionHandler:
                     await self.subscribe(connection)
                     # connection was successful, reset retry count and delay
                     retries = 0
-                    rate_limited = 0
                     delay = 1
                     if self.timeout != -1:
                         loop = asyncio.get_running_loop()

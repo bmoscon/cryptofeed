@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 from aiohttp.client_reqrep import ClientResponse
 import requests
-from websockets.asyncio.client import connect
+from websockets.asyncio.client import connect, ClientConnection
 from websockets.protocol import State
 import aiohttp
 from aiohttp.typedefs import StrOrURL
@@ -82,7 +82,7 @@ class AsyncConnection(Connection):
         self.last_message = None
         self.authentication = authentication
         self.subscription = subscription
-        self.conn: Union[websockets.WebSocketClientProtocol, aiohttp.ClientSession] = None
+        self.conn: Union[ClientConnection, aiohttp.ClientSession] = None
         atexit.register(self.__del__)
 
     def __del__(self):

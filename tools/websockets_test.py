@@ -32,6 +32,6 @@ async def main():
             if not is_gzip:
                 print(f"< {response}")
             else:
-                print(f"< {zlib.decompress(response, 16+zlib.MAX_WBITS)}")
+                print(f"< {zlib.decompress(response, 16 + zlib.MAX_WBITS)}")
 
 asyncio.get_event_loop().run_until_complete(main())

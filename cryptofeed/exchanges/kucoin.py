@@ -285,7 +285,7 @@ class KuCoin(Feed):
                     await conn.write(json.dumps({
                         'id': 1,
                         'type': 'subscribe',
-                        'topic': f"{chan}:{','.join(symbols[slice_index: slice_index+100])}",
+                        'topic': f"{chan}: {','.join(symbols[slice_index: slice_index + 100])}",
                         'privateChannel': False,
                         'response': True
                     }))
