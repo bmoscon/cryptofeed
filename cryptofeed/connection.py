@@ -16,7 +16,8 @@ from dataclasses import dataclass
 
 from aiohttp.client_reqrep import ClientResponse
 import requests
-import websockets
+from websockets.asyncio.client import connect
+from websockets.protocol import State
 import aiohttp
 from aiohttp.typedefs import StrOrURL
 from yapic import json as json_parser
@@ -303,7 +304,7 @@ class WSAsyncConn(AsyncConnection):
 
     @property
     def is_open(self) -> bool:
-        return self.conn and not self.conn.closed
+        return self.conn and not self.conn.state == State.CLOSED
 
     async def _open(self):
         if self.is_open:
@@ -315,7 +316,7 @@ class WSAsyncConn(AsyncConnection):
             if self.authentication:
                 self.address, self.ws_kwargs = await self.authentication(self.address, self.ws_kwargs)
 
-            self.conn = await websockets.connect(self.address, **self.ws_kwargs)
+            self.conn = await connect(self.address, **self.ws_kwargs)
         self.sent = 0
         self.received = 0
         self.last_message = None
@@ -357,7 +358,7 @@ class WebsocketEndpoint:
     authentication: bool = None
 
     def __post_init__(self):
-        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': 2**23, 'max_queue': None, 'read_limit': 2**18}
+        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': None, 'max_queue': None}
         if self.options:
             defaults.update(self.options)
         self.options = defaults
