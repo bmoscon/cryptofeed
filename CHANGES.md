@@ -1,5 +1,8 @@
 ## Changelog
 
+### [Unreleased]
+ * Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
+
 ### 2.4.1
  * Bugfix: Handle empty nextFundingRate in OKX
  * Bugfix: Handle null next_funding_time and estimated_rate in HuobiSwap funding
