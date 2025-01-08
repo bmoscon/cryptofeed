@@ -56,9 +56,13 @@ class HTTPSync(Connection):
         r = requests.get(address, headers=headers, params=params)
         return self.process_response(r, address, json=json, text=text, uuid=uuid)
 
-    def write(self, address: str, data=None, json=False, text=True, uuid=None):
+    def write(self, address: str, data=None, json=False, text=True, uuid=None, is_data_json=False):
         LOG.debug("HTTPSync: post to %s", address)
-        r = requests.post(address, data=data)
+        if (is_data_json):
+            r = requests.post(address, json=data)
+        else:
+            r = requests.post(address, data=data)
+
         return self.process_response(r, address, json=json, text=text, uuid=uuid)
 
 
