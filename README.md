@@ -176,7 +176,7 @@ Cryptofeed supports some REST interfaces for retrieving real-time and historical
 
 ## Future Work
 
-There are a lot of planned features, new exchanges, etc planned! If you'd like to discuss ongoing development, please join the [slack](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
+There are a lot of planned features, new exchanges, etc planned! If you'd like to discuss ongoing development, please join the [discord](https://discord.gg/ZWVC2VAP) or open a thread in the [discussions](https://github.com/bmoscon/cryptofeed/discussions) in GitHub.
 
 ## Contributing
 
