@@ -108,3 +108,5 @@ ENV/
 
 # PyCharm
 .idea/
+.aider*
+.trunk/
