@@ -1,7 +1,7 @@
 #!/bin/bash
 #set -e -x
 
-py_vers=("/opt/python/cp310-cp310/bin" "/opt/python/cp38-cp38/bin" "/opt/python/cp39-cp39/bin")
+py_vers=("/opt/python/cp312-cp312/bin" "/opt/python/cp313-cp313/bin")
 
 #for PY in "${py_vers[@]}"; do
 #    "${PY}/pip" wheel /io/ -w wheelhouse/
@@ -13,7 +13,7 @@ py_vers=("/opt/python/cp310-cp310/bin" "/opt/python/cp38-cp38/bin" "/opt/python/
 
 set -e -u -x
 
-PLAT=manylinux_2_24_x86_64
+PLAT=manylinux_2_34_x86_64
 
 function repair_wheel {
     wheel="$1"
