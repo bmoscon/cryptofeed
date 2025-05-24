@@ -258,14 +258,42 @@ class OKX(Feed, OKXRestMixin):
             await self.callback(TRADES, t, timestamp)
 
     async def _funding(self, msg: dict, timestamp: float):
+        """
+        {
+            "arg":{
+                "channel":"funding-rate",
+                "instId":"BTC-USD-SWAP"
+            },
+            "data":[
+                {
+                    "formulaType": "noRate",
+                    "fundingRate":"0.0001875391284828",
+                    "fundingTime":"1700726400000",
+                    "impactValue": "",
+                    "instId":"BTC-USD-SWAP",
+                    "instType":"SWAP",
+                    "interestRate": "",
+                    "method": "current_period",
+                    "maxFundingRate":"0.00375",
+                    "minFundingRate":"-0.00375",
+                    "nextFundingRate":"",
+                    "nextFundingTime":"1700755200000",
+                    "premium": "0.0001233824646391",
+                    "settFundingRate":"0.0001699799259033",
+                    "settState":"settled",
+                    "ts":"1700724675402"
+                }
+            ]
+            }
+        """
         for update in msg['data']:
             f = Funding(
                 self.id,
                 self.exchange_symbol_to_std_symbol(update['instId']),
                 None,
                 Decimal(update['fundingRate']),
-                None,
                 self.timestamp_normalize(int(update['fundingTime'])),
+                timestamp,
                 predicted_rate=Decimal(update['nextFundingRate']) if update['nextFundingRate'] != '' else None,
                 raw=update
             )
