@@ -402,7 +402,7 @@ class Bybit(Feed):
         if update_type == 'delta':
             delta = {BID: data['b'], ASK: data['a']}
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=int(msg['ts']), raw=msg, delta=delta)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(msg['ts'])), raw=msg, delta=delta)
 
     async def _ticker_open_interest_funding_index(self, msg: dict, timestamp: float, conn: AsyncConnection):
         '''
