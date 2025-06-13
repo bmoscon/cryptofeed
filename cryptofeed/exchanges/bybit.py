@@ -17,9 +17,9 @@ import re
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL, SPOT, TICKER
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L1_BOOK, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL, SPOT, TICKER
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation, Ticker
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation, Ticker, L1Book
 
 LOG = logging.getLogger('feedhandler')
 
@@ -27,6 +27,7 @@ LOG = logging.getLogger('feedhandler')
 class Bybit(Feed):
     id = BYBIT
     websocket_channels = {
+        L1_BOOK: '',
         L2_BOOK: '',  # Assigned in self.subscribe
         TRADES: 'publicTrade',
         FILLS: 'execution',
@@ -39,8 +40,8 @@ class Bybit(Feed):
         TICKER: 'tickers'
     }
     websocket_endpoints = [
-        WebsocketEndpoint('wss://stream.bybit.com/v5/public/linear', instrument_filter=('TYPE', (FUTURES, PERPETUAL)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/linear', options={'compression': None}),
-        WebsocketEndpoint('wss://stream.bybit.com/v5/public/spot', instrument_filter=('TYPE', (SPOT)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[CANDLES],), sandbox='wss://stream-testnet.bybit.com/v5/public/spot', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/linear', instrument_filter=('TYPE', (FUTURES, PERPETUAL)), channel_filter=(websocket_channels[L1_BOOK], websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/linear', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/spot', instrument_filter=('TYPE', (SPOT)), channel_filter=(websocket_channels[L1_BOOK], websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[CANDLES],), sandbox='wss://stream-testnet.bybit.com/v5/public/spot', options={'compression': None}),
         WebsocketEndpoint('wss://stream.bybit.com/realtime_private', channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]), instrument_filter=('QUOTE', ('USDT',)), sandbox='wss://stream-testnet.bybit.com/realtime_private', options={'compression': None}),
     ]
     rest_endpoints = [
@@ -231,6 +232,8 @@ class Bybit(Feed):
                 LOG.error("%s: Error from exchange %s", conn.uuid, msg)
         elif msg["topic"].startswith('publicTrade'):
             await self._trade(msg, timestamp, market)
+        elif msg["topic"].startswith('orderbook.1'):
+            await self._top_of_book(msg, timestamp, market)
         elif msg["topic"].startswith('orderbook'):
             await self._book(msg, timestamp, market)
         elif msg['topic'].startswith('kline'):
@@ -279,6 +282,13 @@ class Bybit(Feed):
                             PERPETUAL: "orderbook.200",
                         }
                         sub = [f"{l2_book_channel[sym.type]}.{pair}"]
+                    elif self.exchange_channel_to_std(chan) == L1_BOOK:
+                        l1_book_channel = {
+                            SPOT: "orderbook.1",
+                            FUTURES: "orderbook.1",
+                            PERPETUAL: "orderbook.1",
+                        }
+                        sub = [f"{l1_book_channel[sym.type]}.{pair}"]
                     else:
                         sub = [f"{chan}.{pair}"]
 
@@ -403,6 +413,46 @@ class Bybit(Feed):
             delta = {BID: data['b'], ASK: data['a']}
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(msg['ts'])), raw=msg, delta=delta)
+
+    async def _top_of_book(self, msg: dict, timestamp: float, market: str):
+        '''
+        {
+            'topic': 'orderbook.1.BTCUSDT',
+            'type': 'snapshot',
+            'ts': 1749822878982,
+            'data': {
+                's': 'BTCUSDT',
+                'b': [['104714.40', '0.727']],
+                'a': [['104714.50', '16.541']],
+                'u': 58267067,
+                'seq': 416909700197
+            },
+            'cts': 1749822878980
+        }
+        '''
+        pair = msg['topic'].split('.')[-1]
+        update_type = msg['type']
+        data = msg['data']
+
+        if market == 'spot':
+            pair = self.convert_to_spot_name(self, data['s'])
+            if not pair:
+                return
+
+        symbol = self.exchange_symbol_to_std_symbol(pair)
+
+        if update_type == 'snapshot':
+            l1 = L1Book(
+                self.id,
+                symbol,
+                Decimal(data['b'][0][0]) if 'b' in data else Decimal(0),
+                Decimal(data['b'][0][1]) if 'b' in data else Decimal(0),
+                Decimal(data['a'][0][0]) if 'a' in data else Decimal(0),
+                Decimal(data['a'][0][1]) if 'a' in data else Decimal(0),
+                int(msg['ts']),
+                raw=msg
+            )
+            await self.callback(L1_BOOK, l1, timestamp)
 
     async def _ticker_open_interest_funding_index(self, msg: dict, timestamp: float, conn: AsyncConnection):
         '''
