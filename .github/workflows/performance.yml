@@ -69,101 +69,11 @@ jobs:
         run: |
           echo "⚡ Running cryptofeed-specific benchmarks..."
           
-          # Create benchmark script for cryptofeed components
-          cat > benchmark_cryptofeed.py << 'EOF'
-          import time
-          import asyncio
-          from memory_profiler import profile
-          import psutil
-          import os
-          
-          # Import cryptofeed modules to benchmark
-          try:
-              from cryptofeed import FeedHandler
-              from cryptofeed.exchanges import Coinbase, Binance
-              from cryptofeed.defines import TRADES, L2_BOOK
-          except ImportError as e:
-              print(f"Import error: {e}")
-              exit(0)
-          
-          class BenchmarkSuite:
-              def __init__(self):
-                  self.results = {}
-                  
-              def time_function(self, name, func, *args, **kwargs):
-                  """Time a function execution"""
-                  start_time = time.perf_counter()
-                  result = func(*args, **kwargs)
-                  end_time = time.perf_counter()
-                  duration = end_time - start_time
-                  self.results[name] = duration
-                  print(f"⏱️  {name}: {duration:.4f}s")
-                  return result
-              
-              def benchmark_feed_handler_creation(self):
-                  """Benchmark FeedHandler instantiation"""
-                  def create_handler():
-                      return FeedHandler()
-                  
-                  self.time_function("FeedHandler creation", create_handler)
-              
-              def benchmark_exchange_setup(self):
-                  """Benchmark exchange configuration"""
-                  def setup_exchanges():
-                      coinbase = Coinbase(symbols=['BTC-USD'], channels=[TRADES])
-                      binance = Binance(symbols=['BTCUSDT'], channels=[TRADES])
-                      return coinbase, binance
-                  
-                  self.time_function("Exchange setup", setup_exchanges)
-              
-              def benchmark_memory_usage(self):
-                  """Benchmark memory consumption"""
-                  process = psutil.Process(os.getpid())
-                  initial_memory = process.memory_info().rss / 1024 / 1024  # MB
-                  
-                  # Create multiple handlers to test memory usage
-                  handlers = []
-                  for i in range(10):
-                      fh = FeedHandler()
-                      handlers.append(fh)
-                  
-                  final_memory = process.memory_info().rss / 1024 / 1024  # MB
-                  memory_diff = final_memory - initial_memory
-                  
-                  print(f"💾 Memory usage: {initial_memory:.1f}MB -> {final_memory:.1f}MB (+{memory_diff:.1f}MB)")
-                  self.results["memory_usage_mb"] = memory_diff
-              
-              def run_all_benchmarks(self):
-                  """Run all benchmark suites"""
-                  print("🚀 Starting cryptofeed benchmarks...")
-                  
-                  self.benchmark_feed_handler_creation()
-                  self.benchmark_exchange_setup()
-                  self.benchmark_memory_usage()
-                  
-                  print("\n📊 Benchmark Results Summary:")
-                  for name, value in self.results.items():
-                      if "time" in name.lower() or name.endswith("_s"):
-                          print(f"  {name}: {value:.4f}s")
-                      elif "memory" in name.lower():
-                          print(f"  {name}: {value:.2f}MB")
-                      else:
-                          print(f"  {name}: {value}")
-                  
-                  return self.results
-          
-          if __name__ == "__main__":
-              benchmark = BenchmarkSuite()
-              results = benchmark.run_all_benchmarks()
-              
-              # Save results to file
-              import json
-              with open("benchmark-results.json", "w") as f:
-                  json.dump(results, f, indent=2)
-          EOF
+          # Make benchmark script executable
+          chmod +x tools/benchmark_cryptofeed.py
           
           # Run the benchmarks
-          python benchmark_cryptofeed.py || echo "Benchmark completed with some issues"
+          python tools/benchmark_cryptofeed.py || echo "Benchmark completed with some issues"
 
       - name: Run pytest benchmarks (if available)
         run: |
@@ -339,71 +249,23 @@ jobs:
         run: |
           echo "⚖️ Comparing performance results..."
           
-          # Create comparison script
-          cat > compare_performance.py << 'EOF'
-          import json
-          import os
-          import glob
-          
-          def load_benchmark_results():
-              """Load all benchmark result files"""
-              results = {}
-              
-              for file in glob.glob("benchmark-results.json"):
-                  try:
-                      with open(file) as f:
-                          data = json.load(f)
-                          results['current'] = data
-                  except:
-                      pass
-              
-              return results
-          
-          def generate_comparison_report(results):
-              """Generate performance comparison report"""
-              report = ["# Performance Comparison Report\n"]
-              
-              if 'current' in results:
-                  report.append("## Current PR Performance\n")
-                  for metric, value in results['current'].items():
-                      if isinstance(value, (int, float)):
-                          unit = "s" if "time" in metric.lower() else ("MB" if "memory" in metric.lower() else "")
-                          report.append(f"- **{metric}**: {value:.4f}{unit}")
-                      else:
-                          report.append(f"- **{metric}**: {value}")
-                  
-                  report.append("\n## Analysis\n")
-                  report.append("- ✅ Performance benchmarks completed successfully")
-                  report.append("- 📊 Results available in workflow artifacts")
-                  
-                  # Simple performance assessment
-                  if 'memory_usage_mb' in results['current']:
-                      mem_usage = results['current']['memory_usage_mb']
-                      if mem_usage < 50:
-                          report.append("- 💚 Memory usage: Excellent (< 50MB)")
-                      elif mem_usage < 100:
-                          report.append("- 💛 Memory usage: Good (< 100MB)")
-                      else:
-                          report.append("- ❌ Memory usage: High (> 100MB)")
-              else:
-                  report.append("No performance results available for comparison")
-              
-              return "\n".join(report)
-          
-          if __name__ == "__main__":
-              results = load_benchmark_results()
-              report = generate_comparison_report(results)
-              
-              print("Performance Comparison:")
-              print("=" * 50)
-              print(report)
-              
-              # Save report
-              with open("performance-comparison.md", "w") as f:
-                  f.write(report)
-          EOF
-          
-          python compare_performance.py
+          # Simple performance comparison without complex inline scripts
+          if [ -f "benchmark-results.json" ]; then
+            echo "## Performance Results" > performance-comparison.md
+            echo "" >> performance-comparison.md
+            echo "Benchmark results available in artifacts." >> performance-comparison.md
+            echo "Key metrics from this run:" >> performance-comparison.md
+            echo "" >> performance-comparison.md
+            
+            # Extract key metrics using simple tools
+            if command -v jq &> /dev/null; then
+              jq -r 'to_entries[] | "- **\(.key)**: \(.value)"' benchmark-results.json >> performance-comparison.md
+            else
+              echo "- Detailed metrics available in benchmark-results.json" >> performance-comparison.md
+            fi
+          else
+            echo "No performance results generated" > performance-comparison.md
+          fi
 
       - name: Comment PR with performance results
         uses: actions/github-script@v7
@@ -436,7 +298,7 @@ jobs:
   continuous-profiling:
     name: Continuous Profiling
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

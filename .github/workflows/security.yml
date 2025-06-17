@@ -199,12 +199,26 @@ jobs:
   container-scan:
     name: Container Security Scan
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && contains(github.event.pull_request.changed_files, 'Dockerfile')
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check for Dockerfile changes
+        id: dockerfile_changes
+        if: github.event_name == 'pull_request'
+        run: |
+          if gh api repos/${{ github.repository }}/pulls/${{ github.event.number }}/files \
+             --jq '.[].filename' | grep -q "Dockerfile"; then
+            echo "dockerfile_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "dockerfile_changed=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Docker image
+        if: steps.dockerfile_changes.outputs.dockerfile_changed == 'true'
         run: |
           if [ -f Dockerfile ]; then
             docker build -t cryptofeed:security-scan .
@@ -214,7 +228,8 @@ jobs:
           fi
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
+        if: steps.dockerfile_changes.outputs.dockerfile_changed == 'true'
         with:
           image-ref: 'cryptofeed:security-scan'
           format: 'sarif'
@@ -222,7 +237,7 @@ jobs:
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && steps.dockerfile_changes.outputs.dockerfile_changed == 'true'
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -234,7 +249,7 @@ jobs:
       id-token: write
       actions: read
       contents: read
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     
     steps:
       - name: Checkout code

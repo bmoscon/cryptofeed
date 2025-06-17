@@ -46,7 +46,7 @@ jobs:
 
       - name: Run quality checks with Trunk
         run: |
-          trunk check --all --upstream origin/master
+          trunk check --all --upstream origin/${{ github.event.repository.default_branch }}
 
       - name: Run tests
         run: uv run pytest tests/ -v
