@@ -1,17 +1,42 @@
-name: flake8 Lint
+name: Code Quality Lint
 
 on: [push, pull_request]
 
 jobs:
-  flake8-lint:
+  ruff-lint:
     runs-on: ubuntu-latest
-    name: Lint
+    name: Lint with Ruff
     steps:
       - name: Check out source repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+      
       - name: Set up Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: flake8 Lint
-        uses: py-actions/flake8@v2
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          uv pip install -e .
+      
+      - name: Run ruff linting
+        run: |
+          uv run ruff check . --output-format=github
+      
+      - name: Run ruff formatting check
+        run: |
+          uv run ruff format --check --diff .

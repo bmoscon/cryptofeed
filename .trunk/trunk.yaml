@@ -1,6 +1,6 @@
 # This file controls the behavior of Trunk: https://docs.trunk.io/cli
 # To learn more about the format of this file, see https://docs.trunk.io/reference/trunk-yaml
-version: 0.1
+version: 1.0
 cli:
   version: 1.24.0
 plugins:
