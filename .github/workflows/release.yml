@@ -29,21 +29,27 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest ruff black isort
-          pip install -e .
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
 
-      - name: Run all quality checks
+      - name: Install dependencies with uv
         run: |
-          ruff check .
-          black --check .
-          isort --check-only .
+          uv sync --dev
+          uv pip install -e .
+
+      - name: Install and setup Trunk
+        uses: trunk-io/trunk-action@v1
+        with:
+          check-mode: all
+
+      - name: Run quality checks with Trunk
+        run: |
+          trunk check --all --upstream origin/master
 
       - name: Run tests
-        run: pytest tests/ -v
+        run: uv run pytest tests/ -v
         continue-on-error: true
 
       - name: Validate version format
@@ -68,10 +74,14 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
       - name: Install build dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install build wheel cython setuptools
+          uv pip install build wheel cython setuptools
 
       - name: Build source distribution
         run: python -m build --sdist
