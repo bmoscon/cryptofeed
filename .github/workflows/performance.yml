@@ -49,6 +49,7 @@ jobs:
 
       - name: Install dependencies and benchmarking tools
         run: |
+          uv venv
           uv sync --dev
           uv pip install pytest-benchmark memory-profiler psutil py-spy
           uv pip install -e .
@@ -317,6 +318,7 @@ jobs:
 
       - name: Install profiling tools
         run: |
+          uv venv
           uv sync --dev
           uv pip install py-spy line_profiler memory-profiler
           uv pip install -e .

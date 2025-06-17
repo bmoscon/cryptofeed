@@ -38,6 +38,7 @@ jobs:
 
       - name: Install dependencies with uv
         run: |
+          uv venv
           uv sync --dev
           uv pip install -e .
 
@@ -90,6 +91,7 @@ jobs:
 
       - name: Install dependencies with uv
         run: |
+          uv venv
           uv sync --dev
           uv pip install pytest pytest-cov pytest-asyncio
           uv pip install -e .
@@ -159,6 +161,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          uv venv
           uv pip install build wheel cython
 
       - name: Build package
@@ -166,6 +169,7 @@ jobs:
 
       - name: Test installation
         run: |
+          uv venv
           uv pip install dist/*.whl
           python -c "import cryptofeed; print('Package installed successfully')"
 
@@ -202,6 +206,7 @@ jobs:
 
       - name: Install package from wheel
         run: |
+          uv venv
           uv pip install dist/*.whl
           uv pip install pytest pytest-asyncio
 
@@ -229,7 +234,9 @@ jobs:
           version: "latest"
 
       - name: Install safety
-        run: uv pip install safety
+        run: |
+          uv venv
+          uv pip install safety
 
       - name: Check dependencies for vulnerabilities
         run: |
@@ -264,6 +271,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          uv venv
           uv sync --dev
           uv pip install pytest-benchmark
           uv pip install -e .

@@ -47,6 +47,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          uv venv
           uv sync --dev
           uv pip install -e .
 
@@ -86,6 +87,7 @@ jobs:
 
       - name: Install security tools
         run: |
+          uv venv
           uv pip install safety bandit[toml] pip-audit
 
       - name: Install project dependencies
@@ -168,6 +170,7 @@ jobs:
 
       - name: Install license checker
         run: |
+          uv venv
           uv pip install pip-licenses
 
       - name: Install project dependencies

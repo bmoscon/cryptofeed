@@ -36,6 +36,7 @@ jobs:
 
       - name: Install dependencies with uv
         run: |
+          uv venv
           uv sync --dev
           uv pip install -e .
 
@@ -81,6 +82,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          uv venv
           uv pip install build wheel cython setuptools
 
       - name: Build source distribution

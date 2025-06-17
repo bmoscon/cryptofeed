@@ -40,6 +40,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          uv venv
           uv sync --dev
           uv pip install -e .
 
@@ -238,6 +239,7 @@ jobs:
 
       - name: Install analysis tools
         run: |
+          uv venv
           uv pip install radon xenon vulture
           uv sync --dev
           uv pip install -e .
@@ -314,6 +316,7 @@ jobs:
 
       - name: Install documentation tools
         run: |
+          uv venv
           uv pip install pydocstyle interrogate
           uv sync --dev
           uv pip install -e .
