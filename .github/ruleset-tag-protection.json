@@ -1,0 +1,35 @@
+{
+  "name": "Tag Protection",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/tags/v*"],
+      "exclude": ["refs/tags/v*-rc*", "refs/tags/v*-beta*", "refs/tags/v*-alpha*"]
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "required_signatures"
+    },
+    {
+      "type": "tag_name_pattern",
+      "parameters": {
+        "name": "Semantic Version Tags",
+        "negate": false,
+        "operator": "regex",
+        "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+      }
+    }
+  ],
+  "bypass_actors": [
+    {
+      "actor_id": 1,
+      "actor_type": "OrganizationAdmin",
+      "bypass_mode": "always"
+    }
+  ]
+}
