@@ -16,11 +16,26 @@ async def order_info(oi, receipt_timestamp):
 
 
 def main():
-    path_to_config = 'config.yaml'
+    path_to_config = "config.yaml"
 
-    binance = Binance(config=path_to_config, subscription={BALANCES: [], ORDER_INFO: []}, timeout=-1, callbacks={BALANCES: balance, ORDER_INFO: order_info})
-    binance_delivery = BinanceDelivery(config=path_to_config, subscription={BALANCES: [], POSITIONS: [], ORDER_INFO: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
-    binance_futures = BinanceFutures(config=path_to_config, subscription={BALANCES: [], POSITIONS: [], ORDER_INFO: []}, timeout=-1, callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info})
+    binance = Binance(
+        config=path_to_config,
+        subscription={BALANCES: [], ORDER_INFO: []},
+        timeout=-1,
+        callbacks={BALANCES: balance, ORDER_INFO: order_info},
+    )
+    binance_delivery = BinanceDelivery(
+        config=path_to_config,
+        subscription={BALANCES: [], POSITIONS: [], ORDER_INFO: []},
+        timeout=-1,
+        callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info},
+    )
+    binance_futures = BinanceFutures(
+        config=path_to_config,
+        subscription={BALANCES: [], POSITIONS: [], ORDER_INFO: []},
+        timeout=-1,
+        callbacks={BALANCES: balance, POSITIONS: position, ORDER_INFO: order_info},
+    )
 
     print(binance._generate_token())
     print(binance_delivery._generate_token())
@@ -33,5 +48,5 @@ def main():
     f.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

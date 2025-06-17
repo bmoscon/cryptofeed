@@ -1,14 +1,14 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import time
 
 from cryptofeed import FeedHandler
 from cryptofeed.callback import BookCallback
-from cryptofeed.defines import BID, ASK, L2_BOOK
+from cryptofeed.defines import ASK, BID, L2_BOOK
 from cryptofeed.exchanges import Bitmex
 
 
@@ -26,7 +26,7 @@ async def book(feed, symbol, book, timestamp):
     counter += 1
     bids = list(book[BID].keys())
     asks = list(book[ASK].keys())
-    avg += (t - timestamp)
+    avg += t - timestamp
 
     try:
         assert (t - timestamp) < 2
@@ -49,9 +49,9 @@ async def book(feed, symbol, book, timestamp):
 def main():
     f = FeedHandler()
 
-    f.add_feed(Bitmex(symbols=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
+    f.add_feed(Bitmex(symbols=["BTC-USD"], channels=[L2_BOOK], callbacks={L2_BOOK: BookCallback(book)}))
     f.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

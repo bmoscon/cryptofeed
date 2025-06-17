@@ -1,42 +1,73 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-from typing import Dict, Tuple
+"""
+
+from collections import defaultdict
+from datetime import timedelta
+from decimal import Decimal
 import hashlib
 import hmac
 import logging
 import time
-from collections import defaultdict
-from datetime import timedelta
-from decimal import Decimal
+from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.defines import BID, ASK, BITMEX, BUY, CANCELLED, FILLED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, SPOT, TICKER, TRADES, UNFILLED
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
+from cryptofeed.defines import (
+    ASK,
+    BID,
+    BITMEX,
+    BUY,
+    CANCELLED,
+    FILLED,
+    FUNDING,
+    FUTURES,
+    L2_BOOK,
+    LIMIT,
+    LIQUIDATIONS,
+    MARKET,
+    OPEN,
+    OPEN_INTEREST,
+    ORDER_INFO,
+    PERPETUAL,
+    SELL,
+    SPOT,
+    TICKER,
+    TRADES,
+    UNFILLED,
+)
+from cryptofeed.exchanges.mixins.bitmex_rest import BitmexRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.exchanges.mixins.bitmex_rest import BitmexRestMixin
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OrderInfo, OpenInterest, Liquidation
+from cryptofeed.types import Funding, Liquidation, OpenInterest, OrderBook, OrderInfo, Ticker, Trade
 
-LOG = logging.getLogger('feedhandler')
+
+LOG = logging.getLogger("feedhandler")
 
 
 class Bitmex(Feed, BitmexRestMixin):
     id = BITMEX
-    websocket_endpoints = [WebsocketEndpoint('wss://www.bitmex.com/realtime', sandbox='wss://testnet.bitmex.com/realtime', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://www.bitmex.com', routes=Routes('/api/v1/instrument/active'), sandbox='https://testnet.bitmex.com')]
+    websocket_endpoints = [
+        WebsocketEndpoint(
+            "wss://www.bitmex.com/realtime", sandbox="wss://testnet.bitmex.com/realtime", options={"compression": None}
+        )
+    ]
+    rest_endpoints = [
+        RestEndpoint(
+            "https://www.bitmex.com", routes=Routes("/api/v1/instrument/active"), sandbox="https://testnet.bitmex.com"
+        )
+    ]
     websocket_channels = {
-        L2_BOOK: 'orderBookL2',
-        TRADES: 'trade',
-        TICKER: 'quote',
-        FUNDING: 'funding',
-        ORDER_INFO: 'order',
-        OPEN_INTEREST: 'instrument',
-        LIQUIDATIONS: 'liquidation'
+        L2_BOOK: "orderBookL2",
+        TRADES: "trade",
+        TICKER: "quote",
+        FUNDING: "funding",
+        ORDER_INFO: "order",
+        OPEN_INTEREST: "instrument",
+        LIQUIDATIONS: "liquidation",
     }
     request_limit = 0.5
 
@@ -46,26 +77,26 @@ class Bitmex(Feed, BitmexRestMixin):
         info = defaultdict(dict)
 
         for entry in data:
-            base = entry['rootSymbol'].replace("XBT", "BTC")
-            quote = entry['quoteCurrency'].replace("XBT", "BTC")
+            base = entry["rootSymbol"].replace("XBT", "BTC")
+            quote = entry["quoteCurrency"].replace("XBT", "BTC")
 
-            if entry['typ'] == 'FFWCSX':
+            if entry["typ"] == "FFWCSX":
                 stype = PERPETUAL
-            elif entry['typ'] == 'FFCCSX':
+            elif entry["typ"] == "FFCCSX":
                 stype = FUTURES
-            elif entry['typ'] == 'IFXXXP':
+            elif entry["typ"] == "IFXXXP":
                 stype = SPOT
             else:
-                LOG.info('Unsupported type %s for instrument %s', entry['typ'], entry['symbol'])
+                LOG.info("Unsupported type %s for instrument %s", entry["typ"], entry["symbol"])
 
-            s = Symbol(base, quote, type=stype, expiry_date=entry.get('expiry'))
+            s = Symbol(base, quote, type=stype, expiry_date=entry.get("expiry"))
             if s.normalized not in ret:
-                ret[s.normalized] = entry['symbol']
-                info['tick_size'][s.normalized] = entry['tickSize']
-                info['instrument_type'][s.normalized] = stype
-                info['is_quanto'][s.normalized] = entry['isQuanto']
+                ret[s.normalized] = entry["symbol"]
+                info["tick_size"][s.normalized] = entry["tickSize"]
+                info["instrument_type"][s.normalized] = stype
+                info["is_quanto"][s.normalized] = entry["isQuanto"]
             else:
-                LOG.info('Ignoring duplicate symbol mapping %s<=>%s', s.normalized, entry['symbol'])
+                LOG.info("Ignoring duplicate symbol mapping %s<=>%s", s.normalized, entry["symbol"])
 
         return ret, info
 
@@ -80,31 +111,30 @@ class Bitmex(Feed, BitmexRestMixin):
     @staticmethod
     def normalize_order_status(status):
         status_map = {
-            'New': OPEN,
-            'Filled': FILLED,
-            'Canceled': CANCELLED,
+            "New": OPEN,
+            "Filled": FILLED,
+            "Canceled": CANCELLED,
         }
         return status_map[status]
 
     def init_order_info(self, o):
         oi = OrderInfo(
             self.id,
-            self.exchange_symbol_to_std_symbol(o['symbol']),
-            o['orderID'],
-            BUY if o['side'] == 'Buy' else SELL,
-            self.normalize_order_status(o['ordStatus']),
-            LIMIT if o['ordType'].lower() == 'limit' else MARKET if o['ordType'].lower() == 'market' else None,
-            Decimal(o['avgPx']) if o['avgPx'] else Decimal(o['price']),
-            Decimal(o['orderQty']),
-            Decimal(o['leavesQty']),
-            self.timestamp_normalize(o['timestamp']),
-            raw=str(o),     # Need to convert to string to avoid json serialization error when updating order
+            self.exchange_symbol_to_std_symbol(o["symbol"]),
+            o["orderID"],
+            BUY if o["side"] == "Buy" else SELL,
+            self.normalize_order_status(o["ordStatus"]),
+            LIMIT if o["ordType"].lower() == "limit" else MARKET if o["ordType"].lower() == "market" else None,
+            Decimal(o["avgPx"]) if o["avgPx"] else Decimal(o["price"]),
+            Decimal(o["orderQty"]),
+            Decimal(o["leavesQty"]),
+            self.timestamp_normalize(o["timestamp"]),
+            raw=str(o),  # Need to convert to string to avoid json serialization error when updating order
         )
         return oi
 
     async def _order(self, msg: dict, timestamp: float):
-        """
-        order msg example
+        """Order msg example
 
         {
           "table": "order",
@@ -297,29 +327,29 @@ class Bitmex(Feed, BitmexRestMixin):
         }
 
         """
-        if msg['action'] == 'partial':
+        if msg["action"] == "partial":
             # Initial snapshot of open orders
             self.open_orders = {}
-            for o in msg['data']:
+            for o in msg["data"]:
                 oi = self.init_order_info(o)
                 self.open_orders[oi.id] = oi
-        elif msg['action'] == 'insert':
-            for o in msg['data']:
+        elif msg["action"] == "insert":
+            for o in msg["data"]:
                 oi = self.init_order_info(o)
                 self.open_orders[oi.id] = oi
                 await self.callback(ORDER_INFO, oi, timestamp)
-        elif msg['action'] == 'update':
-            for o in msg['data']:
-                oi = self.open_orders.get(o['orderID'])
+        elif msg["action"] == "update":
+            for o in msg["data"]:
+                oi = self.open_orders.get(o["orderID"])
                 if oi:
                     info = oi.to_dict()
-                    if 'ordStatus' in o:
-                        info['status'] = self.normalize_order_status(o['ordStatus'])
-                    if 'leaveQty' in o:
-                        info['remaining'] = Decimal(o['leavesQty'])
-                    if 'avgPx' in o:
-                        info['price'] = Decimal(o['avgPx'])
-                    info['raw'] = str(o)    # Not sure if this is needed
+                    if "ordStatus" in o:
+                        info["status"] = self.normalize_order_status(o["ordStatus"])
+                    if "leaveQty" in o:
+                        info["remaining"] = Decimal(o["leavesQty"])
+                    if "avgPx" in o:
+                        info["price"] = Decimal(o["avgPx"])
+                    info["raw"] = str(o)  # Not sure if this is needed
                     new_oi = OrderInfo(**info)
                     if new_oi.status in (FILLED, CANCELLED):
                         self.open_orders.pop(new_oi.id)
@@ -330,8 +360,7 @@ class Bitmex(Feed, BitmexRestMixin):
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
     async def _trade(self, msg: dict, timestamp: float):
-        """
-        trade msg example
+        """Trade msg example
 
         {
             'timestamp': '2018-05-19T12:25:26.632Z',
@@ -346,80 +375,79 @@ class Bitmex(Feed, BitmexRestMixin):
             'foreignNotional': 40
         }
         """
-        for data in msg['data']:
-            ts = self.timestamp_normalize(data['timestamp'])
+        for data in msg["data"]:
+            ts = self.timestamp_normalize(data["timestamp"])
             t = Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(data['symbol']),
-                BUY if data['side'] == 'Buy' else SELL,
-                Decimal(data['size']),
-                Decimal(data['price']),
+                self.exchange_symbol_to_std_symbol(data["symbol"]),
+                BUY if data["side"] == "Buy" else SELL,
+                Decimal(data["size"]),
+                Decimal(data["price"]),
                 ts,
-                id=data['trdMatchID'],
-                raw=data
+                id=data["trdMatchID"],
+                raw=data,
             )
             await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
-        """
-        the Full bitmex book
+        """The Full bitmex book
         Docs, https://www.bitmex.com/app/wsAPI
         """
         # PERF perf_start(self.id, 'book_msg')
 
-        if not msg['data']:
+        if not msg["data"]:
             # see https://github.com/bmoscon/cryptofeed/issues/688
             # msg['data'] can be an empty list
             return
 
         delta = None
         # if we reset the book, force a full update
-        pair = self.exchange_symbol_to_std_symbol(msg['data'][0]['symbol'])
+        pair = self.exchange_symbol_to_std_symbol(msg["data"][0]["symbol"])
 
         if not self.partial_received[pair]:
             # per bitmex documentation messages received before partial
             # should be discarded
-            if msg['action'] != 'partial':
+            if msg["action"] != "partial":
                 return
             self.partial_received[pair] = True
 
-        if msg['action'] == 'partial':
-            for data in msg['data']:
-                side = BID if data['side'] == 'Buy' else ASK
-                price = Decimal(data['price'])
-                size = Decimal(data['size'])
-                order_id = data['id']
+        if msg["action"] == "partial":
+            for data in msg["data"]:
+                side = BID if data["side"] == "Buy" else ASK
+                price = Decimal(data["price"])
+                size = Decimal(data["size"])
+                order_id = data["id"]
 
                 self._l2_book[pair].book[side][price] = size
                 self.order_id[pair][side][order_id] = price
-        elif msg['action'] == 'insert':
+        elif msg["action"] == "insert":
             delta = {BID: [], ASK: []}
-            for data in msg['data']:
-                side = BID if data['side'] == 'Buy' else ASK
-                price = Decimal(data['price'])
-                size = Decimal(data['size'])
-                order_id = data['id']
+            for data in msg["data"]:
+                side = BID if data["side"] == "Buy" else ASK
+                price = Decimal(data["price"])
+                size = Decimal(data["size"])
+                order_id = data["id"]
 
                 self._l2_book[pair].book[side][price] = size
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, size))
-        elif msg['action'] == 'update':
+        elif msg["action"] == "update":
             delta = {BID: [], ASK: []}
-            for data in msg['data']:
-                side = BID if data['side'] == 'Buy' else ASK
-                update_size = Decimal(data['size'])
-                order_id = data['id']
+            for data in msg["data"]:
+                side = BID if data["side"] == "Buy" else ASK
+                update_size = Decimal(data["size"])
+                order_id = data["id"]
 
                 price = self.order_id[pair][side][order_id]
 
                 self._l2_book[pair].book[side][price] = update_size
                 self.order_id[pair][side][order_id] = price
                 delta[side].append((price, update_size))
-        elif msg['action'] == 'delete':
+        elif msg["action"] == "delete":
             delta = {BID: [], ASK: []}
-            for data in msg['data']:
-                side = BID if data['side'] == 'Buy' else ASK
-                order_id = data['id']
+            for data in msg["data"]:
+                side = BID if data["side"] == "Buy" else ASK
+                order_id = data["id"]
 
                 delete_price = self.order_id[pair][side][order_id]
                 del self.order_id[pair][side][order_id]
@@ -432,27 +460,28 @@ class Bitmex(Feed, BitmexRestMixin):
         # PERF perf_end(self.id, 'book_msg')
         # PERF perf_log(self.id, 'book_msg')
 
-        self._l2_book[pair].timestamp = self.timestamp_normalize(msg["data"][0]["timestamp"]) \
-            if "data" in msg and isinstance(msg["data"], list) and msg["data"] and "timestamp" in msg["data"][0] \
+        self._l2_book[pair].timestamp = (
+            self.timestamp_normalize(msg["data"][0]["timestamp"])
+            if "data" in msg and isinstance(msg["data"], list) and msg["data"] and "timestamp" in msg["data"][0]
             else None
+        )
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta)
 
     async def _ticker(self, msg: dict, timestamp: float):
-        for data in msg['data']:
+        for data in msg["data"]:
             t = Ticker(
                 self.id,
-                self.exchange_symbol_to_std_symbol(data['symbol']),
-                Decimal(data['bidPrice']),
-                Decimal(data['askPrice']),
-                self.timestamp_normalize(data['timestamp']),
-                raw=data
+                self.exchange_symbol_to_std_symbol(data["symbol"]),
+                Decimal(data["bidPrice"]),
+                Decimal(data["askPrice"]),
+                self.timestamp_normalize(data["timestamp"]),
+                raw=data,
             )
             await self.callback(TICKER, t, timestamp)
 
     async def _funding(self, msg: dict, timestamp: float):
-        """
-        {'table': 'funding',
+        """{'table': 'funding',
          'action': 'partial',
          'keys': ['timestamp', 'symbol'],
          'types': {
@@ -479,23 +508,22 @@ class Bitmex(Feed, BitmexRestMixin):
             }]
         }
         """
-        for data in msg['data']:
-            ts = self.timestamp_normalize(data['timestamp'])
-            interval = data['fundingInterval']
+        for data in msg["data"]:
+            ts = self.timestamp_normalize(data["timestamp"])
+            interval = data["fundingInterval"]
             f = Funding(
                 self.id,
-                self.exchange_symbol_to_std_symbol(data['symbol']),
+                self.exchange_symbol_to_std_symbol(data["symbol"]),
                 None,
-                data['fundingRate'],
-                self.timestamp_normalize(data['timestamp'] + timedelta(hours=interval.hour)),
+                data["fundingRate"],
+                self.timestamp_normalize(data["timestamp"] + timedelta(hours=interval.hour)),
                 ts,
-                raw=data
+                raw=data,
             )
             await self.callback(FUNDING, f, timestamp)
 
     async def _instrument(self, msg: dict, timestamp: float):
-        """
-        Example instrument data
+        """Example instrument data
 
         {
         'table':'instrument',
@@ -728,15 +756,20 @@ class Bitmex(Feed, BitmexRestMixin):
         ]
         }
         """
-        for data in msg['data']:
-            if 'openInterest' in data:
-                ts = self.timestamp_normalize(data['timestamp'])
-                oi = OpenInterest(self.id, self.exchange_symbol_to_std_symbol(data['symbol']), Decimal(data['openInterest']), ts, raw=data)
+        for data in msg["data"]:
+            if "openInterest" in data:
+                ts = self.timestamp_normalize(data["timestamp"])
+                oi = OpenInterest(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(data["symbol"]),
+                    Decimal(data["openInterest"]),
+                    ts,
+                    raw=data,
+                )
                 await self.callback(OPEN_INTEREST, oi, timestamp)
 
     async def _liquidation(self, msg: dict, timestamp: float):
-        """
-        liquidation msg example
+        """Liquidation msg example
 
         {
             'orderID': '9513c849-ca0d-4e11-8190-9d221972288c',
@@ -746,52 +779,52 @@ class Bitmex(Feed, BitmexRestMixin):
             'leavesQty': 2020
         }
         """
-        if msg['action'] == 'insert':
-            for data in msg['data']:
+        if msg["action"] == "insert":
+            for data in msg["data"]:
                 liq = Liquidation(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(data['symbol']),
-                    BUY if data['side'] == 'Buy' else SELL,
-                    Decimal(data['leavesQty']),
-                    Decimal(data['price']),
-                    data['orderID'],
+                    self.exchange_symbol_to_std_symbol(data["symbol"]),
+                    BUY if data["side"] == "Buy" else SELL,
+                    Decimal(data["leavesQty"]),
+                    Decimal(data["price"]),
+                    data["orderID"],
                     UNFILLED,
                     None,
-                    raw=data
+                    raw=data,
                 )
                 await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        if 'table' in msg:
-            if msg['table'] == 'trade':
+        if "table" in msg:
+            if msg["table"] == "trade":
                 await self._trade(msg, timestamp)
-            elif msg['table'] == 'order':
+            elif msg["table"] == "order":
                 await self._order(msg, timestamp)
-            elif msg['table'] == 'orderBookL2':
+            elif msg["table"] == "orderBookL2":
                 await self._book(msg, timestamp)
-            elif msg['table'] == 'funding':
+            elif msg["table"] == "funding":
                 await self._funding(msg, timestamp)
-            elif msg['table'] == 'instrument':
+            elif msg["table"] == "instrument":
                 await self._instrument(msg, timestamp)
-            elif msg['table'] == 'quote':
+            elif msg["table"] == "quote":
                 await self._ticker(msg, timestamp)
-            elif msg['table'] == 'liquidation':
+            elif msg["table"] == "liquidation":
                 await self._liquidation(msg, timestamp)
             else:
-                LOG.warning("%s: Unhandled table=%r in %r", conn.uuid, msg['table'], msg)
-        elif 'info' in msg:
+                LOG.warning("%s: Unhandled table=%r in %r", conn.uuid, msg["table"], msg)
+        elif "info" in msg:
             LOG.debug("%s: Info message from exchange: %s", conn.uuid, msg)
-        elif 'subscribe' in msg:
-            if not msg['success']:
+        elif "subscribe" in msg:
+            if not msg["success"]:
                 LOG.error("%s: Subscribe failure: %s", conn.uuid, msg)
-        elif 'error' in msg:
+        elif "error" in msg:
             LOG.error("%s: Error message from exchange: %s", conn.uuid, msg)
-        elif 'request' in msg:
-            if msg['success']:
-                LOG.debug("%s: Success %s", conn.uuid, msg['request'].get('op'))
+        elif "request" in msg:
+            if msg["success"]:
+                LOG.debug("%s: Success %s", conn.uuid, msg["request"].get("op"))
             else:
-                LOG.warning("%s: Failure %s", conn.uuid, msg['request'])
+                LOG.warning("%s: Failure %s", conn.uuid, msg["request"])
         else:
             LOG.warning("%s: Unexpected message from exchange: %s", conn.uuid, msg)
 
@@ -804,16 +837,15 @@ class Bitmex(Feed, BitmexRestMixin):
                 chans.append(f"{chan}:{pair}")
 
         for i in range(0, len(chans), 10):
-            await conn.write(json.dumps({"op": "subscribe",
-                                         "args": chans[i:i + 10]}))
+            await conn.write(json.dumps({"op": "subscribe", "args": chans[i : i + 10]}))
 
     async def _authenticate(self, conn: AsyncConnection):
         """Send API Key with signed message."""
         # Docs: https://www.bitmex.com/app/apiKeys
         # https://github.com/BitMEX/sample-market-maker/blob/master/test/websocket-apikey-auth-test.py
         if self.key_id and self.key_secret:
-            LOG.info('%s: Authenticate with signature', conn.uuid)
+            LOG.info("%s: Authenticate with signature", conn.uuid)
             expires = int(time.time()) + 365 * 24 * 3600  # One year
-            msg = f'GET/realtime{expires}'.encode('utf-8')
-            signature = hmac.new(self.key_secret.encode('utf-8'), msg, digestmod=hashlib.sha256).hexdigest()
-            await conn.write(json.dumps({'op': 'authKeyExpires', 'args': [self.key_id, expires, signature]}))
+            msg = f"GET/realtime{expires}".encode()
+            signature = hmac.new(self.key_secret.encode("utf-8"), msg, digestmod=hashlib.sha256).hexdigest()
+            await conn.write(json.dumps({"op": "authKeyExpires", "args": [self.key_id, expires, signature]}))

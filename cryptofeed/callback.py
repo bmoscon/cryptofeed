@@ -1,9 +1,9 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
 import inspect
 
@@ -16,7 +16,7 @@ class Callback:
     async def __call__(self, obj, receipt_timestamp):
         if self.callback is None:
             return
-        elif self.is_async:
+        if self.is_async:
             await self.callback(obj, receipt_timestamp)
         else:
             loop = asyncio.get_event_loop()

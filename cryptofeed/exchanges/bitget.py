@@ -1,51 +1,80 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import base64
+from collections import defaultdict
+from decimal import Decimal
 import hmac
 import logging
-from decimal import Decimal
 from time import time
 from typing import Dict, List, Tuple, Union
-from collections import defaultdict
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import ASK, BALANCES, BID, BITGET, BUY, CANCELLED, CANDLES, FILLED, L2_BOOK, LONG, OPEN, ORDER_INFO, PARTIAL, PERPETUAL, POSITIONS, SELL, SHORT, SPOT, TICKER, TRADES
+from cryptofeed.defines import (
+    ASK,
+    BALANCES,
+    BID,
+    BITGET,
+    BUY,
+    CANCELLED,
+    CANDLES,
+    FILLED,
+    L2_BOOK,
+    LONG,
+    OPEN,
+    ORDER_INFO,
+    PARTIAL,
+    PERPETUAL,
+    POSITIONS,
+    SELL,
+    SHORT,
+    SPOT,
+    TICKER,
+    TRADES,
+)
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol, str_to_symbol
-from cryptofeed.types import Ticker, Trade, Candle, OrderBook, Balance, Position, OrderInfo
+from cryptofeed.types import Balance, Candle, OrderBook, OrderInfo, Position, Ticker, Trade
 from cryptofeed.util.time import timedelta_str_to_sec
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class Bitget(Feed):
     id = BITGET
     websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.bitget.com/spot/v1/stream', instrument_filter=('TYPE', (SPOT,))),
-        WebsocketEndpoint('wss://ws.bitget.com/mix/v1/stream', instrument_filter=('TYPE', (PERPETUAL,))),
+        WebsocketEndpoint("wss://ws.bitget.com/spot/v1/stream", instrument_filter=("TYPE", (SPOT,))),
+        WebsocketEndpoint("wss://ws.bitget.com/mix/v1/stream", instrument_filter=("TYPE", (PERPETUAL,))),
     ]
     rest_endpoints = [
-        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (SPOT,)), routes=Routes('/api/spot/v1/public/products')),
-        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (PERPETUAL,)), routes=Routes(['/api/mix/v1/market/contracts?productType=umcbl', '/api/mix/v1/market/contracts?productType=dmcbl'])),
+        RestEndpoint(
+            "https://api.bitget.com", instrument_filter=("TYPE", (SPOT,)), routes=Routes("/api/spot/v1/public/products")
+        ),
+        RestEndpoint(
+            "https://api.bitget.com",
+            instrument_filter=("TYPE", (PERPETUAL,)),
+            routes=Routes(
+                ["/api/mix/v1/market/contracts?productType=umcbl", "/api/mix/v1/market/contracts?productType=dmcbl"]
+            ),
+        ),
     ]
 
-    valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '12h', '1d', '1w'}
+    valid_candle_intervals = {"1m", "5m", "15m", "30m", "1h", "4h", "12h", "1d", "1w"}
     websocket_channels = {
-        L2_BOOK: 'books',
-        TRADES: 'trade',
-        TICKER: 'ticker',
-        CANDLES: 'candle',
-        ORDER_INFO: 'orders',
-        BALANCES: 'account',
-        POSITIONS: 'positions'
+        L2_BOOK: "books",
+        TRADES: "trade",
+        TICKER: "ticker",
+        CANDLES: "candle",
+        ORDER_INFO: "orders",
+        BALANCES: "account",
+        POSITIONS: "positions",
     }
     request_limit = 20
 
@@ -55,8 +84,7 @@ class Bitget(Feed):
 
     @classmethod
     def _parse_symbol_data(cls, data: Union[List, Dict]) -> Tuple[Dict, Dict]:
-        """
-        contract types
+        """Contract types
 
         umcbl	USDT Unified Contract
         dmcbl	Quanto Swap Contract
@@ -69,7 +97,7 @@ class Bitget(Feed):
         if isinstance(data, dict):
             data = [data]
         for d in data:
-            for entry in d['data']:
+            for entry in d["data"]:
                 """
                 Spot
 
@@ -88,13 +116,13 @@ class Bitget(Feed):
                 }
                 """
                 if "symbolName" in entry:
-                    sym = Symbol(entry['baseCoin'], entry['quoteCoin'])
-                    ret[sym.normalized] = entry['symbolName']
+                    sym = Symbol(entry["baseCoin"], entry["quoteCoin"])
+                    ret[sym.normalized] = entry["symbolName"]
                 else:
-                    sym = Symbol(entry['baseCoin'], entry['quoteCoin'], type=PERPETUAL)
-                    ret[sym.normalized] = entry['symbol']
-                info['instrument_type'][sym.normalized] = sym.type
-                info['is_quanto'][sym.normalized] = 'dmcbl' in entry['symbol'].lower()
+                    sym = Symbol(entry["baseCoin"], entry["quoteCoin"], type=PERPETUAL)
+                    ret[sym.normalized] = entry["symbol"]
+                info["instrument_type"][sym.normalized] = sym.type
+                info["is_quanto"][sym.normalized] = "dmcbl" in entry["symbol"].lower()
 
         return ret, info
 
@@ -107,8 +135,7 @@ class Bitget(Feed):
                     del self._l2_book[std_pair]
 
     async def _ticker(self, msg: dict, timestamp: float, symbol: str):
-        """
-        {
+        """{
             'action': 'snapshot',
             'arg': {
                 'instType': 'sp',
@@ -132,27 +159,26 @@ class Bitget(Feed):
             ]
         }
         """
-        key = 'ts'
-        if msg['arg']['instType'] == 'mc':
-            key = 'systemTime'
+        key = "ts"
+        if msg["arg"]["instType"] == "mc":
+            key = "systemTime"
 
-        for entry in msg['data']:
+        for entry in msg["data"]:
             # sometimes snapshots do not have bids/asks in them
-            if 'bestBid' not in entry or 'bestAsk' not in entry:
+            if "bestBid" not in entry or "bestAsk" not in entry:
                 continue
             t = Ticker(
                 self.id,
                 symbol,
-                Decimal(entry['bestBid']),
-                Decimal(entry['bestAsk']),
+                Decimal(entry["bestBid"]),
+                Decimal(entry["bestAsk"]),
                 self.timestamp_normalize(entry[key]),
-                raw=entry
+                raw=entry,
             )
             await self.callback(TICKER, t, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float, symbol: str):
-        """
-        {
+        """{
             'action': 'update',
             'arg': {
                 'instType': 'sp',
@@ -164,21 +190,20 @@ class Bitget(Feed):
             ]
         }
         """
-        for entry in msg['data']:
+        for entry in msg["data"]:
             t = Trade(
                 self.id,
                 symbol,
-                SELL if entry[3] == 'sell' else BUY,
+                SELL if entry[3] == "sell" else BUY,
                 Decimal(entry[2]),
                 Decimal(entry[1]),
                 self.timestamp_normalize(int(entry[0])),
-                raw=entry
+                raw=entry,
             )
             await self.callback(TRADES, t, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float, symbol: str):
-        '''
-        {
+        """{
             'action': 'update',
             'arg': {
                 'instType': 'sp',
@@ -187,8 +212,8 @@ class Bitget(Feed):
             },
             'data': [['1649014920000', '46434.2', '46437.98', '46434.2', '46437.98', '0.9469']]
         }
-        '''
-        for entry in msg['data']:
+        """
+        for entry in msg["data"]:
             t = Candle(
                 self.id,
                 symbol,
@@ -203,15 +228,15 @@ class Bitget(Feed):
                 Decimal(entry[5]),
                 None,
                 self.timestamp_normalize(int(entry[0])),
-                raw=entry
+                raw=entry,
             )
             await self.callback(CANDLES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float, symbol: str):
-        data = msg['data'][0]
+        data = msg["data"][0]
 
-        if msg['action'] == 'snapshot':
-            '''
+        if msg["action"] == "snapshot":
+            """
             {
                 'action': 'snapshot',
                 'arg': {
@@ -228,17 +253,26 @@ class Bitget(Feed):
                     }
                 ]
             }
-            '''
-            bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
-            asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks, checksum_format=self.id)
+            """
+            bids = {Decimal(price): Decimal(amount) for price, amount in data["bids"]}
+            asks = {Decimal(price): Decimal(amount) for price, amount in data["asks"]}
+            self._l2_book[symbol] = OrderBook(
+                self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks, checksum_format=self.id
+            )
 
-            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data['checksum'] & 0xFFFFFFFF):
+            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data["checksum"] & 0xFFFFFFFF):
                 raise BadChecksum
-            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
+            await self.book_callback(
+                L2_BOOK,
+                self._l2_book[symbol],
+                timestamp,
+                checksum=data["checksum"],
+                timestamp=self.timestamp_normalize(int(data["ts"])),
+                raw=msg,
+            )
 
         else:
-            '''
+            """
             {
                 'action': 'update',
                 'arg': {
@@ -255,9 +289,9 @@ class Bitget(Feed):
                     }
                 ]
             }
-            '''
+            """
             delta = {BID: [], ASK: []}
-            for side, key in ((BID, 'bids'), (ASK, 'asks')):
+            for side, key in ((BID, "bids"), (ASK, "asks")):
                 for price, size in data[key]:
                     price = Decimal(price)
                     size = Decimal(size)
@@ -268,13 +302,20 @@ class Bitget(Feed):
                     else:
                         self._l2_book[symbol].book[side][price] = size
 
-            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data['checksum'] & 0xFFFFFFFF):
+            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data["checksum"] & 0xFFFFFFFF):
                 raise BadChecksum
-            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
+            await self.book_callback(
+                L2_BOOK,
+                self._l2_book[symbol],
+                timestamp,
+                delta=delta,
+                checksum=data["checksum"],
+                timestamp=self.timestamp_normalize(int(data["ts"])),
+                raw=msg,
+            )
 
     async def _account(self, msg: dict, symbol: str, timestamp: float):
-        '''
-        spot
+        """Spot
 
         {
             'action': 'snapshot',
@@ -314,20 +355,13 @@ class Bitget(Feed):
                 'usdtEquity': '0.000000000000'
             }]
         }
-        '''
-        for entry in msg['data']:
-            b = Balance(
-                self.id,
-                symbol,
-                Decimal(entry['available']),
-                Decimal(entry['locked']),
-                raw=entry
-            )
+        """
+        for entry in msg["data"]:
+            b = Balance(self.id, symbol, Decimal(entry["available"]), Decimal(entry["locked"]), raw=entry)
             await self.callback(BALANCES, b, timestamp)
 
     async def _positions(self, msg: dict, symbol: str, timestamp: float):
-        '''
-        {
+        """{
             'action': 'snapshot',
             'arg': {
                 'instType': 'sumcbl',
@@ -360,35 +394,34 @@ class Bitget(Feed):
                 }
             ]
         }
-        '''
+        """
         # exchange, symbol, position, entry_price, side, unrealised_pnl, timestamp, raw=None):
-        for entry in msg['data']:
+        for entry in msg["data"]:
             p = Position(
                 self.id,
                 symbol,
-                Decimal(entry['total']),
-                Decimal(entry['averageOpenPrice']),
-                LONG if entry['holdSide'] == 'long' else SHORT,
-                Decimal(entry['upl']),
-                self.timestamp_normalize(int(entry['uTime'])),
-                raw=entry
+                Decimal(entry["total"]),
+                Decimal(entry["averageOpenPrice"]),
+                LONG if entry["holdSide"] == "long" else SHORT,
+                Decimal(entry["upl"]),
+                self.timestamp_normalize(int(entry["uTime"])),
+                raw=entry,
             )
             await self.callback(POSITIONS, p, timestamp)
 
     def _status(self, status: str) -> str:
-        if status == 'new':
+        if status == "new":
             return OPEN
-        if status == 'partial-fill':
+        if status == "partial-fill":
             return PARTIAL
-        if status == 'full-fill':
+        if status == "full-fill":
             return FILLED
-        if status == 'cancelled':
+        if status == "cancelled":
             return CANCELLED
         return status
 
     async def _order(self, msg: dict, symbol: str, timestamp: float):
-        '''
-        {
+        """{
             'action': 'snapshot',
             'arg': {
                 'instType': 'sumcbl',
@@ -461,67 +494,64 @@ class Bitget(Feed):
                 'uTime': 1650408010163
             }]
         }
-        '''
-        for entry in msg['data']:
-
+        """
+        for entry in msg["data"]:
             o = OrderInfo(
                 self.id,
-                self.exchange_symbol_to_std_symbol(entry['instId']),
-                entry['ordId'],
-                entry['side'],
-                self._status(entry['status']),
-                entry['ordType'],
-                Decimal(entry['px'] if 'fillPx' not in entry else entry['fillPx']),
-                Decimal(entry['sz']),
-                Decimal(entry['sz']) - Decimal(entry['accFillSz']),
-                self.timestamp_normalize(int(entry['uTime'])),
-                client_order_id=entry['clOrdId'],
-                raw=entry
+                self.exchange_symbol_to_std_symbol(entry["instId"]),
+                entry["ordId"],
+                entry["side"],
+                self._status(entry["status"]),
+                entry["ordType"],
+                Decimal(entry["px"] if "fillPx" not in entry else entry["fillPx"]),
+                Decimal(entry["sz"]),
+                Decimal(entry["sz"]) - Decimal(entry["accFillSz"]),
+                self.timestamp_normalize(int(entry["uTime"])),
+                client_order_id=entry["clOrdId"],
+                raw=entry,
             )
             await self.callback(ORDER_INFO, o, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
-        if 'event' in msg:
+        if "event" in msg:
             # {'event': 'subscribe', 'arg': {'instType': 'sp', 'channel': 'ticker', 'instId': 'BTCUSDT'}}
-            if msg['event'] == 'login' and msg['code'] == 0:
+            if msg["event"] == "login" and msg["code"] == 0:
                 LOG.info("%s: Authenticated successfully", conn.uuid)
                 return
-            if msg['event'] == 'subscribe':
+            if msg["event"] == "subscribe":
                 return
-            if msg['event'] == 'error':
-                LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
+            if msg["event"] == "error":
+                LOG.error("%s: Error from exchange: %s", conn.uuid, msg)
                 return
 
-        symbol = msg['arg']['instId']
-        if symbol != 'default':
-            if msg['arg']['instType'] == 'mc':
-                if symbol.endswith('T'):
+        symbol = msg["arg"]["instId"]
+        if symbol != "default":
+            if msg["arg"]["instType"] == "mc":
+                if symbol.endswith("T"):
                     symbol = self.exchange_symbol_to_std_symbol(symbol + "_UMCBL")
                 else:
                     symbol = self.exchange_symbol_to_std_symbol(symbol + "_DMCBL")
-            elif msg['arg']['instType'] in {'dmcbl', 'umcbl'}:
-                symbol = self.exchange_symbol_to_std_symbol(symbol)
-            elif msg['arg']['instType'] == 'sp':
+            elif msg["arg"]["instType"] in {"dmcbl", "umcbl"} or msg["arg"]["instType"] == "sp":
                 symbol = self.exchange_symbol_to_std_symbol(symbol)
             else:
                 # SPBL
                 symbol = self.exchange_symbol_to_std_symbol(symbol.split("_")[0])
 
-        if msg['arg']['channel'] == 'books':
+        if msg["arg"]["channel"] == "books":
             await self._book(msg, timestamp, symbol)
-        elif msg['arg']['channel'] == 'ticker':
+        elif msg["arg"]["channel"] == "ticker":
             await self._ticker(msg, timestamp, symbol)
-        elif msg['arg']['channel'] == 'trade':
+        elif msg["arg"]["channel"] == "trade":
             await self._trade(msg, timestamp, symbol)
-        elif msg['arg']['channel'].startswith('candle'):
+        elif msg["arg"]["channel"].startswith("candle"):
             await self._candle(msg, timestamp, symbol)
-        elif msg['arg']['channel'].startswith('account'):
+        elif msg["arg"]["channel"].startswith("account"):
             await self._account(msg, symbol, timestamp)
-        elif msg['arg']['channel'].startswith('orders'):
+        elif msg["arg"]["channel"].startswith("orders"):
             await self._order(msg, symbol, timestamp)
-        elif msg['arg']['channel'].startswith('positions'):
+        elif msg["arg"]["channel"].startswith("positions"):
             await self._positions(msg, symbol, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
@@ -530,17 +560,18 @@ class Bitget(Feed):
         LOG.debug("%s: Attempting authentication", conn.uuid)
         timestamp = int(time())
         msg = f"{timestamp}GET/user/verify"
-        msg = hmac.new(bytes(self.key_secret, encoding='utf8'), bytes(msg, encoding='utf-8'), digestmod='sha256')
-        sign = str(base64.b64encode(msg.digest()), 'utf8')
-        await conn.write(json.dumps({
-            "op": "login",
-            "args": [{
-                "apiKey": self.key_id,
-                "passphrase": self.key_passphrase,
-                "timestamp": timestamp,
-                "sign": sign
-            }]
-        }))
+        msg = hmac.new(bytes(self.key_secret, encoding="utf8"), bytes(msg, encoding="utf-8"), digestmod="sha256")
+        sign = str(base64.b64encode(msg.digest()), "utf8")
+        await conn.write(
+            json.dumps(
+                {
+                    "op": "login",
+                    "args": [
+                        {"apiKey": self.key_id, "passphrase": self.key_passphrase, "timestamp": timestamp, "sign": sign}
+                    ],
+                }
+            )
+        )
 
     async def subscribe(self, conn: AsyncConnection):
         if self.key_id and self.key_passphrase and self.key_secret:
@@ -549,34 +580,29 @@ class Bitget(Feed):
         args = []
 
         interval = self.candle_interval
-        if interval[-1] != 'm':
+        if interval[-1] != "m":
             interval = f"{interval[:-1]}{interval[-1].upper()}"
 
         for chan, symbols in conn.subscription.items():
             for s in symbols:
                 sym = str_to_symbol(self.exchange_symbol_to_std_symbol(s))
                 if sym.type == SPOT:
-                    if chan == 'positions':  # positions not applicable on spot
+                    if chan == "positions":  # positions not applicable on spot
                         continue
                     if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                        itype = 'spbl'
-                        s += '_SPBL'
+                        itype = "spbl"
+                        s += "_SPBL"
                     else:
-                        itype = 'SP'
+                        itype = "SP"
+                elif self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
+                    itype = s.split("_")[-1]
+                    if chan == "orders":
+                        s = "default"  # currently only supports 'default' for order channel on futures
                 else:
-                    if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                        itype = s.split('_')[-1]
-                        if chan == 'orders':
-                            s = 'default'  # currently only supports 'default' for order channel on futures
-                    else:
-                        itype = 'MC'
-                        s = s.split("_")[0]
+                    itype = "MC"
+                    s = s.split("_")[0]
 
-                d = {
-                    'instType': itype,
-                    'channel': chan if chan != 'candle' else 'candle' + interval,
-                    'instId': s
-                }
+                d = {"instType": itype, "channel": chan if chan != "candle" else "candle" + interval, "instId": s}
                 args.append(d)
 
         await conn.write(json.dumps({"op": "subscribe", "args": args}))

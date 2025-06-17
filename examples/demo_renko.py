@@ -1,9 +1,10 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from datetime import datetime
 
 from cryptofeed import FeedHandler
@@ -18,11 +19,10 @@ async def renko(data=None):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(symbols=['BTC-USD-PERP'], channels=[TRADES], callbacks={
-               TRADES: RenkoFixed(renko, brick_size=3)}))
+    f.add_feed(Bitmex(symbols=["BTC-USD-PERP"], channels=[TRADES], callbacks={TRADES: RenkoFixed(renko, brick_size=3)}))
 
     f.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 from cryptofeed import FeedHandler
-from cryptofeed.callback import OrderInfoCallback, BalancesCallback, UserFillsCallback
-from cryptofeed.defines import DERIBIT, ORDER_INFO, BALANCES, FILLS
+from cryptofeed.callback import BalancesCallback, OrderInfoCallback, UserFillsCallback
+from cryptofeed.defines import BALANCES, DERIBIT, FILLS, ORDER_INFO
 
 
 async def order(feed, symbol, data: dict, receipt_timestamp):
@@ -20,18 +20,22 @@ async def balance(feed, currency, data: dict, receipt_timestamp):
 def main():
     f = FeedHandler(config="config.yaml")
 
-    f.add_feed(DERIBIT,
-               channels=[FILLS, ORDER_INFO],
-               symbols=["ETH-USD-PERP", "BTC-USD-PERP", "ETH-USD-22M24", "BTC-50000-22M24-call"],
-               callbacks={FILLS: UserFillsCallback(fill), ORDER_INFO: OrderInfoCallback(order)},
-               timeout=-1)
-    f.add_feed(DERIBIT,
-               channels=[BALANCES],
-               symbols=["BTC", "ETH"],
-               callbacks={BALANCES: BalancesCallback(balance)},
-               timeout=-1)
+    f.add_feed(
+        DERIBIT,
+        channels=[FILLS, ORDER_INFO],
+        symbols=["ETH-USD-PERP", "BTC-USD-PERP", "ETH-USD-22M24", "BTC-50000-22M24-call"],
+        callbacks={FILLS: UserFillsCallback(fill), ORDER_INFO: OrderInfoCallback(order)},
+        timeout=-1,
+    )
+    f.add_feed(
+        DERIBIT,
+        channels=[BALANCES],
+        symbols=["BTC", "ETH"],
+        callbacks={BALANCES: BalancesCallback(balance)},
+        timeout=-1,
+    )
     f.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

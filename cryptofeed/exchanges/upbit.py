@@ -1,32 +1,31 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-import logging
+"""
+
 from decimal import Decimal
+import logging
 from typing import Dict, Tuple
 import uuid
 
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES, UPBIT
+from cryptofeed.exchanges.mixins.upbit_rest import UpbitRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.upbit_rest import UpbitRestMixin
-from cryptofeed.connection import WebsocketEndpoint, RestEndpoint, Routes
 from cryptofeed.types import OrderBook, Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class Upbit(Feed, UpbitRestMixin):
     id = UPBIT
-    websocket_endpoints = [WebsocketEndpoint('wss://api.upbit.com/websocket/v1')]
-    rest_endpoints = [RestEndpoint('https://api.upbit.com', routes=Routes('/v1/market/all'))]
+    websocket_endpoints = [WebsocketEndpoint("wss://api.upbit.com/websocket/v1")]
+    rest_endpoints = [RestEndpoint("https://api.upbit.com", routes=Routes("/v1/market/all"))]
     websocket_channels = {
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
@@ -40,17 +39,16 @@ class Upbit(Feed, UpbitRestMixin):
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
-        info = {'instrument_type': {}}
+        info = {"instrument_type": {}}
         for entry in data:
-            quote, base = entry['market'].split("-")
+            quote, base = entry["market"].split("-")
             s = Symbol(base, quote)
-            ret[s.normalized] = entry['market']
-            info['instrument_type'][s.normalized] = s.type
+            ret[s.normalized] = entry["market"]
+            info["instrument_type"][s.normalized] = s.type
         return ret, info
 
     async def _trade(self, msg: dict, timestamp: float):
-        """
-        Doc : https://docs.upbit.com/v1.0.7/reference#시세-체결-조회
+        """Doc : https://docs.upbit.com/v1.0.7/reference#시세-체결-조회
 
         {
             'ty': 'trade'             // Event type
@@ -69,24 +67,22 @@ class Upbit(Feed, UpbitRestMixin):
             'c': 'FALL',              // Change - 'FALL' / 'RISE' / 'EVEN'
         }
         """
-
-        price = Decimal(msg['tp'])
-        amount = Decimal(msg['tv'])
+        price = Decimal(msg["tp"])
+        amount = Decimal(msg["tv"])
         t = Trade(
             self.id,
-            self.exchange_symbol_to_std_symbol(msg['cd']),
-            BUY if msg['ab'] == 'BID' else SELL,
+            self.exchange_symbol_to_std_symbol(msg["cd"]),
+            BUY if msg["ab"] == "BID" else SELL,
             amount,
             price,
-            self.timestamp_normalize(msg['ttms']),
-            id=str(msg['sid']),
-            raw=msg
+            self.timestamp_normalize(msg["ttms"]),
+            id=str(msg["sid"]),
+            raw=msg,
         )
         await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
-        """
-        Doc : https://docs.upbit.com/v1.0.7/reference#시세-호가-정보orderbook-조회
+        """Doc : https://docs.upbit.com/v1.0.7/reference#시세-호가-정보orderbook-조회
 
         Currently, Upbit orderbook api only provides 15 depth book state and does not support delta
 
@@ -114,30 +110,32 @@ class Upbit(Feed, UpbitRestMixin):
             'tms': 1584263923870,  // Timestamp
         }
         """
-        pair = self.exchange_symbol_to_std_symbol(msg['cd'])
-        orderbook_timestamp = self.timestamp_normalize(msg['tms'])
+        pair = self.exchange_symbol_to_std_symbol(msg["cd"])
+        orderbook_timestamp = self.timestamp_normalize(msg["tms"])
         if pair not in self._l2_book:
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
 
-        self._l2_book[pair].book.bids = {Decimal(unit['bp']): Decimal(unit['bs']) for unit in msg['obu'] if unit['bp'] > 0}
-        self._l2_book[pair].book.asks = {Decimal(unit['ap']): Decimal(unit['as']) for unit in msg['obu'] if unit['ap'] > 0}
+        self._l2_book[pair].book.bids = {
+            Decimal(unit["bp"]): Decimal(unit["bs"]) for unit in msg["obu"] if unit["bp"] > 0
+        }
+        self._l2_book[pair].book.asks = {
+            Decimal(unit["ap"]): Decimal(unit["as"]) for unit in msg["obu"] if unit["ap"] > 0
+        }
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=orderbook_timestamp, raw=msg)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
 
-        if msg['ty'] == "trade":
+        if msg["ty"] == "trade":
             await self._trade(msg, timestamp)
-        elif msg['ty'] == "orderbook":
+        elif msg["ty"] == "orderbook":
             await self._book(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
-        """
-        Doc : https://docs.upbit.com/docs/upbit-quotation-websocket
+        """Doc : https://docs.upbit.com/docs/upbit-quotation-websocket
 
         For subscription, ticket information is commonly required.
         In order to reduce the data size, format parameter is set to 'SIMPLE' instead of 'DEFAULT'
@@ -160,13 +158,12 @@ class Upbit(Feed, UpbitRestMixin):
         5. In order to get TRADES of "BTC-KRW", ORDERBOOK of "ETH-KRW and TICKER of "EOS-KRW" with in shorter format
         > [{"ticket":"UNIQUE_TICKET"},{"format":"SIMPLE"},{"type":"trade","codes":["KRW-BTC"]},{"type":"orderbook","codes":["KRW-ETH"]},{"type":"ticker", "codes":["KRW-EOS"]}]
         """
-
         chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
         for chan in self.subscription:
             codes = list(self.subscription[chan])
             if chan == L2_BOOK:
-                chans.append({"type": "orderbook", "codes": codes, 'isOnlyRealtime': True})
+                chans.append({"type": "orderbook", "codes": codes, "isOnlyRealtime": True})
             if chan == TRADES:
-                chans.append({"type": "trade", "codes": codes, 'isOnlyRealtime': True})
+                chans.append({"type": "trade", "codes": codes, "isOnlyRealtime": True})
 
         await conn.write(json.dumps(chans))

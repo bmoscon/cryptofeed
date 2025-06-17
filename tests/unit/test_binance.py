@@ -1,9 +1,10 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import random
 
 import pytest
@@ -14,7 +15,9 @@ from cryptofeed.exchanges import Binance
 @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
 def test_binance_address_generation():
     symbols = Binance.symbols()
-    channels = [channel for channel in Binance.info()['channels']['websocket'] if not Binance.is_authenticated_channel(channel)]
+    channels = [
+        channel for channel in Binance.info()["channels"]["websocket"] if not Binance.is_authenticated_channel(channel)
+    ]
     for length in (10, 20, 30, 40, 50, 100, 200, 500, len(symbols)):
         syms = []
         chans = []

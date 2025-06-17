@@ -1,10 +1,12 @@
-'''
+"""
 Copyright (C) 2018-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from typing import Optional
+
 from cryptofeed import FeedHandler
 from cryptofeed.backends.kafka import BookKafka, TradeKafka
 from cryptofeed.defines import L2_BOOK, TRADES
@@ -29,23 +31,26 @@ class CustomTradeKafka(TradeKafka):
         return f"{self.key}-{data['exchange']}"
 
     def partition_key(self, data: dict) -> Optional[bytes]:
-        return f"{data['symbol']}".encode('utf-8')
+        return f"{data['symbol']}".encode()
 
 
 def main():
     common_kafka_config = {
-        'bootstrap_servers': '127.0.0.1:9092',
-        'acks': 1,
-        'request_timeout_ms': 10000,
-        'connections_max_idle_ms': 20000,
+        "bootstrap_servers": "127.0.0.1:9092",
+        "acks": 1,
+        "request_timeout_ms": 10000,
+        "connections_max_idle_ms": 20000,
     }
-    f = FeedHandler({'log': {'filename': 'feedhandler.log', 'level': 'INFO'}})
-    cbs = {TRADES: CustomTradeKafka(client_id='Coinbase Trades', **common_kafka_config), L2_BOOK: BookKafka(client_id='Coinbase Book', **common_kafka_config)}
+    f = FeedHandler({"log": {"filename": "feedhandler.log", "level": "INFO"}})
+    cbs = {
+        TRADES: CustomTradeKafka(client_id="Coinbase Trades", **common_kafka_config),
+        L2_BOOK: BookKafka(client_id="Coinbase Book", **common_kafka_config),
+    }
 
-    f.add_feed(Coinbase(max_depth=10, channels=[TRADES, L2_BOOK], symbols=['BTC-USD'], callbacks=cbs))
+    f.add_feed(Coinbase(max_depth=10, channels=[TRADES, L2_BOOK], symbols=["BTC-USD"], callbacks=cbs))
 
     f.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,12 +1,22 @@
 from datetime import datetime, timedelta
-import quasardb.pool as pool
-import quasardb.numpy as qdbnp
+
 import numpy as np
+from quasardb import pool
+import quasardb.numpy as qdbnp
+
 from cryptofeed.backends.backend import BackendCallback
 
 
 class QuasarCallback(BackendCallback):
-    def __init__(self, uri="qdb://127.0.0.1:2836", username: str = "", private_key: str = "", public_key: str = "", none_to=None, shard_size: timedelta = timedelta(minutes=15)):
+    def __init__(
+        self,
+        uri="qdb://127.0.0.1:2836",
+        username: str = "",
+        private_key: str = "",
+        public_key: str = "",
+        none_to=None,
+        shard_size: timedelta = timedelta(minutes=15),
+    ):
         self.numeric_type = float
         self.table = ""
         self.running = True
@@ -22,11 +32,11 @@ class QuasarCallback(BackendCallback):
         return f"{int(hours)}hour {int(minutes)}min {int(seconds)}s"
 
     def format(self, data: dict):
-        data['timestamp'] = np.datetime64(datetime.utcfromtimestamp(data['timestamp']), 'ns')
-        data['receipt_timestamp'] = np.datetime64(datetime.utcfromtimestamp(data['receipt_timestamp']), 'ns')
-        data['timestamp'], data['receipt_timestamp'] = data['receipt_timestamp'], data['timestamp']
-        index = data['timestamp']
-        data.pop('timestamp')
+        data["timestamp"] = np.datetime64(datetime.utcfromtimestamp(data["timestamp"]), "ns")
+        data["receipt_timestamp"] = np.datetime64(datetime.utcfromtimestamp(data["receipt_timestamp"]), "ns")
+        data["timestamp"], data["receipt_timestamp"] = data["receipt_timestamp"], data["timestamp"]
+        index = data["timestamp"]
+        data.pop("timestamp")
         return index, data
 
     def _set_table_name(self, data: dict):
@@ -75,9 +85,9 @@ class CandlesQuasar(QuasarCallback):
 
     def format(self, data: dict):
         index, data = super().format(data)
-        data['start'] = datetime.utcfromtimestamp(data['start'])
-        data['stop'] = datetime.utcfromtimestamp(data['stop'])
-        data['closed'] = int(data['closed'])
+        data["start"] = datetime.utcfromtimestamp(data["start"])
+        data["stop"] = datetime.utcfromtimestamp(data["stop"])
+        data["closed"] = int(data["closed"])
         return index, data
 
     def _create_query(self):
@@ -89,7 +99,7 @@ class FundingQuasar(QuasarCallback):
 
     def format(self, data: dict):
         index, data = super().format(data)
-        data['next_funding_time'] = datetime.utcfromtimestamp(data['next_funding_time'])
+        data["next_funding_time"] = datetime.utcfromtimestamp(data["next_funding_time"])
         return index, data
 
     def _create_query(self):
@@ -102,24 +112,24 @@ class BookQuasar(QuasarCallback):
     def format(self, data: dict):
         index, data = super().format(data)
         # store only best bid and best ask
-        if not data['book']:
+        if not data["book"]:
             best_bid = max(data["delta"]["bid"], key=lambda x: x[0])
             best_ask = min(data["delta"]["ask"], key=lambda x: x[0])
 
-            data['best_bid_price'] = best_bid[0]
-            data['best_bid_amount'] = best_bid[1]
-            data['best_ask_price'] = best_ask[0]
-            data['best_ask_amount'] = best_ask[1]
-            data.pop('delta')
+            data["best_bid_price"] = best_bid[0]
+            data["best_bid_amount"] = best_bid[1]
+            data["best_ask_price"] = best_ask[0]
+            data["best_ask_amount"] = best_ask[1]
+            data.pop("delta")
         else:
             best_bid = max(data["book"]["bid"].keys())
             best_ask = min(data["book"]["ask"].keys())
 
-            data['best_bid_price'] = best_bid
-            data['best_bid_amount'] = data["book"]["bid"][best_bid]
-            data['best_ask_price'] = best_ask
-            data['best_ask_amount'] = data["book"]["ask"][best_ask]
-            data.pop('book')
+            data["best_bid_price"] = best_bid
+            data["best_bid_amount"] = data["book"]["bid"][best_bid]
+            data["best_ask_price"] = best_ask
+            data["best_ask_amount"] = data["book"]["ask"][best_ask]
+            data.pop("book")
         return index, data
 
     def _create_query(self):

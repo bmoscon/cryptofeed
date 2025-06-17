@@ -1,0 +1,40 @@
+# Pre-commit configuration for cryptofeed
+# See https://pre-commit.com for more information
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4  # Use the ref you want to point at
+    hooks:
+      # Run the linter
+      - id: ruff
+        name: ruff-lint
+        args: [--fix]
+      # Run the formatter
+      - id: ruff-format
+        name: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        name: mypy-type-check
+        additional_dependencies: [types-PyYAML, types-requests]
+        args: [--ignore-missing-imports]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        name: bandit-security-check
+        args: [-c, pyproject.toml]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: debug-statements

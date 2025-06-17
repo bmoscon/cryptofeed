@@ -1,13 +1,14 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
 
 from cryptofeed import FeedHandler
-from cryptofeed.defines import BID, ASK, COINBASE, L2_BOOK, TICKER, TRADES
+from cryptofeed.defines import ASK, BID, COINBASE, L2_BOOK, TICKER, TRADES
 from cryptofeed.exchanges import Binance, Coinbase
 
 
@@ -25,12 +26,14 @@ async def trade(t, receipt_timestamp):
 
 
 async def book(update, receipt_timestamp):
-    print(f"Received update from {update.exchange}", end=' - ')
+    print(f"Received update from {update.exchange}", end=" - ")
     if update.delta:
         print(f"Delta from last book contains {len(update.delta[BID]) + len(update.delta[ASK])} entries.")
     else:
         book_data = update.book.to_dict()
-        print(f'Book received at {receipt_timestamp} for {update.exchange} - {update.symbol}, with {len(book_data[BID]) + len(book_data[ASK])} entries.')
+        print(
+            f"Book received at {receipt_timestamp} for {update.exchange} - {update.symbol}, with {len(book_data[BID]) + len(book_data[ASK])} entries."
+        )
 
 
 async def aio_task():
@@ -43,15 +46,26 @@ def main():
     f = FeedHandler()
     f.run(start_loop=False)
 
-    f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker}))
-    f.add_feed(COINBASE, symbols=['BTC-USD'], channels=[TICKER], callbacks={TICKER: ticker})
-    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade}))
-    f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book}))
+    f.add_feed(
+        Binance(
+            symbols=["BTC-USDT"],
+            channels=[TRADES, TICKER, L2_BOOK],
+            callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker},
+        )
+    )
+    f.add_feed(COINBASE, symbols=["BTC-USD"], channels=[TICKER], callbacks={TICKER: ticker})
+    f.add_feed(Coinbase(symbols=["BTC-USD"], channels=[TRADES], callbacks={TRADES: trade}))
+    f.add_feed(
+        Coinbase(
+            subscription={L2_BOOK: ["BTC-USD", "ETH-USD"], TRADES: ["ETH-USD", "BTC-USD"]},
+            callbacks={TRADES: trade, L2_BOOK: book},
+        )
+    )
 
     loop = asyncio.get_event_loop()
     loop.create_task(aio_task())
     loop.run_forever()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

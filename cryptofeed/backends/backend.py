@@ -1,21 +1,21 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
 from asyncio.queues import Queue
-from multiprocessing import Pipe, Process
 from contextlib import asynccontextmanager
+from multiprocessing import Pipe, Process
 
 
-SHUTDOWN_SENTINEL = 'STOP'
+SHUTDOWN_SENTINEL = "STOP"
 
 
 class BackendQueue:
     def start(self, loop: asyncio.AbstractEventLoop, multiprocess=False):
-        if hasattr(self, 'started') and self.started:
+        if hasattr(self, "started") and self.started:
             # prevent a backend callback from starting more than 1 writer and creating more than 1 queue
             return
         self.multiprocess = multiprocess
@@ -92,18 +92,18 @@ class BackendCallback:
     async def __call__(self, dtype, receipt_timestamp: float):
         data = dtype.to_dict(numeric_type=self.numeric_type, none_to=self.none_to)
         if not dtype.timestamp:
-            data['timestamp'] = receipt_timestamp
-        data['receipt_timestamp'] = receipt_timestamp
+            data["timestamp"] = receipt_timestamp
+        data["receipt_timestamp"] = receipt_timestamp
         await self.write(data)
 
 
 class BackendBookCallback:
     async def _write_snapshot(self, book, receipt_timestamp: float):
         data = book.to_dict(numeric_type=self.numeric_type, none_to=self.none_to)
-        del data['delta']
+        del data["delta"]
         if not book.timestamp:
-            data['timestamp'] = receipt_timestamp
-        data['receipt_timestamp'] = receipt_timestamp
+            data["timestamp"] = receipt_timestamp
+        data["receipt_timestamp"] = receipt_timestamp
         await self.write(data)
 
     async def __call__(self, book, receipt_timestamp: float):
@@ -112,11 +112,11 @@ class BackendBookCallback:
         else:
             data = book.to_dict(delta=book.delta is not None, numeric_type=self.numeric_type, none_to=self.none_to)
             if not book.timestamp:
-                data['timestamp'] = receipt_timestamp
-            data['receipt_timestamp'] = receipt_timestamp
+                data["timestamp"] = receipt_timestamp
+            data["receipt_timestamp"] = receipt_timestamp
 
             if book.delta is None:
-                del data['delta']
+                del data["delta"]
             else:
                 self.snapshot_count[book.symbol] += 1
             await self.write(data)

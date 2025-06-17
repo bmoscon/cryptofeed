@@ -1,9 +1,10 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
 from decimal import Decimal
 
@@ -26,25 +27,23 @@ class TestBitmexRest:
     def test_rest_bitmex(self):
         ret = []
 
-        for data in b.trades_sync('BTC-USD-PERP'):
+        for data in b.trades_sync("BTC-USD-PERP"):
             ret.extend(data)
 
         assert len(ret) > 0
-        assert ret[0]['feed'] == 'BITMEX'
-        assert ret[0]['symbol'] == 'BTC-USD-PERP'
-
+        assert ret[0]["feed"] == "BITMEX"
+        assert ret[0]["symbol"] == "BTC-USD-PERP"
 
     def test_ticker(self):
-        ret = b.ticker_sync('BTC-USD-PERP')
+        ret = b.ticker_sync("BTC-USD-PERP")
         assert isinstance(ret, dict)
-        assert ret['feed'] == 'BITMEX'
-        assert ret['symbol'] == 'BTC-USD-PERP'
-        assert ret['bid'] > 0
-        assert ret['ask'] > 0
-
+        assert ret["feed"] == "BITMEX"
+        assert ret["symbol"] == "BTC-USD-PERP"
+        assert ret["bid"] > 0
+        assert ret["ask"] > 0
 
     def test_book(self):
-        ret = b.l2_book_sync('BTC-USD-PERP')
+        ret = b.l2_book_sync("BTC-USD-PERP")
         assert len(ret.book[BID]) > 0
         assert len(ret.book[ASK]) > 0
         for price in ret.book[ASK]:

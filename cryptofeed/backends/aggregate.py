@@ -1,11 +1,11 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-import time
+"""
+
 from decimal import Decimal
+import time
 
 import numpy as np
 
@@ -14,14 +14,13 @@ class AggregateCallback:
     def __init__(self, handler):
         self.handler = handler
         if hasattr(self.handler, "__class__") and hasattr(self.handler, "start") and hasattr(self.handler, "stop"):
-            setattr(self, "start", self.handler.start)
-            setattr(self, "stop", self.handler.stop)
+            self.start = self.handler.start
+            self.stop = self.handler.stop
             self.__name__ = self.handler.__class__
 
 
 class Throttle(AggregateCallback):
-    """
-    Wraps a callback and throttles updates based on `window`. Will allow
+    """Wraps a callback and throttles updates based on `window`. Will allow
     1 update per `window` interval; all others are dropped
     """
 
@@ -38,8 +37,7 @@ class Throttle(AggregateCallback):
 
 
 class OHLCV(AggregateCallback):
-    """
-    Aggregate trades and calculate OHLCV for time window
+    """Aggregate trades and calculate OHLCV for time window
     window is in seconds, defaults to 300 seconds (5 minutes).
     This is an EXAMPLE of how one might use the Aggregation functionality.
     You should probably use the candle data channel (if the exchange supports that).
@@ -53,23 +51,27 @@ class OHLCV(AggregateCallback):
 
     def _agg(self, symbol, amount, price):
         if symbol not in self.data:
-            self.data[symbol] = {'open': price, 'high': price, 'low': price,
-                                 'close': price, 'volume': Decimal(0), 'vwap': Decimal(0)}
+            self.data[symbol] = {
+                "open": price,
+                "high": price,
+                "low": price,
+                "close": price,
+                "volume": Decimal(0),
+                "vwap": Decimal(0),
+            }
 
-        self.data[symbol]['close'] = price
-        self.data[symbol]['volume'] += amount
-        if price > self.data[symbol]['high']:
-            self.data[symbol]['high'] = price
-        if price < self.data[symbol]['low']:
-            self.data[symbol]['low'] = price
-        self.data[symbol]['vwap'] += price * amount
+        self.data[symbol]["close"] = price
+        self.data[symbol]["volume"] += amount
+        self.data[symbol]["high"] = max(self.data[symbol]["high"], price)
+        self.data[symbol]["low"] = min(self.data[symbol]["low"], price)
+        self.data[symbol]["vwap"] += price * amount
 
     async def __call__(self, trade, receipt_timestamp: float):
         now = time.time()
         if now - self.last_update > self.window:
             self.last_update = now
             for p in self.data:
-                self.data[p]['vwap'] /= self.data[p]['volume']
+                self.data[p]["vwap"] /= self.data[p]["volume"]
 
             await self.handler(self.data)
             self.data = {}
@@ -78,8 +80,7 @@ class OHLCV(AggregateCallback):
 
 
 class RenkoFixed(AggregateCallback):
-    """
-    Aggregate trades into Renko bricks with fixed size
+    """Aggregate trades into Renko bricks with fixed size
     brick size is in points, default to 10 (change to ticks later?)
     """
 
@@ -103,7 +104,7 @@ class RenkoFixed(AggregateCallback):
             self.brick_open = price
             self.brick_high = price
             self.brick_low = price
-            self.data[symbol] = {'brick_open': price, 'brick_close': price}
+            self.data[symbol] = {"brick_open": price, "brick_close": price}
 
         self.brick_low = np.min([self.brick_low, price])
         self.brick_high = np.max([self.brick_high, price])
@@ -126,9 +127,9 @@ class RenkoFixed(AggregateCallback):
             same = self.new_direction == self.prev_direction
             if same:
                 self.brick_open = self.brick_close
-            self.data[symbol]['brick_open'] = self.brick_open
+            self.data[symbol]["brick_open"] = self.brick_open
             self.brick_close = price
-            self.data[symbol]['brick_close'] = self.brick_close
+            self.data[symbol]["brick_close"] = self.brick_close
             self.brick_high = self.brick_low = self.brick_close
             self.prev_direction = self.new_direction
 
@@ -143,8 +144,7 @@ class RenkoFixed(AggregateCallback):
 
 class CustomAggregate(AggregateCallback):
     def __init__(self, *args, window=30, aggregator=None, init=None, **kwargs):
-        """
-        aggregator is a function pointer to the aggregator function. The aggregator will be called with
+        """Aggregator is a function pointer to the aggregator function. The aggregator will be called with
         a dictionary of internal state (the aggregator will define it), and the data from the cryptofeed callback (trade, book, etc).
         init is a function pointer that will be called at the start of each time window, with the internal state.
         This can be used to clear the internal state or

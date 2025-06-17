@@ -1,9 +1,10 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from datetime import datetime as dt
 
 from cryptofeed import FeedHandler
@@ -18,10 +19,10 @@ async def callback(data, receipt):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[L2_BOOK], callbacks={L2_BOOK: Throttle(callback, window=10)}))
+    f.add_feed(Coinbase(symbols=["BTC-USD"], channels=[L2_BOOK], callbacks={L2_BOOK: Throttle(callback, window=10)}))
 
     f.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,48 +1,97 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-import logging
+"""
+
 from asyncio import create_task, sleep
 from collections import defaultdict
 from decimal import Decimal
-import requests
+import logging
 import time
-from typing import Dict, Union, Tuple
+from typing import Dict, Tuple, Union
 from urllib.parse import urlencode
 
+import requests
 from yapic import json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.connection import AsyncConnection, HTTPConcurrentPoll, HTTPPoll, RestEndpoint, Routes, WebsocketEndpoint
+from cryptofeed.defines import (
+    ASK,
+    BALANCES,
+    BID,
+    BINANCE,
+    BUY,
+    CANDLES,
+    FILLED,
+    FUNDING,
+    FUTURES,
+    L2_BOOK,
+    LIMIT,
+    LIQUIDATIONS,
+    MARKET,
+    OPEN_INTEREST,
+    ORDER_INFO,
+    PERPETUAL,
+    SELL,
+    SPOT,
+    TICKER,
+    TRADES,
+    UNFILLED,
+)
+from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.binance_rest import BinanceRestMixin
-from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook, OrderInfo, Balance
+from cryptofeed.types import Balance, Candle, Funding, Liquidation, OrderBook, OrderInfo, Ticker, Trade
+
 
 REFRESH_SNAPSHOT_MIN_INTERVAL_SECONDS = 60
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class Binance(Feed, BinanceRestMixin):
     id = BINANCE
-    websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443', sandbox='wss://testnet.binance.vision')]
-    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}', authentication='/api/v3/userDataStream'), sandbox='https://testnet.binance.vision')]
+    websocket_endpoints = [WebsocketEndpoint("wss://stream.binance.com:9443", sandbox="wss://testnet.binance.vision")]
+    rest_endpoints = [
+        RestEndpoint(
+            "https://api.binance.com",
+            routes=Routes(
+                "/api/v3/exchangeInfo",
+                l2book="/api/v3/depth?symbol={}&limit={}",
+                authentication="/api/v3/userDataStream",
+            ),
+            sandbox="https://testnet.binance.vision",
+        )
+    ]
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
-    valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
-    valid_depth_intervals = {'100ms', '1000ms'}
+    valid_candle_intervals = {
+        "1m",
+        "3m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "4h",
+        "6h",
+        "8h",
+        "12h",
+        "1d",
+        "3d",
+        "1w",
+        "1M",
+    }
+    valid_depth_intervals = {"100ms", "1000ms"}
     websocket_channels = {
-        L2_BOOK: 'depth',
-        TRADES: 'aggTrade',
-        TICKER: 'bookTicker',
-        CANDLES: 'kline_',
+        L2_BOOK: "depth",
+        TRADES: "aggTrade",
+        TICKER: "bookTicker",
+        CANDLES: "kline_",
         BALANCES: BALANCES,
-        ORDER_INFO: ORDER_INFO
+        ORDER_INFO: ORDER_INFO,
     }
     request_limit = 20
 
@@ -54,30 +103,29 @@ class Binance(Feed, BinanceRestMixin):
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
-        for symbol in data['symbols']:
-            if symbol.get('status', 'TRADING') != "TRADING":
+        for symbol in data["symbols"]:
+            if symbol.get("status", "TRADING") != "TRADING":
                 continue
-            if symbol.get('contractStatus', 'TRADING') != "TRADING":
+            if symbol.get("contractStatus", "TRADING") != "TRADING":
                 continue
 
             expiration = None
             stype = SPOT
-            if symbol.get('contractType') == 'PERPETUAL':
+            if symbol.get("contractType") == "PERPETUAL":
                 stype = PERPETUAL
-            elif symbol.get('contractType') in ('CURRENT_QUARTER', 'NEXT_QUARTER'):
+            elif symbol.get("contractType") in ("CURRENT_QUARTER", "NEXT_QUARTER"):
                 stype = FUTURES
-                expiration = symbol['symbol'].split("_")[1]
+                expiration = symbol["symbol"].split("_")[1]
 
-            s = Symbol(symbol['baseAsset'], symbol['quoteAsset'], type=stype, expiry_date=expiration)
-            ret[s.normalized] = symbol['symbol']
-            info['tick_size'][s.normalized] = symbol['filters'][0]['tickSize']
-            info['instrument_type'][s.normalized] = stype
+            s = Symbol(symbol["baseAsset"], symbol["quoteAsset"], type=stype, expiry_date=expiration)
+            ret[s.normalized] = symbol["symbol"]
+            info["tick_size"][s.normalized] = symbol["filters"][0]["tickSize"]
+            info["instrument_type"][s.normalized] = stype
         return ret, info
 
-    def __init__(self, depth_interval='100ms', **kwargs):
-        """
-        depth_interval: str
-            time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
+    def __init__(self, depth_interval="100ms", **kwargs):
+        """depth_interval: str
+        time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
         """
         if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
@@ -88,8 +136,7 @@ class Binance(Feed, BinanceRestMixin):
         self._reset()
 
     def _address(self) -> Union[str, Dict]:
-        """
-        Binance has a 200 pair/stream limit per connection, so we need to break the address
+        """Binance has a 200 pair/stream limit per connection, so we need to break the address
         down into multiple connections if necessary. Because the key is currently not used
         for the address dict, we can just set it to the last used stream, since this will be
         unique.
@@ -100,10 +147,10 @@ class Binance(Feed, BinanceRestMixin):
         if self.requires_authentication:
             listen_key = self._generate_token()
             address = self.address
-            address += '/ws/' + listen_key
+            address += "/ws/" + listen_key
         else:
             address = self.address
-            address += '/stream?streams='
+            address += "/stream?streams="
         subs = []
 
         is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)
@@ -136,13 +183,13 @@ class Binance(Feed, BinanceRestMixin):
                 subs.append(f"{pair}@{stream}")
 
         if 0 < len(subs) < 200:
-            return address + '/'.join(subs)
-        else:
-            def split_list(_list: list, n: int):
-                for i in range(0, len(_list), n):
-                    yield _list[i:i + n]
+            return address + "/".join(subs)
 
-            return [address + '/'.join(chunk) for chunk in split_list(subs, 200)]
+        def split_list(_list: list, n: int):
+            for i in range(0, len(_list), n):
+                yield _list[i : i + n]
+
+        return [address + "/".join(chunk) for chunk in split_list(subs, 200)]
 
     def _reset(self):
         self._l2_book = {}
@@ -152,25 +199,26 @@ class Binance(Feed, BinanceRestMixin):
         while True:
             await sleep(30 * 60)
             if self._auth_token is None:
-                raise ValueError('There is no token to refresh')
-            payload = {'listenKey': self._auth_token}
-            r = requests.put(f'{self.rest_endpoints[0].route("authentication", sandbox=self.sandbox)}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
+                raise ValueError("There is no token to refresh")
+            payload = {"listenKey": self._auth_token}
+            r = requests.put(
+                f"{self.rest_endpoints[0].route('authentication', sandbox=self.sandbox)}?{urlencode(payload)}",
+                headers={"X-MBX-APIKEY": self.key_id},
+            )
             r.raise_for_status()
 
     def _generate_token(self) -> str:
-        url = self.rest_endpoints[0].route('authentication', sandbox=self.sandbox)
-        r = requests.post(url, headers={'X-MBX-APIKEY': self.key_id})
+        url = self.rest_endpoints[0].route("authentication", sandbox=self.sandbox)
+        r = requests.post(url, headers={"X-MBX-APIKEY": self.key_id})
         r.raise_for_status()
         response = r.json()
-        if 'listenKey' in response:
-            self._auth_token = response['listenKey']
+        if "listenKey" in response:
+            self._auth_token = response["listenKey"]
             return self._auth_token
-        else:
-            raise ValueError(f'Unable to retrieve listenKey token from {url}')
+        raise ValueError(f"Unable to retrieve listenKey token from {url}")
 
     async def _trade(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "e": "aggTrade",  // Event type
             "E": 123456789,   // Event time
             "s": "BNBBTC",    // Symbol
@@ -184,19 +232,20 @@ class Binance(Feed, BinanceRestMixin):
             "M": true         // Ignore
         }
         """
-        t = Trade(self.id,
-                  self.exchange_symbol_to_std_symbol(msg['s']),
-                  SELL if msg['m'] else BUY,
-                  Decimal(msg['q']),
-                  Decimal(msg['p']),
-                  self.timestamp_normalize(msg['T']),
-                  id=str(msg['a']),
-                  raw=msg)
+        t = Trade(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg["s"]),
+            SELL if msg["m"] else BUY,
+            Decimal(msg["q"]),
+            Decimal(msg["p"]),
+            self.timestamp_normalize(msg["T"]),
+            id=str(msg["a"]),
+            raw=msg,
+        )
         await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             'u': 382569232,
             's': 'FETUSDT',
             'b': '0.36031000',
@@ -205,13 +254,13 @@ class Binance(Feed, BinanceRestMixin):
             'A': '176.40000000'
         }
         """
-        pair = self.exchange_symbol_to_std_symbol(msg['s'])
-        bid = Decimal(msg['b'])
-        ask = Decimal(msg['a'])
+        pair = self.exchange_symbol_to_std_symbol(msg["s"])
+        bid = Decimal(msg["b"])
+        ask = Decimal(msg["a"])
 
         # Binance does not have a timestamp in this update, but the two futures APIs do
-        if 'E' in msg:
-            ts = self.timestamp_normalize(msg['E'])
+        if "E" in msg:
+            ts = self.timestamp_normalize(msg["E"])
         else:
             ts = timestamp
 
@@ -219,8 +268,7 @@ class Binance(Feed, BinanceRestMixin):
         await self.callback(TICKER, t, timestamp)
 
     async def _liquidations(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
         "e":"forceOrder",       // Event Type
         "E":1568014460893,      // Event Time
         "o":{
@@ -238,38 +286,35 @@ class Binance(Feed, BinanceRestMixin):
             }
         }
         """
-        pair = self.exchange_symbol_to_std_symbol(msg['o']['s'])
-        liq = Liquidation(self.id,
-                          pair,
-                          SELL if msg['o']['S'] == 'SELL' else BUY,
-                          Decimal(msg['o']['q']),
-                          Decimal(msg['o']['p']),
-                          None,
-                          FILLED if msg['o']['X'] == 'FILLED' else UNFILLED,
-                          self.timestamp_normalize(msg['E']),
-                          raw=msg)
+        pair = self.exchange_symbol_to_std_symbol(msg["o"]["s"])
+        liq = Liquidation(
+            self.id,
+            pair,
+            SELL if msg["o"]["S"] == "SELL" else BUY,
+            Decimal(msg["o"]["q"]),
+            Decimal(msg["o"]["p"]),
+            None,
+            FILLED if msg["o"]["X"] == "FILLED" else UNFILLED,
+            self.timestamp_normalize(msg["E"]),
+            raw=msg,
+        )
         await self.callback(LIQUIDATIONS, liq, receipt_timestamp=timestamp)
 
     def _check_update_id(self, std_pair: str, msg: dict) -> bool:
-        """
-        Messages will be queued while fetching snapshot and we can return a book_callback
+        """Messages will be queued while fetching snapshot and we can return a book_callback
         using this msg's data instead of waiting for the next update.
         """
-        if self._l2_book[std_pair].delta is None and msg['u'] <= self.last_update_id[std_pair]:
+        if self._l2_book[std_pair].delta is None and msg["u"] <= self.last_update_id[std_pair]:
             return True
-        elif msg['U'] <= self.last_update_id[std_pair] and msg['u'] <= self.last_update_id[std_pair]:
+        if msg["U"] <= self.last_update_id[std_pair] and msg["u"] <= self.last_update_id[std_pair]:
             # Old message, can ignore it
             return True
-        elif msg['U'] <= self.last_update_id[std_pair] + 1 <= msg['u']:
-            self.last_update_id[std_pair] = msg['u']
+        if msg["U"] <= self.last_update_id[std_pair] + 1 <= msg["u"] or self.last_update_id[std_pair] + 1 == msg["U"]:
+            self.last_update_id[std_pair] = msg["u"]
             return False
-        elif self.last_update_id[std_pair] + 1 == msg['U']:
-            self.last_update_id[std_pair] = msg['u']
-            return False
-        else:
-            self._reset()
-            LOG.warning("%s: Missing book update detected, resetting book", self.id)
-            return True
+        self._reset()
+        LOG.warning("%s: Missing book update detected, resetting book", self.id)
+        return True
 
     async def _snapshot(self, pair: str) -> None:
         max_depth = self.max_depth if self.max_depth else 1000
@@ -279,18 +324,30 @@ class Binance(Feed, BinanceRestMixin):
                     max_depth = d
                     break
 
-        resp = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(pair, max_depth))
+        resp = await self.http_conn.read(self.rest_endpoints[0].route("l2book", self.sandbox).format(pair, max_depth))
         resp = json.loads(resp, parse_float=Decimal)
-        timestamp = self.timestamp_normalize(resp['E']) if 'E' in resp else None
+        timestamp = self.timestamp_normalize(resp["E"]) if "E" in resp else None
 
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        self.last_update_id[std_pair] = resp['lastUpdateId']
-        self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
-        await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), timestamp=timestamp, raw=resp, sequence_number=self.last_update_id[std_pair])
+        self.last_update_id[std_pair] = resp["lastUpdateId"]
+        self._l2_book[std_pair] = OrderBook(
+            self.id,
+            std_pair,
+            max_depth=self.max_depth,
+            bids={Decimal(u[0]): Decimal(u[1]) for u in resp["bids"]},
+            asks={Decimal(u[0]): Decimal(u[1]) for u in resp["asks"]},
+        )
+        await self.book_callback(
+            L2_BOOK,
+            self._l2_book[std_pair],
+            time.time(),
+            timestamp=timestamp,
+            raw=resp,
+            sequence_number=self.last_update_id[std_pair],
+        )
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
-        """
-        {
+        """{
             "e": "depthUpdate", // Event type
             "E": 123456789,     // Event time
             "s": "BNBBTC",      // Symbol
@@ -322,7 +379,7 @@ class Binance(Feed, BinanceRestMixin):
 
         delta = {BID: [], ASK: []}
 
-        for s, side in (('b', BID), ('a', ASK)):
+        for s, side in (("b", BID), ("a", ASK)):
             for update in msg[s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
@@ -334,11 +391,18 @@ class Binance(Feed, BinanceRestMixin):
                 else:
                     self._l2_book[pair].book[side][price] = amount
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['E']), raw=msg, delta=delta, sequence_number=self.last_update_id[pair])
+        await self.book_callback(
+            L2_BOOK,
+            self._l2_book[pair],
+            timestamp,
+            timestamp=self.timestamp_normalize(msg["E"]),
+            raw=msg,
+            delta=delta,
+            sequence_number=self.last_update_id[pair],
+        )
 
     async def _funding(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "e": "markPriceUpdate",  // Event type
             "E": 1562305380000,      // Event time
             "s": "BTCUSDT",          // Symbol
@@ -359,24 +423,25 @@ class Binance(Feed, BinanceRestMixin):
             "T": 1562306400000          // Next funding time
         }
         """
-        next_time = self.timestamp_normalize(msg['T']) if msg['T'] > 0 else None
-        rate = Decimal(msg['r']) if msg['r'] else None
+        next_time = self.timestamp_normalize(msg["T"]) if msg["T"] > 0 else None
+        rate = Decimal(msg["r"]) if msg["r"] else None
         if next_time is None:
             rate = None
 
-        f = Funding(self.id,
-                    self.exchange_symbol_to_std_symbol(msg['s']),
-                    Decimal(msg['p']),
-                    rate,
-                    next_time,
-                    self.timestamp_normalize(msg['E']),
-                    predicted_rate=Decimal(msg['P']) if 'P' in msg and msg['P'] is not None else None,
-                    raw=msg)
+        f = Funding(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg["s"]),
+            Decimal(msg["p"]),
+            rate,
+            next_time,
+            self.timestamp_normalize(msg["E"]),
+            predicted_rate=Decimal(msg["P"]) if "P" in msg and msg["P"] is not None else None,
+            raw=msg,
+        )
         await self.callback(FUNDING, f, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             'e': 'kline',
             'E': 1615927655524,
             's': 'BTCUSDT',
@@ -401,27 +466,28 @@ class Binance(Feed, BinanceRestMixin):
             }
         }
         """
-        if self.candle_closed_only and not msg['k']['x']:
+        if self.candle_closed_only and not msg["k"]["x"]:
             return
-        c = Candle(self.id,
-                   self.exchange_symbol_to_std_symbol(msg['s']),
-                   msg['k']['t'] / 1000,
-                   msg['k']['T'] / 1000,
-                   msg['k']['i'],
-                   msg['k']['n'],
-                   Decimal(msg['k']['o']),
-                   Decimal(msg['k']['c']),
-                   Decimal(msg['k']['h']),
-                   Decimal(msg['k']['l']),
-                   Decimal(msg['k']['v']),
-                   msg['k']['x'],
-                   self.timestamp_normalize(msg['E']),
-                   raw=msg)
+        c = Candle(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg["s"]),
+            msg["k"]["t"] / 1000,
+            msg["k"]["T"] / 1000,
+            msg["k"]["i"],
+            msg["k"]["n"],
+            Decimal(msg["k"]["o"]),
+            Decimal(msg["k"]["c"]),
+            Decimal(msg["k"]["h"]),
+            Decimal(msg["k"]["l"]),
+            Decimal(msg["k"]["v"]),
+            msg["k"]["x"],
+            self.timestamp_normalize(msg["E"]),
+            raw=msg,
+        )
         await self.callback(CANDLES, c, timestamp)
 
     async def _account_update(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "e": "outboundAccountPosition", //Event type
             "E": 1564034571105,             //Event Time
             "u": 1564034571073,             //Time of last account update
@@ -434,18 +500,12 @@ class Binance(Feed, BinanceRestMixin):
             ]
         }
         """
-        for balance in msg['B']:
-            b = Balance(
-                self.id,
-                balance['a'],
-                Decimal(balance['f']),
-                Decimal(balance['l']),
-                raw=msg)
+        for balance in msg["B"]:
+            b = Balance(self.id, balance["a"], Decimal(balance["f"]), Decimal(balance["l"]), raw=msg)
             await self.callback(BALANCES, b, timestamp)
 
     async def _order_update(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "e": "executionReport",        // Event type
             "E": 1499405658658,            // Event time
             "s": "ETHBTC",                 // Symbol
@@ -482,16 +542,16 @@ class Binance(Feed, BinanceRestMixin):
         """
         oi = OrderInfo(
             self.id,
-            self.exchange_symbol_to_std_symbol(msg['s']),
-            str(msg['i']),
-            BUY if msg['S'].lower() == 'buy' else SELL,
-            msg['x'],
-            LIMIT if msg['o'].lower() == 'limit' else MARKET if msg['o'].lower() == 'market' else None,
-            Decimal(msg['Z']) / Decimal(msg['z']) if not Decimal.is_zero(Decimal(msg['z'])) else None,
-            Decimal(msg['q']),
-            Decimal(msg['q']) - Decimal(msg['z']),
-            self.timestamp_normalize(msg['E']),
-            raw=msg
+            self.exchange_symbol_to_std_symbol(msg["s"]),
+            str(msg["i"]),
+            BUY if msg["S"].lower() == "buy" else SELL,
+            msg["x"],
+            LIMIT if msg["o"].lower() == "limit" else MARKET if msg["o"].lower() == "market" else None,
+            Decimal(msg["Z"]) / Decimal(msg["z"]) if not Decimal.is_zero(Decimal(msg["z"])) else None,
+            Decimal(msg["q"]),
+            Decimal(msg["q"]) - Decimal(msg["z"]),
+            self.timestamp_normalize(msg["E"]),
+            raw=msg,
         )
         await self.callback(ORDER_INFO, oi, timestamp)
 
@@ -500,31 +560,31 @@ class Binance(Feed, BinanceRestMixin):
 
         # Handle account updates from User Data Stream
         if self.requires_authentication:
-            msg_type = msg['e']
-            if msg_type == 'outboundAccountPosition':
+            msg_type = msg["e"]
+            if msg_type == "outboundAccountPosition":
                 await self._account_update(msg, timestamp)
-            elif msg_type == 'executionReport':
+            elif msg_type == "executionReport":
                 await self._order_update(msg, timestamp)
             return
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
-        pair, _ = msg['stream'].split('@', 1)
-        msg = msg['data']
+        pair, _ = msg["stream"].split("@", 1)
+        msg = msg["data"]
         pair = pair.upper()
-        if 'e' in msg:
-            if msg['e'] == 'depthUpdate':
+        if "e" in msg:
+            if msg["e"] == "depthUpdate":
                 await self._book(msg, pair, timestamp)
-            elif msg['e'] == 'aggTrade':
+            elif msg["e"] == "aggTrade":
                 await self._trade(msg, timestamp)
-            elif msg['e'] == 'forceOrder':
+            elif msg["e"] == "forceOrder":
                 await self._liquidations(msg, timestamp)
-            elif msg['e'] == 'markPriceUpdate':
+            elif msg["e"] == "markPriceUpdate":
                 await self._funding(msg, timestamp)
-            elif msg['e'] == 'kline':
+            elif msg["e"] == "kline":
                 await self._candle(msg, timestamp)
             else:
                 LOG.warning("%s: Unexpected message received: %s", self.id, msg)
-        elif 'A' in msg:
+        elif "A" in msg:
             await self._ticker(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)

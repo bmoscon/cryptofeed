@@ -1,16 +1,20 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+
+NOTE: This project has been modernized to use pyproject.toml for metadata
+and uv for package management. This setup.py is maintained for backward
+compatibility but pyproject.toml is the primary configuration source.
+See MODERNIZATION.md for details on the new toolchain.
+"""
+
 import os
 import sys
 
-from setuptools import Extension, setup
-from setuptools import find_packages
-from setuptools.command.test import test as TestCommand
 from Cython.Build import cythonize
+from setuptools import Extension, find_packages, setup
+from setuptools.command.test import test as TestCommand
 
 
 def get_long_description():
@@ -28,7 +32,8 @@ def get_long_description():
 class Test(TestCommand):
     def run_tests(self):
         import pytest
-        errno = pytest.main(['tests/'])
+
+        errno = pytest.main(["tests/"])
         sys.exit(errno)
 
 
@@ -37,11 +42,11 @@ define_macros = []
 
 # comment out line to compile with type check assertions
 # verify value at runtime with cryptofeed.types.COMPILED_WITH_ASSERTIONS
-define_macros.append(('CYTHON_WITHOUT_ASSERTIONS', None))
+define_macros.append(("CYTHON_WITHOUT_ASSERTIONS", None))
 
-extension = Extension("cryptofeed.types", ["cryptofeed/types.pyx"],
-                      extra_compile_args=extra_compile_args,
-                      define_macros=define_macros)
+extension = Extension(
+    "cryptofeed.types", ["cryptofeed/types.pyx"], extra_compile_args=extra_compile_args, define_macros=define_macros
+)
 
 setup(
     name="cryptofeed",
@@ -53,16 +58,56 @@ setup(
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     license="XFree86",
-    keywords=["cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data", "crypto assets",
-              "Trades", "Tickers", "BBO", "Funding", "Open Interest", "Liquidation", "Order book", "Bid", "Ask",
-              "fmfw.io", "Bitfinex", "bitFlyer", "AscendEX", "Bitstamp", "Blockchain.com", "Bybit",
-              "Binance", "Binance Delivery", "Binance Futures", "Binance US", "BitMEX", "Coinbase", "Deribit", "EXX",
-              "Gate.io", "Gemini", "HitBTC", "Huobi", "Huobi DM", "Huobi Swap", "Kraken",
-              "Kraken Futures", "OKCoin", "OKX", "Poloniex", "ProBit", "Upbit"],
+    keywords=[
+        "cryptocurrency",
+        "bitcoin",
+        "btc",
+        "feed handler",
+        "market feed",
+        "market data",
+        "crypto assets",
+        "Trades",
+        "Tickers",
+        "BBO",
+        "Funding",
+        "Open Interest",
+        "Liquidation",
+        "Order book",
+        "Bid",
+        "Ask",
+        "fmfw.io",
+        "Bitfinex",
+        "bitFlyer",
+        "AscendEX",
+        "Bitstamp",
+        "Blockchain.com",
+        "Bybit",
+        "Binance",
+        "Binance Delivery",
+        "Binance Futures",
+        "Binance US",
+        "BitMEX",
+        "Coinbase",
+        "Deribit",
+        "EXX",
+        "Gate.io",
+        "Gemini",
+        "HitBTC",
+        "Huobi",
+        "Huobi DM",
+        "Huobi Swap",
+        "Kraken",
+        "Kraken Futures",
+        "OKCoin",
+        "OKX",
+        "Poloniex",
+        "ProBit",
+        "Upbit",
+    ],
     url="https://github.com/bmoscon/cryptofeed",
-    packages=find_packages(exclude=['tests*']),
-    cmdclass={'test': Test},
-    python_requires='>=3.9',
+    packages=find_packages(exclude=["tests*"]),
+    cmdclass={"test": Test},
+    python_requires=">=3.9",
     classifiers=[
         "Intended Audience :: Developers",
         "Development Status :: 4 - Beta",
@@ -83,7 +128,7 @@ setup(
         "yapic.json>=1.6.3",
         'uvloop ; platform_system!="Windows"',
         "order_book>=0.6.0",
-        "aiodns>=1.1"  # aiodns speeds up DNS resolving
+        "aiodns>=1.1",  # aiodns speeds up DNS resolving
     ],
     extras_require={
         "arctic": ["arctic", "pandas"],

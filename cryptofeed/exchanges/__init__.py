@@ -1,22 +1,23 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from cryptofeed.defines import *
-from cryptofeed.defines import EXX as EXX_str, FMFW as FMFW_str, OKX as OKX_str
-from .bitdotcom import BitDotCom
-from .phemex import Phemex
+from cryptofeed.defines import EXX as EXX_str
+from cryptofeed.defines import FMFW as FMFW_str
+from cryptofeed.defines import OKX as OKX_str
+
 from .ascendex import AscendEX
 from .ascendex_futures import AscendEXFutures
 from .bequant import Bequant
 from .binance import Binance
 from .binance_delivery import BinanceDelivery
 from .binance_futures import BinanceFutures
-from .binance_us import BinanceUS
 from .binance_tr import BinanceTR
-from .fmfw import FMFW
+from .binance_us import BinanceUS
+from .bitdotcom import BitDotCom
 from .bitfinex import Bitfinex
 from .bitflyer import Bitflyer
 from .bitget import Bitget
@@ -31,6 +32,7 @@ from .delta import Delta
 from .deribit import Deribit
 from .dydx import dYdX
 from .exx import EXX
+from .fmfw import FMFW
 from .gateio import Gateio
 from .gateio_futures import GateioFutures
 from .gemini import Gemini
@@ -42,11 +44,13 @@ from .independent_reserve import IndependentReserve
 from .kraken import Kraken
 from .kraken_futures import KrakenFutures
 from .kucoin import KuCoin
-from .okx import OKX
 from .okcoin import OKCoin
+from .okx import OKX
+from .phemex import Phemex
 from .poloniex import Poloniex
 from .probit import Probit
 from .upbit import Upbit
+
 
 # Maps string name to class name for use with config
 EXCHANGE_MAP = {

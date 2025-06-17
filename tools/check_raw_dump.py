@@ -1,9 +1,9 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import ast
 import sys
 import zlib
@@ -17,7 +17,7 @@ def bytes_string_to_bytes(string):
 
 
 def main(filename):
-    with open(filename, 'r') as fp:
+    with open(filename) as fp:
         counter = 0
         for line in fp.readlines():
             counter += 1
@@ -26,25 +26,24 @@ def main(filename):
             if line.startswith("configuration"):
                 continue
             start = line[:3]
-            if start == 'wss':
-
+            if start == "wss":
                 continue
-            if start == 'htt':
+            if start == "htt":
                 _, line = line.split(" -> ")
 
             _, line = line.split(": ", 1)
             if "header: " in line:
                 line = line.split("header:")[0]
             try:
-                if 'OKCOIN' in filename or 'OKX' in filename:
-                    if line.startswith('b\'') or line.startswith('b"'):
+                if "OKCOIN" in filename or "OKX" in filename:
+                    if line.startswith("b'") or line.startswith('b"'):
                         line = bytes_string_to_bytes(line)
                         line = zlib.decompress(line, -15).decode()
-                elif 'HUOBI' in filename and 'ws' in filename:
+                elif "HUOBI" in filename and "ws" in filename:
                     line = bytes_string_to_bytes(line)
                     line = zlib.decompress(line, 16 + zlib.MAX_WBITS)
-                elif 'UPBIT' in filename:
-                    if line.startswith('b\'') or line.startswith('b"'):
+                elif "UPBIT" in filename:
+                    if line.startswith("b'") or line.startswith('b"'):
                         line = line.strip()[2:-1]
                 _ = json.loads(line)
             except Exception:
@@ -54,5 +53,5 @@ def main(filename):
         print(f"Successfully verified {counter} updates")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv[1])

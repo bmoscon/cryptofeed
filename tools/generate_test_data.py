@@ -1,20 +1,32 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
 import glob
 import random
 
+from check_raw_dump import main as check_dump
 import uvloop
 
-from cryptofeed.feedhandler import FeedHandler
+from cryptofeed.defines import (
+    BINANCE,
+    BINANCE_FUTURES,
+    BINANCE_TR,
+    BINANCE_US,
+    BITFINEX,
+    CANDLES,
+    EXX,
+    L2_BOOK,
+    TICKER,
+    TRADES,
+)
 from cryptofeed.exchanges import EXCHANGE_MAP
+from cryptofeed.feedhandler import FeedHandler
 from cryptofeed.raw_data_collection import AsyncFileCallback
-from cryptofeed.defines import BINANCE, BINANCE_FUTURES, BINANCE_US, BINANCE_TR, BITFINEX, L2_BOOK, TRADES, TICKER, CANDLES, EXX
-from check_raw_dump import main as check_dump
+
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
@@ -26,34 +38,43 @@ def stop():
 
 def main(only_exchange=None):
     skip = [EXX]
-    files = glob.glob('*')
+    files = glob.glob("*")
     for f in files:
         for e in EXCHANGE_MAP.keys():
             if e + "." in f:
                 skip.append(e.split(".")[0])
 
-    print(f'Generating test data. This will take approximately {(len(EXCHANGE_MAP) - len(set(skip))) * 0.5} minutes.')
+    print(f"Generating test data. This will take approximately {(len(EXCHANGE_MAP) - len(set(skip))) * 0.5} minutes.")
     loop = asyncio.get_event_loop()
-    for exch_str, exchange in EXCHANGE_MAP.items() if only_exchange is None else [(only_exchange, EXCHANGE_MAP[only_exchange])]:
+    for exch_str, exchange in (
+        EXCHANGE_MAP.items() if only_exchange is None else [(only_exchange, EXCHANGE_MAP[only_exchange])]
+    ):
         if exch_str in skip:
             continue
 
         print(f"Collecting data for {exch_str}")
-        fh = FeedHandler(raw_data_collection=AsyncFileCallback("./"), config={'uvloop': False, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}, 'rest': {'log': {'filename': 'rest.log', 'level': 'WARNING'}}})
+        fh = FeedHandler(
+            raw_data_collection=AsyncFileCallback("./"),
+            config={
+                "uvloop": False,
+                "log": {"filename": "feedhandler.log", "level": "WARNING"},
+                "rest": {"log": {"filename": "rest.log", "level": "WARNING"}},
+            },
+        )
         info = exchange.info()
-        channels = list(set.intersection(set(info['channels']['websocket']), set([L2_BOOK, TRADES, TICKER, CANDLES])))
+        channels = list(set.intersection(set(info["channels"]["websocket"]), set([L2_BOOK, TRADES, TICKER, CANDLES])))
         sample_size = 10
         if exch_str in (BINANCE_US, BINANCE_TR, BINANCE):
             # books of size 5000 count significantly against rate limits
             sample_size = 4
         while True:
             try:
-                symbols = random.sample(info['symbols'], sample_size)
+                symbols = random.sample(info["symbols"], sample_size)
 
                 if exch_str == BINANCE_FUTURES:
-                    symbols = [s for s in symbols if 'PINDEX' not in s]
+                    symbols = [s for s in symbols if "PINDEX" not in s]
                 elif exch_str == BITFINEX:
-                    symbols = [s for s in symbols if '-' in s]
+                    symbols = [s for s in symbols if "-" in s]
 
             except ValueError:
                 sample_size -= 1
@@ -81,5 +102,5 @@ def main(only_exchange=None):
                 print(e)
 
 
-if __name__ == '__main__':
-    main('BIT.COM')
+if __name__ == "__main__":
+    main("BIT.COM")

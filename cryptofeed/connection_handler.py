@@ -1,28 +1,39 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
+from collections.abc import Awaitable
 import logging
-from socket import error as socket_error
 import time
-from typing import Awaitable
 import zlib
 
 from websockets import ConnectionClosed
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.exceptions import ExhaustedRetries
 from cryptofeed.defines import HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN, OKX
+from cryptofeed.exceptions import ExhaustedRetries
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class ConnectionHandler:
-    def __init__(self, conn: AsyncConnection, subscribe: Awaitable, handler: Awaitable, authenticate: Awaitable, retries: int, timeout=120, timeout_interval=30, exceptions=None, log_on_error=False, start_delay=0):
+    def __init__(
+        self,
+        conn: AsyncConnection,
+        subscribe: Awaitable,
+        handler: Awaitable,
+        authenticate: Awaitable,
+        retries: int,
+        timeout=120,
+        timeout_interval=30,
+        exceptions=None,
+        log_on_error=False,
+        start_delay=0,
+    ):
         self.conn = conn
         self.subscribe = subscribe
         self.handler = handler
@@ -63,13 +74,23 @@ class ConnectionHandler:
                         loop = asyncio.get_running_loop()
                         loop.create_task(self._watcher())
                     await self._handler(connection, self.handler)
-            except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
+            except (OSError, ConnectionClosed, ConnectionAbortedError, ConnectionResetError) as e:
                 if self.exceptions:
                     for ex in self.exceptions:
                         if isinstance(e, ex):
-                            LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", self.conn.uuid, str(e))
+                            LOG.warning(
+                                "%s: encountered exception %s, which is on the ignore list. Raising",
+                                self.conn.uuid,
+                                str(e),
+                            )
                             raise
-                LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", self.conn.uuid, str(e), delay, exc_info=True)
+                LOG.warning(
+                    "%s: encountered connection issue %s - reconnecting in %.1f seconds...",
+                    self.conn.uuid,
+                    str(e),
+                    delay,
+                    exc_info=True,
+                )
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
@@ -77,17 +98,23 @@ class ConnectionHandler:
                 if self.exceptions:
                     for ex in self.exceptions:
                         if isinstance(e, ex):
-                            LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", self.conn.uuid, str(e))
+                            LOG.warning(
+                                "%s: encountered exception %s, which is on the ignore list. Raising",
+                                self.conn.uuid,
+                                str(e),
+                            )
                             raise
-                LOG.error("%s: encountered an exception, reconnecting in %.1f seconds", self.conn.uuid, delay, exc_info=True)
+                LOG.error(
+                    "%s: encountered an exception, reconnecting in %.1f seconds", self.conn.uuid, delay, exc_info=True
+                )
                 await asyncio.sleep(delay)
                 retries += 1
                 delay *= 2
 
         if not self.running:
-            LOG.info('%s: terminate the connection handler because not running', self.conn.uuid)
+            LOG.info("%s: terminate the connection handler because not running", self.conn.uuid)
         else:
-            LOG.error('%s: failed to reconnect after %d retries - exiting', self.conn.uuid, retries)
+            LOG.error("%s: failed to reconnect after %d retries - exiting", self.conn.uuid, retries)
             raise ExhaustedRetries()
 
     async def _handler(self, connection, handler):

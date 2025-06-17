@@ -23,36 +23,35 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Cache pip dependencies
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', 'setup.py') }}
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-uv-
 
-      - name: Install Trunk
-        uses: trunk-io/trunk-action@v1
-        with:
-          check-mode: all
-
-      - name: Install dependencies
+      - name: Install dependencies with uv
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install -e .
+          uv sync --dev
+          uv pip install -e .
 
-      - name: Run Trunk checks
-        run: trunk check --ci --monitor=false
-
-      - name: Fallback - Individual tool checks (if Trunk fails)
-        if: failure()
+      - name: Run ruff linting
         run: |
-          pip install ruff black isort mypy
-          ruff check . --output-format=github
-          black --check --diff .
-          isort --check-only --diff .
-          mypy cryptofeed --ignore-missing-imports
+          uv run ruff check . --output-format=github
+
+      - name: Run ruff formatting check
+        run: |
+          uv run ruff format --check --diff .
+
+      - name: Run mypy type checking
+        run: |
+          uv run mypy cryptofeed --ignore-missing-imports
         continue-on-error: true
 
   test:
@@ -71,24 +70,28 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip dependencies
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt', 'setup.py') }}
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
+            ${{ runner.os }}-py${{ matrix.python-version }}-uv-
 
-      - name: Install dependencies
+      - name: Install dependencies with uv
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest pytest-cov pytest-asyncio
-          pip install -e .
+          uv sync --dev
+          uv pip install pytest pytest-cov pytest-asyncio
+          uv pip install -e .
 
       - name: Run tests with pytest
         run: |
-          pytest tests/ --cov=cryptofeed --cov-report=xml --cov-report=term-missing
+          uv run pytest tests/ --cov=cryptofeed --cov-report=xml --cov-report=term-missing
         continue-on-error: true
 
       - name: Upload coverage to Codecov
@@ -112,11 +115,16 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
       - name: Install bandit
-        run: pip install bandit[toml]
+        run: uv pip install bandit[toml]
 
       - name: Run Bandit security scan
-        run: bandit -r cryptofeed/ -f json -o bandit-report.json
+        run: uv run bandit -r cryptofeed/ -f json -o bandit-report.json
         continue-on-error: true
 
       - name: Upload Bandit scan results
@@ -139,17 +147,21 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
       - name: Install build dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install build wheel cython
+          uv pip install build wheel cython
 
       - name: Build package
-        run: python -m build
+        run: uv run python -m build
 
       - name: Test installation
         run: |
-          pip install dist/*.whl
+          uv pip install dist/*.whl
           python -c "import cryptofeed; print('Package installed successfully')"
 
       - name: Upload build artifacts
@@ -178,10 +190,15 @@ jobs:
           name: dist-packages
           path: dist/
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
       - name: Install package from wheel
         run: |
-          pip install dist/*.whl
-          pip install pytest pytest-asyncio
+          uv pip install dist/*.whl
+          uv pip install pytest pytest-asyncio
 
       - name: Run integration tests
         run: |
@@ -201,13 +218,18 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
       - name: Install safety
-        run: pip install safety
+        run: uv pip install safety
 
       - name: Check dependencies for vulnerabilities
         run: |
-          pip install -r requirements.txt
-          safety check --json --output safety-report.json
+          uv sync
+          uv run safety check --json --output safety-report.json
         continue-on-error: true
 
       - name: Upload safety scan results
@@ -230,12 +252,16 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest-benchmark
-          pip install -e .
+          uv sync --dev
+          uv pip install pytest-benchmark
+          uv pip install -e .
 
       - name: Run performance benchmarks
         run: |

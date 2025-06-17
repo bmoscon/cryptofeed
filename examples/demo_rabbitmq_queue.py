@@ -1,9 +1,10 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from multiprocessing import Process
 
 from cryptofeed import FeedHandler
@@ -18,13 +19,12 @@ def callback(ch, method, properties, body):
 
 def receiver(port):
     import pika
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost', port=port))
+
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost", port=port))
     channel = connection.channel()
-    channel.queue_declare(queue='cryptofeed', durable=True)
-    channel.basic_consume(queue='cryptofeed',
-                          on_message_callback=callback, auto_ack=True)
-    print(' [*] Waiting for messages. To exit press CTRL+C')
+    channel.queue_declare(queue="cryptofeed", durable=True)
+    channel.basic_consume(queue="cryptofeed", on_message_callback=callback, auto_ack=True)
+    print(" [*] Waiting for messages. To exit press CTRL+C")
     channel.start_consuming()
 
 
@@ -35,7 +35,9 @@ def main():
         p.start()
 
         f = FeedHandler()
-        f.add_feed(Kraken(max_depth=2, channels=[L2_BOOK], symbols=['BTC-USD', 'ETH-USD'], callbacks={L2_BOOK: BookRabbit()}))
+        f.add_feed(
+            Kraken(max_depth=2, channels=[L2_BOOK], symbols=["BTC-USD", "ETH-USD"], callbacks={L2_BOOK: BookRabbit()})
+        )
 
         f.run()
 
@@ -43,5 +45,5 @@ def main():
         p.terminate()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

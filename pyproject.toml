@@ -2,44 +2,277 @@
 requires = ["setuptools>=61.0", "wheel", "Cython"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "cryptofeed"
+version = "2.4.1"
+description = "Cryptocurrency Exchange Websocket Data Feed Handler"
+readme = "README.md"
+license = { text = "XFree86" }
+authors = [{ name = "Bryant Moscon", email = "bmoscon@gmail.com" }]
+maintainers = [{ name = "Bryant Moscon", email = "bmoscon@gmail.com" }]
+keywords = [
+  "cryptocurrency",
+  "bitcoin",
+  "btc",
+  "feed handler",
+  "market feed",
+  "market data",
+  "crypto assets",
+  "Trades",
+  "Tickers",
+  "BBO",
+  "Funding",
+  "Open Interest",
+  "Liquidation",
+  "Order book",
+  "Bid",
+  "Ask",
+  "fmfw.io",
+  "Bitfinex",
+  "bitFlyer",
+  "AscendEX",
+  "Bitstamp",
+  "Blockchain.com",
+  "Bybit",
+  "Binance",
+  "Binance Delivery",
+  "Binance Futures",
+  "Binance US",
+  "BitMEX",
+  "Coinbase",
+  "Deribit",
+  "EXX",
+  "Gate.io",
+  "Gemini",
+  "HitBTC",
+  "Huobi",
+  "Huobi DM",
+  "Huobi Swap",
+  "Kraken",
+  "Kraken Futures",
+  "OKCoin",
+  "OKX",
+  "Poloniex",
+  "ProBit",
+  "Upbit",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Framework :: AsyncIO",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Office/Business :: Financial",
+  "Topic :: Internet",
+]
+requires-python = ">=3.9"
+dependencies = [
+  "requests>=2.18.4",
+  "websockets>=14.1",
+  "pyyaml",
+  "aiohttp>=3.11.6",
+  "aiofile>=2.0.0",
+  "yapic.json>=1.6.3",
+  "uvloop; platform_system!='Windows'",
+  "order_book>=0.6.0",
+  "aiodns>=1.1",
+]
+
+[project.optional-dependencies]
+# Backend storage options
+arctic = ["arctic", "pandas"]
+mongo = ["motor"]
+postgres = ["asyncpg"]
+redis = ["hiredis", "redis>=4.5.1"]
+
+# Message queue options
+kafka = ["aiokafka>=0.7.0"]
+rabbit = ["aio_pika", "pika"]
+zmq = ["pyzmq"]
+
+# Cloud services
+gcp_pubsub = ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"]
+
+# Time series databases
+quasardb = ["quasardb", "numpy"]
+
+# Development tools
+dev = [
+  "pytest>=7.0.0",
+  "pytest-asyncio>=0.21.0",
+  "pytest-cov>=4.0.0",
+]
+
+# All optional dependencies
+all = [
+  "arctic",
+  "pandas",
+  "motor",
+  "asyncpg",
+  "hiredis",
+  "redis>=4.5.1",
+  "aiokafka>=0.7.0",
+  "aio_pika",
+  "pika",
+  "pyzmq",
+  "google_cloud_pubsub>=2.4.1",
+  "gcloud_aio_pubsub",
+  "quasardb",
+  "numpy",
+]
+
+[project.urls]
+Homepage = "https://github.com/bmoscon/cryptofeed"
+Documentation = "https://github.com/bmoscon/cryptofeed/wiki"
+Repository = "https://github.com/bmoscon/cryptofeed.git"
+"Bug Tracker" = "https://github.com/bmoscon/cryptofeed/issues"
+Changelog = "https://github.com/bmoscon/cryptofeed/blob/master/CHANGES.md"
+
 # Tool configurations for modern Python development
 
-[tool.black]
+[tool.ruff]
+# Ruff replaces Black, isort, flake8, and provides extensive linting
 line-length = 120
-target-version = ['py39', 'py310', 'py311', 'py312']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | venv
-  | \.trunk
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+target-version = "py39"
+exclude = [
+  ".eggs",
+  ".git",
+  ".hg",
+  ".mypy_cache",
+  ".tox",
+  ".venv",
+  "venv",
+  ".trunk",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+]
 
-[tool.isort]
-profile = "black"
-line_length = 120
-known_first_party = ["cryptofeed"]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-atomic = true
-remove_redundant_aliases = true
-color_output = true
-skip_gitignore = true
-lines_after_imports = 2
+[tool.ruff.lint]
+# Enable comprehensive rule sets for professional Python development
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "D",    # pydocstyle
+  "UP",   # pyupgrade
+  "YTT",  # flake8-2020
+  "BLE",  # flake8-blind-except
+  "B",    # flake8-bugbear
+  "A",    # flake8-builtins
+  "COM",  # flake8-commas
+  "C4",   # flake8-comprehensions
+  "DTZ",  # flake8-datetimez
+  "T10",  # flake8-debugger
+  "EM",   # flake8-errmsg
+  "EXE",  # flake8-executable
+  "FA",   # flake8-future-annotations
+  "ISC",  # flake8-implicit-str-concat
+  "ICN",  # flake8-import-conventions
+  "G",    # flake8-logging-format
+  "INP",  # flake8-no-pep420
+  "PIE",  # flake8-pie
+  "T20",  # flake8-print
+  "PYI",  # flake8-pyi
+  "PT",   # flake8-pytest-style
+  "Q",    # flake8-quotes
+  "RSE",  # flake8-raise
+  "RET",  # flake8-return
+  "SLF",  # flake8-self
+  "SLOT", # flake8-slots
+  "SIM",  # flake8-simplify
+  "TID",  # flake8-tidy-imports
+  "TCH",  # flake8-type-checking
+  "ARG",  # flake8-unused-arguments
+  "PTH",  # flake8-use-pathlib
+  "ERA",  # eradicate
+  "PD",   # pandas-vet
+  "PGH",  # pygrep-hooks
+  "PL",   # pylint
+  "TRY",  # tryceratops
+  "FLY",  # flynt
+  "NPY",  # numpy
+  "PERF", # perflint
+  "FURB", # refurb
+  "LOG",  # flake8-logging
+  "RUF",  # ruff-specific
+]
+
+ignore = [
+  # Documentation - allow missing docstrings for now
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D107",
+  "D203",
+  "D213", # Docstring formatting conflicts
+
+  # Complexity - allow reasonable complexity for financial code
+  "PLR0911", # Too many return statements
+  "PLR0912", # Too many branches
+  "PLR0913", # Too many arguments
+  "PLR0915", # Too many statements
+  "PLR2004", # Magic value used in comparison
+
+  # Compatibility - maintain existing patterns
+  "COM812", # Missing trailing comma (conflicts with formatter)
+  "ISC001", # Implicit string concatenation (conflicts with formatter)
+  "TRY003", # Avoid specifying long messages outside exception class
+  "EM101",  # Exception must not use a string literal
+  "EM102",  # Exception must not use an f-string literal
+  "B008",   # Function calls in argument defaults (common pattern)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+  "D",       # Disable docstring requirements in tests
+  "PLR2004", # Allow magic values in tests
+  "S101",    # Allow assert statements in tests
+  "ARG001",  # Allow unused function arguments in tests
+  "ARG005",  # Allow unused lambda arguments in tests
+  "FBT001",  # Allow boolean positional arguments in tests
+  "FBT003",  # Allow boolean positional arguments in tests
+]
+"examples/**/*.py" = [
+  "D",      # Disable docstring requirements in examples
+  "T201",   # Allow print statements in examples
+  "INP001", # Allow implicit namespace packages in examples
+]
+
+[tool.ruff.lint.isort]
+# Import sorting (replaces standalone isort)
+known-first-party = ["cryptofeed"]
+force-sort-within-sections = true
+split-on-trailing-comma = true
+lines-after-imports = 2
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-branches = 15
+max-returns = 8
+max-statements = 60
+
+[tool.ruff.format]
+# Code formatting (replaces Black)
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
 
 [tool.mypy]
 python_version = "3.9"
@@ -60,15 +293,15 @@ show_error_codes = true
 # Per-module options for external dependencies
 [[tool.mypy.overrides]]
 module = [
-    "aiofile.*",
-    "aiokafka.*", 
-    "aio_pika.*",
-    "arctic.*",
-    "motor.*",
-    "redis.*",
-    "yapic.*",
-    "uvloop.*",
-    "order_book.*",
+  "aiofile.*",
+  "aiokafka.*",
+  "aio_pika.*",
+  "arctic.*",
+  "motor.*",
+  "redis.*",
+  "yapic.*",
+  "uvloop.*",
+  "order_book.*",
 ]
 ignore_missing_imports = true
 
@@ -78,55 +311,64 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
-    "--strict-markers",
-    "--strict-config", 
-    "--verbose",
-    "--tb=short",
-    "--cov=cryptofeed",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-report=xml",
+  "--strict-markers",
+  "--strict-config",
+  "--verbose",
+  "--tb=short",
+  "--cov=cryptofeed",
+  "--cov-report=term-missing",
+  "--cov-report=html",
+  "--cov-report=xml",
 ]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "network: marks tests that require network access",
-    "unit: marks tests as unit tests",
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "integration: marks tests as integration tests",
+  "network: marks tests that require network access",
+  "unit: marks tests as unit tests",
 ]
-filterwarnings = [
-    "error",
-    "ignore::UserWarning",
-    "ignore::DeprecationWarning",
-]
+filterwarnings = ["error", "ignore::UserWarning", "ignore::DeprecationWarning"]
 
 [tool.coverage.run]
 source = ["cryptofeed"]
 omit = [
-    "*/tests/*",
-    "*/test_*",
-    "*/conftest.py",
-    "*/__pycache__/*",
-    "*/examples/*",
+  "*/tests/*",
+  "*/test_*",
+  "*/conftest.py",
+  "*/__pycache__/*",
+  "*/examples/*",
 ]
 
 [tool.coverage.report]
 exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == .__main__.:",
-    "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
+  "pragma: no cover",
+  "def __repr__",
+  "if self.debug:",
+  "if settings.DEBUG",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if 0:",
+  "if __name__ == .__main__.:",
+  "class .*\\bProtocol\\):",
+  "@(abc\\.)?abstractmethod",
 ]
 
 [tool.bandit]
 targets = ["cryptofeed"]
 exclude_dirs = ["tests", "examples"]
-skips = ["B101", "B601"]  # Skip assert_used and shell_injection in specific contexts
+skips = [
+  "B101",
+  "B601",
+] # Skip assert_used and shell_injection in specific contexts
 
 [tool.bandit.assert_used]
 skips = ["**/tests/**", "**/test_*.py"]
+
+[dependency-groups]
+dev = [
+  "bandit>=1.8.5",
+  "mypy>=1.16.1",
+  "pytest>=8.4.0",
+  "pytest-asyncio>=1.0.0",
+  "pytest-cov>=6.2.1",
+  "ruff>=0.11.13",
+]

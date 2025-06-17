@@ -1,37 +1,52 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from collections import defaultdict
-from typing import Dict, Tuple
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-import logging
 from decimal import Decimal
+import logging
+from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.defines import ASCENDEX, BID, ASK, BUY, L2_BOOK, SELL, TRADES
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
+from cryptofeed.defines import ASCENDEX, ASK, BID, BUY, L2_BOOK, SELL, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade, OrderBook
+from cryptofeed.types import OrderBook, Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class AscendEX(Feed):
     id = ASCENDEX
-    rest_endpoints = [RestEndpoint('https://ascendex.com', routes=Routes('/api/pro/v1/products'), sandbox='https://api-test.ascendex-sandbox.com')]
+    rest_endpoints = [
+        RestEndpoint(
+            "https://ascendex.com",
+            routes=Routes("/api/pro/v1/products"),
+            sandbox="https://api-test.ascendex-sandbox.com",
+        )
+    ]
     websocket_channels = {
-        L2_BOOK: 'depth:',
-        TRADES: 'trades:',
+        L2_BOOK: "depth:",
+        TRADES: "trades:",
     }
     # Docs, https://ascendex.github.io/ascendex-pro-api/#websocket-authentication
     # noinspection PyTypeChecker
-    websocket_endpoints = [WebsocketEndpoint('wss://ascendex.com/1/api/pro/v1/stream', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES],), sandbox='wss://api-test.ascendex-sandbox.com/1/api/pro/v1/stream',)]
+    websocket_endpoints = [
+        WebsocketEndpoint(
+            "wss://ascendex.com/1/api/pro/v1/stream",
+            channel_filter=(
+                websocket_channels[L2_BOOK],
+                websocket_channels[TRADES],
+            ),
+            sandbox="wss://api-test.ascendex-sandbox.com/1/api/pro/v1/stream",
+        )
+    ]
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -42,13 +57,13 @@ class AscendEX(Feed):
         ret = {}
         info = defaultdict(dict)
 
-        for entry in data['data']:
+        for entry in data["data"]:
             # Only "Normal" status symbols are tradeable
-            if entry['status'] == 'Normal':
-                s = Symbol(entry['baseAsset'], entry['quoteAsset'])
-                ret[s.normalized] = entry['symbol']
-                info['tick_size'][s.normalized] = entry['tickSize']
-                info['instrument_type'][s.normalized] = s.type
+            if entry["status"] == "Normal":
+                s = Symbol(entry["baseAsset"], entry["quoteAsset"])
+                ret[s.normalized] = entry["symbol"]
+                info["tick_size"][s.normalized] = entry["tickSize"]
+                info["instrument_type"][s.normalized] = s.type
 
         return ret, info
 
@@ -57,8 +72,7 @@ class AscendEX(Feed):
         self.seq_no = defaultdict(lambda: None)
 
     async def _trade(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             'm': 'trades',
             'symbol': 'BTC/USDT',
             'data': [{
@@ -70,22 +84,24 @@ class AscendEX(Feed):
             }]
         }
         """
-        for trade in msg['data']:
-            t = Trade(self.id,
-                      self.exchange_symbol_to_std_symbol(msg['symbol']),
-                      SELL if trade['bm'] else BUY,
-                      Decimal(trade['q']),
-                      Decimal(trade['p']),
-                      self.timestamp_normalize(trade['ts']),
-                      raw=trade)
+        for trade in msg["data"]:
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(msg["symbol"]),
+                SELL if trade["bm"] else BUY,
+                Decimal(trade["q"]),
+                Decimal(trade["p"]),
+                self.timestamp_normalize(trade["ts"]),
+                raw=trade,
+            )
             await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
-        sequence_number = msg['data']['seqnum']
-        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
+        sequence_number = msg["data"]["seqnum"]
+        pair = self.exchange_symbol_to_std_symbol(msg["symbol"])
         delta = {BID: [], ASK: []}
 
-        if msg['m'] == 'depth-snapshot':
+        if msg["m"] == "depth-snapshot":
             self.seq_no[pair] = sequence_number
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
         else:
@@ -96,9 +112,9 @@ class AscendEX(Feed):
                 raise MissingSequenceNumber
             self.seq_no[pair] = sequence_number
 
-        for side in ('bids', 'asks'):
-            for price, amount in msg['data'][side]:
-                s = BID if side == 'bids' else ASK
+        for side in ("bids", "asks"):
+            for price, amount in msg["data"][side]:
+                s = BID if side == "bids" else ASK
                 price = Decimal(price)
                 size = Decimal(amount)
                 if size == 0:
@@ -109,22 +125,27 @@ class AscendEX(Feed):
                     delta[s].append((price, size))
                     self._l2_book[pair].book[s][price] = size
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['data']['ts']), raw=msg, delta=delta if msg['m'] != 'depth-snapshot' else None, sequence_number=sequence_number)
+        await self.book_callback(
+            L2_BOOK,
+            self._l2_book[pair],
+            timestamp,
+            timestamp=self.timestamp_normalize(msg["data"]["ts"]),
+            raw=msg,
+            delta=delta if msg["m"] != "depth-snapshot" else None,
+            sequence_number=sequence_number,
+        )
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
 
-        if 'm' in msg:
-            if msg['m'] == 'depth' or msg['m'] == 'depth-snapshot':
+        if "m" in msg:
+            if msg["m"] == "depth" or msg["m"] == "depth-snapshot":
                 await self._book(msg, timestamp)
-            elif msg['m'] == 'trades':
+            elif msg["m"] == "trades":
                 await self._trade(msg, timestamp)
-            elif msg['m'] == 'ping':
+            elif msg["m"] == "ping":
                 await conn.write('{"op":"pong"}')
-            elif msg['m'] == 'connected':
-                return
-            elif msg['m'] == 'sub':
+            elif msg["m"] == "connected" or msg["m"] == "sub":
                 return
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
@@ -141,7 +162,7 @@ class AscendEX(Feed):
             if channel == "depth:":
                 l2_pairs.extend(pairs)
 
-            message = {'op': 'sub', 'ch': channel + ','.join(pairs)}
+            message = {"op": "sub", "ch": channel + ",".join(pairs)}
             await conn.write(json.dumps(message))
 
         for pair in l2_pairs:

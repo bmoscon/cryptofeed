@@ -1,41 +1,59 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
+import base64
 from decimal import Decimal
+import hashlib
+import hmac
 import logging
 import time
 from typing import Dict, Tuple
-import hmac
-import base64
-import hashlib
 
 from yapic import json
 
+from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.symbols import Symbol
-from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.types import OrderBook, Trade, Ticker, Candle
+from cryptofeed.types import Candle, OrderBook, Ticker, Trade
+from cryptofeed.util.time import timedelta_str_to_sec
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class KuCoin(Feed):
     id = KUCOIN
     websocket_endpoints = None
-    rest_endpoints = [RestEndpoint('https://api.kucoin.com', routes=Routes('/api/v1/symbols', l2book='/api/v3/market/orderbook/level2?symbol={}'))]
-    valid_candle_intervals = {'1m', '3m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w'}
-    candle_interval_map = {'1m': '1min', '3m': '3min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week'}
+    rest_endpoints = [
+        RestEndpoint(
+            "https://api.kucoin.com",
+            routes=Routes("/api/v1/symbols", l2book="/api/v3/market/orderbook/level2?symbol={}"),
+        )
+    ]
+    valid_candle_intervals = {"1m", "3m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "1w"}
+    candle_interval_map = {
+        "1m": "1min",
+        "3m": "3min",
+        "15m": "15min",
+        "30m": "30min",
+        "1h": "1hour",
+        "2h": "2hour",
+        "4h": "4hour",
+        "6h": "6hour",
+        "8h": "8hour",
+        "12h": "12hour",
+        "1d": "1day",
+        "1w": "1week",
+    }
     websocket_channels = {
-        L2_BOOK: '/market/level2',
-        TRADES: '/market/match',
-        TICKER: '/market/ticker',
-        CANDLES: '/market/candles'
+        L2_BOOK: "/market/level2",
+        TRADES: "/market/match",
+        TICKER: "/market/ticker",
+        CANDLES: "/market/candles",
     }
 
     @classmethod
@@ -45,22 +63,26 @@ class KuCoin(Feed):
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
-        info = {'tick_size': {}, 'instrument_type': {}}
-        for symbol in data['data']:
-            if not symbol['enableTrading']:
+        info = {"tick_size": {}, "instrument_type": {}}
+        for symbol in data["data"]:
+            if not symbol["enableTrading"]:
                 continue
-            s = Symbol(symbol['baseCurrency'], symbol['quoteCurrency'])
-            info['tick_size'][s.normalized] = symbol['priceIncrement']
-            ret[s.normalized] = symbol['symbol']
-            info['instrument_type'][s.normalized] = s.type
+            s = Symbol(symbol["baseCurrency"], symbol["quoteCurrency"])
+            info["tick_size"][s.normalized] = symbol["priceIncrement"]
+            ret[s.normalized] = symbol["symbol"]
+            info["instrument_type"][s.normalized] = s.type
         return ret, info
 
     def __init__(self, **kwargs):
-        address_info = self.http_sync.write('https://api.kucoin.com/api/v1/bullet-public', json=True)
-        token = address_info['data']['token']
-        address = address_info['data']['instanceServers'][0]['endpoint']
+        address_info = self.http_sync.write("https://api.kucoin.com/api/v1/bullet-public", json=True)
+        token = address_info["data"]["token"]
+        address = address_info["data"]["instanceServers"][0]["endpoint"]
         address = f"{address}?token={token}"
-        self.websocket_endpoints = [WebsocketEndpoint(address, options={'ping_interval': address_info['data']['instanceServers'][0]['pingInterval'] / 2000})]
+        self.websocket_endpoints = [
+            WebsocketEndpoint(
+                address, options={"ping_interval": address_info["data"]["instanceServers"][0]["pingInterval"] / 2000}
+            )
+        ]
         super().__init__(**kwargs)
         if any([len(self.subscription[chan]) > 300 for chan in self.subscription]):
             raise ValueError("Kucoin has a limit of 300 symbols per connection")
@@ -71,8 +93,7 @@ class KuCoin(Feed):
         self.seq_no = {}
 
     async def _candles(self, msg: dict, symbol: str, timestamp: float):
-        """
-        {
+        """{
             'data': {
                 'symbol': 'BTC-USDT',
                 'candles': ['1619196960', '49885.4', '49821', '49890.5', '49821', '2.60137567', '129722.909001802'],
@@ -85,7 +106,7 @@ class KuCoin(Feed):
         """
         symbol, interval = symbol.split("_")
         interval = self.normalize_candle_interval[interval]
-        start, open, close, high, low, vol, _ = msg['data']['candles']
+        start, open, close, high, low, vol, _ = msg["data"]["candles"]
         end = int(start) + timedelta_str_to_sec(interval) - 1
         c = Candle(
             self.id,
@@ -100,14 +121,13 @@ class KuCoin(Feed):
             Decimal(low),
             Decimal(vol),
             None,
-            msg['data']['time'] / 1000000000,
-            raw=msg
+            msg["data"]["time"] / 1000000000,
+            raw=msg,
         )
         await self.callback(CANDLES, c, timestamp)
 
     async def _ticker(self, msg: dict, symbol: str, timestamp: float):
-        """
-        {
+        """{
             "type":"message",
             "topic":"/market/ticker:BTC-USDT",
             "subject":"trade.ticker",
@@ -123,12 +143,11 @@ class KuCoin(Feed):
             }
         }
         """
-        t = Ticker(self.id, symbol, Decimal(msg['data']['bestBid']), Decimal(msg['data']['bestAsk']), None, raw=msg)
+        t = Ticker(self.id, symbol, Decimal(msg["data"]["bestBid"]), Decimal(msg["data"]["bestAsk"]), None, raw=msg)
         await self.callback(TICKER, t, timestamp)
 
     async def _trades(self, msg: dict, symbol: str, timestamp: float):
-        """
-        {
+        """{
             "type":"message",
             "topic":"/market/match:BTC-USDT",
             "subject":"trade.l3match",
@@ -150,12 +169,12 @@ class KuCoin(Feed):
         t = Trade(
             self.id,
             symbol,
-            BUY if msg['data']['side'] == 'buy' else SELL,
-            Decimal(msg['data']['size']),
-            Decimal(msg['data']['price']),
-            float(msg['data']['time']) / 1000000000,
-            id=msg['data']['tradeId'],
-            raw=msg
+            BUY if msg["data"]["side"] == "buy" else SELL,
+            Decimal(msg["data"]["size"]),
+            Decimal(msg["data"]["price"]),
+            float(msg["data"]["time"]) / 1000000000,
+            id=msg["data"]["tradeId"],
+            raw=msg,
         )
         await self.callback(TRADES, t, timestamp)
 
@@ -165,9 +184,13 @@ class KuCoin(Feed):
         # Now required to pass timestamp with string to sign. Timestamp should exactly match header timestamp
         now = str(int(time.time() * 1000))
         str_to_sign = now + str_to_sign
-        signature = base64.b64encode(hmac.new(self.key_secret.encode('utf-8'), str_to_sign.encode('utf-8'), hashlib.sha256).digest())
+        signature = base64.b64encode(
+            hmac.new(self.key_secret.encode("utf-8"), str_to_sign.encode("utf-8"), hashlib.sha256).digest()
+        )
         # Passphrase must now be encrypted by key_secret
-        passphrase = base64.b64encode(hmac.new(self.key_secret.encode('utf-8'), self.key_passphrase.encode('utf-8'), hashlib.sha256).digest())
+        passphrase = base64.b64encode(
+            hmac.new(self.key_secret.encode("utf-8"), self.key_passphrase.encode("utf-8"), hashlib.sha256).digest()
+        )
 
         # API key version is currently 2 (whereas API version is anywhere from 1-3 ¯\_(ツ)_/¯)
         header = {
@@ -175,27 +198,30 @@ class KuCoin(Feed):
             "KC-API-SIGN": signature.decode(),
             "KC-API-TIMESTAMP": now,
             "KC-API-PASSPHRASE": passphrase.decode(),
-            "KC-API-KEY-VERSION": "2"
+            "KC-API-KEY-VERSION": "2",
         }
         return header
 
     async def _snapshot(self, symbol: str):
         str_to_sign = "GET" + self.rest_endpoints[0].routes.l2book.format(symbol)
         headers = self.generate_token(str_to_sign)
-        data = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol), header=headers)
+        data = await self.http_conn.read(
+            self.rest_endpoints[0].route("l2book", self.sandbox).format(symbol), header=headers
+        )
         timestamp = time.time()
         data = json.loads(data, parse_float=Decimal)
-        data = data['data']
-        self.seq_no[symbol] = int(data['sequence'])
-        bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
-        asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
+        data = data["data"]
+        self.seq_no[symbol] = int(data["sequence"])
+        bids = {Decimal(price): Decimal(amount) for price, amount in data["bids"]}
+        asks = {Decimal(price): Decimal(amount) for price, amount in data["asks"]}
         self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
 
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, raw=data, sequence_number=int(data['sequence']))
+        await self.book_callback(
+            L2_BOOK, self._l2_book[symbol], timestamp, raw=data, sequence_number=int(data["sequence"])
+        )
 
     async def _process_l2_book(self, msg: dict, symbol: str, timestamp: float):
-        """
-        {
+        """{
             'data': {
                 'sequenceStart': 1615591136351,
                 'symbol': 'BTC-USDT',
@@ -210,22 +236,22 @@ class KuCoin(Feed):
             'type': 'message'
         }
         """
-        data = msg['data']
-        sequence = data['sequenceStart']
+        data = msg["data"]
+        sequence = data["sequenceStart"]
         if symbol not in self._l2_book or sequence > self.seq_no[symbol] + 1:
             if symbol in self.seq_no and sequence > self.seq_no[symbol] + 1:
                 LOG.warning("%s: Missing book update detected, resetting book", self.id)
             await self._snapshot(symbol)
 
-        data = msg['data']
+        data = msg["data"]
         if sequence < self.seq_no[symbol]:
             return
 
-        self.seq_no[symbol] = data['sequenceEnd']
+        self.seq_no[symbol] = data["sequenceEnd"]
 
         delta = {BID: [], ASK: []}
-        for s, side in (('bids', BID), ('asks', ASK)):
-            for update in data['changes'][s]:
+        for s, side in (("bids", BID), ("asks", ASK)):
+            for update in data["changes"][s]:
                 price = Decimal(update[0])
                 amount = Decimal(update[1])
 
@@ -237,22 +263,23 @@ class KuCoin(Feed):
                     self._l2_book[symbol].book[side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, raw=msg, sequence_number=data['sequenceEnd'])
+        await self.book_callback(
+            L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, raw=msg, sequence_number=data["sequenceEnd"]
+        )
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
-        if 'topic' not in msg:
-            if msg['type'] == 'error':
+        if "topic" not in msg:
+            if msg["type"] == "error":
                 LOG.warning("%s: error from exchange %s", self.id, msg)
                 return
-            elif msg['type'] in {'welcome', 'ack'}:
+            if msg["type"] in {"welcome", "ack"}:
                 return
-            else:
-                LOG.warning("%s: Unhandled message type %s", self.id, msg)
-                return
+            LOG.warning("%s: Unhandled message type %s", self.id, msg)
+            return
 
-        topic, symbol = msg['topic'].split(":", 1)
+        topic, symbol = msg["topic"].split(":", 1)
         topic = self.exchange_channel_to_std(topic)
 
         if topic == TICKER:
@@ -273,19 +300,27 @@ class KuCoin(Feed):
             nchan = self.exchange_channel_to_std(chan)
             if nchan == CANDLES:
                 for symbol in symbols:
-                    await conn.write(json.dumps({
-                        'id': 1,
-                        'type': 'subscribe',
-                        'topic': f"{chan}:{symbol}_{self.candle_interval_map[self.candle_interval]}",
-                        'privateChannel': False,
-                        'response': True
-                    }))
+                    await conn.write(
+                        json.dumps(
+                            {
+                                "id": 1,
+                                "type": "subscribe",
+                                "topic": f"{chan}:{symbol}_{self.candle_interval_map[self.candle_interval]}",
+                                "privateChannel": False,
+                                "response": True,
+                            }
+                        )
+                    )
             else:
                 for slice_index in range(0, len(symbols), 100):
-                    await conn.write(json.dumps({
-                        'id': 1,
-                        'type': 'subscribe',
-                        'topic': f"{chan}: {','.join(symbols[slice_index: slice_index + 100])}",
-                        'privateChannel': False,
-                        'response': True
-                    }))
+                    await conn.write(
+                        json.dumps(
+                            {
+                                "id": 1,
+                                "type": "subscribe",
+                                "topic": f"{chan}: {','.join(symbols[slice_index : slice_index + 100])}",
+                                "privateChannel": False,
+                                "response": True,
+                            }
+                        )
+                    )

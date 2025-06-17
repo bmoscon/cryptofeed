@@ -1,35 +1,37 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from collections import defaultdict
-import os
 import io
-from typing import Optional
-from typing import IO
-from typing import Union
-from typing import AnyStr
+import os
+from typing import IO, AnyStr, Optional, Union
 
 import aiohttp
-import google.api_core.exceptions
-from google.cloud import pubsub_v1
-from yapic import json
 
 # Use gcloud.aio.pubsub for asyncio
 # https://github.com/talkiq/gcloud-aio
 from gcloud.aio.pubsub import PublisherClient, PubsubMessage
+import google.api_core.exceptions
+from google.cloud import pubsub_v1
+from yapic import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 
 
 class GCPPubSubCallback:
-    def __init__(self, topic: Optional[str] = None, key: Optional[str] = None,
-                 service_file: Optional[Union[str, IO[AnyStr]]] = None,
-                 ordering_key: Optional[Union[str, io.IOBase]] = None, numeric_type=float, none_to=None):
-        '''
-        Backend using Google Cloud Platform Pub/Sub. Use requires an account with Google Cloud Platform.
+    def __init__(
+        self,
+        topic: Optional[str] = None,
+        key: Optional[str] = None,
+        service_file: Optional[Union[str, IO[AnyStr]]] = None,
+        ordering_key: Optional[Union[str, io.IOBase]] = None,
+        numeric_type=float,
+        none_to=None,
+    ):
+        """Backend using Google Cloud Platform Pub/Sub. Use requires an account with Google Cloud Platform.
         Free tier allows 10GB messages per month.
 
         Both the environment variables GCP_PROJECT='<project_id>' and GOOGLE_APPLICATION_CREDENTIALS='/path/key.json'
@@ -53,12 +55,12 @@ class GCPPubSubCallback:
             if messages have the same ordering key and you publish the messages
             to the same region, subscribers can receive the messages in order
             https://cloud.google.com/pubsub/docs/publisher#using_ordering_keys
-        '''
+        """
         self.key = key or self.default_key
         self.ordering_key = ordering_key
         self.numeric_type = numeric_type
         self.none_to = none_to
-        self.topic = topic or f'cryptofeed-{self.key}'
+        self.topic = topic or f"cryptofeed-{self.key}"
         self.topic_path = self.get_topic()
         self.service_file = service_file
         self.session = None
@@ -66,7 +68,7 @@ class GCPPubSubCallback:
 
     def get_topic(self):
         publisher = pubsub_v1.PublisherClient()
-        project_id = os.getenv('GCP_PROJECT')
+        project_id = os.getenv("GCP_PROJECT")
         topic_path = PublisherClient.topic_path(project_id, self.topic)
         try:
             publisher.create_topic(request={"name": topic_path})
@@ -83,32 +85,29 @@ class GCPPubSubCallback:
     async def get_client(self):
         if not self.client:
             session = await self.get_session()
-            self.client = PublisherClient(
-                service_file=self.service_file, session=session
-            )
+            self.client = PublisherClient(service_file=self.service_file, session=session)
         return self.client
 
     async def write(self, data: dict):
-        '''
-        Publish message. For filtering, "feed" and "symbol" are added as attributes.
+        """Publish message. For filtering, "feed" and "symbol" are added as attributes.
         https://cloud.google.com/pubsub/docs/filtering
-        '''
+        """
         client = await self.get_client()
         payload = json.dumps(data).encode()
-        message = PubsubMessage(payload, feed=data['exchange'], symbol=data['symbol'])
+        message = PubsubMessage(payload, feed=data["exchange"], symbol=data["symbol"])
         await client.publish(self.topic_path, [message])
 
 
 class TradeGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'trades'
+    default_key = "trades"
 
 
 class FundingGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'funding'
+    default_key = "funding"
 
 
 class BookGCPPubSub(GCPPubSubCallback, BackendBookCallback):
-    default_key = 'book'
+    default_key = "book"
 
     def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
         self.snapshots_only = snapshots_only
@@ -118,32 +117,32 @@ class BookGCPPubSub(GCPPubSubCallback, BackendBookCallback):
 
 
 class TickerGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'ticker'
+    default_key = "ticker"
 
 
 class OpenInterestGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'open_interest'
+    default_key = "open_interest"
 
 
 class LiquidationsGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'liquidations'
+    default_key = "liquidations"
 
 
 class CandlesGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'candles'
+    default_key = "candles"
 
 
 class OrderInfoGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'order_info'
+    default_key = "order_info"
 
 
 class TransactionsGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'transactions'
+    default_key = "transactions"
 
 
 class BalancesGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'balances'
+    default_key = "balances"
 
 
 class FillsGCPPubSub(GCPPubSubCallback, BackendCallback):
-    default_key = 'fills'
+    default_key = "fills"

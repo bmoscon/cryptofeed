@@ -1,9 +1,9 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from collections import defaultdict
 import logging
 
@@ -11,15 +11,15 @@ from yapic import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 from cryptofeed.backends.http import HTTPCallback
-from cryptofeed.defines import BID, ASK
+from cryptofeed.defines import ASK, BID
 
-LOG = logging.getLogger('feedhandler')
+
+LOG = logging.getLogger("feedhandler")
 
 
 class InfluxCallback(HTTPCallback):
     def __init__(self, addr: str, org: str, bucket: str, token: str, key=None, **kwargs):
-        """
-        Parent class for InfluxDB callbacks
+        """Parent class for InfluxDB callbacks
 
         influxDB schema
         ---------------
@@ -66,13 +66,13 @@ class InfluxCallback(HTTPCallback):
     def format(self, data):
         ret = []
         for key, value in data.items():
-            if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp'}:
+            if key in {"timestamp", "exchange", "symbol", "receipt_timestamp"}:
                 continue
             if isinstance(value, str) or value is None:
                 ret.append(f'{key}="{value}"')
             else:
-                ret.append(f'{key}={value}')
-        return ','.join(ret)
+                ret.append(f"{key}={value}")
+        return ",".join(ret)
 
     async def writer(self):
         while self.running:
@@ -80,31 +80,31 @@ class InfluxCallback(HTTPCallback):
                 for update in updates:
                     d = self.format(update)
                     timestamp = update["timestamp"]
-                    timestamp_str = f',timestamp={timestamp}' if timestamp is not None else ''
+                    timestamp_str = f",timestamp={timestamp}" if timestamp is not None else ""
 
-                    if 'interval' in update:
-                        trades = f',trades={update["trades"]},' if update['trades'] else ','
-                        update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]},interval={update["interval"]} start={update["start"]},stop={update["stop"]}{trades}open={update["open"]},close={update["close"]},high={update["high"]},low={update["low"]},volume={update["volume"]}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
+                    if "interval" in update:
+                        trades = f",trades={update['trades']}," if update["trades"] else ","
+                        update = f"{self.key}-{update['exchange']},symbol={update['symbol']},interval={update['interval']} start={update['start']},stop={update['stop']}{trades}open={update['open']},close={update['close']},high={update['high']},low={update['low']},volume={update['volume']}{timestamp_str},receipt_timestamp={update['receipt_timestamp']} {int(update['receipt_timestamp'] * 1000000)}"
                     else:
-                        update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]} {d}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
+                        update = f"{self.key}-{update['exchange']},symbol={update['symbol']} {d}{timestamp_str},receipt_timestamp={update['receipt_timestamp']} {int(update['receipt_timestamp'] * 1000000)}"
 
                     await self.http_write(update, headers=self.headers)
         await self.session.close()
 
 
 class TradeInflux(InfluxCallback, BackendCallback):
-    default_key = 'trades'
+    default_key = "trades"
 
     def format(self, data):
-        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",type="{str(data["type"])}"'
+        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{data["id"]!s}",type="{data["type"]!s}"'
 
 
 class FundingInflux(InfluxCallback, BackendCallback):
-    default_key = 'funding'
+    default_key = "funding"
 
 
 class BookInflux(InfluxCallback, BackendBookCallback):
-    default_key = 'book'
+    default_key = "book"
 
     def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
         self.snapshots_only = snapshots_only
@@ -113,41 +113,41 @@ class BookInflux(InfluxCallback, BackendBookCallback):
         super().__init__(*args, **kwargs)
 
     def format(self, data):
-        delta = 'delta' in data
-        book = data['book'] if not delta else data['delta']
+        delta = "delta" in data
+        book = data["book"] if not delta else data["delta"]
         bids = json.dumps(book[BID])
         asks = json.dumps(book[ASK])
 
-        return f'delta={str(delta)},{BID}="{bids}",{ASK}="{asks}"'
+        return f'delta={delta!s},{BID}="{bids}",{ASK}="{asks}"'
 
 
 class TickerInflux(InfluxCallback, BackendCallback):
-    default_key = 'ticker'
+    default_key = "ticker"
 
 
 class OpenInterestInflux(InfluxCallback, BackendCallback):
-    default_key = 'open_interest'
+    default_key = "open_interest"
 
 
 class LiquidationsInflux(InfluxCallback, BackendCallback):
-    default_key = 'liquidations'
+    default_key = "liquidations"
 
 
 class CandlesInflux(InfluxCallback, BackendCallback):
-    default_key = 'candles'
+    default_key = "candles"
 
 
 class OrderInfoInflux(InfluxCallback, BackendCallback):
-    default_key = 'order_info'
+    default_key = "order_info"
 
 
 class TransactionsInflux(InfluxCallback, BackendCallback):
-    default_key = 'transactions'
+    default_key = "transactions"
 
 
 class BalancesInflux(InfluxCallback, BackendCallback):
-    default_key = 'balances'
+    default_key = "balances"
 
 
 class FillsInflux(InfluxCallback, BackendCallback):
-    default_key = 'fills'
+    default_key = "fills"

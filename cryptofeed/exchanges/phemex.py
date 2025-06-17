@@ -1,40 +1,46 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-import hmac
-import time
+"""
+
 from collections import defaultdict
-from cryptofeed.symbols import Symbol
-import logging
 from decimal import Decimal
+import hmac
+import logging
+import time
 from typing import Dict, Tuple
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BALANCES, BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, PERPETUAL
+from cryptofeed.defines import ASK, BALANCES, BID, BUY, CANDLES, L2_BOOK, PERPETUAL, PHEMEX, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Candle, Balance
+from cryptofeed.symbols import Symbol
+from cryptofeed.types import Balance, Candle, OrderBook, Trade
 
-LOG = logging.getLogger('feedhandler')
+
+LOG = logging.getLogger("feedhandler")
 
 
 class Phemex(Feed):
     id = PHEMEX
-    websocket_endpoints = [WebsocketEndpoint('wss://phemex.com/ws', sandbox='wss://testnet.phemex.com/ws', limit=20)]
-    rest_endpoints = [RestEndpoint('https://api.phemex.com', routes=Routes('/exchange/public/cfg/v2/products'))]
+    websocket_endpoints = [WebsocketEndpoint("wss://phemex.com/ws", sandbox="wss://testnet.phemex.com/ws", limit=20)]
+    rest_endpoints = [RestEndpoint("https://api.phemex.com", routes=Routes("/exchange/public/cfg/v2/products"))]
     price_scale = {}
-    valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
-    candle_interval_map = {interval: second for interval, second in zip(valid_candle_intervals, [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000])}
+    valid_candle_intervals = ("1m", "5m", "15m", "30m", "1h", "4h", "1d", "1M", "1Q", "1Y")
+    candle_interval_map = {
+        interval: second
+        for interval, second in zip(
+            valid_candle_intervals, [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000]
+        )
+    }
 
     websocket_channels = {
-        BALANCES: 'aop.subscribe',
-        L2_BOOK: 'orderbook.subscribe',
-        TRADES: 'trade.subscribe',
-        CANDLES: 'kline.subscribe',
+        BALANCES: "aop.subscribe",
+        L2_BOOK: "orderbook.subscribe",
+        TRADES: "trade.subscribe",
+        CANDLES: "kline.subscribe",
     }
 
     @classmethod
@@ -46,21 +52,21 @@ class Phemex(Feed):
         ret = {}
         info = defaultdict(dict)
 
-        for entry in data['data']['products']:
-            if entry['status'] != 'Listed':
+        for entry in data["data"]["products"]:
+            if entry["status"] != "Listed":
                 continue
-            stype = entry['type'].lower()
-            if "perpetual" in stype:    # can be "perpetualv2"
+            stype = entry["type"].lower()
+            if "perpetual" in stype:  # can be "perpetualv2"
                 stype = PERPETUAL
-            base, quote = entry['displaySymbol'].split("/")
+            base, quote = entry["displaySymbol"].split("/")
             s = Symbol(base.strip(), quote.strip(), type=stype)
-            ret[s.normalized] = entry['symbol']
-            info['tick_size'][s.normalized] = entry['tickSize'] if 'tickSize' in entry else entry['quoteTickSize']
-            info['instrument_type'][s.normalized] = stype
+            ret[s.normalized] = entry["symbol"]
+            info["tick_size"][s.normalized] = entry["tickSize"] if "tickSize" in entry else entry["quoteTickSize"]
+            info["instrument_type"][s.normalized] = stype
             # the price scale for spot symbols is not reported via the API but it is documented
             # here in the API docs: https://github.com/phemex/phemex-api-docs/blob/master/Public-Spot-API-en.md#spot-currency-and-symbols
             # the default value for spot is 10^8
-            cls.price_scale[s.normalized] = 10 ** entry.get('priceScale', 8)
+            cls.price_scale[s.normalized] = 10 ** entry.get("priceScale", 8)
         return ret, info
 
     def __init__(self, **kwargs):
@@ -78,8 +84,7 @@ class Phemex(Feed):
                     del self._l2_book[std_pair]
 
     async def _book(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             'book': {
                 'asks': [],
                 'bids': [
@@ -93,16 +98,28 @@ class Phemex(Feed):
             'type': 'incremental'
         }
         """
-        symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        ts = self.timestamp_normalize(msg['timestamp'])
+        symbol = self.exchange_symbol_to_std_symbol(msg["symbol"])
+        ts = self.timestamp_normalize(msg["timestamp"])
         delta = {BID: [], ASK: []}
 
-        if msg['type'] == 'snapshot':
+        if msg["type"] == "snapshot":
             delta = None
-            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids={Decimal(entry[0]) / Decimal(self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['bids']}, asks={Decimal(entry[0]) / Decimal(self.price_scale[symbol]): Decimal(entry[1]) for entry in msg['book']['asks']})
+            self._l2_book[symbol] = OrderBook(
+                self.id,
+                symbol,
+                max_depth=self.max_depth,
+                bids={
+                    Decimal(entry[0]) / Decimal(self.price_scale[symbol]): Decimal(entry[1])
+                    for entry in msg["book"]["bids"]
+                },
+                asks={
+                    Decimal(entry[0]) / Decimal(self.price_scale[symbol]): Decimal(entry[1])
+                    for entry in msg["book"]["asks"]
+                },
+            )
         else:
-            for key, side in (('asks', ASK), ('bids', BID)):
-                for price, amount in msg['book'][key]:
+            for key, side in (("asks", ASK), ("bids", BID)):
+                for price, amount in msg["book"][key]:
                     price = Decimal(price) / Decimal(self.price_scale[symbol])
                     amount = Decimal(amount)
                     delta[side].append((price, amount))
@@ -116,8 +133,7 @@ class Phemex(Feed):
         await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, timestamp=ts, delta=delta)
 
     async def _trade(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             'sequence': 9047166781,
             'symbol': 'BTCUSD',
             'trades': [
@@ -126,22 +142,21 @@ class Phemex(Feed):
             'type': 'incremental'
         }
         """
-        symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        for ts, side, price, amount in msg['trades']:
+        symbol = self.exchange_symbol_to_std_symbol(msg["symbol"])
+        for ts, side, price, amount in msg["trades"]:
             t = Trade(
                 self.id,
                 symbol,
-                BUY if side == 'Buy' else SELL,
+                BUY if side == "Buy" else SELL,
                 Decimal(amount),
                 Decimal(price) / Decimal(self.price_scale[symbol]),
                 self.timestamp_normalize(ts),
-                raw=msg
+                raw=msg,
             )
             await self.callback(TRADES, t, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             'kline': [
                 [1625332980, 60, 346285000, 346300000, 346390000, 346300000, 346390000, 49917, 144121225]
             ],
@@ -150,9 +165,9 @@ class Phemex(Feed):
             'type': 'incremental'
         }
         """
-        symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
+        symbol = self.exchange_symbol_to_std_symbol(msg["symbol"])
 
-        for entry in msg['kline']:
+        for entry in msg["kline"]:
             ts, _, _, open, high, low, close, volume, _ = entry
             c = Candle(
                 self.id,
@@ -167,13 +182,12 @@ class Phemex(Feed):
                 Decimal(low) / Decimal(self.price_scale[symbol]),
                 Decimal(volume),
                 None,
-                None
+                None,
             )
             await self.callback(CANDLES, c, timestamp)
 
     async def _user_data(self, msg: dict, timestamp: float):
-        '''
-        snapshot:
+        """snapshot:
 
         {
             "accounts":[
@@ -589,50 +603,49 @@ class Phemex(Feed):
             "timestamp":1573717286767188294,
             "type":"incremental"
         }
-        '''
-        for entry in msg['accounts']:
+        """
+        for entry in msg["accounts"]:
             b = Balance(
                 self.id,
-                entry['currency'],
-                Decimal(entry['accountBalanceEv']),
-                Decimal(entry['totalUsedBalanceEv']),
-                self.timestamp_normalize(msg['timestamp']),
-                raw=entry
+                entry["currency"],
+                Decimal(entry["accountBalanceEv"]),
+                Decimal(entry["totalUsedBalanceEv"]),
+                self.timestamp_normalize(msg["timestamp"]),
+                raw=entry,
             )
             await self.callback(BALANCES, b, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
-        if 'id' in msg and msg['id'] == 100:
-            if not msg['error']:
-                LOG.info("%s: Auth request result: %s", conn.uuid, msg['result']['status'])
+        if "id" in msg and msg["id"] == 100:
+            if not msg["error"]:
+                LOG.info("%s: Auth request result: %s", conn.uuid, msg["result"]["status"])
                 msg = json.dumps({"id": 101, "method": self.std_channel_to_exchange(BALANCES), "params": []})
                 LOG.debug(f"{conn.uuid}: Subscribing to authenticated channels: {msg}")
                 await conn.write(msg)
             else:
                 LOG.warning("%s: Auth unsuccessful: %s", conn.uuid, msg)
-        elif 'id' in msg and msg['id'] == 101:
-            if not msg['error']:
-                LOG.info("%s: Subscribe to auth channels request result: %s", conn.uuid, msg['result']['status'])
+        elif "id" in msg and msg["id"] == 101:
+            if not msg["error"]:
+                LOG.info("%s: Subscribe to auth channels request result: %s", conn.uuid, msg["result"]["status"])
             else:
                 LOG.warning(f"{conn.uuid}: Subscription unsuccessful: {msg}")
-        elif 'id' in msg and msg['id'] == 1 and not msg['error']:
+        elif "id" in msg and msg["id"] == 1 and not msg["error"]:
             pass
-        elif 'accounts' in msg:
+        elif "accounts" in msg:
             await self._user_data(msg, timestamp)
-        elif 'book' in msg:
+        elif "book" in msg:
             await self._book(msg, timestamp)
-        elif 'trades' in msg:
+        elif "trades" in msg:
             await self._trade(msg, timestamp)
-        elif 'kline' in msg:
+        elif "kline" in msg:
             await self._candle(msg, timestamp)
-        elif 'result' in msg:
-            if 'error' in msg and msg['error'] is not None:
+        elif "result" in msg:
+            if "error" in msg and msg["error"] is not None:
                 LOG.warning("%s: Error from exchange %s", conn.uuid, msg)
                 return
-            else:
-                LOG.warning("%s: Unhandled 'result' message: %s", conn.uuid, msg)
+            LOG.warning("%s: Unhandled 'result' message: %s", conn.uuid, msg)
         else:
             LOG.warning("%s: Invalid message type %s", conn.uuid, msg)
 
@@ -644,7 +657,7 @@ class Phemex(Feed):
                 for sym in symbols:
                     msg = {"id": 1, "method": chan, "params": [sym]}
                     if self.exchange_channel_to_std(chan) == CANDLES:
-                        msg['params'] = [*[sym], self.candle_interval_map[self.candle_interval]]
+                        msg["params"] = [*[sym], self.candle_interval_map[self.candle_interval]]
                     LOG.debug(f"{conn.uuid}: Sending subscribe request to public channel: {msg}")
                     await conn.write(json.dumps(msg))
 
@@ -656,7 +669,9 @@ class Phemex(Feed):
 
     def _auth(self, key_id, key_secret, session_id=100):
         # https://github.com/phemex/phemex-api-docs/blob/master/Public-Contract-API-en.md#api-user-authentication
-        expires = int((time.time() + 60))
-        signature = str(hmac.new(bytes(key_secret, 'utf-8'), bytes(f'{key_id}{expires}', 'utf-8'), digestmod='sha256').hexdigest())
+        expires = int(time.time() + 60)
+        signature = str(
+            hmac.new(bytes(key_secret, "utf-8"), bytes(f"{key_id}{expires}", "utf-8"), digestmod="sha256").hexdigest()
+        )
         auth = {"method": "user.auth", "params": ["API", key_id, signature, expires], "id": session_id}
         return auth

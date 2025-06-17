@@ -1,19 +1,29 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-from datetime import datetime as dt, timezone
+"""
+
+from datetime import datetime as dt
+from datetime import timezone
 from typing import Dict, Tuple, Union
 
-from cryptofeed.defines import FUTURES, FX, OPTION, PERPETUAL, SPOT, CALL, PUT, CURRENCY
+from cryptofeed.defines import CALL, CURRENCY, FUTURES, FX, OPTION, PERPETUAL, PUT, SPOT
 
 
 class Symbol:
-    symbol_sep = '-'
+    symbol_sep = "-"
 
-    def __init__(self, base: str, quote: str, type=SPOT, strike_price=None, option_type=None, expiry_date=None, expiry_normalize=True):
+    def __init__(
+        self,
+        base: str,
+        quote: str,
+        type=SPOT,
+        strike_price=None,
+        option_type=None,
+        expiry_date=None,
+        expiry_normalize=True,
+    ):
         if type == OPTION:
             if option_type not in (CALL, PUT):
                 raise ValueError("option_type must be either CALL or PUT")
@@ -39,7 +49,7 @@ class Symbol:
 
     @staticmethod
     def month_code(month: str) -> str:
-        ret = ['F', 'G', 'H', 'J', 'K', 'M', 'N', 'Q', 'U', 'V', 'X', 'Z']
+        ret = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
         return ret[int(month) - 1]
 
     @staticmethod
@@ -62,7 +72,7 @@ class Symbol:
             return f"{year}{month}{day}"
         if len(date) == 9 or len(date) == 7:
             year, month, day = date[-2:], date[2:5], date[:2]
-            months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+            months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
             month = Symbol.month_code(months.index(month) + 1)
             return f"{year}{month}{day}"
 
@@ -104,11 +114,11 @@ class _Symbols:
 
     def set(self, exchange: str, normalized: dict, exchange_info: dict):
         self.data[exchange] = {}
-        self.data[exchange]['normalized'] = normalized
-        self.data[exchange]['info'] = exchange_info
+        self.data[exchange]["normalized"] = normalized
+        self.data[exchange]["info"] = exchange_info
 
     def get(self, exchange: str) -> Tuple[Dict, Dict]:
-        return self.data[exchange]['normalized'], self.data[exchange]['info']
+        return self.data[exchange]["normalized"], self.data[exchange]["info"]
 
     def populated(self, exchange: str) -> bool:
         return exchange in self.data
@@ -119,7 +129,7 @@ class _Symbols:
         if isinstance(symbol, Symbol):
             symbol = symbol.normalized
         for exchange, data in self.data.items():
-            if symbol in data['normalized']:
+            if symbol in data["normalized"]:
                 ret.append(exchange)
         return ret
 
@@ -128,21 +138,28 @@ Symbols = _Symbols()
 
 
 def str_to_symbol(symbol: str) -> Symbol:
-    '''
-    symbol: str
-        the symbol string must already be in correctly normalized format or this will fail
-    '''
+    """symbol: str
+    the symbol string must already be in correctly normalized format or this will fail
+    """
     values = symbol.split(Symbol.symbol_sep)
     if len(values) == 1:
         return Symbol(values[0], values[0], type=CURRENCY)
     if len(values) == 2:
         return Symbol(values[0], values[1], type=SPOT)
-    if values[-1] == 'PERP':
+    if values[-1] == "PERP":
         return Symbol(values[0], values[1], type=PERPETUAL)
     if len(values) == 5:
-        s = Symbol(values[0], values[1], type=OPTION, strike_price=values[2], option_type=values[4], expiry_date=values[3], expiry_normalize=False)
+        s = Symbol(
+            values[0],
+            values[1],
+            type=OPTION,
+            strike_price=values[2],
+            option_type=values[4],
+            expiry_date=values[3],
+            expiry_normalize=False,
+        )
         return s
     if len(values) == 3:
         s = Symbol(values[0], values[1], type=FUTURES, expiry_date=values[2], expiry_normalize=False)
         return s
-    raise ValueError(f'Invalid symbol: {symbol}')
+    raise ValueError(f"Invalid symbol: {symbol}")

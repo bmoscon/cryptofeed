@@ -1,26 +1,33 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-import os
-import glob
+"""
 
-from cryptofeed.defines import COINBASE, L2_BOOK, TRADES, TICKER, BID, ASK
+import glob
+import os
+
+from cryptofeed.defines import ASK, BID, COINBASE, L2_BOOK, TICKER, TRADES
 from cryptofeed.raw_data_collection import playback
 
 
 async def ticker(ticker, receipt_timestamp):
-    print(f'Timestamp: {ticker.timestamp} Exchange: {ticker.exchange} Symbol: {ticker.symbol} Bid: {ticker.bid} Ask: {ticker.ask}')
+    print(
+        f"Timestamp: {ticker.timestamp} Exchange: {ticker.exchange} Symbol: {ticker.symbol} Bid: {ticker.bid} Ask: {ticker.ask}"
+    )
 
 
 async def trade(trade, receipt_timestamp):
-    print(f"Timestamp: {trade.timestamp} Cryptofeed Receipt: {receipt_timestamp} Exchange: {trade.exchange} Symbol: {trade.symbol} ID: {trade.id} Side: {trade.side} Amount: {trade.amount} Price: {trade.price}")
+    print(
+        f"Timestamp: {trade.timestamp} Cryptofeed Receipt: {receipt_timestamp} Exchange: {trade.exchange} Symbol: {trade.symbol} ID: {trade.id} Side: {trade.side} Amount: {trade.amount} Price: {trade.price}"
+    )
 
 
 async def book(update, receipt_timestamp):
-    print(f'Timestamp: {update.timestamp} Exchange: {update.exchange} Symbol: {update.symbol} Book Bid Size is {len(update.book[BID])} Ask Size is {len(update.book[ASK])}')
+    print(
+        f"Timestamp: {update.timestamp} Exchange: {update.exchange} Symbol: {update.symbol} Book Bid Size is {len(update.book[BID])} Ask Size is {len(update.book[ASK])}"
+    )
 
 
 def main():
@@ -33,5 +40,5 @@ def main():
     print(stats)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

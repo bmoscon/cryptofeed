@@ -1,44 +1,46 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-import logging
-from decimal import Decimal
-from typing import Tuple, Dict
+"""
+
 from datetime import datetime as dt
 from datetime import timedelta
+from decimal import Decimal
+import logging
+from typing import Dict, Tuple
 
 from yapic import json
 
-from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BUY, BITHUMB, SELL, TRADES
+from cryptofeed.defines import BITHUMB, BUY, SELL, TRADES
 from cryptofeed.feed import Feed
+from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.types import Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class Bithumb(Feed):
-    '''
-    Before you use this bithumb implementation, you should know that this is exchange's API is pretty terrible.
+    """Before you use this bithumb implementation, you should know that this is exchange's API is pretty terrible.
 
     For some unknown reason, bithumb's api_info page lists all their KRW symbols as USDT. Probably because they bought
     the exchange and copied everything but didn't bother to update the reference data.
 
     We'll just assume that anything USDT is actually KRW. A search on their exchange page
     shows that there is no USDT symbols available. Please be careful when referencing their api_info page
-    '''
+    """
+
     id = BITHUMB
-    websocket_endpoints = [WebsocketEndpoint('wss://pubwss.bithumb.com/pub/ws')]
-    rest_endpoints = [RestEndpoint('https://api.bithumb.com', routes=Routes(['/public/ticker/ALL_BTC', '/public/ticker/ALL_KRW']))]
+    websocket_endpoints = [WebsocketEndpoint("wss://pubwss.bithumb.com/pub/ws")]
+    rest_endpoints = [
+        RestEndpoint("https://api.bithumb.com", routes=Routes(["/public/ticker/ALL_BTC", "/public/ticker/ALL_KRW"]))
+    ]
     websocket_channels = {
         # L2_BOOK: 'orderbookdepth', <-- technically the exchange supports orderbooks but it only provides orderbook deltas, there is
         # no way to synchronize against a rest snapshot, nor request/obtain an orderbook via the websocket, so this isn't really useful
-        TRADES: 'transaction',
+        TRADES: "transaction",
     }
 
     @classmethod
@@ -56,12 +58,12 @@ class Bithumb(Feed):
             return Symbols.get(cls.id)[0]
         try:
             data = {}
-            for ep in cls.rest_endpoints[0].route('instruments'):
+            for ep in cls.rest_endpoints[0].route("instruments"):
                 ret = cls.http_sync.read(ep, json=True, uuid=cls.id)
-                if 'BTC' in ep:
-                    data['BTC'] = ret
+                if "BTC" in ep:
+                    data["BTC"] = ret
                 else:
-                    data['KRW'] = ret
+                    data["KRW"] = ret
 
             syms, info = cls._parse_symbol_data(data)
             Symbols.set(cls.id, syms, info)
@@ -73,16 +75,16 @@ class Bithumb(Feed):
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
-        info = {'instrument_type': {}}
+        info = {"instrument_type": {}}
 
         for quote_curr, response in data.items():
-            bases = response['data']
+            bases = response["data"]
             for base_curr in bases.keys():
-                if base_curr == 'date':
+                if base_curr == "date":
                     continue
                 s = Symbol(base_curr, quote_curr)
                 ret[s.normalized] = f"{base_curr}_{quote_curr}"
-                info['instrument_type'][s.normalized] = s.type
+                info["instrument_type"][s.normalized] = s.type
 
         return ret, info
 
@@ -90,8 +92,7 @@ class Bithumb(Feed):
         super().__init__(max_depth=max_depth, **kwargs)
 
     async def _trades(self, msg: dict, rtimestamp: float):
-        '''
-        {
+        """{
             "type": "transaction",
             "content": {
                 "list": [
@@ -107,27 +108,27 @@ class Bithumb(Feed):
                 ]
             }
         }
-        '''
-        trades = msg.get('content', {}).get('list', [])
+        """
+        trades = msg.get("content", {}).get("list", [])
 
         for trade in trades:
             # API ref list uses '-', but market data returns '_'
-            symbol = self.exchange_symbol_to_std_symbol(trade['symbol'])
-            timestamp = self.timestamp_normalize(trade['contDtm'])
-            price = Decimal(trade['contPrice'])
-            quantity = Decimal(trade['contQty'])
-            side = BUY if trade['buySellGb'] == '2' else SELL
+            symbol = self.exchange_symbol_to_std_symbol(trade["symbol"])
+            timestamp = self.timestamp_normalize(trade["contDtm"])
+            price = Decimal(trade["contPrice"])
+            quantity = Decimal(trade["contQty"])
+            side = BUY if trade["buySellGb"] == "2" else SELL
 
             t = Trade(self.id, symbol, side, quantity, price, timestamp, raw=trade)
             await self.callback(TRADES, t, rtimestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        msg_type = msg.get('type', None)
+        msg_type = msg.get("type", None)
 
-        if msg_type == 'transaction':
+        if msg_type == "transaction":
             await self._trades(msg, timestamp)
-        elif msg_type is None and msg.get('status', None) == '0000':
+        elif msg_type is None and msg.get("status", None) == "0000":
             return
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
@@ -135,8 +136,12 @@ class Bithumb(Feed):
     async def subscribe(self, conn: AsyncConnection):
         if self.subscription:
             for chan in self.subscription:
-                await conn.write(json.dumps({
-                    "type": chan,
-                    "symbols": [symbol for symbol in self.subscription[chan]]
-                    # API ref list uses '-', but subscription requires '_'
-                }))
+                await conn.write(
+                    json.dumps(
+                        {
+                            "type": chan,
+                            "symbols": [symbol for symbol in self.subscription[chan]],
+                            # API ref list uses '-', but subscription requires '_'
+                        }
+                    )
+                )

@@ -1,45 +1,44 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
 
 
 def timedelta_str_to_sec(td: str):
-    if td == '1m':
+    if td == "1m":
         return 60
-    if td == '3m':
+    if td == "3m":
         return 180
-    if td == '5m':
+    if td == "5m":
         return 300
-    if td == '10m':
+    if td == "10m":
         return 600
-    if td == '15m':
+    if td == "15m":
         return 900
-    if td == '30m':
+    if td == "30m":
         return 1800
-    if td == '1h':
+    if td == "1h":
         return 3600
-    if td == '2h':
+    if td == "2h":
         return 7200
-    if td == '4h':
+    if td == "4h":
         return 14400
-    if td == '6h':
+    if td == "6h":
         return 21600
-    if td == '8h':
+    if td == "8h":
         return 28800
-    if td == '12h':
+    if td == "12h":
         return 43200
-    if td == '1d':
+    if td == "1d":
         return 86400
-    if td == '3d':
+    if td == "3d":
         return 259200
-    if td == '1w':
+    if td == "1w":
         return 604800
-    if td == '2w':
+    if td == "2w":
         return 1209600
-    if td == '1M':
+    if td == "1M":
         return 2592000
-    if td == '1Y':
+    if td == "1Y":
         return 31536000

@@ -1,14 +1,14 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import logging
 from logging.handlers import RotatingFileHandler
 
 
-FORMAT = logging.Formatter('%(asctime)-15s : %(levelname)s : %(message)s')
+FORMAT = logging.Formatter("%(asctime)-15s : %(levelname)s : %(message)s")
 
 
 def get_logger(name, filename, level=logging.WARNING):

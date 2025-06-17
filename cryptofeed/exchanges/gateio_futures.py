@@ -1,41 +1,63 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
 
-import logging
 from collections import defaultdict
 from decimal import Decimal
-from yapic import json
+import logging
 import time
+from typing import Dict, Tuple
+
+from yapic import json
 
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import GATEIO_FUTURES, PERPETUAL, CANDLES, L2_BOOK, TICKER, TRADES, BID, ASK, BUY, SELL, OPEN_INTEREST, INDEX, FUNDING
-
+from cryptofeed.defines import (
+    ASK,
+    BID,
+    BUY,
+    CANDLES,
+    FUNDING,
+    GATEIO_FUTURES,
+    INDEX,
+    L2_BOOK,
+    OPEN_INTEREST,
+    PERPETUAL,
+    SELL,
+    TICKER,
+    TRADES,
+)
 from cryptofeed.exchanges.gateio import Gateio
-from typing import Dict, Tuple
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import OrderBook, Trade, Ticker, Candle, Index, OpenInterest, Funding
+from cryptofeed.types import Candle, Funding, Index, OpenInterest, OrderBook, Ticker, Trade
 from cryptofeed.util.time import timedelta_str_to_sec
 
-LOG = logging.getLogger('feedhandler')
+
+LOG = logging.getLogger("feedhandler")
 
 
 class GateioFutures(Gateio):
     id = GATEIO_FUTURES
-    websocket_endpoints = [WebsocketEndpoint('wss://fx-ws.gateio.ws/v4/ws/usdt', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/futures/usdt/contracts', l2book='/api/v4/futures/usdt/order_book?contract={}&limit=100&with_id=true'))]
+    websocket_endpoints = [WebsocketEndpoint("wss://fx-ws.gateio.ws/v4/ws/usdt", options={"compression": None})]
+    rest_endpoints = [
+        RestEndpoint(
+            "https://api.gateio.ws",
+            routes=Routes(
+                "/api/v4/futures/usdt/contracts",
+                l2book="/api/v4/futures/usdt/order_book?contract={}&limit=100&with_id=true",
+            ),
+        )
+    ]
 
     websocket_channels = {
-        L2_BOOK: 'futures.order_book_update',
-        TRADES: 'futures.trades',
-        TICKER: 'futures.book_ticker',
-        CANDLES: 'futures.candlesticks',
-        FUNDING: 'futures.tickers',
-        OPEN_INTEREST: 'futures.tickers',
-        INDEX: 'futures.tickers'
+        L2_BOOK: "futures.order_book_update",
+        TRADES: "futures.trades",
+        TICKER: "futures.book_ticker",
+        CANDLES: "futures.candlesticks",
+        FUNDING: "futures.tickers",
+        OPEN_INTEREST: "futures.tickers",
+        INDEX: "futures.tickers",
     }
 
     @classmethod
@@ -48,14 +70,13 @@ class GateioFutures(Gateio):
                 continue
             base, quote = entry["name"].split("_")
             s = Symbol(base, quote, type=PERPETUAL)
-            ret[s.normalized] = entry['name']
-            info['instrument_type'][s.normalized] = s.type
-            info['tick_size'][s.normalized] = entry['order_price_round']
+            ret[s.normalized] = entry["name"]
+            info["instrument_type"][s.normalized] = s.type
+            info["tick_size"][s.normalized] = entry["order_price_round"]
         return ret, info
 
     async def _book_ticker(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
         "time": 1615366379,
         "time_ms": 1615366379123,
         "channel": "futures.book_ticker",
@@ -74,18 +95,17 @@ class GateioFutures(Gateio):
         """
         t = Ticker(
             self.id,
-            self.exchange_symbol_to_std_symbol(msg['result']['s']),
-            Decimal(msg['result']['b']),
-            Decimal(msg['result']['a']),
-            float(msg['result']["t"] / 1000),
-            raw=msg
+            self.exchange_symbol_to_std_symbol(msg["result"]["s"]),
+            Decimal(msg["result"]["b"]),
+            Decimal(msg["result"]["a"]),
+            float(msg["result"]["t"] / 1000),
+            raw=msg,
         )
 
         await self.callback(TICKER, t, timestamp)
 
     async def _candles(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "time": 1542162490,
             "time_ms": 1542162490123,
             "channel": "futures.candlesticks",
@@ -113,29 +133,28 @@ class GateioFutures(Gateio):
             ]
         }
         """
-        for entry in msg['result']:
-            interval, symbol = entry['n'].split('_', 1)
+        for entry in msg["result"]:
+            interval, symbol = entry["n"].split("_", 1)
             c = Candle(
                 self.id,
                 self.exchange_symbol_to_std_symbol(symbol),
-                float(entry['t']),
-                float(entry['t']) + timedelta_str_to_sec(interval) - 0.1,
+                float(entry["t"]),
+                float(entry["t"]) + timedelta_str_to_sec(interval) - 0.1,
                 interval,
                 None,
-                float(entry['o']),
-                float(entry['c']),
-                float(entry['h']),
-                float(entry['l']),
-                float(entry['v']),
+                float(entry["o"]),
+                float(entry["c"]),
+                float(entry["h"]),
+                float(entry["l"]),
+                float(entry["v"]),
                 None,
-                float(msg['time_ms'] / 1000),
-                raw=entry
+                float(msg["time_ms"] / 1000),
+                raw=entry,
             )
             await self.callback(CANDLES, c, timestamp)
 
     async def _snapshot(self, symbol: str):
-        """
-        {
+        """{
             "id": 123456,
             "current": 1623898993.123,
             "update": 1623898993.121,
@@ -161,21 +180,20 @@ class GateioFutures(Gateio):
             ]
         }
         """
-        ret = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol))
+        ret = await self.http_conn.read(self.rest_endpoints[0].route("l2book", self.sandbox).format(symbol))
         data = json.loads(ret, parse_float=Decimal)
 
         symbol = self.exchange_symbol_to_std_symbol(symbol)
         self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
-        self.last_update_id[symbol] = data['id']
+        self.last_update_id[symbol] = data["id"]
 
-        self._l2_book[symbol].book.bids = {Decimal(bid["p"]): Decimal(bid["s"]) for bid in data['bids']}
-        self._l2_book[symbol].book.asks = {Decimal(ask["p"]): Decimal(ask["s"]) for ask in data['asks']}
+        self._l2_book[symbol].book.bids = {Decimal(bid["p"]): Decimal(bid["s"]) for bid in data["bids"]}
+        self._l2_book[symbol].book.asks = {Decimal(ask["p"]): Decimal(ask["s"]) for ask in data["asks"]}
         # self._l2_book[symbol].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], time.time(), raw=data, sequence_number=data['id'])
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], time.time(), raw=data, sequence_number=data["id"])
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "time": 1615366381,
             "time_ms": 1615366381123,
             "channel": "futures.order_book_update",
@@ -209,19 +227,19 @@ class GateioFutures(Gateio):
             }
         }
         """
-        symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
+        symbol = self.exchange_symbol_to_std_symbol(msg["result"]["s"])
         if symbol not in self._l2_book:
-            await self._snapshot(msg['result']['s'])
+            await self._snapshot(msg["result"]["s"])
 
-        skip_update = self._check_update_id(symbol, msg['result'])
+        skip_update = self._check_update_id(symbol, msg["result"])
         if skip_update:
             return
 
-        ts = msg['result']['t'] / 1000
+        ts = msg["result"]["t"] / 1000
         delta = {BID: [], ASK: []}
 
-        for s, side in (('b', BID), ('a', ASK)):
-            for update in msg['result'][s]:
+        for s, side in (("b", BID), ("a", ASK)):
+            for update in msg["result"][s]:
                 price = Decimal(update["p"])
                 amount = Decimal(update["s"])
 
@@ -236,8 +254,7 @@ class GateioFutures(Gateio):
         await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, timestamp=ts, raw=msg)
 
     async def _trades(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "channel": "futures.trades",
             "event": "update",
             "time": 1541503698,
@@ -254,22 +271,21 @@ class GateioFutures(Gateio):
             ]
         }
         """
-        for entry in msg['result']:
+        for entry in msg["result"]:
             t = Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(entry['contract']),
-                SELL if entry['size'] < 0 else BUY,
-                Decimal(abs(entry['size'])),
-                Decimal(entry['price']),
-                float(entry['create_time_ms'] / 1000),
-                id=str(entry['id']),
-                raw=entry
+                self.exchange_symbol_to_std_symbol(entry["contract"]),
+                SELL if entry["size"] < 0 else BUY,
+                Decimal(abs(entry["size"])),
+                Decimal(entry["price"]),
+                float(entry["create_time_ms"] / 1000),
+                id=str(entry["id"]),
+                raw=entry,
             )
             await self.callback(TRADES, t, timestamp)
 
     async def _tickers(self, msg: dict, timestamp: float):
-        """
-        {
+        """{
             "time": 1541"659086,
             "time_ms": 1541659086123,
             "channel": "futures.tickers",
@@ -298,38 +314,38 @@ class GateioFutures(Gateio):
             ]
         }
         """
-        ts = msg['time_ms'] / 1000
-        for entry in msg['result']:
+        ts = msg["time_ms"] / 1000
+        for entry in msg["result"]:
             if "total_size" in entry:
                 oi = OpenInterest(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(entry['contract']),
-                    Decimal(entry['total_size']),
+                    self.exchange_symbol_to_std_symbol(entry["contract"]),
+                    Decimal(entry["total_size"]),
                     ts,
-                    raw=entry
+                    raw=entry,
                 )
                 await self.callback(OPEN_INTEREST, oi, timestamp)
 
             if "index_price" in entry:
                 i = Index(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(entry['contract']),
-                    Decimal(entry['index_price']),
+                    self.exchange_symbol_to_std_symbol(entry["contract"]),
+                    Decimal(entry["index_price"]),
                     ts,
-                    raw=entry
+                    raw=entry,
                 )
                 await self.callback(INDEX, i, timestamp)
 
             if "funding_rate" in entry:
                 f = Funding(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(entry['contract']),
+                    self.exchange_symbol_to_std_symbol(entry["contract"]),
                     Decimal(entry["mark_price"]),
-                    Decimal(entry['funding_rate']),
+                    Decimal(entry["funding_rate"]),
                     None,
                     ts,
-                    Decimal(entry['funding_rate_indicative']),
-                    raw=entry
+                    Decimal(entry["funding_rate_indicative"]),
+                    raw=entry,
                 )
                 await self.callback(FUNDING, f, timestamp)
 
@@ -337,23 +353,23 @@ class GateioFutures(Gateio):
         msg = json.loads(msg, parse_float=Decimal)
 
         if "error" in msg:
-            if msg['error'] is None:
+            if msg["error"] is None:
                 pass
             else:
                 LOG.warning("%s: Error received from exchange - %s", self.id, msg)
-        if msg['event'] == 'subscribe':
+        if msg["event"] == "subscribe":
             return
-        elif 'channel' in msg:
-            market, channel = msg['channel'].split('.')
-            if channel == 'book_ticker':
+        if "channel" in msg:
+            market, channel = msg["channel"].split(".")
+            if channel == "book_ticker":
                 await self._book_ticker(msg, timestamp)
-            elif channel == 'tickers':
+            elif channel == "tickers":
                 await self._tickers(msg, timestamp)
-            elif channel == 'trades':
+            elif channel == "trades":
                 await self._trades(msg, timestamp)
-            elif channel == 'order_book_update':
+            elif channel == "order_book_update":
                 await self._process_l2_book(msg, timestamp)
-            elif channel == 'candlesticks':
+            elif channel == "candlesticks":
                 await self._candles(msg, timestamp)
             else:
                 LOG.warning("%s: Unhandled message type %s", self.id, msg)

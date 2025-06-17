@@ -1,23 +1,38 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
+from collections.abc import AsyncGenerator
+from datetime import datetime as dt
+from datetime import timezone
 from decimal import Decimal
 import logging
-from datetime import datetime as dt, timezone
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-from cryptofeed.defines import CANDLES, FUNDING, L2_BOOK, L3_BOOK, OPEN_INTEREST, POSITIONS, TICKER, TRADES, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
-from cryptofeed.symbols import Symbol, Symbols
-from cryptofeed.connection import HTTPSync, RestEndpoint
-from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
 from cryptofeed.config import Config
+from cryptofeed.connection import HTTPSync, RestEndpoint
+from cryptofeed.defines import (
+    BALANCES,
+    CANDLES,
+    FILLS,
+    FUNDING,
+    L2_BOOK,
+    L3_BOOK,
+    OPEN_INTEREST,
+    ORDER_INFO,
+    POSITIONS,
+    TICKER,
+    TRADES,
+    TRANSACTIONS,
+)
+from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
+from cryptofeed.symbols import Symbol, Symbols
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class Exchange:
@@ -37,7 +52,9 @@ class Exchange:
         self.sandbox = sandbox
         self.subaccount = subaccount
 
-        keys = self.config[self.id.lower()] if self.subaccount is None else self.config[self.id.lower()][self.subaccount]
+        keys = (
+            self.config[self.id.lower()] if self.subaccount is None else self.config[self.id.lower()][self.subaccount]
+        )
         self.key_id = keys.key_id
         self.key_secret = keys.key_secret
         self.key_passphrase = keys.key_passphrase
@@ -62,15 +79,13 @@ class Exchange:
 
     @classmethod
     def info(cls) -> Dict:
-        """
-        Return information about the Exchange for REST and Websocket data channels
-        """
+        """Return information about the Exchange for REST and Websocket data channels"""
         symbols = cls.symbol_mapping()
         data = Symbols.get(cls.id)[1]
-        data['symbols'] = list(symbols.keys())
-        data['channels'] = {
-            'rest': list(cls.rest_channels) if hasattr(cls, 'rest_channels') else [],
-            'websocket': list(cls.websocket_channels.keys())
+        data["symbols"] = list(symbols.keys())
+        data["channels"] = {
+            "rest": list(cls.rest_channels) if hasattr(cls, "rest_channels") else [],
+            "websocket": list(cls.websocket_channels.keys()),
         }
         return data
 
@@ -80,11 +95,10 @@ class Exchange:
 
     @classmethod
     def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[List[str], str]:
-        """
-        override if a specific exchange needs to do something first, like query an API
+        """Override if a specific exchange needs to do something first, like query an API
         to get a list of currencies, that are then used to build the list of symbol endpoints
         """
-        return ep.route('instruments')
+        return ep.route("instruments")
 
     @classmethod
     def symbol_mapping(cls, refresh=False, headers: dict = None) -> Dict:
@@ -114,14 +128,14 @@ class Exchange:
         try:
             return cls.websocket_channels[channel]
         except KeyError:
-            raise UnsupportedDataFeed(f'{channel} is not supported on {cls.id}')
+            raise UnsupportedDataFeed(f"{channel} is not supported on {cls.id}")
 
     @classmethod
     def exchange_channel_to_std(cls, channel: str) -> str:
         for chan, exch in cls.websocket_channels.items():
             if exch == channel:
                 return chan
-        raise ValueError(f'Unable to normalize channel {cls.id}')
+        raise ValueError(f"Unable to normalize channel {cls.id}")
 
     @classmethod
     def is_authenticated_channel(cls, channel: str) -> bool:
@@ -132,9 +146,9 @@ class Exchange:
             return self.exchange_symbol_mapping[symbol]
         except KeyError:
             if self.ignore_invalid_instruments:
-                LOG.warning('Invalid symbol %s configured for %s', symbol, self.id)
+                LOG.warning("Invalid symbol %s configured for %s", symbol, self.id)
                 return symbol
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
+            raise UnsupportedSymbol(f"{symbol} is not supported on {self.id}")
 
     def std_symbol_to_exchange_symbol(self, symbol: Union[str, Symbol]) -> str:
         if isinstance(symbol, Symbol):
@@ -143,9 +157,9 @@ class Exchange:
             return self.normalized_symbol_mapping[symbol]
         except KeyError:
             if self.ignore_invalid_instruments:
-                LOG.warning('Invalid symbol %s configured for %s', symbol, self.id)
+                LOG.warning("Invalid symbol %s configured for %s", symbol, self.id)
                 return symbol
-            raise UnsupportedSymbol(f'{symbol} is not supported on {self.id}')
+            raise UnsupportedSymbol(f"{symbol} is not supported on {self.id}")
 
 
 class RestExchange:
@@ -167,7 +181,7 @@ class RestExchange:
         except StopAsyncIteration:
             return
 
-    def _datetime_normalize(self, timestamp: Union[str, int, float, dt]) -> float:
+    def _datetime_normalize(self, timestamp: Union[str, float, dt]) -> float:
         if isinstance(timestamp, (float, int)):
             return timestamp
         if isinstance(timestamp, dt):
@@ -175,9 +189,9 @@ class RestExchange:
 
         if isinstance(timestamp, str):
             try:
-                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=timezone.utc).timestamp()
+                return dt.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc).timestamp()
             except ValueError:
-                return dt.strptime(timestamp, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc).timestamp()
+                return dt.strptime(timestamp, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
 
     def _interval_normalize(self, start, end) -> Tuple[Optional[float], Optional[float]]:
         if start:
@@ -187,7 +201,7 @@ class RestExchange:
         if end:
             end = self._datetime_normalize(end)
         if start and start > end:
-            raise ValueError('Start time must be less than or equal to end time')
+            raise ValueError("Start time must be less than or equal to end time")
         return start, end if start else None
 
     # public / non account specific
@@ -198,11 +212,13 @@ class RestExchange:
     async def ticker(self, symbol: str, retry_count=1, retry_delay=60):
         raise NotImplementedError
 
-    def candles_sync(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
-        gen = self.candles(symbol, start=start, end=end, interval=interval, retry_count=retry_count, retry_delay=retry_delay)
+    def candles_sync(self, symbol: str, start=None, end=None, interval="1m", retry_count=1, retry_delay=60):
+        gen = self.candles(
+            symbol, start=start, end=end, interval=interval, retry_count=retry_count, retry_delay=retry_delay
+        )
         return self._sync_run_generator(gen)
 
-    async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):
+    async def candles(self, symbol: str, start=None, end=None, interval="1m", retry_count=1, retry_delay=60):
         raise NotImplementedError
 
     def trades_sync(self, symbol: str, start=None, end=None, retry_count=1, retry_delay=60):
@@ -300,15 +316,15 @@ class RestExchange:
     def __getitem__(self, key):
         if key == TRADES:
             return self.trades
-        elif key == CANDLES:
+        if key == CANDLES:
             return self.candles
-        elif key == FUNDING:
+        if key == FUNDING:
             return self.funding
-        elif key == L2_BOOK:
+        if key == L2_BOOK:
             return self.l2_book
-        elif key == L3_BOOK:
+        if key == L3_BOOK:
             return self.l3_book
-        elif key == TICKER:
+        if key == TICKER:
             return self.ticker
-        elif key == OPEN_INTEREST:
+        if key == OPEN_INTEREST:
             return self.open_interest

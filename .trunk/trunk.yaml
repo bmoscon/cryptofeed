@@ -2,34 +2,38 @@
 # To learn more about the format of this file, see https://docs.trunk.io/reference/trunk-yaml
 version: 0.1
 cli:
-  version: 1.22.5
+  version: 1.24.0
 plugins:
   sources:
     - id: trunk
-      ref: v1.6.2
+      ref: v1.7.0
       uri: https://github.com/trunk-io/plugins
+# Many linters and tools depend on runtimes - configure them here. (https://docs.trunk.io/runtimes)
 runtimes:
   enabled:
-    - node@18.12.1
     - go@1.21.0
+    - node@22.16.0
     - python@3.10.8
 lint:
   enabled:
-    - actionlint@1.7.1
-    - bandit@1.7.9
-    - black@24.10.0
+    - actionlint@1.7.7
+    - bandit@1.8.5
     - git-diff-check
-    - isort@5.13.2
-    - markdownlint@0.41.0
-    - mypy@1.11.2
-    - osv-scanner@1.8.4
-    - prettier@3.3.3
-    - ruff@0.6.4
+    - markdownlint@0.45.0
+    - mypy@1.16.1
+    - osv-scanner@2.0.3
+    - prettier@3.5.3
+    - ruff@0.11.13
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - taplo@0.9.3
-    - trufflehog@3.81.10
-    - yamllint@1.35.1
+    - trufflehog@3.89.1
+    - yamllint@1.37.1
+  disabled:
+    - black # Replaced by ruff format
+    - isort # Replaced by ruff
+    - checkov # Not needed for this project
+    - flake8 # Replaced by ruff
 actions:
   disabled:
     - trunk-announce

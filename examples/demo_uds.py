@@ -1,13 +1,14 @@
-'''
+"""
 Copyright (C) 2018-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import asyncio
-import os
 from decimal import Decimal
 from multiprocessing import Process
+import os
 
 from yapic import json
 
@@ -31,23 +32,28 @@ async def reader(reader, writer):
 
 
 async def main():
-    server = await asyncio.start_unix_server(
-        reader, path='temp.uds')
+    server = await asyncio.start_unix_server(reader, path="temp.uds")
 
     await server.serve_forever()
 
 
 def writer(path):
     f = FeedHandler()
-    f.add_feed(Coinbase(channels=[TRADES, TICKER], symbols=['BTC-USD'], callbacks={TRADES: TradeSocket(path), TICKER: TickerSocket(path)}))
+    f.add_feed(
+        Coinbase(
+            channels=[TRADES, TICKER],
+            symbols=["BTC-USD"],
+            callbacks={TRADES: TradeSocket(path), TICKER: TickerSocket(path)},
+        )
+    )
 
     f.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
-        p = Process(target=writer, args=('uds://temp.uds',))
+        p = Process(target=writer, args=("uds://temp.uds",))
         p.start()
         asyncio.run(main())
     finally:
-        os.unlink('temp.uds')
+        os.unlink("temp.uds")

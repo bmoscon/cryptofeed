@@ -1,15 +1,15 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 import os
 
 import yaml
 
 
-_default_config = {'uvloop': True, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}}
+_default_config = {"uvloop": True, "log": {"filename": "feedhandler.log", "level": "WARNING"}}
 
 
 class AttrDict(dict):
@@ -45,22 +45,22 @@ class Config:
             if config and os.path.exists(config):
                 with open(config) as fp:
                     self.config = AttrDict(yaml.safe_load(fp))
-                    self.log_msg = f'Config: use file={config!r} containing the following main keys: {", ".join(self.config.keys())}'
+                    self.log_msg = f"Config: use file={config!r} containing the following main keys: {', '.join(self.config.keys())}"
             else:
-                self.log_msg = f'Config: no file={config!r} => default config.'
+                self.log_msg = f"Config: no file={config!r} => default config."
         elif isinstance(config, dict):
             self.config = AttrDict(config)
-            self.log_msg = f'Config: use dict containing the following main keys: {", ".join(self.config.keys())}'
+            self.log_msg = f"Config: use dict containing the following main keys: {', '.join(self.config.keys())}"
         elif isinstance(config, Config):
             self.config = AttrDict(config.config)
-            self.log_msg = f'Config: using Config containing the following main keys: {", ".join(self.config.keys())}'
-        elif os.environ.get('CRYPTOFEED_CONFIG') and os.path.exists(os.environ.get('CRYPTOFEED_CONFIG')):
-            config = os.environ.get('CRYPTOFEED_CONFIG')
+            self.log_msg = f"Config: using Config containing the following main keys: {', '.join(self.config.keys())}"
+        elif os.environ.get("CRYPTOFEED_CONFIG") and os.path.exists(os.environ.get("CRYPTOFEED_CONFIG")):
+            config = os.environ.get("CRYPTOFEED_CONFIG")
             with open(config) as fp:
                 self.config = AttrDict(yaml.safe_load(fp))
-                self.log_msg = f'Config: use file={config!r} from CRYPTOFEED_CONFIG containing the following main keys: {", ".join(self.config.keys())}'
+                self.log_msg = f"Config: use file={config!r} from CRYPTOFEED_CONFIG containing the following main keys: {', '.join(self.config.keys())}"
         else:
-            self.log_msg = f'Config: Only accept str and dict but got {type(config)!r} => default config.'
+            self.log_msg = f"Config: Only accept str and dict but got {type(config)!r} => default config."
 
     def __bool__(self):
         return self.config != {}

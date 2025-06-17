@@ -1,37 +1,58 @@
-'''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
+"""
+
 from collections import defaultdict
-from cryptofeed.symbols import Symbol
-import logging
 from decimal import Decimal
+import logging
 from typing import Dict, Tuple
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES
+from cryptofeed.defines import (
+    ASK,
+    BID,
+    BUY,
+    FUNDING,
+    FUTURES,
+    KRAKEN_FUTURES,
+    L2_BOOK,
+    OPEN_INTEREST,
+    PERPETUAL,
+    SELL,
+    TICKER,
+    TRADES,
+)
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest
+from cryptofeed.symbols import Symbol
+from cryptofeed.types import Funding, OpenInterest, OrderBook, Ticker, Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger("feedhandler")
 
 
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
-    websocket_endpoints = [WebsocketEndpoint('wss://futures.kraken.com/ws/v1', sandbox='wss://demo-futures.kraken.com/ws/v1')]
-    rest_endpoints = [RestEndpoint('https://futures.kraken.com', routes=Routes('/derivatives/api/v3/instruments'), sandbox='https://demo-futures.kraken.com')]
+    websocket_endpoints = [
+        WebsocketEndpoint("wss://futures.kraken.com/ws/v1", sandbox="wss://demo-futures.kraken.com/ws/v1")
+    ]
+    rest_endpoints = [
+        RestEndpoint(
+            "https://futures.kraken.com",
+            routes=Routes("/derivatives/api/v3/instruments"),
+            sandbox="https://demo-futures.kraken.com",
+        )
+    ]
     websocket_channels = {
-        L2_BOOK: 'book',
-        TRADES: 'trade',
-        TICKER: 'ticker_lite',
-        FUNDING: 'ticker',
-        OPEN_INTEREST: 'ticker',
+        L2_BOOK: "book",
+        TRADES: "trade",
+        TICKER: "ticker_lite",
+        FUNDING: "ticker",
+        OPEN_INTEREST: "ticker",
     }
 
     @classmethod
@@ -42,39 +63,39 @@ class KrakenFutures(Feed):
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         # Docs, https://support.kraken.com/hc/en-us/articles/360022835891-Ticker-symbols
         _kraken_futures_product_type = {
-            'FI': 'Inverse Futures',
-            'FV': 'Vanilla Futures',
-            'PI': 'Perpetual Inverse Futures',
-            'FF': 'Fixed Maturity Linear Futures',
-            'PF': 'Perpetual Linear Multi-Collateral Futures',
-            'PV': 'Perpetual Vanilla Futures',
-            'IN': 'Real Time Index',
-            'RR': 'Reference Rate',
+            "FI": "Inverse Futures",
+            "FV": "Vanilla Futures",
+            "PI": "Perpetual Inverse Futures",
+            "FF": "Fixed Maturity Linear Futures",
+            "PF": "Perpetual Linear Multi-Collateral Futures",
+            "PV": "Perpetual Vanilla Futures",
+            "IN": "Real Time Index",
+            "RR": "Reference Rate",
         }
         ret = {}
         info = defaultdict(dict)
 
-        data = data['instruments']
+        data = data["instruments"]
         for entry in data:
-            if not entry['tradeable']:
+            if not entry["tradeable"]:
                 continue
-            ftype, symbol = entry['symbol'].upper().split("_", maxsplit=1)
+            ftype, symbol = entry["symbol"].upper().split("_", maxsplit=1)
             stype = PERPETUAL
             expiry = None
             if "_" in symbol:
                 stype = FUTURES
                 symbol, expiry = symbol.split("_")
-            symbol = symbol.replace('XBT', 'BTC')
+            symbol = symbol.replace("XBT", "BTC")
             base, quote = symbol[:-3], symbol[-3:]
 
             s = Symbol(base, quote, type=stype, expiry_date=expiry)
 
-            info['tick_size'][s.normalized] = entry['tickSize']
-            info['contract_size'][s.normalized] = entry['contractSize']
-            info['underlying'][s.normalized] = entry.get('underlying')
-            info['product_type'][s.normalized] = _kraken_futures_product_type[ftype]
-            info['instrument_type'][s.normalized] = stype
-            ret[s.normalized] = entry['symbol']
+            info["tick_size"][s.normalized] = entry["tickSize"]
+            info["contract_size"][s.normalized] = entry["contractSize"]
+            info["underlying"][s.normalized] = entry.get("underlying")
+            info["product_type"][s.normalized] = _kraken_futures_product_type[ftype]
+            info["instrument_type"][s.normalized] = stype
+            ret[s.normalized] = entry["symbol"]
         return ret, info
 
     def __reset(self):
@@ -85,17 +106,10 @@ class KrakenFutures(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
         for chan in self.subscription:
-            await conn.write(json.dumps(
-                {
-                    "event": "subscribe",
-                    "feed": chan,
-                    "product_ids": self.subscription[chan]
-                }
-            ))
+            await conn.write(json.dumps({"event": "subscribe", "feed": chan, "product_ids": self.subscription[chan]}))
 
     async def _trade(self, msg: dict, pair: str, timestamp: float):
-        """
-        {
+        """{
             "feed": "trade",
             "product_id": "PI_XBTUSD",
             "uid": "b5a1c239-7987-4207-96bf-02355a3263cf",
@@ -110,18 +124,17 @@ class KrakenFutures(Feed):
         t = Trade(
             self.id,
             pair,
-            BUY if msg['side'] == 'buy' else SELL,
-            Decimal(msg['qty']),
-            Decimal(msg['price']),
-            self.timestamp_normalize(msg['time']),
-            id=msg['uid'],
-            raw=msg
+            BUY if msg["side"] == "buy" else SELL,
+            Decimal(msg["qty"]),
+            Decimal(msg["price"]),
+            self.timestamp_normalize(msg["time"]),
+            id=msg["uid"],
+            raw=msg,
         )
         await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
-        """
-        {
+        """{
             "feed": "ticker_lite",
             "product_id": "PI_XBTUSD",
             "bid": 11726.5,
@@ -135,12 +148,11 @@ class KrakenFutures(Feed):
             "maturityTime": 0
         }
         """
-        t = Ticker(self.id, pair, msg['bid'], msg['ask'], None, raw=msg)
+        t = Ticker(self.id, pair, msg["bid"], msg["ask"], None, raw=msg)
         await self.callback(TICKER, t, timestamp)
 
     async def _book_snapshot(self, msg: dict, pair: str, timestamp: float):
-        """
-        {
+        """{
             "feed": "book_snapshot",
             "product_id": "PI_XBTUSD",
             "timestamp": 1565342712774,
@@ -162,8 +174,8 @@ class KrakenFutures(Feed):
             "tickSize": null
         }
         """
-        bids = {Decimal(update['price']): Decimal(update['qty']) for update in msg['bids']}
-        asks = {Decimal(update['price']): Decimal(update['qty']) for update in msg['asks']}
+        bids = {Decimal(update["price"]): Decimal(update["qty"]) for update in msg["bids"]}
+        asks = {Decimal(update["price"]): Decimal(update["qty"]) for update in msg["asks"]}
         if pair in self._l2_book:
             self._l2_book[pair].book.bids = bids
             self._l2_book[pair].book.asks = asks
@@ -172,11 +184,10 @@ class KrakenFutures(Feed):
 
         self._l2_book[pair].timestamp = self.timestamp_normalize(msg["timestamp"]) if "timestamp" in msg else None
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, sequence_number=msg['seq'])
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, sequence_number=msg["seq"])
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
-        """
-        Message is received for every book update:
+        """Message is received for every book update:
         {
             "feed": "book",
             "product_id": "PI_XBTUSD",
@@ -187,14 +198,14 @@ class KrakenFutures(Feed):
             "timestamp": 1565342713929
         }
         """
-        if pair in self.seq_no and self.seq_no[pair] + 1 != msg['seq']:
+        if pair in self.seq_no and self.seq_no[pair] + 1 != msg["seq"]:
             raise MissingSequenceNumber
-        self.seq_no[pair] = msg['seq']
+        self.seq_no[pair] = msg["seq"]
 
         delta = {BID: [], ASK: []}
-        s = BID if msg['side'] == 'buy' else ASK
-        price = Decimal(msg['price'])
-        amount = Decimal(msg['qty'])
+        s = BID if msg["side"] == "buy" else ASK
+        price = Decimal(msg["price"])
+        amount = Decimal(msg["qty"])
 
         if amount == 0:
             delta[s].append((price, 0))
@@ -205,60 +216,52 @@ class KrakenFutures(Feed):
 
         self._l2_book[pair].timestamp = self.timestamp_normalize(msg["timestamp"]) if "timestamp" in msg else None
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, sequence_number=msg['seq'], raw=msg)
+        await self.book_callback(
+            L2_BOOK, self._l2_book[pair], timestamp, delta=delta, sequence_number=msg["seq"], raw=msg
+        )
 
     async def _funding(self, msg: dict, pair: str, timestamp: float):
-        if 'funding_rate' in msg:
+        if "funding_rate" in msg:
             f = Funding(
                 self.id,
                 pair,
                 None,
-                msg['funding_rate'],
-                self.timestamp_normalize(msg['next_funding_rate_time']),
-                self.timestamp_normalize(msg['time']),
-                predicted_rate=msg['funding_rate_prediction'],
-                raw=msg
+                msg["funding_rate"],
+                self.timestamp_normalize(msg["next_funding_rate_time"]),
+                self.timestamp_normalize(msg["time"]),
+                predicted_rate=msg["funding_rate_prediction"],
+                raw=msg,
             )
             await self.callback(FUNDING, f, timestamp)
 
-        oi = msg['openInterest']
+        oi = msg["openInterest"]
         if pair in self._open_interest_cache and oi == self._open_interest_cache[pair]:
             return
         self._open_interest_cache[pair] = oi
-        o = OpenInterest(
-            self.id,
-            pair,
-            oi,
-            self.timestamp_normalize(msg['time']),
-            raw=msg
-        )
+        o = OpenInterest(self.id, pair, oi, self.timestamp_normalize(msg["time"]), raw=msg)
         await self.callback(OPEN_INTEREST, o, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
-
         msg = json.loads(msg, parse_float=Decimal)
 
-        if 'event' in msg:
-            if msg['event'] == 'info':
+        if "event" in msg:
+            if msg["event"] == "info" or msg["event"] == "subscribed":
                 return
-            elif msg['event'] == 'subscribed':
-                return
-            else:
-                LOG.warning("%s: Invalid message type %s", self.id, msg)
+            LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
             # As per Kraken support: websocket product_id is uppercase version of the REST API symbols
-            pair = self.exchange_symbol_to_std_symbol(msg['product_id'].lower())
-            if msg['feed'] == 'trade':
+            pair = self.exchange_symbol_to_std_symbol(msg["product_id"].lower())
+            if msg["feed"] == "trade":
                 await self._trade(msg, pair, timestamp)
-            elif msg['feed'] == 'trade_snapshot':
+            elif msg["feed"] == "trade_snapshot":
                 return
-            elif msg['feed'] == 'ticker_lite':
+            elif msg["feed"] == "ticker_lite":
                 await self._ticker(msg, pair, timestamp)
-            elif msg['feed'] == 'ticker':
+            elif msg["feed"] == "ticker":
                 await self._funding(msg, pair, timestamp)
-            elif msg['feed'] == 'book_snapshot':
+            elif msg["feed"] == "book_snapshot":
                 await self._book_snapshot(msg, pair, timestamp)
-            elif msg['feed'] == 'book':
+            elif msg["feed"] == "book":
                 await self._book(msg, pair, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)

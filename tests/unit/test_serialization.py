@@ -1,30 +1,22 @@
-'''
+"""
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
-'''
-from decimal import Decimal
-from time import time
-import json
+"""
 
-from cryptofeed.types import OrderInfo, OrderBook, Trade, Ticker, Liquidation, Funding, Candle
-from cryptofeed.defines import BUY, PENDING, LIMIT, UNFILLED
+from decimal import Decimal
+import json
+from time import time
+
+from cryptofeed.defines import BUY, LIMIT, PENDING, UNFILLED
+from cryptofeed.types import Candle, Funding, Liquidation, OrderBook, OrderInfo, Ticker, Trade
 
 
 def test_order_info():
     oi = OrderInfo(
-            'COINBASE',
-            'BTC-USD',
-            None,
-            BUY,
-            PENDING,
-            LIMIT,
-            Decimal(40000.00),
-            Decimal(1.25),
-            Decimal(1.25),
-            time()
-        )
+        "COINBASE", "BTC-USD", None, BUY, PENDING, LIMIT, Decimal(40000.00), Decimal(1.25), Decimal(1.25), time()
+    )
     d = oi.to_dict(numeric_type=str)
     d = json.dumps(d)
     d = json.loads(d)
@@ -34,10 +26,7 @@ def test_order_info():
 
 def test_order_book():
     ob = OrderBook(
-        'COINBASE',
-        'BTC-USD',
-        bids={100: 1, 200: 2, 300: 3, 400: 4, 500: 5},
-        asks={600: 6, 700: 7, 800: 8, 1000: 10}
+        "COINBASE", "BTC-USD", bids={100: 1, 200: 2, 300: 3, 400: 4, 500: 5}, asks={600: 6, 700: 7, 800: 8, 1000: 10}
     )
     ob.timestamp = time()
     d = ob.to_dict()
@@ -47,16 +36,7 @@ def test_order_book():
 
 
 def test_trade():
-    t = Trade(
-        'COINBASE',
-        'BTC-USD',
-        BUY,
-        Decimal(10),
-        Decimal(100),
-        time(),
-        id=str(int(time())),
-        type='TEST'
-    )
+    t = Trade("COINBASE", "BTC-USD", BUY, Decimal(10), Decimal(100), time(), id=str(int(time())), type="TEST")
     d = t.to_dict(numeric_type=str)
     d = json.dumps(d)
     d = json.loads(d)
@@ -66,8 +46,8 @@ def test_trade():
 
 def test_ticker():
     t = Ticker(
-        'COINBASE',
-        'BTC-USD',
+        "COINBASE",
+        "BTC-USD",
         Decimal(10),
         Decimal(100),
         time(),
@@ -81,12 +61,12 @@ def test_ticker():
 
 def test_liquidation():
     t = Liquidation(
-        'BINANCE_FUTURES',
-        'BTC-USD-PERP',
+        "BINANCE_FUTURES",
+        "BTC-USD-PERP",
         BUY,
         Decimal(10),
         Decimal(100),
-        '1234-abcd-6789-1234',
+        "1234-abcd-6789-1234",
         UNFILLED,
         time(),
     )
@@ -99,8 +79,8 @@ def test_liquidation():
 
 def test_funding():
     t = Funding(
-        'BINANCE_FUTURES',
-        'BTC-USD-PERP',
+        "BINANCE_FUTURES",
+        "BTC-USD-PERP",
         Decimal(10),
         Decimal(100),
         time(),
@@ -115,11 +95,11 @@ def test_funding():
 
 def test_candle():
     t = Candle(
-        'BINANCE_FUTURES',
-        'BTC-USD-PERP',
+        "BINANCE_FUTURES",
+        "BTC-USD-PERP",
         time(),
         time() + 60,
-        '1m',
+        "1m",
         54,
         Decimal(10),
         Decimal(100),

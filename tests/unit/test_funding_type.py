@@ -1,8 +1,8 @@
-from cryptofeed.exchange import Exchange
-from cryptofeed.types import Funding
-
 import datetime
 from decimal import Decimal
+
+from cryptofeed.exchange import Exchange
+from cryptofeed.types import Funding
 
 
 def test_funding_to_dict():
@@ -15,9 +15,7 @@ def test_funding_to_dict():
             datetime.datetime(2021, 12, 26, 21, 0, tzinfo=datetime.timezone.utc)
         ),
         "predicted_rate": Decimal("0.0"),
-        "timestamp": Exchange.timestamp_normalize(
-            datetime.datetime(2021, 12, 26, 20, 0, tzinfo=datetime.timezone.utc)
-        ),
+        "timestamp": Exchange.timestamp_normalize(datetime.datetime(2021, 12, 26, 20, 0, tzinfo=datetime.timezone.utc)),
     }
 
     f = Funding(
