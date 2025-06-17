@@ -38,7 +38,6 @@ jobs:
         run: |
           uv venv
           uv sync --dev
-          uv pip install -e .
 
       - name: Install and setup Trunk
         uses: trunk-io/trunk-action@v1

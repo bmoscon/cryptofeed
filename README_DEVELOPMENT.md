@@ -12,6 +12,27 @@ This guide provides comprehensive setup instructions for developers working on t
 
 ### 1. Clone and Setup
 
+#### Using uv (Recommended)
+
+```bash
+# Clone repository
+git clone https://github.com/tommy-ca/cryptofeed.git
+cd cryptofeed
+
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install all dependencies (creates .venv automatically)
+uv sync --frozen
+
+# Activate virtual environment
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate     # Windows
+```
+
+#### Alternative with pip
+
 ```bash
 # Clone repository
 git clone https://github.com/tommy-ca/cryptofeed.git
@@ -25,10 +46,29 @@ venv\Scripts\activate     # Windows
 
 # Install development dependencies
 pip install -e ".[all]"
-pip install pytest ruff black isort mypy
 ```
 
-### 2. Install Development Tools
+### 2. Development Dependency Groups
+
+With uv, you can install specific dependency groups for different development needs:
+
+```bash
+# Install specific development tool groups
+uv sync --group test        # Testing dependencies only
+uv sync --group lint        # Code quality tools (ruff, mypy, etc.)
+uv sync --group build       # Build tools (wheel, setuptools, etc.)
+uv sync --group security    # Security scanning tools
+uv sync --group performance # Performance benchmarking tools
+uv sync --group quality     # Code complexity analysis tools
+
+# Install multiple groups
+uv sync --group test --group lint --group security
+
+# Install all development dependencies
+uv sync --frozen  # Includes all groups
+```
+
+### 3. Install Development Tools
 
 #### Trunk (Code Quality - Recommended)
 ```bash
@@ -42,24 +82,28 @@ trunk --version
 trunk install-hooks
 ```
 
-#### Alternative: Manual Tool Setup
+#### Using uv for individual tools
 ```bash
-# If not using Trunk, install tools individually
-pip install ruff black isort mypy pytest bandit safety
+# Tools are already installed via dependency groups
+uv run ruff check .     # Linting
+uv run mypy cryptofeed  # Type checking
+uv run pytest tests/   # Testing
+uv run bandit -r .     # Security scanning
 ```
 
-### 3. Verify Setup
+### 4. Verify Setup
 
 ```bash
-# Run tests
-pytest tests/
+# Run tests with uv
+uv run pytest tests/
 
-# Check code quality
+# Check code quality with Trunk (recommended)
 trunk check
-# or manually:
-ruff check .
-black --check .
-isort --check .
+
+# Or manually with uv:
+uv run ruff check .
+uv run mypy cryptofeed
+uv run bandit -r cryptofeed/
 ```
 
 ## 🛠️ Development Workflow
@@ -78,7 +122,7 @@ trunk fmt              # Format all files
 trunk check --fix      # Fix issues automatically
 
 # Run tests
-pytest tests/
+uv run pytest tests/
 
 # Commit changes
 git add .

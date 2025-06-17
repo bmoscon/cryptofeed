@@ -1,6 +1,6 @@
 # Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
+![Python](https://img.shields.io/badge/Python-3.9+-green.svg)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
 
@@ -147,25 +147,58 @@ Supported Backends:
 
 ## Installation
 
-**Note:** cryptofeed requires Python 3.8+
+**Note:** cryptofeed requires Python 3.9+
 
-Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
+### Using uv (Recommended)
 
-    pip install cryptofeed
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager that provides better dependency resolution and faster installations.
 
-Cryptofeed has optional dependencies, depending on the backends used. You can install them individually, or all at once. To install Cryptofeed along with all its optional dependencies in one bundle:
+1. **Install uv:**
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
 
-    pip install cryptofeed[all]
+2. **Install cryptofeed:**
+   ```bash
+   uv add cryptofeed
+   ```
 
-If you wish to clone the repository and install from source, run this command from the root of the cloned repository.
+3. **With optional dependencies:**
+   ```bash
+   uv add cryptofeed[all]  # All backends
+   uv add cryptofeed[redis,kafka]  # Specific backends
+   ```
 
-    python setup.py install
+### Using pip (Traditional)
 
-Alternatively, you can install in 'edit' mode (also called development mode):
+Cryptofeed can also be installed from PyPi using pip:
 
-    python setup.py develop
+```bash
+pip install cryptofeed
+pip install cryptofeed[all]  # With all optional dependencies
+```
 
-See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
+### Development Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/bmoscon/cryptofeed.git
+   cd cryptofeed
+   ```
+
+2. **Install with uv (recommended):**
+   ```bash
+   uv sync --frozen  # Installs all dependencies including dev tools
+   source .venv/bin/activate  # Linux/macOS
+   # or .venv\Scripts\activate  # Windows
+   ```
+
+3. **Alternative with pip:**
+   ```bash
+   pip install -e .
+   ```
+
+See more discussion of package installation and backend-specific setup in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
 
 

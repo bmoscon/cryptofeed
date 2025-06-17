@@ -14,6 +14,8 @@ from cryptofeed.defines import BUY, CANCELLED, LIMIT, PENDING
 from cryptofeed.exchanges import Coinbase
 from cryptofeed.types import Candle, Ticker, Trade
 
+# Mark all tests in this module as network and integration tests
+pytestmark = [pytest.mark.network, pytest.mark.integration]
 
 public = Coinbase(config="config.yaml")
 sandbox = Coinbase(sandbox=True, config="config.yaml")

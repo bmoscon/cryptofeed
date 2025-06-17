@@ -12,6 +12,8 @@ import pytest
 from cryptofeed.defines import ASK, BID, BUY, CANCELLED, LIMIT
 from cryptofeed.exchanges import Gemini
 
+pytestmark = [pytest.mark.network, pytest.mark.integration]
+
 
 public = Gemini(config="config.yaml")
 sandbox = Gemini(sandbox=True, config="config.yaml")

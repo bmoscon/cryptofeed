@@ -51,8 +51,7 @@ jobs:
         run: |
           uv venv
           uv sync --dev
-          uv pip install pytest-benchmark memory-profiler psutil py-spy
-          uv pip install -e .
+          uv pip install py-spy
 
       - name: System info
         run: |
@@ -320,8 +319,7 @@ jobs:
         run: |
           uv venv
           uv sync --dev
-          uv pip install py-spy line_profiler memory-profiler
-          uv pip install -e .
+          uv pip install py-spy line_profiler
 
       - name: Run continuous profiling
         run: |

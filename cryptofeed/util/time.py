@@ -1,4 +1,4 @@
-"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+"""Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com.
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -42,3 +42,4 @@ def timedelta_str_to_sec(td: str):
         return 2592000
     if td == "1Y":
         return 31536000
+    return None

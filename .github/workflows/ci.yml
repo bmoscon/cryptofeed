@@ -31,8 +31,10 @@ jobs:
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
@@ -40,7 +42,6 @@ jobs:
         run: |
           uv venv
           uv sync --dev
-          uv pip install -e .
 
       - name: Install and setup Trunk
         uses: trunk-io/trunk-action@v1
@@ -84,21 +85,24 @@ jobs:
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('**/pyproject.toml') }}
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-uv-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-py${{ matrix.python-version }}-uv-
+            ${{ runner.os }}-uv-
 
       - name: Install dependencies with uv
         run: |
           uv venv
+          # Install with dev dependencies for compatibility
           uv sync --dev
-          uv pip install pytest pytest-cov pytest-asyncio
-          uv pip install -e .
 
       - name: Run tests with pytest
         run: |
-          uv run pytest tests/ --cov=cryptofeed --cov-report=xml --cov-report=term-missing
+          # Run tests excluding network-dependent tests for CI
+          uv run pytest tests/ --cov=cryptofeed --cov-report=xml --cov-report=term-missing -m "not network" --tb=short
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
@@ -162,7 +166,7 @@ jobs:
       - name: Install build dependencies
         run: |
           uv venv
-          uv pip install build wheel cython
+          uv sync --dev
 
       - name: Build package
         run: uv run python -m build
@@ -233,14 +237,13 @@ jobs:
         with:
           version: "latest"
 
-      - name: Install safety
+      - name: Install dependencies
         run: |
           uv venv
-          uv pip install safety
+          uv sync --dev
 
       - name: Check dependencies for vulnerabilities
         run: |
-          uv sync
           uv run safety check --json --output safety-report.json
         continue-on-error: true
 
@@ -273,8 +276,6 @@ jobs:
         run: |
           uv venv
           uv sync --dev
-          uv pip install pytest-benchmark
-          uv pip install -e .
 
       - name: Run performance benchmarks
         run: |

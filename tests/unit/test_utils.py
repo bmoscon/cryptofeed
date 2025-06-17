@@ -5,8 +5,13 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 """
 
+import pytest
+
 from cryptofeed.defines import ASK, BID
 from cryptofeed.util.book import book_delta
+
+# Mark all tests in this module as unit tests  
+pytestmark = pytest.mark.unit
 
 
 def test_book_delta_simple():

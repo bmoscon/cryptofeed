@@ -49,7 +49,6 @@ jobs:
         run: |
           uv venv
           uv sync --dev
-          uv pip install -e .
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
@@ -88,21 +87,17 @@ jobs:
       - name: Install security tools
         run: |
           uv venv
-          uv pip install safety bandit[toml] pip-audit
-
-      - name: Install project dependencies
-        run: |
           uv sync --dev
-          uv pip install -e .
+
 
       - name: Run Safety check
         run: |
-          safety check --json --output safety-report.json || true
+          uv run safety check --output json > safety-report.json || true
           cat safety-report.json
 
       - name: Run pip-audit
         run: |
-          pip-audit --desc --output pip-audit-report.json --format json || true
+          uv run pip-audit --desc --output pip-audit-report.json --format json || true
           cat pip-audit-report.json
 
       - name: Install and setup Trunk
@@ -120,7 +115,7 @@ jobs:
         if: failure()
         run: |
           echo "🚨 Trunk bandit failed, using fallback..."
-          bandit -r cryptofeed/ -f json -o bandit-report.json || true
+          uv run bandit -r cryptofeed/ -f json -o bandit-report.json || true
           cat bandit-report.json
 
       - name: Upload security scan results
@@ -168,20 +163,15 @@ jobs:
         with:
           version: "latest"
 
-      - name: Install license checker
+      - name: Install dependencies with license checker
         run: |
           uv venv
-          uv pip install pip-licenses
-
-      - name: Install project dependencies
-        run: |
           uv sync --dev
-          uv pip install -e .
 
       - name: Check licenses
         run: |
-          pip-licenses --format=json --output-file=licenses.json
-          pip-licenses --format=markdown --output-file=licenses.md
+          uv run pip-licenses --format=json --output-file=licenses.json
+          uv run pip-licenses --format=markdown --output-file=licenses.md
 
       - name: Verify allowed licenses
         run: |

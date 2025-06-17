@@ -42,7 +42,6 @@ jobs:
         run: |
           uv venv
           uv sync --dev
-          uv pip install -e .
 
       - name: Install and setup Trunk
         uses: trunk-io/trunk-action@v1
@@ -71,28 +70,20 @@ jobs:
         if: failure()
         run: |
           echo "🚨 Trunk failed, running comprehensive fallback analysis..."
-          chmod +x tools/check-fallback.sh
-          ./tools/check-fallback.sh
-
-          # Generate fallback reports
+          
+          # Generate fallback reports using dev dependencies
           echo "📝 Generating fallback reports..."
 
-          # Ruff analysis
-          uv add --dev ruff
-          uv run ruff check . --output-format=json > fallback-ruff.json || true
-          uv run ruff check . --output-format=sarif > fallback-ruff.sarif || true
+          # Ruff analysis with dev dependencies
+          uv run ruff check cryptofeed/ --output-format=json > fallback-ruff.json || true
+          uv run ruff check cryptofeed/ --output-format=sarif > fallback-ruff.sarif || true
 
           # MyPy analysis
-          uv add --dev mypy
-          uv run mypy cryptofeed --ignore-missing-imports --json-report mypy-report || true
+          uv run mypy cryptofeed/ --ignore-missing-imports || true
 
           # Bandit security analysis
-          uv add --dev bandit
           uv run bandit -r cryptofeed/ -f json -o fallback-bandit.json || true
           uv run bandit -r cryptofeed/ -f sarif -o fallback-bandit.sarif || true
-
-          # Cleanup
-          uv remove --dev ruff mypy bandit
 
       - name: Generate quality metrics
         run: |
@@ -105,15 +96,11 @@ jobs:
           # Count TODO/FIXME comments
           echo "TODO comments: $(grep -r "TODO\|FIXME" cryptofeed/ --include="*.py" | wc -l)" >> metrics.txt
 
-          # Calculate complexity (if available)
-          uv add --dev radon || true
-          if command -v radon &> /dev/null; then
-            echo "Cyclomatic Complexity Analysis:" >> metrics.txt
-            uv run radon cc cryptofeed/ -a >> metrics.txt || true
-            echo "Maintainability Index:" >> metrics.txt
-            uv run radon mi cryptofeed/ >> metrics.txt || true
-            uv remove --dev radon || true
-          fi
+          # Calculate complexity (already installed in dev dependencies)
+          echo "Cyclomatic Complexity Analysis:" >> metrics.txt
+          uv run radon cc cryptofeed/ -a >> metrics.txt || true
+          echo "Maintainability Index:" >> metrics.txt
+          uv run radon mi cryptofeed/ >> metrics.txt || true
 
           echo "📊 Quality Metrics:"
           cat metrics.txt
@@ -240,9 +227,7 @@ jobs:
       - name: Install analysis tools
         run: |
           uv venv
-          uv pip install radon xenon vulture
           uv sync --dev
-          uv pip install -e .
 
       - name: Run complexity analysis
         run: |
@@ -317,9 +302,7 @@ jobs:
       - name: Install documentation tools
         run: |
           uv venv
-          uv pip install pydocstyle interrogate
           uv sync --dev
-          uv pip install -e .
 
       - name: Check docstring coverage
         run: |

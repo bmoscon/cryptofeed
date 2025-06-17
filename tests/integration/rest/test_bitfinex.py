@@ -8,8 +8,12 @@ associated with this software.
 import asyncio
 from decimal import Decimal
 
+import pytest
+
 from cryptofeed.defines import ASK, BID, BITFINEX, BUY, SELL
 from cryptofeed.exchanges import Bitfinex
+
+pytestmark = [pytest.mark.network, pytest.mark.integration]
 
 
 b = Bitfinex()

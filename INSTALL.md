@@ -1,68 +1,146 @@
-# Cryptofeed installation
- 
+# Cryptofeed Installation
+
 The Cryptofeed library is intended for use by Python developers.
 
-Several ways to get/use Cryptofeed:
+**Requirements:**
+- Python 3.9+
+- Optional: [uv](https://github.com/astral-sh/uv) for faster dependency management
 
-* Pip - `pip install cryptofeed`
-* Git - `git clone https://github.com/bmoscon/cryptofeed`
-* Zipped source code - Download [github.com/bmoscon/cryptofeed/archive/master.zip](https://github.com/bmoscon/cryptofeed/archive/master.zip)
+## Installation Methods
 
-## Installation with Pip
+### Using uv (Recommended)
 
-The safe way to install and upgrade the Cryptofeed library:
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager with superior dependency resolution and installation speed.
 
-    pip install --user --upgrade cryptofeed
+**1. Install uv:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-Cryptofeed supports many backends as Redis, ZeroMQ, RabbitMQ, MongoDB, PostgreSQL, Google Cloud and many others.
-Cryptofeed is usually used with a subset of the available backends, and installing the dependencies of all backends is not required. 
-Thus, to minimize the number of dependencies, the backend dependencies are optional, but easy to install.
+**2. Basic Installation:**
+```bash
+uv add cryptofeed
+```
 
-See the file [`setup.py`](https://github.com/bmoscon/cryptofeed/blob/master/setup.py#L60)
-for the exhaustive list of these *extra* dependencies.
+**3. With All Optional Dependencies:**
+```bash
+uv add cryptofeed[all]
+```
 
-* Install all optional dependencies  
-  To install Cryptofeed along with all optional dependencies in one bundle:
+### Using pip (Traditional)
 
-        pip install --user --upgrade cryptofeed[all]
+**Basic Installation:**
+```bash
+pip install --user --upgrade cryptofeed
+```
 
-* Arctic backend  
-  To install Cryptofeed along with [Arctic](https://github.com/man-group/arctic/) in one bundle:
+**With All Optional Dependencies:**
+```bash
+pip install --user --upgrade cryptofeed[all]
+```
 
-         pip install --user --upgrade cryptofeed[arctic]
+## Backend-Specific Installation
 
-* Google Cloud Pub / Sub backend
+Cryptofeed supports many backends including Redis, ZeroMQ, RabbitMQ, MongoDB, PostgreSQL, Google Cloud, and others. Backend dependencies are optional to minimize installation footprint.
 
-         pip install --user --upgrade cryptofeed[gcp_pubsub]
+### Using uv
 
-* Kafka backend
+* **All backends:**
+  ```bash
+  uv add cryptofeed[all]
+  ```
 
-         pip install --user --upgrade cryptofeed[kafka]
+* **Arctic backend:**
+  ```bash
+  uv add cryptofeed[arctic]
+  ```
 
-* MongoDB backend
+* **Google Cloud Pub/Sub backend:**
+  ```bash
+  uv add cryptofeed[gcp_pubsub]
+  ```
 
-         pip install --user --upgrade cryptofeed[mongo]
+* **Kafka backend:**
+  ```bash
+  uv add cryptofeed[kafka]
+  ```
 
-* PostgreSQL backend
+* **MongoDB backend:**
+  ```bash
+  uv add cryptofeed[mongo]
+  ```
 
-         pip install --user --upgrade cryptofeed[postgres]
+* **PostgreSQL backend:**
+  ```bash
+  uv add cryptofeed[postgres]
+  ```
 
-* QuasarDB backend  
-  To install Cryptofeed along with [QuasarDB](https://quasar.ai/) in one bundle:
+* **QuasarDB backend:**
+  ```bash
+  uv add cryptofeed[quasardb]
+  ```
 
-         pip install --user --upgrade cryptofeed[quasardb]
+* **RabbitMQ backend:**
+  ```bash
+  uv add cryptofeed[rabbit]
+  ```
 
-* RabbitMQ backend
+* **Redis backend:**
+  ```bash
+  uv add cryptofeed[redis]
+  ```
 
-         pip install --user --upgrade cryptofeed[rabbit]
+* **ZeroMQ backend:**
+  ```bash
+  uv add cryptofeed[zmq]
+  ```
 
-* Redis backend
+### Using pip
 
-          pip install --user --upgrade cryptofeed[redis]
+Replace `uv add` with `pip install --user --upgrade` for any of the above commands.
 
-* ZeroMQ backend
+## Development Installation
 
-         pip install --user --upgrade cryptofeed[zmq]
+### Using uv (Recommended)
+
+**1. Clone the repository:**
+```bash
+git clone https://github.com/bmoscon/cryptofeed.git
+cd cryptofeed
+```
+
+**2. Install with all development dependencies:**
+```bash
+uv sync --frozen
+```
+
+**3. Activate virtual environment:**
+```bash
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate     # Windows
+```
+
+### Development Dependency Groups
+
+The project uses uv dependency groups for organized development:
+
+```bash
+uv sync --group test        # Testing dependencies only
+uv sync --group lint        # Code quality tools
+uv sync --group build       # Build tools
+uv sync --group security    # Security scanning tools
+uv sync --group performance # Performance benchmarking
+uv sync --group quality     # Code complexity analysis
+```
+
+### Alternative Development Setup (pip)
+
+```bash
+git clone https://github.com/bmoscon/cryptofeed.git
+cd cryptofeed
+pip install -e .  # Editable installation
+```
 
 If you have a problem with the installation/hacking of Cryptofeed, you are welcome to:
 * open a new issue: https://github.com/bmoscon/cryptofeed/issues/

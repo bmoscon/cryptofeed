@@ -364,6 +364,7 @@ skips = [
 skips = ["**/tests/**", "**/test_*.py"]
 
 [dependency-groups]
+# Core development dependencies
 dev = [
   "bandit>=1.8.5",
   "mypy>=1.16.1",
@@ -371,4 +372,69 @@ dev = [
   "pytest-asyncio>=1.0.0",
   "pytest-cov>=6.2.1",
   "ruff>=0.11.13",
+  # Build tools
+  "build",
+  "wheel",
+  # Security tools  
+  "safety",
+  "pip-audit",
+  # Code quality tools
+  "radon",
+  "xenon",
+  "vulture", 
+  "pydocstyle",
+  "interrogate",
+  # Performance tools
+  "pytest-benchmark",
+  "memory-profiler",
+  "psutil",
+  # Licensing
+  "pip-licenses",
+]
+
+# Specialized dependency groups for CI optimization
+build = [
+  "build",
+  "wheel", 
+  "setuptools>=61.0",
+  "cython",
+]
+
+test = [
+  "pytest>=7.0.0",
+  "pytest-asyncio>=0.21.0", 
+  "pytest-cov>=4.0.0",
+]
+
+lint = [
+  "ruff>=0.11.13",
+  "mypy>=1.16.1",
+  "pydocstyle",
+  "interrogate",
+]
+
+security = [
+  "bandit>=1.8.5",
+  "safety",
+  "pip-audit",
+]
+
+performance = [
+  "pytest-benchmark",
+  "memory-profiler",
+  "psutil",
+]
+
+quality = [
+  "radon",
+  "xenon",
+  "vulture",
+]
+
+ci = [
+  "pytest>=8.4.0",
+  "pytest-cov>=6.2.1",
+  "ruff>=0.11.13",
+  "mypy>=1.16.1",
+  "bandit>=1.8.5",
 ]
