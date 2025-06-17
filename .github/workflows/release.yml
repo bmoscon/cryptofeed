@@ -3,16 +3,16 @@ name: Release Pipeline
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., v1.2.3)'
+        description: "Version to release (e.g., v1.2.3)"
         required: true
-        default: 'v1.0.0'
+        default: "v1.0.0"
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: "3.11"
 
 jobs:
   validate-release:
@@ -127,21 +127,22 @@ jobs:
         run: |
           cat > release_notes.md << EOF
           # Release ${{ steps.version.outputs.version }}
-          
+
           ## What's Changed
           - See CHANGES.md for detailed changelog
-          
+
           ## Installation
           \`\`\`bash
           pip install cryptofeed==${{ steps.version.outputs.version }}
           \`\`\`
-          
+
           ## Docker
           \`\`\`bash
           docker pull cryptofeed:${{ steps.version.outputs.version }}
           \`\`\`
-          
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.version.outputs.version }}...HEAD
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/\
+          v${{ steps.version.outputs.version }}...HEAD
           EOF
 
       - name: Create GitHub Release
@@ -153,7 +154,10 @@ jobs:
             dist/*.tar.gz
             dist/*.whl
           draft: false
-          prerelease: ${{ contains(steps.version.outputs.version, 'rc') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') }}
+          prerelease: ${{ 
+            contains(steps.version.outputs.version, 'rc') || 
+            contains(steps.version.outputs.version, 'beta') || 
+            contains(steps.version.outputs.version, 'alpha') }}
 
   publish-pypi:
     name: Publish to PyPI

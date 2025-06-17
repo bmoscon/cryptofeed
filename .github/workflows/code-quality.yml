@@ -2,21 +2,21 @@ name: Code Quality Analysis
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   schedule:
-    - cron: '0 2 * * 1'  # Weekly on Mondays at 2 AM
+    - cron: "0 2 * * 1" # Weekly on Mondays at 2 AM
   workflow_dispatch:
     inputs:
       full_analysis:
-        description: 'Run full analysis including performance benchmarks'
+        description: "Run full analysis including performance benchmarks"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: "3.11"
 
 jobs:
   trunk-analysis:
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for better analysis
+          fetch-depth: 0 # Full history for better analysis
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -52,16 +52,16 @@ jobs:
         run: |
           # Generate detailed reports in multiple formats
           echo "🔍 Running comprehensive code quality analysis..."
-          
+
           # JSON report for programmatic processing
           trunk check --all --output-format=json > trunk-report.json || true
-          
+
           # SARIF report for GitHub security tab
           trunk check --all --output-format=sarif > trunk-report.sarif || true
-          
+
           # Human-readable report
           trunk check --all --output-format=text > trunk-report.txt || true
-          
+
           # Show summary in logs
           echo "📊 Quality Analysis Summary:"
           cat trunk-report.txt | head -50 || echo "No issues found!"
@@ -72,48 +72,48 @@ jobs:
           echo "🚨 Trunk failed, running comprehensive fallback analysis..."
           chmod +x tools/check-fallback.sh
           ./tools/check-fallback.sh
-          
+
           # Generate fallback reports
           echo "📝 Generating fallback reports..."
-          
+
           # Ruff analysis
           uv add --dev ruff
           uv run ruff check . --output-format=json > fallback-ruff.json || true
           uv run ruff check . --output-format=sarif > fallback-ruff.sarif || true
-          
-          # MyPy analysis  
+
+          # MyPy analysis
           uv add --dev mypy
           uv run mypy cryptofeed --ignore-missing-imports --json-report mypy-report || true
-          
+
           # Bandit security analysis
           uv add --dev bandit
           uv run bandit -r cryptofeed/ -f json -o fallback-bandit.json || true
           uv run bandit -r cryptofeed/ -f sarif -o fallback-bandit.sarif || true
-          
+
           # Cleanup
           uv remove --dev ruff mypy bandit
 
       - name: Generate quality metrics
         run: |
           echo "📈 Generating quality metrics..."
-          
+
           # Count lines of code
           find cryptofeed/ -name "*.py" -exec wc -l {} + | tail -1 > metrics.txt
           echo "Total Python files: $(find cryptofeed/ -name '*.py' | wc -l)" >> metrics.txt
-          
+
           # Count TODO/FIXME comments
           echo "TODO comments: $(grep -r "TODO\|FIXME" cryptofeed/ --include="*.py" | wc -l)" >> metrics.txt
-          
+
           # Calculate complexity (if available)
           uv add --dev radon || true
           if command -v radon &> /dev/null; then
             echo "Cyclomatic Complexity Analysis:" >> metrics.txt
             uv run radon cc cryptofeed/ -a >> metrics.txt || true
-            echo "Maintainability Index:" >> metrics.txt  
+            echo "Maintainability Index:" >> metrics.txt
             uv run radon mi cryptofeed/ >> metrics.txt || true
             uv remove --dev radon || true
           fi
-          
+
           echo "📊 Quality Metrics:"
           cat metrics.txt
 
@@ -145,11 +145,11 @@ jobs:
       - name: Quality gate check
         run: |
           echo "🚪 Checking quality gates..."
-          
+
           # Initialize counters
           CRITICAL_ISSUES=0
           HIGH_ISSUES=0
-          
+
           # Check Trunk report if available
           if [ -f "trunk-report.json" ] && [ -s "trunk-report.json" ]; then
             echo "📋 Analyzing Trunk report..."
@@ -157,26 +157,26 @@ jobs:
             grep -i "error\|critical" trunk-report.json && CRITICAL_ISSUES=$((CRITICAL_ISSUES + 1)) || true
             grep -i "high" trunk-report.json && HIGH_ISSUES=$((HIGH_ISSUES + 1)) || true
           fi
-          
+
           # Quality gate thresholds
           MAX_CRITICAL=0
           MAX_HIGH=10
-          
+
           echo "📊 Quality Gate Results:"
           echo "Critical issues: $CRITICAL_ISSUES (max: $MAX_CRITICAL)"
           echo "High issues: $HIGH_ISSUES (max: $MAX_HIGH)"
-          
+
           # Fail if thresholds exceeded
           if [ $CRITICAL_ISSUES -gt $MAX_CRITICAL ]; then
             echo "❌ Quality gate FAILED: Too many critical issues ($CRITICAL_ISSUES > $MAX_CRITICAL)"
             exit 1
           fi
-          
+
           if [ $HIGH_ISSUES -gt $MAX_HIGH ]; then
             echo "⚠️  Quality gate WARNING: Many high issues ($HIGH_ISSUES > $MAX_HIGH)"
             # Don't fail on high issues, just warn
           fi
-          
+
           echo "✅ Quality gate PASSED"
 
       - name: Comment PR with quality summary
@@ -185,9 +185,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             let summary = '## 📊 Code Quality Analysis\n\n';
-            
+
             // Read metrics if available
             try {
               const metrics = fs.readFileSync('metrics.txt', 'utf8');
@@ -195,7 +195,7 @@ jobs:
             } catch (e) {
               summary += '### 📈 Metrics\nMetrics generation failed\n\n';
             }
-            
+
             // Read trunk report summary if available
             try {
               const report = fs.readFileSync('trunk-report.txt', 'utf8');
@@ -204,13 +204,13 @@ jobs:
             } catch (e) {
               summary += '### 🔍 Analysis Summary\nTrunk analysis completed - check artifacts for details\n\n';
             }
-            
+
             summary += '### 📋 Reports Available\n';
             summary += '- 📄 Detailed analysis reports in workflow artifacts\n';
             summary += '- 🛡️ Security findings in GitHub Security tab\n';
             summary += '- 📊 Quality metrics and complexity analysis\n\n';
             summary += '> 🤖 Generated by Code Quality workflow';
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -245,19 +245,19 @@ jobs:
       - name: Run complexity analysis
         run: |
           echo "🧮 Running complexity analysis..."
-          
+
           # Cyclomatic Complexity
           echo "=== Cyclomatic Complexity ===" > complexity-report.txt
           uv run radon cc cryptofeed/ -a -nc >> complexity-report.txt
-          
+
           # Maintainability Index
           echo -e "\n=== Maintainability Index ===" >> complexity-report.txt
           uv run radon mi cryptofeed/ -nc >> complexity-report.txt
-          
+
           # Raw metrics
           echo -e "\n=== Raw Metrics ===" >> complexity-report.txt
           uv run radon raw cryptofeed/ >> complexity-report.txt
-          
+
           # Halstead metrics
           echo -e "\n=== Halstead Metrics ===" >> complexity-report.txt
           uv run radon hal cryptofeed/ >> complexity-report.txt
@@ -266,18 +266,21 @@ jobs:
         run: |
           echo "🪦 Searching for dead code..."
           uv run vulture cryptofeed/ > dead-code-report.txt || true
-          
+
           echo "📋 Dead code analysis:"
           cat dead-code-report.txt | head -20
 
       - name: Check for code smells
         run: |
           echo "👃 Checking for code smells..."
-          
+
           # Long functions (>50 lines)
           echo "=== Long Functions ===" > code-smells.txt
-          find cryptofeed/ -name "*.py" -exec awk '/^def |^class / { name=$0; start=NR } /^def |^class |^$/ { if (name && NR-start > 50) print FILENAME ":" start ":" name; name="" }' {} + >> code-smells.txt
-          
+          find cryptofeed/ -name "*.py" -exec awk \
+            '/^def |^class / { name=$0; start=NR } \
+             /^def |^class |^$/ { if (name && NR-start > 50) \
+               print FILENAME ":" start ":" name; name="" }' {} + >> code-smells.txt
+
           # High complexity functions
           echo -e "\n=== High Complexity Functions ===" >> code-smells.txt
           uv run xenon --max-absolute B --max-modules A --max-average A cryptofeed/ >> code-smells.txt || true
@@ -318,10 +321,11 @@ jobs:
       - name: Check docstring coverage
         run: |
           echo "📚 Checking documentation coverage..."
-          
+
           # Docstring coverage report
-          uv run interrogate cryptofeed/ -v --ignore-init-method --ignore-magic --ignore-module --ignore-nested-functions > doc-coverage.txt
-          
+          uv run interrogate cryptofeed/ -v --ignore-init-method --ignore-magic \
+            --ignore-module --ignore-nested-functions > doc-coverage.txt
+
           echo "📊 Documentation Coverage:"
           cat doc-coverage.txt
 
@@ -329,7 +333,7 @@ jobs:
         run: |
           echo "📝 Checking docstring style..."
           uv run pydocstyle cryptofeed/ > docstring-style.txt || true
-          
+
           echo "📋 Docstring style issues:"
           cat docstring-style.txt | head -20
 

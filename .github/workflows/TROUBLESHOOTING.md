@@ -5,6 +5,7 @@
 ### Issue: Trunk Installation/Setup Failures
 
 **Symptoms**:
+
 - `trunk-io/trunk-action@v1` step fails
 - Error: "Unable to download Trunk"
 - Timeout during Trunk setup
@@ -12,6 +13,7 @@
 **Solutions**:
 
 1. **Automatic Fallback** (Already Configured):
+
    ```yaml
    - name: Run fallback tools if Trunk fails
      if: failure()
@@ -22,6 +24,7 @@
    ```
 
 2. **Manual Trunk Installation**:
+
    ```bash
    # If fallback doesn't work, debug manually
    curl -fsSL https://get.trunk.io | bash
@@ -44,6 +47,7 @@
 ### Issue: uv Dependency Resolution Failures
 
 **Symptoms**:
+
 - `uv sync` fails with conflict errors
 - "No solution found when resolving dependencies"
 - Package installation timeouts
@@ -51,22 +55,25 @@
 **Solutions**:
 
 1. **Clear Cache and Retry**:
+
    ```bash
    uv cache clean
    uv sync --dev --resolution=highest
    ```
 
 2. **Use Specific Python Version**:
+
    ```bash
    uv python install 3.11
    uv sync --python 3.11
    ```
 
 3. **Debug Resolution**:
+
    ```bash
    # Verbose output to see conflicts
    uv sync --dev --verbose
-   
+
    # Try offline mode if network issues
    uv sync --dev --offline
    ```
@@ -86,6 +93,7 @@
 ### Issue: Quality Gate Failures
 
 **Symptoms**:
+
 - Code quality workflow fails with "Quality gate FAILED"
 - Too many critical/high issues detected
 - SARIF upload failures
@@ -93,6 +101,7 @@
 **Solutions**:
 
 1. **Check Issue Count**:
+
    ```bash
    # Local quality check
    trunk check --all --output-format=json > report.json
@@ -100,16 +109,18 @@
    ```
 
 2. **Fix Critical Issues First**:
+
    ```bash
    # Auto-fix what's possible
    trunk format
    trunk check --fix --all
-   
+
    # Manual review for remaining issues
    trunk check --all
    ```
 
 3. **Adjust Quality Thresholds** (if needed):
+
    ```yaml
    # In code-quality.yml
    MAX_CRITICAL=5    # Temporarily increase if needed
@@ -127,6 +138,7 @@
 ### Issue: Performance Test Failures
 
 **Symptoms**:
+
 - Memory profiling OOM errors
 - Benchmark timeouts
 - Performance regression failures
@@ -134,11 +146,13 @@
 **Solutions**:
 
 1. **Use Larger Runner**:
+
    ```yaml
-   runs-on: ubuntu-latest-8-cores  # More memory/CPU
+   runs-on: ubuntu-latest-8-cores # More memory/CPU
    ```
 
 2. **Reduce Test Scope**:
+
    ```python
    # In benchmark scripts
    BENCHMARK_ITERATIONS = 10  # Reduce from 1000
@@ -146,6 +160,7 @@
    ```
 
 3. **Skip Memory-Intensive Tests**:
+
    ```yaml
    - name: Run basic benchmarks only
      if: github.event_name == 'pull_request'
@@ -154,10 +169,11 @@
    ```
 
 4. **Debug Memory Issues**:
+
    ```bash
    # Local memory debugging
    python -m memory_profiler your_script.py
-   
+
    # Check for memory leaks
    valgrind --tool=memcheck python your_script.py
    ```
@@ -167,6 +183,7 @@
 ### Issue: Security Scan False Positives
 
 **Symptoms**:
+
 - Bandit reports non-issues as vulnerabilities
 - Safety reports outdated CVEs
 - TruffleHog detects test data as secrets
@@ -174,6 +191,7 @@
 **Solutions**:
 
 1. **Configure Bandit Exclusions**:
+
    ```yaml
    # .bandit config in pyproject.toml
    [tool.bandit]
@@ -182,6 +200,7 @@
    ```
 
 2. **Safety Ignore File**:
+
    ```bash
    # Create .safety-policy.json
    {
@@ -195,6 +214,7 @@
    ```
 
 3. **TruffleHog Configuration**:
+
    ```yaml
    # In security.yml
    - name: Run TruffleHog with exclusions
@@ -215,6 +235,7 @@
 ### Issue: Release Pipeline Failures
 
 **Symptoms**:
+
 - PyPI upload authentication errors
 - Docker build failures
 - GitHub release creation errors
@@ -222,6 +243,7 @@
 **Solutions**:
 
 1. **Check PyPI Credentials**:
+
    ```bash
    # Verify PYPI_API_TOKEN secret is set
    # Test with TestPyPI first
@@ -229,6 +251,7 @@
    ```
 
 2. **Docker Build Issues**:
+
    ```yaml
    # Single platform first
    - name: Build Docker (single platform)
@@ -237,10 +260,11 @@
    ```
 
 3. **GitHub Token Permissions**:
+
    ```yaml
    permissions:
-     contents: write    # For releases
-     packages: write    # For container registry
+     contents: write # For releases
+     packages: write # For container registry
    ```
 
 4. **Version Tag Issues**:
@@ -254,6 +278,7 @@
 ### Issue: Workflow Permission Errors
 
 **Symptoms**:
+
 - "insufficient permissions" errors
 - SARIF upload failures
 - Artifact upload denied
@@ -261,6 +286,7 @@
 **Solutions**:
 
 1. **Configure Workflow Permissions**:
+
    ```yaml
    permissions:
      contents: read
@@ -271,6 +297,7 @@
    ```
 
 2. **Repository Settings**:
+
    - Go to Settings → Actions → General
    - Set "Workflow permissions" to "Read and write permissions"
    - Enable "Allow GitHub Actions to create and approve pull requests"
@@ -289,6 +316,7 @@
 ### Issue: Workflow Timeout/Hanging
 
 **Symptoms**:
+
 - Jobs exceed 6-hour limit
 - Steps hang indefinitely
 - No progress for extended periods
@@ -296,17 +324,19 @@
 **Solutions**:
 
 1. **Add Timeouts**:
+
    ```yaml
    jobs:
      test:
-       timeout-minutes: 30  # Job timeout
+       timeout-minutes: 30 # Job timeout
        steps:
          - name: Run tests
-           timeout-minutes: 10  # Step timeout
+           timeout-minutes: 10 # Step timeout
            run: pytest tests/
    ```
 
 2. **Debug Hanging Steps**:
+
    ```yaml
    # Add debugging
    env:
@@ -328,6 +358,7 @@
 ### Issue: Cache-Related Problems
 
 **Symptoms**:
+
 - Cache restore failures
 - Stale cached dependencies
 - Excessive cache usage
@@ -335,10 +366,11 @@
 **Solutions**:
 
 1. **Clear Cache**:
+
    ```bash
    # Via GitHub CLI
    gh cache delete --all
-   
+
    # Or use cache action
    - name: Clear cache
      run: |
@@ -346,6 +378,7 @@
    ```
 
 2. **Better Cache Keys**:
+
    ```yaml
    - uses: actions/cache@v4
      with:
@@ -411,7 +444,7 @@ trunk --version
 trunk config
 trunk check --dry-run
 
-# uv debugging  
+# uv debugging
 uv --version
 uv tree
 uv pip list
@@ -424,18 +457,21 @@ python -c "import cryptofeed; print(cryptofeed.__file__)"
 ## 📞 Getting Help
 
 ### Internal Resources
+
 1. **Check logs**: GitHub Actions → Failed run → View logs
 2. **Review changes**: Compare with last successful run
 3. **Local testing**: Reproduce issue locally
 4. **Documentation**: Check workflow README files
 
 ### External Resources
+
 1. **GitHub Actions docs**: https://docs.github.com/en/actions
 2. **uv documentation**: https://docs.astral.sh/uv/
 3. **Trunk documentation**: https://docs.trunk.io/
 4. **Community forums**: GitHub Discussions
 
 ### Emergency Contacts
+
 - **Repository maintainer**: @bmoscon
 - **GitHub support**: For platform issues
 - **Tool vendors**: For tool-specific problems
@@ -443,6 +479,7 @@ python -c "import cryptofeed; print(cryptofeed.__file__)"
 ## 🔄 Recovery Procedures
 
 ### Workflow Completely Broken
+
 ```bash
 # 1. Identify breaking change
 git log --oneline -10 .github/workflows/
@@ -461,6 +498,7 @@ git push origin hotfix/workflow-fix
 ```
 
 ### Mass Quality Issues
+
 ```bash
 # 1. Run auto-fixes
 trunk format
@@ -475,6 +513,7 @@ trunk check --all > quality-issues.txt
 ```
 
 ### Performance Regression
+
 ```bash
 # 1. Identify regression point
 git bisect start
@@ -490,6 +529,7 @@ git bisect run python benchmark_test.py
 ---
 
 > 📧 **Still stuck?** Open a GitHub issue with:
+>
 > - Workflow run URL
 > - Error messages
 > - Steps to reproduce

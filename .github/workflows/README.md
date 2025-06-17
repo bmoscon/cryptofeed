@@ -4,23 +4,25 @@ This directory contains the CI/CD workflows for the cryptofeed project, moderniz
 
 ## 🚀 Workflow Overview
 
-| Workflow | Purpose | Triggers | Key Features |
-|----------|---------|----------|--------------|
-| [`ci.yml`](./ci.yml) | Main CI/CD pipeline | Push, PR, Manual | uv + Trunk integration, multi-Python testing |
-| [`code-quality.yml`](./code-quality.yml) | Comprehensive code analysis | Push, PR, Schedule, Manual | Quality gates, detailed reporting |
-| [`performance.yml`](./performance.yml) | Performance benchmarking | Push, PR, Schedule, Manual | Multi-Python benchmarks, memory profiling |
-| [`security.yml`](./security.yml) | Security scanning | Push, PR, Schedule, Manual | Multi-tool security analysis |
-| [`release.yml`](./release.yml) | Release automation | Tags, Manual | PyPI publishing, GitHub releases |
-| [`codeql-analysis.yml`](./codeql-analysis.yml) | GitHub CodeQL analysis | Schedule, Manual | Advanced security scanning |
+| Workflow                                       | Purpose                     | Triggers                   | Key Features                                 |
+| ---------------------------------------------- | --------------------------- | -------------------------- | -------------------------------------------- |
+| [`ci.yml`](./ci.yml)                           | Main CI/CD pipeline         | Push, PR, Manual           | uv + Trunk integration, multi-Python testing |
+| [`code-quality.yml`](./code-quality.yml)       | Comprehensive code analysis | Push, PR, Schedule, Manual | Quality gates, detailed reporting            |
+| [`performance.yml`](./performance.yml)         | Performance benchmarking    | Push, PR, Schedule, Manual | Multi-Python benchmarks, memory profiling    |
+| [`security.yml`](./security.yml)               | Security scanning           | Push, PR, Schedule, Manual | Multi-tool security analysis                 |
+| [`release.yml`](./release.yml)                 | Release automation          | Tags, Manual               | PyPI publishing, GitHub releases             |
+| [`codeql-analysis.yml`](./codeql-analysis.yml) | GitHub CodeQL analysis      | Schedule, Manual           | Advanced security scanning                   |
 
 ## 🛠️ Modern Toolchain
 
 ### Core Technologies
+
 - **[uv](https://github.com/astral-sh/uv)**: Ultra-fast Python package manager (10-100x faster than pip)
 - **[Trunk](https://trunk.io)**: Unified tool orchestration with hermetic installs
 - **Fallback System**: Reliable uv-based fallbacks when Trunk has issues
 
 ### Tool Management
+
 - **Trunk Managed**: ruff@0.11.13, mypy@1.16.1, bandit@1.8.5
 - **uv Managed**: Project dependencies, development tools
 - **Hermetic Installs**: Consistent tool versions across all environments
@@ -32,6 +34,7 @@ This directory contains the CI/CD workflows for the cryptofeed project, moderniz
 **Purpose**: Main continuous integration and deployment pipeline
 
 **Key Jobs**:
+
 - **Code Quality**: Trunk-managed linting, formatting, type checking
 - **Testing**: Multi-Python version testing (3.9-3.12) with uv
 - **Security**: Bandit security scanning via Trunk
@@ -40,17 +43,19 @@ This directory contains the CI/CD workflows for the cryptofeed project, moderniz
 - **Performance**: Basic performance validation
 
 **Performance Benefits**:
+
 - ⚡ **10-150x faster** tool execution via Trunk
 - 🚀 **Parallel execution** with uv's concurrent installs
 - 🛡️ **Robust fallbacks** for reliability
 
 **Triggers**:
+
 ```yaml
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   workflow_dispatch:
 ```
 
@@ -59,6 +64,7 @@ on:
 **Purpose**: Comprehensive code quality analysis and reporting
 
 **Key Features**:
+
 - **Trunk Analysis**: Unified linting, formatting, and security checks
 - **Quality Gates**: Configurable thresholds for critical/high issues
 - **Detailed Reporting**: JSON, SARIF, and human-readable formats
@@ -67,12 +73,14 @@ on:
 - **PR Comments**: Automated quality summaries on pull requests
 
 **Quality Thresholds**:
+
 ```yaml
-MAX_CRITICAL: 0     # Zero tolerance for critical issues
-MAX_HIGH: 10        # Warning threshold for high-priority issues
+MAX_CRITICAL: 0 # Zero tolerance for critical issues
+MAX_HIGH: 10 # Warning threshold for high-priority issues
 ```
 
 **Artifacts Generated**:
+
 - `trunk-report.json` - Programmatic analysis results
 - `trunk-report.sarif` - GitHub Security tab integration
 - `complexity-report.txt` - Code complexity metrics
@@ -83,6 +91,7 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 **Purpose**: Performance monitoring and regression detection
 
 **Key Features**:
+
 - **Multi-Python Testing**: Benchmarks across Python 3.10-3.12
 - **Memory Profiling**: Memory usage analysis and leak detection
 - **Continuous Profiling**: Long-running performance analysis
@@ -90,12 +99,14 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 - **Cryptofeed-Specific**: Tailored benchmarks for exchange integrations
 
 **Benchmark Types**:
+
 - **Standard**: Core functionality benchmarks
 - **Comprehensive**: Full system performance analysis
 - **Memory**: Memory usage and leak detection
 - **Network**: Network performance and latency testing
 
 **Performance Metrics**:
+
 - Function execution times
 - Memory consumption patterns
 - CPU utilization profiles
@@ -106,6 +117,7 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 **Purpose**: Comprehensive security analysis and vulnerability detection
 
 **Security Tools**:
+
 - **CodeQL**: GitHub's semantic code analysis
 - **Bandit**: Python security linter (Trunk-managed with fallback)
 - **Safety**: Dependency vulnerability scanning
@@ -115,6 +127,7 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 - **OSSF Scorecard**: Open source security scoring
 
 **Security Features**:
+
 - **Dependency Review**: Automated dependency security analysis
 - **License Compliance**: License compatibility checking
 - **Secrets Detection**: Prevent accidental secret commits
@@ -126,6 +139,7 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 **Purpose**: Automated release management and distribution
 
 **Release Process**:
+
 1. **Validation**: Quality checks with Trunk integration
 2. **Building**: Source and wheel distribution creation
 3. **Testing**: TestPyPI deployment and verification
@@ -134,6 +148,7 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 6. **Docker**: Multi-platform container builds and publishing
 
 **Release Features**:
+
 - **Semantic Versioning**: Automated version detection
 - **Release Notes**: Generated changelog and installation instructions
 - **Multi-Platform**: Linux/ARM64 and AMD64 container builds
@@ -144,6 +159,7 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 **Purpose**: Advanced security analysis with GitHub CodeQL
 
 **Analysis Features**:
+
 - **Semantic Analysis**: Deep code understanding beyond syntax
 - **Security Queries**: Extended security and quality rule sets
 - **Scheduled Scanning**: Weekly comprehensive analysis
@@ -155,7 +171,7 @@ MAX_HIGH: 10        # Warning threshold for high-priority issues
 
 ```yaml
 env:
-  PYTHON_VERSION: '3.11'  # Default Python version for most jobs
+  PYTHON_VERSION: "3.11" # Default Python version for most jobs
 ```
 
 ### Dependabot Integration
@@ -175,6 +191,7 @@ The workflows are integrated with Dependabot for automated dependency updates:
 ### Branch Protection
 
 Recommended branch protection rules:
+
 - **Require PR reviews**: Minimum 1 reviewer
 - **Require status checks**: CI/CD must pass
 - **Require up-to-date branches**: Prevent outdated merges
@@ -201,6 +218,7 @@ Recommended branch protection rules:
 ### Common Issues
 
 #### Trunk Installation Failures
+
 ```bash
 # Fallback mechanism automatically activates
 echo "🚨 Trunk failed, running fallback script..."
@@ -209,6 +227,7 @@ chmod +x tools/check-fallback.sh
 ```
 
 #### uv Dependency Resolution
+
 ```bash
 # Clear cache and retry
 uv cache clean
@@ -216,6 +235,7 @@ uv sync --dev
 ```
 
 #### Python Version Conflicts
+
 ```bash
 # Use explicit Python version
 uv python install 3.11
@@ -225,6 +245,7 @@ uv sync --python 3.11
 ### Debugging Workflows
 
 #### Enable Debug Logging
+
 ```yaml
 env:
   ACTIONS_STEP_DEBUG: true
@@ -232,6 +253,7 @@ env:
 ```
 
 #### Local Testing
+
 ```bash
 # Test workflows locally with act
 act -j test --secret-file .secrets
@@ -249,6 +271,7 @@ act -j test --secret-file .secrets
 ### Workflow Updates
 
 When updating workflows:
+
 1. **Test locally** with representative data
 2. **Use feature branches** for workflow changes
 3. **Monitor carefully** after deployment

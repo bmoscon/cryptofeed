@@ -2,17 +2,17 @@ name: Performance Benchmarks
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   schedule:
-    - cron: '0 4 * * 1'  # Weekly on Mondays at 4 AM
+    - cron: "0 4 * * 1" # Weekly on Mondays at 4 AM
   workflow_dispatch:
     inputs:
       benchmark_type:
-        description: 'Type of benchmarks to run'
+        description: "Type of benchmarks to run"
         required: false
-        default: 'standard'
+        default: "standard"
         type: choice
         options:
           - standard
@@ -21,7 +21,7 @@ on:
           - network
 
 env:
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: "3.11"
 
 jobs:
   performance-benchmarks:
@@ -29,8 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
-        
+        python-version: ["3.10", "3.11", "3.12"]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,49 +58,51 @@ jobs:
           echo "🖥️ System Information:" > system-info.txt
           echo "Python version: $(python --version)" >> system-info.txt
           echo "CPU info:" >> system-info.txt
-          python -c "import psutil; print(f'CPU cores: {psutil.cpu_count()} ({psutil.cpu_count(logical=False)} physical)')" >> system-info.txt
-          python -c "import psutil; print(f'Memory: {psutil.virtual_memory().total / (1024**3):.1f} GB')" >> system-info.txt
+          python -c "import psutil; print(f'CPU cores: {psutil.cpu_count()} ' + \
+                     f'({psutil.cpu_count(logical=False)} physical)')" >> system-info.txt
+          python -c "import psutil; print(f'Memory: ' + \
+                     f'{psutil.virtual_memory().total / (1024**3):.1f} GB')" >> system-info.txt
           echo "Disk space:" >> system-info.txt
           df -h >> system-info.txt
-          
+
           cat system-info.txt
 
       - name: Run cryptofeed performance benchmarks
         run: |
           echo "⚡ Running cryptofeed-specific benchmarks..."
-          
+
           # Make benchmark script executable
           chmod +x tools/benchmark_cryptofeed.py
-          
+
           # Run the benchmarks
           python tools/benchmark_cryptofeed.py || echo "Benchmark completed with some issues"
 
       - name: Run pytest benchmarks (if available)
         run: |
           echo "🧪 Running pytest benchmarks..."
-          
+
           # Look for existing benchmark tests
           if find tests/ -name "*benchmark*" -o -name "*perf*" 2>/dev/null | grep -q .; then
             echo "Found existing benchmark tests"
             uv run pytest --benchmark-only --benchmark-json=pytest-benchmarks.json tests/ || true
           else
             echo "No pytest benchmark tests found, creating sample"
-            
+
             # Create a simple benchmark test
             mkdir -p tests/benchmarks
             cat > tests/benchmarks/test_performance.py << 'EOF'
           import pytest
           import time
-          
+
           def sample_function(n):
               """Sample function to benchmark"""
               return sum(i * i for i in range(n))
-          
+
           def test_sample_benchmark(benchmark):
               """Sample benchmark test"""
               result = benchmark(sample_function, 1000)
               assert result > 0
-          
+
           def test_import_speed(benchmark):
               """Benchmark cryptofeed import time"""
               def import_cryptofeed():
@@ -109,11 +111,11 @@ jobs:
                       return True
                   except ImportError:
                       return False
-              
+
               result = benchmark(import_cryptofeed)
               assert result is True
           EOF
-            
+
             # Run the sample benchmarks
             uv run pytest --benchmark-only --benchmark-json=pytest-benchmarks.json tests/benchmarks/ || true
           fi
@@ -122,40 +124,40 @@ jobs:
         if: github.event.inputs.benchmark_type == 'memory' || github.event.inputs.benchmark_type == 'comprehensive'
         run: |
           echo "🧠 Running memory profiling..."
-          
+
           # Create memory profiling script
           cat > memory_profile.py << 'EOF'
           from memory_profiler import profile
           import psutil
           import os
-          
+
           @profile
           def memory_intensive_task():
               """Memory-intensive task for profiling"""
               try:
                   from cryptofeed import FeedHandler
-                  
+
                   # Create multiple handlers
                   handlers = []
                   for i in range(5):
                       fh = FeedHandler()
                       handlers.append(fh)
-                  
+
                   # Simulate some work
                   data = [list(range(1000)) for _ in range(100)]
-                  
+
                   return len(handlers), len(data)
               except ImportError:
                   # Fallback if cryptofeed import fails
                   data = [list(range(10000)) for _ in range(100)]
                   return 0, len(data)
-          
+
           if __name__ == "__main__":
               print("Starting memory profiling...")
               result = memory_intensive_task()
               print(f"Memory profiling completed: {result}")
           EOF
-          
+
           # Run memory profiling
           python -m memory_profiler memory_profile.py > memory-profile.txt 2>&1 || echo "Memory profiling completed"
           cat memory-profile.txt
@@ -163,20 +165,20 @@ jobs:
       - name: Generate performance report
         run: |
           echo "📈 Generating performance report..."
-          
+
           cat > performance-report.md << 'EOF'
           # Performance Benchmark Report
-          
+
           ## Test Environment
           - **Python Version**: ${{ matrix.python-version }}
           - **OS**: Ubuntu Latest
           - **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          
+
           ## Benchmark Results
-          
+
           ### Cryptofeed Benchmarks
           EOF
-          
+
           # Add benchmark results if available
           if [ -f "benchmark-results.json" ]; then
             echo "```json" >> performance-report.md
@@ -185,10 +187,10 @@ jobs:
           else
             echo "No benchmark results generated" >> performance-report.md
           fi
-          
+
           echo "" >> performance-report.md
           echo "### Pytest Benchmarks" >> performance-report.md
-          
+
           if [ -f "pytest-benchmarks.json" ]; then
             echo "```json" >> performance-report.md
             # Extract key metrics from pytest-benchmark results
@@ -207,14 +209,14 @@ jobs:
           else
             echo "No pytest benchmarks available" >> performance-report.md
           fi
-          
+
           # Add system info
           echo "" >> performance-report.md
           echo "### System Information" >> performance-report.md
           echo "```" >> performance-report.md
           cat system-info.txt >> performance-report.md
           echo "```" >> performance-report.md
-          
+
           echo "📊 Performance report generated:"
           cat performance-report.md
 
@@ -248,7 +250,7 @@ jobs:
       - name: Compare performance
         run: |
           echo "⚖️ Comparing performance results..."
-          
+
           # Simple performance comparison without complex inline scripts
           if [ -f "benchmark-results.json" ]; then
             echo "## Performance Results" > performance-comparison.md
@@ -256,7 +258,7 @@ jobs:
             echo "Benchmark results available in artifacts." >> performance-comparison.md
             echo "Key metrics from this run:" >> performance-comparison.md
             echo "" >> performance-comparison.md
-            
+
             # Extract key metrics using simple tools
             if command -v jq &> /dev/null; then
               jq -r 'to_entries[] | "- **\(.key)**: \(.value)"' benchmark-results.json >> performance-comparison.md
@@ -272,22 +274,22 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             let comment = '## ⚡ Performance Benchmark Results\n\n';
-            
+
             try {
               const comparison = fs.readFileSync('performance-comparison.md', 'utf8');
               comment += comparison;
             } catch (e) {
               comment += 'Performance comparison data not available.\n';
             }
-            
+
             comment += '\n### 📋 Available Artifacts\n';
             comment += '- 📊 **Performance Results**: Detailed benchmark data for each Python version\n';
             comment += '- 🧠 **Memory Profiles**: Memory usage analysis\n';
             comment += '- 📈 **System Information**: Test environment details\n\n';
             comment += '> 🤖 Generated by Performance Benchmarks workflow';
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -322,43 +324,43 @@ jobs:
       - name: Run continuous profiling
         run: |
           echo "🔄 Running continuous profiling..."
-          
+
           # Create a long-running test for profiling
           cat > continuous_test.py << 'EOF'
           import time
           import asyncio
-          
+
           def cpu_intensive_task():
               """CPU-intensive task for profiling"""
               total = 0
               for i in range(1000000):
                   total += i * i
               return total
-          
+
           async def async_task():
               """Async task for profiling"""
               await asyncio.sleep(0.1)
               return cpu_intensive_task()
-          
+
           async def main():
               """Main profiling target"""
               tasks = []
               for _ in range(5):
                   task = asyncio.create_task(async_task())
                   tasks.append(task)
-              
+
               results = await asyncio.gather(*tasks)
               return sum(results)
-          
+
           if __name__ == "__main__":
               print("Starting continuous profiling test...")
               result = asyncio.run(main())
               print(f"Profiling test completed: {result}")
           EOF
-          
+
           # Run with py-spy profiling (non-blocking)
           timeout 30s py-spy record -o profile.svg -d 20 -- python continuous_test.py || echo "Profiling completed"
-          
+
           # Also run line profiler if possible
           echo "Running line profiler..."
           python -m line_profiler continuous_test.py || echo "Line profiler completed"

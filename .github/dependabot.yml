@@ -1,118 +1,119 @@
 # Dependabot configuration for cryptofeed
 # Updated for modern Python toolchain with uv and pyproject.toml
-# See: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# See: https://docs.github.com/code-security/dependabot/dependabot-version-updates/
+# configuration-options-for-the-dependabot.yml-file
 
 version: 2
 updates:
   # Python dependencies (pyproject.toml)
-  - package-ecosystem: "pip"
-    directory: "/"
+  - package-ecosystem: pip
+    directory: /
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: weekly
+      day: monday
       time: "06:00"
-      timezone: "UTC"
+      timezone: UTC
     open-pull-requests-limit: 10
-    target-branch: "develop"
+    target-branch: develop
     commit-message:
-      prefix: "deps"
-      prefix-development: "deps-dev"
-      include: "scope"
+      prefix: deps
+      prefix-development: deps-dev
+      include: scope
     labels:
-      - "dependencies"
-      - "python"
+      - dependencies
+      - python
     reviewers:
-      - "bmoscon"  # Repository owner
+      - bmoscon  # Repository owner
     assignees:
-      - "bmoscon"
+      - bmoscon
     milestone: null
     allow:
-      - dependency-type: "direct"
-      - dependency-type: "indirect"
+      - dependency-type: direct
+      - dependency-type: indirect
     ignore:
       # Ignore patch updates for stable packages
-      - dependency-name: "numpy"
-        update-types: ["version-update:semver-patch"]
-      - dependency-name: "pandas"
-        update-types: ["version-update:semver-patch"]
+      - dependency-name: numpy
+        update-types: [version-update:semver-patch]
+      - dependency-name: pandas
+        update-types: [version-update:semver-patch]
       # Ignore beta/rc releases unless specified
       - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
+        update-types: [version-update:semver-major]
     groups:
       # Group testing dependencies together
       testing-dependencies:
         patterns:
-          - "pytest*"
+          - pytest*
           - "*testing*"
-          - "coverage*"
-      # Group development tools together  
+          - coverage*
+      # Group development tools together
       dev-tools:
         patterns:
-          - "ruff"
-          - "mypy"
-          - "bandit"
-          - "black"
-          - "isort"
+          - ruff
+          - mypy
+          - bandit
+          - black
+          - isort
       # Group async/networking libraries
       networking:
         patterns:
-          - "aiohttp*"
-          - "websocket*"
-          - "urllib*"
-          - "requests*"
+          - aiohttp*
+          - websocket*
+          - urllib*
+          - requests*
       # Group cryptography and security
       security:
         patterns:
-          - "cryptography*"
-          - "pyjwt*"
+          - cryptography*
+          - pyjwt*
           - "*crypto*"
 
   # GitHub Actions dependencies
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
-      day: "tuesday"
+      interval: weekly
+      day: tuesday
       time: "06:00"
-      timezone: "UTC"
+      timezone: UTC
     open-pull-requests-limit: 5
-    target-branch: "develop"
+    target-branch: develop
     commit-message:
-      prefix: "ci"
-      include: "scope"
+      prefix: ci
+      include: scope
     labels:
-      - "dependencies"
-      - "github-actions"
-      - "ci"
+      - dependencies
+      - github-actions
+      - ci
     reviewers:
-      - "bmoscon"
+      - bmoscon
     assignees:
-      - "bmoscon"
+      - bmoscon
     groups:
       # Group action updates together
       github-actions:
         patterns:
-          - "actions/*"
-          - "github/*"
+          - actions/*
+          - github/*
           - "*-action*"
 
   # Docker dependencies (if Dockerfile exists)
-  - package-ecosystem: "docker"
-    directory: "/"
+  - package-ecosystem: docker
+    directory: /
     schedule:
-      interval: "weekly"
-      day: "wednesday"
+      interval: weekly
+      day: wednesday
       time: "06:00"
-      timezone: "UTC"
+      timezone: UTC
     open-pull-requests-limit: 3
-    target-branch: "develop"
+    target-branch: develop
     commit-message:
-      prefix: "docker"
-      include: "scope"
+      prefix: docker
+      include: scope
     labels:
-      - "dependencies"
-      - "docker"
+      - dependencies
+      - docker
     reviewers:
-      - "bmoscon"
+      - bmoscon
     assignees:
-      - "bmoscon"
+      - bmoscon

@@ -29,21 +29,24 @@ Add these badges to your README.md to show workflow status:
 ### CI/CD Pipeline (`ci.yml`)
 
 #### Job Dependencies
+
 ```yaml
 build-and-install:
-  needs: [lint-and-format, test]  # Waits for quality and tests
+  needs: [lint-and-format, test] # Waits for quality and tests
 integration-tests:
-  needs: build-and-install        # Runs after successful build
+  needs: build-and-install # Runs after successful build
 ```
 
 #### Matrix Strategy
+
 ```yaml
 strategy:
   matrix:
-    python-version: ['3.9', '3.10', '3.11', '3.12']
+    python-version: ["3.9", "3.10", "3.11", "3.12"]
 ```
 
 #### Running Specific Jobs Locally
+
 ```bash
 # Test quality checks locally
 trunk check --all
@@ -61,18 +64,21 @@ uv run python -m build
 #### Understanding Quality Gates
 
 **Critical Issues (MAX: 0)**:
+
 - Security vulnerabilities
 - Syntax errors
 - Import errors
 - Breaking changes
 
 **High Issues (MAX: 10)**:
+
 - Code complexity warnings
 - Style violations
 - Type checking errors
 - Documentation issues
 
 #### Manual Quality Check
+
 ```bash
 # Full quality analysis
 trunk check --all --output-format=json > quality-report.json
@@ -84,6 +90,7 @@ trunk check --filter=bandit --all
 ```
 
 #### Quality Report Interpretation
+
 ```json
 {
   "issues": [
@@ -103,16 +110,19 @@ trunk check --filter=bandit --all
 #### Benchmark Types
 
 **Standard Benchmarks**:
+
 - Core functionality timing
 - Basic memory usage
 - Import performance
 
 **Comprehensive Benchmarks**:
+
 - Full system integration
 - Memory leak detection
 - Concurrent operation testing
 
 **Memory Profiling**:
+
 - Detailed memory usage analysis
 - Object lifecycle tracking
 - Memory leak detection
@@ -128,6 +138,7 @@ trunk check --filter=bandit --all
 ```
 
 #### Performance Regression Detection
+
 ```bash
 # Compare current vs baseline
 python compare_benchmarks.py baseline.json current.json
@@ -141,23 +152,25 @@ MEMORY_REGRESSION_THRESHOLD = 1.5       # 50% more memory
 
 #### Security Tools Overview
 
-| Tool | Purpose | Coverage |
-|------|---------|----------|
-| **Bandit** | Python security issues | Source code analysis |
-| **Safety** | Dependency vulnerabilities | PyPI packages |
-| **pip-audit** | Package vulnerabilities | Python dependencies |
-| **TruffleHog** | Secrets detection | Git history |
-| **CodeQL** | Semantic analysis | Deep code patterns |
-| **Trivy** | Container scanning | Docker images |
+| Tool           | Purpose                    | Coverage             |
+| -------------- | -------------------------- | -------------------- |
+| **Bandit**     | Python security issues     | Source code analysis |
+| **Safety**     | Dependency vulnerabilities | PyPI packages        |
+| **pip-audit**  | Package vulnerabilities    | Python dependencies  |
+| **TruffleHog** | Secrets detection          | Git history          |
+| **CodeQL**     | Semantic analysis          | Deep code patterns   |
+| **Trivy**      | Container scanning         | Docker images        |
 
 #### SARIF Integration
 
 Security findings automatically appear in:
+
 - **GitHub Security tab** → Code scanning alerts
 - **Pull Request checks** → Security findings
 - **Repository insights** → Security overview
 
 #### Manual Security Scanning
+
 ```bash
 # Run all security tools
 ./tools/security-scan.sh
@@ -187,11 +200,12 @@ pip-audit --desc --format json
 ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+.*$
 
 # Prerelease detection
-prerelease: ${{ contains(steps.version.outputs.version, 'rc') || 
+prerelease: ${{ contains(steps.version.outputs.version, 'rc') ||
                 contains(steps.version.outputs.version, 'beta') }}
 ```
 
 #### Manual Release Process
+
 ```bash
 # 1. Update version in pyproject.toml
 # 2. Create and push tag
@@ -212,7 +226,7 @@ git push origin v1.2.3
   run: |
     # Add your custom analysis
     python scripts/custom_analysis.py > custom-report.txt
-    
+
 - name: Upload custom reports
   uses: actions/upload-artifact@v4
   with:
@@ -229,17 +243,17 @@ git push origin v1.2.3
     cat > custom_benchmark.py << 'EOF'
     import time
     from cryptofeed import YourComponent
-    
+
     def benchmark_your_feature():
         start = time.perf_counter()
         # Your benchmark code
         YourComponent().your_method()
         return time.perf_counter() - start
-    
+
     result = benchmark_your_feature()
     print(f"Custom benchmark: {result:.4f}s")
     EOF
-    
+
     python custom_benchmark.py
 ```
 
@@ -250,8 +264,8 @@ git push origin v1.2.3
 env:
   PYTHON_VERSION: '3.11'
   PYTEST_ARGS: '--verbose --tb=short'
-  
-# Production environment  
+
+# Production environment
 env:
   PYTHON_VERSION: '3.11'
   PYTEST_ARGS: '--quiet --tb=no'
@@ -266,7 +280,7 @@ env:
 name: Workflow Health Check
 on:
   schedule:
-    - cron: '0 8 * * 1'  # Weekly Monday 8 AM
+    - cron: "0 8 * * 1" # Weekly Monday 8 AM
 
 jobs:
   health-check:
@@ -282,10 +296,10 @@ jobs:
               workflow_id: 'ci.yml',
               per_page: 100
             });
-            
+
             const successRate = runs.workflow_runs
               .filter(run => run.conclusion === 'success').length / runs.workflow_runs.length;
-            
+
             if (successRate < 0.9) {
               core.setFailed(`CI success rate below 90%: ${successRate}`);
             }
@@ -345,7 +359,7 @@ uv sync --python 3.11 --resolution=highest
 
 ```yaml
 # Use larger runner for memory-intensive tests
-runs-on: ubuntu-latest-8-cores  # More memory available
+runs-on: ubuntu-latest-8-cores # More memory available
 ```
 
 ### Scenario 4: Security Tool False Positives
@@ -409,33 +423,37 @@ def analyze_quality_trends(reports_dir):
 strategy:
   matrix:
     include:
-      - python-version: '3.9'
-        os: ubuntu-latest     # Cheapest option
-      - python-version: '3.12'
-        os: ubuntu-latest-4-cores  # Only for latest Python
+      - python-version: "3.9"
+        os: ubuntu-latest # Cheapest option
+      - python-version: "3.12"
+        os: ubuntu-latest-4-cores # Only for latest Python
 ```
 
 ## 🎯 Best Practices Summary
 
 ### Workflow Design
+
 1. **Fail Fast**: Run quick checks first
 2. **Parallel Execution**: Maximize concurrent jobs
 3. **Caching**: Use GitHub Actions cache effectively
 4. **Fallbacks**: Always have backup plans
 
 ### Security
+
 1. **Least Privilege**: Minimal required permissions
 2. **Secret Management**: Use GitHub secrets properly
 3. **SARIF Integration**: Leverage GitHub security features
 4. **Regular Updates**: Keep actions and tools current
 
 ### Performance
+
 1. **Runner Selection**: Choose appropriate runner sizes
 2. **Artifact Management**: Clean up regularly
 3. **Cache Strategy**: Cache dependencies and tools
 4. **Resource Monitoring**: Track usage and costs
 
 ### Maintainability
+
 1. **Documentation**: Keep guides current
 2. **Version Pinning**: Use specific action versions
 3. **Testing**: Validate workflow changes
