@@ -1,4 +1,8 @@
+# VS Code - ignore user-specific settings, allow shared workspace configs
 .vscode/
+!.vscode/settings.json
+!.vscode/launch.json  
+!.vscode/extensions.json
 Pipfile.lock
 # Byte-compiled / optimized / DLL files
 __pycache__/

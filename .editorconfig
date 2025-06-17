@@ -1,0 +1,65 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Python files
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# YAML files
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# JSON files
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 120
+
+# Shell scripts
+[*.sh]
+indent_style = space
+indent_size = 2
+
+# Makefile
+[Makefile]
+indent_style = tab
+
+# Docker files
+[{Dockerfile,*.dockerfile}]
+indent_style = space
+indent_size = 2
+
+# Configuration files
+[*.{ini,cfg,conf,toml}]
+indent_style = space
+indent_size = 4
+
+# HTML/CSS/JS (if any)
+[*.{html,css,js,ts}]
+indent_style = space
+indent_size = 2
+
+# GitHub Actions workflows
+[.github/workflows/*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Ignore some files
+[{package-lock.json,yarn.lock}]
+insert_final_newline = false

@@ -1,0 +1,48 @@
+{
+  "recommendations": [
+    // Python development
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-python.isort", 
+    "ms-python.mypy-type-checker",
+    "charliermarsh.ruff",
+    
+    // Code quality and formatting
+    "trunk.io",
+    "editorconfig.editorconfig",
+    
+    // Git and version control
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    
+    // Documentation and markdown
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    
+    // YAML and configuration
+    "redhat.vscode-yaml",
+    "ms-vscode.vscode-json",
+    
+    // GitHub Actions
+    "github.vscode-github-actions",
+    
+    // Testing
+    "ms-python.pytest",
+    
+    // Productivity
+    "ms-vscode.vscode-todo-highlight",
+    "gruntfuggly.todo-tree",
+    
+    // Docker (if using containers)
+    "ms-vscode-remote.remote-containers",
+    
+    // Shell scripting
+    "timonwong.shellcheck",
+    "foxundermoon.shell-format"
+  ],
+  "unwantedRecommendations": [
+    // Avoid conflicting formatters
+    "ms-python.autopep8",
+    "ms-python.flake8"
+  ]
+}

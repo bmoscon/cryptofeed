@@ -1,30 +1,132 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "Cython"]
+build-backend = "setuptools.build_meta"
+
+# Tool configurations for modern Python development
+
+[tool.black]
+line-length = 120
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | \.trunk
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
 [tool.isort]
-# isort formats the import sections
-#
-# isort v4
-#
-#     isort --jobs 8 --recursive ./cryptofeed
-#
-# isort v5 does not required option --recursive
-#
-#     isort --jobs 8 ./cryptofeed
-#
-# After, you may inverse "ASK, BID" ->  "BID, ASK" using:
-#
-#     find * -name '*.py' -exec sed 's/import ASK, BID/import BID, ASK/' -i {} +
-#
-known_first_party = "cryptofeed"
-line_length = 130
-py_version = 37
-atomic = true
+profile = "black"
+line_length = 120
+known_first_party = ["cryptofeed"]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
 use_parentheses = true
-balanced_wrapping = true
+ensure_newline_before_comments = true
+atomic = true
 remove_redundant_aliases = true
 color_output = true
 skip_gitignore = true
 lines_after_imports = 2
-ensure_newline_before_comments = true
 
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
 
-[build-system]
-requires = ["setuptools", "wheel", "Cython"]
+# Per-module options for external dependencies
+[[tool.mypy.overrides]]
+module = [
+    "aiofile.*",
+    "aiokafka.*", 
+    "aio_pika.*",
+    "arctic.*",
+    "motor.*",
+    "redis.*",
+    "yapic.*",
+    "uvloop.*",
+    "order_book.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config", 
+    "--verbose",
+    "--tb=short",
+    "--cov=cryptofeed",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "network: marks tests that require network access",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["cryptofeed"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/conftest.py",
+    "*/__pycache__/*",
+    "*/examples/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.bandit]
+targets = ["cryptofeed"]
+exclude_dirs = ["tests", "examples"]
+skips = ["B101", "B601"]  # Skip assert_used and shell_injection in specific contexts
+
+[tool.bandit.assert_used]
+skips = ["**/tests/**", "**/test_*.py"]

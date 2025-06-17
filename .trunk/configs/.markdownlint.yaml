@@ -1,2 +1,30 @@
-# Prettier friendly markdownlint config (all formatting rules disabled)
-extends: markdownlint/style/prettier
+# Markdownlint configuration for technical documentation
+# See: https://github.com/DavidAnson/markdownlint/blob/main/schema/.markdownlint.yaml
+
+default: true
+
+# Customize rules for technical documentation
+MD003:
+  style: "atx"  # Use # style headers
+
+MD007:
+  indent: 2    # Unordered list indentation
+
+MD013:
+  line_length: 120  # Allow longer lines for technical docs
+  tables: false     # Don't enforce line length in tables
+  code_blocks: false # Don't enforce line length in code blocks
+
+MD024:
+  allow_different_nesting: true  # Allow duplicate headings in different sections
+
+MD033:
+  allowed_elements: ["details", "summary", "img", "br"]  # Allow specific HTML elements
+
+MD041: false  # Don't require H1 as first line (for READMEs with badges)
+
+MD046:
+  style: "fenced"  # Use ``` for code blocks
+
+MD048:
+  style: "backtick"  # Use ``` not ~~~

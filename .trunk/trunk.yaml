@@ -17,9 +17,13 @@ lint:
   enabled:
     - actionlint@1.7.1
     - bandit@1.7.9
+    - black@24.10.0
     - git-diff-check
+    - isort@5.13.2
     - markdownlint@0.41.0
+    - mypy@1.11.2
     - osv-scanner@1.8.4
+    - prettier@3.3.3
     - ruff@0.6.4
     - shellcheck@0.10.0
     - shfmt@3.6.0

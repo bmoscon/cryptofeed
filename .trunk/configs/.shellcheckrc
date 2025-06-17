@@ -1,7 +1,18 @@
+# ShellCheck configuration for enhanced shell script analysis
+# See: https://github.com/koalaman/shellcheck/wiki/Ignore
+
+# Enable all checks by default
 enable=all
 source-path=SCRIPTDIR
-disable=SC2154
 
-# If you're having issues with shellcheck following source, disable the errors via:
-# disable=SC1090
-# disable=SC1091
+# Disable specific checks that may not be relevant for this project
+disable=SC2154  # Variable is referenced but not assigned
+disable=SC1090  # Can't follow non-constant source
+disable=SC1091  # Not following sourced files (often intentional)
+disable=SC2034  # Unused variables (sometimes used by sourced scripts)
+disable=SC2086  # Double quote to prevent globbing (context-dependent)
+disable=SC2181  # Check exit code directly (style preference)
+
+# Additional configuration
+external-sources=true
+shell=bash
