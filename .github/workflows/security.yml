@@ -103,8 +103,21 @@ jobs:
           pip-audit --desc --output pip-audit-report.json --format json || true
           cat pip-audit-report.json
 
-      - name: Run Bandit security linter
+      - name: Install and setup Trunk
+        uses: trunk-io/trunk-action@v1
+        with:
+          check-mode: all
+
+      - name: Run Bandit via Trunk (preferred)
         run: |
+          trunk check --filter=bandit --all --output-format=json > bandit-trunk-report.json || true
+          cat bandit-trunk-report.json
+        continue-on-error: true
+
+      - name: Run Bandit fallback
+        if: failure()
+        run: |
+          echo "🚨 Trunk bandit failed, using fallback..."
           bandit -r cryptofeed/ -f json -o bandit-report.json || true
           cat bandit-report.json
 
@@ -117,6 +130,7 @@ jobs:
             safety-report.json
             pip-audit-report.json
             bandit-report.json
+            bandit-trunk-report.json
 
   secrets-scan:
     name: Secrets Detection
