@@ -89,7 +89,6 @@ jobs:
           uv venv
           uv sync --dev
 
-
       - name: Run Safety check
         run: |
           uv run safety check --output json > safety-report.json || true

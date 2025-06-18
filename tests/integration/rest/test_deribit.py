@@ -15,6 +15,7 @@ import pytest
 from cryptofeed.defines import ASK, BID
 from cryptofeed.exchanges import Deribit
 
+
 pytestmark = [pytest.mark.network, pytest.mark.integration]
 
 

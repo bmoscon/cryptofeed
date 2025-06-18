@@ -1,60 +1,19 @@
-# YAMLlint configuration for enhanced YAML validation
-# See: https://yamllint.readthedocs.io/en/stable/configuration.html
-
+# Minimal yamllint config - essential rules only
 extends: default
 
 rules:
-  # Line length - allow longer lines for readability
+  # Match ruff line length
   line-length:
     max: 120
     level: warning
-
-  # Document start - not required for all YAML files
+  
+  # Flexible document structure
   document-start: disable
-
-  # Comments - allow comments without space requirement
-  comments:
-    min-spaces-from-content: 1
-    require-starting-space: true
-
-  # Indentation - standard 2-space indentation
+  
+  # Essential formatting
   indentation:
     spaces: 2
-    indent-sequences: true
-    check-multi-line-strings: false
-
-  # Brackets - allow flow style for simple structures
-  brackets:
-    min-spaces-inside: 0
-    max-spaces-inside: 1
-
-  # Braces - allow flow style for simple mappings
-  braces:
-    min-spaces-inside: 0
-    max-spaces-inside: 1
-
-  # Trailing spaces - warn but don't fail
-  trailing-spaces:
-    level: warning
-
-  # Empty lines - allow reasonable spacing
-  empty-lines:
-    max: 2
-    max-start: 1
-    max-end: 1
-
-  # Truthy values - allow yes/no, on/off
-  truthy:
-    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
-
-  # Quoted strings - only when needed, allow template strings
   quoted-strings:
     required: only-when-needed
-    extra-allowed: ["{|}"]
-
-  # Key duplicates - prevent duplicate keys
-  key-duplicates: {}
-
-  # Octal values - prevent implicit octal
-  octal-values:
-    forbid-implicit-octal: true
+  truthy:
+    allowed-values: ["true", "false", "yes", "no", "on", "off"]

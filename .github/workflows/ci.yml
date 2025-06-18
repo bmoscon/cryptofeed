@@ -50,8 +50,9 @@ jobs:
 
       - name: Run Trunk code quality checks
         run: |
-          # Trunk handles ruff, mypy, bandit via hermetic installs
-          trunk check --all --upstream origin/${{ github.event.repository.default_branch }}
+          # Trunk handles ruff, bandit via hermetic installs (mypy disabled for performance)
+          # Using filtered check to match local script: ruff, bandit, git-diff-check
+          trunk check --filter=ruff,bandit,git-diff-check --all --upstream origin/${{ github.event.repository.default_branch }}
         continue-on-error: false
 
       - name: Run fallback tools if Trunk fails

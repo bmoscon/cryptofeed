@@ -12,6 +12,7 @@ import pytest
 from cryptofeed.defines import ASK, BID, KRAKEN
 from cryptofeed.exchanges.kraken import Kraken
 
+
 pytestmark = [pytest.mark.network, pytest.mark.integration]
 
 

@@ -14,6 +14,7 @@ import pytest
 from cryptofeed.exchanges import OKX
 from cryptofeed.types import Candle
 
+
 pytestmark = [pytest.mark.network, pytest.mark.integration]
 
 

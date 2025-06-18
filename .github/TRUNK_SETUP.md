@@ -5,6 +5,7 @@ This document provides comprehensive setup instructions for integrating Trunk wi
 ## Overview
 
 This setup combines:
+
 - **Trunk**: Code quality and formatting tool
 - **GitHub Actions**: Comprehensive CI/CD pipeline
 - **Branch Rulesets**: Repository protection and quality gates
@@ -14,6 +15,7 @@ This setup combines:
 ### What is Trunk?
 
 Trunk is a universal code quality tool that:
+
 - **Unifies linting and formatting** across multiple languages
 - **Provides instant feedback** with super-fast performance
 - **Integrates seamlessly** with existing workflows
@@ -39,12 +41,14 @@ The repository includes pre-configured Trunk setup in `.trunk/`:
 The configuration enables these quality tools:
 
 **Python Tools:**
+
 - **ruff**: Fast Python linter and formatter
 - **black**: Code formatting
 - **isort**: Import sorting
 - **mypy**: Static type checking
 
 **Other Tools:**
+
 - **markdownlint**: Markdown formatting and style
 - **shellcheck**: Shell script analysis
 - **yamllint**: YAML file validation
@@ -55,15 +59,27 @@ The configuration enables these quality tools:
 ### 1. Install Trunk
 
 #### Option A: Automatic Installation (Recommended)
+
+You can install Trunk automatically in one of two ways:
+
+Option 1: Direct installation via curl:
+
 ```bash
 # Install Trunk CLI
 curl https://get.trunk.io -fsSL | bash
 
-# Initialize in repository (already done)
+# Optional: Initialize in repository (if not already done)
 # trunk init
 ```
 
+Option 2: Use our provided bootstrap script to automatically install Trunk if not already installed:
+
+```bash
+./scripts/bootstrap_trunk.sh
+```
+
 #### Option B: Manual Installation
+
 ```bash
 # macOS (Homebrew)
 brew install trunk-io
@@ -120,6 +136,7 @@ trunk check --ci
 ### Git Hooks Integration
 
 #### Pre-commit Hook
+
 ```bash
 # Install pre-commit hook
 trunk install-hooks
@@ -128,6 +145,7 @@ trunk install-hooks
 ```
 
 #### Manual Pre-commit Setup
+
 ```bash
 # Add to .git/hooks/pre-commit
 #!/bin/bash
@@ -163,6 +181,7 @@ The CI pipeline includes Trunk in the **Code Quality Checks** job:
 ### Quality Gates
 
 Trunk is integrated into branch protection as a required status check:
+
 - **Feature branches**: Basic Trunk validation
 - **Main/Release branches**: Full Trunk CI validation
 - **Required for merge**: All Trunk checks must pass
@@ -214,8 +233,8 @@ Customize `.trunk/configs/.markdownlint.yaml`:
 
 ```yaml
 # Markdown linting rules
-MD013: false  # Line length
-MD033: false  # HTML elements
+MD013: false # Line length
+MD033: false # HTML elements
 ```
 
 ### Excluding Files
@@ -240,11 +259,13 @@ node_modules/
 Trunk works alongside existing tools:
 
 **Replaces**:
+
 - Multiple separate linter configurations
 - Manual formatting steps
 - Inconsistent code quality checks
 
 **Enhances**:
+
 - pytest (testing remains unchanged)
 - GitHub Actions (adds quality layer)
 - Development workflow (faster feedback)
@@ -261,11 +282,13 @@ Trunk works alongside existing tools:
 ### Team Collaboration
 
 **Shared Configuration**:
+
 - Consistent formatting across all developers
 - Unified linting rules in version control
 - Automatic tool version management
 
 **Conflict Prevention**:
+
 - Pre-commit hooks prevent bad commits
 - CI validation blocks problematic merges
 - Automatic formatting reduces style debates
@@ -273,11 +296,13 @@ Trunk works alongside existing tools:
 ### Performance Benefits
 
 **Fast Execution**:
+
 - Intelligent caching for large repositories
 - Parallel execution of multiple tools
 - Incremental checking of changed files only
 
 **Developer Experience**:
+
 - Single command for all quality checks
 - IDE integration for real-time feedback
 - Minimal configuration overhead
@@ -287,6 +312,7 @@ Trunk works alongside existing tools:
 ### Common Issues
 
 **❌ Trunk not found**
+
 ```bash
 # Ensure Trunk is in PATH
 which trunk
@@ -295,6 +321,7 @@ export PATH="$HOME/.trunk/bin:$PATH"
 ```
 
 **❌ Configuration conflicts**
+
 ```bash
 # Reset configuration
 trunk init --force
@@ -302,6 +329,7 @@ trunk init --force
 ```
 
 **❌ Performance issues**
+
 ```bash
 # Clear cache
 trunk clean
@@ -310,6 +338,7 @@ trunk check --verbose
 ```
 
 **❌ CI failures**
+
 ```bash
 # Check differences from main
 trunk check --ci --filter=diff-upstream
@@ -341,11 +370,13 @@ trunk check --verbose
 Track code quality improvements:
 
 **Before Trunk**:
+
 - Inconsistent formatting
 - Manual linting processes
 - Style-related PR discussions
 
 **After Trunk**:
+
 - Automated quality enforcement
 - Consistent codebase formatting
 - Focus on logic in code reviews
@@ -353,6 +384,7 @@ Track code quality improvements:
 ### CI/CD Metrics
 
 Monitor workflow efficiency:
+
 - **Build time reduction** through caching
 - **Error detection speed** with pre-commit hooks
 - **Developer productivity** with instant feedback
@@ -461,6 +493,7 @@ git push origin v1.2.0
 ---
 
 **Related Documentation:**
+
 - [Trunk Official Documentation](https://docs.trunk.io/)
 - [GitHub Actions Workflows](WORKFLOW_SETUP.md)
 - [Branch Rulesets Setup](SETUP_RULESETS.md)

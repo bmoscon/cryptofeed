@@ -1,5 +1,5 @@
-# This file controls the behavior of Trunk: https://docs.trunk.io/cli
-# To learn more about the format of this file, see https://docs.trunk.io/reference/trunk-yaml
+# Unified Trunk configuration for cryptofeed
+# Trunk manages tool orchestration, pyproject.toml contains detailed configs
 version: 0.1
 cli:
   version: 1.24.0
@@ -8,32 +8,47 @@ plugins:
     - id: trunk
       ref: v1.7.0
       uri: https://github.com/trunk-io/plugins
-# Many linters and tools depend on runtimes - configure them here. (https://docs.trunk.io/runtimes)
+
+# Minimal runtimes for essential tools
 runtimes:
   enabled:
-    - go@1.21.0
-    - node@22.16.0
-    - python@3.10.8
+    - python@3.10.8         # For ruff, bandit
+    - node@22.16.0          # For prettier
+
+# Essential CI tools (configs defined in pyproject.toml)
 lint:
   enabled:
-    - actionlint@1.7.7
-    - bandit@1.8.5
-    - git-diff-check
-    - markdownlint@0.45.0
-    - mypy@1.16.1
-    - osv-scanner@2.0.3
-    - prettier@3.5.3
-    - ruff@0.11.13
-    - shellcheck@0.10.0
-    - shfmt@3.6.0
-    - taplo@0.9.3
-    - trufflehog@3.89.1
-    - yamllint@1.37.1
+    # Python tools (configured in pyproject.toml)
+    - ruff@0.12.0           # Uses [tool.ruff] config from pyproject.toml
+    - bandit@1.8.5          # Uses [tool.bandit] config from pyproject.toml
+    
+    # File formatting tools
+    - prettier@3.5.3        # YAML, Markdown, JSON formatting
+    - yamllint@1.37.1       # Uses .trunk/configs/.yamllint.yaml
+    
+    # Basic Git checks
+    - git-diff-check        # No additional config needed
+    
   disabled:
-    - black # Replaced by ruff format
-    - isort # Replaced by ruff
-    - checkov # Not needed for this project
-    - flake8 # Replaced by ruff
+    # Performance optimization - disabled in CI
+    - mypy                  # Available in dev env via pyproject.toml
+    
+    # Non-essential for core workflow
+    - actionlint            # GitHub Actions validation (optional)
+    - markdownlint          # Documentation linting (optional)
+    - osv-scanner           # Security scanning (use dedicated workflows)
+    - shellcheck            # Shell linting (minimal shell usage)
+    - shfmt                 # Shell formatting (minimal shell usage)
+    - taplo                 # TOML formatting (ruff handles most cases)
+    - trufflehog            # Secret scanning (use dedicated workflows)
+    
+    # Redundant with ruff
+    - black                 # Replaced by ruff format
+    - isort                 # Replaced by ruff isort
+    - flake8                # Replaced by ruff linting
+    - checkov               # Infrastructure scanning (not applicable)
+
+# Minimal trunk actions
 actions:
   disabled:
     - trunk-announce

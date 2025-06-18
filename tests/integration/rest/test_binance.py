@@ -14,6 +14,7 @@ from cryptofeed.defines import BINANCE, BINANCE_DELIVERY, BINANCE_FUTURES, BUY, 
 from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 from cryptofeed.types import Candle
 
+
 pytestmark = [pytest.mark.network, pytest.mark.integration]
 
 

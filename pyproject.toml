@@ -102,11 +102,7 @@ gcp_pubsub = ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"]
 quasardb = ["quasardb", "numpy"]
 
 # Development tools
-dev = [
-  "pytest>=7.0.0",
-  "pytest-asyncio>=0.21.0",
-  "pytest-cov>=4.0.0",
-]
+dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "pytest-cov>=4.0.0"]
 
 # All optional dependencies
 all = [
@@ -364,77 +360,32 @@ skips = [
 skips = ["**/tests/**", "**/test_*.py"]
 
 [dependency-groups]
-# Core development dependencies
+# Essential development dependencies (matches trunk tools)
 dev = [
-  "bandit>=1.8.5",
-  "mypy>=1.16.1",
+  # Core linting/formatting (managed by trunk)
+  "ruff>=0.11.13",          # Python linting & formatting
+  "bandit>=1.8.5",          # Security linting
+  # Testing
   "pytest>=8.4.0",
   "pytest-asyncio>=1.0.0",
   "pytest-cov>=6.2.1",
-  "ruff>=0.11.13",
   # Build tools
   "build",
   "wheel",
-  # Security tools  
-  "safety",
-  "pip-audit",
-  # Code quality tools
-  "radon",
-  "xenon",
-  "vulture", 
-  "pydocstyle",
-  "interrogate",
-  # Performance tools
-  "pytest-benchmark",
-  "memory-profiler",
-  "psutil",
-  # Licensing
-  "pip-licenses",
+  # Optional: Advanced analysis (when trunk is unavailable)
+  "mypy>=1.16.1",           # Type checking (disabled in CI)
+  "radon",                  # Complexity analysis
+  "vulture",                # Dead code detection
+  "pydocstyle",             # Docstring validation
+  "interrogate",            # Documentation coverage
 ]
 
-# Specialized dependency groups for CI optimization
-build = [
-  "build",
-  "wheel", 
-  "setuptools>=61.0",
-  "cython",
-]
-
-test = [
-  "pytest>=7.0.0",
-  "pytest-asyncio>=0.21.0", 
-  "pytest-cov>=4.0.0",
-]
-
-lint = [
-  "ruff>=0.11.13",
-  "mypy>=1.16.1",
-  "pydocstyle",
-  "interrogate",
-]
-
-security = [
-  "bandit>=1.8.5",
-  "safety",
-  "pip-audit",
-]
-
-performance = [
-  "pytest-benchmark",
-  "memory-profiler",
-  "psutil",
-]
-
-quality = [
-  "radon",
-  "xenon",
-  "vulture",
-]
-
+# Minimal CI dependencies (trunk handles tool management)
 ci = [
   "pytest>=8.4.0",
   "pytest-cov>=6.2.1",
-  "ruff>=0.11.13",
-  "mypy>=1.16.1",
-  "bandit>=1.8.5",
+  # Note: ruff, bandit managed by trunk in CI
 ]
+
+# Build-only dependencies
+build = ["build", "wheel", "setuptools>=61.0", "cython"]

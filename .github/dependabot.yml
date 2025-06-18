@@ -11,7 +11,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-      time: "06:00"
+      time: 06:00
       timezone: UTC
     open-pull-requests-limit: 10
     target-branch: develop
@@ -23,7 +23,7 @@ updates:
       - dependencies
       - python
     reviewers:
-      - bmoscon  # Repository owner
+      - bmoscon # Repository owner
     assignees:
       - bmoscon
     milestone: null

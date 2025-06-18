@@ -7,23 +7,30 @@ After extensive research into uv commands, I found that **`uv sync` should autom
 ## 📚 **UV Command Behavior Research**
 
 ### **uv sync**
+
 **Official Documentation Quote:**
+
 > "If the project virtual environment (`.venv`) does not exist, it will be created."
 
 **Key Behaviors:**
+
 - ✅ **Automatically creates `.venv`** if it doesn't exist
 - ✅ **Installs project dependencies** from pyproject.toml/uv.lock
 - ✅ **Manages the entire project environment**
 - ✅ **Handles editable installs** of the project itself
 
 ### **uv pip**
+
 **Behavior Analysis:**
+
 - ❌ **Does NOT create virtual environments automatically**
 - ❌ **Uses system Python or active environment** if no venv present
 - ⚠️ **Requires explicit virtual environment activation or --python flag**
 
 ### **uv venv**
+
 **Purpose:**
+
 - ✅ **Explicitly creates virtual environments**
 - ✅ **Provides fine control** over environment creation
 - ✅ **Useful for CI/CD where explicit control is preferred**
@@ -39,6 +46,7 @@ Looking at the original error and workflow patterns:
 3. **GitHub Actions Environment**: Fresh runners with no existing virtual environments
 
 ### **Specific Failure Pattern**
+
 ```bash
 # This SHOULD work (uv sync creates .venv):
 uv sync --dev
@@ -58,18 +66,19 @@ Even though `uv sync` creates virtual environments, our workflows had these issu
 
 ## 📊 **Command Comparison**
 
-| Command | Creates VEnv | Uses Existing VEnv | Best For |
-|---------|--------------|-------------------|----------|
-| `uv sync` | ✅ Auto | ✅ Yes | Project dependency management |
-| `uv pip install` | ❌ No | ✅ Yes | Additional packages, CI tools |
-| `uv venv` | ✅ Explicit | N/A | Explicit environment creation |
-| `uv run` | ✅ Temp/Project | ✅ Yes | Running commands with dependencies |
+| Command          | Creates VEnv    | Uses Existing VEnv | Best For                           |
+| ---------------- | --------------- | ------------------ | ---------------------------------- |
+| `uv sync`        | ✅ Auto         | ✅ Yes             | Project dependency management      |
+| `uv pip install` | ❌ No           | ✅ Yes             | Additional packages, CI tools      |
+| `uv venv`        | ✅ Explicit     | N/A                | Explicit environment creation      |
+| `uv run`         | ✅ Temp/Project | ✅ Yes             | Running commands with dependencies |
 
 ## 🔧 **Best Practices for CI/CD**
 
 ### **Recommended Patterns**
 
 #### **Pattern 1: uv sync-first (Preferred)**
+
 ```yaml
 - name: Setup dependencies
   run: |
@@ -78,8 +87,9 @@ Even though `uv sync` creates virtual environments, our workflows had these issu
 ```
 
 #### **Pattern 2: Explicit venv (More Explicit)**
+
 ```yaml
-- name: Setup dependencies  
+- name: Setup dependencies
   run: |
     uv venv  # Explicit virtual environment creation
     uv sync --dev  # Install project dependencies
@@ -87,9 +97,10 @@ Even though `uv sync` creates virtual environments, our workflows had these issu
 ```
 
 #### **Pattern 3: uv run for isolated commands**
+
 ```yaml
 - name: Run tests
-  run: uv run pytest tests/  # Handles dependencies automatically
+  run: uv run pytest tests/ # Handles dependencies automatically
 ```
 
 ## 🎯 **Our Workflow Analysis**
@@ -104,6 +115,7 @@ Even though `uv sync` creates virtual environments, our workflows had these issu
 ### **Alternative Approaches We Could Consider**
 
 #### **Option A: Reorder Commands (Risky)**
+
 ```yaml
 # Always run uv sync first
 - name: Install dependencies
@@ -113,16 +125,18 @@ Even though `uv sync` creates virtual environments, our workflows had these issu
 ```
 
 #### **Option B: Use uv run (Different Approach)**
+
 ```yaml
 # Use uv run for everything
 - name: Run linting
   run: uv run ruff check .
-  
-- name: Run tests  
+
+- name: Run tests
   run: uv run pytest tests/
 ```
 
 #### **Option C: Explicit venv + sync (Our Current Approach)**
+
 ```yaml
 # Explicit virtual environment creation
 - name: Setup environment
@@ -135,11 +149,13 @@ Even though `uv sync` creates virtual environments, our workflows had these issu
 ## 🚀 **Performance Implications**
 
 ### **Our Current Approach**
+
 - **Pros**: Explicit, predictable, handles all edge cases
 - **Cons**: Adds ~1-2 seconds per job for `uv venv` call
 - **Total Impact**: Minimal (1-2 seconds × 15 jobs = 15-30 seconds total)
 
 ### **Alternative Approaches**
+
 - **uv sync only**: Slightly faster, but risky for complex workflows
 - **uv run everywhere**: Different paradigm, would require major refactoring
 
@@ -148,20 +164,22 @@ Even though `uv sync` creates virtual environments, our workflows had these issu
 ### **Keep Our Current Fix** ✅
 
 **Reasoning:**
+
 1. **Reliability**: Explicit `uv venv` prevents all virtual environment issues
 2. **Maintainability**: Clear, explicit behavior that's easy to understand
 3. **Minimal Cost**: 15-30 seconds total across all workflows
 4. **Future-Proof**: Works regardless of uv version changes or workflow complexity
 
 ### **Potential Future Optimization**
+
 Could consider migrating to `uv run` for command execution, but this would be a major refactoring:
 
 ```yaml
 # Future consideration (not recommended now)
 - name: Run tests
   run: uv run pytest tests/
-  
-- name: Run linting  
+
+- name: Run linting
   run: uv run ruff check .
 ```
 
@@ -170,13 +188,16 @@ Could consider migrating to `uv run` for command execution, but this would be a 
 ### **Key Documentation Quotes**
 
 **uv sync**:
+
 > "If the project virtual environment (`.venv`) does not exist, it will be created."
 
 **uv pip**:
+
 > "Manage Python packages with a pip-compatible interface"
 > (No mention of automatic virtual environment creation)
 
 **uv run**:
+
 > "Run a command or script"
 > "The project virtual environment (`.venv`) is used if it exists, otherwise a temporary environment is created."
 

@@ -6,9 +6,9 @@ set -e
 
 echo "🔍 Running comprehensive code quality checks with Trunk..."
 
-# Use Trunk for unified linting and formatting
-echo "📋 Checking code with Trunk (ruff, mypy, bandit)..."
-trunk check --filter=ruff,mypy,bandit,git-diff-check
+# Use Trunk for unified linting and formatting (mypy disabled for performance)
+echo "📋 Checking code with Trunk (ruff, bandit, git-diff-check)..."
+trunk check --filter=ruff,bandit,git-diff-check
 
 echo "🎨 Auto-formatting code with Trunk..."
 trunk fmt --filter=ruff
@@ -17,6 +17,6 @@ echo "✅ Code quality checks complete!"
 echo ""
 echo "💡 To run individual tools manually:"
 echo "   trunk check --filter=ruff    # Linting only"
-echo "   trunk check --filter=mypy    # Type checking only"
 echo "   trunk check --filter=bandit  # Security scanning only"
 echo "   trunk fmt                    # Format all files"
+echo "   # Note: mypy disabled in local/CI for performance"

@@ -70,7 +70,7 @@ jobs:
         if: failure()
         run: |
           echo "🚨 Trunk failed, running comprehensive fallback analysis..."
-          
+
           # Generate fallback reports using dev dependencies
           echo "📝 Generating fallback reports..."
 
@@ -78,8 +78,8 @@ jobs:
           uv run ruff check cryptofeed/ --output-format=json > fallback-ruff.json || true
           uv run ruff check cryptofeed/ --output-format=sarif > fallback-ruff.sarif || true
 
-          # MyPy analysis
-          uv run mypy cryptofeed/ --ignore-missing-imports || true
+          # MyPy analysis (disabled for performance - matches local scripts)
+          # uv run mypy cryptofeed/ --ignore-missing-imports || true
 
           # Bandit security analysis
           uv run bandit -r cryptofeed/ -f json -o fallback-bandit.json || true

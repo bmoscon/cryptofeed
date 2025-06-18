@@ -18,6 +18,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 **Triggers**: Push/PR to main, master, develop branches + manual dispatch
 
 **Jobs**:
+
 - **Code Quality Checks**: Ruff linting, Black formatting, isort imports, mypy typing
 - **Multi-Python Testing**: Tests on Python 3.9, 3.10, 3.11, 3.12
 - **Security Scan**: Bandit security linting with artifact upload
@@ -27,6 +28,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 - **Performance Tests**: Benchmark execution (on PRs)
 
 **Key Features**:
+
 - Caching for faster builds
 - Parallel job execution
 - Codecov integration
@@ -35,9 +37,10 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 
 ### 2. Release Pipeline (`.github/workflows/release.yml`)
 
-**Triggers**: Git tags (v*) + manual dispatch
+**Triggers**: Git tags (v\*) + manual dispatch
 
 **Jobs**:
+
 - **Validate Release**: Quality checks and version validation
 - **Build Release**: Source and wheel distribution creation
 - **GitHub Release**: Automated release notes and asset upload
@@ -45,6 +48,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 - **Docker Build**: Multi-platform container images
 
 **Key Features**:
+
 - Semantic version enforcement
 - TestPyPI validation before production
 - Automated release notes generation
@@ -56,6 +60,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 **Triggers**: Push/PR + weekly schedule (Mondays 6 AM) + manual dispatch
 
 **Jobs**:
+
 - **CodeQL Analysis**: GitHub's semantic code analysis
 - **Dependency Review**: License and vulnerability review (PRs only)
 - **Vulnerability Scan**: Safety, pip-audit, Bandit security tools
@@ -65,6 +70,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 - **OSSF Scorecard**: Security posture assessment
 
 **Key Features**:
+
 - SARIF upload for security findings
 - License compliance tracking
 - Secrets detection across git history
@@ -79,6 +85,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 **Enforcement**: Active (blocking)
 
 **Rules**:
+
 - ❌ Deletion protection
 - ❌ Force push protection
 - ✅ Linear history requirement
@@ -100,6 +107,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 **Enforcement**: Active (blocking)
 
 **Rules**:
+
 - ❌ Deletion protection
 - ❌ Force push protection
 - ✅ Signed commits required
@@ -116,6 +124,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 **Enforcement**: Active (blocking)
 
 **Rules**:
+
 - ❌ Tag deletion protection
 - ✅ Signed tags required
 - ✅ Semantic version pattern: `^v[0-9]+\.[0-9]+\.[0-9]+$`
@@ -128,6 +137,7 @@ The repository includes a comprehensive CI/CD and security infrastructure:
 **Enforcement**: Evaluate (non-blocking feedback)
 
 **Rules**:
+
 - ✅ Conventional commit format validation
 - ✅ Valid email format requirement
 - ✅ Basic status checks (code quality only)
@@ -281,6 +291,7 @@ Edit the ruleset JSON files to add/remove required checks:
 ### Branch Naming Conventions
 
 Supported patterns:
+
 - **Feature**: `feature/`, `feat/`
 - **Fixes**: `fix/`, `bugfix/`
 - **Documentation**: `docs/`
@@ -291,21 +302,25 @@ Supported patterns:
 ### Common Issues
 
 **❌ Status checks not appearing**
+
 - Ensure workflow job names match ruleset contexts exactly
 - Verify workflows trigger on correct events (push/PR)
 - Check that workflows have run at least once
 
 **❌ Rulesets not enforcing**
+
 - Confirm enforcement is set to "Active"
 - Verify target branch patterns match your naming
 - Check user permissions and bypass settings
 
 **❌ Required reviewers not working**
+
 - Ensure users have appropriate repository permissions
 - Verify code owner files (CODEOWNERS) if required
 - Check team membership for organization repositories
 
 **❌ Signed commits failing**
+
 - Configure GPG signing: `git config commit.gpgsign true`
 - Set up GPG key in GitHub settings
 - Use `git commit -S` for signed commits

@@ -5,16 +5,19 @@ This document guides you through the cryptofeed project's migration to modern Py
 ## 🎯 What Changed
 
 ### **Package Management: pip → uv**
+
 - **8-20x faster** package installation and resolution
 - **Universal lockfile** for reproducible builds
 - **Unified interface** replacing pip, pip-tools, virtualenv, and more
 
 ### **Code Quality: Multiple Tools → ruff**
+
 - **Single tool** replaces Black, isort, flake8, and many plugins
 - **10-100x faster** linting and formatting
 - **Same code style** with better performance and error messages
 
 ### **Tools Still Used**
+
 - **mypy**: Type checking (v1.16.1, managed by Trunk)
 - **bandit**: Security scanning (v1.8.5, managed by Trunk)
 - **pytest**: Testing framework (managed by uv)
@@ -24,6 +27,7 @@ This document guides you through the cryptofeed project's migration to modern Py
 ### 1. Install uv
 
 #### Option A: Standalone Installer (Recommended)
+
 ```bash
 # macOS/Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -33,6 +37,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ```
 
 #### Option B: Alternative Methods
+
 ```bash
 # Homebrew (macOS)
 brew install uv
@@ -125,6 +130,7 @@ git push
 ### VS Code
 
 Update `.vscode/settings.json`:
+
 ```json
 {
   "python.defaultInterpreter": "./.venv/bin/python",
@@ -141,6 +147,7 @@ Update `.vscode/settings.json`:
 ```
 
 Install extensions:
+
 - `charliermarsh.ruff` - Ruff linting and formatting
 - `ms-python.mypy-type-checker` - Type checking
 
@@ -148,6 +155,7 @@ Install extensions:
 
 1. Go to Settings → Tools → External Tools
 2. Add new tool:
+
    - **Name**: Ruff Format
    - **Program**: `uv`
    - **Arguments**: `run ruff format $FilePath$`
@@ -297,6 +305,7 @@ uv run ruff rule F401
 ### Rule Categories
 
 Ruff includes rules from many tools:
+
 - **E, W**: pycodestyle (PEP 8)
 - **F**: Pyflakes (unused imports, variables)
 - **I**: isort (import sorting)
@@ -312,14 +321,14 @@ Ruff includes rules from many tools:
 
 ### Command Mapping
 
-| Old Command | New Command | Notes |
-|-------------|-------------|-------|
-| `black .` | `uv run ruff format .` | Same output, faster |
-| `isort .` | `uv run ruff check --select I --fix .` | Or use `ruff format` |
-| `flake8 .` | `uv run ruff check .` | More comprehensive |
-| `pip install -r requirements.txt` | `uv sync` | Uses pyproject.toml |
-| `pip install package` | `uv add package` | Automatic lock file update |
-| `python -m venv venv` | `uv venv` | Faster, automatic |
+| Old Command                       | New Command                            | Notes                      |
+| --------------------------------- | -------------------------------------- | -------------------------- |
+| `black .`                         | `uv run ruff format .`                 | Same output, faster        |
+| `isort .`                         | `uv run ruff check --select I --fix .` | Or use `ruff format`       |
+| `flake8 .`                        | `uv run ruff check .`                  | More comprehensive         |
+| `pip install -r requirements.txt` | `uv sync`                              | Uses pyproject.toml        |
+| `pip install package`             | `uv add package`                       | Automatic lock file update |
+| `python -m venv venv`             | `uv venv`                              | Faster, automatic          |
 
 ### Configuration Migration
 
@@ -329,7 +338,7 @@ Old separate config files → `pyproject.toml`:
 # Replaces setup.cfg [tool:pytest]
 [tool.pytest.ini_options]
 
-# Replaces .flake8 or setup.cfg [flake8] 
+# Replaces .flake8 or setup.cfg [flake8]
 [tool.ruff.lint]
 
 # Replaces pyproject.toml [tool.black]
@@ -343,13 +352,13 @@ Old separate config files → `pyproject.toml`:
 
 ### Before vs After
 
-| Operation | Old Tools | New Tools | Improvement |
-|-----------|-----------|-----------|-------------|
-| Package install | pip | uv | 8-20x faster |
-| Code formatting | Black | ruff format | 30x faster |
-| Import sorting | isort | ruff | 10-100x faster |
-| Linting | flake8 | ruff check | 10-100x faster |
-| Environment creation | venv + pip | uv venv | 5-10x faster |
+| Operation            | Old Tools  | New Tools   | Improvement    |
+| -------------------- | ---------- | ----------- | -------------- |
+| Package install      | pip        | uv          | 8-20x faster   |
+| Code formatting      | Black      | ruff format | 30x faster     |
+| Import sorting       | isort      | ruff        | 10-100x faster |
+| Linting              | flake8     | ruff check  | 10-100x faster |
+| Environment creation | venv + pip | uv venv     | 5-10x faster   |
 
 ### Benchmarks (on typical project)
 
@@ -370,24 +379,26 @@ time (uv run ruff format . && uv run ruff check .)
 ## 🔧 Trunk Configuration
 
 ### Updated Runtime Versions
+
 The project uses stable, tested runtime versions:
 
 ```yaml
 # .trunk/trunk.yaml
 runtimes:
   enabled:
-    - go@1.21.0        # Stable Go version
-    - node@22.16.0     # Latest Node LTS
-    - python@3.10.8    # Stable Python (resolves download issues)
+    - go@1.21.0 # Stable Go version
+    - node@22.16.0 # Latest Node LTS
+    - python@3.10.8 # Stable Python (resolves download issues)
 
 lint:
   enabled:
-    - ruff@0.11.13     # Latest available ruff
-    - mypy@1.16.1      # Latest available mypy  
-    - bandit@1.8.5     # Stable bandit
+    - ruff@0.11.13 # Latest available ruff
+    - mypy@1.16.1 # Latest available mypy
+    - bandit@1.8.5 # Stable bandit
 ```
 
 ### Tool Management Strategy
+
 - **Trunk manages**: ruff, mypy, bandit (with hermetic installs)
 - **uv manages**: pytest, project dependencies
 - **Result**: Clean separation, no version conflicts
@@ -397,6 +408,7 @@ lint:
 ### Common Issues
 
 **Q: uv command not found**
+
 ```bash
 # Add to PATH or restart terminal
 export PATH="$HOME/.cargo/bin:$PATH"
@@ -404,6 +416,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
 **Q: Dependencies not resolving**
+
 ```bash
 # Clear cache and retry
 uv cache clean
@@ -411,6 +424,7 @@ uv sync --refresh
 ```
 
 **Q: Trunk Python download issues**
+
 ```bash
 # If you see Python download errors, use fallback script
 ./tools/check-fallback.sh
@@ -420,6 +434,7 @@ trunk --version  # Should be 1.24.0+
 ```
 
 **Q: Ruff errors after migration**
+
 ```bash
 # Via Trunk (preferred)
 trunk check --filter=ruff --show-source
@@ -436,6 +451,7 @@ uv run ruff check --fix
 ```
 
 **Q: mypy errors**
+
 ```bash
 # Install type stubs
 uv add --dev types-requests types-PyYAML
@@ -445,6 +461,7 @@ uv run mypy --show-config
 ```
 
 **Q: Tests failing**
+
 ```bash
 # Install test dependencies
 uv sync --dev
@@ -459,6 +476,7 @@ uv run pytest -v
 ### Performance Issues
 
 **Slow uv operations:**
+
 ```bash
 # Use faster resolver
 uv add package --resolution=lowest-direct
@@ -468,6 +486,7 @@ uv sync --no-sources
 ```
 
 **Large dependency trees:**
+
 ```bash
 # Use dependency groups
 uv add --group dev pytest
@@ -484,7 +503,7 @@ The project's CI automatically uses uv:
 - name: Install uv
   uses: astral-sh/setup-uv@v4
 
-- name: Install dependencies  
+- name: Install dependencies
   run: uv sync --dev
 
 - name: Run tests
@@ -498,33 +517,36 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.13  # Match Trunk version
+    rev: v0.11.13 # Match Trunk version
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
-  
+
   # Alternative: Use Trunk for pre-commit
   - repo: https://github.com/trunk-io/pre-commit
     rev: v1.24.0
     hooks:
       - id: trunk
-        args: [check, --filter=ruff,mypy,bandit]
+        args: [check, --filter=ruff, mypy, bandit]
 ```
 
 ## 📚 Additional Resources
 
 ### Documentation
+
 - [uv Documentation](https://docs.astral.sh/uv/)
 - [Ruff Documentation](https://docs.astral.sh/ruff/)
 - [Trunk Documentation](https://docs.trunk.io/)
 - [pyproject.toml Guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/)
 
 ### Migration Guides
+
 - [Migrating from pip-tools to uv](https://docs.astral.sh/uv/guides/pip-tools/)
 - [Ruff vs Black, isort, flake8](https://docs.astral.sh/ruff/faq/#how-does-ruff-compare-to-flake8-black-and-isort)
 
 ### Community
+
 - [uv GitHub](https://github.com/astral-sh/uv)
 - [Ruff GitHub](https://github.com/astral-sh/ruff)
 - [Trunk GitHub](https://github.com/trunk-io/trunk)
@@ -537,7 +559,7 @@ repos:
 
 1. **Install uv**: Follow the installation guide above
 2. **Install Trunk**: `curl -fsSL https://get.trunk.io | bash` (if not already installed)
-3. **Setup environment**: Run `uv sync --dev` 
+3. **Setup environment**: Run `uv sync --dev`
 4. **Verify Trunk**: Run `trunk check --sample=1` to test configuration
 5. **Update IDE**: Configure ruff and Trunk extensions
 6. **Try new workflow**: Use `trunk check` and `trunk fmt` for daily development

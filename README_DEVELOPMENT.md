@@ -71,6 +71,7 @@ uv sync --frozen  # Includes all groups
 ### 3. Install Development Tools
 
 #### Trunk (Code Quality - Recommended)
+
 ```bash
 # Install Trunk CLI
 curl https://get.trunk.io -fsSL | bash
@@ -83,6 +84,7 @@ trunk install-hooks
 ```
 
 #### Using uv for individual tools
+
 ```bash
 # Tools are already installed via dependency groups
 uv run ruff check .     # Linting
@@ -151,6 +153,7 @@ mypy cryptofeed/
 ```
 
 **Required standards:**
+
 - ✅ All tests pass
 - ✅ Code follows Black formatting
 - ✅ Imports sorted with isort
@@ -204,7 +207,9 @@ cryptofeed/
 ### VS Code (Recommended)
 
 #### Extensions
+
 Install these VS Code extensions:
+
 ```json
 {
   "recommendations": [
@@ -219,7 +224,9 @@ Install these VS Code extensions:
 ```
 
 #### Settings
+
 Add to `.vscode/settings.json`:
+
 ```json
 {
   "python.defaultInterpreterPath": "./venv/bin/python",
@@ -256,13 +263,13 @@ class TestExample:
         # Synchronous test
         result = some_function()
         assert result == expected_value
-    
+
     @pytest.mark.asyncio
     async def test_async_function(self):
         # Asynchronous test
         result = await some_async_function()
         assert result == expected_value
-    
+
     def test_exception_handling(self):
         # Test error conditions
         with pytest.raises(ValueError):
@@ -272,16 +279,19 @@ class TestExample:
 ### Test Categories
 
 **Unit Tests** (`tests/unit/`):
+
 - Test individual functions and classes
 - Mock external dependencies
 - Fast execution
 
 **Integration Tests** (`tests/integration/`):
+
 - Test component interactions
 - Use real network connections (limited)
 - Slower execution
 
 **Performance Tests** (`tests/performance/`):
+
 - Benchmark critical functions
 - Memory usage validation
 - Throughput testing
@@ -382,6 +392,7 @@ git commit -m "test(integration): add Coinbase Pro websocket tests"
 ### Version Management
 
 The project uses [Semantic Versioning](https://semver.org/):
+
 - **Major** (X.0.0): Breaking changes
 - **Minor** (0.X.0): New features (backward compatible)
 - **Patch** (0.0.X): Bug fixes
@@ -416,12 +427,14 @@ git push origin v2.5.0
 ### Common Issues
 
 **Import Errors**:
+
 ```bash
 # Ensure package is installed in development mode
 pip install -e .
 ```
 
 **Test Failures**:
+
 ```bash
 # Run specific failing test with verbose output
 pytest tests/test_failing.py -v -s
@@ -431,6 +444,7 @@ pytest --pdb tests/test_failing.py
 ```
 
 **Network Issues**:
+
 ```bash
 # Test with increased timeout
 pytest --timeout=60 tests/integration/
@@ -492,12 +506,14 @@ python -m memory_profiler your_script.py
 ### Review Guidelines
 
 **For Authors**:
+
 - Provide clear PR description
 - Include test cases
 - Document breaking changes
 - Keep PRs focused and small
 
 **For Reviewers**:
+
 - Check code quality and style
 - Verify test coverage
 - Validate security implications
@@ -506,24 +522,28 @@ python -m memory_profiler your_script.py
 ## 📚 Resources
 
 ### Documentation
+
 - [Project README](README.md)
 - [API Documentation](docs/)
 - [GitHub Workflows](/.github/WORKFLOW_SETUP.md)
 - [Trunk Setup](/.github/TRUNK_SETUP.md)
 
 ### External Resources
+
 - [Python asyncio](https://docs.python.org/3/library/asyncio.html)
 - [pytest Documentation](https://docs.pytest.org/)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Semantic Versioning](https://semver.org/)
 
 ### Community
+
 - [GitHub Issues](https://github.com/tommy-ca/cryptofeed/issues)
 - [GitHub Discussions](https://github.com/tommy-ca/cryptofeed/discussions)
 
 ---
 
-**Need Help?** 
+**Need Help?**
+
 - Check the [troubleshooting guide](/.github/WORKFLOW_SETUP.md#troubleshooting)
 - Search [existing issues](https://github.com/tommy-ca/cryptofeed/issues)
 - Create a [new issue](https://github.com/tommy-ca/cryptofeed/issues/new)

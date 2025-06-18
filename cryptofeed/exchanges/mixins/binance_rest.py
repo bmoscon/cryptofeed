@@ -62,10 +62,7 @@ class BinanceRestMixin(RestExchange):
     async def _request(self, method: str, endpoint: str, auth: bool = False, payload={}, api=None):
         query_string = urlencode(payload)
         if auth:
-            if query_string:
-                query_string = f"{query_string}&timestamp={self._nonce()}"
-            else:
-                query_string = f"timestamp={self._nonce()}"
+            query_string = f"{query_string}&timestamp={self._nonce()}" if query_string else f"timestamp={self._nonce()}"
 
         if not api:
             api = self.api

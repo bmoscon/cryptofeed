@@ -155,9 +155,9 @@ jobs:
             dist/*.tar.gz
             dist/*.whl
           draft: false
-          prerelease: ${{ 
-            contains(steps.version.outputs.version, 'rc') || 
-            contains(steps.version.outputs.version, 'beta') || 
+          prerelease: ${{
+            contains(steps.version.outputs.version, 'rc') ||
+            contains(steps.version.outputs.version, 'beta') ||
             contains(steps.version.outputs.version, 'alpha') }}
 
   publish-pypi:

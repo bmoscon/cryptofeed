@@ -14,11 +14,13 @@ The repository includes four pre-configured rulesets:
 ## Manual Setup via GitHub Web Interface
 
 ### 1. Navigate to Repository Settings
+
 1. Go to your repository on GitHub
 2. Click **Settings** tab
 3. In the left sidebar, click **Rules** → **Rulesets**
 
 ### 2. Create Main Branch Protection Ruleset
+
 1. Click **New branch ruleset**
 2. Copy configuration from `.github/ruleset-main-protection.json`
 3. Configure:
@@ -29,6 +31,7 @@ The repository includes four pre-configured rulesets:
    - **Bypass list**: Repository administrators
 
 ### 3. Create Release Branch Protection Ruleset
+
 1. Click **New branch ruleset**
 2. Copy configuration from `.github/ruleset-release-branches.json`
 3. Configure:
@@ -39,6 +42,7 @@ The repository includes four pre-configured rulesets:
    - **Required approvers**: 2
 
 ### 4. Create Tag Protection Ruleset
+
 1. Click **New tag ruleset**
 2. Copy configuration from `.github/ruleset-tag-protection.json`
 3. Configure:
@@ -48,6 +52,7 @@ The repository includes four pre-configured rulesets:
    - **Rules**: Deletion protection and signature requirements
 
 ### 5. Create Feature Branch Guidelines
+
 1. Click **New branch ruleset**
 2. Copy configuration from `.github/ruleset-feature-branches.json`
 3. Configure:
@@ -88,6 +93,7 @@ gh api repos/:owner/:repo/rulesets \\
 The rulesets reference GitHub Actions workflows that must be present:
 
 ### Status Checks Referenced
+
 - **Code Quality Checks** (from `ci.yml`)
 - **Run Tests** (from `ci.yml`)
 - **Security Scan** (from `security.yml`)
@@ -95,45 +101,51 @@ The rulesets reference GitHub Actions workflows that must be present:
 - **Validate Release** (from `release.yml`)
 
 ### Workflow Job Names Must Match
+
 Ensure your workflow job names exactly match the status check contexts in the rulesets:
 
 ```yaml
 # In .github/workflows/ci.yml
 jobs:
   lint-and-format:
-    name: Code Quality Checks  # Referenced in rulesets
-  
+    name: Code Quality Checks # Referenced in rulesets
+
   test:
-    name: Run Tests            # Referenced in rulesets
-  
+    name: Run Tests # Referenced in rulesets
+
   security:
-    name: Security Scan        # Referenced in rulesets
+    name: Security Scan # Referenced in rulesets
 ```
 
 ## Enforcement Levels
 
 ### Active Enforcement
+
 - **Main/Master Branches**: Strict enforcement, blocks non-compliant pushes
 - **Release Branches**: Enhanced protection with mandatory reviews
 - **Tags**: Prevents deletion and enforces semantic versioning
 
 ### Evaluate Mode
+
 - **Feature Branches**: Provides feedback without blocking development
 
 ## Bypass Configuration
 
 ### Repository Administrators
+
 - Can bypass main branch protection in emergency situations
 - Cannot bypass release branch protection (requires PR)
 - Can manage tags for release preparation
 
 ### No Bypass
+
 - Feature branch guidelines have no bypass actors
 - Encourages consistent development practices
 
 ## Customization
 
 ### Modify Target Branches
+
 Edit the `conditions.ref_name.include` arrays in the JSON files:
 
 ```json
@@ -148,6 +160,7 @@ Edit the `conditions.ref_name.include` arrays in the JSON files:
 ```
 
 ### Adjust Required Reviewers
+
 Modify the `required_approving_review_count` parameter:
 
 ```json
@@ -160,6 +173,7 @@ Modify the `required_approving_review_count` parameter:
 ```
 
 ### Update Status Checks
+
 Add or remove required GitHub Actions jobs:
 
 ```json
@@ -188,16 +202,19 @@ After setup, test the rulesets:
 ## Troubleshooting
 
 ### Status Checks Not Found
+
 - Ensure GitHub Actions workflows are committed and running
 - Verify job names match exactly between workflows and rulesets
 - Check that workflows trigger on the correct events
 
 ### Bypass Not Working
+
 - Confirm user has appropriate repository permissions
 - Check that bypass actor configuration matches user type
 - Verify enforcement status is set correctly
 
 ### Rules Not Applying
+
 - Ensure target branch patterns match your branch naming
 - Check that rulesets are in "Active" enforcement mode
 - Verify conditions are correctly configured
