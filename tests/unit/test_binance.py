@@ -12,6 +12,7 @@ import pytest
 from cryptofeed.exchanges import Binance
 
 
+@pytest.mark.network
 @pytest.mark.xfail(reason="Binance blocks build machine IP ranges. If outside the USA this should pass")
 def test_binance_address_generation():
     symbols = Binance.symbols()

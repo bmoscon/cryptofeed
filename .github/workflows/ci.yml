@@ -5,6 +5,8 @@ on:
     branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
+  schedule:
+    - cron: "0 6 * * *"  # Daily at 6 AM UTC for network tests
   workflow_dispatch:
 
 env:
@@ -184,8 +186,49 @@ jobs:
           name: dist-packages
           path: dist/
 
+  network-tests:
+    name: Network-Dependent Tests
+    runs-on: ubuntu-latest
+    needs: build-and-install
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    continue-on-error: true  # Network tests may fail due to external factors
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dependencies with uv
+        run: |
+          uv venv
+          uv sync --dev
+
+      - name: Run network-dependent tests
+        run: |
+          # Run only network-dependent tests (integration and unit tests that require network)
+          uv run pytest tests/ -m "network" --tb=short -v
+        continue-on-error: true
+
+      - name: Upload network test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: network-test-results
+          path: |
+            pytest-report.xml
+            htmlcov/
+          retention-days: 7
+
   integration-tests:
-    name: Integration Tests
+    name: Integration Tests (Local)
     runs-on: ubuntu-latest
     needs: build-and-install
     if: github.event_name == 'pull_request'
@@ -215,10 +258,10 @@ jobs:
           uv pip install dist/*.whl
           uv pip install pytest pytest-asyncio
 
-      - name: Run integration tests
+      - name: Run integration tests (non-network)
         run: |
-          # Add integration tests here when available
-          echo "Integration tests placeholder"
+          # Run integration tests that don't require network access
+          uv run pytest tests/integration/ -m "not network" --tb=short
         continue-on-error: true
 
   dependency-check:
