@@ -45,6 +45,7 @@ class Binance(Feed, BinanceRestMixin):
         ORDER_INFO: ORDER_INFO
     }
     request_limit = 20
+    per_connectio_limit = 1024
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
@@ -135,14 +136,14 @@ class Binance(Feed, BinanceRestMixin):
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
 
-        if 0 < len(subs) < 200:
+        if 0 < len(subs) < self.per_connectio_limit:
             return address + '/'.join(subs)
         else:
             def split_list(_list: list, n: int):
                 for i in range(0, len(_list), n):
                     yield _list[i:i + n]
 
-            return [address + '/'.join(chunk) for chunk in split_list(subs, 200)]
+            return [address + '/'.join(chunk) for chunk in split_list(subs, self.per_connectio_limit)]
 
     def _reset(self):
         self._l2_book = {}
