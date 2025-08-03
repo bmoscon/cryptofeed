@@ -91,6 +91,7 @@ setup(
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
         "postgres": ["asyncpg"],
+        'mysql': ['asyncmy'],
         "quasardb": ["quasardb", "numpy"],
         "rabbit": ["aio_pika", "pika"],
         "redis": ["hiredis", "redis>=4.5.1"],
