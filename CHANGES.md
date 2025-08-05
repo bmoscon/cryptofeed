@@ -1,4 +1,6 @@
 ## Changelog
+### 2.4.2
+ * Feature: MySQL backend support
 
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
