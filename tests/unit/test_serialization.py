@@ -8,7 +8,7 @@ from decimal import Decimal
 from time import time
 import json
 
-from cryptofeed.types import OrderInfo, OrderBook, Trade, Ticker, Liquidation, Funding, Candle
+from cryptofeed.types import OrderInfo, OrderBook, Trade, Ticker, Liquidation, Funding, Candle, L1Book
 from cryptofeed.defines import BUY, PENDING, LIMIT, UNFILLED
 
 
@@ -44,6 +44,22 @@ def test_order_book():
     ob2 = OrderBook.from_dict(d)
     assert ob.book.to_dict() == ob2.book.to_dict()
     assert ob == ob2
+
+def test_l1_book():
+    l1 = L1Book(
+        'BYBIT',
+        'ADA-USDT',
+        Decimal(0.65),
+        Decimal(1000),
+        Decimal(0.67),
+        Decimal(1500),
+        int(time())
+    )
+    d = l1.to_dict()
+    d = json.dumps(d)
+    d = json.loads(d)
+    l1_2 = L1Book.from_dict(d)
+    assert l1 == l1_2
 
 
 def test_trade():
