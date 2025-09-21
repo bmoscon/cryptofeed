@@ -72,3 +72,16 @@ retry:
 - Update legacy connectors (e.g., native Binance/OKX) to consume the helper in a
   follow-up cycle, starting with documentation and unit tests.
 
+
+## Task Breakdown
+
+1. Extend `CcxtGenericFeed` to accept `proxies`, `endpoints`, and optional
+   `proxy_resolver`; propagate values to REST/WS transports.
+2. Add unit tests mocking ccxt clients to assert proxy settings and endpoint
+   overrides are applied correctly.
+3. Introduce a shared helper (`get_proxy_settings` / `apply_proxy_settings`) for
+   native HTTP/WebSocket clients; add unit coverage in one legacy exchange.
+4. Document configuration samples and update README/exchange docs once capability
+   is validated.
+5. Integration follow-up: rerun Backpack ccxt smoke tests through a managed
+   proxy to verify real-world behaviour.
