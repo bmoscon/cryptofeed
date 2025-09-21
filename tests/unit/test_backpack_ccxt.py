@@ -3,14 +3,21 @@ from __future__ import annotations
 
 import asyncio
 from decimal import Decimal
-from types import SimpleNamespace
+from types import ModuleType
 from typing import Any
 import sys
 
 import pytest
 
 from cryptofeed.defines import L2_BOOK, TRADES
-from cryptofeed.exchanges.backpack_ccxt import OrderBookSnapshot, TradeUpdate
+from cryptofeed.exchanges.backpack_ccxt import (
+    BackpackMetadataCache,
+    BackpackRestTransport,
+    BackpackWsTransport,
+    CcxtBackpackFeed,
+    OrderBookSnapshot,
+    TradeUpdate,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +34,7 @@ def clear_ccxt_modules(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def fake_ccxt(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+def fake_ccxt(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     markets = {
         "BTC/USDT": {
             "id": "BTC_USDT",
@@ -78,25 +85,31 @@ def fake_ccxt(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         async def close(self) -> None:
             return None
 
-    fake_async_support = SimpleNamespace(backpack=FakeAsyncClient)
-    fake_pro = SimpleNamespace(backpack=FakeProClient)
-    fake_root = SimpleNamespace(async_support=fake_async_support, pro=fake_pro)
+    module_ccxt = ModuleType("ccxt")
+    module_async = ModuleType("ccxt.async_support")
+    module_pro = ModuleType("ccxt.pro")
 
-    import sys
+    module_async.backpack = FakeAsyncClient
+    module_pro.backpack = FakeProClient
 
-    monkeypatch.setitem(sys.modules, "ccxt", fake_root)
-    monkeypatch.setitem(sys.modules, "ccxt.async_support", fake_async_support)
-    monkeypatch.setitem(sys.modules, "ccxt.async_support.backpack", FakeAsyncClient)
-    monkeypatch.setitem(sys.modules, "ccxt.pro", fake_pro)
-    monkeypatch.setitem(sys.modules, "ccxt.pro.backpack", FakeProClient)
+    module_ccxt.async_support = module_async
+    module_ccxt.pro = module_pro
 
-    return SimpleNamespace(async_client=FakeAsyncClient, pro_client=FakeProClient, markets=markets)
+    monkeypatch.setitem(sys.modules, "ccxt", module_ccxt)
+    monkeypatch.setitem(sys.modules, "ccxt.async_support", module_async)
+    monkeypatch.setitem(sys.modules, "ccxt.async_support.backpack", ModuleType("ccxt.async_support.backpack"))
+    monkeypatch.setitem(sys.modules, "ccxt.pro", module_pro)
+    monkeypatch.setitem(sys.modules, "ccxt.pro.backpack", ModuleType("ccxt.pro.backpack"))
+
+    return {
+        "async_client": FakeAsyncClient,
+        "pro_client": FakeProClient,
+        "markets": markets,
+    }
 
 
 @pytest.mark.asyncio
 async def test_metadata_cache_loads_markets(fake_ccxt):
-    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache
-
     cache = BackpackMetadataCache()
     await cache.ensure()
 
@@ -106,8 +119,6 @@ async def test_metadata_cache_loads_markets(fake_ccxt):
 
 @pytest.mark.asyncio
 async def test_rest_transport_normalizes_order_book(fake_ccxt):
-    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, BackpackRestTransport
-
     cache = BackpackMetadataCache()
     await cache.ensure()
 
@@ -122,9 +133,7 @@ async def test_rest_transport_normalizes_order_book(fake_ccxt):
 
 
 @pytest.mark.asyncio
-async def test_ws_transport_normalizes_trade(fake_ccxt, monkeypatch):
-    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, BackpackWsTransport
-
+async def test_ws_transport_normalizes_trade(fake_ccxt):
     cache = BackpackMetadataCache()
     await cache.ensure()
 
@@ -155,8 +164,6 @@ async def test_ws_transport_normalizes_trade(fake_ccxt, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_feed_bootstrap_calls_l2_callback(fake_ccxt):
-    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, CcxtBackpackFeed
-
     class DummyRest:
         def __init__(self, cache):
             self.cache = cache
@@ -185,7 +192,7 @@ async def test_feed_bootstrap_calls_l2_callback(fake_ccxt):
         channels=[L2_BOOK],
         metadata_cache=BackpackMetadataCache(),
         rest_transport_factory=lambda cache: DummyRest(cache),
-        ws_transport_factory=lambda cache: None,
+        ws_transport_factory=lambda cache: BackpackWsTransport(cache),
     )
 
     feed.register_callback(L2_BOOK, lambda snapshot: captured.append(snapshot))
@@ -198,13 +205,10 @@ async def test_feed_bootstrap_calls_l2_callback(fake_ccxt):
 
 @pytest.mark.asyncio
 async def test_feed_stream_trades_dispatches_callback(fake_ccxt):
-    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, CcxtBackpackFeed
-
     class DummyWs:
         def __init__(self, cache):
             self.cache = cache
             self.calls: list[str] = []
-            self.closed = False
 
         async def next_trade(self, symbol: str) -> TradeUpdate:
             self.calls.append(symbol)
@@ -214,12 +218,12 @@ async def test_feed_stream_trades_dispatches_callback(fake_ccxt):
                 amount=Decimal('0.25'),
                 side='buy',
                 trade_id='tradeid',
-                timestamp=1_700_000_000.123,
+                timestamp=1_700_000.0,
                 sequence=42,
             )
 
         async def close(self) -> None:
-            self.closed = True
+            return None
 
     trades: list[TradeUpdate] = []
 
@@ -227,7 +231,7 @@ async def test_feed_stream_trades_dispatches_callback(fake_ccxt):
         symbols=['BTC-USDT'],
         channels=[TRADES],
         metadata_cache=BackpackMetadataCache(),
-        rest_transport_factory=lambda cache: None,
+        rest_transport_factory=lambda cache: BackpackRestTransport(cache),
         ws_transport_factory=lambda cache: DummyWs(cache),
     )
 
@@ -240,8 +244,6 @@ async def test_feed_stream_trades_dispatches_callback(fake_ccxt):
 
 @pytest.mark.asyncio
 async def test_feed_respects_rest_only(fake_ccxt):
-    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, CcxtBackpackFeed
-
     class FailingWs:
         def __init__(self, cache):
             raise AssertionError('ws transport should not be constructed when rest_only is true')
@@ -250,7 +252,7 @@ async def test_feed_respects_rest_only(fake_ccxt):
         symbols=['BTC-USDT'],
         channels=[TRADES],
         metadata_cache=BackpackMetadataCache(),
-        rest_transport_factory=lambda cache: None,
+        rest_transport_factory=lambda cache: BackpackRestTransport(cache),
         ws_transport_factory=lambda cache: FailingWs(cache),
         rest_only=True,
     )

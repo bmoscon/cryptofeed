@@ -49,10 +49,8 @@ exchanges:
 
 1. Support TRADES + L2_BOOK for ccxt exchanges that expose `fetch_order_book`
    and `watch_trades` / `watch_order_book`.
-2. Provide HTTP 451/429 handling with simple retries and configuration for
-   alternative hosts.
-3. Use existing queue/emitter, metrics, and backoff logic to avoid duplicating
-   functionality (DRY).
+2. Provide HTTP 451/429 handling with configuration for alternative hosts.
+3. Use existing queue/emitter, metrics, and backoff logic to avoid duplication (DRY).
 
 ## TDD Plan
 
@@ -70,6 +68,5 @@ exchanges:
   advanced auth or derivatives until justified.
 - DRY: share metadata/transport logic across derived feeds; no duplicated rate
   limit logic.
-- YAGNI: avoid premature support for private channels; keep configuration
-  surface minimal.
+- YAGNI: defer private/auth channels; keep configuration surface minimal.
 
