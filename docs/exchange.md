@@ -47,6 +47,24 @@ native connector lands), smaller spot brokers, and regional venues. Contributors
 interested in the ccxt path should coordinate in `docs/exchange.md` to avoid
 duplication.
 
+### Backpack via ccxt/ccxt.pro
+
+Backpack’s REST and WebSocket APIs are exposed through ccxt/ccxt.pro. Until a
+first-party connector ships, the MVP adapter will:
+
+- Use `ccxt.binance()`-style calls via `ccxt.backpack` (ccxt `Exchanges` list)citeturn1search0
+  to fetch market metadata and snapshots.
+- Stream trades and depth via `ccxt.pro.backpack.watch_trades()` /
+  `.watch_order_book()` and translate Backpack’s `sequence` to Cryptofeed’s
+  delta bookkeeping.
+- Support API key injection using ccxt’s `apiKey/secret` fields for private
+  channels once required.
+
+Limitations: ccxt currently treats Backpack as experimental; check the
+`has` capabilities before enabling certain channels and provide fallbacks when
+functions return `False`. Contributors should submit upstream fixes as needed to
+ensure consistent metadata (e.g., min tick size, contract specs).citeturn1search1
+
 #### Example: Binance via ccxt/ccxt.pro
 
 ```python
