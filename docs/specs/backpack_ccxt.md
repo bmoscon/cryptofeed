@@ -2,68 +2,77 @@
 
 ## Objectives
 
-- Provide a drop-in `CcxtBackpackFeed` aligned with Cryptofeed's SOLID/KISS principles.
-- Support public market data (trades, L2 book) for `BTC/USDT` and `ETH/USDT`.
-- Reuse ccxt metadata and ccxt.pro streams while keeping the existing emitter/queue architecture intact.
+- Provide a drop-in `CcxtBackpackFeed` that follows Cryptofeed’s SOLID/KISS architecture.
+- Support public market data (TRADES, L2_BOOK) for `BTC/USDT` and `ETH/USDT` in the MVP.
+- Reuse ccxt metadata and ccxt.pro streams while retaining existing emitter/queue/backpressure components.
 
 ## Endpoints & Authentication
 
-- REST base: `https://api.backpack.exchange/` (rate limited).
-- WebSocket base: `wss://ws.backpack.exchange`.
-- Trading pairs follow `<base>_<quote>` convention (e.g., `BTC_USDT`).
-- Authenticated REST requires headers: `X-Timestamp`, `X-Window`, `X-API-Key`, `X-Signature` (ED25519).
-- Private WebSocket subscriptions sign `{"method": "subscribe", ...}` payloads using the same key.
+- REST base: `https://api.backpack.exchange/`
+- WebSocket base: `wss://ws.backpack.exchange`
+- Symbols use `<base>_<quote>` (e.g., `BTC_USDT`).
+- Authenticated REST headers: `X-Timestamp`, `X-Window`, `X-API-Key`, `X-Signature` (ED25519).
+- Private WebSocket subscriptions sign `{"method": "subscribe", ...}` payloads with the same credentials.
 
-## Channel Mapping
+## Channel Mapping & Normalization
 
-| Cryptofeed Channel | Backpack Topic | Notes |
-|--------------------|----------------|-------|
-| TRADES             | `trade.<symbol>` | Stream returns trade ID `t`, price `p`, size `q`, sequence `s`. |
-| L2_BOOK            | `depth.<symbol>` | `U/u` fields indicate start/end sequence for delta replay; snapshots via REST. |
+| Cryptofeed Channel | Backpack Topic      | Notes |
+|--------------------|---------------------|-------|
+| TRADES             | `trade.<symbol>`    | Fields: price `p`, quantity `q`, trade id `t`, sequence `s`, timestamp `ts` (µs). |
+| L2_BOOK            | `depth.<symbol>`    | Fields: bids/asks arrays plus `U/u` sequence range for deltas. |
+
+Additional transformations:
+
+- Convert timestamps `ts` (µs) → float seconds.
+- Normalize symbol via ccxt `safe_symbol` / `market` helpers.
+- Preserve `sequence` in event metadata for gap detection.
 
 ## Architecture
 
 ```
 CcxtBackpackFeed
- ├─ CcxtMetadataCache  -> ccxt.backpack.load_markets()
- ├─ CcxtRestTransport  -> ccxt.async_support.backpack.fetch_order_book()
- └─ CcxtWsTransport    -> ccxt.pro.backpack.watch_trades()/watch_order_book()
+ ├─ CcxtMetadataCache   → ccxt.backpack.load_markets()
+ ├─ CcxtRestTransport   → ccxt.async_support.backpack.fetch_order_book()
+ └─ CcxtWsTransport     → ccxt.pro.backpack.watch_trades()/watch_order_book()
+      ↳ CcxtEmitter     → existing BackendQueue/IggyMetrics
 ```
 
-- Symbol normalization uses ccxt's `safe_symbol`/`market` helpers.
-- REST snapshots enqueue L2 events with `force=True` to reset state.
-- WebSocket deltas reference `sequence`/`crossSequence` to detect gaps.
+- REST snapshots enqueue L2 events with `force=True`, mirroring native connectors (e.g., Binance).
+- WebSocket deltas rely on `sequence` / `U/u` to ensure ordered replay.
+- Rate limits leverage `exchange.rateLimit` and ccxt’s async throttling helpers.
 
 ## Configuration Example
 
 ```yaml
 exchanges:
   ccxt_backpack:
-    class: Ccxt_Backpack_Feed
+    class: CcxtBackpackFeed
     exchange: backpack
     symbols: ["BTC-USDT", "ETH-USDT"]
     channels: [TRADES, L2_BOOK]
-    snapshot_interval: 30
-    websocket: true
+    snapshot_interval: 30          # seconds between REST snapshots
+    websocket: true                 # disable if region restrictions block WS
     rest_only: false
-    api_key: ${BACKPACK_KEY}      # optional
+    api_key: ${BACKPACK_KEY}        # optional for private channels
     api_secret: ${BACKPACK_SECRET}
 ```
 
 ## Error Handling
 
-- Handle HTTP 451 / regional restrictions and expose alternative hosts (e.g., VPN or future regional domains).
-- Back off on `429` using ccxt's `rateLimit` and `asyncio.sleep`.
-- If WebSocket fails repeatedly, fall back to REST polling until connectivity recovers.
+- Surface HTTP 451 / restricted-location errors and allow alternate endpoints (VPN or future regional hosts).
+- Back off on HTTP 429 using ccxt’s built-in rate limit helpers.
+- Provide a `rest_only` toggle when WebSocket connectivity repeatedly fails.
+- Monitor `exchange.has` flags; log warnings when ccxt marks Backpack features as experimental.
 
-## Testing
+## Testing Strategy
 
-1. Unit: mock ccxt transports to assert symbol mapping, emitter integration, and error surfacing.
-2. Integration: run against Backpack from allowed region; verify trades/L2 events reach callbacks.
-3. Regression: add docker-compose harness to confirm compatibility each release.
+1. **Unit** – mock ccxt transports to assert symbol normalization, queue integration, and error surfacing.
+2. **Integration** – run against Backpack from an allowed region; verify trades/L2 callbacks receive sequenced updates.
+3. **Regression** – add a docker-compose harness to ensure the ccxt adapter continues to work across releases.
 
 ## Open Questions
 
-- Confirm microsecond timestamp conversion requirements for downstream storage.
-- Evaluate ccxt's current `has` flags for Backpack (some channels marked experimental).
-- Coordinate upstream PRs to improve market metadata (tick size, contract specs).
+- Confirm microsecond timestamp handling for downstream storage/metrics.
+- Track ccxt upstream status for Backpack (e.g., futures/spot coverage, precision
+  metadata) and contribute fixes where needed.
+- Evaluate auth requirements for private channels once order execution streams are in scope.
