@@ -70,3 +70,20 @@ exchanges:
   limit logic.
 - YAGNI: defer private/auth channels; keep configuration surface minimal.
 
+
+## Proxy / Endpoint Overrides
+
+- Support optional `rest_proxy` / `ws_proxy` configuration (e.g., SOCKS5 or HTTP)
+  to route ccxt REST/WS requests through region-compliant gateways.
+- Allow overriding base URLs (`rest`/`websocket`) per deployment; use ccxt
+  `urls` metadata when present, otherwise fall back to configuration values.
+- Provide retry/backoff guidance when proxy endpoints fail (surface actionable
+  logs).
+
+## Next-cycle TDD Tasks
+
+1. Add proxy/endpoint configuration parsing to `CcxtGenericFeed` and propagate to
+   transports.
+2. Extend unit tests with proxy parameters (mock ccxt client to assert options
+   passed correctly).
+3. Update docs/README once live integration verifies proxy support.
