@@ -37,3 +37,27 @@ retry:
 - DRY: Generic implementation reused by Backpack and future ccxt-based feeds.
 - YAGNI: Only support proxies for REST/WS; defer auth proxies or per-channel overrides until required.
 
+
+## External Proxy Manager Integration
+
+- Allow operators to supply a `proxy_resolver` callable (or plugin entry-point) that
+  returns proxy settings at runtime. Example signature::
+
+    def resolve_proxies(exchange_id: str) -> dict[str, str]:
+        return {"rest": "socks5://...", "websocket": "http://..."}
+
+- `CcxtGenericFeed` should call the resolver during initialization so dynamically
+  rotated proxies (from a proxy management system or service mesh) are honoured.
+- If resolver returns empty values, fall back to static configuration.
+- Log the effective proxy target (without credentials) to aid observability.
+
+## Non-ccxt Clients
+
+- Reuse the proxy schema for other HTTP/WebSocket clients inside Cryptofeed
+  (e.g., `requests`, `aiohttp`, native websocket connections) to provide a
+  consistent operator experience.
+- Implement a small helper (`apply_proxy_settings(session, proxies)`) that can be
+  reused across exchanges/backends.
+- Ensure proxy-aware unit tests exist for at least one native exchange connector
+  once the helper is available.
+
