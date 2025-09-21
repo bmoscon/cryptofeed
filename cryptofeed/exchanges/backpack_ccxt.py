@@ -185,7 +185,7 @@ class BackpackWsTransport:
             amount=amount,
             side=raw.get("side"),
             trade_id=str(raw.get("t")),
-            timestamp=float(ts_raw) / 1_000.0,
+            timestamp=float(ts_raw) / 1_000_000.0,
             sequence=raw.get("s"),
         )
 
