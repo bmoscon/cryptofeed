@@ -27,6 +27,8 @@ tracking issues in this document. The historical walkthrough below (based on
 Huobi) is retained for reference, but new connectors should follow the roadmap
 above and prefer the latest standards helpers.
 
+See `docs/specs/backpack_ccxt.md` for detailed Backpack MVP requirements.
+
 ### ccxt / ccxt.pro integration
 
 To broaden data coverage for long-tail venues, we are drafting an adapter that
