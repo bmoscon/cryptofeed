@@ -70,6 +70,13 @@ exchanges:
 2. **Integration** – run against Backpack from an allowed region; verify trades/L2 callbacks receive sequenced updates.
 3. **Regression** – add a docker-compose harness to ensure the ccxt adapter continues to work across releases.
 
+Suggested integration checklist:
+
+- Configure ccxt credentials or VPN endpoint permitted by Backpack.
+- Run a short session that bootstraps snapshots (`bootstrap_l2`) and streams trades.
+- Record sample payloads (trade + depth delta) for inclusion in regression fixtures.
+
+
 ## Open Questions
 
 - Confirm microsecond timestamp handling for downstream storage/metrics.
