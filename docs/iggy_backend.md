@@ -19,7 +19,7 @@ Cryptofeed's Iggy backend mirrors the Kafka backend while respecting SOLID/KISS/
 - Metrics: expose counters `iggy_emit_total`, `iggy_emit_failure_total` and histogram `iggy_emit_latency_seconds`; exporters must be pluggable (Prometheus default, optional OTEL meter).
 - Transport: `_default_client_factory(host=..., port=...)` plugs into `IggyTransport`; transports may support `tcp`, `http`, `quic` host lists.
 - Auto-provision: when `auto_create` is enabled, create missing streams, topics, and partitions before publishing by issuing the same `get_*`/`create_*` calls demonstrated in the Iggy examples so producers never fail on first write. citeturn0search0turn0search4
-- Authentication & configuration: expose username/password, personal access token, transport scheme (HTTP/TCP/QUIC), **and** connection-string shortcuts so the backend can mirror the example workflow of loading credentials from environment variables and instantiating the proper `IggyClient` implementation. citeturn0search1
+- Authentication & configuration: expose username/password, personal access token, transport scheme (HTTP/TCP/QUIC), and a direct `host:port` path compatible with `apache-iggy` ≥0.5.0. Connection-string convenience constructors only exist in older SDKs, so the backend should gracefully fall back when the installed client lacks `from_connection_string`. citeturn0search1
 - Partition strategy: allow callbacks to choose between partition-id pinning and key-based hashing to preserve ordering semantics, matching the example usage of `PollingStrategy::next()` and consumer-group builders. citeturn0search1
 - Consumer semantics: document and validate consumer-group offset management so downstream consumers interoperating with our streams behave like the official consumer and consumer-group samples. citeturn0search1turn0search4
 - Polling contract: enforce support for `poll_messages` with `PollingStrategy::next()`/`auto_commit` defaults, including batch sizing and poll interval controls reflected in the official SDK examples. citeturn0search1
@@ -28,7 +28,7 @@ Cryptofeed's Iggy backend mirrors the Kafka backend while respecting SOLID/KISS/
 
 - Docker end-to-end: `IGGY_DOCKER_TESTS=1 pytest tests/unit/test_iggy_backend.py tests/integration/test_iggy_backend.py -q`.
 - Benchmarks: capture latency/throughput via `iggy_emit_latency_seconds` while replaying realistic loads.
-- Run `python examples/verify_iggy_backend.py --connection-string iggy+tcp://iggy:iggy@127.0.0.1:8090 --stream cryptofeed --topic trades` alongside a feed handler session to confirm messages flow from Cryptofeed into Iggy using the official SDK poller. citeturn0view0
+- Run `python examples/verify_iggy_backend.py --connection-string iggy+tcp://iggy:iggy@127.0.0.1:8090 --stream-id 1 --topic-id 1 --provision` alongside a feed handler session. The helper uses the asynchronous `IggyClient("host:port")` API shipped in `apache-iggy` ≥0.5.0 and provisions stream/topic IDs when requested. citeturn0view0
 
 ## Documentation & Release
 

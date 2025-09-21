@@ -1,23 +1,22 @@
-"""Utility script to sanity-check the Iggy backend using the official SDK.
+"""Verify Iggy backend output using the installed Apache SDK (>=0.5.0).
 
-Launch an Iggy server (see docs/iggy_backend.md), run your Cryptofeed feed
-handler configured with the Iggy backend, then execute this script to confirm
-messages are landing in the expected stream/topic.
+The current bindings expose asynchronous `IggyClient` helpers that expect
+`host:port` endpoints (no `from_connection_string`). This script parses the
+connection string documented in ``docs/iggy_backend.md``, connects/login, and
+polls the configured stream/topic for a bounded number of batches.
 
-Usage (after installing apache-iggy):
+Example usage::
 
     python examples/verify_iggy_backend.py \
         --connection-string iggy+tcp://iggy:iggy@127.0.0.1:8090 \
-        --stream cryptofeed \
-        --topic trades
-
-The script polls for a bounded number of batches and prints each payload.
+        --stream-id 1 --topic-id 1 --provision
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+from dataclasses import dataclass
 from typing import Optional
 
 from apache_iggy import IggyClient, PollingStrategy
@@ -31,8 +30,10 @@ def parse_args() -> argparse.Namespace:
         default="iggy+tcp://iggy:iggy@127.0.0.1:8090",
         help="Iggy connection string (scheme://user:password@host:port)",
     )
-    parser.add_argument("--stream", default="cryptofeed", help="Stream name to inspect")
-    parser.add_argument("--topic", default="trades", help="Topic name to inspect")
+    parser.add_argument("--stream-id", type=int, default=1, help="Numeric stream id")
+    parser.add_argument("--stream-name", default="cryptofeed", help="Stream name when provisioning")
+    parser.add_argument("--topic-id", type=int, default=1, help="Numeric topic id")
+    parser.add_argument("--topic-name", default="trades", help="Topic name when provisioning")
     parser.add_argument("--partition", type=int, default=1, help="Partition id to poll")
     parser.add_argument("--batches", type=int, default=5, help="Maximum batches to consume")
     parser.add_argument(
@@ -45,61 +46,100 @@ def parse_args() -> argparse.Namespace:
         "--interval",
         type=float,
         default=0.5,
-        help="Sleep interval between empty polls in seconds",
+        help="Sleep interval (seconds) between empty polls",
+    )
+    parser.add_argument(
+        "--provision",
+        action="store_true",
+        help="Create stream/topic if they do not already exist",
     )
     return parser.parse_args()
 
 
-async def ensure_stream_topic(
+@dataclass(slots=True)
+class ParsedConnection:
+    host: str
+    port: int
+    username: Optional[str]
+    password: Optional[str]
+
+
+def parse_connection_string(value: str) -> ParsedConnection:
+    raw = value
+    if raw.startswith("iggy+"):
+        raw = raw[len("iggy+"):]
+    if "//" in raw:
+        raw = raw.split("//", 1)[1]
+    creds, hostpart = raw.split("@", 1) if "@" in raw else (None, raw)
+    host, port = hostpart.split(":", 1)
+    username = password = None
+    if creds:
+        username, password = creds.split(":", 1)
+    return ParsedConnection(host=host, port=int(port), username=username, password=password)
+
+
+async def provision_resources(
     client: IggyClient,
     *,
-    stream: str,
-    topic: str,
-    partition: int,
+    stream_id: int,
+    stream_name: str,
+    topic_id: int,
+    topic_name: str,
 ) -> None:
-    """Replicate backend provisioning so the poller works even before data arrives."""
+    try:
+        await client.create_stream(stream_id=stream_id, name=stream_name)
+        logger.info("Created stream id=%s name=%s", stream_id, stream_name)
+    except Exception:
+        logger.debug("Stream %s already exists", stream_id)
 
-    existing_stream = await client.get_stream(stream)
-    if existing_stream is None:
-        logger.info("Stream %s missing, creating", stream)
-        await client.create_stream(name=stream)
-
-    existing_topic = await client.get_topic(stream, topic)
-    if existing_topic is None:
-        logger.info("Topic %s missing, creating", topic)
-        await client.create_topic(stream=stream, name=topic, partitions_count=partition)
+    try:
+        await client.create_topic(
+            stream_id=stream_id,
+            topic_id=topic_id,
+            partitions_count=1,
+            name=topic_name,
+            compression_algorithm=None,
+        )
+        logger.info("Created topic id=%s name=%s", topic_id, topic_name)
+    except Exception:
+        logger.debug("Topic %s already exists", topic_id)
 
 
 async def poll_messages(
     client: IggyClient,
     *,
-    stream: str,
-    topic: str,
+    stream_id: int,
+    topic_id: int,
+    stream_name: str,
+    topic_name: str,
     partition: int,
     batch_size: int,
     max_batches: int,
     interval: float,
 ) -> None:
     batches = 0
-    from apache_iggy import ReceiveMessage  # local import for type hints
-
     while batches < max_batches:
-        logger.debug(
-            "Polling stream=%s topic=%s partition=%d", stream, topic, partition
-        )
-        messages: list[ReceiveMessage] = await client.poll_messages(
-            stream=stream,
-            topic=topic,
-            partition_id=partition,
-            polling_strategy=PollingStrategy.next(),
-            count=batch_size,
-            auto_commit=True,
-        )
-
+        try:
+            messages = await client.poll_messages(
+                stream=stream_id,
+                topic=topic_id,
+                partition_id=partition,
+                polling_strategy=PollingStrategy.Next(),
+                count=batch_size,
+                auto_commit=True,
+            )
+        except RuntimeError:
+            messages = await client.poll_messages(
+                stream=stream_name,
+                topic=topic_name,
+                partition_id=partition,
+                polling_strategy=PollingStrategy.Next(),
+                count=batch_size,
+                auto_commit=True,
+            )
         if not messages:
             await asyncio.sleep(interval)
             continue
-
         logger.info("Received %d messages", len(messages))
         for message in messages:
             payload = message.payload().decode("utf-8", errors="replace")
@@ -114,19 +154,29 @@ async def poll_messages(
 
 async def main() -> None:
     args = parse_args()
-    client = IggyClient.from_connection_string(args.connection_string)
+    parsed = parse_connection_string(args.connection_string)
+    client = IggyClient(f"{parsed.host}:{parsed.port}")
     await client.connect()
-    logger.info("Connected to Iggy at %s", args.connection_string)
-    await ensure_stream_topic(
-        client,
-        stream=args.stream,
-        topic=args.topic,
-        partition=args.partition,
-    )
+    logger.info("Connected to Iggy at %s:%s", parsed.host, parsed.port)
+    if parsed.username and parsed.password:
+        await client.login_user(parsed.username, parsed.password)
+        logger.info("Authenticated as %s", parsed.username)
+
+    if args.provision:
+        await provision_resources(
+            client,
+            stream_id=args.stream_id,
+            stream_name=args.stream_name,
+            topic_id=args.topic_id,
+            topic_name=args.topic_name,
+        )
+
     await poll_messages(
         client,
-        stream=args.stream,
-        topic=args.topic,
+        stream_id=args.stream_id,
+        topic_id=args.topic_id,
+        stream_name=args.stream_name,
+        topic_name=args.topic_name,
         partition=args.partition,
         batch_size=args.batch_size,
         max_batches=args.batches,
