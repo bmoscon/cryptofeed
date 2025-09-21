@@ -191,6 +191,10 @@ class IggyConfig:
     max_inflight: Optional[int] = None
     key: Optional[str] = None
     value_serializer: Optional[Callable[[dict[str, Any]], bytes]] = None
+    stream_id: Optional[int] = None
+    topic_id: Optional[int] = None
+    partitions: int = 1
+    replication_factor: int = 1
 
 
 def _format_log(config: IggyConfig, event: str, **info: Any) -> str:
@@ -214,9 +218,12 @@ class IggyEmitter:
         self._transport = transport
         self._metrics = metrics
         self._logger = logger
+        self._provisioned = False
+        self._provision_lock = asyncio.Lock()
 
     async def emit(self, payload: Any) -> None:
         client = self._transport.client()
+        await self._maybe_provision(client)
         attempts = 0
         start = time.perf_counter()
         while True:
@@ -268,6 +275,45 @@ class IggyEmitter:
     def transport(self) -> IggyTransport:
         return self._transport
 
+    async def _maybe_provision(self, client: Any) -> None:
+        if not self.config.auto_create:
+            return
+        if self._provisioned:
+            return
+        async with self._provision_lock:
+            if self._provisioned:
+                return
+            await self._provision(client)
+            self._provisioned = True
+
+    async def _provision(self, client: Any) -> None:
+        get_stream = getattr(client, "get_stream", None)
+        create_stream = getattr(client, "create_stream", None)
+        if get_stream is None or create_stream is None:
+            raise AttributeError("Iggy client does not support stream provisioning")
+        stream = await get_stream(self.config.stream)
+        if stream is None:
+            stream_kwargs: dict[str, Any] = {"name": self.config.stream}
+            if self.config.stream_id is not None:
+                stream_kwargs["stream_id"] = self.config.stream_id
+            await create_stream(**stream_kwargs)
+
+        get_topic = getattr(client, "get_topic", None)
+        create_topic = getattr(client, "create_topic", None)
+        if get_topic is None or create_topic is None:
+            raise AttributeError("Iggy client does not support topic provisioning")
+        topic = await get_topic(self.config.stream, self.config.topic)
+        if topic is None:
+            topic_kwargs: dict[str, Any] = {
+                "stream": self.config.stream,
+                "name": self.config.topic,
+                "partitions_count": self.config.partitions,
+                "replication_factor": self.config.replication_factor,
+            }
+            if self.config.topic_id is not None:
+                topic_kwargs["topic_id"] = self.config.topic_id
+            await create_topic(**topic_kwargs)
+
 
 class IggyCallback(BackendQueue):
     """Base callback for emitting records into an Apache Iggy stream."""
@@ -305,6 +351,10 @@ class IggyCallback(BackendQueue):
         transport_adapter: Optional[IggyTransport] = None,
         emitter: Optional[IggyEmitter] = None,
         logger: Optional[logging.Logger] = None,
+        stream_id: Optional[int] = None,
+        topic_id: Optional[int] = None,
+        partitions: int = 1,
+        replication_factor: int = 1,
         numeric_type=float,
         none_to=None,
     ) -> None:
@@ -337,6 +387,10 @@ class IggyCallback(BackendQueue):
             max_inflight=max_inflight,
             key=resolved_key,
             value_serializer=value_serializer,
+            stream_id=stream_id,
+            topic_id=topic_id,
+            partitions=partitions,
+            replication_factor=replication_factor,
         )
         client_factory = client_factory or _default_client_factory
         self._transport = transport_adapter or IggyTransport(host=host, port=port, client_factory=client_factory)

@@ -960,13 +960,13 @@ def test_iggy_callback_delegates_config_attributes() -> None:
 
 @pytest.mark.asyncio
 async def test_iggy_callback_uses_injected_emitter(monkeypatch: pytest.MonkeyPatch) -> None:
-    from cryptofeed.backends.iggy import IggyCallback, IggyEmitter
+    from cryptofeed.backends.iggy import IggyCallback
 
-    class StubEmitter(IggyEmitter):
-        def __init__(self) -> None:  # type: ignore[override]
+    class StubEmitter:
+        def __init__(self) -> None:
             self.calls: list[Any] = []
 
-        async def emit(self, payload: Any) -> None:  # type: ignore[override]
+        async def emit(self, payload: Any) -> None:
             self.calls.append(payload)
 
     emitter = StubEmitter()
@@ -1054,6 +1054,121 @@ async def test_iggy_emitter_respects_retry_backoff(monkeypatch: pytest.MonkeyPat
     await emitter.emit({"exchange": "BINANCE"})
 
     assert sleep_calls == [0.01]
+
+
+@pytest.mark.asyncio
+async def test_iggy_emitter_auto_create_provisions_resources(monkeypatch: pytest.MonkeyPatch) -> None:
+    import logging
+    from cryptofeed.backends.iggy import IggyEmitter, IggyConfig, IggyTransport
+
+    class ProvisioningClient:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+            self.stream_exists = False
+            self.topic_exists = False
+
+        async def get_stream(self, name: str):
+            self.calls.append(("get_stream", (name,), {}))
+            return types.SimpleNamespace(name=name, id=1) if self.stream_exists else None
+
+        async def create_stream(self, **kwargs: Any) -> None:
+            self.calls.append(("create_stream", tuple(), kwargs))
+            self.stream_exists = True
+
+        async def get_topic(self, stream: str, topic: str):
+            self.calls.append(("get_topic", (stream, topic), {}))
+            return types.SimpleNamespace(name=topic, id=1) if self.topic_exists else None
+
+        async def create_topic(self, **kwargs: Any) -> None:
+            self.calls.append(("create_topic", tuple(), kwargs))
+            self.topic_exists = True
+
+        async def send(self, **kwargs: Any) -> None:
+            self.calls.append(("send", tuple(), kwargs))
+
+    client = ProvisioningClient()
+    transport = IggyTransport(host="localhost", port=8090, client_factory=lambda host, port: client)
+    config = IggyConfig(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        auto_create=True,
+        stream_id=1,
+        topic_id=2,
+        partitions=3,
+        replication_factor=1,
+    )
+    metrics = type(
+        "Metrics",
+        (),
+        {
+            "increment_emit_success": lambda self, **_: None,
+            "increment_emit_failure": lambda self, **_: None,
+            "observe_latency": lambda self, *_1, **_2: None,
+        },
+    )()
+
+    emitter = IggyEmitter(config=config, transport=transport, metrics=metrics, logger=logging.getLogger("feedhandler.iggy"))
+
+    await emitter.emit({"exchange": "BINANCE"})
+    await emitter.emit({"exchange": "BINANCE"})
+
+    call_names = [name for name, _, _ in client.calls]
+    assert call_names.count("get_stream") == 1
+    assert call_names.count("create_stream") == 1
+    assert call_names.count("get_topic") == 1
+    assert call_names.count("create_topic") == 1
+    assert call_names.count("send") == 2
+    stream_kwargs = dict(client.calls[1][2])
+    assert stream_kwargs.get("name") == "cryptofeed"
+    assert stream_kwargs.get("stream_id") == 1
+    topic_kwargs = dict(client.calls[3][2])
+    assert topic_kwargs.get("stream") == "cryptofeed"
+    assert topic_kwargs.get("name") == "trades"
+    assert topic_kwargs.get("partitions_count") == 3
+
+
+@pytest.mark.asyncio
+async def test_iggy_emitter_skips_auto_create_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    import logging
+    from cryptofeed.backends.iggy import IggyEmitter, IggyConfig, IggyTransport
+
+    class RecordingClient:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        async def send(self, **kwargs: Any) -> None:
+            self.calls.append("send")
+
+    client = RecordingClient()
+    transport = IggyTransport(host="localhost", port=8090, client_factory=lambda host, port: client)
+    config = IggyConfig(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        auto_create=False,
+    )
+    metrics = type(
+        "Metrics",
+        (),
+        {
+            "increment_emit_success": lambda self, **_: None,
+            "increment_emit_failure": lambda self, **_: None,
+            "observe_latency": lambda self, *_1, **_2: None,
+        },
+    )()
+
+    emitter = IggyEmitter(config=config, transport=transport, metrics=metrics, logger=logging.getLogger("feedhandler.iggy"))
+
+    await emitter.emit({"exchange": "BINANCE"})
+
+    assert client.calls == ["send"]
 
 
 class _StubCounter:
