@@ -76,3 +76,36 @@ exchanges:
 - Track ccxt upstream status for Backpack (e.g., futures/spot coverage, precision
   metadata) and contribute fixes where needed.
 - Evaluate auth requirements for private channels once order execution streams are in scope.
+
+## Task Breakdown
+
+1. **Metadata cache & symbol normalization** (est. 1 day)
+   - Implement `CcxtMetadataCache` wrapper that loads markets and exposes symbol
+     conversion helpers (`safe_symbol`, precision info).
+   - Map normalized `BTC-USDT` input to Backpack’s `BTC_USDT` identifiers.
+
+2. **REST snapshot adapter** (est. 1 day)
+   - Implement `CcxtRestTransport` with `fetch_order_book` bootstrapping,
+     including rate-limit backoff.
+   - Normalize snapshot payloads and enqueue as `L2_BOOK` events via existing
+     emitter logic.
+
+3. **WebSocket transport** (est. 2 days)
+   - Implement `CcxtWsTransport` wrapping `watch_trades` and `watch_order_book`.
+   - Maintain local sequence state to detect gaps; emit warnings/recover by
+     triggering REST snapshot when sequence discontinuity occurs.
+
+4. **Feed integration** (est. 1 day)
+   - Wire transports into `CcxtBackpackFeed`, respecting Cryptofeed’s queue and
+     metrics patterns (SOLID/KISS).
+   - Add configuration parsing (`snapshot_interval`, `rest_only`, credentials).
+
+5. **Error handling & testing hooks** (est. 1 day)
+   - Surface HTTP 451/429 errors with actionable messages.
+   - Provide toggles for REST-only fallback and alternative hosts.
+   - Add unit tests (mocked transports) and integration harness using ccxt
+     sandbox credentials (if available).
+
+6. **Documentation & rollout** (est. 0.5 day)
+   - Update README/roadmap with ccxt adapter status once MVP lands.
+   - Document configuration examples and known caveats (rate limits, region access).
