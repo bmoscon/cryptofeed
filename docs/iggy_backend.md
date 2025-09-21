@@ -4,6 +4,13 @@
 
 Cryptofeed's Iggy backend mirrors the Kafka backend while respecting SOLID/KISS/DRY/YAGNI principles and consistent naming. `IggyTransport` owns client lifecycle (lazy connect, reuse per host/port). `IggyMetrics` centralises observability (Prometheus by default, optional OpenTelemetry). `IggyCallback` stays thin—queue handling plus structured logging.
 
+### Local Setup Requirements
+
+- Run an Iggy server locally before exercising the backend. Clone `apache/iggy` and start the server with `cargo r --bin iggy-server`, or pull the official Docker image (`docker pull apache/iggy`) and run `docker compose up`. Server data persists under `local_data` by default; tweak ports/addresses in `configs/server.toml`. citeturn0view0
+- Default root credentials are `iggy` / `iggy`. Use them for provisioning automation or create scoped users via the server APIs once the backend is working. citeturn0view0
+- SDK quickstarts assume Rust toolchain for server/client samples; for Python producer/consumer flows reuse the example scripts in `examples/python` with the same connection details. citeturn0view0
+- Install the Python SDK and logging helpers (`pip install apache-iggy loguru`) before running `examples/verify_iggy_backend.py` or other tooling scripts. citeturn0view0
+
 ## Functional Requirements
 
 - Provide callback subclasses matching Kafka coverage: `TradeIggy`, `FundingIggy`, `BookIggy`, `TickerIggy`, `OpenInterestIggy`, `LiquidationsIggy`, `CandlesIggy`, `OrderInfoIggy`, `TransactionsIggy`, `BalancesIggy`, `FillsIggy`.
@@ -21,6 +28,7 @@ Cryptofeed's Iggy backend mirrors the Kafka backend while respecting SOLID/KISS/
 
 - Docker end-to-end: `IGGY_DOCKER_TESTS=1 pytest tests/unit/test_iggy_backend.py tests/integration/test_iggy_backend.py -q`.
 - Benchmarks: capture latency/throughput via `iggy_emit_latency_seconds` while replaying realistic loads.
+- Run `python examples/verify_iggy_backend.py --connection-string iggy+tcp://iggy:iggy@127.0.0.1:8090 --stream cryptofeed --topic trades` alongside a feed handler session to confirm messages flow from Cryptofeed into Iggy using the official SDK poller. citeturn0view0
 
 ## Documentation & Release
 

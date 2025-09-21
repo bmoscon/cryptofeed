@@ -185,9 +185,8 @@ def _default_client_factory(
             "Install iggy-py to use the default Iggy backend client"
         ) from exc
     if connection_string:
-        if not hasattr(Client, "from_connection_string"):
-            raise RuntimeError("Installed iggy client does not support connection_string")
-        return Client.from_connection_string(connection_string)
+        from apache_iggy import IggyClient
+        return IggyClient.from_connection_string(connection_string)
     if host is None or port is None:
         raise ValueError("host and port must be provided when connection_string is absent")
     return Client(host=host, port=port)
