@@ -68,6 +68,10 @@ The roadmap prioritises modern derivatives venues with robust APIs:
 If you operate at one of these venues or would like to help with testing, please join the discussion in `docs/exchange.md`.
 
 
+### Generic exchange adapters
+
+Cryptofeed will expose a `CcxtFeed` that wraps ccxt (REST) and ccxt.pro (WebSocket) as a fallback for long-tail venues. See docs/exchange.md for the design sketch.
+
 ## Basic Usage
 
 Create a FeedHandler object and add subscriptions. For the various data channels that an exchange supports, you can supply callbacks for data events, or use provided backends (described below) to handle the data for you. Start the feed handler and you're done!

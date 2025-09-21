@@ -47,6 +47,50 @@ native connector lands), smaller spot brokers, and regional venues. Contributors
 interested in the ccxt path should coordinate in `docs/exchange.md` to avoid
 duplication.
 
+#### Example: Binance via ccxt/ccxt.pro
+
+```python
+import asyncio
+import ccxt.async_support as ccxt_async
+import ccxt.pro as ccxt_pro
+
+async def snapshot(symbol: str = "BTC/USDT") -> dict:
+    client = ccxt_async.binance()
+    try:
+        await client.load_markets()
+        return await client.fetch_order_book(symbol, limit=5)
+    finally:
+        await client.close()
+
+async def stream_trades(symbol: str = "BTC/USDT") -> list:
+    exchange = ccxt_pro.binance()
+    try:
+        return await exchange.watch_trades(symbol)
+    finally:
+        await exchange.close()
+
+async def main():
+    book = await snapshot()
+    trades = await stream_trades()
+    print("top bid", book["bids"][0], "last trade", trades[-1])
+
+asyncio.run(main())
+```
+
+Architectural notes:
+
+- Wrap the async REST client in a thin adapter that exposes the snapshot API
+  expected by `Feed._reset` when bootstrapping order books.
+- Use ccxt.pro streams to bridge into Cryptofeed’s polling loop; map incoming
+  trades/order books into normalized dataclasses before dispatching to
+  callbacks.
+- ccxt relies on exchange REST endpoints for market metadata and may enforce
+  *regional restrictions*. During testing the public Binance endpoint returned
+  `ExchangeNotAvailable` (HTTP 451) when accessed from a restricted IP. The
+  adapter should surface such errors clearly and allow users to route through
+  permitted endpoints (e.g., Binance US). We were unable to capture a live
+  snapshot because of this restriction.
+
 
 # Adding a new exchange (legacy Huobi walkthrough)
 
