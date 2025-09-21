@@ -386,3 +386,59 @@ class BookIggy(IggyCallback, BackendBookCallback):
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
         super().__init__(*args, **kwargs)
+
+
+class FundingIggy(IggyCallback, BackendCallback):
+    default_key = "funding"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+class OpenInterestIggy(IggyCallback, BackendCallback):
+    default_key = "open_interest"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+class LiquidationsIggy(IggyCallback, BackendCallback):
+    default_key = "liquidations"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+class CandlesIggy(IggyCallback, BackendCallback):
+    default_key = "candles"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+class OrderInfoIggy(IggyCallback, BackendCallback):
+    default_key = "order_info"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+class TransactionsIggy(IggyCallback, BackendCallback):
+    default_key = "transactions"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+class BalancesIggy(IggyCallback, BackendCallback):
+    default_key = "balances"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+
+class FillsIggy(IggyCallback, BackendCallback):
+    default_key = "fills"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)

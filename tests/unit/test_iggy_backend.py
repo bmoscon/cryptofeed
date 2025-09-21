@@ -888,6 +888,52 @@ def test_iggy_metrics_helper_records_latency() -> None:
     assert histogram.samples[-1]['value'] == 0.5
 
 
+@pytest.mark.asyncio
+async def test_iggy_callback_classes_have_expected_keys() -> None:
+    from cryptofeed.backends import iggy as iggy_module
+
+    class StubClient:
+        async def send(self, **_: Any) -> None:
+            return None
+
+    classes = [
+        (iggy_module.TradeIggy, "trades"),
+        (iggy_module.FundingIggy, "funding"),
+        (iggy_module.BookIggy, "book"),
+        (iggy_module.TickerIggy, "ticker"),
+        (iggy_module.OpenInterestIggy, "open_interest"),
+        (iggy_module.LiquidationsIggy, "liquidations"),
+        (iggy_module.CandlesIggy, "candles"),
+        (iggy_module.OrderInfoIggy, "order_info"),
+        (iggy_module.TransactionsIggy, "transactions"),
+        (iggy_module.BalancesIggy, "balances"),
+        (iggy_module.FillsIggy, "fills"),
+    ]
+
+    for iggy_class, expected_key in classes:
+        metrics = iggy_module.IggyMetrics(
+            make_counter=lambda *a, **k: _StubCounter(*a, **k),
+            make_histogram=lambda *a, **k: _StubHistogram(*a, **k),
+        )
+        transport = iggy_module.IggyTransport(
+            host="localhost",
+            port=8090,
+            client_factory=lambda host, port: StubClient(),
+        )
+        callback = iggy_class(
+            host="localhost",
+            port=8090,
+            transport="tcp",
+            stream="cryptofeed",
+            topic="trades",
+            backend="iggy",
+            transport_adapter=transport,
+            metrics=metrics,
+        )
+        assert getattr(callback, "default_key", None) == expected_key
+        assert callback.key == expected_key
+
+
 def test_docs_mention_iggy_docker_tests() -> None:
     content = Path('docs/iggy_backend.md').read_text()
     assert 'IGGY_DOCKER_TESTS=1' in content
