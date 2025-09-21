@@ -13,6 +13,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence
+from urllib.parse import urlparse
 
 SUPPORTED_TRANSPORTS = {"tcp", "http", "quic"}
 SUPPORTED_SERIALIZERS = {"json", "binary"}
@@ -90,15 +91,28 @@ PROMETHEUS_REGISTRY, _MAKE_COUNTER, _MAKE_HISTOGRAM = _load_prometheus()
 class IggyTransport:
     """Lazy wrapper around the underlying iggy client."""
 
-    def __init__(self, *, host: str, port: int, client_factory: Callable[..., Any]) -> None:
+    def __init__(
+        self,
+        *,
+        host: str,
+        port: int,
+        client_factory: Callable[..., Any],
+        connection_string: Optional[str] = None,
+    ) -> None:
         self._host = host
         self._port = port
+        self._connection_string = connection_string
         self._factory = client_factory
         self._client: Any = None
 
     def client(self) -> Any:
         if self._client is None:
-            client = self._factory(host=self._host, port=self._port)
+            kwargs: dict[str, Any]
+            if self._connection_string:
+                kwargs = {"connection_string": self._connection_string}
+            else:
+                kwargs = {"host": self._host, "port": self._port}
+            client = self._factory(**kwargs)
             if client is None:
                 raise RuntimeError("Iggy client factory returned None")
             self._client = client
@@ -158,13 +172,24 @@ _PROM_COUNTERS: dict[str, Any] = {}
 _PROM_HISTOGRAMS: dict[str, Any] = {}
 
 
-def _default_client_factory(*, host: str, port: int) -> Any:
+def _default_client_factory(
+    *,
+    host: Optional[str] = None,
+    port: Optional[int] = None,
+    connection_string: Optional[str] = None,
+) -> Any:
     try:
         from iggy.client import Client
     except ModuleNotFoundError as exc:
         raise RuntimeError(
             "Install iggy-py to use the default Iggy backend client"
         ) from exc
+    if connection_string:
+        if not hasattr(Client, "from_connection_string"):
+            raise RuntimeError("Installed iggy client does not support connection_string")
+        return Client.from_connection_string(connection_string)
+    if host is None or port is None:
+        raise ValueError("host and port must be provided when connection_string is absent")
     return Client(host=host, port=port)
 
 
@@ -195,6 +220,7 @@ class IggyConfig:
     topic_id: Optional[int] = None
     partitions: int = 1
     replication_factor: int = 1
+    connection_string: Optional[str] = None
 
 
 def _format_log(config: IggyConfig, event: str, **info: Any) -> str:
@@ -328,8 +354,9 @@ class IggyCallback(BackendQueue):
     def __init__(
         self,
         *,
-        host: str,
-        port: int,
+        connection_string: Optional[str] = None,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
         transport: str,
         stream: str,
         topic: str,
@@ -358,8 +385,20 @@ class IggyCallback(BackendQueue):
         numeric_type=float,
         none_to=None,
     ) -> None:
-        if not host:
+        parsed_host: Optional[str] = None
+        parsed_port: Optional[int] = None
+        if connection_string:
+            parsed = urlparse(connection_string)
+            if not parsed.hostname or parsed.port is None:
+                raise ValueError("connection_string must include host and port")
+            parsed_host = parsed.hostname
+            parsed_port = parsed.port
+        final_host = host or parsed_host
+        final_port = port if port is not None else parsed_port
+        if not final_host:
             raise ValueError("host must be provided")
+        if final_port is None:
+            raise ValueError("port must be provided")
         if not stream:
             raise ValueError("stream must be provided")
         if transport not in SUPPORTED_TRANSPORTS:
@@ -369,8 +408,8 @@ class IggyCallback(BackendQueue):
         default_key = getattr(self, "default_key", None)
         resolved_key = key or default_key or topic
         self.config = IggyConfig(
-            host=host,
-            port=port,
+            host=final_host,
+            port=final_port,
             transport=transport,
             stream=stream,
             topic=topic,
@@ -391,9 +430,15 @@ class IggyCallback(BackendQueue):
             topic_id=topic_id,
             partitions=partitions,
             replication_factor=replication_factor,
+            connection_string=connection_string,
         )
         client_factory = client_factory or _default_client_factory
-        self._transport = transport_adapter or IggyTransport(host=host, port=port, client_factory=client_factory)
+        self._transport = transport_adapter or IggyTransport(
+            host=final_host,
+            port=final_port,
+            client_factory=client_factory,
+            connection_string=connection_string,
+        )
         self.metrics = metrics or DEFAULT_IGGY_METRICS
         self._logger = logger or LOG
         self.emitter = emitter or IggyEmitter(

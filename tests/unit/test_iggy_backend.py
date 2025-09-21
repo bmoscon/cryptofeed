@@ -226,6 +226,50 @@ def test_iggy_backend_configuration_validation() -> None:
     assert callback.serializer == "binary"
 
 
+def test_iggy_callback_accepts_connection_string() -> None:
+    from cryptofeed.backends.iggy import IggyCallback
+
+    callback = IggyCallback(
+        connection_string="iggy+tcp://user:pass@localhost:8090",
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+    )
+
+    assert callback.connection_string == "iggy+tcp://user:pass@localhost:8090"
+    assert callback.host == "localhost"
+    assert callback.port == 8090
+
+
+def test_iggy_transport_uses_connection_string(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cryptofeed.backends.iggy import IggyCallback
+
+    captured: dict[str, Any] = {}
+
+    def factory(**kwargs: Any) -> Any:
+        captured.update(kwargs)
+        class DummyClient:
+            async def send(self, **_: Any) -> None:
+                return None
+        return DummyClient()
+
+    callback = IggyCallback(
+        connection_string="iggy+tcp://user:pass@localhost:8090",
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        client_factory=factory,
+    )
+
+    callback.transport.client()
+
+    assert captured["connection_string"] == "iggy+tcp://user:pass@localhost:8090"
+    assert "host" not in captured
+    assert "port" not in captured
+
+
 @pytest.mark.asyncio
 async def test_iggy_binary_serialization_passthrough(monkeypatch: pytest.MonkeyPatch) -> None:
     """Binary mode must preserve payload types and surface unsupported data."""
