@@ -9,6 +9,9 @@ import sys
 
 import pytest
 
+from cryptofeed.defines import L2_BOOK, TRADES
+from cryptofeed.exchanges.backpack_ccxt import OrderBookSnapshot, TradeUpdate
+
 
 @pytest.fixture(autouse=True)
 def clear_ccxt_modules(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -145,6 +148,111 @@ async def test_ws_transport_normalizes_trade(fake_ccxt, monkeypatch):
     assert trade.price == Decimal("30005")
     assert trade.amount == Decimal("0.25")
     assert trade.sequence == 42
-    assert trade.timestamp == pytest.approx(1_700_000_000.123)
+    assert trade.timestamp == pytest.approx(1_700_000.000123)
 
     await transport.close()
+
+
+@pytest.mark.asyncio
+async def test_feed_bootstrap_calls_l2_callback(fake_ccxt):
+    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, CcxtBackpackFeed
+
+    class DummyRest:
+        def __init__(self, cache):
+            self.cache = cache
+            self.calls = []
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def order_book(self, symbol: str, limit: int | None = None):
+            self.calls.append(symbol)
+            return OrderBookSnapshot(
+                symbol=symbol,
+                bids=[(Decimal('30000'), Decimal('1'))],
+                asks=[(Decimal('30010'), Decimal('2'))],
+                timestamp=1.0,
+                sequence=1,
+            )
+
+    captured: list[OrderBookSnapshot] = []
+
+    feed = CcxtBackpackFeed(
+        symbols=['BTC-USDT'],
+        channels=[L2_BOOK],
+        metadata_cache=BackpackMetadataCache(),
+        rest_transport_factory=lambda cache: DummyRest(cache),
+        ws_transport_factory=lambda cache: None,
+    )
+
+    feed.register_callback(L2_BOOK, lambda snapshot: captured.append(snapshot))
+    await feed.bootstrap_l2(limit=5)
+
+    assert len(captured) == 1
+    assert captured[0].symbol == 'BTC-USDT'
+    assert captured[0].bids[0] == (Decimal('30000'), Decimal('1'))
+
+
+@pytest.mark.asyncio
+async def test_feed_stream_trades_dispatches_callback(fake_ccxt):
+    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, CcxtBackpackFeed
+
+    class DummyWs:
+        def __init__(self, cache):
+            self.cache = cache
+            self.calls: list[str] = []
+            self.closed = False
+
+        async def next_trade(self, symbol: str) -> TradeUpdate:
+            self.calls.append(symbol)
+            return TradeUpdate(
+                symbol=symbol,
+                price=Decimal('30005'),
+                amount=Decimal('0.25'),
+                side='buy',
+                trade_id='tradeid',
+                timestamp=1_700_000_000.123,
+                sequence=42,
+            )
+
+        async def close(self) -> None:
+            self.closed = True
+
+    trades: list[TradeUpdate] = []
+
+    feed = CcxtBackpackFeed(
+        symbols=['BTC-USDT'],
+        channels=[TRADES],
+        metadata_cache=BackpackMetadataCache(),
+        rest_transport_factory=lambda cache: None,
+        ws_transport_factory=lambda cache: DummyWs(cache),
+    )
+
+    feed.register_callback(TRADES, lambda update: trades.append(update))
+    await feed.stream_trades_once()
+
+    assert len(trades) == 1
+    assert trades[0].sequence == 42
+
+
+@pytest.mark.asyncio
+async def test_feed_respects_rest_only(fake_ccxt):
+    from cryptofeed.exchanges.backpack_ccxt import BackpackMetadataCache, CcxtBackpackFeed
+
+    class FailingWs:
+        def __init__(self, cache):
+            raise AssertionError('ws transport should not be constructed when rest_only is true')
+
+    feed = CcxtBackpackFeed(
+        symbols=['BTC-USDT'],
+        channels=[TRADES],
+        metadata_cache=BackpackMetadataCache(),
+        rest_transport_factory=lambda cache: None,
+        ws_transport_factory=lambda cache: FailingWs(cache),
+        rest_only=True,
+    )
+
+    await feed.stream_trades_once()

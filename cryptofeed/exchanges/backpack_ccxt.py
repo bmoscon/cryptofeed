@@ -8,10 +8,12 @@ import time to keep the dependency optional.
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from decimal import Decimal
+import inspect
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+from cryptofeed.defines import L2_BOOK, TRADES
 
 from loguru import logger
 
@@ -202,4 +204,66 @@ __all__ = [
     "BackpackWsTransport",
     "OrderBookSnapshot",
     "TradeUpdate",
+    "CcxtBackpackFeed",
 ]
+
+
+class CcxtBackpackFeed:
+    """Coordinator feed that wires ccxt transports into Cryptofeed-style callbacks."""
+
+    def __init__(
+        self,
+        *,
+        symbols: List[str],
+        channels: List[str],
+        snapshot_interval: int = 30,
+        websocket: bool = True,
+        rest_only: bool = False,
+        metadata_cache: Optional[BackpackMetadataCache] = None,
+        rest_transport_factory: Callable[[BackpackMetadataCache], BackpackRestTransport] = BackpackRestTransport,
+        ws_transport_factory: Callable[[BackpackMetadataCache], BackpackWsTransport] = BackpackWsTransport,
+    ) -> None:
+        self.symbols = symbols
+        self.channels = set(channels)
+        self.snapshot_interval = snapshot_interval
+        self.websocket = websocket
+        self.rest_only = rest_only
+        self.metadata_cache = metadata_cache or BackpackMetadataCache()
+        self.rest_factory = rest_transport_factory
+        self.ws_factory = ws_transport_factory
+        self._callbacks: Dict[str, List[Callable[[Any], Any]]] = {}
+        self._ws_transport: Optional[BackpackWsTransport] = None
+
+    def register_callback(self, channel: str, callback: Callable[[Any], Any]) -> None:
+        self._callbacks.setdefault(channel, []).append(callback)
+
+    async def bootstrap_l2(self, *, limit: Optional[int] = None) -> None:
+        if L2_BOOK not in self.channels:
+            return
+        await self.metadata_cache.ensure()
+        async with self.rest_factory(self.metadata_cache) as rest:
+            for symbol in self.symbols:
+                snapshot = await rest.order_book(symbol, limit=limit)
+                await self._notify(L2_BOOK, snapshot)
+
+    async def stream_trades_once(self) -> None:
+        if TRADES not in self.channels or self.rest_only or not self.websocket:
+            return
+        await self.metadata_cache.ensure()
+        if self._ws_transport is None:
+            self._ws_transport = self.ws_factory(self.metadata_cache)
+        for symbol in self.symbols:
+            update = await self._ws_transport.next_trade(symbol)
+            await self._notify(TRADES, update)
+
+    async def close(self) -> None:
+        if self._ws_transport is not None:
+            await self._ws_transport.close()
+            self._ws_transport = None
+
+    async def _notify(self, channel: str, payload: Any) -> None:
+        callbacks = self._callbacks.get(channel, [])
+        for cb in callbacks:
+            result = cb(payload)
+            if inspect.isawaitable(result):
+                await result
