@@ -52,18 +52,41 @@ duplication.
 Backpack’s REST and WebSocket APIs are exposed through ccxt/ccxt.pro. Until a
 first-party connector ships, the MVP adapter will:
 
-- Use `ccxt.binance()`-style calls via `ccxt.backpack` (ccxt `Exchanges` list)citeturn1search0
-  to fetch market metadata and snapshots.
-- Stream trades and depth via `ccxt.pro.backpack.watch_trades()` /
-  `.watch_order_book()` and translate Backpack’s `sequence` to Cryptofeed’s
-  delta bookkeeping.
-- Support API key injection using ccxt’s `apiKey/secret` fields for private
-  channels once required.
+- Use `ccxt.backpack` to fetch market metadata (`/markets`), depth snapshots,
+  and recent trades by mapping normalized symbols (e.g., `BTC-USDT`) to
+  Backpack’s `<base>_<quote>` format (e.g., `BTC_USDT`).citeturn0search0turn0search5
+- Stream trades (`trade.<symbol>`) and depth (`depth.<symbol>`) via
+  `ccxt.pro.backpack.watch_trades()` and `.watch_order_book()` then translate the
+  sequential IDs (`t` for trades, `U/u` for depth) into Cryptofeed’s delta/state
+  tracking.
+- Handle ED25519-based authentication for private streams (`account.*`) by
+  delegating to ccxt’s signing hooks and exposing configuration for window,
+  timestamp, and signature payloads.citeturn0search0turn0search1
+- Surface REST + WebSocket endpoints (`https://api.backpack.exchange/`,
+  `wss://ws.backpack.exchange`) in configuration so operators can redirect to
+  mirrors if region restrictions apply (HTTP 451).citeturn0search0turn0search5
 
 Limitations: ccxt currently treats Backpack as experimental; check the
 `has` capabilities before enabling certain channels and provide fallbacks when
 functions return `False`. Contributors should submit upstream fixes as needed to
 ensure consistent metadata (e.g., min tick size, contract specs).citeturn1search1
+
+#### Deliverables
+
+1. `CcxtBackpackFeed` subclass configuring channel/topic maps and symbol
+   normalization helpers.
+2. Documentation covering required headers for authenticated REST calls
+   (`X-Timestamp`, `X-Window`, `X-API-Key`, `X-Signature`) and signature flow
+   for WebSocket subscriptions.citeturn0search0
+3. Integration tests that replay depth/trade events from ccxt.pro and validate
+   the emitter’s sequencing (`sequence`, `engine timestamp`).
+
+#### Open questions
+
+- Backpack pushes timestamps in microseconds; confirm whether downstream
+  storage backends or metrics need nanosecond precision conversions.
+- Evaluate ccxt’s rate-limit defaults vs. Backpack’s published guidance to
+  avoid throttling (`429`) when refreshing order book snapshots.
 
 #### Example: Binance via ccxt/ccxt.pro
 
