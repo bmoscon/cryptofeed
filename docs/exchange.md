@@ -1,7 +1,20 @@
-# *** Note this is somewhat out of date and will be updated at a later time ***
+# Exchange Integration Roadmap
+
+Cryptofeed is cleaning up legacy connectors and focusing engineering effort on
+modern venues with reliable APIs. The immediate targets for 2025Q4 are:
+
+- **Backpack** – spot and perpetual derivatives coverage including depth, trades,
+  and account-level webhooks.
+- **Hyperliquid** – perpetual order book, vault statistics, and the protocol’s
+  native funding feed.
+
+Contributors interested in these venues can find acceptance criteria and
+tracking issues in this document. The historical walkthrough below (based on
+Huobi) is retained for reference, but new connectors should follow the roadmap
+above and prefer the latest standards helpers.
 
 
-# Adding a new exchange
+# Adding a new exchange (legacy Huobi walkthrough)
 
 <br><br>
 

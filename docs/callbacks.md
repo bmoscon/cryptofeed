@@ -29,22 +29,40 @@ Every callback has the same signature, two positional arguments, the data object
 
 ### Backends
 
-The backends are defined [here](../cryptofeed/backends/). Currently the following are supported:
+The backends are defined [here](../cryptofeed/backends/).
+
+#### Actively supported destinations
+
+* Kafka
+* Postgres
+* QuestDB
+* RabbitMQ
+* Redis / Redis Streams
+* TCP / UDP / UDS sockets
+* VictoriaMetrics
+
+#### Legacy / community-maintained targets
+
+The following adapters remain in-tree for backwards compatibility but are no longer
+part of the release test matrix:
 
 * Arctic
 * ElasticSearch
 * GCP Pub/Sub
 * InfluxDB
-* Kafka
 * MongoDB
-* Postgres
-* QuestDB
-* RabbitMQ
-* Redis
-* Redis Streams
-* TCP/UDP/UDS sockets
-* VictoriaMetrics
 * ZMQ
+
+#### Upcoming storage integrations
+
+We are actively drafting specs and proof-of-concept adapters for the next wave of
+streaming and analytics backends:
+
+* GreptimeDB
+* RisingWave
+* Apache Iceberg (via object-store writer)
+* NATS JetStream
+* InfluxDB3
 
 There are also a handful of wrappers defined [here](../cryptofeed/backends/aggregate.py) that can be used in conjunction with these and raw callbacks to convert data to OHLCV, throttle data, etc. 
 
