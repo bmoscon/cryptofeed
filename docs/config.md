@@ -27,3 +27,18 @@ The following are valid settings for the configuration of Cryptofeed.
 
 
 For an example config file, see the provided [sample config](../config.yaml)
+
+- `iggy_emit_total`, `iggy_emit_failure_total`, `iggy_emit_latency_seconds` counters/histograms exported when `prometheus_client` is installed (see `cryptofeed.backends.iggy`).
+```yaml
+backends:
+  iggy:
+    host: localhost
+    port: 8090
+    stream: cryptofeed
+    topic: trades
+    transport: tcp
+    retry_attempts: 3
+    prometheus_metrics: true  # ensure prometheus_client is installed
+```
+
+- To forward metrics/logs to OpenTelemetry, configure `OTEL_EXPORTER_OTLP_ENDPOINT` (or your provider-specific settings) and set `export_otel: true` in the Iggy backend config (fallbacks to Prometheus/local logging when not enabled).

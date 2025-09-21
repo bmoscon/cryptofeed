@@ -802,3 +802,11 @@
 ### 0.5.0 (2018-01-02)
   * Initial release: GDAX, Poloniex, Bitfinex Support
   * Feature: NBBO support
+
+## Unreleased
+- Add Apache Iggy backend with structured logging and Prometheus metrics (iggy_emit_total, iggy_emit_failure_total, iggy_emit_latency_seconds).
+
+### Added
+- Apache Iggy backend with structured logging (`emit_success/emit_failure/emit_retry`) and Prometheus metrics (`iggy_emit_total`, `iggy_emit_failure_total`, `iggy_emit_latency_seconds`).
+
+- Added Docker-backed integration guidance (`IGGY_DOCKER_TESTS=1 pytest ...`) and benchmark notes for the Iggy backend.
