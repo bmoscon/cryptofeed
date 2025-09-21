@@ -837,6 +837,225 @@ def test_prometheus_registry_exposed() -> None:
     assert PROMETHEUS_REGISTRY is not None
 
 
+@pytest.mark.asyncio
+async def test_iggy_emitter_records_success(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+    from cryptofeed.backends.iggy import IggyEmitter, IggyConfig, IggyTransport
+
+    class StubClient:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, str, dict[str, Any]]] = []
+
+        async def send(self, *, stream: str, topic: str, payload: Any, partition_strategy=None) -> None:  # noqa: ANN001 - parity with iggy sdk
+            self.calls.append((stream, topic, payload))
+
+    class StubMetrics:
+        def __init__(self) -> None:
+            self.successes: list[dict[str, Any]] = []
+            self.failures: list[dict[str, Any]] = []
+            self.latencies: list[tuple[float, dict[str, Any]]] = []
+
+        def increment_emit_success(self, **labels: Any) -> None:
+            self.successes.append(labels)
+
+        def increment_emit_failure(self, **labels: Any) -> None:
+            self.failures.append(labels)
+
+        def observe_latency(self, duration: float, **labels: Any) -> None:
+            self.latencies.append((duration, labels))
+
+    client = StubClient()
+    transport = IggyTransport(host="localhost", port=8090, client_factory=lambda host, port: client)
+    config = IggyConfig(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        serializer="json",
+    )
+    metrics = StubMetrics()
+    emitter = IggyEmitter(config=config, transport=transport, metrics=metrics, logger=logging.getLogger("feedhandler.iggy"))
+
+    payload = {"exchange": "BINANCE"}
+    with caplog.at_level("INFO", logger="feedhandler.iggy"):
+        await emitter.emit(payload)
+
+    assert client.calls == [("cryptofeed", "trades", payload)]
+    assert metrics.failures == []
+    assert metrics.successes[-1] == {"stream": "cryptofeed", "topic": "trades"}
+    duration, labels = metrics.latencies[-1]
+    assert duration >= 0
+    assert labels == {"stream": "cryptofeed", "topic": "trades"}
+    message = "".join(caplog.messages)
+    assert "event=emit_success" in message
+
+
+@pytest.mark.asyncio
+async def test_iggy_emitter_records_failure(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+    from cryptofeed.backends.iggy import IggyEmitter, IggyConfig, IggyTransport
+
+    class FailingClient:
+        async def send(self, *, stream: str, topic: str, payload: Any, partition_strategy=None) -> None:  # noqa: ANN001 - parity with iggy sdk
+            raise RuntimeError("broken link")
+
+    class StubMetrics:
+        def __init__(self) -> None:
+            self.successes: list[dict[str, Any]] = []
+            self.failures: list[dict[str, Any]] = []
+
+        def increment_emit_success(self, **labels: Any) -> None:
+            self.successes.append(labels)
+
+        def increment_emit_failure(self, **labels: Any) -> None:
+            self.failures.append(labels)
+
+        def observe_latency(self, duration: float, **labels: Any) -> None:
+            return None
+
+    transport = IggyTransport(host="localhost", port=8090, client_factory=lambda host, port: FailingClient())
+    config = IggyConfig(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        retry_attempts=1,
+    )
+    metrics = StubMetrics()
+    emitter = IggyEmitter(config=config, transport=transport, metrics=metrics, logger=logging.getLogger("feedhandler.iggy"))
+
+    with caplog.at_level("ERROR", logger="feedhandler.iggy"):
+        with pytest.raises(RuntimeError, match="broken link"):
+            await emitter.emit({"exchange": "BINANCE"})
+
+    assert metrics.successes == []
+    assert metrics.failures[-1]["error"] == "RuntimeError"
+    assert metrics.failures[-1]["topic"] == "trades"
+    assert "event=emit_failure" in "".join(caplog.messages)
+
+
+def test_iggy_callback_delegates_config_attributes() -> None:
+    from cryptofeed.backends.iggy import IggyCallback
+
+    callback = IggyCallback(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+    )
+
+    assert callback.host == "localhost"
+    assert callback.stream == "cryptofeed"
+    assert callback.config.transport == "tcp"
+    assert callback.config.key == "trades"
+    with pytest.raises(AttributeError):
+        _ = callback.nonexistent  # noqa: F841
+
+
+@pytest.mark.asyncio
+async def test_iggy_callback_uses_injected_emitter(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cryptofeed.backends.iggy import IggyCallback, IggyEmitter
+
+    class StubEmitter(IggyEmitter):
+        def __init__(self) -> None:  # type: ignore[override]
+            self.calls: list[Any] = []
+
+        async def emit(self, payload: Any) -> None:  # type: ignore[override]
+            self.calls.append(payload)
+
+    emitter = StubEmitter()
+
+    callback = IggyCallback(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        emitter=emitter,
+    )
+
+    await callback._emit({"exchange": "BINANCE"})
+    assert emitter.calls == [{"exchange": "BINANCE"}]
+
+
+def test_iggy_callback_uses_injected_logger(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+    from cryptofeed.backends.iggy import IggyCallback
+
+    logger = logging.getLogger("test.iggy")
+
+    callback = IggyCallback(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        logger=logger,
+    )
+
+    with caplog.at_level("INFO", logger="test.iggy"):
+        callback.log_connection_event("connect", detail="boot")
+
+    assert "event=connect" in "".join(caplog.messages)
+    assert "detail=boot" in "".join(caplog.messages)
+
+
+@pytest.mark.asyncio
+async def test_iggy_emitter_respects_retry_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+    import logging
+    from cryptofeed.backends.iggy import IggyEmitter, IggyConfig, IggyTransport
+
+    sleep_calls: list[float] = []
+
+    async def fake_sleep(duration: float) -> None:
+        sleep_calls.append(duration)
+
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+
+    class FlakyClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def send(self, *, stream: str, topic: str, payload: Any, partition_strategy=None) -> None:  # noqa: ANN001 - parity with iggy sdk
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("first failure")
+
+    config = IggyConfig(
+        host="localhost",
+        port=8090,
+        transport="tcp",
+        stream="cryptofeed",
+        topic="trades",
+        backend="iggy",
+        retry_attempts=2,
+        retry_backoff_ms=(10, 20, 30),
+    )
+
+    client = FlakyClient()
+    transport = IggyTransport(host="localhost", port=8090, client_factory=lambda host, port: client)
+    metrics = type("Metrics", (), {
+        "increment_emit_success": lambda self, **_: None,
+        "increment_emit_failure": lambda self, **_: None,
+        "observe_latency": lambda self, *_1, **_2: None,
+    })()
+
+    emitter = IggyEmitter(config=config, transport=transport, metrics=metrics, logger=logging.getLogger("feedhandler.iggy"))
+
+    await emitter.emit({"exchange": "BINANCE"})
+
+    assert sleep_calls == [0.01]
+
+
 class _StubCounter:
     def __init__(self, name: str, doc: str, labelnames: tuple[str, ...], registry=None) -> None:
         self.samples = []

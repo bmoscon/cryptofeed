@@ -193,8 +193,86 @@ class IggyConfig:
     value_serializer: Optional[Callable[[dict[str, Any]], bytes]] = None
 
 
+def _format_log(config: IggyConfig, event: str, **info: Any) -> str:
+    fields = {"event": event, "host": config.host, "stream": config.stream, "topic": config.topic}
+    fields.update({k: v for k, v in info.items() if k != "auth"})
+    return "; ".join(f"{k}={v}" for k, v in fields.items())
+
+
+class IggyEmitter:
+    """Emit payloads via the Iggy transport while capturing metrics and structured logs."""
+
+    def __init__(
+        self,
+        *,
+        config: IggyConfig,
+        transport: IggyTransport,
+        metrics: IggyMetrics,
+        logger: logging.Logger = LOG,
+    ) -> None:
+        self.config = config
+        self._transport = transport
+        self._metrics = metrics
+        self._logger = logger
+
+    async def emit(self, payload: Any) -> None:
+        client = self._transport.client()
+        attempts = 0
+        start = time.perf_counter()
+        while True:
+            try:
+                await client.send(
+                    stream=self.config.stream,
+                    topic=self.config.topic,
+                    payload=payload,
+                    partition_strategy=self.config.partition_strategy,
+                )
+            except Exception as exc:  # noqa: BLE001 - propagate unexpected failures after retries
+                attempts += 1
+                if attempts >= self.config.retry_attempts:
+                    self._metrics.increment_emit_failure(
+                        stream=self.config.stream,
+                        topic=self.config.topic,
+                        error=exc.__class__.__name__,
+                    )
+                    self._logger.error(
+                        _format_log(self.config, "emit_failure", error=exc.__class__.__name__, retries=attempts)
+                    )
+                    raise
+                self._logger.warning(
+                    _format_log(self.config, "emit_retry", error=exc.__class__.__name__, attempt=attempts)
+                )
+                await asyncio.sleep(self._retry_delay(attempts))
+                continue
+            break
+        duration = time.perf_counter() - start
+        self._metrics.increment_emit_success(stream=self.config.stream, topic=self.config.topic)
+        self._metrics.observe_latency(duration, stream=self.config.stream, topic=self.config.topic)
+        self._logger.info(
+            _format_log(
+                self.config,
+                "emit_success",
+                retries=attempts,
+                duration_ms=round(duration * 1000, 3),
+            )
+        )
+
+    def _retry_delay(self, attempt: int) -> float:
+        backoff = self.config.retry_backoff_ms
+        if isinstance(backoff, (tuple, list)):
+            index = min(attempt - 1, len(backoff) - 1)
+            return float(backoff[index]) / 1000
+        return float(backoff) / 1000
+
+    @property
+    def transport(self) -> IggyTransport:
+        return self._transport
+
+
 class IggyCallback(BackendQueue):
     """Base callback for emitting records into an Apache Iggy stream."""
+
+    _CONFIG_FIELDS = frozenset(IggyConfig.__annotations__.keys())
 
     def start(self, loop, multiprocess: bool = False) -> None:
         """Start the background writer and mark the callback running."""
@@ -222,9 +300,11 @@ class IggyCallback(BackendQueue):
         max_inflight: Optional[int] = None,
         key: Optional[str] = None,
         value_serializer: Optional[Callable[[dict[str, Any]], bytes]] = None,
-        client_factory: Optional[Callable[["IggyCallback"], Any]] = None,
+        client_factory: Optional[Callable[..., Any]] = None,
         metrics: Optional[IggyMetrics] = None,
         transport_adapter: Optional[IggyTransport] = None,
+        emitter: Optional[IggyEmitter] = None,
+        logger: Optional[logging.Logger] = None,
         numeric_type=float,
         none_to=None,
     ) -> None:
@@ -258,76 +338,40 @@ class IggyCallback(BackendQueue):
             key=resolved_key,
             value_serializer=value_serializer,
         )
-        self.host = host
-        self.port = port
-        self.transport = transport
-        self.stream = stream
-        self.topic = topic
-        self.backend = backend
-        self.tls = tls
-        self.auth = auth
-        self.partition_strategy = partition_strategy
-        self.serializer = serializer
-        self.batch_size = batch_size
-        self.flush_interval_ms = flush_interval_ms
-        self.auto_create = auto_create
-        self.retry_attempts = retry_attempts
-        self.retry_backoff_ms = retry_backoff_ms
-        self.max_inflight = max_inflight
-        self.key = resolved_key
-        self.value_serializer = value_serializer
         client_factory = client_factory or _default_client_factory
-        self.transport = transport_adapter or IggyTransport(host=host, port=port, client_factory=client_factory)
+        self._transport = transport_adapter or IggyTransport(host=host, port=port, client_factory=client_factory)
         self.metrics = metrics or DEFAULT_IGGY_METRICS
+        self._logger = logger or LOG
+        self.emitter = emitter or IggyEmitter(
+            config=self.config,
+            transport=self._transport,
+            metrics=self.metrics,
+            logger=self._logger,
+        )
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.running = False
         self.started = False
 
+    def __getattr__(self, item: str) -> Any:
+        if item in self._CONFIG_FIELDS:
+            return getattr(self.config, item)
+        raise AttributeError(item)
+
+    @property
+    def transport(self) -> IggyTransport:
+        return self._transport
+
     def log_connection_event(self, event: str, level: int = logging.INFO, **info: Any) -> None:
-        fields = {"event": event, "host": self.host, "stream": self.stream, "topic": self.topic}
-        fields.update({k: v for k, v in info.items() if k != "auth"})
-        message = "; ".join(f"{k}={v}" for k, v in fields.items())
-        LOG.log(level, message)
+        message = _format_log(self.config, event, **info)
+        self._logger.log(level, message)
 
     async def write(self, data):
         serialized = self._serialize(data)
         await super().write(serialized)
 
     async def _emit(self, payload):
-        client = self.transport.client()
-        attempts = 0
-        start = time.perf_counter()
-        while True:
-            try:
-                await client.send(
-                    stream=self.stream,
-                    topic=self.topic,
-                    payload=payload,
-                    partition_strategy=self.partition_strategy,
-                )
-            except Exception as exc:  # noqa: BLE001 - propagate unexpected failures after retries
-                attempts += 1
-                if attempts >= self.retry_attempts:
-                    self.metrics.increment_emit_failure(stream=self.stream, topic=self.topic, error=exc.__class__.__name__)
-                    self.log_connection_event("emit_failure", level=logging.ERROR, error=exc.__class__.__name__, retries=attempts)
-                    raise
-                self.log_connection_event("emit_retry", level=logging.WARNING, error=exc.__class__.__name__, attempt=attempts)
-                await asyncio.sleep(self._retry_delay(attempts))
-                continue
-            break
-        duration = time.perf_counter() - start
-        self.metrics.increment_emit_success(stream=self.stream, topic=self.topic)
-        self.metrics.observe_latency(duration, stream=self.stream, topic=self.topic)
-        self.log_connection_event("emit_success", retries=attempts, duration_ms=round(duration * 1000, 3))
-
-
-    def _retry_delay(self, attempt: int) -> float:
-        backoff = self.retry_backoff_ms
-        if isinstance(backoff, (tuple, list)):
-            index = min(attempt - 1, len(backoff) - 1)
-            return float(backoff[index]) / 1000
-        return float(backoff) / 1000
+        await self.emitter.emit(payload)
 
     def _serialize(self, payload):
         if self.serializer == "json":
