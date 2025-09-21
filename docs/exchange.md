@@ -3,15 +3,49 @@
 Cryptofeed is cleaning up legacy connectors and focusing engineering effort on
 modern venues with reliable APIs. The immediate targets for 2025Q4 are:
 
-- **Backpack** – spot and perpetual derivatives coverage including depth, trades,
-  and account-level webhooks.
-- **Hyperliquid** – perpetual order book, vault statistics, and the protocol’s
-  native funding feed.
+- **Backpack** – spot and perpetual derivatives with high-frequency WebSocket
+  channels (`wss://api.backpack.exchange/stream`) plus REST order entry and
+  account webhooks. Public docs cover depth snapshots, incremental trades, and
+  private order execution streams suitable for latency-sensitive trading.citeturn0search0
+- **Hyperliquid** – on-chain perpetual venue with a unified WebSocket gateway
+  for order book updates, vault statistics, and the protocol’s funding feed.
+  REST endpoints expose historical candles, open interest, and account
+  signature flows required for authenticated data.citeturn0search1
+
+Implementation checklist for these connectors:
+
+1. Map normalized channel names (TRADES, L2_BOOK, FUNDING) to the provider’s
+   topic schema and document any authentication signature requirements.
+2. Provide depth snapshot bootstrapping plus delta replay logic aligned with
+   the exchange sequencing guarantees.
+3. Capture exchange-specific metadata (e.g., Backpack’s `sequence` field or
+   Hyperliquid’s `crossSequence`) so downstream storage backends can reason
+   about ordering.
 
 Contributors interested in these venues can find acceptance criteria and
 tracking issues in this document. The historical walkthrough below (based on
 Huobi) is retained for reference, but new connectors should follow the roadmap
 above and prefer the latest standards helpers.
+
+### ccxt / ccxt.pro integration
+
+To broaden data coverage for long-tail venues, we are drafting an adapter that
+wraps [`ccxt`](https://github.com/ccxt/ccxt) for REST polling and
+[`ccxt.pro`](https://github.com/ccxt/ccxt.pro) for WebSocket streaming. The goal
+is to expose a generic `CcxtFeed` that translates Cryptofeed’s normalized
+channels into ccxt market calls while respecting our engineering principles:
+
+1. **SOLID/KISS** – isolate ccxt-specific concerns inside a thin transport
+   layer so existing callbacks/backends remain unchanged.
+2. **DRY** – reuse ccxt’s market metadata to seed symbol maps, throttling, and
+   authentication flows.
+3. **YAGNI** – start with trades and L2 book snapshots before adding more exotic
+   channels.
+
+We expect this adapter to unlock coverage for exchanges like Backpack (until a
+native connector lands), smaller spot brokers, and regional venues. Contributors
+interested in the ccxt path should coordinate in `docs/exchange.md` to avoid
+duplication.
 
 
 # Adding a new exchange (legacy Huobi walkthrough)

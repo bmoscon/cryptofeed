@@ -58,11 +58,16 @@ part of the release test matrix:
 We are actively drafting specs and proof-of-concept adapters for the next wave of
 streaming and analytics backends:
 
-* GreptimeDB
-* RisingWave
-* Apache Iceberg (via object-store writer)
-* NATS JetStream
-* InfluxDB3
+- GreptimeDB – distributed, columnar time-series database with SQL/PromQL
+  compatibility; ideal for storing high-cardinality trade and metrics data.citeturn0search2
+- RisingWave – cloud-native streaming database that speaks PostgreSQL wire
+  protocol, enabling windowed aggregations directly on order flow.citeturn0search3
+- Apache Iceberg – table format for large-scale analytic lakes; plan to stream
+  data into Iceberg tables via object storage writers and metadata commits.citeturn0search4
+- NATS JetStream – lightweight, horizontally scalable streaming log suitable
+  for fan-out distribution and durable replay workloads.citeturn0search5
+- InfluxDB3 – next-generation time-series/analytics stack with SQL and Apache
+  Arrow support, providing a unified write path for metrics and events.citeturn0search6
 
 There are also a handful of wrappers defined [here](../cryptofeed/backends/aggregate.py) that can be used in conjunction with these and raw callbacks to convert data to OHLCV, throttle data, etc. 
 

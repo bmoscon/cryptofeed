@@ -47,7 +47,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 ### Legacy / community-maintained connectors
 
 These connectors remain in the repository but are no longer part of the core regression matrix. Contributions are welcome, but new
-deployments should prefer the actively maintained list above.
+deployments should prefer the actively maintained list above. Additional community-maintained connectors are listed in docs/exchange.md.
 
 * [EXX](https://www.exx.com/)
 * [HitBTC](https://hitbtc.com/)
@@ -60,8 +60,10 @@ deployments should prefer the actively maintained list above.
 
 The roadmap prioritises modern derivatives venues with robust APIs:
 
-* Backpack (perpetuals + spot)
-* Hyperliquid (L2+trades + vault metrics)
+* Backpack – unified REST/WebSocket API (`api.backpack.exchange`) covering spot
+  and perpetual contracts, with account webhooks for order lifecycle events.citeturn0search0
+* Hyperliquid – on-chain perpetual protocol with high-frequency book streams and
+  programmatic funding/vault data via `api.hyperliquid.xyz`.citeturn0search1
 
 If you operate at one of these venues or would like to help with testing, please join the discussion in `docs/exchange.md`.
 
