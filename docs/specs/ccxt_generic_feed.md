@@ -51,6 +51,7 @@ exchanges:
    and `watch_trades` / `watch_order_book`.
 2. Provide HTTP 451/429 handling with configuration for alternative hosts.
 3. Use existing queue/emitter, metrics, and backoff logic to avoid duplication (DRY).
+- Support injecting a `proxy_resolver` callable so deployments can source proxies from an external manager at runtime.
 
 ## TDD Plan
 
