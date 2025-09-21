@@ -80,6 +80,16 @@ exchanges:
 - Provide retry/backoff guidance when proxy endpoints fail (surface actionable
   logs).
 
+### Proxy configuration details
+
+- `rest_proxy`: URL for HTTP/SOCKS proxy (e.g., `socks5://user:pass@host:port`).
+  Pass through to ccxt by setting `client.proxies`.
+- `ws_proxy`: Proxy options for ccxt.pro WebSocket clients (e.g., see
+  `exchange.options['ws_proxy']`).
+- Allow per-endpoint overrides for both public and private APIs.
+- One-time proxy validation: attempt a lightweight request (e.g., `fetch_time`)
+  on startup to fail fast if the proxy blocks traffic.
+
 ## Next-cycle TDD Tasks
 
 1. Add proxy/endpoint configuration parsing to `CcxtGenericFeed` and propagate to
