@@ -61,3 +61,14 @@ retry:
 - Ensure proxy-aware unit tests exist for at least one native exchange connector
   once the helper is available.
 
+
+## Extending proxies beyond ccxt
+
+- Introduce a shared proxy configuration helper (e.g., `get_proxy_settings(feed_name)`)
+  that native HTTP/WebSocket clients (requests, aiohttp, websocket-client) can call
+  to obtain REST/WS proxy settings without code changes.
+- Config schema should allow per-feed overrides and optionally reference external
+  resolvers (same interface as ccxt).
+- Update legacy connectors (e.g., native Binance/OKX) to consume the helper in a
+  follow-up cycle, starting with documentation and unit tests.
+
