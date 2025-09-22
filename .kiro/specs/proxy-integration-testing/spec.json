@@ -1,0 +1,22 @@
+{
+  "feature_name": "proxy-integration-testing",
+  "created_at": "2025-09-22T08:05:04Z",
+  "updated_at": "2025-09-22T09:07:49Z",
+  "language": "en",
+  "phase": "complete",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": false
+}

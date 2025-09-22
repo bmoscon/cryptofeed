@@ -1,0 +1,22 @@
+{
+  "feature_name": "cryptofeed-proxy-integration",
+  "created_at": "2025-09-22T01:28:33Z",
+  "updated_at": "2025-09-22T09:47:28Z",
+  "language": "en",
+  "phase": "complete",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": false
+}

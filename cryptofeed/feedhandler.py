@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from collections.abc import Mapping
 from cryptofeed.connection import Connection
 import logging
 import signal
@@ -27,6 +28,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
 from cryptofeed.exchanges import EXCHANGE_MAP
+from cryptofeed.proxy import ProxySettings, init_proxy_system, load_proxy_settings
 
 
 LOG = logging.getLogger('feedhandler')
@@ -48,13 +50,15 @@ def setup_signal_handlers(loop):
 
 
 class FeedHandler:
-    def __init__(self, config=None, raw_data_collection=None):
+    def __init__(self, config=None, raw_data_collection=None, proxy_settings=None):
         """
         config: str, dict or None
             if str, absolute path (including file name) of the config file. If not provided, config can also be a dictionary of values, or
             can be None, which will default options. See docs/config.md for more information.
         raw_data_collection: callback (see AsyncFileCallback) or None
             if set, enables collection of raw data from exchanges. ALL https/wss traffic from the exchanges will be collected.
+        proxy_settings: ProxySettings, dict, or None
+            optional explicit proxy configuration. Environment variables take precedence over config and explicit settings.
         """
         self.feeds = []
         self.config = Config(config=config)
@@ -77,6 +81,44 @@ class FeedHandler:
                 LOG.info('FH: uvloop initalized')
             except ImportError:
                 LOG.info("FH: uvloop not initialized")
+
+        self._initialize_proxy_system(proxy_settings)
+
+    def _initialize_proxy_system(self, explicit_settings):
+        """Initialize proxy system using env → YAML → explicit precedence."""
+
+        def _coerce_to_plain_dict(value):
+            if isinstance(value, Mapping):
+                return {k: _coerce_to_plain_dict(v) for k, v in value.items()}
+            return value
+
+        env_settings = load_proxy_settings()
+
+        config_settings = None
+        if 'proxy' in self.config:
+            raw_proxy_config = self.config['proxy']
+            if raw_proxy_config:
+                config_settings = ProxySettings(**_coerce_to_plain_dict(raw_proxy_config))
+
+        explicit_proxy_settings = None
+        if explicit_settings is not None:
+            if isinstance(explicit_settings, ProxySettings):
+                explicit_proxy_settings = explicit_settings
+            elif isinstance(explicit_settings, Mapping):
+                explicit_proxy_settings = ProxySettings(**_coerce_to_plain_dict(explicit_settings))
+            else:
+                raise TypeError('proxy_settings must be a ProxySettings instance or mapping')
+
+        if env_settings.model_fields_set:
+            settings = env_settings
+        elif config_settings is not None:
+            settings = config_settings
+        elif explicit_proxy_settings is not None:
+            settings = explicit_proxy_settings
+        else:
+            settings = env_settings
+
+        init_proxy_system(settings)
 
     def add_feed(self, feed, loop=None, **kwargs):
         """
