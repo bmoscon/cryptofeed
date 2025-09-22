@@ -1,0 +1,32 @@
+{
+  "feature_name": "proxy-system-complete",
+  "created_at": "2025-01-22T10:04:00Z",
+  "updated_at": "2025-01-22T10:04:00Z",
+  "language": "en",
+  "phase": "completed",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    },
+    "implementation": {
+      "generated": true,
+      "approved": true
+    },
+    "documentation": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": true,
+  "implementation_status": "complete",
+  "documentation_status": "complete"
+}
