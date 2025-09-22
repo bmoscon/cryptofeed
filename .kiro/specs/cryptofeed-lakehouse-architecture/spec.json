@@ -1,0 +1,34 @@
+{
+  "feature_name": "cryptofeed-lakehouse-architecture",
+  "created_at": "2025-01-22T18:30:00Z",
+  "updated_at": "2025-01-22T16:45:00Z",
+  "language": "en",
+  "phase": "disabled",
+  "disabled_status": {
+    "disabled_date": "2025-01-22T16:45:00Z",
+    "reason": "Specification disabled by user request",
+    "previous_phase": "tasks-generated",
+    "can_be_reactivated": true
+  },
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    },
+    "disabled": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": false,
+  "implementation_status": "disabled",
+  "specification_status": "disabled"
+}
