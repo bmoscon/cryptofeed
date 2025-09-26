@@ -18,6 +18,7 @@ class BackpackMetrics:
     last_snapshot_timestamp: Optional[float] = None
     last_sequence: Optional[int] = None
     last_trade_timestamp: Optional[float] = None
+    last_ticker_timestamp: Optional[float] = None
     symbol_snapshot_age: Dict[str, float] = field(default_factory=dict)
 
     def record_ws_message(self) -> None:
@@ -39,6 +40,10 @@ class BackpackMetrics:
         if timestamp is not None:
             self.last_trade_timestamp = timestamp
 
+    def record_ticker(self, timestamp: Optional[float]) -> None:
+        if timestamp is not None:
+            self.last_ticker_timestamp = timestamp
+
     def record_orderbook(self, symbol: str, timestamp: Optional[float], sequence: Optional[int]) -> None:
         now = time.time()
         if timestamp is not None:
@@ -57,5 +62,6 @@ class BackpackMetrics:
             "last_snapshot_timestamp": self.last_snapshot_timestamp,
             "last_sequence": self.last_sequence,
             "last_trade_timestamp": self.last_trade_timestamp,
+            "last_ticker_timestamp": self.last_ticker_timestamp,
             "symbol_snapshot_age": dict(self.symbol_snapshot_age),
         }

@@ -138,6 +138,9 @@ class BackpackWsSession:
         else:
             await self._conn.write(data)
 
+    async def send(self, payload: dict) -> None:
+        await self._send(payload)
+
     def _start_heartbeat(self) -> None:
         if self._heartbeat_interval <= 0:
             return

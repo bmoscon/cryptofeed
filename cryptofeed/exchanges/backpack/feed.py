@@ -1,15 +1,16 @@
 """Native Backpack feed integrating configuration, transports, and adapters."""
 from __future__ import annotations
 
+import json
 import logging
 from typing import List, Optional, Tuple
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BACKPACK, L2_BOOK, TRADES
+from cryptofeed.defines import BACKPACK, L2_BOOK, TRADES, TICKER
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol, Symbols
 
-from .adapters import BackpackOrderBookAdapter, BackpackTradeAdapter
+from .adapters import BackpackOrderBookAdapter, BackpackTickerAdapter, BackpackTradeAdapter
 from .auth import BackpackAuthHelper
 from .config import BackpackConfig
 from .health import BackpackHealthReport, evaluate_health
@@ -32,6 +33,7 @@ class BackpackFeed(Feed):
     websocket_channels = {
         TRADES: "trades",
         L2_BOOK: "l2",
+        TICKER: "ticker",
     }
 
     def __init__(
@@ -56,8 +58,10 @@ class BackpackFeed(Feed):
         self._symbol_service = symbol_service or BackpackSymbolService(rest_client=self._rest_client)
         self._trade_adapter = BackpackTradeAdapter(exchange=self.id)
         self._order_book_adapter = BackpackOrderBookAdapter(exchange=self.id, max_depth=kwargs.get("max_depth", 0))
+        self._ticker_adapter = BackpackTickerAdapter(exchange=self.id)
         self._router: Optional[BackpackMessageRouter] = None
         self._ws_session: Optional[BackpackWsSession] = None
+        self._connection: Optional["BackpackWsConnection"] = None
 
         super().__init__(**kwargs)
 
@@ -88,8 +92,10 @@ class BackpackFeed(Feed):
             self._router = BackpackMessageRouter(
                 trade_adapter=self._trade_adapter,
                 order_book_adapter=self._order_book_adapter,
+                ticker_adapter=self._ticker_adapter,
                 trade_callback=self._callback(TRADES),
                 order_book_callback=self._callback(L2_BOOK),
+                ticker_callback=self._callback(TICKER),
                 metrics=self.metrics,
             )
 
@@ -112,6 +118,8 @@ class BackpackFeed(Feed):
                 "symbols": list(mapping.keys()),
             }
             Symbols.set(self.id, mapping, info)
+            self.normalized_symbol_mapping = mapping
+            self.exchange_symbol_mapping = {value: key for key, value in mapping.items()}
 
     def _build_ws_session(self) -> BackpackWsSession:
         auth_helper = BackpackAuthHelper(self.config) if self.config.requires_auth else None
@@ -121,14 +129,14 @@ class BackpackFeed(Feed):
         return session
 
     async def subscribe(self, connection: AsyncConnection):
-        # Overridden to integrate Backpack subscriptions with WS session
         await self._ensure_symbol_metadata()
         await self._initialize_router()
 
+        if isinstance(connection, BackpackWsConnection):
+            self._ws_session = connection.session
+
         if not self._ws_session:
-            self._ws_session = self._build_ws_session()
-            await self._ws_session.open()
-            LOG.info("%s: websocket session opened", self.id)
+            raise RuntimeError("Backpack websocket session unavailable during subscribe")
 
         subscriptions = []
         for std_channel, exchange_channel in self.websocket_channels.items():
@@ -168,6 +176,40 @@ class BackpackFeed(Feed):
     # Override connect to use Backpack session
     # ------------------------------------------------------------------
     def connect(self) -> List[Tuple[AsyncConnection, callable, callable]]:
-        # Defer websocket handling to BackpackWsSession managed in subscribe
-        LOG.debug("BackpackFeed connect invoked - relying on custom BackpackWsSession")
-        return []
+        if not self._connection:
+            self._connection = BackpackWsConnection(self)
+        return [(self._connection, self.subscribe, self.message_handler)]
+
+
+class BackpackWsConnection(AsyncConnection):
+    def __init__(self, feed: BackpackFeed):
+        super().__init__(f"{feed.id}.native")
+        self.feed = feed
+        self.session: Optional[BackpackWsSession] = None
+
+    async def _open(self):
+        if self.session is None:
+            self.session = self.feed._build_ws_session()
+            await self.session.open()
+            self.feed._ws_session = self.session
+
+    @property
+    def is_open(self) -> bool:
+        return self.session is not None and self.feed._ws_session is not None
+
+    async def read(self):
+        if self.session is None:
+            await self._open()
+        while True:
+            message = await self.session.read()
+            yield message
+
+    async def write(self, msg: str):
+        if self.session is None:
+            await self._open()
+        await self.session.send(json.loads(msg))
+
+    async def close(self):
+        if self.session:
+            await self.session.close()
+            self.session = None

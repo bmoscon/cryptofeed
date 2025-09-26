@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+from decimal import Decimal
 
 import pytest
 
-from cryptofeed.exchanges.backpack.adapters import BackpackOrderBookAdapter, BackpackTradeAdapter
+from cryptofeed.exchanges.backpack.adapters import BackpackOrderBookAdapter, BackpackTickerAdapter, BackpackTradeAdapter
 from cryptofeed.exchanges.backpack.router import BackpackMessageRouter
 
 
@@ -25,8 +26,10 @@ async def test_router_dispatches_trade():
     router = BackpackMessageRouter(
         trade_adapter=trade_adapter,
         order_book_adapter=orderbook_adapter,
+        ticker_adapter=BackpackTickerAdapter(exchange="BACKPACK"),
         trade_callback=collector,
         order_book_callback=None,
+        ticker_callback=None,
     )
 
     await router.dispatch(
@@ -55,8 +58,10 @@ async def test_router_dispatches_order_book_snapshot():
     router = BackpackMessageRouter(
         trade_adapter=trade_adapter,
         order_book_adapter=orderbook_adapter,
+        ticker_adapter=BackpackTickerAdapter(exchange="BACKPACK"),
         trade_callback=None,
         order_book_callback=collector,
+        ticker_callback=None,
     )
 
     await router.dispatch(
@@ -75,3 +80,37 @@ async def test_router_dispatches_order_book_snapshot():
     assert book.symbol == "BTC-USDT"
     assert book.sequence_number == 42
     assert timestamp == pytest.approx(1_700_000.0)
+
+
+@pytest.mark.asyncio
+async def test_router_dispatches_ticker():
+    trade_adapter = BackpackTradeAdapter(exchange="BACKPACK")
+    orderbook_adapter = BackpackOrderBookAdapter(exchange="BACKPACK")
+    ticker_adapter = BackpackTickerAdapter(exchange="BACKPACK")
+    collector = CallbackCollector()
+
+    router = BackpackMessageRouter(
+        trade_adapter=trade_adapter,
+        order_book_adapter=orderbook_adapter,
+        ticker_adapter=ticker_adapter,
+        trade_callback=None,
+        order_book_callback=None,
+        ticker_callback=collector,
+    )
+
+    await router.dispatch(
+        {
+            "type": "ticker",
+            "symbol": "BTC_USDT",
+            "last": "30050",
+            "bestBid": "30040",
+            "bestAsk": "30060",
+            "volume": "10",
+            "timestamp": 1_700_000_000_500,
+        }
+    )
+
+    assert collector.items
+    ticker, timestamp = collector.items[0]
+    assert ticker.symbol == "BTC-USDT"
+    assert float(ticker.bid) == pytest.approx(30040)

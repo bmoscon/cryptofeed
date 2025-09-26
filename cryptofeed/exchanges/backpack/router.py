@@ -18,14 +18,18 @@ class BackpackMessageRouter:
         *,
         trade_adapter,
         order_book_adapter,
+        ticker_adapter=None,
         trade_callback: Optional[Callable[[Any, float], Awaitable[None]]] = None,
         order_book_callback: Optional[Callable[[Any, float], Awaitable[None]]] = None,
+        ticker_callback: Optional[Callable[[Any, float], Awaitable[None]]] = None,
         metrics: Optional[BackpackMetrics] = None,
     ) -> None:
         self._trade_adapter = trade_adapter
         self._order_book_adapter = order_book_adapter
         self._trade_callback = trade_callback
         self._order_book_callback = order_book_callback
+        self._ticker_adapter = ticker_adapter
+        self._ticker_callback = ticker_callback
         self._metrics = metrics
         self._handlers: Dict[str, Callable[[dict], Awaitable[None]]] = {
             "trade": self._handle_trade,
@@ -34,6 +38,7 @@ class BackpackMessageRouter:
             "orderbook": self._handle_order_book,
             "l2_snapshot": self._handle_order_book,
             "l2_update": self._handle_order_book,
+            "ticker": self._handle_ticker,
         }
 
     async def dispatch(self, message: str | dict) -> None:
@@ -97,3 +102,14 @@ class BackpackMessageRouter:
                 getattr(book, "sequence_number", None),
             )
         await self._order_book_callback(book, timestamp)
+
+    async def _handle_ticker(self, payload: dict) -> None:
+        if not self._ticker_callback or not self._ticker_adapter:
+            return
+        symbol = payload.get("symbol")
+        normalized_symbol = symbol.replace("_", "-") if symbol else symbol
+        ticker = self._ticker_adapter.parse(payload, normalized_symbol=normalized_symbol)
+        timestamp = getattr(ticker, "timestamp", None) or 0.0
+        if self._metrics:
+            self._metrics.record_ticker(timestamp)
+        await self._ticker_callback(ticker, timestamp)

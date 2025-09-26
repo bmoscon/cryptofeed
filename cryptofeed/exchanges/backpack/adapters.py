@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Dict, Iterable, List, Optional
 
 from cryptofeed.defines import ASK, BID
-from cryptofeed.types import OrderBook, Trade
+from cryptofeed.types import OrderBook, Trade, Ticker
 
 
 def _microseconds_to_seconds(value: Optional[int | float]) -> Optional[float]:
@@ -147,3 +147,28 @@ class BackpackOrderBookAdapter:
                     del price_map[price]
             else:
                 price_map[price] = size
+
+
+class BackpackTickerAdapter:
+    """Convert Backpack ticker payloads into cryptofeed Ticker objects."""
+
+    def __init__(self, exchange: str):
+        self._exchange = exchange
+
+    def parse(self, payload: dict, *, normalized_symbol: str) -> Ticker:
+        last_raw = payload.get("last") or payload.get("price")
+        last_price = Decimal(str(last_raw)) if last_raw is not None else Decimal("0")
+        bid_val = payload.get("bestBid") or payload.get("bid")
+        ask_val = payload.get("bestAsk") or payload.get("ask")
+        bid_dec = Decimal(str(bid_val)) if bid_val is not None else last_price
+        ask_dec = Decimal(str(ask_val)) if ask_val is not None else last_price
+        timestamp = _microseconds_to_seconds(payload.get("timestamp") or payload.get("ts")) or 0.0
+
+        return Ticker(
+            exchange=self._exchange,
+            symbol=normalized_symbol,
+            bid=bid_dec,
+            ask=ask_dec,
+            timestamp=timestamp,
+            raw=payload,
+        )

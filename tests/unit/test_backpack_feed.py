@@ -20,12 +20,22 @@ class StubRestClient:
 class StubSymbolService:
     def __init__(self):
         self.ensure_calls = 0
+        self._markets = []
 
     async def ensure(self):
         self.ensure_calls += 1
+        if not self._markets:
+            Market = type("Market", (), {})
+            market = Market()
+            market.normalized_symbol = "BTC-USDT"
+            market.native_symbol = "BTC_USDT"
+            self._markets = [market]
 
     def native_symbol(self, symbol: str) -> str:
         return symbol.replace("-", "_")
+
+    def all_markets(self):
+        return self._markets
 
 
 class StubWsSession:
@@ -33,12 +43,20 @@ class StubWsSession:
         self.open_called = False
         self.subscriptions = []
         self.closed = False
+        self.sent = []
 
     async def open(self):
         self.open_called = True
 
     async def subscribe(self, subscriptions):
         self.subscriptions.extend(subscriptions)
+
+    async def read(self):
+        await asyncio.sleep(0)
+        return "{}"
+
+    async def send(self, payload):
+        self.sent.append(payload)
 
     async def close(self):
         self.closed = True
@@ -65,7 +83,9 @@ async def test_feed_subscribe_initializes_session():
         channels=[TRADES, L2_BOOK],
     )
 
-    await feed.subscribe(None)
+    connection = feed.connect()[0][0]
+    await connection._open()
+    await feed.subscribe(connection)
 
     assert symbols.ensure_calls == 1
     assert ws.open_called is True
@@ -88,7 +108,9 @@ async def test_feed_shutdown_closes_clients():
         channels=[TRADES],
     )
 
-    await feed.subscribe(None)
+    connection = feed.connect()[0][0]
+    await connection._open()
+    await feed.subscribe(connection)
     await feed.shutdown()
 
     assert rest.closed is True

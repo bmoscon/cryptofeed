@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 
 from cryptofeed.defines import ASK, BID
-from cryptofeed.exchanges.backpack.adapters import BackpackOrderBookAdapter, BackpackTradeAdapter
+from cryptofeed.exchanges.backpack.adapters import BackpackOrderBookAdapter, BackpackTickerAdapter, BackpackTradeAdapter
 
 
 def test_trade_adapter_parses_payload():
@@ -58,3 +58,19 @@ def test_order_book_adapter_snapshot_and_delta():
     assert delta.sequence_number == 101
     assert delta.delta[BID][0][0] == Decimal("30000")
     assert delta.delta[ASK] == []
+
+
+def test_ticker_adapter_parses_payload():
+    adapter = BackpackTickerAdapter(exchange="BACKPACK")
+    payload = {
+        "symbol": "BTC_USDT",
+        "last": "30055",
+        "bestBid": "30050",
+        "bestAsk": "30060",
+        "volume": "15",
+        "timestamp": 1_700_000_000_300,
+    }
+
+    ticker = adapter.parse(payload, normalized_symbol="BTC-USDT")
+    assert ticker.bid == Decimal("30050")
+    assert ticker.ask == Decimal("30060")

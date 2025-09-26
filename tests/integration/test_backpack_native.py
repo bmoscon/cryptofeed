@@ -32,12 +32,19 @@ class FixtureWsSession:
         self.open_called = False
         self.subscriptions = []
         self.closed = False
+        self._queue: asyncio.Queue[str] = asyncio.Queue()
 
     async def open(self):
         self.open_called = True
 
     async def subscribe(self, subscriptions):
         self.subscriptions.extend(subscriptions)
+
+    async def read(self):
+        return await self._queue.get()
+
+    async def send(self, payload):
+        return None
 
     async def close(self):
         self.closed = True
@@ -65,13 +72,17 @@ async def test_backpack_feed_processes_fixtures(monkeypatch):
         callbacks={TRADES: [trade_cb], L2_BOOK: [book_cb]},
     )
 
-    await feed.subscribe(None)
+    connection = feed.connect()[0][0]
+    await connection._open()
+    await feed.subscribe(connection)
 
     snapshot_payload = json.loads((FIXTURES / "orderbook_snapshot.json").read_text())
     trade_payload = json.loads((FIXTURES / "trade.json").read_text())
+    ticker_payload = json.loads((FIXTURES / "ticker.json").read_text())
 
-    await feed.message_handler(json.dumps(snapshot_payload), None, 0)
-    await feed.message_handler(json.dumps(trade_payload), None, 0)
+    await feed.message_handler(json.dumps(snapshot_payload), connection, 0)
+    await feed.message_handler(json.dumps(trade_payload), connection, 0)
+    await feed.message_handler(json.dumps(ticker_payload), connection, 0)
 
     assert books and trades
     assert books[0][0].symbol == "BTC-USDT"
