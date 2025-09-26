@@ -1,0 +1,131 @@
+"""Backpack WebSocket session abstraction leveraging cryptofeed WSAsyncConn."""
+from __future__ import annotations
+
+import asyncio
+from dataclasses import dataclass
+from typing import Any, Iterable, Optional
+
+from yapic import json
+
+from cryptofeed.connection import WSAsyncConn
+from cryptofeed.exchanges.backpack.auth import BackpackAuthHelper
+from cryptofeed.exchanges.backpack.config import BackpackConfig
+
+
+class BackpackWebsocketError(RuntimeError):
+    """Raised for Backpack websocket lifecycle errors."""
+
+
+@dataclass(slots=True)
+class BackpackSubscription:
+    channel: str
+    symbols: Iterable[str]
+    private: bool = False
+
+
+class BackpackWsSession:
+    """Manages Backpack websocket connectivity, authentication, and subscriptions."""
+
+    def __init__(
+        self,
+        config: BackpackConfig,
+        *,
+        auth_helper: BackpackAuthHelper | None = None,
+        conn_factory=None,
+        heartbeat_interval: float = 15.0,
+    ) -> None:
+        self._config = config
+        self._auth_helper = auth_helper
+        if self._config.enable_private_channels and self._auth_helper is None:
+            self._auth_helper = BackpackAuthHelper(self._config)
+
+        factory = conn_factory or (lambda: WSAsyncConn(self._config.ws_endpoint, "backpack", exchange_id=config.exchange_id))
+        self._conn = factory()
+
+        self._heartbeat_interval = heartbeat_interval
+        self._heartbeat_task: Optional[asyncio.Task] = None
+        self._connected = False
+
+    async def open(self) -> None:
+        open_fn = getattr(self._conn, "open", None)
+        if callable(open_fn):
+            await open_fn()
+        else:
+            await self._conn._open()
+        self._connected = True
+        self._start_heartbeat()
+
+        if self._auth_helper:
+            await self._send_auth()
+
+    async def subscribe(self, subscriptions: Iterable[BackpackSubscription]) -> None:
+        if not self._connected:
+            raise BackpackWebsocketError("Websocket not open")
+
+        payload = {
+            "op": "subscribe",
+            "channels": [
+                {
+                    "name": sub.channel,
+                    "symbols": list(sub.symbols),
+                    "private": sub.private,
+                }
+                for sub in subscriptions
+            ],
+        }
+        await self._send(payload)
+
+    async def read(self) -> Any:
+        if not self._connected:
+            raise BackpackWebsocketError("Websocket not open")
+
+        read_fn = getattr(self._conn, "receive", None)
+        if callable(read_fn):
+            return await read_fn()
+
+        # Fallback to AsyncIterable interface from WSAsyncConn
+        async for message in self._conn.read():
+            return message
+        raise BackpackWebsocketError("Websocket closed while reading")
+
+    async def close(self) -> None:
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._heartbeat_task
+            self._heartbeat_task = None
+
+        if self._connected:
+            await self._conn.close()
+            self._connected = False
+
+    async def _send_auth(self) -> None:
+        timestamp = self._auth_helper._current_timestamp_us()
+        headers = self._auth_helper.build_headers(method="GET", path="/ws/auth", timestamp_us=timestamp)
+        payload = {"op": "auth", "headers": headers}
+        await self._send(payload)
+
+    async def _send(self, payload: dict) -> None:
+        data = json.dumps(payload)
+        send_fn = getattr(self._conn, "send", None)
+        if callable(send_fn):
+            await send_fn(data)
+        else:
+            await self._conn.write(data)
+
+    def _start_heartbeat(self) -> None:
+        if self._heartbeat_interval <= 0:
+            return
+        loop = asyncio.get_running_loop()
+        self._heartbeat_task = loop.create_task(self._heartbeat())
+
+    async def _heartbeat(self) -> None:
+        while True:
+            await asyncio.sleep(self._heartbeat_interval)
+            try:
+                await self._send({"op": "ping"})
+            except Exception as exc:  # pragma: no cover - heartbeat failure best effort
+                raise BackpackWebsocketError(f"Heartbeat failed: {exc}") from exc
+
+
+from contextlib import suppress  # noqa: E402  (import after class definition for readability)
