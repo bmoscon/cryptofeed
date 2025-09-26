@@ -168,3 +168,49 @@ proxy:
           - url: "socks5://coinbase-ws-2:1081"
         strategy: "random"
 ```
+
+## Service-Oriented Evolution 🚀
+
+### Current Implementation: Embedded Proxy Pools ✅
+The current proxy pool system provides advanced multi-proxy capabilities with embedded pool management, health checking, and selection strategies suitable for standalone deployments.
+
+### Next Evolution: External Service Delegation 🎯
+**Related Specification**: [external-proxy-service](../external-proxy-service/requirements.md)
+
+The embedded proxy pool system serves as both:
+1. **Production-ready standalone solution** for immediate proxy pool needs
+2. **Reference implementation** for external proxy service capabilities
+
+### External Service Migration Benefits
+- **Centralized Pool Management**: Proxy pools managed centrally across all cryptofeed instances
+- **Global Load Balancing**: Selection strategies optimized across entire infrastructure
+- **Centralized Health Monitoring**: Health checks and metrics consolidated for operational visibility
+- **Dynamic Pool Updates**: Real-time proxy pool changes without application restart
+- **Advanced Analytics**: Comprehensive proxy usage and performance analytics
+
+### Hybrid Architecture Strategy
+```yaml
+proxy:
+  enabled: true
+  # External service configuration (future)
+  external_service:
+    enabled: true
+    endpoints: ["https://proxy-service:8080"]
+    fallback_to_embedded: true
+  
+  # Embedded fallback configuration (current)
+  default:
+    http:
+      pool:
+        - url: "socks5://fallback-proxy1:1080"
+        - url: "socks5://fallback-proxy2:1080"
+      strategy: "round_robin"
+```
+
+### Migration Compatibility
+- **Zero Breaking Changes**: All current pool configurations continue working
+- **Gradual Migration**: External service integration optional and incremental
+- **Embedded Fallback**: Current pool system maintained as reliable backup
+- **Feature Parity**: External service provides all current pool features plus enhancements
+
+This pool system implementation enables immediate proxy pool capabilities while serving as the foundation for future service-oriented proxy infrastructure.

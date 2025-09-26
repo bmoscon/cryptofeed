@@ -135,3 +135,31 @@ Cryptofeed Proxy System MVP - HTTP and WebSocket proxy support for cryptofeed ex
 - **YAGNI**: No premature enterprise features (proxy rotation, health checks)
 - **Pydantic v2**: Type-safe configuration with validation
 - **Zero Breaking Changes**: Transparent injection maintains backward compatibility
+
+## Architecture Evolution Path 🚀
+
+### Current Status: Embedded Proxy Management ✅
+The current implementation provides a solid foundation with embedded proxy management suitable for single-instance deployments and moderate scale operations.
+
+### Next Evolution: Service-Oriented Proxy Management 🎯
+**Related Specification**: [external-proxy-service](../external-proxy-service/requirements.md)
+
+The proxy system is designed for evolution towards service-oriented architecture where:
+- **Proxy inventory management** delegated to external services
+- **Health checking and monitoring** centralized across all cryptofeed instances
+- **Load balancing and selection** optimized globally rather than per-instance
+- **Operational visibility** enhanced through centralized proxy service metrics
+
+### Migration Strategy
+1. **Phase 1**: Current embedded system continues as production foundation
+2. **Phase 2**: External service integration with embedded fallback (zero breaking changes)
+3. **Phase 3**: Primary delegation to external services with embedded backup
+4. **Phase 4**: Optional full delegation for enterprise deployments
+
+### Backward Compatibility Guarantee
+- All existing proxy configurations will continue working unchanged
+- ProxyInjector interface remains stable across architecture evolution
+- Embedded proxy system maintained as reliable fallback mechanism
+- Configuration methods (environment, YAML, programmatic) preserved
+
+This foundation enables seamless evolution from embedded proxy management to enterprise-grade service-oriented proxy infrastructure while maintaining operational continuity.

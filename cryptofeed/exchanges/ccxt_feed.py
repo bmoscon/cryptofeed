@@ -24,7 +24,8 @@ from cryptofeed.exchanges.ccxt_generic import (
     CcxtWsTransport,
 )
 from cryptofeed.exchanges.ccxt_adapters import CcxtTypeAdapter
-from cryptofeed.symbols import Symbol, Symbols
+from cryptofeed.exchanges.ccxt_config import validate_ccxt_config, CcxtExchangeConfig
+from cryptofeed.symbols import Symbol, Symbols, str_to_symbol
 
 
 class CcxtFeed(Feed):
@@ -46,36 +47,63 @@ class CcxtFeed(Feed):
     
     def __init__(
         self,
-        exchange_id: str,
+        exchange_id: Optional[str] = None,
         proxies: Optional[Dict[str, str]] = None,
         ccxt_options: Optional[Dict[str, any]] = None,
+        config: Optional[CcxtExchangeConfig] = None,
         **kwargs
     ):
         """
         Initialize CCXT feed with standard cryptofeed Feed integration.
-        
+
         Args:
             exchange_id: CCXT exchange identifier (e.g., 'backpack')
-            proxies: Proxy configuration for REST/WebSocket
-            ccxt_options: Additional CCXT client options
+            proxies: Proxy configuration for REST/WebSocket (legacy dict format)
+            ccxt_options: Additional CCXT client options (legacy dict format)
+            config: Complete typed configuration (preferred over individual args)
             **kwargs: Standard Feed arguments (symbols, channels, callbacks, etc.)
         """
-        # Store CCXT-specific configuration
-        self.ccxt_exchange_id = exchange_id
-        self.proxies = proxies or {}
-        self.ccxt_options = ccxt_options or {}
+        # Validate and normalize configuration using Pydantic models
+        if config is not None:
+            # Use provided typed configuration
+            self.ccxt_config = config
+        else:
+            # Convert legacy dict-based config to typed configuration with validation
+            if exchange_id is None:
+                raise ValueError("exchange_id is required when config is not provided")
+            try:
+                self.ccxt_config = validate_ccxt_config(
+                    exchange_id=exchange_id,
+                    proxies=proxies,
+                    ccxt_options=ccxt_options,
+                    **{k: v for k, v in kwargs.items() if k in {'snapshot_interval', 'websocket_enabled', 'rest_only', 'use_market_id'}}
+                )
+            except Exception as e:
+                raise ValueError(f"Invalid CCXT configuration for exchange '{exchange_id}': {e}") from e
+
+        # Extract validated configuration
+        self.ccxt_exchange_id = self.ccxt_config.exchange_id
+        self.proxies = self.ccxt_config.proxies.model_dump() if self.ccxt_config.proxies else {}
+        self.ccxt_options = self.ccxt_config.to_ccxt_dict()
         
         # Initialize CCXT components
-        self._metadata_cache = CcxtMetadataCache(exchange_id)
+        self._metadata_cache = CcxtMetadataCache(self.ccxt_exchange_id)
         self._ccxt_feed: Optional[CcxtGenericFeed] = None
         self._running = False
         
         # Set the class id attribute dynamically
-        self.__class__.id = self._get_exchange_constant(exchange_id)
+        self.__class__.id = self._get_exchange_constant(self.ccxt_exchange_id)
         
         # Initialize symbol mapping for this exchange
         self._initialize_symbol_mapping()
-        
+
+        # Convert string symbols to Symbol objects if symbols were provided
+        if 'symbols' in kwargs and kwargs['symbols']:
+            kwargs['symbols'] = [
+                str_to_symbol(sym) if isinstance(sym, str) else sym
+                for sym in kwargs['symbols']
+            ]
+
         # Initialize parent Feed
         super().__init__(**kwargs)
         

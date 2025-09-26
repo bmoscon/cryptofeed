@@ -1,0 +1,22 @@
+{
+  "feature_name": "ccxt-generic-pro-exchange",
+  "created_at": "2025-09-23T15:00:47Z",
+  "updated_at": "2025-01-22T18:50:00Z",
+  "language": "en",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": false
+    }
+  },
+  "ready_for_implementation": false
+}
