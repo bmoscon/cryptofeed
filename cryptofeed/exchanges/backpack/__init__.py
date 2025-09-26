@@ -6,6 +6,8 @@ from .auth import BackpackAuthHelper, BackpackAuthError
 from .symbols import BackpackSymbolService, BackpackMarket
 from .rest import BackpackRestClient, BackpackOrderBookSnapshot, BackpackRestError
 from .ws import BackpackWsSession, BackpackSubscription, BackpackWebsocketError
+from .metrics import BackpackMetrics
+from .health import BackpackHealthReport, evaluate_health
 from .feed import BackpackFeed
 
 __all__ = [
@@ -21,5 +23,8 @@ __all__ = [
     "BackpackWsSession",
     "BackpackSubscription",
     "BackpackWebsocketError",
+    "BackpackMetrics",
+    "BackpackHealthReport",
+    "evaluate_health",
     "BackpackFeed",
 ]

@@ -49,46 +49,25 @@ native connector lands), smaller spot brokers, and regional venues. Contributors
 interested in the ccxt path should coordinate in `docs/exchange.md` to avoid
 duplication.
 
-### Backpack via ccxt/ccxt.pro
+### Backpack Native Feed
 
-Backpack’s REST and WebSocket APIs are exposed through ccxt/ccxt.pro. Until a
-first-party connector ships, the MVP adapter will:
+Backpack now ships with a first-party adapter located under
+`cryptofeed/exchanges/backpack`. Enable it by setting the
+`CRYPTOFEED_BACKPACK_NATIVE` environment variable to `true`. The native feed
+provides:
 
-- Use `ccxt.backpack` to fetch market metadata (`/markets`), depth snapshots,
-  and recent trades by mapping normalized symbols (e.g., `BTC-USDT`) to
-  Backpack’s `<base>_<quote>` format (e.g., `BTC_USDT`).citeturn0search0turn0search5
-- Stream trades (`trade.<symbol>`) and depth (`depth.<symbol>`) via
-  `ccxt.pro.backpack.watch_trades()` and `.watch_order_book()` then translate the
-  sequential IDs (`t` for trades, `U/u` for depth) into Cryptofeed’s delta/state
-  tracking.
-- Handle ED25519-based authentication for private streams (`account.*`) by
-  delegating to ccxt’s signing hooks and exposing configuration for window,
-  timestamp, and signature payloads.citeturn0search0turn0search1
-- Surface REST + WebSocket endpoints (`https://api.backpack.exchange/`,
-  `wss://ws.backpack.exchange`) in configuration so operators can redirect to
-  mirrors if region restrictions apply (HTTP 451).citeturn0search0turn0search5
+- Pydantic-backed configuration (`BackpackConfig`) with ED25519 key
+  normalization and sandbox/proxy toggles.
+- Dedicated REST/WebSocket transports that reuse cryptofeed’s proxy injector
+  and emit heartbeat pings to guard against stale connections.
+- Message router + adapters that convert Backpack payloads into cryptofeed
+  `Trade`/`OrderBook` objects while maintaining snapshot/delta sequencing.
+- Built-in metrics via `BackpackMetrics` and health evaluation helpers exposed
+  through `BackpackFeed.health()`.
 
-Limitations: ccxt currently treats Backpack as experimental; check the
-`has` capabilities before enabling certain channels and provide fallbacks when
-functions return `False`. Contributors should submit upstream fixes as needed to
-ensure consistent metadata (e.g., min tick size, contract specs).citeturn1search1
-
-#### Deliverables
-
-1. `CcxtBackpackFeed` subclass configuring channel/topic maps and symbol
-   normalization helpers.
-2. Documentation covering required headers for authenticated REST calls
-   (`X-Timestamp`, `X-Window`, `X-API-Key`, `X-Signature`) and signature flow
-   for WebSocket subscriptions.citeturn0search0
-3. Integration tests that replay depth/trade events from ccxt.pro and validate
-   the emitter’s sequencing (`sequence`, `engine timestamp`).
-
-#### Open questions
-
-- Backpack pushes timestamps in microseconds; confirm whether downstream
-  storage backends or metrics need nanosecond precision conversions.
-- Evaluate ccxt’s rate-limit defaults vs. Backpack’s published guidance to
-  avoid throttling (`429`) when refreshing order book snapshots.
+See `docs/exchanges/backpack.md` for setup instructions, observability guidance,
+and migration steps from the ccxt integration. Historical details for the ccxt
+MVP remain in `docs/specs/backpack_ccxt.md`.
 
 #### Example: Binance via ccxt/ccxt.pro
 

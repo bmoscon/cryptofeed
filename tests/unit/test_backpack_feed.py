@@ -71,7 +71,7 @@ async def test_feed_subscribe_initializes_session():
     assert ws.open_called is True
     assert ws.subscriptions
     assert ws.subscriptions[0].channel == "trades"
-    assert set(ws.subscriptions[0].symbols) == {"BTC-USDT"}
+    assert set(ws.subscriptions[0].symbols) == {"BTC_USDT"}
 
 
 @pytest.mark.asyncio

@@ -12,6 +12,8 @@ from cryptofeed.symbols import Symbol, Symbols
 from .adapters import BackpackOrderBookAdapter, BackpackTradeAdapter
 from .auth import BackpackAuthHelper
 from .config import BackpackConfig
+from .health import BackpackHealthReport, evaluate_health
+from .metrics import BackpackMetrics
 from .rest import BackpackRestClient
 from .router import BackpackMessageRouter
 from .symbols import BackpackSymbolService
@@ -47,8 +49,9 @@ class BackpackFeed(Feed):
 
         self.config = config or BackpackConfig()
         Symbols.set(self.id, {}, {})
+        self.metrics = BackpackMetrics()
         self._rest_client_factory = rest_client_factory or (lambda cfg: BackpackRestClient(cfg))
-        self._ws_session_factory = ws_session_factory or (lambda cfg: BackpackWsSession(cfg))
+        self._ws_session_factory = ws_session_factory or (lambda cfg: BackpackWsSession(cfg, metrics=self.metrics))
         self._rest_client = self._rest_client_factory(self.config)
         self._symbol_service = symbol_service or BackpackSymbolService(rest_client=self._rest_client)
         self._trade_adapter = BackpackTradeAdapter(exchange=self.id)
@@ -87,6 +90,7 @@ class BackpackFeed(Feed):
                 order_book_adapter=self._order_book_adapter,
                 trade_callback=self._callback(TRADES),
                 order_book_callback=self._callback(L2_BOOK),
+                metrics=self.metrics,
             )
 
     def _callback(self, channel):
@@ -102,6 +106,12 @@ class BackpackFeed(Feed):
 
     async def _ensure_symbol_metadata(self) -> None:
         await self._symbol_service.ensure()
+        mapping = {market.normalized_symbol: market.native_symbol for market in self._symbol_service.all_markets()}
+        if mapping:
+            info = {
+                "symbols": list(mapping.keys()),
+            }
+            Symbols.set(self.id, mapping, info)
 
     def _build_ws_session(self) -> BackpackWsSession:
         auth_helper = BackpackAuthHelper(self.config) if self.config.requires_auth else None
@@ -118,12 +128,13 @@ class BackpackFeed(Feed):
         if not self._ws_session:
             self._ws_session = self._build_ws_session()
             await self._ws_session.open()
+            LOG.info("%s: websocket session opened", self.id)
 
         subscriptions = []
         for std_channel, exchange_channel in self.websocket_channels.items():
             if exchange_channel not in self.subscription:
                 continue
-            symbols = [self.exchange_symbol_to_std_symbol(sym) for sym in self.subscription[exchange_channel]]
+            symbols = list(self.subscription[exchange_channel])
             subscriptions.append(
                 BackpackSubscription(
                     channel=exchange_channel,
@@ -134,6 +145,7 @@ class BackpackFeed(Feed):
 
         if subscriptions:
             await self._ws_session.subscribe(subscriptions)
+            LOG.info("%s: subscribed to %s", self.id, ",".join(sub.channel for sub in subscriptions))
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         if self._router:
@@ -143,6 +155,14 @@ class BackpackFeed(Feed):
         if self._ws_session:
             await self._ws_session.close()
         await self._rest_client.close()
+
+    def metrics_snapshot(self) -> dict:
+        """Return current metrics snapshot."""
+        return self.metrics.snapshot()
+
+    def health(self, *, max_snapshot_age: float = 60.0) -> BackpackHealthReport:
+        """Evaluate feed health based on current metrics."""
+        return evaluate_health(self.metrics, max_snapshot_age=max_snapshot_age)
 
     # ------------------------------------------------------------------
     # Override connect to use Backpack session

@@ -8,8 +8,9 @@ from typing import Any, Iterable, Optional
 from yapic import json
 
 from cryptofeed.connection import WSAsyncConn
-from cryptofeed.exchanges.backpack.auth import BackpackAuthHelper
+from cryptofeed.exchanges.backpack.auth import BackpackAuthHelper, BackpackAuthError
 from cryptofeed.exchanges.backpack.config import BackpackConfig
+from cryptofeed.exchanges.backpack.metrics import BackpackMetrics
 
 
 class BackpackWebsocketError(RuntimeError):
@@ -31,6 +32,7 @@ class BackpackWsSession:
         config: BackpackConfig,
         *,
         auth_helper: BackpackAuthHelper | None = None,
+        metrics: Optional[BackpackMetrics] = None,
         conn_factory=None,
         heartbeat_interval: float = 15.0,
     ) -> None:
@@ -39,6 +41,7 @@ class BackpackWsSession:
         if self._config.enable_private_channels and self._auth_helper is None:
             self._auth_helper = BackpackAuthHelper(self._config)
 
+        self._metrics = metrics
         factory = conn_factory or (lambda: WSAsyncConn(self._config.ws_endpoint, "backpack", exchange_id=config.exchange_id))
         self._conn = factory()
 
@@ -47,6 +50,8 @@ class BackpackWsSession:
         self._connected = False
 
     async def open(self) -> None:
+        if self._connected and self._metrics:
+            self._metrics.record_ws_reconnect()
         open_fn = getattr(self._conn, "open", None)
         if callable(open_fn):
             await open_fn()
@@ -56,7 +61,12 @@ class BackpackWsSession:
         self._start_heartbeat()
 
         if self._auth_helper:
-            await self._send_auth()
+            try:
+                await self._send_auth()
+            except BackpackAuthError:
+                if self._metrics:
+                    self._metrics.record_auth_failure()
+                raise
 
     async def subscribe(self, subscriptions: Iterable[BackpackSubscription]) -> None:
         if not self._connected:
@@ -79,13 +89,24 @@ class BackpackWsSession:
         if not self._connected:
             raise BackpackWebsocketError("Websocket not open")
 
-        read_fn = getattr(self._conn, "receive", None)
-        if callable(read_fn):
-            return await read_fn()
+        try:
+            read_fn = getattr(self._conn, "receive", None)
+            if callable(read_fn):
+                message = await read_fn()
+                if self._metrics:
+                    self._metrics.record_ws_message()
+                return message
 
-        # Fallback to AsyncIterable interface from WSAsyncConn
-        async for message in self._conn.read():
-            return message
+            # Fallback to AsyncIterable interface from WSAsyncConn
+            async for message in self._conn.read():
+                if self._metrics:
+                    self._metrics.record_ws_message()
+                return message
+        except Exception as exc:
+            if self._metrics:
+                self._metrics.record_ws_error()
+            raise
+
         raise BackpackWebsocketError("Websocket closed while reading")
 
     async def close(self) -> None:
@@ -100,8 +121,12 @@ class BackpackWsSession:
             self._connected = False
 
     async def _send_auth(self) -> None:
-        timestamp = self._auth_helper._current_timestamp_us()
-        headers = self._auth_helper.build_headers(method="GET", path="/ws/auth", timestamp_us=timestamp)
+        try:
+            timestamp = self._auth_helper._current_timestamp_us()
+            headers = self._auth_helper.build_headers(method="GET", path="/ws/auth", timestamp_us=timestamp)
+        except Exception as exc:  # pragma: no cover - defensive, metrics capture auth failures
+            raise BackpackAuthError(str(exc)) from exc
+
         payload = {"op": "auth", "headers": headers}
         await self._send(payload)
 
@@ -125,6 +150,8 @@ class BackpackWsSession:
             try:
                 await self._send({"op": "ping"})
             except Exception as exc:  # pragma: no cover - heartbeat failure best effort
+                if self._metrics:
+                    self._metrics.record_ws_error()
                 raise BackpackWebsocketError(f"Heartbeat failed: {exc}") from exc
 
 

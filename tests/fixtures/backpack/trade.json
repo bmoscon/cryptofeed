@@ -1,0 +1,9 @@
+{
+  "type": "trade",
+  "symbol": "BTC_USDT",
+  "price": "30005",
+  "size": "0.25",
+  "side": "buy",
+  "ts": 1700000000100,
+  "t": "trade-1"
+}
