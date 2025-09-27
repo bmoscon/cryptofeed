@@ -247,6 +247,16 @@ class CcxtOrderBookAdapter(BaseOrderBookAdapter):
 
             order_book.timestamp = timestamp
             order_book.raw = raw_orderbook
+            sequence = (
+                raw_orderbook.get('nonce')
+                or raw_orderbook.get('sequence')
+                or raw_orderbook.get('seq')
+            )
+            if sequence is not None:
+                try:
+                    order_book.sequence_number = int(sequence)
+                except (TypeError, ValueError):
+                    order_book.sequence_number = sequence
 
             return order_book
         except (AdapterValidationError, Exception) as e:
@@ -264,7 +274,9 @@ class CcxtOrderBookAdapter(BaseOrderBookAdapter):
             if raw_timestamp > 1e10:
                 return float(raw_timestamp) / 1000.0
             return float(raw_timestamp)
-        return super().normalize_timestamp(raw_timestamp)
+        if isinstance(raw_timestamp, str):
+            return float(raw_timestamp)
+        raise AdapterValidationError(f"Invalid timestamp format: {raw_timestamp}")
 
 
 class FallbackTradeAdapter(BaseTradeAdapter):

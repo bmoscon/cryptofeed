@@ -16,8 +16,15 @@ from cryptofeed.exchanges.ccxt_config import (
     CcxtOptionsConfig,
     CcxtTransportConfig,
     CcxtExchangeConfig,
-    validate_ccxt_config
+    CcxtConfig,
+    CcxtExchangeContext,
+    CcxtConfigExtensions,
+    load_ccxt_config,
+    validate_ccxt_config,
 )
+from cryptofeed.proxy import ProxySettings, ConnectionProxies, ProxyConfig
+import textwrap
+from pathlib import Path
 
 
 class TestCcxtProxyConfig:
@@ -315,7 +322,9 @@ class TestValidateCcxtConfig:
 
         assert config.exchange_id == "binance"
         assert config.proxies is None
-        assert config.ccxt_options is None
+        assert config.ccxt_options is not None
+        assert config.ccxt_options.api_key is None
+        assert config.transport is None
 
     def test_validate_invalid_config_raises_error(self):
         """Invalid configuration should raise descriptive errors."""
@@ -336,3 +345,103 @@ class TestValidateCcxtConfig:
                 exchange_id="backpack",
                 ccxt_options={"rate_limit": 0}  # Below minimum
             )
+
+
+class TestCcxtConfigLoading:
+    """Test configuration loading from multiple sources."""
+
+    def test_load_ccxt_config_precedence(self, monkeypatch, tmp_path):
+        """Environment overrides YAML and defaults when loading config."""
+        yaml_content = textwrap.dedent(
+            """
+            exchanges:
+              backpack:
+                api_key: yaml_key
+                secret: yaml_secret
+                sandbox: false
+                proxies:
+                  rest: http://yaml-proxy:8080
+                  websocket: socks5://yaml-proxy:1080
+                options:
+                  enable_rate_limit: false
+                  custom_flag: true
+                transport:
+                  snapshot_interval: 45
+                  websocket_enabled: true
+            """
+        )
+        yaml_path = tmp_path / "ccxt.yaml"
+        yaml_path.write_text(yaml_content)
+
+        monkeypatch.setenv("CRYPTOFEED_CCXT_BACKPACK__API_KEY", "env_key")
+        monkeypatch.setenv("CRYPTOFEED_CCXT_BACKPACK__OPTIONS__TIMEOUT", "45000")
+
+        context = load_ccxt_config(
+            exchange_id="backpack",
+            yaml_path=yaml_path,
+            overrides={
+                "sandbox": True,
+                "options": {"rate_limit": 99}
+            },
+        )
+
+        assert context.exchange_id == "backpack"
+        assert context.ccxt_options["apiKey"] == "env_key"
+        assert context.ccxt_options["secret"] == "yaml_secret"
+        assert context.ccxt_options["timeout"] == 45000
+        assert context.ccxt_options["enableRateLimit"] is False
+        assert context.ccxt_options["rateLimit"] == 99
+        assert context.use_sandbox is True
+        assert context.http_proxy_url == "http://yaml-proxy:8080"
+        assert context.websocket_proxy_url == "socks5://yaml-proxy:1080"
+        assert context.transport.snapshot_interval == 45
+
+    def test_load_ccxt_config_uses_proxy_settings(self):
+        """Proxy settings should provide defaults when config omits proxies."""
+        proxy_settings = ProxySettings(
+            enabled=True,
+            default=ConnectionProxies(
+                http=ProxyConfig(url="http://default:8080"),
+                websocket=ProxyConfig(url="socks5://default:1080"),
+            ),
+            exchanges={
+                "binance": ConnectionProxies(
+                    http=ProxyConfig(url="http://binance:8080"),
+                    websocket=None,
+                )
+            },
+        )
+
+        context = load_ccxt_config(
+            exchange_id="binance",
+            overrides={
+                "api_key": "key",
+                "secret": "secret",
+            },
+            proxy_settings=proxy_settings,
+        )
+
+        assert context.http_proxy_url == "http://binance:8080"
+        assert context.websocket_proxy_url == "socks5://default:1080"
+
+    def test_ccxt_config_extensions_applied(self):
+        """Registered extensions should mutate configuration before validation."""
+
+        def add_extension_fields(data):
+            options = data.setdefault("options", {})
+            options["postOnly"] = True
+            return data
+
+        CcxtConfigExtensions.register("ftx", add_extension_fields)
+
+        context = load_ccxt_config(
+            exchange_id="ftx",
+            overrides={
+                "api_key": "key",
+                "secret": "secret",
+            },
+        )
+
+        assert context.ccxt_options["postOnly"] is True
+
+        CcxtConfigExtensions.reset()

@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 from decimal import Decimal
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import L2_BOOK, TRADES
@@ -24,7 +24,13 @@ from cryptofeed.exchanges.ccxt_generic import (
     CcxtWsTransport,
 )
 from cryptofeed.exchanges.ccxt_adapters import CcxtTypeAdapter
-from cryptofeed.exchanges.ccxt_config import validate_ccxt_config, CcxtExchangeConfig
+from cryptofeed.exchanges.ccxt_config import (
+    CcxtConfig,
+    CcxtExchangeConfig,
+    CcxtExchangeContext,
+    load_ccxt_config,
+)
+from cryptofeed.proxy import get_proxy_injector
 from cryptofeed.symbols import Symbol, Symbols, str_to_symbol
 
 
@@ -63,51 +69,101 @@ class CcxtFeed(Feed):
             config: Complete typed configuration (preferred over individual args)
             **kwargs: Standard Feed arguments (symbols, channels, callbacks, etc.)
         """
-        # Validate and normalize configuration using Pydantic models
-        if config is not None:
-            # Use provided typed configuration
-            self.ccxt_config = config
+        transport_keys = {'snapshot_interval', 'websocket_enabled', 'rest_only', 'use_market_id'}
+        transport_overrides: Dict[str, Any] = {}
+        for key in list(kwargs.keys()):
+            if key in transport_keys:
+                transport_overrides[key] = kwargs.pop(key)
+
+        credential_keys = {
+            'api_key',
+            'secret',
+            'passphrase',
+            'sandbox',
+            'rate_limit',
+            'enable_rate_limit',
+            'timeout',
+        }
+        overrides: Dict[str, Any] = {}
+        if proxies:
+            overrides['proxies'] = proxies
+        if ccxt_options:
+            overrides['options'] = ccxt_options
+        if transport_overrides:
+            overrides['transport'] = transport_overrides
+        for field in list(kwargs.keys()):
+            if field in credential_keys:
+                overrides[field] = kwargs.pop(field)
+
+        proxy_settings = self._resolve_proxy_settings()
+
+        if isinstance(config, CcxtExchangeContext):
+            context = config
+        elif isinstance(config, CcxtExchangeConfig):
+            options_dump = (
+                config.ccxt_options.model_dump(exclude_none=True)
+                if config.ccxt_options
+                else {}
+            )
+            base_config = CcxtConfig(
+                exchange_id=config.exchange_id,
+                proxies=config.proxies,
+                transport=config.transport,
+                options=options_dump,
+            )
+            context = base_config.to_context(proxy_settings=proxy_settings)
         else:
-            # Convert legacy dict-based config to typed configuration with validation
             if exchange_id is None:
                 raise ValueError("exchange_id is required when config is not provided")
-            try:
-                self.ccxt_config = validate_ccxt_config(
-                    exchange_id=exchange_id,
-                    proxies=proxies,
-                    ccxt_options=ccxt_options,
-                    **{k: v for k, v in kwargs.items() if k in {'snapshot_interval', 'websocket_enabled', 'rest_only', 'use_market_id'}}
-                )
-            except Exception as e:
-                raise ValueError(f"Invalid CCXT configuration for exchange '{exchange_id}': {e}") from e
+            context = load_ccxt_config(
+                exchange_id=exchange_id,
+                overrides=overrides or None,
+                proxy_settings=proxy_settings,
+            )
 
-        # Extract validated configuration
-        self.ccxt_exchange_id = self.ccxt_config.exchange_id
-        self.proxies = self.ccxt_config.proxies.model_dump() if self.ccxt_config.proxies else {}
-        self.ccxt_options = self.ccxt_config.to_ccxt_dict()
-        
-        # Initialize CCXT components
-        self._metadata_cache = CcxtMetadataCache(self.ccxt_exchange_id)
+        self._context = context
+        self.ccxt_exchange_id = context.exchange_id
+        self.proxies: Dict[str, str] = {}
+        if context.http_proxy_url:
+            self.proxies['rest'] = context.http_proxy_url
+        if context.websocket_proxy_url:
+            self.proxies['websocket'] = context.websocket_proxy_url
+        self.ccxt_options = dict(context.ccxt_options)
+
+        self._metadata_cache = CcxtMetadataCache(self.ccxt_exchange_id, context=context)
         self._ccxt_feed: Optional[CcxtGenericFeed] = None
         self._running = False
-        
-        # Set the class id attribute dynamically
+
         self.__class__.id = self._get_exchange_constant(self.ccxt_exchange_id)
-        
-        # Initialize symbol mapping for this exchange
+
         self._initialize_symbol_mapping()
 
-        # Convert string symbols to Symbol objects if symbols were provided
         if 'symbols' in kwargs and kwargs['symbols']:
             kwargs['symbols'] = [
                 str_to_symbol(sym) if isinstance(sym, str) else sym
                 for sym in kwargs['symbols']
             ]
 
-        # Initialize parent Feed
+        exchange_constant = self._get_exchange_constant(self.ccxt_exchange_id).lower()
+        if self.ccxt_options.get('apiKey') and self.ccxt_options.get('secret'):
+            credentials_config = {
+                exchange_constant: {
+                    'key_id': self.ccxt_options.get('apiKey'),
+                    'key_secret': self.ccxt_options.get('secret'),
+                    'key_passphrase': self.ccxt_options.get('password'),
+                    'account_name': None,
+                }
+            }
+            kwargs.setdefault('config', credentials_config)
+
+        kwargs.setdefault('sandbox', context.use_sandbox)
+
         super().__init__(**kwargs)
-        
-        # Set up logging
+
+        self.key_id = self.ccxt_options.get('apiKey')
+        self.key_secret = self.ccxt_options.get('secret')
+        self.key_passphrase = self.ccxt_options.get('password')
+
         self.log = logging.getLogger('feedhandler')
         
     def _get_exchange_constant(self, exchange_id: str) -> str:
@@ -126,10 +182,16 @@ class CcxtFeed(Feed):
         # Create empty symbol mapping to satisfy parent requirements
         normalized_mapping = {}
         info = {'symbols': []}
-        
+
         # Register with Symbols system
         if not Symbols.populated(self.__class__.id):
             Symbols.set(self.__class__.id, normalized_mapping, info)
+
+    def _resolve_proxy_settings(self):
+        injector = get_proxy_injector()
+        if injector is None:
+            return None
+        return getattr(injector, 'settings', None)
     
     @classmethod 
     def symbol_mapping(cls, refresh=False, headers=None):
@@ -173,6 +235,10 @@ class CcxtFeed(Feed):
             symbols=ccxt_symbols,
             channels=channels,
             metadata_cache=self._metadata_cache,
+            snapshot_interval=self._context.transport.snapshot_interval,
+            websocket_enabled=self._context.transport.websocket_enabled,
+            rest_only=self._context.transport.rest_only,
+            config_context=self._context,
         )
         
         # Register our callbacks with CCXT feed
