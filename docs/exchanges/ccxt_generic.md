@@ -9,8 +9,8 @@ The CCXT generic exchange abstraction standardizes how CCXT-backed markets are o
 3. **Instantiate feed**: Construct a `CcxtFeed` with desired symbols/channels. The feed automatically provisions `CcxtGenericFeed` transports and adapters using the supplied configuration context.
 
 ```python
-from cryptofeed.exchanges.ccxt_config import CcxtConfig
-from cryptofeed.exchanges.ccxt_feed import CcxtFeed
+from cryptofeed.exchanges.ccxt.config import CcxtConfig
+from cryptofeed.exchanges.ccxt.feed import CcxtFeed
 
 ccxt_config = CcxtConfig(
     exchange_id="backpack",
@@ -47,6 +47,8 @@ The loader enforces precedence: overrides ⟶ environment ⟶ YAML ⟶ defaults.
 - Proxy settings come from the shared `ProxySettings` (feature-flagged by `CRYPTOFEED_PROXY_*`). If explicit proxies are omitted, the loader pulls defaults per exchange from the proxy system.
 - The transport layer propagates proxy URLs to both `aiohttp` and CCXT’s internal proxy fields to ensure REST and WebSocket flows share routing.
 - Transport options (`snapshot_interval`, `websocket_enabled`, `rest_only`, `use_market_id`) live inside the `CcxtTransportConfig` model and automatically shape feed behaviour.
+
+> **Directory Layout**: All CCXT modules now live under `cryptofeed/exchanges/ccxt/`. Legacy imports such as `cryptofeed.exchanges.ccxt_config` continue to function via compatibility shims but new development should target the package modules directly.
 
 ## Extension Points
 - **Symbol normalization**: Override via `CcxtExchangeBuilder.create_feed_class(symbol_normalizer=...)` or subclass `CcxtTradeAdapter` / `CcxtOrderBookAdapter` to handle bespoke payloads.

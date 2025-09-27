@@ -34,5 +34,13 @@ The CCXT/CCXT-Pro generic exchange abstraction aims to provide a consistent inte
 
 #### Acceptance Criteria
 1. WHEN unit tests run THEN they SHALL cover configuration validation, transport behavior, and data normalization utilities.
-2. WHEN integration tests execute THEN they SHALL verify a sample CCXT exchange uses proxy-aware transports and emits normalized callbacks.
-3. WHEN documentation is updated THEN onboarding guides SHALL explain how to add new CCXT exchanges using the abstraction.
+2. WHEN integration tests execute THEN they SHALL verify feed lifecycle (start/stop) and private-channel guards using patched CCXT clients across REST and WebSocket paths.
+3. WHEN documentation is updated THEN onboarding guides SHALL explain how to add new CCXT exchanges using the abstraction and reference the required unit, integration, and end-to-end test suites.
+
+### Requirement 5: Directory Organization
+**Objective:** As a codebase maintainer, I want all CCXT-related modules grouped under a dedicated package directory, so that navigation and future extensions remain predictable.
+
+#### Acceptance Criteria
+1. WHEN developers inspect the source tree THEN all CCXT modules (config, transports, adapters, feeds, builder) SHALL reside beneath a common `cryptofeed/exchanges/ccxt/` directory hierarchy.
+2. IF new CCXT components are introduced THEN they SHALL be placed inside the dedicated `ccxt` package rather than the legacy flat exchange directory.
+3. WHEN existing CCXT imports are updated THEN the refactor SHALL avoid breaking public APIs by maintaining re-export shims or updated import paths documented in the developer guide.

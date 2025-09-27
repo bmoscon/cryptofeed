@@ -31,6 +31,7 @@ graph TD
 ```
 
 ## Component Design
+- **Directory Layout**: All CCXT modules SHALL reside under `cryptofeed/exchanges/ccxt/` with submodules for config, transports, adapters, feed, and builder. Existing top-level imports MUST re-export from this package to avoid breaking public APIs during the relocation.
 ### ConfigLayer
 - `CcxtConfig` Pydantic model capturing global settings (API keys, rate limits, proxies, timeouts).
 - `CcxtExchangeContext` exposes resolved URLs, sandbox flags, and exchange options.
@@ -63,10 +64,10 @@ graph TD
   - Transport proxy integration (ensuring proxy URLs passed to aiohttp/websockets).
   - Adapter correctness (trade/book conversion).
 - Integration Tests:
-  - Spin up sample CCXT exchanges (e.g., Binance via CCXT) using recorded fixtures or live sandbox with proxies enabled.
-  - Validate REST and WebSocket flows produce normalized callbacks.
+  - Patch CCXT async/pro clients to simulate REST + WebSocket lifecycles (including private-channel auth) without external dependencies.
+  - Validate proxy routing, authentication callbacks, and callback normalization using the shared transports.
 - End-to-End Smoke:
-  - Use `FeedHandler` to load a CCXT feed via the abstraction and emit trades/books through proxy harness.
+  - Run `FeedHandler` against the generic feed in a controlled environment (fixtures or sandbox) to exercise config → start → data callbacks, covering proxy + auth scenarios end-to-end.
 
 ## Documentation
 - Developer guide detailing how to onboard a new CCXT exchange using the abstraction.
@@ -79,9 +80,11 @@ graph TD
 - **Performance overhead**: transports reuse sessions and avoid redundant conversions.
 
 ## Deliverables
-1. `cryptofeed/exchanges/ccxt_generic.py` (or similar) implementing the abstraction components.
-2. Typed configuration models in `cryptofeed/exchanges/ccxt_config.py`.
-3. Transport utilities under `cryptofeed/exchanges/ccxt_transport.py` (REST + WS).
-4. Adapter module `cryptofeed/exchanges/ccxt_adapters.py` for trade/order book conversion.
-5. Test suites: unit (`tests/unit/test_ccxt_generic.py`), integration (`tests/integration/test_ccxt_generic.py`), smoke (`tests/integration/test_ccxt_feed_smoke.py`).
-6. Documentation updates in `docs/exchanges/ccxt_generic.md` and proxy references.
+1. `cryptofeed/exchanges/ccxt/` package containing:
+   - `config.py`, `context.py`, `extensions.py` (configuration layer).
+   - `transport/rest.py`, `transport/ws.py` (shared transports).
+   - `adapters/__init__.py` for trade/order book conversion utilities.
+   - `feed.py` and `builder.py` for generic feed orchestration.
+   - Compatibility shims (e.g., `cryptofeed/exchanges/ccxt_config.py`) re-exporting new package symbols during migration.
+2. Test suites: unit (`tests/unit/test_ccxt_config.py`, `tests/unit/test_ccxt_adapters_conversion.py`, `tests/unit/test_ccxt_generic_feed.py`), integration (`tests/integration/test_ccxt_generic.py`), smoke (`tests/integration/test_ccxt_feed_smoke.py`).
+3. Documentation updates in `docs/exchanges/ccxt_generic.md` and `docs/exchanges/ccxt_generic_api.md` covering structure, configuration, and extension points.

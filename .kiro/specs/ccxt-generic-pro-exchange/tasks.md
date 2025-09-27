@@ -6,6 +6,20 @@ Based on the approved design document, here are the detailed implementation task
 
 ### Phase 1: Core Configuration Layer
 
+#### Task 1.1
+#### Task 1.3: Directory Relocation ✅
+**File**: `cryptofeed/exchanges/ccxt/`
+- [x] Create dedicated `ccxt` package under `cryptofeed/exchanges/`
+- [x] Move configuration, transport, adapter, feed, and builder modules into package submodules
+- [x] Provide compatibility shims that re-export legacy import paths
+- [x] Update tests and documentation references to new structure
+
+**Acceptance Criteria**:
+- [x] CCXT modules reside under `cryptofeed/exchanges/ccxt/` with logical subpackages
+- [x] Legacy import paths remain functional via re-exports or updated entry points
+- [x] Tests and docs reference the new directory structure
+- [x] Build/lint pipelines succeed after relocation
+
 #### Task 1.1: Implement CcxtConfig Pydantic Models ✅
 **File**: `cryptofeed/exchanges/ccxt_config.py`
 - [x] Create `CcxtConfig` base Pydantic model with:
@@ -122,6 +136,8 @@ Based on the approved design document, here are the detailed implementation task
 
 ### Phase 4: Extension Hooks and Factory System
 
+- Keep `builder.py` under `cryptofeed/exchanges/ccxt/` with re-export entry point for legacy imports.
+
 #### Task 4.1: Implement CcxtExchangeBuilder Factory ✅
 **File**: `cryptofeed/exchanges/ccxt_generic.py`
 - [x] Create `CcxtExchangeBuilder` factory for feed class generation
@@ -164,44 +180,46 @@ Based on the approved design document, here are the detailed implementation task
 ### Phase 5: Testing Implementation
 
 #### Task 5.1: Unit Test Suite
-**File**: `tests/unit/test_ccxt_generic.py`
-- Create comprehensive unit tests for configuration validation
-- Test transport proxy integration with mock ProxyInjector
-- Validate adapter conversion correctness with test data
-- Test error handling and edge cases
+**Files**: `tests/unit/test_ccxt_config.py`, `tests/unit/test_ccxt_adapters_conversion.py`, `tests/unit/test_ccxt_generic_feed.py`
+- Create comprehensive unit tests covering configuration validation, adapter conversions, and generic feed authentication/proxy flows via patched clients.
+- Exercise transport-level behaviors (proxy resolution, auth guards) using deterministic fakes instead of live CCXT calls.
+- Validate adapter conversion correctness with edge-case payloads (timestamps, decimals, sequence numbers).
+- Confirm error-handling paths (missing credentials, malformed payloads) raise descriptive exceptions without leaking secrets.
 
 **Acceptance Criteria**:
-- Configuration validation tests cover all error conditions
-- Transport tests verify proxy usage without external dependencies
-- Adapter tests validate conversion accuracy with decimal precision
-- Error handling tests confirm graceful failure behavior
+- Unit tests cover configuration, adapters, and generic feed logic with >90% branch coverage for critical paths.
+- Transport proxy/auth handling verified through unit-level fakes (no external network).
+- Adapter tests ensure decimal precision and sequence preservation.
+- Tests assert informative error messages for invalid configurations or payloads.
 
 #### Task 5.2: Integration Test Suite
 **File**: `tests/integration/test_ccxt_generic.py`
-- Create integration tests using sample CCXT exchange (Binance)
-- Test proxy-aware transport behavior with real proxy configuration
-- Validate normalized callback emission through complete flows
-- Test WebSocket and REST transport integration
+- Implement integration tests that patch CCXT async/pro clients to simulate REST and WebSocket lifecycles (including private-channel authentication) without external dependencies.
+- Validate proxy-aware transport behavior, reconnection logic, and callback normalization across combined REST+WS flows.
+- Ensure tests exercise configuration precedence (env, YAML, overrides) and per-exchange proxy overrides.
+- Cover failure scenarios (missing credentials, proxy errors) and confirm graceful recovery/backoff.
 
 **Acceptance Criteria**:
-- Integration tests use recorded fixtures or sandbox endpoints
-- Proxy integration tests verify actual proxy usage
-- End-to-end flows produce normalized Trade/OrderBook objects
-- Both HTTP and WebSocket transports tested with proxy support
+- Integration tests run fully offline using patched CCXT clients and fixtures.
+- Combined REST/WS flows produce normalized `Trade`/`OrderBook` objects and trigger registered callbacks.
+- Proxy routing, authentication callbacks, and reconnection/backoff paths are asserted.
+- Tests document required markers/fixtures for selective execution (e.g., `@pytest.mark.ccxt_integration`).
 
 #### Task 5.3: End-to-End Smoke Tests
 **File**: `tests/integration/test_ccxt_feed_smoke.py`
-- Create smoke tests using FeedHandler with CCXT generic feeds
-- Test complete configuration → connection → callback flow
-- Validate proxy system integration in realistic scenarios
-- Add performance benchmarks for transport overhead
+- Build smoke scenarios that run `FeedHandler` end-to-end with the generic CCXT feed using controlled fixtures (or sandbox endpoints when available).
+- Cover configuration loading (YAML/env/overrides), feed startup/shutdown, callback dispatch, and proxy integration.
+- Include scenarios for authenticated channels to ensure credentials propagate through FeedHandler lifecycle.
+- Capture basic performance/latency metrics and ensure compatibility with monitoring hooks.
 
 **Acceptance Criteria**:
-- Smoke tests verify complete integration with FeedHandler
-- Tests validate proxy configuration from environment variables
-- Performance tests confirm minimal transport overhead
-- Tests work with existing cryptofeed monitoring and metrics
+- Smoke suite runs as part of CI (optionally behind a marker) and validates config → start → data callback cycles.
+- Proxy and authentication settings are verified via assertions/end-to-end logging.
+- FeedHandler integration works with existing backends/metrics without manual setup.
+- Smoke results recorded for baseline runtime (per docs) to detect regressions.
 
+
+- Update documentation to note new `cryptofeed/exchanges/ccxt/` package structure and shim paths.
 ### Phase 6: Documentation and Examples
 
 #### Task 6.1: Developer Documentation ✅

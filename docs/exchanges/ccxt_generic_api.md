@@ -2,6 +2,8 @@
 
 ## Configuration Models
 
+> Modules live beneath `cryptofeed/exchanges/ccxt/`. Use package-relative imports such as `from cryptofeed.exchanges.ccxt.config import CcxtConfig`. Compatibility shims exist for legacy paths but new integrations should adopt the package layout.
+
 ### `CcxtConfig`
 - **Fields**: `exchange_id`, `api_key`, `secret`, `passphrase`, `sandbox`, `rate_limit`, `enable_rate_limit`, `timeout`, `proxies`, `transport`, `options`.
 - **Methods**:
