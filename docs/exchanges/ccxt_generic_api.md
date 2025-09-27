@@ -92,3 +92,8 @@ load_ccxt_config(
 - `CcxtUnavailable`: Raised when CCXT async/pro modules for the exchange cannot be imported.
 - `RuntimeError` (private auth failure): thrown when private channels are requested without valid credentials.
 - `AdapterValidationError`: surfaced when adapters encounter malformed payloads.
+
+## Test Modules
+- **Unit**: `tests/unit/test_ccxt_config.py`, `tests/unit/test_ccxt_adapters_conversion.py`, `tests/unit/test_ccxt_generic_feed.py`
+- **Integration**: `tests/integration/test_ccxt_generic.py`
+- **Smoke / E2E**: `tests/integration/test_ccxt_feed_smoke.py`

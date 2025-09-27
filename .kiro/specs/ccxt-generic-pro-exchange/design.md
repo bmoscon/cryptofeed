@@ -66,8 +66,8 @@ graph TD
 - Integration Tests:
   - Patch CCXT async/pro clients to simulate REST + WebSocket lifecycles (including private-channel auth) without external dependencies.
   - Validate proxy routing, authentication callbacks, and callback normalization using the shared transports.
-- End-to-End Smoke:
-  - Run `FeedHandler` against the generic feed in a controlled environment (fixtures or sandbox) to exercise config → start → data callbacks, covering proxy + auth scenarios end-to-end.
+- End-to-End Smoke Tests:
+  - Run `FeedHandler` against the generic CCXT feed in a controlled environment (fixtures or sandbox) to exercise config → start → data callbacks, covering proxy + auth scenarios end-to-end.
 
 ## Documentation
 - Developer guide detailing how to onboard a new CCXT exchange using the abstraction.

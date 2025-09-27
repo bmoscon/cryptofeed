@@ -56,9 +56,9 @@ The loader enforces precedence: overrides ⟶ environment ⟶ YAML ⟶ defaults.
 - **Adapter registry**: Use `AdapterRegistry.register_trade_adapter` to plug exchange-specific converters without changing core code.
 
 ## Testing Strategy
-- Unit tests should target configuration validation (`tests/unit/test_ccxt_config.py`) and adapter correctness (`tests/unit/test_ccxt_adapters_conversion.py`).
-- Integration tests (`tests/integration/test_ccxt_generic.py`) rely on patched CCXT clients to exercise REST/WebSocket flows through the generic feed without live network calls.
-- Smoke tests (`tests/integration/test_ccxt_feed_smoke.py`) ensure FeedHandler compatibility and callback dispatch using the shared abstraction.
+- **Unit**: `tests/unit/test_ccxt_config.py`, `tests/unit/test_ccxt_adapters_conversion.py`, `tests/unit/test_ccxt_generic_feed.py` cover configuration precedence, adapter precision, and generic feed authentication/proxy handling via deterministic fakes.
+- **Integration**: `tests/integration/test_ccxt_generic.py` patches CCXT async/pro modules to validate combined REST+WebSocket lifecycles, proxy routing, and authentication callbacks without external network calls.
+- **Smoke / E2E**: `tests/integration/test_ccxt_feed_smoke.py` drives `FeedHandler` end-to-end (config → start → callbacks) to ensure FeedHandler interoperability, proxy propagation, and authenticated channel flows.
 
 ## Troubleshooting
 - **Credential errors**: Check that `api_key` and `secret` are set in either the model, environment, or YAML. Missing values surface as `RuntimeError` during transport authentication.
