@@ -47,9 +47,9 @@ class BackpackFeed(Feed):
         **kwargs,
     ) -> None:
         self.config = config or BackpackConfig()
+        self.metrics = BackpackMetrics()
         self._apply_proxy_override()
         Symbols.set(self.id, {}, {})
-        self.metrics = BackpackMetrics()
         self._rest_client_factory = rest_client_factory or (lambda cfg: BackpackRestClient(cfg))
         self._ws_session_factory = ws_session_factory or (lambda cfg: BackpackWsSession(cfg, metrics=self.metrics))
         self._rest_client = self._rest_client_factory(self.config)
@@ -183,7 +183,10 @@ class BackpackFeed(Feed):
             injector.settings.enabled = True
 
         exchanges = dict(injector.settings.exchanges)
-        exchanges[self.config.exchange_id] = ConnectionProxies(http=proxies, websocket=proxies)
+        new_entry = ConnectionProxies(http=proxies, websocket=proxies)
+        if exchanges.get(self.config.exchange_id) != new_entry:
+            self.metrics.record_proxy_rotation()
+        exchanges[self.config.exchange_id] = new_entry
         injector.settings.exchanges = exchanges
 
     # ------------------------------------------------------------------

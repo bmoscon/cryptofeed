@@ -78,3 +78,15 @@ async def test_symbol_lookup_missing_symbol():
 
     with pytest.raises(KeyError):
         service.get_market("ETH-USDT")
+
+
+@pytest.mark.asyncio
+async def test_native_to_normalized_mapping():
+    rest = DummyRestClient(MOCK_MARKETS)
+    service = BackpackSymbolService(rest_client=rest)
+
+    await service.ensure()
+
+    assert service.native_symbol("BTC-USDT") == "BTC_USDT"
+    assert service.normalized_symbol("BTC_USDT") == "BTC-USDT"
+    assert service.normalized_symbol("BTC_USD_PERP") == "BTC-USD-PERP"

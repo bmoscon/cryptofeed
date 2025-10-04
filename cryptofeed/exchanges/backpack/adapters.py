@@ -47,8 +47,13 @@ class BackpackTradeAdapter:
         )
 
     def _parse_payload(self, payload: dict, normalized_symbol: str) -> TradePayload:
-        price = Decimal(str(payload.get("price") or payload.get("p")))
-        amount = Decimal(str(payload.get("size") or payload.get("q")))
+        price_raw = payload.get("price") or payload.get("p")
+        amount_raw = payload.get("size") or payload.get("q")
+        if price_raw is None or amount_raw is None:
+            raise ValueError("trade payload missing price or size fields")
+
+        price = Decimal(str(price_raw))
+        amount = Decimal(str(amount_raw))
         timestamp = payload.get("timestamp") or payload.get("ts")
         sequence = payload.get("sequence") or payload.get("s")
         trade_id = payload.get("id") or payload.get("t")
@@ -83,14 +88,8 @@ class BackpackOrderBookAdapter:
         sequence: Optional[int] = None,
         raw: Optional[dict] = None,
     ) -> OrderBook:
-        bids_processed = {
-            Decimal(str(level[0])): Decimal(str(level[1]))
-            for level in bids
-        }
-        asks_processed = {
-            Decimal(str(level[0])): Decimal(str(level[1]))
-            for level in asks
-        }
+        bids_processed = self._levels_to_map(bids)
+        asks_processed = self._levels_to_map(asks)
 
         order_book = OrderBook(
             exchange=self._exchange,
@@ -136,6 +135,16 @@ class BackpackOrderBookAdapter:
     def _normalize_level(self, level: Iterable) -> List[Decimal]:
         price, size = level[0], level[1]
         return [Decimal(str(price)), Decimal(str(size))]
+
+    def _levels_to_map(self, levels: Iterable[Iterable]) -> Dict[Decimal, Decimal]:
+        processed: Dict[Decimal, Decimal] = {}
+        for level in levels:
+            if len(level) < 2:
+                raise ValueError("order book level missing price/size")
+            price = Decimal(str(level[0]))
+            size = Decimal(str(level[1]))
+            processed[price] = size
+        return processed
 
     def _update_levels(self, book: OrderBook, side: str, levels: Iterable[Iterable]):
         price_map = book.book.bids if side == BID else book.book.asks

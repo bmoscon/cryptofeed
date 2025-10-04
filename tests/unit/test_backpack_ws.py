@@ -70,6 +70,60 @@ async def test_ws_session_subscribe_sends_payload():
 
 
 @pytest.mark.asyncio
+async def test_ws_session_reauth_on_private_subscribe():
+    config = BackpackConfig(
+        enable_private_channels=True,
+        auth=BackpackAuthSettings(
+            api_key="api",
+            public_key="".join(f"{i:02x}" for i in range(32)),
+            private_key="".join(f"{i:02x}" for i in range(32)),
+        ),
+    )
+    stub = StubWebsocket()
+    session = BackpackWsSession(config, conn_factory=lambda: stub, heartbeat_interval=0)
+
+    await session.open()
+    stub.sent_messages.clear()
+
+    await session.subscribe([
+        BackpackSubscription(channel="orders", symbols=["BTC-USDT"], private=True)
+    ])
+
+    # Expect subscribe + auth messages in that order
+    assert len(stub.sent_messages) == 2
+    subscribe_payload = json.loads(stub.sent_messages[0])
+    assert subscribe_payload["op"] == "subscribe"
+    reauth_payload = json.loads(stub.sent_messages[1])
+    assert reauth_payload["op"] == "auth"
+
+
+@pytest.mark.asyncio
+async def test_ws_session_refreshes_auth_window():
+    config = BackpackConfig(
+        enable_private_channels=True,
+        auth=BackpackAuthSettings(
+            api_key="api",
+            public_key="".join(f"{i:02x}" for i in range(32)),
+            private_key="".join(f"{i:02x}" for i in range(32)),
+        ),
+    )
+    stub = StubWebsocket()
+    session = BackpackWsSession(config, conn_factory=lambda: stub, heartbeat_interval=0)
+
+    await session.open()
+    await session.subscribe([
+        BackpackSubscription(channel="orders", symbols=["BTC-USDT"], private=True)
+    ])
+    stub.sent_messages.clear()
+    session._last_auth_timestamp_us = 0
+
+    await session._maybe_refresh_auth()
+
+    assert stub.sent_messages
+    assert json.loads(stub.sent_messages[-1])["op"] == "auth"
+
+
+@pytest.mark.asyncio
 async def test_ws_session_read_uses_stub_receive():
     config = BackpackConfig()
     stub = StubWebsocket()

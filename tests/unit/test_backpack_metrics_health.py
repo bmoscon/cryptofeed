@@ -26,3 +26,16 @@ def test_health_flags_auth_failure():
     report = evaluate_health(metrics)
     assert report.healthy is False
     assert "authentication" in " ".join(report.reasons)
+
+
+def test_health_detects_parser_errors_and_stale_stream():
+    metrics = BackpackMetrics()
+    metrics.record_parser_error()
+    # simulate stale stream
+    metrics.last_message_timestamp = time.time() - 120
+
+    report = evaluate_health(metrics, max_snapshot_age=30)
+    assert report.healthy is False
+    reason_str = " ".join(report.reasons)
+    assert "parser" in reason_str
+    assert "no messages" in reason_str

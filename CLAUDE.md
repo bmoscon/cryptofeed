@@ -44,6 +44,12 @@ Refer to `AGENTS.md` for an overview of available agent workflows and command us
 - Keep configuration surface minimal
 - Avoid building for hypothetical future requirements
 
+### FRs Over NFRs
+- Deliver functional requirements before tuning non-functional concerns
+- Capture NFR gaps as follow-up work instead of blocking feature delivery
+- Align prioritization with user impact, revisiting NFRs once core behavior ships
+- Treat performance, resiliency, and compliance targets as iterative enhancements unless explicitly critical
+
 ## Development Standards
 
 ### NO MOCKS

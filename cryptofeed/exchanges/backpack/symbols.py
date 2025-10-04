@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Dict, Iterable, Optional
+from typing import Dict, Iterable, Optional, Tuple
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +27,7 @@ class BackpackSymbolService:
         self._ttl = timedelta(seconds=ttl_seconds)
         self._lock = asyncio.Lock()
         self._markets: Dict[str, BackpackMarket] = {}
+        self._native_to_normalized: Dict[str, str] = {}
         self._expires_at: Optional[datetime] = None
 
     async def ensure(self, *, force: bool = False) -> None:
@@ -36,7 +37,7 @@ class BackpackSymbolService:
                 return
 
             raw_markets = await self._rest_client.fetch_markets()
-            self._markets = self._parse_markets(raw_markets)
+            self._markets, self._native_to_normalized = self._parse_markets(raw_markets)
             self._expires_at = now + self._ttl
 
     def get_market(self, symbol: str) -> BackpackMarket:
@@ -48,16 +49,24 @@ class BackpackSymbolService:
     def native_symbol(self, symbol: str) -> str:
         return self.get_market(symbol).native_symbol
 
+    def normalized_symbol(self, native_symbol: str) -> str:
+        try:
+            return self._native_to_normalized[native_symbol]
+        except KeyError as exc:
+            raise KeyError(f"Unknown Backpack native symbol: {native_symbol}") from exc
+
     def all_markets(self) -> Iterable[BackpackMarket]:
         return self._markets.values()
 
     def clear(self) -> None:
         self._markets = {}
+        self._native_to_normalized = {}
         self._expires_at = None
 
     @staticmethod
-    def _parse_markets(markets: Iterable[dict]) -> Dict[str, BackpackMarket]:
+    def _parse_markets(markets: Iterable[dict]) -> Tuple[Dict[str, BackpackMarket], Dict[str, str]]:
         parsed: Dict[str, BackpackMarket] = {}
+        native_map: Dict[str, str] = {}
         for entry in markets:
             if entry.get('status', '').upper() not in {'TRADING', 'ENABLED', ''}:
                 continue
@@ -89,4 +98,5 @@ class BackpackSymbolService:
                 min_amount=min_amount,
             )
             parsed[normalized] = market
-        return parsed
+            native_map[native_symbol] = normalized
+        return parsed, native_map

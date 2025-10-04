@@ -7,6 +7,7 @@ import pytest
 
 from cryptofeed.exchanges.backpack.adapters import BackpackOrderBookAdapter, BackpackTickerAdapter, BackpackTradeAdapter
 from cryptofeed.exchanges.backpack.router import BackpackMessageRouter
+from cryptofeed.exchanges.backpack.metrics import BackpackMetrics
 
 
 class CallbackCollector:
@@ -114,3 +115,23 @@ async def test_router_dispatches_ticker():
     ticker, timestamp = collector.items[0]
     assert ticker.symbol == "BTC-USDT"
     assert float(ticker.bid) == pytest.approx(30040)
+
+
+@pytest.mark.asyncio
+async def test_router_drops_invalid_payload_and_records_metrics():
+    metrics = BackpackMetrics()
+    router = BackpackMessageRouter(
+        trade_adapter=BackpackTradeAdapter(exchange="BACKPACK"),
+        order_book_adapter=BackpackOrderBookAdapter(exchange="BACKPACK"),
+        ticker_adapter=None,
+        trade_callback=None,
+        order_book_callback=None,
+        ticker_callback=None,
+        metrics=metrics,
+    )
+
+    await router.dispatch({"type": "trade", "price": "100"})
+
+    snapshot = metrics.snapshot()
+    assert snapshot["parser_errors"] == 1
+    assert snapshot["dropped_messages"] == 1
