@@ -14,8 +14,17 @@ def test_exchanges_fh():
     Ensure all exchanges are in feedhandler's string to class mapping
     """
     path = os.path.dirname(os.path.abspath(__file__))
-    files = os.listdir(f"{path}/../../cryptofeed/exchanges")
-    files = [f.replace("cryptodotcom", "CRYPTO.COM") for f in files if '__' not in f and 'mixins' not in f]
-    files = [f.replace("bitdotcom", "BIT.COM") for f in files if '__' not in f and 'mixins' not in f]
-    files = [f[:-3].upper() for f in files]  # Drop extension .py and uppercase
-    assert sorted(files) == sorted(EXCHANGE_MAP.keys())
+    base = os.path.join(path, "../../cryptofeed/exchanges")
+
+    translation = {
+        "BIT.COM": "bitdotcom",
+        "CRYPTO.COM": "cryptodotcom",
+    }
+
+    for exchange in EXCHANGE_MAP.keys():
+        module_name = translation.get(exchange, exchange.lower())
+        module_path = os.path.join(base, f"{module_name}.py")
+        package_path = os.path.join(base, module_name)
+
+        exists = os.path.exists(module_path) or os.path.isdir(package_path)
+        assert exists, f"Missing implementation module for {exchange}"

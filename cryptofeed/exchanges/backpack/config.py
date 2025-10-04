@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
@@ -69,6 +69,25 @@ class BackpackConfig(BaseModel):
     """Configuration for native Backpack feed integration."""
 
     model_config = ConfigDict(frozen=True, extra='forbid')
+
+    legacy_fields: ClassVar[set[str]] = {
+        'native_enabled',
+        'ccxt',
+        'rest_endpoint_override',
+        'ws_endpoint_override',
+        'rest_endpoint',
+        'ws_endpoint',
+    }
+
+    @model_validator(mode='before')
+    @classmethod
+    def _reject_legacy_fields(cls, data):
+        if isinstance(data, dict):
+            invalid = sorted(field for field in data.keys() if field in cls.legacy_fields)
+            if invalid:
+                joined = ", ".join(invalid)
+                raise ValueError(f"Backpack configuration fields {joined} are no longer supported; use native options.")
+        return data
 
     exchange_id: Literal['backpack'] = Field('backpack', description="Exchange identifier")
     enable_private_channels: bool = Field(False, description="Enable private Backpack channels")

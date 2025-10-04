@@ -4,8 +4,6 @@ Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import os
-
 from cryptofeed.defines import *
 from cryptofeed.defines import EXX as EXX_str, FMFW as FMFW_str, OKX as OKX_str
 from .bitdotcom import BitDotCom
@@ -49,10 +47,7 @@ from .okcoin import OKCoin
 from .poloniex import Poloniex
 from .probit import Probit
 from .upbit import Upbit
-
-_ENABLE_BACKPACK_NATIVE = os.environ.get("CRYPTOFEED_BACKPACK_NATIVE", "false").lower() in {"1", "true", "yes", "on"}
-if _ENABLE_BACKPACK_NATIVE:
-    from .backpack.feed import BackpackFeed
+from .backpack.feed import BackpackFeed
 
 # Maps string name to class name for use with config
 EXCHANGE_MAP = {
@@ -99,5 +94,4 @@ EXCHANGE_MAP = {
     UPBIT: Upbit,
 }
 
-if _ENABLE_BACKPACK_NATIVE:
-    EXCHANGE_MAP[BACKPACK] = BackpackFeed
+EXCHANGE_MAP[BACKPACK] = BackpackFeed

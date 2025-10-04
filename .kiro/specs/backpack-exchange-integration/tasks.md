@@ -1,72 +1,91 @@
-# Task Breakdown
+# Implementation Plan
 
-## Phase 0 · Foundations & Feature Flag
-- [x] **T0.1 Audit ccxt Backpack Usage** (`cryptofeed/exchanges/backpack_ccxt.py`, deployment configs)  
-  Catalogue current dependencies on the ccxt adapter, note behavioural gaps, and draft a toggle plan for migration.
-- [x] **T0.2 Introduce Feature Flag** (`cryptofeed/exchange/registry.py`, config loaders)  
-  Add `backpack.native_enabled` option controlling whether FeedHandler instantiates native or ccxt-backed feeds.
+- [ ] 1. Enforce native-only activation for Backpack
+- [x] 1.1 Lock FeedHandler routing to the native exchange modules
+  - Resolve all Backpack registrations directly to the native feed implementation.
+  - Guard runtime loaders so any attempt to reference the legacy identifier surfaces a migration error.
+  - Ensure feature toggles default to the native path without requiring additional flags.
+  - _Requirements: R1.1, R1.2, R1.3_
 
-## Phase 1 · Configuration & Symbols
-- [x] **T1.1 Implement BackpackConfig** (`cryptofeed/config/backpack.py`)  
-  Build Pydantic model enforcing ED25519 credential structure, sandbox endpoints, proxy overrides, and window bounds.
-- [x] **T1.2 Build Symbol Service** (`cryptofeed/exchanges/backpack/symbols.py`)  
-  Fetch `/api/v1/markets`, normalize symbols, detect instrument types, and cache results with TTL invalidation.
-- [x] **T1.3 Wire Feed Bootstrap** (`cryptofeed/exchanges/backpack/feed.py`)  
-  Integrate config + symbol service; expose helpers translating between normalized and native symbols.
+- [x] 1.2 Provide operator feedback for unsupported legacy configuration
+  - Detect deprecated Backpack configuration keys during startup validation.
+  - Emit actionable remediation guidance pointing to the native feed controls.
+  - Block initialization whenever residual ccxt-era values are present.
+  - _Requirements: R1.2, R2.3_
 
-## Phase 2 · Transports & Authentication
-- [x] **T2.1 REST Client Wrapper** (`cryptofeed/exchanges/backpack/rest.py`)  
-  Wrap `HTTPAsyncConn`, enforce Backpack endpoints, retries, circuit breaker, and snapshot helper APIs.
-- [x] **T2.2 WebSocket Session Manager** (`cryptofeed/exchanges/backpack/ws.py`)  
-  Wrap `WSAsyncConn`, add heartbeat watchdog, automatic resubscription, and proxy metadata propagation.
-- [x] **T2.3 ED25519 Auth Mixin** (`cryptofeed/exchanges/backpack/auth.py`)  
-  Validate keys, produce microsecond timestamps, sign payloads, and assemble REST/WS headers.
-- [x] **T2.4 Private Channel Handshake** (`feed.py`, `ws.py`)  
-  Combine auth mixin with WebSocket connect sequence and retry policy for auth failures.
+- [ ] 2. Strengthen configuration validation and credential handling
+- [x] 2.1 Validate ED25519 credentials and sandbox selection rules
+  - Normalize public and private key material regardless of input encoding.
+  - Enforce window bounds, sandbox toggles, and deterministic endpoint resolution.
+  - Surface precise validation errors when required values are missing or malformed.
+  - _Requirements: R2.1, R2.2_
 
-## Phase 3 · Message Routing & Adapters
-- [x] **T3.1 Router Skeleton** (`cryptofeed/exchanges/backpack/router.py`)  
-  Dispatch envelopes to adapters, surface errors, and emit metrics for dropped frames.
-- [x] **T3.2 Trade Adapter** (`cryptofeed/exchanges/backpack/adapters.py`)  
-  Convert trade payloads to `Trade` dataclasses with decimal precision and sequence management.
-- [x] **T3.3 Order Book Adapter** (`.../adapters.py`)  
-  Manage snapshot + delta lifecycle, detect gaps, and trigger resync via REST snapshots.
-- [x] **T3.4 Ancillary Channels** (`.../adapters.py`)  
-  Implement ticker, candle, and private order/position adapters as scoped in design.
+- [x] 2.2 Reject unsupported configuration fields with guided messaging
+  - Inspect user-supplied settings for legacy or unknown attributes.
+  - Provide migration hints explaining the streamlined configuration surface.
+  - Prevent ambiguous fallbacks by failing fast on invalid keys.
+  - _Requirements: R2.3_
 
-## Phase 4 · Feed Integration & Observability
-- [x] **T4.1 Implement BackpackFeed** (`cryptofeed/exchanges/backpack/feed.py`)  
-  Subclass `Feed`, bootstrap snapshots, manage stream loops, and register callbacks under feature flag guard.
-- [x] **T4.2 Metrics & Logging** (`feed.py`, `router.py`)  
-  Emit structured logs and counters for reconnects, auth failures, parser errors, message throughput.
-- [x] **T4.3 Health Endpoint** (`cryptofeed/health/backpack.py`)  
-  Report snapshot freshness, subscription status, and recent error counts for monitoring.
-- [x] **T4.4 Exchange Registration** (`cryptofeed/defines.py`, `cryptofeed/exchanges/__init__.py`, docs)  
-  Register `BACKPACK`, update discovery tables, and document feature flag availability.
+- [ ] 3. Deliver proxy-integrated REST and WebSocket transports
+- [x] 3.1 Route REST flows through the shared proxy subsystem
+  - Resolve exchange-specific HTTP proxy overrides from the consolidated settings.
+  - Execute snapshot and metadata requests using the pooled connection strategy.
+  - Record transport metrics reflecting proxy rotations and retry attempts.
+  - _Requirements: R3.1_
 
-## Phase 5 · Testing & Tooling
-- [x] **T5.1 Unit Tests** (`tests/unit/test_backpack_*`)  
-  Cover config validation, auth signatures (golden vectors), symbol normalization, router/adapters, and feed bootstrap.
-- [x] **T5.2 Integration Tests** (`tests/integration/test_backpack_native.py`)  
-  Validate REST snapshot + WS delta flow, proxy wiring, private channel handshake using fixtures/sandbox.
-- [x] **T5.3 Fixture Library** (`tests/fixtures/backpack/`)  
-  Record public/private payload samples, edge cases, and error frames for deterministic tests.
-- [x] **T5.4 Credential Validator Tool** (`tools/backpack_auth_check.py`)  
-  Provide CLI utility verifying ED25519 keys and timestamp drift for operators.
+- [x] 3.2 Establish proxy-aware WebSocket sessions
+  - Source WebSocket proxy information via the injector without bespoke logic.
+  - Manage connection lifecycle with pooled proxy selection and rotation on failure.
+  - Preserve subscription state across reconnects while emitting observability signals.
+  - _Requirements: R3.2, R3.3_
 
-## Phase 6 · Documentation & Migration
-- [x] **T6.1 Exchange Documentation Update** (`docs/exchanges/backpack.md`)  
-  Document native feed configuration, auth setup, proxy examples, metrics, and observability story.
-- [x] **T6.2 Migration Playbook** (`docs/runbooks/backpack_migration.md`)  
-  Outline phased rollout, monitoring checkpoints, success/failure criteria, and rollback triggers.
-- [x] **T6.3 Example Script** (`examples/backpack_native_demo.py`)  
-  Demonstrate public + private subscriptions, logging, and error handling with feature flag enabled.
-- [x] **T6.4 Deprecation Checklist** (`docs/migrations/backpack_ccxt.md`)  
-  Track clean-up tasks for ccxt scaffolding once native feed reaches GA.
+- [ ] 4. Normalize Backpack market data for downstream consumers
+- [ ] 4.1 Hydrate symbol metadata and maintain normalized mappings
+  - Fetch market definitions and classify instrument types for spot and perpetual products.
+  - Cache normalized-to-native symbol relationships for FeedHandler lookups.
+  - Expose mapping utilities ensuring symmetry between normalized and exchange codes.
+  - _Requirements: R4.1_
 
-## Success Criteria
-- Native feed achieves parity with ccxt path for trades and order book data while adding private channel support.
-- ED25519 authentication consistently succeeds with accurate error reporting for invalid keys.
-- Proxy-aware transports reuse existing infrastructure without regressing other exchanges.
-- Automated tests (unit + integration) cover critical flows with deterministic fixtures running in CI.
-- Operators can enable the feature flag, follow documentation, and monitor health signals during rollout.
+- [ ] 4.2 Translate trade and order book flows into standard data objects
+  - Parse trade payloads with Decimal precision and attach exchange timestamps.
+  - Reconcile order book snapshots and deltas while preserving sequence guarantees.
+  - Emit normalized events through existing callback contracts.
+  - _Requirements: R4.2_
+
+- [ ] 4.3 Guard against malformed payloads with resilient handling
+  - Detect schema mismatches or missing fields before dispatching events.
+  - Log structured warnings identifying the offending channel and symbol.
+  - Drop invalid messages without triggering fallback parsers.
+  - _Requirements: R4.3_
+
+- [ ] 5. Implement secure ED25519 authentication for private channels
+- [ ] 5.1 Generate deterministic signatures and headers
+  - Produce Base64-encoded ED25519 signatures using microsecond timestamps.
+  - Package authentication headers with window constraints and optional passphrase handling.
+  - Provide validation helpers highlighting incorrect key material or clock drift.
+  - _Requirements: R5.1, R5.2_
+
+- [ ] 5.2 Sustain private channel sessions with replay protection
+  - Send authenticated WebSocket frames during session startup and resend after reconnects.
+  - Rotate timestamps within the configured window while sessions remain active.
+  - Surface explicit errors when verification fails and trigger controlled retries.
+  - _Requirements: R5.2, R5.3_
+
+- [ ] 6. Embed observability, testing, and operator guidance
+- [ ] 6.1 Expand metrics and health reporting for Backpack
+  - Track reconnects, authentication failures, parser issues, and proxy rotations.
+  - Evaluate feed health based on snapshot freshness and stream cadence thresholds.
+  - Expose snapshots suitable for dashboards and alerting workflows.
+  - _Requirements: R6.1_
+
+- [ ] 6.2 Build automated coverage across unit and integration flows
+  - Create deterministic unit tests for configuration, auth signatures, symbol mapping, and routing.
+  - Exercise integration paths covering proxy usage, snapshot/delta coherence, and private subscriptions.
+  - Ensure suites run without mocks by leveraging fixtures and sandbox-safe payloads.
+  - _Requirements: R6.1_
+
+- [x] 6.3 Deliver operator-facing documentation and migration support
+  - Document native setup steps, proxy expectations, and health verification procedures.
+  - Publish migration guidance confirming retirement of the ccxt pathway.
+  - Provide runnable examples showcasing public and private channel usage.
+  - _Requirements: R6.2, R6.3_

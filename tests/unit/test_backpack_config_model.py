@@ -67,3 +67,8 @@ def test_public_only_config_defaults():
     assert config.auth is None
     assert config.rest_endpoint == "https://api.backpack.exchange"
     assert config.ws_endpoint == "wss://ws.backpack.exchange"
+
+
+def test_rejects_legacy_native_enabled_field():
+    with pytest.raises(ValueError, match="no longer supported"):
+        BackpackConfig(native_enabled=True)

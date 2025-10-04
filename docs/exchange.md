@@ -52,9 +52,8 @@ duplication.
 ### Backpack Native Feed
 
 Backpack now ships with a first-party adapter located under
-`cryptofeed/exchanges/backpack`. Enable it by setting the
-`CRYPTOFEED_BACKPACK_NATIVE` environment variable to `true`. The native feed
-provides:
+`cryptofeed/exchanges/backpack`. The native feed is enabled by default and
+replaces the legacy ccxt implementation. It provides:
 
 - Pydantic-backed configuration (`BackpackConfig`) with ED25519 key
   normalization and sandbox/proxy toggles.
@@ -65,9 +64,9 @@ provides:
 - Built-in metrics via `BackpackMetrics` and health evaluation helpers exposed
   through `BackpackFeed.health()`.
 
-See `docs/exchanges/backpack.md` for setup instructions, observability guidance,
-and migration steps from the ccxt integration. Historical details for the ccxt
-MVP remain in `docs/specs/backpack_ccxt.md`.
+See `docs/exchanges/backpack.md` for setup instructions and observability
+guidance. Historical details for the ccxt MVP remain in
+`docs/specs/backpack_ccxt.md`.
 
 #### Example: Binance via ccxt/ccxt.pro
 

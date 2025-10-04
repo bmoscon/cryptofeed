@@ -1,5 +1,8 @@
 # Backpack Exchange Integration (ccxt/ccxt.pro MVP)
 
+> **Archived:** The ccxt-based Backpack adapter was removed in the October 2025
+> release. This document is preserved for historical reference only.
+
 ## Objectives
 
 - Provide a drop-in `CcxtBackpackFeed` that follows Cryptofeed’s SOLID/KISS architecture.

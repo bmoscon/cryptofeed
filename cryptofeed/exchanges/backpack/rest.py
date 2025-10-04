@@ -35,10 +35,6 @@ class BackpackRestClient:
         self._conn: HTTPAsyncConn = factory()
         self._closed = False
 
-        if self._config.proxies and self._config.proxies.url:
-            # Ensure override proxy is respected for the entire session
-            self._conn.proxy = self._config.proxies.url
-
     async def close(self) -> None:
         if not self._closed:
             await self._conn.close()

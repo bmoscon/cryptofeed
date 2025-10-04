@@ -7,6 +7,7 @@ import pytest
 from cryptofeed.defines import L2_BOOK, TRADES
 from cryptofeed.exchanges.backpack.config import BackpackConfig
 from cryptofeed.exchanges.backpack.feed import BackpackFeed
+from cryptofeed.proxy import ProxyConfig, ProxySettings, get_proxy_injector, init_proxy_system
 
 
 class StubRestClient:
@@ -62,11 +63,6 @@ class StubWsSession:
         self.closed = True
 
 
-def test_feature_flag_disabled_raises():
-    with pytest.raises(RuntimeError):
-        BackpackFeed(feature_flag_enabled=False, symbols=["BTC-USDT"], channels=[TRADES])
-
-
 @pytest.mark.asyncio
 async def test_feed_subscribe_initializes_session():
     rest = StubRestClient()
@@ -75,7 +71,6 @@ async def test_feed_subscribe_initializes_session():
 
     feed = BackpackFeed(
         config=BackpackConfig(),
-        feature_flag_enabled=True,
         rest_client_factory=lambda cfg: rest,
         ws_session_factory=lambda cfg: ws,
         symbol_service=symbols,
@@ -100,7 +95,6 @@ async def test_feed_shutdown_closes_clients():
     ws = StubWsSession()
 
     feed = BackpackFeed(
-        feature_flag_enabled=True,
         rest_client_factory=lambda cfg: rest,
         ws_session_factory=lambda cfg: ws,
         symbol_service=StubSymbolService(),
@@ -115,3 +109,28 @@ async def test_feed_shutdown_closes_clients():
 
     assert rest.closed is True
     assert ws.closed is True
+
+
+def test_feed_applies_proxy_override():
+    init_proxy_system(ProxySettings(enabled=True))
+
+    config = BackpackConfig(proxies=ProxyConfig(url="socks5://override-proxy:1080"))
+    rest = StubRestClient()
+    ws = StubWsSession()
+    feed = BackpackFeed(
+        config=config,
+        rest_client_factory=lambda cfg: rest,
+        ws_session_factory=lambda cfg: ws,
+        symbol_service=StubSymbolService(),
+        symbols=["BTC-USDT"],
+        channels=[TRADES],
+    )
+
+    injector = get_proxy_injector()
+    assert injector is not None
+    proxies = injector.settings.exchanges.get("backpack")
+    assert proxies is not None
+    assert proxies.http is not None and proxies.http.url == "socks5://override-proxy:1080"
+    assert proxies.websocket is not None and proxies.websocket.url == "socks5://override-proxy:1080"
+
+    init_proxy_system(ProxySettings(enabled=False))

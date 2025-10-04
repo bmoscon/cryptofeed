@@ -131,8 +131,14 @@ class FeedHandler:
             newly instantiated object
         """
         if isinstance(feed, str):
-            if feed in EXCHANGE_MAP:
-                self.feeds.append((EXCHANGE_MAP[feed](config=self.config, **kwargs)))
+            feed_key = feed.upper()
+            if feed_key == "BACKPACK_CCXT":
+                raise ValueError(
+                    "Backpack ccxt integration has been removed. Configure the native 'BACKPACK' feed instead."
+                )
+
+            if feed_key in EXCHANGE_MAP:
+                self.feeds.append((EXCHANGE_MAP[feed_key](config=self.config, **kwargs)))
             else:
                 raise ValueError("Invalid feed specified")
         else:

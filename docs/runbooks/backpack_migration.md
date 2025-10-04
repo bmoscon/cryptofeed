@@ -1,51 +1,57 @@
-# Backpack Native Feed Migration Runbook
+# Backpack Native Feed Verification Runbook
 
 ## Goals
-- Transition production workloads from `CcxtBackpackFeed` to the native `BackpackFeed` implementation.
-- Preserve downstream data fidelity (trades + L2) while activating ED25519 private channels.
-- Capture telemetry that confirms healthy operation (snapshots fresh, no auth failures).
+- Confirm native `BackpackFeed` operation following removal of the legacy
+  `CcxtBackpackFeed` adapter.
+- Validate ED25519 authentication, proxy routing, and normalized data flow.
+- Ensure observability dashboards and alerts cover the native feed metrics.
 
 ## Prerequisites
-- Release including the native modules and `CRYPTOFEED_BACKPACK_NATIVE` feature flag.
-- Operators aware of new configuration surface (ED25519 credentials, proxy overrides, metrics endpoints).
-- Access to recorded fixtures for preflight validation (
-  `tests/fixtures/backpack/`).
+- Deploy a release dated October 2025 or later (native feed registered by
+  default).
+- Provide ED25519 credentials (API key, public key, private seed, optional
+  passphrase) via `BackpackConfig`.
+- Configure proxy settings globally or through `BackpackConfig.proxies` if
+  exchange-specific overrides are required.
+- Access to recorded fixtures (`tests/fixtures/backpack/`) for dry-run testing.
 
-## Phases
-1. **Dry Run (Sandbox)**
-   - Enable feature flag in a staging or sandbox environment.
-   - Run integration tests (`pytest tests/integration/test_backpack_native.py`).
-   - Exercise `tools/backpack_auth_check.py` against staging credentials.
+## Verification Steps
+1. **Sandbox Validation**
+   - Run `pytest tests/integration/test_backpack_native.py` against fixtures or
+     sandbox endpoints.
+   - Execute `python -m tools.backpack_auth_check` with staged credentials to
+     confirm key format and timestamp window alignment.
 
-2. **Shadow Mode**
-   - Enable native feed in read-only `FeedHandler` instance.
-   - Compare metrics snapshots (`feed.metrics_snapshot()`) with ccxt path.
-   - Monitor `feed.health().healthy` for at least 30 minutes.
+2. **Staging Readiness**
+   - Launch a FeedHandler instance with `BackpackFeed` configured via
+     `BackpackConfig`.
+   - Inspect `feed.metrics_snapshot()` for message throughput and absence of
+     errors.
+   - Call `feed.health(max_snapshot_age=30)` and verify `status == "healthy"`.
 
-3. **Primary Cutover**
-   - Flip feature flag to `true` in production deployment.
-   - Scale out FeedHandler instances gradually (10%, 50%, 100%).
-   - Monitor:
-     - `ws_errors`, `auth_failures`, `dropped_messages` (should remain zero).
-     - Snapshot age (`symbol_snapshot_age`) < 30s.
-     - Application-specific latency/error dashboards.
+3. **Production Rollout**
+   - Deploy updated configuration referencing `BACKPACK` (no feature flag
+     required).
+   - Monitor key metrics: `backpack.ws.reconnects`, `backpack.ws.auth_failures`,
+     `backpack.parser.errors`, and proxy rotation counters.
+   - Validate downstream consumers receive normalized symbols (`BTC-USDT`) and
+     consistent sequencing.
 
-4. **Stabilisation**
-   - Continue tracking metrics for 24 hours.
-   - Capture post-cutover feedback from downstream consumers.
-   - If anomalies detected, revert feature flag to `false` and re-queue investigation (see rollback).
-
-## Rollback
-- Toggle `CRYPTOFEED_BACKPACK_NATIVE=false` and redeploy.
-- Restart FeedHandler processes to ensure `EXCHANGE_MAP` rebinds to ccxt feed.
-- Document failure indicators (logs, metrics) in `docs/migrations/backpack_ccxt.md`.
+## Incident Response
+- If persistent auth failures occur, inspect ED25519 key material and ensure
+  system clocks are synchronized (microsecond precision required).
+- For proxy-related disconnects, review proxy injector health metrics and
+  rotate pool entries as documented in `docs/proxy/runbooks`.
+- In case of severe regression, disable Backpack subscriptions temporarily (do
+  not revert to ccxt) and engage exchange support while analysing captured
+  payloads.
 
 ## Success Criteria
-- `BackpackFeed.health().healthy` remains `True` for 99% of checks.
-- No increase in downstream error rate for Backpack pipelines.
-- Private channel consumers receive authenticated updates with correct sequencing.
+- `BackpackFeed.health().healthy` reports `True` across observation windows.
+- No increase in downstream error rates or alert volume.
+- Private channel callbacks fire with valid ED25519 signatures and timestamps.
 
-## Post-Migration Tasks
-- Update operator runbooks to remove ccxt references.
-- Remove redundant ccxt fixtures/tests after GA (tracked in `docs/migrations/backpack_ccxt.md`).
-- Communicate completion to stakeholders.
+## References
+- `docs/exchanges/backpack.md` – configuration, observability, and proxy
+  guidance.
+- `docs/migrations/backpack_ccxt.md` – historical record of ccxt deprecation.

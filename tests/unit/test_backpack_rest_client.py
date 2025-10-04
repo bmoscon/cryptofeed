@@ -6,7 +6,6 @@ import pytest
 
 from cryptofeed.exchanges.backpack.config import BackpackConfig
 from cryptofeed.exchanges.backpack.rest import BackpackRestClient, BackpackRestError
-from cryptofeed.proxy import ProxyConfig
 
 
 class StubHTTPAsyncConn:
@@ -75,18 +74,6 @@ async def test_fetch_order_book_invalid_payload():
     client = BackpackRestClient(config, http_conn_factory=lambda: conn)
     with pytest.raises(BackpackRestError):
         await client.fetch_order_book(native_symbol="BTC_USDT", depth=10)
-
-
-@pytest.mark.asyncio
-async def test_proxy_override_applied():
-    conn = StubHTTPAsyncConn()
-    config = BackpackConfig(proxies=ProxyConfig(url="socks5://example:1080"))
-    url = f"{config.rest_endpoint}/api/v1/markets"
-    conn.queue_response(url, "[]")
-
-    client = BackpackRestClient(config, http_conn_factory=lambda: conn)
-    assert conn.proxy == "socks5://example:1080"
-    await client.fetch_markets()
 
 
 @pytest.mark.asyncio

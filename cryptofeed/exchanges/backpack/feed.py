@@ -9,6 +9,7 @@ from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BACKPACK, L2_BOOK, TRADES, TICKER
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol, Symbols
+from cryptofeed.proxy import ConnectionProxies, get_proxy_injector
 
 from .adapters import BackpackOrderBookAdapter, BackpackTickerAdapter, BackpackTradeAdapter
 from .auth import BackpackAuthHelper
@@ -40,16 +41,13 @@ class BackpackFeed(Feed):
         self,
         *,
         config: Optional[BackpackConfig] = None,
-        feature_flag_enabled: bool = True,
         rest_client_factory=None,
         ws_session_factory=None,
         symbol_service: Optional[BackpackSymbolService] = None,
         **kwargs,
     ) -> None:
-        if not feature_flag_enabled:
-            raise RuntimeError("Native Backpack feed is disabled. Set feature_flag_enabled=True to opt-in.")
-
         self.config = config or BackpackConfig()
+        self._apply_proxy_override()
         Symbols.set(self.id, {}, {})
         self.metrics = BackpackMetrics()
         self._rest_client_factory = rest_client_factory or (lambda cfg: BackpackRestClient(cfg))
@@ -171,6 +169,22 @@ class BackpackFeed(Feed):
     def health(self, *, max_snapshot_age: float = 60.0) -> BackpackHealthReport:
         """Evaluate feed health based on current metrics."""
         return evaluate_health(self.metrics, max_snapshot_age=max_snapshot_age)
+
+    def _apply_proxy_override(self) -> None:
+        proxies = self.config.proxies
+        if not proxies:
+            return
+
+        injector = get_proxy_injector()
+        if injector is None:
+            return
+
+        if not injector.settings.enabled:
+            injector.settings.enabled = True
+
+        exchanges = dict(injector.settings.exchanges)
+        exchanges[self.config.exchange_id] = ConnectionProxies(http=proxies, websocket=proxies)
+        injector.settings.exchanges = exchanges
 
     # ------------------------------------------------------------------
     # Override connect to use Backpack session
