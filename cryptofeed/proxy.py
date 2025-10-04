@@ -20,6 +20,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime, UTC
 from typing import Optional, Literal, Dict, Any, Tuple, List, Union
 from urllib.parse import urlparse
+from weakref import ref as weakref_ref
+from weakref import ReferenceType
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from pydantic_settings import BaseSettings
@@ -422,11 +424,47 @@ class ProxyInjector:
     
     def __init__(self, proxy_settings: ProxySettings):
         self.settings = proxy_settings
+        self._pool_cache: Dict[int, Tuple[ReferenceType[ProxyConfig], ProxyPool]] = {}
+
+    def _get_proxy_pool(self, proxy_config: ProxyConfig) -> ProxyPool:
+        """Get or create a ProxyPool for the given proxy configuration."""
+        key = id(proxy_config)
+        cached = self._pool_cache.get(key)
+
+        if cached:
+            proxy_ref, pool = cached
+            if proxy_ref() is proxy_config:
+                return pool
+            if proxy_ref() is None:
+                self._pool_cache.pop(key, None)
+
+        pool = ProxyPool(proxy_config.pool)
+
+        def _cleanup(_ref):
+            self._pool_cache.pop(key, None)
+
+        self._pool_cache[key] = (weakref_ref(proxy_config, _cleanup), pool)
+        return pool
+
+    def _resolve_proxy_url(self, proxy_config: ProxyConfig) -> Optional[str]:
+        """Resolve concrete proxy URL, selecting from pools when configured."""
+        if proxy_config is None:
+            return None
+
+        if proxy_config.pool:
+            pool = self._get_proxy_pool(proxy_config)
+            selected_proxy = pool.select_proxy()
+            return selected_proxy.url
+
+        return proxy_config.url
     
     def get_http_proxy_url(self, exchange_id: str) -> Optional[str]:
         """Get HTTP proxy URL for exchange if configured."""
         proxy_config = self.settings.get_proxy(exchange_id, 'http')
-        return proxy_config.url if proxy_config else None
+        if not proxy_config:
+            return None
+
+        return self._resolve_proxy_url(proxy_config)
     
     def apply_http_proxy(self, session: aiohttp.ClientSession, exchange_id: str) -> None:
         """Apply HTTP proxy to aiohttp session if configured."""
@@ -443,9 +481,14 @@ class ProxyInjector:
             return await websockets.connect(url, **kwargs)
 
         connect_kwargs = dict(kwargs)
-        scheme = proxy_config.scheme
+        resolved_proxy_url = self._resolve_proxy_url(proxy_config)
 
-        log_proxy_usage(transport='websocket', exchange_id=exchange_id, proxy_url=proxy_config.url)
+        if not resolved_proxy_url:
+            return await websockets.connect(url, **kwargs)
+
+        scheme = urlparse(resolved_proxy_url).scheme
+
+        log_proxy_usage(transport='websocket', exchange_id=exchange_id, proxy_url=resolved_proxy_url)
 
         if scheme in ('socks4', 'socks5'):
             try:
@@ -460,7 +503,7 @@ class ProxyInjector:
             headers.setdefault('Proxy-Connection', 'keep-alive')
             connect_kwargs[header_key] = headers
 
-        connect_kwargs['proxy'] = proxy_config.url
+        connect_kwargs['proxy'] = resolved_proxy_url
         return await websockets.connect(url, **connect_kwargs)
 
 

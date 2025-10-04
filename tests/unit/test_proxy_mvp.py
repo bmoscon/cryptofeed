@@ -18,6 +18,8 @@ from cryptofeed.connection import HTTPAsyncConn
 from cryptofeed.proxy import (
     ProxyConfig,
     ConnectionProxies,
+    ProxyPoolConfig,
+    ProxyUrlConfig,
     ProxySettings,
     ProxyInjector,
     init_proxy_system,
@@ -255,7 +257,34 @@ class TestProxyInjector:
         # Should return None when disabled
         proxy_url = injector.get_http_proxy_url("binance")
         assert proxy_url is None
-    
+
+    def test_get_http_proxy_url_from_pool(self):
+        """Ensure HTTP proxy URLs are resolved from configured pools."""
+        pool_config = ProxyPoolConfig(
+            strategy="round_robin",
+            proxies=[
+                ProxyUrlConfig(url="http://pool-proxy-1:8080"),
+                ProxyUrlConfig(url="http://pool-proxy-2:8080"),
+            ],
+        )
+
+        settings = ProxySettings(
+            enabled=True,
+            exchanges={
+                "binance": ConnectionProxies(
+                    http=ProxyConfig(pool=pool_config)
+                )
+            }
+        )
+
+        injector = ProxyInjector(settings)
+
+        first = injector.get_http_proxy_url("binance")
+        second = injector.get_http_proxy_url("binance")
+
+        assert first == "http://pool-proxy-1:8080"
+        assert second == "http://pool-proxy-2:8080"
+
     @pytest.mark.asyncio
     async def test_create_websocket_connection_no_proxy(self, settings_with_proxies):
         """Test WebSocket connection creation without proxy."""
@@ -272,7 +301,7 @@ class TestProxyInjector:
             # Should call regular websockets.connect
             mock_connect.assert_called_once_with("wss://example.com")
             assert result is not None
-    
+
     @pytest.mark.asyncio 
     async def test_create_websocket_connection_socks_proxy(self, settings_with_proxies):
         """Test WebSocket connection creation with SOCKS proxy."""
@@ -289,6 +318,41 @@ class TestProxyInjector:
             assert args == ("wss://example.com",)
             assert kwargs["proxy"] == "socks5://default:1081"
             assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_create_websocket_connection_with_pool(self):
+        """Ensure WebSocket connections resolve proxies from pools."""
+        websocket_pool = ProxyPoolConfig(
+            strategy="round_robin",
+            proxies=[
+                ProxyUrlConfig(url="http://ws-proxy-1:8080"),
+                ProxyUrlConfig(url="http://ws-proxy-2:8080"),
+            ],
+        )
+
+        settings = ProxySettings(
+            enabled=True,
+            exchanges={
+                "delta": ConnectionProxies(
+                    websocket=ProxyConfig(pool=websocket_pool)
+                )
+            }
+        )
+
+        injector = ProxyInjector(settings)
+
+        async def mock_connect_coroutine(*args, **kwargs):
+            return AsyncMock()
+
+        with patch('cryptofeed.proxy.websockets.connect', side_effect=mock_connect_coroutine) as mock_connect:
+            await injector.create_websocket_connection("wss://delta.example.com", "delta")
+
+            mock_connect.assert_called_once()
+            args, kwargs = mock_connect.call_args
+            assert args == ("wss://delta.example.com",)
+            assert kwargs["proxy"] == "http://ws-proxy-1:8080"
+            headers = kwargs.get("extra_headers") or kwargs.get("additional_headers")
+            assert headers["Proxy-Connection"] == "keep-alive"
 
     @pytest.mark.asyncio
     async def test_create_websocket_connection_http_proxy(self):
