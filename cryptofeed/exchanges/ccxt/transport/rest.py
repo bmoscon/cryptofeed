@@ -40,7 +40,7 @@ class CcxtRestTransport:
         self._authenticated = False
         self._max_retries = max(1, max_retries)
         self._base_retry_delay = max(0.0, base_retry_delay)
-        self._log = logger or logging.getLogger('feedhandler')
+        self._log = logger or logging.getLogger(__name__)
         self._sleep = asyncio.sleep
 
     async def __aenter__(self) -> "CcxtRestTransport":

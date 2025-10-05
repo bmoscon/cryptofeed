@@ -6,7 +6,7 @@ from threading import RLock
 from typing import Dict
 
 
-LOG = logging.getLogger("feedhandler")
+LOG = logging.getLogger(__name__)
 _usage: Dict[str, int] = {}
 _lock = RLock()
 
@@ -39,4 +39,3 @@ def reset_shim_usage() -> None:
 
 
 __all__ = ["record_shim_use", "get_shim_usage", "reset_shim_usage"]
-
