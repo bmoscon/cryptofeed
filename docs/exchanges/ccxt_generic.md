@@ -75,6 +75,14 @@ def normalize_timestamp(payload):
 5. Verify no code imports legacy shims (`cryptofeed.exchanges.ccxt_feed`, `ccxt_config`, `ccxt_transport`, `ccxt_adapters`).
 6. Run `pytest tests/unit/test_ccxt_* tests/integration/test_ccxt_generic.py -q` to verify coverage.
 
+## Monitoring Legacy Shims
+- Shim imports now trigger a `feedhandler` warning and increment counters exposed via `cryptofeed.exchanges.get_shim_usage()`.
+- Run `python - <<'PY'
+from cryptofeed.exchanges import get_shim_usage
+print(get_shim_usage())
+PY` to inspect downstream usage during migration reviews.
+- Remove remaining shims once counters stay at zero across release cycles (spec `ccxt-generic-pro-exchange` task 7.4).
+
 ## Testing Strategy
 - **Unit** – `tests/unit/test_ccxt_adapter_registry.py`, `tests/unit/test_ccxt_feed_config_validation.py`, `tests/unit/test_ccxt_generic_feed.py`.
 - **Integration** – `tests/integration/test_ccxt_generic.py` validates REST snapshots, WebSocket trades, proxy routing, and REST fallback.

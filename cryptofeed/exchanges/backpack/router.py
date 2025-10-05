@@ -1,16 +1,17 @@
 """Backpack message router for translating websocket frames into callbacks."""
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any, Awaitable, Callable, Dict, Optional
+from typing import Any, Awaitable, Callable, Optional
+
+from cryptofeed.exchanges.native.router import NativeMessageRouter
 
 from .metrics import BackpackMetrics
 
 LOG = logging.getLogger("feedhandler")
 
 
-class BackpackMessageRouter:
+class BackpackMessageRouter(NativeMessageRouter):
     """Dispatch Backpack websocket messages to registered adapters and callbacks."""
 
     def __init__(
@@ -24,6 +25,7 @@ class BackpackMessageRouter:
         ticker_callback: Optional[Callable[[Any, float], Awaitable[None]]] = None,
         metrics: Optional[BackpackMetrics] = None,
     ) -> None:
+        super().__init__(metrics=metrics, logger=LOG)
         self._trade_adapter = trade_adapter
         self._order_book_adapter = order_book_adapter
         self._trade_callback = trade_callback
@@ -31,28 +33,12 @@ class BackpackMessageRouter:
         self._ticker_adapter = ticker_adapter
         self._ticker_callback = ticker_callback
         self._metrics = metrics
-        self._handlers: Dict[str, Callable[[dict], Awaitable[None]]] = {
-            "trade": self._handle_trade,
-            "trades": self._handle_trade,
-            "l2": self._handle_order_book,
-            "orderbook": self._handle_order_book,
-            "l2_snapshot": self._handle_order_book,
-            "l2_update": self._handle_order_book,
-            "ticker": self._handle_ticker,
-        }
-
-    async def dispatch(self, message: str | dict) -> None:
-        payload = json.loads(message) if isinstance(message, str) else message
-        channel = payload.get("channel") or payload.get("type")
-        if not channel:
-            self._drop_payload("missing channel", payload)
-            return
-
-        handler = self._handlers.get(channel)
-        if handler:
-            await handler(payload)
-        else:
-            self._drop_payload(f"unknown channel '{channel}'", payload)
+        self.register_handlers(["trade", "trades"], self._handle_trade)
+        self.register_handlers(
+            ["l2", "orderbook", "l2_snapshot", "l2_update"],
+            self._handle_order_book,
+        )
+        self.register_handler("ticker", self._handle_ticker)
 
     async def _handle_trade(self, payload: dict) -> None:
         symbol = payload.get("symbol") or payload.get("topic")
@@ -139,9 +125,3 @@ class BackpackMessageRouter:
         if not self._ticker_callback:
             return
         await self._ticker_callback(ticker, timestamp)
-
-    def _drop_payload(self, reason: str, payload: dict) -> None:
-        if self._metrics:
-            self._metrics.record_parser_error()
-            self._metrics.record_dropped_message()
-        LOG.warning("Backpack router dropped payload: %s | payload=%s", reason, payload)

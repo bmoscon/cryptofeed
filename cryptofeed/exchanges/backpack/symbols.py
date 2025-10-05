@@ -1,102 +1,62 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Iterable, Mapping, Optional
 
+from cryptofeed.exchanges.native.symbols import NativeMarket, NativeSymbolService
 
 @dataclass(frozen=True, slots=True)
-class BackpackMarket:
+class BackpackMarket(NativeMarket):
     """Normalized Backpack market metadata."""
 
-    normalized_symbol: str
-    native_symbol: str
-    instrument_type: str
-    price_precision: Optional[int]
-    amount_precision: Optional[int]
-    min_amount: Optional[Decimal]
+    instrument_type: str = "SPOT"
+    price_precision: Optional[int] = None
+    amount_precision: Optional[int] = None
+    min_amount: Optional[Decimal] = None
 
 
-class BackpackSymbolService:
-    """Loads and caches Backpack market metadata for symbol normalization."""
+class BackpackSymbolService(NativeSymbolService):
+    """Backpack-specific symbol loader built atop the native toolkit."""
 
-    def __init__(self, *, rest_client, ttl_seconds: int = 900):
-        self._rest_client = rest_client
-        self._ttl = timedelta(seconds=ttl_seconds)
-        self._lock = asyncio.Lock()
-        self._markets: Dict[str, BackpackMarket] = {}
-        self._native_to_normalized: Dict[str, str] = {}
-        self._expires_at: Optional[datetime] = None
+    market_class = BackpackMarket
 
-    async def ensure(self, *, force: bool = False) -> None:
-        async with self._lock:
-            now = datetime.now(timezone.utc)
-            if not force and self._expires_at and now < self._expires_at and self._markets:
-                return
+    def __init__(self, *, rest_client, ttl_seconds: int = 900) -> None:
+        super().__init__(rest_client=rest_client, ttl_seconds=ttl_seconds)
 
-            raw_markets = await self._rest_client.fetch_markets()
-            self._markets, self._native_to_normalized = self._parse_markets(raw_markets)
-            self._expires_at = now + self._ttl
+    def _include_market(self, entry: Mapping[str, object]) -> bool:
+        status = str(entry.get("status", "")).upper()
+        return status in {"TRADING", "ENABLED", ""}
 
-    def get_market(self, symbol: str) -> BackpackMarket:
-        try:
-            return self._markets[symbol]
-        except KeyError as exc:
-            raise KeyError(f"Unknown Backpack symbol: {symbol}") from exc
+    def _normalize_symbol(self, native_symbol: str, entry: Mapping[str, object]) -> str:  # noqa: ARG002
+        return native_symbol.replace("_", "-").replace("/", "-")
 
-    def native_symbol(self, symbol: str) -> str:
-        return self.get_market(symbol).native_symbol
+    def _instrument_type(self, entry: Mapping[str, object]) -> Optional[str]:
+        market_type = str(entry.get("type", "spot")).upper()
+        if market_type == "PERPETUAL":
+            return "PERPETUAL"
+        if market_type in {"FUTURE", "FUTURES"}:
+            return "FUTURES"
+        return "SPOT"
 
-    def normalized_symbol(self, native_symbol: str) -> str:
-        try:
-            return self._native_to_normalized[native_symbol]
-        except KeyError as exc:
-            raise KeyError(f"Unknown Backpack native symbol: {native_symbol}") from exc
+    def _build_market(
+        self,
+        entry: Mapping[str, object],
+        normalized_symbol: str,
+        native_symbol: str,
+    ) -> BackpackMarket:
+        precision = entry.get("precision", {}) if isinstance(entry, Mapping) else {}
+        limits = entry.get("limits", {}) if isinstance(entry, Mapping) else {}
+        amount_limits = limits.get("amount", {}) if isinstance(limits, Mapping) else {}
+        min_amount_raw = amount_limits.get("min") if isinstance(amount_limits, Mapping) else None
+        min_amount = Decimal(str(min_amount_raw)) if min_amount_raw is not None else None
 
-    def all_markets(self) -> Iterable[BackpackMarket]:
-        return self._markets.values()
-
-    def clear(self) -> None:
-        self._markets = {}
-        self._native_to_normalized = {}
-        self._expires_at = None
-
-    @staticmethod
-    def _parse_markets(markets: Iterable[dict]) -> Tuple[Dict[str, BackpackMarket], Dict[str, str]]:
-        parsed: Dict[str, BackpackMarket] = {}
-        native_map: Dict[str, str] = {}
-        for entry in markets:
-            if entry.get('status', '').upper() not in {'TRADING', 'ENABLED', ''}:
-                continue
-
-            native_symbol = entry['symbol']
-            normalized = native_symbol.replace('_', '-').replace('/', '-')
-            market_type = entry.get('type', 'spot').upper()
-            if market_type == 'PERPETUAL':
-                instrument_type = 'PERPETUAL'
-            elif market_type in {'FUTURE', 'FUTURES'}:
-                instrument_type = 'FUTURES'
-            else:
-                instrument_type = 'SPOT'
-
-            precision = entry.get('precision', {})
-            limits = entry.get('limits', {})
-            amount_limits = limits.get('amount', {}) if isinstance(limits, dict) else {}
-            min_amount_raw = amount_limits.get('min')
-            min_amount = None
-            if min_amount_raw is not None:
-                min_amount = Decimal(str(min_amount_raw))
-
-            market = BackpackMarket(
-                normalized_symbol=normalized,
-                native_symbol=native_symbol,
-                instrument_type=instrument_type,
-                price_precision=precision.get('price'),
-                amount_precision=precision.get('amount'),
-                min_amount=min_amount,
-            )
-            parsed[normalized] = market
-            native_map[native_symbol] = normalized
-        return parsed, native_map
+        return BackpackMarket(
+            normalized_symbol=normalized_symbol,
+            native_symbol=native_symbol,
+            instrument_type=self._instrument_type(entry) or "SPOT",
+            price_precision=precision.get("price") if isinstance(precision, Mapping) else None,
+            amount_precision=precision.get("amount") if isinstance(precision, Mapping) else None,
+            min_amount=min_amount,
+            metadata=entry,
+        )

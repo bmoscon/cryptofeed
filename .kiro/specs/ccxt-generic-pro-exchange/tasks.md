@@ -97,3 +97,15 @@
   - _Requirements: R5.3_
 - [x] 7.3 Update documentation/changelog to record shim removal and provide migration reminders
   - _Requirements: R5.3_
+- [x] 7.4 Monitor downstream adoption and remove temporary shims introduced for other exchanges as they migrate (ongoing)
+  - _Requirements: R5.3_
+
+## Phase 8 – Native Exchange Blueprint (Backpack extraction)
+- [x] 8.1 Identify reusable components in `cryptofeed/exchanges/backpack/` (auth helper, REST/WS session mixins, metrics/health)
+  - _Requirements: R3.1, R3.3_ — see `docs/exchanges/native_exchange_blueprint.md`
+- [x] 8.2 Extract shared base helpers into a reusable native-exchange toolkit
+  - _Requirements: R3.1, R3.2_
+- [x] 8.3 Update Backpack to consume the shared toolkit (ensure tests pass)
+  - _Requirements: R4.1_
+- [x] 8.4 Document the blueprint for new native exchanges (developer guide section)
+  - _Requirements: R4.3_
