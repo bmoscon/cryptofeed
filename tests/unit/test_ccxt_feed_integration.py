@@ -20,6 +20,8 @@ from cryptofeed.defines import L2_BOOK, TRADES, BACKPACK
 from cryptofeed.feed import Feed
 from cryptofeed.types import Trade, OrderBook  # Using cryptofeed types, not custom ones
 from cryptofeed.symbols import Symbol
+from cryptofeed.exchanges.ccxt.feed import CcxtFeed
+from cryptofeed.exchanges.ccxt.adapters import CcxtTypeAdapter
 
 
 @pytest.fixture(autouse=True)
@@ -119,9 +121,6 @@ class TestCcxtFeedInheritance:
         FAILING TEST: CcxtFeed should inherit from Feed base class
         to integrate with existing cryptofeed infrastructure.
         """
-        # This will fail until we implement proper inheritance
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-        
         feed = CcxtFeed(
             exchange_id="backpack",
             symbols=["BTC-USDT"],
@@ -138,8 +137,6 @@ class TestCcxtFeedInheritance:
         
     def test_ccxt_feed_has_exchange_id(self, mock_ccxt):
         """CcxtFeed should have proper exchange ID."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-        
         feed = CcxtFeed(
             exchange_id="backpack", 
             symbols=["BTC-USDT"],
@@ -150,8 +147,6 @@ class TestCcxtFeedInheritance:
         
     def test_ccxt_feed_symbol_normalization(self, mock_ccxt):
         """CcxtFeed should normalize symbols using cryptofeed conventions."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-        
         feed = CcxtFeed(
             exchange_id="backpack",
             symbols=["BTC-USDT"],
@@ -172,8 +167,6 @@ class TestCcxtTypeAdapters:
         """
         FAILING TEST: CCXT trade data should convert to cryptofeed Trade type.
         """
-        from cryptofeed.exchanges.ccxt_adapters import CcxtTypeAdapter
-        
         ccxt_trade = {
             "symbol": "BTC/USDT",
             "side": "buy", 
@@ -201,8 +194,6 @@ class TestCcxtTypeAdapters:
         """
         FAILING TEST: CCXT order book should convert to cryptofeed OrderBook.
         """
-        from cryptofeed.exchanges.ccxt_adapters import CcxtTypeAdapter
-        
         ccxt_book = {
             "symbol": "BTC/USDT",
             "bids": [["30000", "1.5"], ["29950", "2"]],
@@ -233,7 +224,6 @@ class TestCcxtCallbackIntegration:
         """
         FAILING TEST: CcxtFeed should integrate with cryptofeed callback system.
         """
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
         from cryptofeed.callback import TradeCallback, BookCallback
         
         trades_received = []
@@ -273,8 +263,6 @@ class TestCcxtConfiguration:
         """
         FAILING TEST: CcxtFeed should parse configuration like other feeds.
         """
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-        
         config = {
             "exchange_id": "backpack",
             "symbols": ["BTC-USDT", "ETH-USDT"],
@@ -306,8 +294,6 @@ class TestCcxtFeedEndToEnd:
         """
         FAILING TEST: Complete feed lifecycle should work.
         """
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-        
         received_data = []
         
         def data_handler(data, timestamp):

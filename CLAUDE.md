@@ -27,10 +27,22 @@ Refer to `AGENTS.md` for an overview of available agent workflows and command us
 - **Dependency Inversion**: Depend on abstractions, not concretions
 
 ### KISS (Keep It Simple, Stupid)
+- Prefer well-scoped conventional commits (feat:, fix:, chore:, etc.) to keep history searchable
+- Document behavioral changes in the subject; leave refactors/docs/tests as chore/test/docs prefixes
+- Avoid multi-purpose commits—split when scope spans unrelated areas
+- Tie commits to spec/task IDs when available for traceability
+
+### KISS (Keep It Simple, Stupid)
 - Prefer simple solutions over complex ones
 - Avoid premature optimization
 - Write code that is easy to understand and maintain
 - Minimize cognitive load for future developers
+
+### Conventional Commits
+- Use `feat:`, `fix:`, `chore:`, `docs:`, etc., to label intent and surface change type quickly
+- Keep commit scope tight—one functional concern per commit, split unrelated work
+- Reference spec/task IDs when available to maintain traceability
+- Describe the user-facing behavior change in the subject; reserve details for the body if needed
 
 ### DRY (Don't Repeat Yourself)
 - Extract common functionality into reusable components

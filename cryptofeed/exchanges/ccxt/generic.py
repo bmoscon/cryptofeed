@@ -5,7 +5,7 @@ import asyncio
 import inspect
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Callable, Dict, List, Optional, Tuple, Iterable, Set
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Iterable, Set
 import sys
 
 from loguru import logger
@@ -20,7 +20,10 @@ from cryptofeed.defines import (
     TRADE_HISTORY,
     TRANSACTIONS,
 )
-from .config import CcxtExchangeContext
+from .context import CcxtExchangeContext
+
+if TYPE_CHECKING:  # pragma: no cover - import for type checking only
+    from .transport import CcxtRestTransport, CcxtWsTransport
 
 
 @dataclass(slots=True)
@@ -112,7 +115,18 @@ class CcxtMetadataCache:
             raise CcxtUnavailable(
                 f"ccxt.async_support.{self.exchange_id} unavailable"
             ) from exc
-        client = ctor(self._client_kwargs())
+        kwargs = self._client_kwargs()
+        if not kwargs:
+            client = ctor()
+        else:
+            try:
+                client = ctor(**kwargs)
+            except TypeError:
+                client = ctor()
+                try:
+                    client.__dict__.setdefault('_cryptofeed_init_kwargs', {}).update(kwargs)
+                except Exception:  # pragma: no cover - defensive fallback
+                    pass
         try:
             markets = await client.load_markets()
             self._markets = markets
@@ -147,179 +161,6 @@ class CcxtMetadataCache:
         return Decimal(str(minimum)) if minimum is not None else None
 
 
-class CcxtRestTransport:
-    """REST transport for order book snapshots."""
-
-    def __init__(
-        self,
-        cache: CcxtMetadataCache,
-        *,
-        context: Optional[CcxtExchangeContext] = None,
-        require_auth: bool = False,
-        auth_callbacks: Optional[Iterable[Callable[[Any], Any]]] = None,
-    ) -> None:
-        self._cache = cache
-        self._client: Optional[Any] = None
-        self._context = context
-        self._require_auth = require_auth
-        self._auth_callbacks = list(auth_callbacks or [])
-        self._authenticated = False
-
-    async def __aenter__(self) -> "CcxtRestTransport":
-        await self._ensure_client()
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb) -> None:  # type: ignore[override]
-        await self.close()
-
-    async def _ensure_client(self) -> Any:
-        if self._client is None:
-            try:
-                async_support = _resolve_dynamic_import()("ccxt.async_support")
-                ctor = getattr(async_support, self._cache.exchange_id)
-            except Exception as exc:  # pragma: no cover
-                raise CcxtUnavailable(
-                    f"ccxt.async_support.{self._cache.exchange_id} unavailable"
-                ) from exc
-            self._client = ctor(self._client_kwargs())
-        return self._client
-
-    def _client_kwargs(self) -> Dict[str, Any]:
-        if not self._context:
-            return {}
-        kwargs = dict(self._context.ccxt_options)
-        proxy_url = self._context.http_proxy_url
-        if proxy_url:
-            kwargs.setdefault('aiohttp_proxy', proxy_url)
-            kwargs.setdefault('proxies', {'http': proxy_url, 'https': proxy_url})
-        kwargs.setdefault('enableRateLimit', kwargs.get('enableRateLimit', True))
-        return kwargs
-
-    async def _authenticate_client(self, client: Any) -> None:
-        if not self._require_auth or self._authenticated:
-            return
-        checker = getattr(client, 'check_required_credentials', None)
-        if checker is not None:
-            try:
-                checker()
-            except Exception as exc:  # pragma: no cover - relies on ccxt error details
-                raise RuntimeError(
-                    "CCXT credentials are invalid or incomplete for REST transport"
-                ) from exc
-        for callback in self._auth_callbacks:
-            result = callback(client)
-            if inspect.isawaitable(result):
-                await result
-        self._authenticated = True
-
-    async def order_book(self, symbol: str, *, limit: Optional[int] = None) -> OrderBookSnapshot:
-        await self._cache.ensure()
-        client = await self._ensure_client()
-        await self._authenticate_client(client)
-        request_symbol = self._cache.request_symbol(symbol)
-        book = await client.fetch_order_book(request_symbol, limit=limit)
-        timestamp_raw = book.get("timestamp") or book.get("datetime")
-        timestamp = float(timestamp_raw) / 1000.0 if timestamp_raw else None
-        return OrderBookSnapshot(
-            symbol=symbol,
-            bids=[(Decimal(str(price)), Decimal(str(amount))) for price, amount in book["bids"]],
-            asks=[(Decimal(str(price)), Decimal(str(amount))) for price, amount in book["asks"]],
-            timestamp=timestamp,
-            sequence=book.get("nonce"),
-        )
-
-    async def close(self) -> None:
-        if self._client is not None:
-            await self._client.close()
-            self._client = None
-
-
-class CcxtWsTransport:
-    """WebSocket transport backed by ccxt.pro."""
-
-    def __init__(
-        self,
-        cache: CcxtMetadataCache,
-        *,
-        context: Optional[CcxtExchangeContext] = None,
-        require_auth: bool = False,
-        auth_callbacks: Optional[Iterable[Callable[[Any], Any]]] = None,
-    ) -> None:
-        self._cache = cache
-        self._client: Optional[Any] = None
-        self._context = context
-        self._require_auth = require_auth
-        self._auth_callbacks = list(auth_callbacks or [])
-        self._authenticated = False
-
-    def _ensure_client(self) -> Any:
-        if self._client is None:
-            try:
-                pro_module = _resolve_dynamic_import()("ccxt.pro")
-                ctor = getattr(pro_module, self._cache.exchange_id)
-            except Exception as exc:  # pragma: no cover
-                raise CcxtUnavailable(
-                    f"ccxt.pro.{self._cache.exchange_id} unavailable"
-                ) from exc
-            self._client = ctor(self._client_kwargs())
-        return self._client
-
-    def _client_kwargs(self) -> Dict[str, Any]:
-        if not self._context:
-            return {}
-        kwargs = dict(self._context.ccxt_options)
-        proxy_url = self._context.websocket_proxy_url or self._context.http_proxy_url
-        if proxy_url:
-            kwargs.setdefault('aiohttp_proxy', proxy_url)
-            kwargs.setdefault('proxies', {'http': proxy_url, 'https': proxy_url})
-        kwargs.setdefault('enableRateLimit', kwargs.get('enableRateLimit', True))
-        return kwargs
-
-    async def _authenticate_client(self, client: Any) -> None:
-        if not self._require_auth or self._authenticated:
-            return
-        checker = getattr(client, 'check_required_credentials', None)
-        if checker is not None:
-            try:
-                checker()
-            except Exception as exc:  # pragma: no cover
-                raise RuntimeError(
-                    "CCXT credentials are invalid or incomplete for WebSocket transport"
-                ) from exc
-        for callback in self._auth_callbacks:
-            result = callback(client)
-            if inspect.isawaitable(result):
-                await result
-        self._authenticated = True
-
-    async def next_trade(self, symbol: str) -> TradeUpdate:
-        await self._cache.ensure()
-        client = self._ensure_client()
-        await self._authenticate_client(client)
-        request_symbol = self._cache.request_symbol(symbol)
-        trades = await client.watch_trades(request_symbol)
-        if not trades:
-            raise asyncio.TimeoutError("No trades received")
-        raw = trades[-1]
-        price = Decimal(str(raw.get("p")))
-        amount = Decimal(str(raw.get("q")))
-        ts_raw = raw.get("ts") or raw.get("timestamp") or 0
-        return TradeUpdate(
-            symbol=symbol,
-            price=price,
-            amount=amount,
-            side=raw.get("side"),
-            trade_id=str(raw.get("t")),
-            timestamp=float(ts_raw) / 1_000_000.0,
-            sequence=raw.get("s"),
-        )
-
-    async def close(self) -> None:
-        if self._client is not None:
-            await self._client.close()
-            self._client = None
-
-
 class CcxtGenericFeed:
     """Co-ordinates ccxt transports and dispatches normalized events."""
 
@@ -333,8 +174,8 @@ class CcxtGenericFeed:
         websocket_enabled: bool = True,
         rest_only: bool = False,
         metadata_cache: Optional[CcxtMetadataCache] = None,
-        rest_transport_factory: Callable[[CcxtMetadataCache], CcxtRestTransport] = CcxtRestTransport,
-        ws_transport_factory: Callable[[CcxtMetadataCache], CcxtWsTransport] = CcxtWsTransport,
+        rest_transport_factory: Optional[Callable[[CcxtMetadataCache], Any]] = None,
+        ws_transport_factory: Optional[Callable[[CcxtMetadataCache], Any]] = None,
         config_context: Optional[CcxtExchangeContext] = None,
     ) -> None:
         self.exchange_id = exchange_id
@@ -350,15 +191,15 @@ class CcxtGenericFeed:
         self.snapshot_interval = snapshot_interval
         self.websocket_enabled = websocket_enabled
         self.rest_only = rest_only
-        self._authentication_callbacks: List[Callable[[Any], Any]] = []
         if self._context:
             metadata_cache = metadata_cache or CcxtMetadataCache(
                 exchange_id, context=self._context
             )
         self.cache = metadata_cache or CcxtMetadataCache(exchange_id)
-        self.rest_factory = rest_transport_factory
-        self.ws_factory = ws_transport_factory
-        self._ws_transport: Optional[CcxtWsTransport] = None
+        self._authentication_callbacks: List[Callable[[Any], Any]] = []
+        self.rest_factory = rest_transport_factory or self._create_default_rest_factory()
+        self.ws_factory = ws_transport_factory or self._create_default_ws_factory()
+        self._ws_transport = None
         self._callbacks: Dict[str, List[Callable[[Any], Any]]] = {}
         self._auth_channels = self.channels.intersection(AUTH_REQUIRED_CHANNELS)
         self._requires_authentication = bool(self._auth_channels)
@@ -402,9 +243,21 @@ class CcxtGenericFeed:
         await self.cache.ensure()
         if self._ws_transport is None:
             self._ws_transport = self._create_ws_transport()
-        for symbol in self.symbols:
-            update = await self._ws_transport.next_trade(symbol)
-            await self._dispatch(TRADES, update)
+        try:
+            for symbol in self.symbols:
+                update = await self._ws_transport.next_trade(symbol)
+                await self._dispatch(TRADES, update)
+        except CcxtUnavailable as exc:
+            self.rest_only = True
+            self.websocket_enabled = False
+            if self._ws_transport is not None:
+                await self._ws_transport.close()
+                self._ws_transport = None
+            logger.warning(
+                "ccxt feed falling back to REST",
+                exchange=self.exchange_id,
+                reason=str(exc),
+            )
 
     async def close(self) -> None:
         if self._ws_transport is not None:
@@ -438,41 +291,38 @@ class CcxtGenericFeed:
     def _create_ws_transport(self) -> CcxtWsTransport:
         return self.ws_factory(self.cache, **self._ws_transport_kwargs())
 
+    def _create_default_rest_factory(self) -> Callable[[CcxtMetadataCache], 'CcxtRestTransport']:
+        def factory(cache: CcxtMetadataCache, **kwargs: Any) -> CcxtRestTransport:
+            from .transport import CcxtRestTransport
 
-# =============================================================================
-# CCXT Exchange Builder Factory (Task 4.1)
-# =============================================================================
+            return CcxtRestTransport(cache, **kwargs)
 
-import importlib
-from typing import Type, Union, Set
-from cryptofeed.feed import Feed
-from .feed import CcxtFeed
-from .config import CcxtExchangeConfig
-from .adapters import BaseTradeAdapter, BaseOrderBookAdapter
+        return factory
 
+    def _create_default_ws_factory(self) -> Callable[[CcxtMetadataCache], 'CcxtWsTransport']:
+        def factory(cache: CcxtMetadataCache, **kwargs: Any) -> CcxtWsTransport:
+            from .transport import CcxtWsTransport
 
-class UnsupportedExchangeError(Exception):
-    """Raised when an unsupported exchange is requested."""
-    pass
+            return CcxtWsTransport(cache, **kwargs)
 
-
-def get_supported_ccxt_exchanges() -> List[str]:
-    """Get list of supported CCXT exchanges."""
-    try:
-        ccxt = _dynamic_import('ccxt')
-        exchanges = list(ccxt.exchanges)
-        return sorted(exchanges)
-    except ImportError:
-        logger.warning("CCXT not available - returning empty exchange list")
-        return []
-
+        return factory
 
 __all__ = [
     "CcxtUnavailable",
     "CcxtMetadataCache",
-    "CcxtRestTransport",
-    "CcxtWsTransport",
     "CcxtGenericFeed",
     "OrderBookSnapshot",
     "TradeUpdate",
+    "get_supported_ccxt_exchanges",
 ]
+
+
+def get_supported_ccxt_exchanges() -> List[str]:
+    """Return sorted list of exchanges supported by the installed ccxt package."""
+    try:
+        ccxt = _dynamic_import('ccxt')
+        exchanges = list(getattr(ccxt, 'exchanges', []))
+    except ImportError:
+        logger.warning("CCXT not available - returning empty exchange list")
+        return []
+    return sorted(exchanges)

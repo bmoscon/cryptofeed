@@ -62,6 +62,9 @@ def ccxt_fake_clients(monkeypatch) -> Dict[str, List[_FakeAsyncClient]]:
     """Patch CCXT dynamic imports with deterministic fake clients."""
 
     from cryptofeed.exchanges.ccxt import generic as generic_module
+    from cryptofeed.exchanges.ccxt import transport as transport_pkg
+    from cryptofeed.exchanges.ccxt.transport import rest as rest_module
+    from cryptofeed.exchanges.ccxt.transport import ws as ws_module
 
     registry: Dict[str, List[_FakeAsyncClient]] = {"rest": [], "ws": []}
 
@@ -86,8 +89,17 @@ def ccxt_fake_clients(monkeypatch) -> Dict[str, List[_FakeAsyncClient]]:
 
     original_resolver = generic_module._resolve_dynamic_import
     original_import = generic_module._dynamic_import
+    original_rest_resolver = getattr(rest_module, "_resolve_dynamic_import", None)
+    original_ws_resolver = getattr(ws_module, "_resolve_dynamic_import", None)
+
     monkeypatch.setattr(generic_module, "_resolve_dynamic_import", lambda: importer)
     monkeypatch.setattr(generic_module, "_dynamic_import", importer)
+    if original_rest_resolver is not None:
+        monkeypatch.setattr(rest_module, "_resolve_dynamic_import", lambda: importer)
+    if original_ws_resolver is not None:
+        monkeypatch.setattr(ws_module, "_resolve_dynamic_import", lambda: importer)
+    if hasattr(transport_pkg, "_resolve_dynamic_import"):
+        monkeypatch.setattr(transport_pkg, "_resolve_dynamic_import", lambda: importer)
 
     yield registry
 

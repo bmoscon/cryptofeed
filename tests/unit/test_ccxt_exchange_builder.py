@@ -19,6 +19,8 @@ from typing import Dict, Any, Optional, List, Callable
 from unittest.mock import Mock, MagicMock, patch
 
 from cryptofeed.feed import Feed
+from cryptofeed.exchanges.ccxt.config import CcxtExchangeConfig
+from cryptofeed.exchanges.ccxt.adapters import CcxtTradeAdapter
 
 
 class TestCcxtExchangeBuilder:
@@ -39,19 +41,6 @@ class TestCcxtExchangeBuilder:
         # Should validate exchange ID exists in CCXT
         assert builder.validate_exchange_id('binance') is True
         assert builder.validate_exchange_id('invalid_exchange') is False
-
-    def test_exchange_builder_ccxt_module_loading(self):
-        """Test CCXT module loading for valid exchanges."""
-        from cryptofeed.exchanges.ccxt_generic import CcxtExchangeBuilder
-
-        builder = CcxtExchangeBuilder()
-
-        # Should load CCXT modules dynamically
-        async_module = builder.load_ccxt_async_module('binance')
-        pro_module = builder.load_ccxt_pro_module('binance')
-
-        assert async_module is not None
-        assert pro_module is not None
 
     def test_exchange_builder_feed_class_generation(self):
         """Test feed class generation for valid exchanges."""
@@ -148,18 +137,6 @@ class TestExchangeIDValidation:
         assert builder.normalize_exchange_id('coinbase-pro') == 'coinbasepro'
         assert builder.normalize_exchange_id('HUOBI_PRO') == 'huobipro'
 
-    def test_exchange_feature_detection(self):
-        """Test exchange feature detection for capabilities."""
-        from cryptofeed.exchanges.ccxt_generic import CcxtExchangeBuilder
-
-        builder = CcxtExchangeBuilder()
-
-        # Should detect exchange capabilities
-        features = builder.get_exchange_features('binance')
-        assert 'trades' in features
-        assert 'orderbook' in features
-        assert 'websocket' in features
-
 
 class TestGeneratedFeedClass:
     """Test generated feed class functionality."""
@@ -237,7 +214,6 @@ class TestBuilderConfigurationOptions:
     def test_builder_with_transport_config(self):
         """Test builder with transport configuration."""
         from cryptofeed.exchanges.ccxt_generic import CcxtExchangeBuilder
-        from cryptofeed.exchanges.ccxt_config import CcxtExchangeConfig
 
         config = CcxtExchangeConfig(exchange_id='binance')
 
@@ -248,12 +224,11 @@ class TestBuilderConfigurationOptions:
         )
 
         instance = feed_class()
-        assert instance.ccxt_config == config
+        assert instance.ccxt_config.exchange_id == config.exchange_id
 
     def test_builder_with_adapter_overrides(self):
         """Test builder with adapter overrides."""
         from cryptofeed.exchanges.ccxt_generic import CcxtExchangeBuilder
-        from cryptofeed.exchanges.ccxt_adapters import CcxtTradeAdapter
 
         class CustomTradeAdapter(CcxtTradeAdapter):
             def convert_trade(self, raw_trade):

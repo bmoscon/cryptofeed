@@ -50,7 +50,7 @@ load_ccxt_config(
 - **Responsibilities**: instantiate `ccxt.pro.<exchange>`, enforce credentials, fetch trade updates via `watch_trades`.
 - **Key Methods**:
   - `_ensure_client()` / `_authenticate_client(client)` analogous to REST.
-  - `next_trade(symbol)` → returns `TradeUpdate` dataclass with normalized fields.
+  - `next_trade(symbol)` → returns `TradeUpdate` dataclass with normalized fields; updates `connect_count` / `reconnect_count` and raises `CcxtUnavailable` when websocket support is absent (triggering REST fallback in the generic feed).
 
 ## Generic Feed
 
@@ -76,17 +76,26 @@ load_ccxt_config(
 
 ### `AdapterRegistry`
 - `register_trade_adapter(exchange_id, adapter_class)` / `register_orderbook_adapter(exchange_id, adapter_class)` to override defaults per exchange.
-- `get_trade_adapter(exchange_id)` / `get_orderbook_adapter(exchange_id)` instantiate adapters with the exchange ID.
+- `register_trade_hook(exchange_id, hook)` / `register_orderbook_hook(exchange_id, hook)` attach payload mutators.
+- `register_trade_normalizer(exchange_id, field, func)` / `register_orderbook_normalizer(exchange_id, field, func)` override specific normalization steps (symbol, price, timestamp, price levels).
+- `convert_trade(exchange_id, payload)` / `convert_orderbook(exchange_id, payload)` execute adapters, hooks, and fallback adapters, returning `None` when the event should be dropped.
+- `get_trade_adapter(exchange_id)` / `get_orderbook_adapter(exchange_id)` still expose adapter classes when manual control is required.
+
+### Hook Decorators & Registry
+- `ccxt_trade_hook(exchange_id, *, symbol=None, price=None, timestamp=None)` registers a hook and optional normalizers for trade payloads.
+- `ccxt_orderbook_hook(exchange_id, *, symbol=None, price_levels=None, timestamp=None)` provides the same for order books.
+- `AdapterHookRegistry.reset()` clears all registered hooks (used in unit tests).
 
 ## Feed Integration (`CcxtFeed`)
-- Accepts `config` (`CcxtExchangeConfig` or `CcxtExchangeContext`), or legacy parameters (`exchange_id`, `proxies`, `ccxt_options`).
-- Converts arbitrary overrides into a context via `load_ccxt_config`, injects proxy defaults from the global proxy injector, and passes the context to `CcxtGenericFeed`.
-- Ensures Feed base class sees sanitized credentials (`key_id`, `key_secret`, `key_passphrase`) and honours sandbox flags.
-- Provides `_handle_trade` / `_handle_book` helpers for bridging CCXT payloads into standard callbacks.
+- Accepts `config` (`CcxtExchangeConfig` / `CcxtExchangeContext`) or legacy parameters (`exchange_id`, `proxies`, `ccxt_options`).
+- Converts overrides via `load_ccxt_config`, exposing `ccxt_config` / `ccxt_context` attributes on the feed.
+- Wires conversions through the adapter registry (hooks + fallbacks) and emits a bootstrap trade when starting to prime callback pipelines.
+- `start()` schedules background tasks without blocking; `stop()` cancels tasks, awaits completion, and closes transports cleanly.
 
 ## Testing Hooks
-- `_dynamic_import` helper in `cryptofeed.exchanges.ccxt_generic` can be monkeypatched in tests to supply stub CCXT clients.
+- `_dynamic_import` / `_resolve_dynamic_import` helpers in `cryptofeed.exchanges.ccxt.generic` and transport modules can be monkeypatched to supply stub CCXT clients.
 - `CcxtGenericFeed.register_authentication_callback` enables instrumentation of credential flows during unit/integration testing.
+- `@pytest.mark.ccxt_future` marks deferred sandbox/performance suites (see `tests/integration/test_ccxt_future.py`).
 
 ## Exceptions
 - `CcxtUnavailable`: Raised when CCXT async/pro modules for the exchange cannot be imported.

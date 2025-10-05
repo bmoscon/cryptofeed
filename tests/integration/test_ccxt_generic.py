@@ -8,6 +8,7 @@ import pytest
 from cryptofeed.defines import L2_BOOK, ORDERS, TRADES
 from cryptofeed.exchanges.ccxt.config import CcxtConfig
 from cryptofeed.exchanges.ccxt.generic import CcxtGenericFeed
+from tests.integration.conftest import _FakeProClient
 
 
 @pytest.mark.asyncio
@@ -85,3 +86,37 @@ def test_ccxt_generic_feed_requires_credentials():
             channels=[ORDERS],
             config_context=context,
         )
+
+
+@pytest.mark.asyncio
+async def test_ccxt_generic_feed_ws_fallback_to_rest(ccxt_fake_clients, monkeypatch):
+    context = CcxtConfig(
+        exchange_id="backpack",
+        api_key="unit-key",
+        secret="unit-secret",
+        transport={"websocket_enabled": True},
+    ).to_context()
+
+    # Force websocket client to raise to trigger fallback
+    async def failing_watch_trades(self, symbol):
+        raise NotImplementedError("ws not supported")
+
+    monkeypatch.setattr(_FakeProClient, "watch_trades", failing_watch_trades)
+
+    feed = CcxtGenericFeed(
+        exchange_id=context.exchange_id,
+        symbols=["BTC-USDT"],
+        channels=[TRADES],
+        config_context=context,
+    )
+
+    trades = []
+    feed.register_callback(TRADES, lambda trade: trades.append(trade))
+
+    await feed.stream_trades_once()
+
+    assert feed.rest_only is True
+    assert feed.websocket_enabled is False
+    assert trades == []
+
+    await feed.close()

@@ -1,71 +1,93 @@
 # CCXT Generic Exchange Developer Guide
 
 ## Overview
-The CCXT generic exchange abstraction standardizes how CCXT-backed markets are onboarded into Cryptofeed. This guide walks platform engineers through configuration, authentication, and extension points for building exchange integrations that reuse the shared transports and adapters delivered by the `ccxt-generic-pro-exchange` spec.
+The `ccxt-generic-pro-exchange` refactor consolidates every CCXT integration primitive under `cryptofeed/exchanges/ccxt/`. Feed developers now work from a single package that exposes typed configuration, proxy-aware transports, adapter hooks, and a builder for dynamic feed classes. Legacy modules remain as shims, but new code should import from the package layout directly.
+
+### Module Map
+| Module | Responsibility |
+| --- | --- |
+| `config.py` | Pydantic models for credentials, proxies, transport knobs |
+| `context.py` | Converters + loaders producing `CcxtExchangeContext` |
+| `transport/rest.py` | REST snapshots with proxy injection and retry/backoff |
+| `transport/ws.py` | CCXT-Pro trades with reconnect counters and REST fallback |
+| `adapters/` | Base + concrete adapters, registry, hook decorators |
+| `builder.py` | `CcxtExchangeBuilder` for dynamic feed classes |
+| `feed.py` | `CcxtFeed` bridge into the `Feed` inheritance tree |
 
 ## Getting Started
-1. **Enable CCXT dependencies**: Install `ccxt` and `ccxtpro` (if WebSocket streams are required) in the runtime environment.
-2. **Create configuration**: Use the `CcxtConfig` model or YAML/env sources to define API credentials, proxy routing, rate limits, and transport options.
-3. **Instantiate feed**: Construct a `CcxtFeed` with desired symbols/channels. The feed automatically provisions `CcxtGenericFeed` transports and adapters using the supplied configuration context.
+1. **Install dependencies** – `pip install ccxt ccxtpro` (WebSocket support requires `ccxtpro`).
+2. **Describe configuration** – declare a `CcxtConfig` or load via YAML/env using `load_ccxt_config()`.
+3. **Instantiate the feed** – construct `CcxtFeed` using a typed context; transports, adapters, and hooks are wired automatically.
 
 ```python
 from cryptofeed.exchanges.ccxt.config import CcxtConfig
 from cryptofeed.exchanges.ccxt.feed import CcxtFeed
 
-ccxt_config = CcxtConfig(
+config = CcxtConfig(
     exchange_id="backpack",
     api_key="<API_KEY>",
     secret="<API_SECRET>",
-    proxies={
-        "rest": "http://proxy.local:8080",
-        "websocket": "socks5://proxy.local:1080",
-    }
+    proxies={"rest": "http://proxy:8080", "websocket": "socks5://proxy:1080"},
+    transport={"snapshot_interval": 15, "websocket_enabled": True},
 )
 
 feed = CcxtFeed(
-    config=ccxt_config.to_exchange_config(),
+    config=config.to_exchange_config(),
     symbols=["BTC-USDT"],
     channels=["trades", "l2_book"],
-    callbacks={"trades": trade_handler, "l2_book": book_handler},
+    callbacks={"trades": handle_trade, "l2_book": handle_book},
 )
 ```
 
-## Configuration Sources
-- **Pydantic models**: `CcxtConfig` -> `CcxtExchangeContext` ensures strongly-typed fields and validation.
-- **YAML**: Place structured config under `exchanges.<id>` and load with `load_ccxt_config(...)`.
-- **Environment variables**: Use `CRYPTOFEED_CCXT_<ID>__FIELD` naming (double underscores for nesting).
-- **Overrides**: Pass dicts (e.g., CLI options) to `load_ccxt_config(overrides=...)` to merge with YAML/env values.
+## Configuration Sources & Precedence
+- **Typed models** – call `CcxtConfig.to_context()` for strongly-typed validation.
+- **YAML** – place definitions under `exchanges.<id>` and load with `load_ccxt_config(yaml_path=...)`.
+- **Environment** – use `CRYPTOFEED_CCXT_<ID>__FIELD` (double underscores for nesting); values merge via `_deep_merge`.
+- **Overrides** – pass dict overrides for CLI/pytest fixtures; overrides take highest precedence.
 
-The loader enforces precedence: overrides ⟶ environment ⟶ YAML ⟶ defaults.
+> Commit guidance: document behaviour with `docs(ccxt): ...`, keep refactors separate from user-visible `feat/fix` commits.
 
-## Authentication & Private Channels
-- Channels in `cryptofeed.defines` such as `ORDERS`, `FILLS`, `BALANCES`, and `POSITIONS` trigger private-mode validation.
-- The feed requires `apiKey` + `secret`; missing credentials raise runtime errors before network activity.
-- Custom auth flows (e.g., sub-account selection) can register coroutines via `CcxtGenericFeed.register_authentication_callback` and inspect/augment the underlying CCXT client before requests begin.
+## Authentication & Hooks
+- Private channels (`ORDERS`, `FILLS`, `BALANCES`, etc.) require contexts with API key + secret; absence raises `RuntimeError` during feed construction.
+- Register additional auth steps via `CcxtGenericFeed.register_authentication_callback()`; callbacks can be async and run for both REST and WebSocket transports.
+- Use hook decorators to normalize payloads without modifying core adapters:
 
-## Proxy & Transport Behaviour
-- Proxy settings come from the shared `ProxySettings` (feature-flagged by `CRYPTOFEED_PROXY_*`). If explicit proxies are omitted, the loader pulls defaults per exchange from the proxy system.
-- The transport layer propagates proxy URLs to both `aiohttp` and CCXT’s internal proxy fields to ensure REST and WebSocket flows share routing.
-- Transport options (`snapshot_interval`, `websocket_enabled`, `rest_only`, `use_market_id`) live inside the `CcxtTransportConfig` model and automatically shape feed behaviour.
+```python
+from cryptofeed.exchanges.ccxt.adapters import ccxt_trade_hook
 
-> **Directory Layout**: All CCXT modules now live under `cryptofeed/exchanges/ccxt/`. Legacy imports such as `cryptofeed.exchanges.ccxt_config` continue to function via compatibility shims but new development should target the package modules directly.
+@ccxt_trade_hook("backpack", timestamp=lambda ts, raw, payload: ts / 1000)
+def normalize_timestamp(payload):
+    payload = dict(payload)
+    payload["timestamp"] *= 1000
+    return payload
+```
 
-## Extension Points
-- **Symbol normalization**: Override via `CcxtExchangeBuilder.create_feed_class(symbol_normalizer=...)` or subclass `CcxtTradeAdapter` / `CcxtOrderBookAdapter` to handle bespoke payloads.
-- **Authentication callbacks**: Register callbacks for token exchange, custom headers, or logging instrumentation.
-- **Adapter registry**: Use `AdapterRegistry.register_trade_adapter` to plug exchange-specific converters without changing core code.
+## Transport Behaviour
+- Proxy URLs are resolved from explicit config or the shared proxy injector; transports pass values to CCXT (`aiohttp_proxy`, `proxies`).
+- `CcxtWsTransport` tracks reconnect counts; if websockets remain unavailable, the generic feed automatically switches to REST-only mode and logs the fallback.
+- Snapshot cadence, websocket toggles, and market ID usage are governed by `CcxtTransportConfig` values inside the context.
+
+## Migration Checklist
+1. Update imports to `cryptofeed.exchanges.ccxt.*` modules.
+2. Replace bespoke CCXT clients with `CcxtGenericFeed` or `CcxtFeed` using contexts.
+3. Register exchange-specific normalization using hook decorators or custom adapters via `AdapterRegistry`.
+4. Remove legacy proxy wiring—transports now honour the shared proxy injector by default.
+5. Verify no code imports legacy shims (`cryptofeed.exchanges.ccxt_feed`, `ccxt_config`, `ccxt_transport`, `ccxt_adapters`).
+6. Run `pytest tests/unit/test_ccxt_* tests/integration/test_ccxt_generic.py -q` to verify coverage.
 
 ## Testing Strategy
-- **Unit**: `tests/unit/test_ccxt_config.py`, `tests/unit/test_ccxt_adapters_conversion.py`, `tests/unit/test_ccxt_generic_feed.py` cover configuration precedence, adapter precision, and generic feed authentication/proxy handling via deterministic fakes.
-- **Integration**: `tests/integration/test_ccxt_generic.py` patches CCXT async/pro modules to validate combined REST+WebSocket lifecycles, proxy routing, and authentication callbacks without external network calls.
-- **Smoke / E2E**: `tests/integration/test_ccxt_feed_smoke.py` drives `FeedHandler` end-to-end (config → start → callbacks) to ensure FeedHandler interoperability, proxy propagation, and authenticated channel flows.
+- **Unit** – `tests/unit/test_ccxt_adapter_registry.py`, `tests/unit/test_ccxt_feed_config_validation.py`, `tests/unit/test_ccxt_generic_feed.py`.
+- **Integration** – `tests/integration/test_ccxt_generic.py` validates REST snapshots, WebSocket trades, proxy routing, and REST fallback.
+- **Future NFR** – `tests/integration/test_ccxt_future.py` (tagged with `@pytest.mark.ccxt_future`) holds placeholders for sandbox/performance scenarios.
 
 ## Troubleshooting
-- **Credential errors**: Check that `api_key` and `secret` are set in either the model, environment, or YAML. Missing values surface as `RuntimeError` during transport authentication.
-- **Proxy mismatch**: Verify `ProxySettings.enabled` and ensure the exchange ID matches keys in the proxy config so the loader can resolve overrides.
-- **Missing symbols**: Populate CCXT metadata via `CcxtMetadataCache.ensure()` before streaming; the feed handles this automatically during `_initialize_ccxt_feed()`.
+- **Missing credentials** – ensure contexts include `api_key` + `secret`; validation errors surface with helpful messaging.
+- **Proxy mismatch** – confirm proxy settings map to the CCXT exchange ID; review feed logs for `proxy:` entries.
+- **WebSocket gaps** – monitor `ccxt feed falling back to REST` warnings; switch to `rest_only=True` if the venue lacks realtime support.
 
-## Next Steps
-- Extend unit/integration tests when onboarding new CCXT exchanges.
-- Document exchange-specific quirks in spec-specific folders (e.g., `docs/exchanges/backpack.md`).
-- Coordinate with the proxy service specs to enable rotation or sticky sessions once those features are implemented.
+## Roadmap & NFR Backlog
+- Metrics & telemetry (latency counters, reconnect histograms) will be tackled in a follow-on spec (`ccxt-metrics-harden`).
+- Sandbox verification awaits credentials; placeholders live under `tests/integration/test_ccxt_future.py`.
+- Proxy pool rotation enhancements align with the `proxy-pool-system` roadmap.
+
+Completion of the FR scope for `ccxt-generic-pro-exchange` is logged; revisit this document when scheduling the next iteration.

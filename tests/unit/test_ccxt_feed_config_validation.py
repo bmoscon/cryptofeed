@@ -11,6 +11,12 @@ from unittest.mock import AsyncMock
 import sys
 
 from cryptofeed.defines import TRADES, L2_BOOK
+from cryptofeed.exchanges.ccxt.feed import CcxtFeed
+from cryptofeed.exchanges.ccxt.config import (
+    CcxtExchangeConfig,
+    CcxtProxyConfig,
+    CcxtOptionsConfig,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -81,8 +87,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_valid_configuration_works(self, mock_ccxt):
         """Valid configurations should work without errors."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-
         # Test with legacy dict format
         feed = CcxtFeed(
             exchange_id="backpack",
@@ -99,8 +103,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_invalid_exchange_id_raises_descriptive_error(self, mock_ccxt):
         """Invalid exchange ID should raise descriptive error."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-
         with pytest.raises(ValueError, match="Invalid CCXT configuration for exchange ''"):
             CcxtFeed(
                 exchange_id="",  # Invalid: empty string
@@ -117,8 +119,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_invalid_proxy_raises_descriptive_error(self, mock_ccxt):
         """Invalid proxy configuration should raise descriptive error."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-
         with pytest.raises(ValueError, match="Invalid CCXT configuration"):
             CcxtFeed(
                 exchange_id="backpack",
@@ -129,8 +129,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_invalid_ccxt_options_raise_descriptive_error(self, mock_ccxt):
         """Invalid CCXT options should raise descriptive errors."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-
         # API key without secret
         with pytest.raises(ValueError, match="Invalid CCXT configuration"):
             CcxtFeed(
@@ -151,13 +149,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_typed_configuration_works(self, mock_ccxt):
         """Using typed Pydantic configuration should work."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-        from cryptofeed.exchanges.ccxt_config import (
-            CcxtExchangeConfig,
-            CcxtProxyConfig,
-            CcxtOptionsConfig
-        )
-
         config = CcxtExchangeConfig(
             exchange_id="backpack",
             proxies=CcxtProxyConfig(rest="http://proxy:8080"),
@@ -182,8 +173,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_configuration_extension_hooks(self, mock_ccxt):
         """Exchange-specific options should be supported."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-
         feed = CcxtFeed(
             exchange_id="backpack",
             symbols=["BTC-USDT"],
@@ -205,8 +194,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_transport_configuration_validation(self, mock_ccxt):
         """Transport configuration should be validated."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-
         # Valid transport config
         feed = CcxtFeed(
             exchange_id="backpack",
@@ -232,8 +219,6 @@ class TestCcxtFeedConfigValidation:
 
     def test_backward_compatibility_maintained(self, mock_ccxt):
         """Existing code using dict configs should continue working."""
-        from cryptofeed.exchanges.ccxt_feed import CcxtFeed
-
         # This should work exactly as before, with added validation
         feed = CcxtFeed(
             exchange_id="backpack",

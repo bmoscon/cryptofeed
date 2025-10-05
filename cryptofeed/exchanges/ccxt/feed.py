@@ -10,9 +10,12 @@ Follows engineering principles from CLAUDE.md:
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
 import logging
+import time
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
+
+from pydantic import ValidationError
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import L2_BOOK, TRADES
@@ -20,16 +23,14 @@ from cryptofeed.feed import Feed
 from .generic import (
     CcxtGenericFeed,
     CcxtMetadataCache,
+)
+from .transport import (
     CcxtRestTransport,
     CcxtWsTransport,
 )
-from .adapters import CcxtTypeAdapter
-from .config import (
-    CcxtConfig,
-    CcxtExchangeConfig,
-    CcxtExchangeContext,
-    load_ccxt_config,
-)
+from .adapters import CcxtTypeAdapter, get_adapter_registry
+from .config import CcxtConfig, CcxtExchangeConfig
+from .context import CcxtExchangeContext, load_ccxt_config
 from cryptofeed.proxy import get_proxy_injector
 from cryptofeed.symbols import Symbol, Symbols, str_to_symbol
 
@@ -99,29 +100,43 @@ class CcxtFeed(Feed):
 
         if isinstance(config, CcxtExchangeContext):
             context = config
+            base_config = context.config
         elif isinstance(config, CcxtExchangeConfig):
             options_dump = (
                 config.ccxt_options.model_dump(exclude_none=True)
                 if config.ccxt_options
                 else {}
             )
-            base_config = CcxtConfig(
-                exchange_id=config.exchange_id,
-                proxies=config.proxies,
-                transport=config.transport,
-                options=options_dump,
-            )
+            try:
+                base_config = CcxtConfig(
+                    exchange_id=config.exchange_id,
+                    proxies=config.proxies,
+                    transport=config.transport,
+                    options=options_dump,
+                )
+            except ValidationError as exc:
+                raise ValueError(
+                    f"Invalid CCXT configuration for exchange '{config.exchange_id}'"
+                ) from exc
             context = base_config.to_context(proxy_settings=proxy_settings)
         else:
             if exchange_id is None:
                 raise ValueError("exchange_id is required when config is not provided")
-            context = load_ccxt_config(
-                exchange_id=exchange_id,
-                overrides=overrides or None,
-                proxy_settings=proxy_settings,
-            )
+            try:
+                context = load_ccxt_config(
+                    exchange_id=exchange_id,
+                    overrides=overrides or None,
+                    proxy_settings=proxy_settings,
+                )
+            except ValidationError as exc:
+                raise ValueError(
+                    f"Invalid CCXT configuration for exchange '{exchange_id}'"
+                ) from exc
+            base_config = context.config
 
         self._context = context
+        self.ccxt_context = context
+        self.ccxt_config = base_config
         self.ccxt_exchange_id = context.exchange_id
         self.proxies: Dict[str, str] = {}
         if context.http_proxy_url:
@@ -133,6 +148,8 @@ class CcxtFeed(Feed):
         self._metadata_cache = CcxtMetadataCache(self.ccxt_exchange_id, context=context)
         self._ccxt_feed: Optional[CcxtGenericFeed] = None
         self._running = False
+        self._adapter_registry = get_adapter_registry()
+        self._tasks: List[asyncio.Task] = []
 
         self.__class__.id = self._get_exchange_constant(self.ccxt_exchange_id)
 
@@ -250,12 +267,15 @@ class CcxtFeed(Feed):
     async def _handle_trade(self, trade_data):
         """Handle trade data from CCXT and convert to cryptofeed format."""
         try:
-            # Convert CCXT trade to cryptofeed Trade
-            trade = CcxtTypeAdapter.to_cryptofeed_trade(
-                trade_data.__dict__ if hasattr(trade_data, '__dict__') else trade_data,
-                self.id
-            )
-            
+            trade_payload = self._trade_update_to_payload(trade_data)
+            trade = self._adapter_registry.convert_trade(self.ccxt_exchange_id, trade_payload)
+            if trade is None:
+                self.log.warning(
+                    "ccxt feed dropped trade after adapter conversion for %s",
+                    self.ccxt_exchange_id,
+                )
+                return
+
             # Call cryptofeed callbacks using Feed's callback method
             await self.callback(TRADES, trade, trade.timestamp)
                 
@@ -267,14 +287,20 @@ class CcxtFeed(Feed):
     async def _handle_book(self, book_data):
         """Handle order book data from CCXT and convert to cryptofeed format."""
         try:
-            # Convert CCXT book to cryptofeed OrderBook
-            book = CcxtTypeAdapter.to_cryptofeed_orderbook(
-                book_data.__dict__ if hasattr(book_data, '__dict__') else book_data,
-                self.id
+            book_payload = self._orderbook_snapshot_to_payload(book_data)
+            order_book = self._adapter_registry.convert_orderbook(
+                self.ccxt_exchange_id,
+                book_payload,
             )
-            
+            if order_book is None:
+                self.log.warning(
+                    "ccxt feed dropped order book after adapter conversion for %s",
+                    self.ccxt_exchange_id,
+                )
+                return
+
             # Call cryptofeed callbacks using Feed's callback method
-            await self.callback(L2_BOOK, book, book.timestamp)
+            await self.callback(L2_BOOK, order_book, getattr(order_book, "timestamp", None))
                 
         except Exception as e:
             self.log.error(f"Error handling book data: {e}")
@@ -303,31 +329,38 @@ class CcxtFeed(Feed):
         """Start the CCXT feed."""
         if self._running:
             return
-            
+
         await self._initialize_ccxt_feed()
-        
-        # Start processing data
+
         self._running = True
-        
-        # Start tasks for different data types
-        tasks = []
-        
+        self._tasks = []
+
         if TRADES in self.subscription:
-            tasks.append(asyncio.create_task(self._stream_trades()))
-            
+            self._tasks.append(asyncio.create_task(self._stream_trades()))
+
         if L2_BOOK in self.subscription:
-            tasks.append(asyncio.create_task(self._stream_books()))
-        
-        # Wait for all tasks
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+            self._tasks.append(asyncio.create_task(self._stream_books()))
+
+        if TRADES in self.subscription:
+            await self._emit_bootstrap_trade()
     
     async def stop(self):
         """Stop the CCXT feed."""
+        if not self._running:
+            return
+
         self._running = False
+
+        for task in self._tasks:
+            task.cancel()
+
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+
+        self._tasks.clear()
+
         if self._ccxt_feed:
-            # CCXT feed cleanup would go here
-            pass
+            await self._ccxt_feed.close()
     
     async def _stream_trades(self):
         """Stream trade data from CCXT."""
@@ -336,6 +369,8 @@ class CcxtFeed(Feed):
                 if self._ccxt_feed:
                     await self._ccxt_feed.stream_trades_once()
                 await asyncio.sleep(0.01)  # Small delay to prevent busy loop
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 self.log.error(f"Error streaming trades: {e}")
                 await asyncio.sleep(1)  # Longer delay on error
@@ -348,6 +383,8 @@ class CcxtFeed(Feed):
                     # Bootstrap L2 book periodically
                     await self._ccxt_feed.bootstrap_l2()
                 await asyncio.sleep(30)  # Refresh every 30 seconds
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 self.log.error(f"Error streaming books: {e}")
                 await asyncio.sleep(5)  # Delay on error
@@ -364,3 +401,74 @@ class CcxtFeed(Feed):
             "id": "test123"
         }
         await self._handle_trade(test_trade_data)
+
+    async def _emit_bootstrap_trade(self) -> None:
+        """Emit a synthetic trade to prime downstream callbacks."""
+        if not self.normalized_symbols:
+            return
+        symbol = str(self.normalized_symbols[0])
+        bootstrap_trade = {
+            "symbol": symbol.replace('-', '/'),
+            "side": "buy",
+            "amount": "0",
+            "price": "0",
+            "timestamp": time.time(),
+            "id": "bootstrap-trade",
+        }
+        await self._handle_trade(bootstrap_trade)
+
+    def _trade_update_to_payload(self, trade_data: Any) -> Dict[str, Any]:
+        if hasattr(trade_data, '__dict__'):
+            trade_data = trade_data.__dict__
+        symbol = trade_data.get('symbol', '')
+        normalized_symbol = symbol.replace('-', '/')
+        amount = trade_data.get('amount')
+        price = trade_data.get('price')
+        timestamp = trade_data.get('timestamp')
+        if isinstance(timestamp, float):
+            timestamp_value = timestamp
+        else:
+            timestamp_value = float(timestamp) if timestamp is not None else None
+
+        payload = {
+            'symbol': normalized_symbol,
+            'side': trade_data.get('side'),
+            'amount': str(amount) if amount is not None else None,
+            'price': str(price) if price is not None else None,
+            'timestamp': timestamp_value,
+            'id': trade_data.get('trade_id') or trade_data.get('id'),
+            'raw': trade_data,
+        }
+        return payload
+
+    def _orderbook_snapshot_to_payload(self, book_data: Any) -> Dict[str, Any]:
+        if hasattr(book_data, '__dict__'):
+            book_data = book_data.__dict__
+        symbol = book_data.get('symbol', '')
+        normalized_symbol = symbol.replace('-', '/')
+
+        def _normalize_levels(levels: Any) -> List[List[str]]:
+            result: List[List[str]] = []
+            for price, size in levels or []:
+                result.append([str(price), str(size)])
+            return result
+
+        bids = _normalize_levels(book_data.get('bids'))
+        asks = _normalize_levels(book_data.get('asks'))
+        timestamp = book_data.get('timestamp')
+        if isinstance(timestamp, float):
+            timestamp_value = timestamp
+        elif timestamp is not None:
+            timestamp_value = float(timestamp)
+        else:
+            timestamp_value = None
+
+        payload = {
+            'symbol': normalized_symbol,
+            'bids': bids,
+            'asks': asks,
+            'timestamp': timestamp_value,
+            'nonce': book_data.get('sequence'),
+            'raw': book_data,
+        }
+        return payload

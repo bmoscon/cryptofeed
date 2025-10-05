@@ -3,8 +3,8 @@
   "title": "External Proxy Service Delegation",
   "description": "Transform cryptofeed's embedded proxy management into service-oriented architecture with external proxy services handling inventory, health monitoring, load balancing, and rotation",
   "version": "1.0.0",
-  "status": "active",
-  "phase": "design",
+  "status": "inactive",
+  "phase": "disabled",
   "priority": "high",
   "tags": ["proxy", "service-oriented", "delegation", "architecture", "microservices"],
   "dependencies": [
@@ -21,14 +21,15 @@
   "effort_estimate": "4-6 weeks",
   "ready_for_implementation": false,
   "created_date": "2024-09-23",
-  "last_updated": "2024-09-23",
+  "last_updated": "2025-10-04",
   "author": "claude-code",
-  "review_status": "pending",
+  "review_status": "on_hold",
   "implementation_notes": {
     "approach": "service-oriented architecture with graceful fallback",
     "breaking_changes": false,
     "performance_impact": "minimal with caching",
-    "monitoring_required": true
+    "monitoring_required": true,
+    "status": "deferred until proxy roadmap realignment"
   },
   "success_criteria": [
     "Zero connection failures during service unavailability",

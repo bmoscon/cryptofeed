@@ -6,17 +6,24 @@ from .config import (
     CcxtTransportConfig,
     CcxtExchangeConfig,
     CcxtConfig,
+)
+from .context import (
     CcxtExchangeContext,
-    CcxtConfigExtensions,
     load_ccxt_config,
     validate_ccxt_config,
 )
+from .extensions import CcxtConfigExtensions
 from .adapters import (
-    CcxtTypeAdapter,
-    CcxtTradeAdapter,
-    CcxtOrderBookAdapter,
+    AdapterHookRegistry,
     AdapterRegistry,
     AdapterValidationError,
+    CcxtOrderBookAdapter,
+    CcxtTradeAdapter,
+    CcxtTypeAdapter,
+    FallbackOrderBookAdapter,
+    FallbackTradeAdapter,
+    ccxt_orderbook_hook,
+    ccxt_trade_hook,
 )
 from .transport import CcxtRestTransport, CcxtWsTransport
 from .generic import (
@@ -48,7 +55,12 @@ __all__ = [
     'CcxtTypeAdapter',
     'CcxtTradeAdapter',
     'CcxtOrderBookAdapter',
+    'FallbackTradeAdapter',
+    'FallbackOrderBookAdapter',
     'AdapterRegistry',
+    'AdapterHookRegistry',
+    'ccxt_trade_hook',
+    'ccxt_orderbook_hook',
     'AdapterValidationError',
     'CcxtRestTransport',
     'CcxtWsTransport',

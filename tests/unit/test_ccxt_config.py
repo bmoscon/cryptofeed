@@ -11,14 +11,16 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from cryptofeed.exchanges.ccxt_config import (
+from cryptofeed.exchanges.ccxt.config import (
     CcxtProxyConfig,
     CcxtOptionsConfig,
     CcxtTransportConfig,
     CcxtExchangeConfig,
     CcxtConfig,
-    CcxtExchangeContext,
     CcxtConfigExtensions,
+)
+from cryptofeed.exchanges.ccxt.context import (
+    CcxtExchangeContext,
     load_ccxt_config,
     validate_ccxt_config,
 )
@@ -197,6 +199,31 @@ class TestCcxtTransportConfig:
         # Invalid: conflicting settings
         with pytest.raises(ValidationError, match="Cannot enable WebSocket when rest_only=True"):
             CcxtTransportConfig(rest_only=True, websocket_enabled=True)
+
+
+class TestCcxtConfigModel:
+    """Top-level `CcxtConfig` behaviour and validators."""
+
+    def test_exchange_id_validation(self):
+        """Exchange IDs should be normalized and validated."""
+        config = CcxtConfig(exchange_id="binance")
+        assert config.exchange_id == "binance"
+
+        with pytest.raises(ValidationError):
+            CcxtConfig(exchange_id="Binance")
+
+    def test_credentials_trimmed_and_validated(self):
+        """Credential fields should be stripped and non-empty."""
+        config = CcxtConfig(exchange_id="kraken", api_key=" key ", secret=" secret ")
+        assert config.api_key == "key"
+        assert config.secret == "secret"
+
+        with pytest.raises(ValidationError):
+            CcxtConfig(exchange_id="kraken", api_key="   ", secret="secret")
+
+        with pytest.raises(ValidationError):
+            CcxtConfig(exchange_id="kraken", api_key="key", secret="   ")
+
 
 
 class TestCcxtExchangeConfig:
@@ -427,12 +454,11 @@ class TestCcxtConfigLoading:
     def test_ccxt_config_extensions_applied(self):
         """Registered extensions should mutate configuration before validation."""
 
+        @CcxtConfigExtensions.decorator("ftx")
         def add_extension_fields(data):
             options = data.setdefault("options", {})
             options["postOnly"] = True
             return data
-
-        CcxtConfigExtensions.register("ftx", add_extension_fields)
 
         context = load_ccxt_config(
             exchange_id="ftx",

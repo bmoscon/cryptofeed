@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 
 from cryptofeed.defines import BID, ASK
-from cryptofeed.exchanges.ccxt_adapters import CcxtTradeAdapter, CcxtOrderBookAdapter
+from cryptofeed.exchanges.ccxt.adapters import CcxtTradeAdapter, CcxtOrderBookAdapter
 
 
 class TestCcxtTradeAdapter:
