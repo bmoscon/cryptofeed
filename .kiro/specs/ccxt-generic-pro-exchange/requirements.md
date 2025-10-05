@@ -46,3 +46,11 @@ Refactor the CCXT/CCXT-Pro abstraction so it adheres to Cryptofeed’s updated e
 3. WHEN existing CCXT imports are updated THEN the refactor SHALL avoid breaking public APIs; temporary re-export shims MUST exist only as migration helpers documented with timelines for removal.
 4. WHEN compatibility shims route to the new package THEN accompanying documentation SHALL call out the canonical import surface so downstream teams can migrate without ambiguity.
 5. WHEN a shim becomes redundant THEN it SHALL be removed promptly (NO LEGACY principle) once downstream code has migrated, and the changelog SHALL record the removal under the relevant spec/task.
+
+### Requirement 6: Coverage Expansion for CCXT-Only Exchanges
+**Objective:** As a product strategist, I want the generic ccxt layer to accelerate onboarding for Hyperliquid and other ccxt-supported venues missing native feeds, so Cryptofeed users gain timely access to high-demand exchanges without bespoke implementations.
+
+#### Acceptance Criteria
+1. WHEN Hyperliquid is enabled through the ccxt generic feed THEN symbol normalization, market metadata (precision, settlement asset), and transport fallbacks SHALL match recorded fixtures and live validation runs gated by environment flags.
+2. WHEN evaluating additional ccxt exchanges not currently present in Cryptofeed (e.g., Hyperliquid spot/perps, OKX algo-only venues, HTX derivatives) THEN the roadmap SHALL capture priority, schema deltas, and hook requirements in the spec tasks backlog.
+3. WHEN new exchange coverage is planned THEN documentation SHALL outline live-test opt-ins (environment variables, proxy expectations) and fixture generation workflows to keep CI deterministic while supporting manual verification.

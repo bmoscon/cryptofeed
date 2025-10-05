@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, DefaultDict, Dict, Iterable, List, MutableMapping, Optional
+from typing import Any, Callable, ClassVar, DefaultDict, Dict, Iterable, List, MutableMapping, Optional
 
 LOG = logging.getLogger("feedhandler")
 
@@ -67,12 +67,23 @@ class AdapterHookRegistry:
             return normalizer
         return cls._orderbook_normalizers.get("default", {}).get(field)
 
+    _reset_callbacks: ClassVar[List[Callable[[], None]]] = []
+
     @classmethod
     def reset(cls) -> None:
         cls._trade_hooks.clear()
         cls._orderbook_hooks.clear()
         cls._trade_normalizers.clear()
         cls._orderbook_normalizers.clear()
+        for callback in cls._reset_callbacks:
+            try:
+                callback()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                LOG.warning("R3 adapter reset callback failed: %s", exc)
+
+    @classmethod
+    def register_reset_callback(cls, callback: Callable[[], None]) -> None:
+        cls._reset_callbacks.append(callback)
 
 
 def ccxt_trade_hook(
@@ -169,4 +180,5 @@ __all__ = [
     "apply_trade_hooks",
     "ccxt_orderbook_hook",
     "ccxt_trade_hook",
+    "register_reset_callback",
 ]

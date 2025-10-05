@@ -109,3 +109,41 @@
   - _Requirements: R4.1_
 - [x] 8.4 Document the blueprint for new native exchanges (developer guide section)
   - _Requirements: R4.3_
+
+## Phase 9 – CCXT Exchange Coverage Expansion
+- [x] 9.1 Capture Hyperliquid market metadata fixtures for the generic layer
+  - Record Hyperliquid market snapshots through ccxt, normalize symbol naming, and persist deterministic fixtures for unit tests
+  - Extend symbol normalization tests to assert Hyperliquid-specific instrument types and precision fields
+  - _Requirements: R1.1, R3.1_
+
+- [x] 9.2 Extend builder and adapter tests to validate Hyperliquid support
+  - Add CCXT builder assertions ensuring Hyperliquid feed classes instantiate with correct transport defaults and hook registration
+  - Cover trade/order book adapter conversions using the recorded fixtures, including timestamp and sequence preservation
+  - _Requirements: R3.1, R3.3, R4.1_
+
+- [x] 9.3 Add Hyperliquid-focused integration smoke test via ccxt generic feed
+  - Run the ccxt generic integration flow against Hyperliquid using recorded payloads and proxy-aware transports
+  - Verify REST fallback behaviour and channel subscriptions match Hyperliquid capabilities, logging gaps for backlog follow-up
+  - _Requirements: R2.2, R4.2_
+
+- [x] 9.4 Validate Hyperliquid coverage with real ccxt clients
+  - Execute targeted REST/WebSocket requests against live Hyperliquid endpoints via ccxt, honouring proxy settings and rate limits
+  - Compare live payloads against recorded fixtures to catch schema regressions and update normalization hooks when fields drift
+  - Gate the live tests behind environment flags/credentials so CI remains deterministic while enabling manual validation workflows
+  - _Requirements: R2.2, R3.1, R4.2_
+
+## Phase 10 – CCXT Exchange Backlog Enablement (Deferred)
+- [ ] 10.1 Reassess ccxt-only venue demand after new FR commitments
+  - Track product requests for HTX swaps, OKX options, Binance Innovation Zone, and similar exchanges; revisit once a user-facing FR depends on them
+  - Maintain schema notes (symbol format, settlement asset) in the backlog without pursuing implementation prematurely
+  - _Requirements: R6.2_
+
+- [ ] 10.2 Prepare fixture/hook templates for future exchanges (on hold)
+  - Define repeatable checklists for capturing REST/WebSocket payloads and authoring normalization hooks when a new FR lands
+  - Avoid recording live data or writing adapters until a priority exchange is confirmed (FRs over NFRs principle)
+  - _Requirements: R3.1, R6.1_
+
+- [ ] 10.3 Document decision points for enabling additional ccxt venues
+  - Expand ccxt developer docs with a deferral note, outlining prerequisites (credentials, live validation flags) to be satisfied before starting implementation
+  - Reference this deferred phase so teams can quickly spin up tasks once a concrete FR emerges
+  - _Requirements: R4.3, R6.3_

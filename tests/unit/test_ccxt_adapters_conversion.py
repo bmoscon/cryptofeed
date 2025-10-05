@@ -84,3 +84,42 @@ class TestCcxtOrderBookAdapter:
 
         assert order_book is None
         assert any("Missing required field" in message or "Bids must be a list" in message for message in caplog.messages)
+
+    def test_hyperliquid_trade_normalization(self):
+        adapter = CcxtTradeAdapter(exchange="hyperliquid")
+
+        trade = adapter.convert_trade(
+            {
+                "symbol": "BTC/USDT:USDT",
+                "side": "sell",
+                "amount": "1",
+                "price": "25000.1",
+                "timestamp": 1_700_000_100_000,
+                "id": "hl-trade-1",
+            }
+        )
+
+        assert trade is not None
+        assert trade.symbol == "BTC-USDT-PERP"
+        assert trade.price == Decimal("25000.1")
+        assert trade.timestamp == pytest.approx(1_700_000_100.0)
+
+    def test_hyperliquid_orderbook_normalization(self):
+        adapter = CcxtOrderBookAdapter(exchange="hyperliquid")
+
+        order_book = adapter.convert_orderbook(
+            {
+                "symbol": "BTC/USDT:USDT",
+                "timestamp": 1_700_000_200_000,
+                "bids": [["25000", "12"], ["24999.5", "3"]],
+                "asks": [["25000.5", "5"], ["25001", "8"]],
+                "nonce": 77,
+            }
+        )
+
+        assert order_book is not None
+        assert order_book.symbol == "BTC-USDT-PERP"
+        assert order_book.timestamp == pytest.approx(1_700_000_200.0)
+        bids = dict(order_book.book[BID])
+        assert bids[Decimal("25000")] == Decimal("12")
+        assert getattr(order_book, "sequence_number", None) == 77

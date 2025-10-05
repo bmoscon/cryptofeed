@@ -1,38 +1,38 @@
 {
   "feature_name": "ccxt-generic-pro-exchange",
   "created_at": "2025-09-23T15:00:47Z",
-  "updated_at": "2025-10-04T23:00:00Z",
+  "updated_at": "2025-10-05T23:20:10Z",
   "language": "en",
   "phase": "tasks-generated",
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": false,
-      "approved_at": null
+      "approved": true,
+      "approved_at": "2025-10-05T23:20:10Z"
     },
     "design": {
       "generated": true,
-      "approved": false,
-      "approved_at": null
+      "approved": true,
+      "approved_at": "2025-10-05T23:20:10Z"
     },
     "tasks": {
       "generated": true,
-      "approved": false,
-      "approved_at": null
+      "approved": true,
+      "approved_at": "2025-10-05T23:20:10Z"
     },
     "implementation": {
       "generated": true,
-      "approved": false,
-      "approved_at": null
+      "approved": true,
+      "approved_at": "2025-10-05T23:20:10Z"
     },
     "documentation": {
       "generated": true,
-      "approved": false,
-      "approved_at": null
+      "approved": true,
+      "approved_at": "2025-10-05T23:20:10Z"
     }
   },
-  "ready_for_implementation": false,
-  "implementation_status": "not_started",
-  "documentation_status": "not_started",
+  "ready_for_implementation": true,
+  "implementation_status": "in_progress",
+  "documentation_status": "in_progress",
   "notes": "Spec reopened for CCXT refactor aligned with updated engineering principles"
 }

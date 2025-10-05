@@ -113,6 +113,17 @@ class TestCcxtExchangeBuilder:
         assert instance.rest_endpoint == 'https://custom-api.binance.com'
         assert instance.ws_endpoint == 'wss://custom-stream.binance.com'
 
+    def test_hyperliquid_default_symbol_normalizer(self):
+        """Hyperliquid feeds should normalize ccxt symbols to PERP suffix."""
+        from cryptofeed.exchanges.ccxt_generic import CcxtExchangeBuilder
+
+        builder = CcxtExchangeBuilder()
+        feed_class = builder.create_feed_class('hyperliquid')
+        instance = feed_class()
+
+        assert instance.normalize_symbol('BTC/USDT:USDT') == 'BTC-USDT-PERP'
+        assert instance.normalize_symbol('ETH-USDT-PERP') == 'ETH-USDT-PERP'
+
 
 class TestExchangeIDValidation:
     """Test exchange ID validation and CCXT integration."""

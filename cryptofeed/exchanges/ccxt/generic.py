@@ -93,6 +93,7 @@ class CcxtMetadataCache:
         )
         self._markets: Optional[Dict[str, Dict[str, Any]]] = None
         self._id_map: Dict[str, str] = {}
+        self._symbol_map: Dict[str, str] = {}
 
     def _client_kwargs(self) -> Dict[str, Any]:
         if not self._context:
@@ -131,8 +132,9 @@ class CcxtMetadataCache:
             markets = await client.load_markets()
             self._markets = markets
             for symbol, meta in markets.items():
-                normalized = symbol.replace("/", "-")
+                normalized = self._normalize_symbol(symbol, meta)
                 self._id_map[normalized] = meta.get("id", symbol)
+                self._symbol_map[normalized] = symbol
         finally:
             await client.close()
 
@@ -150,15 +152,40 @@ class CcxtMetadataCache:
     def request_symbol(self, symbol: str) -> str:
         if self.use_market_id:
             return self.id_for_symbol(symbol)
+        if symbol in self._symbol_map:
+            return self._symbol_map[symbol]
         return self.ccxt_symbol(symbol)
 
     def min_amount(self, symbol: str) -> Optional[Decimal]:
         if self._markets is None:
             raise RuntimeError("Metadata cache not initialised")
-        market = self._markets[self.ccxt_symbol(symbol)]
+        ccxt_symbol = self._symbol_map.get(symbol, self.ccxt_symbol(symbol))
+        market = self._markets[ccxt_symbol]
         limits = market.get("limits", {}).get("amount", {})
         minimum = limits.get("min")
         return Decimal(str(minimum)) if minimum is not None else None
+
+    def market_metadata(self, symbol: str) -> Dict[str, Any]:
+        if self._markets is None:
+            raise RuntimeError("Metadata cache not initialised")
+        ccxt_symbol = self._symbol_map.get(symbol, self.ccxt_symbol(symbol))
+        try:
+            return self._markets[ccxt_symbol]
+        except KeyError as exc:
+            raise KeyError(f"Unknown symbol {symbol}") from exc
+
+    def _normalize_symbol(self, symbol: str, meta: Dict[str, Any]) -> str:
+        normalized = symbol.replace("/", "-")
+        if ":" in normalized:
+            normalized = normalized.replace(":", "-")
+
+        market_type = str(meta.get("type", "")).lower()
+        if self.exchange_id == "hyperliquid" and market_type in {"swap", "perpetual"}:
+            base = meta.get("base") or symbol.split("/")[0]
+            quote_segment = meta.get("quote") or symbol.split("/")[1]
+            quote = quote_segment.split(":")[0]
+            normalized = f"{base}-{quote}-PERP"
+        return normalized
 
 
 class CcxtGenericFeed:

@@ -83,6 +83,19 @@ print(get_shim_usage())
 PY` to inspect downstream usage during migration reviews.
 - Remove remaining shims once counters stay at zero across release cycles (spec `ccxt-generic-pro-exchange` task 7.4).
 
+## Live Validation (Optional)
+- Set `CF_CCXT_TEST_HYPERLIQUID=1` (and optionally `CF_CCXT_HTTP_PROXY`) to enable the Hyperliquid live smoke tests under `tests/integration/test_ccxt_hyperliquid_live.py`.
+- REST coverage runs with `ccxt.async_support`; WebSocket validation requires `ccxt.pro` and falls back to a skip if the package is unavailable.
+- Live tests compare payload structure against the recorded fixtures to surface schema drift without impacting the deterministic CI suite.
+
+## Future CCXT Targets
+- **Already covered via ccxt generic**: Backpack (legacy support), Hyperliquid perpetuals (Phase 9).
+- **High-priority backlog**
+  - **HTX (Huobi) USDT-margined swaps** – requires sequence/timestamp hooks and additional risk limits.
+  - **OKX Option-only symbols** – demands market-id routing (`use_market_id`) and Greeks payload adapters.
+  - **Binance Innovation Zone assets** – leverage existing symbol hooks; focus on rate-limit guardrails.
+- Capture candidate exchanges and schema notes in the spec’s Phase 9 backlog when grooming tasks.
+
 ## Testing Strategy
 - **Unit** – `tests/unit/test_ccxt_adapter_registry.py`, `tests/unit/test_ccxt_feed_config_validation.py`, `tests/unit/test_ccxt_generic_feed.py`.
 - **Integration** – `tests/integration/test_ccxt_generic.py` validates REST snapshots, WebSocket trades, proxy routing, and REST fallback.

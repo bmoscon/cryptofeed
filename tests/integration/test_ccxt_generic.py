@@ -76,6 +76,50 @@ async def test_ccxt_generic_feed_rest_ws_flow(ccxt_fake_clients):
     await feed.close()
 
 
+@pytest.mark.asyncio
+async def test_ccxt_generic_feed_hyperliquid_flow(ccxt_fake_clients):
+    registry = ccxt_fake_clients
+
+    context = CcxtConfig(exchange_id="hyperliquid").to_context()
+
+    feed = CcxtGenericFeed(
+        exchange_id="hyperliquid",
+        symbols=["BTC-USDT-PERP"],
+        channels=[TRADES, L2_BOOK],
+        config_context=context,
+    )
+
+    books: list = []
+    trades: list = []
+
+    feed.register_callback(L2_BOOK, lambda snapshot: books.append(snapshot))
+    feed.register_callback(TRADES, lambda trade: trades.append(trade))
+
+    await feed.bootstrap_l2()
+    await feed.stream_trades_once()
+
+    assert books and trades
+
+    book = books[0]
+    assert book.symbol == "BTC-USDT-PERP"
+    assert book.sequence == 901
+    assert book.bids[0][0] == Decimal("25000.4")
+
+    trade = trades[0]
+    assert trade.symbol == "BTC-USDT-PERP"
+    assert trade.price == Decimal("25001.1")
+    assert trade.sequence == 1337
+
+    # Cache should expose ccxt identifiers for Hyperliquid perpetuals
+    assert feed.cache.id_for_symbol("BTC-USDT-PERP") == "BTCUSDT"
+    assert feed.cache.request_symbol("BTC-USDT-PERP") == "BTC/USDT:USDT"
+
+    rest_clients = [client for client in registry["rest"] if client.exchange_id == "hyperliquid"]
+    assert rest_clients, "expected hyperliquid rest client to be constructed"
+
+    await feed.close()
+
+
 def test_ccxt_generic_feed_requires_credentials():
     context = CcxtConfig(exchange_id="backpack").to_context()
 

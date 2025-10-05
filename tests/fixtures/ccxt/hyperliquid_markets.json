@@ -1,0 +1,54 @@
+{
+  "BTC/USDT:USDT": {
+    "id": "BTCUSDT",
+    "symbol": "BTC/USDT:USDT",
+    "base": "BTC",
+    "quote": "USDT",
+    "settle": "USDT",
+    "type": "swap",
+    "linear": true,
+    "contract": true,
+    "precision": {
+      "price": 0.01,
+      "amount": 0.001
+    },
+    "limits": {
+      "amount": {
+        "min": 0.001,
+        "max": null
+      }
+    },
+    "info": {
+      "symbol": "BTC",
+      "tickSize": "0.01",
+      "stepSize": "0.001",
+      "type": "perpetual"
+    }
+  },
+  "ETH/USDT:USDT": {
+    "id": "ETHUSDT",
+    "symbol": "ETH/USDT:USDT",
+    "base": "ETH",
+    "quote": "USDT",
+    "settle": "USDT",
+    "type": "swap",
+    "linear": true,
+    "contract": true,
+    "precision": {
+      "price": 0.01,
+      "amount": 0.01
+    },
+    "limits": {
+      "amount": {
+        "min": 0.01,
+        "max": null
+      }
+    },
+    "info": {
+      "symbol": "ETH",
+      "tickSize": "0.01",
+      "stepSize": "0.01",
+      "type": "perpetual"
+    }
+  }
+}

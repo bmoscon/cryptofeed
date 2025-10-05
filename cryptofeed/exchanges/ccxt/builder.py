@@ -74,7 +74,22 @@ class CcxtExchangeBuilder:
                 return symbol_normalizer(symbol)
             class_dict['normalize_symbol'] = normalize_symbol
         else:
-            class_dict['normalize_symbol'] = lambda self, symbol: symbol.replace('/', '-')
+            def _default_symbol_normalizer(symbol: str) -> str:
+                normalized = symbol.replace('/', '-').replace(':', '-')
+                if normalized_id == 'hyperliquid':
+                    if symbol.endswith('-PERP') or normalized.endswith('-PERP'):
+                        return normalized.replace(':', '-')
+                    base_quote = symbol.split(':')[0]
+                    if '/' in base_quote:
+                        base, quote = base_quote.split('/')
+                    else:
+                        parts = normalized.split('-')
+                        base = parts[0]
+                        quote = parts[1] if len(parts) > 1 else parts[0]
+                    return f"{base}-{quote}-PERP"
+                return normalized
+
+            class_dict['normalize_symbol'] = lambda self, symbol: _default_symbol_normalizer(symbol)
 
         if subscription_filter:
             def should_subscribe(self, symbol: str, channel: str) -> bool:
