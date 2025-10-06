@@ -21,6 +21,7 @@ from cryptofeed.defines import (
     TRANSACTIONS,
 )
 from .context import CcxtExchangeContext
+from .exchanges import get_symbol_normalizer
 
 if TYPE_CHECKING:  # pragma: no cover - import for type checking only
     from .transport import CcxtRestTransport, CcxtWsTransport
@@ -175,16 +176,12 @@ class CcxtMetadataCache:
             raise KeyError(f"Unknown symbol {symbol}") from exc
 
     def _normalize_symbol(self, symbol: str, meta: Dict[str, Any]) -> str:
+        normalizer = get_symbol_normalizer(self.exchange_id)
+        if normalizer is not None:
+            return normalizer(symbol, meta)
         normalized = symbol.replace("/", "-")
         if ":" in normalized:
             normalized = normalized.replace(":", "-")
-
-        market_type = str(meta.get("type", "")).lower()
-        if self.exchange_id == "hyperliquid" and market_type in {"swap", "perpetual"}:
-            base = meta.get("base") or symbol.split("/")[0]
-            quote_segment = meta.get("quote") or symbol.split("/")[1]
-            quote = quote_segment.split(":")[0]
-            normalized = f"{base}-{quote}-PERP"
         return normalized
 
 

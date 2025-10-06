@@ -41,6 +41,9 @@ from .builder import (
     create_ccxt_feed,
 )
 from .feed import CcxtFeed
+from .exchanges import get_symbol_normalizer, load_exchange_overrides
+
+load_exchange_overrides()
 
 __all__ = [
     'CcxtProxyConfig',
@@ -75,4 +78,6 @@ __all__ = [
     'get_exchange_builder',
     'create_ccxt_feed',
     'CcxtFeed',
+    'get_symbol_normalizer',
+    'load_exchange_overrides',
 ]

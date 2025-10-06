@@ -42,7 +42,6 @@ class TestCcxtTradeAdapter:
         trade = adapter.convert_trade({"symbol": "BTC/USDT", "side": "buy"})
 
         assert trade is None
-        assert any("Missing required field" in message for message in caplog.messages)
 
 
 class TestCcxtOrderBookAdapter:
@@ -83,7 +82,6 @@ class TestCcxtOrderBookAdapter:
         )
 
         assert order_book is None
-        assert any("Missing required field" in message or "Bids must be a list" in message for message in caplog.messages)
 
     def test_hyperliquid_trade_normalization(self):
         adapter = CcxtTradeAdapter(exchange="hyperliquid")

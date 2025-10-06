@@ -10,6 +10,7 @@ from .feed import CcxtFeed
 from .generic import CcxtMetadataCache, CcxtUnavailable
 from .generic import get_supported_ccxt_exchanges as _get_supported_ccxt_exchanges
 from .config import CcxtExchangeConfig
+from .exchanges import get_symbol_normalizer
 
 
 class UnsupportedExchangeError(Exception):
@@ -69,27 +70,16 @@ class CcxtExchangeBuilder:
             '_config': config,
         }
 
+        exchange_normalizer = get_symbol_normalizer(normalized_id)
+
         if symbol_normalizer:
             def normalize_symbol(self, symbol: str) -> str:
                 return symbol_normalizer(symbol)
             class_dict['normalize_symbol'] = normalize_symbol
+        elif exchange_normalizer:
+            class_dict['normalize_symbol'] = lambda self, symbol: exchange_normalizer(symbol, None)
         else:
-            def _default_symbol_normalizer(symbol: str) -> str:
-                normalized = symbol.replace('/', '-').replace(':', '-')
-                if normalized_id == 'hyperliquid':
-                    if symbol.endswith('-PERP') or normalized.endswith('-PERP'):
-                        return normalized.replace(':', '-')
-                    base_quote = symbol.split(':')[0]
-                    if '/' in base_quote:
-                        base, quote = base_quote.split('/')
-                    else:
-                        parts = normalized.split('-')
-                        base = parts[0]
-                        quote = parts[1] if len(parts) > 1 else parts[0]
-                    return f"{base}-{quote}-PERP"
-                return normalized
-
-            class_dict['normalize_symbol'] = lambda self, symbol: _default_symbol_normalizer(symbol)
+            class_dict['normalize_symbol'] = lambda self, symbol: symbol.replace('/', '-').replace(':', '-')
 
         if subscription_filter:
             def should_subscribe(self, symbol: str, channel: str) -> bool:

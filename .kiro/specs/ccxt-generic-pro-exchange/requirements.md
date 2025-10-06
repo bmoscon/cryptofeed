@@ -54,3 +54,11 @@ Refactor the CCXT/CCXT-Pro abstraction so it adheres to Cryptofeed’s updated e
 1. WHEN Hyperliquid is enabled through the ccxt generic feed THEN symbol normalization, market metadata (precision, settlement asset), and transport fallbacks SHALL match recorded fixtures and live validation runs gated by environment flags.
 2. WHEN evaluating additional ccxt exchanges not currently present in Cryptofeed (e.g., Hyperliquid spot/perps, OKX algo-only venues, HTX derivatives) THEN the roadmap SHALL capture priority, schema deltas, and hook requirements in the spec tasks backlog.
 3. WHEN new exchange coverage is planned THEN documentation SHALL outline live-test opt-ins (environment variables, proxy expectations) and fixture generation workflows to keep CI deterministic while supporting manual verification.
+
+### Requirement 7: Exchange-Specific Isolation & Engineering Principles
+**Objective:** As an integrator, I want ccxt exchange support to apply project engineering principles consistently so that adding or refactoring an individual venue is low-risk, isolated, and aligned with FR-first delivery.
+
+#### Acceptance Criteria
+1. WHEN exchange-specific logic is required (symbol overrides, adapter hooks, live validation flags) THEN it SHALL reside in dedicated hook registrations or task-scoped modules without leaking into shared infrastructure.
+2. WHEN new ccxt exchanges are onboarded THEN the change list SHALL demonstrate isolation by touching only reusable scaffolding plus exchange-specific hook/fixture files, adhering to SOLID and NO LEGACY guidelines.
+3. WHEN refactoring existing ccxt code THEN updates SHALL include explicit references to the applicable engineering principles (FRs over NFRs, KISS, DRY) in design notes or commit descriptions to maintain traceability.

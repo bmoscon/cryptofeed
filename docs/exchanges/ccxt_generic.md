@@ -96,6 +96,12 @@ PY` to inspect downstream usage during migration reviews.
   - **Binance Innovation Zone assets** – leverage existing symbol hooks; focus on rate-limit guardrails.
 - Capture candidate exchanges and schema notes in the spec’s Phase 9 backlog when grooming tasks.
 
+## Engineering Principles for New CCXT Exchanges
+- **FRs over NFRs**: ship minimal functional coverage first (fixtures + adapter hooks) before investing in metrics or perf tweaks.
+- **Isolation**: put exchange overrides in `cryptofeed/exchanges/ccxt/exchanges/<exchange>.py` (hooks, symbol normalizers) so shared scaffolding stays untouched.
+- **NO LEGACY**: retire temporary shims once downstream users migrate; capture removals in changelog/spec tasks.
+- **Live validation opt-in**: prefer deterministic fixtures for CI; expose env-gated live tests (see Hyperliquid) for manual verification.
+
 ## Testing Strategy
 - **Unit** – `tests/unit/test_ccxt_adapter_registry.py`, `tests/unit/test_ccxt_feed_config_validation.py`, `tests/unit/test_ccxt_generic_feed.py`.
 - **Integration** – `tests/integration/test_ccxt_generic.py` validates REST snapshots, WebSocket trades, proxy routing, and REST fallback.

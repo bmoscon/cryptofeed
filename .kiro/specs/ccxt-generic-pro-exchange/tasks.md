@@ -147,3 +147,19 @@
   - Expand ccxt developer docs with a deferral note, outlining prerequisites (credentials, live validation flags) to be satisfied before starting implementation
   - Reference this deferred phase so teams can quickly spin up tasks once a concrete FR emerges
   - _Requirements: R4.3, R6.3_
+
+## Phase 11 – Engineering Principle Alignment
+- [ ] 11.1 Audit ccxt modules for exchange-specific leakage
+  - Review adapters, transports, and builder utilities to confirm Hyperliquid-specific logic lives in hook registrations or fixtures, not shared code paths
+  - Create follow-up issues for any residual leakage that violates SOLID/NO LEGACY principles
+  - _Requirements: R7.1_
+
+- [ ] 11.2 Refactor extension points for isolated exchange overrides
+  - Introduce structured hook registration modules (e.g., `adapters/exchanges/<exchange>.py`) so future venues can ship in self-contained files
+  - Update builder/import paths to auto-discover exchange-specific hook modules without modifying shared scaffolding
+  - _Requirements: R7.2_
+
+- [ ] 11.3 Document engineering principles in ccxt onboarding guide
+  - Add a section to `docs/exchanges/ccxt_generic.md` explaining how FRs over NFRs, KISS, and NO LEGACY map to ccxt exchange integrations
+  - Provide examples demonstrating isolated change sets when adding a new ccxt exchange via hooks/fixtures
+  - _Requirements: R4.3, R7.3_
