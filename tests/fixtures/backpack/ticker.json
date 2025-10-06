@@ -1,0 +1,9 @@
+{
+  "type": "ticker",
+  "symbol": "BTC_USDT",
+  "last": "30055",
+  "bestBid": "30050",
+  "bestAsk": "30060",
+  "volume": "25.5",
+  "timestamp": 1700000000200
+}

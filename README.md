@@ -17,6 +17,8 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Blockchain.com](https://www.blockchain.com/)
 * [Bybit](https://www.bybit.com/)
 * [Binance](https://www.binance.com/en)
+### Actively maintained connectors
+
 * [Binance Delivery](https://binance-docs.github.io/apidocs/delivery/en/)
 * [Binance Futures](https://www.binance.com/en/futures)
 * [Binance US](https://www.binance.us/en)
@@ -29,15 +31,9 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Deribit](https://www.deribit.com/)
 * [dYdX](https://dydx.exchange/)
 * [FMFW.io](https://www.fmfw.io/)
-* [EXX](https://www.exx.com/)
 * [Gate.io](https://www.gate.io/)
 * [Gate.io Futures](https://www.gate.io/futures_center)
 * [Gemini](https://gemini.com/)
-* [HitBTC](https://hitbtc.com/)
-* [Huobi](https://www.hbg.com/)
-* [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
-* Huobi Swap (Coin-M and USDT-M)
-* [Independent Reserve](https://www.independentreserve.com/) 
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)
@@ -48,6 +44,33 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
 
+### Legacy / community-maintained connectors
+
+These connectors remain in the repository but are no longer part of the core regression matrix. Contributions are welcome, but new
+deployments should prefer the actively maintained list above. Additional community-maintained connectors are listed in docs/exchange.md.
+
+* [EXX](https://www.exx.com/)
+* [HitBTC](https://hitbtc.com/)
+* [Huobi](https://www.hbg.com/)
+* [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
+* Huobi Swap (Coin-M and USDT-M)
+* [Independent Reserve](https://www.independentreserve.com/)
+
+### Upcoming exchange integrations
+
+The roadmap prioritises modern derivatives venues with robust APIs:
+
+* Backpack – unified REST/WebSocket API (`api.backpack.exchange`) covering spot
+  and perpetual contracts, with account webhooks for order lifecycle events.citeturn0search0
+* Hyperliquid – on-chain perpetual protocol with high-frequency book streams and
+  programmatic funding/vault data via `api.hyperliquid.xyz`.citeturn0search1
+
+If you operate at one of these venues or would like to help with testing, please join the discussion in `docs/exchange.md`.
+
+
+### Generic exchange adapters
+
+Cryptofeed will expose a `CcxtFeed` that wraps ccxt (REST) and ccxt.pro (WebSocket) as a fallback for long-tail venues. See docs/exchange.md for the design sketch.
 
 ## Basic Usage
 

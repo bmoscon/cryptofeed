@@ -1,7 +1,208 @@
-# *** Note this is somewhat out of date and will be updated at a later time ***
+# Exchange Integration Roadmap
+
+Cryptofeed is cleaning up legacy connectors and focusing engineering effort on
+modern venues with reliable APIs. The immediate targets for 2025Q4 are:
+
+- **Backpack** – spot and perpetual derivatives with high-frequency WebSocket
+  channels (`wss://api.backpack.exchange/stream`) plus REST order entry and
+  account webhooks. Public docs cover depth snapshots, incremental trades, and
+  private order execution streams suitable for latency-sensitive trading.citeturn0search0
+- **Hyperliquid** – on-chain perpetual venue with a unified WebSocket gateway
+  for order book updates, vault statistics, and the protocol’s funding feed.
+  REST endpoints expose historical candles, open interest, and account
+  signature flows required for authenticated data.citeturn0search1
+
+Implementation checklist for these connectors:
+
+1. Map normalized channel names (TRADES, L2_BOOK, FUNDING) to the provider’s
+   topic schema and document any authentication signature requirements.
+2. Provide depth snapshot bootstrapping plus delta replay logic aligned with
+   the exchange sequencing guarantees.
+3. Capture exchange-specific metadata (e.g., Backpack’s `sequence` field or
+   Hyperliquid’s `crossSequence`) so downstream storage backends can reason
+   about ordering.
+
+Contributors interested in these venues can find acceptance criteria and
+tracking issues in this document. The historical walkthrough below (based on
+Huobi) is retained for reference, but new connectors should follow the roadmap
+above and prefer the latest standards helpers.
+
+See `docs/specs/backpack_ccxt.md` for detailed Backpack MVP requirements.
+
+### ccxt / ccxt.pro integration
+
+To broaden data coverage for long-tail venues, we are drafting an adapter that
+wraps [`ccxt`](https://github.com/ccxt/ccxt) for REST polling and
+[`ccxt.pro`](https://github.com/ccxt/ccxt.pro) for WebSocket streaming. The goal
+is to expose a generic `CcxtFeed` that translates Cryptofeed’s normalized
+channels into ccxt market calls while respecting our engineering principles:
+
+1. **SOLID/KISS** – isolate ccxt-specific concerns inside a thin transport
+   layer so existing callbacks/backends remain unchanged.
+2. **DRY** – reuse ccxt’s market metadata to seed symbol maps, throttling, and
+   authentication flows.
+3. **YAGNI** – start with trades and L2 book snapshots before adding more exotic
+   channels.
+
+We expect this adapter to unlock coverage for exchanges like Backpack (until a
+native connector lands), smaller spot brokers, and regional venues. Contributors
+interested in the ccxt path should coordinate in `docs/exchange.md` to avoid
+duplication.
+
+### Backpack Native Feed
+
+Backpack now ships with a first-party adapter located under
+`cryptofeed/exchanges/backpack`. The native feed is enabled by default and
+replaces the legacy ccxt implementation. It provides:
+
+- Pydantic-backed configuration (`BackpackConfig`) with ED25519 key
+  normalization and sandbox/proxy toggles.
+- Dedicated REST/WebSocket transports that reuse cryptofeed’s proxy injector
+  and emit heartbeat pings to guard against stale connections.
+- Message router + adapters that convert Backpack payloads into cryptofeed
+  `Trade`/`OrderBook` objects while maintaining snapshot/delta sequencing.
+- Built-in metrics via `BackpackMetrics` and health evaluation helpers exposed
+  through `BackpackFeed.health()`.
+
+See `docs/exchanges/backpack.md` for setup instructions and observability
+guidance. Historical details for the ccxt MVP remain in
+`docs/specs/backpack_ccxt.md`.
+
+#### Example: Binance via ccxt/ccxt.pro
+
+```python
+import asyncio
+import ccxt.async_support as ccxt_async
+import ccxt.pro as ccxt_pro
+
+async def snapshot(symbol: str = "BTC/USDT") -> dict:
+    client = ccxt_async.binance()
+    try:
+        await client.load_markets()
+        return await client.fetch_order_book(symbol, limit=5)
+    finally:
+        await client.close()
+
+async def stream_trades(symbol: str = "BTC/USDT") -> list:
+    exchange = ccxt_pro.binance()
+    try:
+        return await exchange.watch_trades(symbol)
+    finally:
+        await exchange.close()
+
+async def main():
+    book = await snapshot()
+    trades = await stream_trades()
+    print("top bid", book["bids"][0], "last trade", trades[-1])
+
+asyncio.run(main())
+```
+
+Architectural notes:
+
+- Wrap the async REST client in a thin adapter that exposes the snapshot API
+  expected by `Feed._reset` when bootstrapping order books.
+- Use ccxt.pro streams to bridge into Cryptofeed’s polling loop; map incoming
+  trades/order books into normalized dataclasses before dispatching to
+  callbacks.
+- ccxt relies on exchange REST endpoints for market metadata and may enforce
+  *regional restrictions*. During testing the public Binance endpoint returned
+  `ExchangeNotAvailable` (HTTP 451) when accessed from a restricted IP. The
+  adapter should surface such errors clearly and allow users to route through
+  permitted endpoints (e.g., Binance US). We were unable to capture a live
+  snapshot because of this restriction.
+
+### MVP specification for `CcxtFeed`
+
+The MVP targets Binance because ccxt/ccxt.pro expose both REST order books and
+streaming trades for it. Once stable, the adapter can be extended to other
+venues supported by ccxt.
+
+#### Goals
+
+1. Provide a drop-in `CcxtFeed` that follows the existing `Feed` interface and
+   emits normalized trades and L2 snapshots/deltas via existing callbacks.
+2. Reuse ccxt metadata to populate symbol maps, precision, throttling limits,
+   and authentication requirements.
+3. Keep the implementation SOLID/KISS by isolating third-party dependencies in
+   a transport/adaptor layer while reusing Cryptofeed’s queueing, metrics, and
+   backpressure infrastructure.
+
+#### Scope
+
+- **In scope:**
+  - Public market data (`TRADES`, `L2_BOOK`) for `BTC/USDT` and `ETH/USDT`.
+  - REST snapshot bootstrapping (`fetch_order_book`) with snapshot interval
+    controls to limit rate usage.
+  - WebSocket streaming through `watch_trades` and `watch_order_book`.
+  - Optional REST polling fallback when WebSocket faces region restrictions.
+- **Out of scope (for MVP):**
+  - Authenticated/user data, derivatives account channels.
+  - Market-level funding/interest feeds (can piggyback on Hyperliquid work).
+  - Resilience to exchange-specific quirks beyond retry/backoff wrappers.
+
+#### Architecture
+
+```
+CcxtFeed
+ ├─ CcxtMetadataCache  -> wraps ccxt.binance().load_markets()
+ ├─ CcxtRestTransport  -> ccxt.async_support.binance()
+ │     • fetch_order_book() → L2 snapshot
+ └─ CcxtWsTransport    -> ccxt.pro.binance()
+       • watch_trades(), watch_order_book()
+```
+
+- The feed schedules periodic snapshots via `CcxtRestTransport` and forwards
+  data through `CcxtEmitter` in the same way native connectors call `_emit`.
+- `CcxtWsTransport` pushes updates into the existing `BackendQueue` so metrics
+  and retry logic are reused verbatim.
+- Both transports must translate ccxt symbols (`BTC/USDT`) to the normalized
+  form (`BTC-USDT`) using `ccxt.safe_symbol` and metadata caches.
+
+#### Configuration
+
+```yaml
+exchanges:
+  ccxt_binance:
+    class: CcxtFeed
+    exchange: binance
+    symbols: ["BTC-USDT", "ETH-USDT"]
+    channels: [TRADES, L2_BOOK]
+    snapshot_interval: 30  # seconds between REST bootstraps
+    websocket: true        # disable when region blocked
+    rest_only: false
+```
+
+#### Error handling & throttling
+
+- Handle `ExchangeNotAvailable`/HTTP 451 by surfacing actionable error messages
+  and allowing configuration of alternative endpoints (e.g., `binanceus`).
+- Respect ccxt’s `rateLimit` metadata and backoff when encountering 429/418.
+- Provide a toggle to fall back to REST polling when WebSocket fails repeatedly
+  (useful for region-blocked deployments).
+
+#### Testing strategy
+
+1. **Unit tests** – mock ccxt transports to ensure symbol mapping, queue
+   integration, and error surfacing behave identically to native connectors.
+2. **Integration smoke** – run against Binance (or Binance US) from an allowed
+   region; verify trades and L2 books populate callbacks/backends.
+3. **Regression harness** – add ccxt-based feed to the docker-compose
+   integration to ensure future changes don’t break the adapter when ccxt
+   updates.
+
+#### Rollout
+
+1. Land the MVP behind a feature flag (`use_ccxt=True`) so existing deployments
+   are unaffected.
+2. Gather feedback from users needing long-tail markets; extend coverage to
+   other ccxt exchanges in priority order.
+3. Once multiple venues are verified, document best practices (e.g., handling
+   API keys, region-specific hosts) and promote the adapter to the “active” list
+   in the README.
 
 
-# Adding a new exchange
+# Adding a new exchange (legacy Huobi walkthrough)
 
 <br><br>
 

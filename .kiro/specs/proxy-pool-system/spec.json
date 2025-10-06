@@ -1,0 +1,29 @@
+{
+  "feature_name": "proxy-pool-system",
+  "created_at": "2025-01-22T17:00:00Z",
+  "updated_at": "2025-10-04T22:30:00Z",
+  "language": "en",
+  "phase": "disabled",
+  "dependencies": {
+    "extends": "proxy-system-complete",
+    "requires": ["proxy-system-complete"]
+  },
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": false,
+  "implementation_status": "disabled",
+  "documentation_status": "disabled",
+  "notes": "Workstream paused pending external service integration roadmap"
+}

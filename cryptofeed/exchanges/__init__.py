@@ -47,6 +47,8 @@ from .okcoin import OKCoin
 from .poloniex import Poloniex
 from .probit import Probit
 from .upbit import Upbit
+from .backpack.feed import BackpackFeed
+from .shim_monitor import get_shim_usage
 
 # Maps string name to class name for use with config
 EXCHANGE_MAP = {
@@ -92,3 +94,5 @@ EXCHANGE_MAP = {
     PROBIT: Probit,
     UPBIT: Upbit,
 }
+
+EXCHANGE_MAP[BACKPACK] = BackpackFeed

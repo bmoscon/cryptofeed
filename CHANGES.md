@@ -1,5 +1,13 @@
 ## Changelog
 
+### Unreleased (2025-10-05)
+ * Feature: Complete `ccxt-generic-pro-exchange` refactor (spec `ccxt-generic-pro-exchange`)
+   * Consolidated CCXT modules under `cryptofeed/exchanges/ccxt/` with typed contexts and proxy-aware transports
+   * Added adapter hook decorators and registry fallbacks for exchange-specific normalization
+   * Refreshed `CcxtFeed` to wire typed configuration, background tasks, and REST fallback when websockets are unavailable
+   * Updated documentation (`docs/exchanges/ccxt_generic*.md`) and tagged future sandbox tests with `@pytest.mark.ccxt_future`
+   * Removed legacy shims (`cryptofeed.exchanges.ccxt_feed`, `ccxt_config`, `ccxt_transport`, `ccxt_adapters`) in favour of the canonical package modules
+
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
  * Bugfix: Handle empty nextFundingRate in OKX

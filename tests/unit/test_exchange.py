@@ -85,6 +85,9 @@ def test_exchange_playback(exchange):
     dir = os.path.dirname(os.path.realpath(__file__))
     pcap = glob.glob(f"{dir}/../../sample_data/{exchange}.*")
 
+    if not pcap:
+        pytest.skip(f"No sample data for {exchange}")
+
     results = playback(exchange, pcap, config="tests/config_test.yaml")
     message_count = get_message_count(pcap)
 
