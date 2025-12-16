@@ -31,6 +31,11 @@ for the exhaustive list of these *extra* dependencies.
 
          pip install --user --upgrade cryptofeed[arctic]
 
+* ClickHouse backend  
+  To install Cryptofeed along with [ClickHouse](https://clickhouse.com/) in one bundle:
+
+         pip install --user --upgrade cryptofeed[clickhouse]
+
 * Google Cloud Pub / Sub backend
 
          pip install --user --upgrade cryptofeed[gcp_pubsub]

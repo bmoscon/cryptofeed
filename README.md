@@ -135,6 +135,7 @@ Supported Backends:
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
+* [ClickHouse](https://clickhouse.com/)
 * [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
