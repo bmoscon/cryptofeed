@@ -101,12 +101,12 @@ class ClickHouseCallback(BackendQueue):
     async def write_batch(self, updates: list):
         client = self._get_client()
         data_rows = [self.format(u) for u in updates]
-        
+
         if self.custom_columns:
             columns = list(self.custom_columns.values())
         else:
             columns = ['timestamp', 'receipt_timestamp', 'exchange', 'symbol', 'data']
-        
+
         try:
             client.insert(self.table, data_rows, column_names=columns)
         except Exception as e:
