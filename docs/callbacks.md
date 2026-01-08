@@ -26,10 +26,9 @@ It's important to note that if your choose to use the raw callbacks and your cal
 
 Every callback has the same signature, two positional arguments, the data object and the receipt timestamp. The data object differs by data type. The data objects are defined in [types.pyx](../cryptofeed/types.pyx)
 
-
 ### Backends
 
-The backends are defined [here](../cryptofeed/backends/). Currently the following are supported:
+The backends are defined [in this folder](../cryptofeed/backends/). Currently the following are supported:
 
 * Arctic
 * ElasticSearch
@@ -46,7 +45,7 @@ The backends are defined [here](../cryptofeed/backends/). Currently the followin
 * VictoriaMetrics
 * ZMQ
 
-There are also a handful of wrappers defined [here](../cryptofeed/backends/aggregate.py) that can be used in conjunction with these and raw callbacks to convert data to OHLCV, throttle data, etc. 
+There are also a handful of wrappers defined [here](../cryptofeed/backends/aggregate.py) that can be used in conjunction with these and raw callbacks to convert data to OHLCV, throttle data, etc.
 
 ### Performance Considerations
 

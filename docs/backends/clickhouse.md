@@ -14,19 +14,22 @@ ClickHouse is ideal for storing time-series data from cryptocurrency exchanges b
 
 ## Installation
 
-1. Install ClickHouse: https://clickhouse.com/docs/en/install
+1. Install ClickHouse: <https://clickhouse.com/docs/en/install>
 
 2. Install cryptofeed with ClickHouse support:
+
 ```bash
 pip install cryptofeed[clickhouse]
 ```
 
-3. Create the database:
+1. Create the database:
+
 ```bash
 clickhouse-client --query "CREATE DATABASE IF NOT EXISTS cryptofeed"
 ```
 
 4. Create tables using the provided schema:
+
 ```bash
 clickhouse-client --database=cryptofeed < examples/clickhouse_tables.sql
 ```
@@ -97,6 +100,7 @@ TradeClickHouse(**clickhouse_config, custom_columns=custom_columns)
 ## Example Queries
 
 ### Recent trades for BTC-USD
+
 ```sql
 SELECT timestamp, exchange, price, amount, side
 FROM trades
@@ -106,6 +110,7 @@ LIMIT 100;
 ```
 
 ### Volume by exchange and hour
+
 ```sql
 SELECT 
     toStartOfHour(timestamp) AS hour,
@@ -120,6 +125,7 @@ ORDER BY hour DESC, exchange;
 ```
 
 ### Price OHLCV aggregation (1-minute candles)
+
 ```sql
 SELECT 
     toStartOfMinute(timestamp) AS minute,
@@ -139,6 +145,7 @@ ORDER BY minute DESC;
 ```
 
 ### Spread analysis across exchanges
+
 ```sql
 SELECT 
     timestamp,
@@ -163,6 +170,7 @@ ORDER BY timestamp DESC;
 ## Monitoring
 
 View table sizes and compression:
+
 ```sql
 SELECT 
     table,
@@ -179,4 +187,4 @@ GROUP BY table;
 
 - Full example: [examples/demo_clickhouse.py](../examples/demo_clickhouse.py)
 - Table schemas: [examples/clickhouse_tables.sql](../examples/clickhouse_tables.sql)
-- ClickHouse documentation: https://clickhouse.com/docs
+- ClickHouse documentation: <https://clickhouse.com/docs>
