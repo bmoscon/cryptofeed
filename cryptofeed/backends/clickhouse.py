@@ -4,11 +4,15 @@ Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from collections import defaultdict
 from datetime import datetime as dt
+import logging
 from typing import Tuple
 
 import clickhouse_connect
+
+LOG = logging.getLogger('feedhandler')
 from yapic import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
@@ -105,13 +109,15 @@ class ClickHouseCallback(BackendQueue):
         if self.custom_columns:
             columns = list(self.custom_columns.values())
         else:
-            columns = ['timestamp', 'receipt_timestamp', 'exchange', 'symbol', 'data']
+            columns = None
 
         try:
-            client.insert(self.table, data_rows, column_names=columns)
+            # Use run_in_executor to avoid blocking the event loop when multiprocessing is disabled
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: client.insert(self.table, data_rows, column_names=columns))
         except Exception as e:
             # Log error but continue processing
-            print(f"ClickHouse insert error: {e}")
+            LOG.error("ClickHouse insert error: %s", e)
 
 
 class TradeClickHouse(ClickHouseCallback, BackendCallback):
@@ -195,7 +201,7 @@ class OpenInterestClickHouse(ClickHouseCallback, BackendCallback):
 
 class IndexClickHouse(ClickHouseCallback, BackendCallback):
     default_table = INDEX
-
+    default_columns = ['timestamp', 'receipt_timestamp', 'exchange', 'symbol', 'price']
     def format(self, data: Tuple):
         if self.custom_columns:
             return self._custom_format(data)
