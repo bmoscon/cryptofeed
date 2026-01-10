@@ -31,6 +31,11 @@ for the exhaustive list of these *extra* dependencies.
 
          pip install --user --upgrade cryptofeed[arctic]
 
+* ClickHouse backend  
+  To install Cryptofeed along with [ClickHouse](https://clickhouse.com/) in one bundle:
+
+         pip install --user --upgrade cryptofeed[clickhouse]
+
 * Google Cloud Pub / Sub backend
 
          pip install --user --upgrade cryptofeed[gcp_pubsub]
@@ -65,8 +70,9 @@ for the exhaustive list of these *extra* dependencies.
          pip install --user --upgrade cryptofeed[zmq]
 
 If you have a problem with the installation/hacking of Cryptofeed, you are welcome to:
-* open a new issue: https://github.com/bmoscon/cryptofeed/issues/
+
+* open a new issue: <https://github.com/bmoscon/cryptofeed/issues/>
 * join us on Slack: [cryptofeed-dev.slack.com](https://join.slack.com/t/cryptofeed-dev/shared_invite/enQtNjY4ODIwODA1MzQ3LTIzMzY3Y2YxMGVhNmQ4YzFhYTc3ODU1MjQ5MDdmY2QyZjdhMGU5ZDFhZDlmMmYzOTUzOTdkYTZiOGUwNGIzYTk)
-* or on GitHub Discussion: https://github.com/bmoscon/cryptofeed/discussions
+* or on GitHub Discussion: <https://github.com/bmoscon/cryptofeed/discussions>
 
 Your Pull Requests are also welcome, even for minor changes.

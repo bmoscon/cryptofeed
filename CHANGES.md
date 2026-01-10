@@ -1,5 +1,9 @@
 ## Changelog
 
+### 2.4.2 (TBD)
+ * Feature: ClickHouse backend support for storing real-time cryptocurrency data
+ * Update: Added copilot-instructions.md
+
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
  * Bugfix: Handle empty nextFundingRate in OKX
