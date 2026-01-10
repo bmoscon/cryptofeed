@@ -201,7 +201,6 @@ class OpenInterestClickHouse(ClickHouseCallback, BackendCallback):
 
 class IndexClickHouse(ClickHouseCallback, BackendCallback):
     default_table = INDEX
-    default_columns = ['timestamp', 'receipt_timestamp', 'exchange', 'symbol', 'price']
     def format(self, data: Tuple):
         if self.custom_columns:
             return self._custom_format(data)

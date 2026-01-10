@@ -12,23 +12,21 @@ ClickHouse is ideal for storing time-series data from cryptocurrency exchanges b
 - **Time-series optimized**: Built-in functions for time-based aggregations
 - **Horizontal scaling**: Add nodes to scale write and query throughput
 
-## Installation
+## Quick Start
 
-1. Install ClickHouse: <https://clickhouse.com/docs/en/install>
-
-2. Install cryptofeed with ClickHouse support:
+Install Cryptofeed with ClickHouse support
 
 ```bash
 pip install cryptofeed[clickhouse]
 ```
 
-1. Create the database:
+Create the dataabase
 
 ```bash
 clickhouse-client --query "CREATE DATABASE IF NOT EXISTS cryptofeed"
 ```
 
-4. Create tables using the provided schema:
+Create tables using the provided schema
 
 ```bash
 clickhouse-client --database=cryptofeed < examples/clickhouse_tables.sql
