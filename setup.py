@@ -87,6 +87,7 @@ setup(
     ],
     extras_require={
         "arctic": ["arctic", "pandas"],
+        "clickhouse": ["clickhouse-connect>=0.6.0"],
         "gcp_pubsub": ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"],
         "kafka": ["aiokafka>=0.7.0"],
         "mongo": ["motor"],
@@ -97,6 +98,7 @@ setup(
         "zmq": ["pyzmq"],
         "all": [
             "arctic",
+            "clickhouse-connect>=0.6.0",
             "google_cloud_pubsub>=2.4.1",
             "gcloud_aio_pubsub",
             "aiokafka>=0.7.0",

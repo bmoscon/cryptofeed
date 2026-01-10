@@ -1,4 +1,5 @@
 # Cryptocurrency Exchange Feed Handler
+
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
@@ -37,7 +38,7 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Huobi](https://www.hbg.com/)
 * [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
 * Huobi Swap (Coin-M and USDT-M)
-* [Independent Reserve](https://www.independentreserve.com/) 
+* [Independent Reserve](https://www.independentreserve.com/)
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)
@@ -47,7 +48,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Poloniex](https://www.poloniex.com/)
 * [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
-
 
 ## Basic Usage
 
@@ -76,9 +76,7 @@ fh.run()
 
 Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage.
 
-
 For an example of a containerized application using cryptofeed to store data to a backend, please see [Cryptostore](https://github.com/bmoscon/cryptostore).
-
 
 ## National Best Bid/Offer (NBBO)
 
@@ -123,18 +121,19 @@ Cryptofeed supports the following channels from exchanges:
 * BALANCES - Updates on wallet funds
 * FILLS - User's executed trades
 
-
 ## Backends
 
 Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces.
 
 Supported Backends:
+
 * Redis (Streams and Sorted Sets)
 * [Arctic](https://github.com/manahl/arctic)
 * ZeroMQ
 * UDP Sockets
 * TCP Sockets
 * Unix Domain Sockets
+* [ClickHouse](https://clickhouse.com/)
 * [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
@@ -144,35 +143,39 @@ Supported Backends:
 * GCP Pub/Sub
 * [QuestDB](https://questdb.io/)
 
-
 ## Installation
 
 **Note:** cryptofeed requires Python 3.8+
 
 Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
 
-    pip install cryptofeed
+```bash
+pip install cryptofeed
+```
 
 Cryptofeed has optional dependencies, depending on the backends used. You can install them individually, or all at once. To install Cryptofeed along with all its optional dependencies in one bundle:
 
-    pip install cryptofeed[all]
+```bash
+pip install cryptofeed[all]
+```
 
 If you wish to clone the repository and install from source, run this command from the root of the cloned repository.
 
-    python setup.py install
+```bash
+python setup.py install
+```
 
 Alternatively, you can install in 'edit' mode (also called development mode):
 
-    python setup.py develop
+```bash
+python setup.py develop
+```
 
 See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
-
-
 
 ## Rest API
 
 Cryptofeed supports some REST interfaces for retrieving real-time and historical data, as well as order placement and account management. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange. The methods for interacting with the exchange RET endpoints exist in two flavors, the synchronous methods (suffixed with `_sync`) as well as the asynchronous which can be utilized with asyncio. For more information see the [documentation](docs/rest.md).
-
 
 ## Future Work
 
