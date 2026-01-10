@@ -201,6 +201,7 @@ class OpenInterestClickHouse(ClickHouseCallback, BackendCallback):
 
 class IndexClickHouse(ClickHouseCallback, BackendCallback):
     default_table = INDEX
+
     def format(self, data: Tuple):
         if self.custom_columns:
             return self._custom_format(data)
