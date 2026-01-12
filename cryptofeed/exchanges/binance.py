@@ -63,7 +63,7 @@ class Binance(Feed, BinanceRestMixin):
 
             expiration = None
             stype = SPOT
-            if symbol.get('contractType') == 'PERPETUAL':
+            if symbol.get('contractType') in ('PERPETUAL', 'TRADIFI_PERPETUAL'):
                 stype = PERPETUAL
             elif symbol.get('contractType') in ('CURRENT_QUARTER', 'NEXT_QUARTER'):
                 stype = FUTURES
