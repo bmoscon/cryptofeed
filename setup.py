@@ -10,7 +10,6 @@ from setuptools import Extension, setup
 from Cython.Build import cythonize
 
 
-
 extra_compile_args = ["/O2" if os.name == "nt" else "-O3"]
 define_macros = []
 
