@@ -98,6 +98,17 @@ class OpenInterestQuest(QuestCallback, BackendCallback):
 class LiquidationsQuest(QuestCallback, BackendCallback):
     default_key = 'liquidations'
 
+    async def write(self, data):
+        timestamp = data["timestamp"]
+        received_timestamp_int = int(data["receipt_timestamp"] * 1_000_000)
+        id_field = f',id="{data["id"]}"' if data["id"] is not None else ''
+        timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else received_timestamp_int * 1000
+        update = (
+            f'{self.key}-{data["exchange"]},symbol={data["symbol"]},side={data["side"]},status={data["status"]} '
+            f'quantity={data["quantity"]},price={data["price"]}{id_field},receipt_timestamp={received_timestamp_int}t {timestamp_int}'
+        )
+        await self.queue.put(update)
+
 
 class CandlesQuest(QuestCallback, BackendCallback):
     default_key = 'candles'
