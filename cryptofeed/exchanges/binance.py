@@ -131,7 +131,8 @@ class Binance(Feed, BinanceRestMixin):
                 # for everything but premium index the symbols need to be lowercase.
                 if pair.startswith("p"):
                     if normalized_chan != CANDLES:
-                        raise ValueError("Premium Index Symbols only allowed on Candle data feed")
+                        LOG.warning("%s: Premium Index symbol %s is only supported on Candle feed; skipping for %s", self.id, pair, normalized_chan)
+                        continue
                 else:
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
