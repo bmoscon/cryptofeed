@@ -41,7 +41,7 @@ class Bybit(Feed):
     websocket_endpoints = [
         WebsocketEndpoint('wss://stream.bybit.com/v5/public/linear', instrument_filter=('TYPE', (FUTURES, PERPETUAL)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/linear', options={'compression': None}),
         WebsocketEndpoint('wss://stream.bybit.com/v5/public/spot', instrument_filter=('TYPE', (SPOT)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[CANDLES],), sandbox='wss://stream-testnet.bybit.com/v5/public/spot', options={'compression': None}),
-        WebsocketEndpoint('wss://stream.bybit.com/realtime_private', channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]), instrument_filter=('QUOTE', ('USDT',)), sandbox='wss://stream-testnet.bybit.com/realtime_private', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/v5/private', channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]), instrument_filter=('QUOTE', ('USDT',)), sandbox='wss://stream-testnet.bybit.com/v5/private', options={'compression': None}),
     ]
     rest_endpoints = [
         RestEndpoint('https://api.bybit.com', routes=Routes(['/v5/market/instruments-info?&category=linear&status=Trading&limit=1000', '/v5/market/instruments-info?&category=spot&status=Trading&limit=1000']))
