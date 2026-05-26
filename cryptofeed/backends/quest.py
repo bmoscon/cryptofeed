@@ -75,7 +75,11 @@ class BookQuest(QuestCallback):
         self.depth = depth
 
     async def __call__(self, book, receipt_timestamp: float):
-        vals = ','.join([f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(self.depth)] + [f"ask_{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(self.depth)])
+        bid_depth = min(self.depth, len(book.book.bids))
+        ask_depth = min(self.depth, len(book.book.asks))
+        bid_vals = [f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(bid_depth)]
+        ask_vals = [f"ask_{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(ask_depth)]
+        vals = ','.join(bid_vals + ask_vals)
         timestamp = book.timestamp
         receipt_timestamp_int = int(receipt_timestamp * 1_000_000)
         timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else receipt_timestamp_int * 1000
