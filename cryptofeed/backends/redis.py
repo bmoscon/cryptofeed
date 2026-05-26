@@ -29,6 +29,7 @@ class RedisCallback(BackendQueue):
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.running = True
+        self.conn_kwargs = kwargs
 
 
 class RedisZSetCallback(RedisCallback):
@@ -43,7 +44,7 @@ class RedisZSetCallback(RedisCallback):
         super().__init__(host=host, port=port, socket=socket, key=key, numeric_type=numeric_type, **kwargs)
 
     async def writer(self):
-        conn = aioredis.from_url(self.redis)
+        conn = aioredis.from_url(self.redis, **self.conn_kwargs)
 
         while self.running:
             async with self.read_queue() as updates:
@@ -58,7 +59,7 @@ class RedisZSetCallback(RedisCallback):
 
 class RedisStreamCallback(RedisCallback):
     async def writer(self):
-        conn = aioredis.from_url(self.redis)
+        conn = aioredis.from_url(self.redis, **self.conn_kwargs)
 
         while self.running:
             async with self.read_queue() as updates:
@@ -81,7 +82,7 @@ class RedisStreamCallback(RedisCallback):
 class RedisKeyCallback(RedisCallback):
 
     async def writer(self):
-        conn = aioredis.from_url(self.redis)
+        conn = aioredis.from_url(self.redis, **self.conn_kwargs)
 
         while self.running:
             async with self.read_queue() as updates:
