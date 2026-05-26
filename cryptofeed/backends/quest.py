@@ -75,7 +75,11 @@ class BookQuest(QuestCallback):
         self.depth = depth
 
     async def __call__(self, book, receipt_timestamp: float):
-        vals = ','.join([f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(self.depth)] + [f"ask_{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(self.depth)])
+        bid_depth = min(self.depth, len(book.book.bids))
+        ask_depth = min(self.depth, len(book.book.asks))
+        bid_vals = [f"bid_{i}_price={book.book.bids.index(i)[0]},bid_{i}_size={book.book.bids.index(i)[1]}" for i in range(bid_depth)]
+        ask_vals = [f"ask_{i}_price={book.book.asks.index(i)[0]},ask_{i}_size={book.book.asks.index(i)[1]}" for i in range(ask_depth)]
+        vals = ','.join(bid_vals + ask_vals)
         timestamp = book.timestamp
         receipt_timestamp_int = int(receipt_timestamp * 1_000_000)
         timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else receipt_timestamp_int * 1000
@@ -93,6 +97,17 @@ class OpenInterestQuest(QuestCallback, BackendCallback):
 
 class LiquidationsQuest(QuestCallback, BackendCallback):
     default_key = 'liquidations'
+
+    async def write(self, data):
+        timestamp = data["timestamp"]
+        received_timestamp_int = int(data["receipt_timestamp"] * 1_000_000)
+        id_field = f',id="{data["id"]}"' if data["id"] is not None else ''
+        timestamp_int = int(timestamp * 1_000_000_000) if timestamp is not None else received_timestamp_int * 1000
+        update = (
+            f'{self.key}-{data["exchange"]},symbol={data["symbol"]},side={data["side"]},status={data["status"]} '
+            f'quantity={data["quantity"]},price={data["price"]}{id_field},receipt_timestamp={received_timestamp_int}t {timestamp_int}'
+        )
+        await self.queue.put(update)
 
 
 class CandlesQuest(QuestCallback, BackendCallback):
