@@ -1,5 +1,9 @@
 ## Changelog
 
+### 2.4.2 (2026-05-26)
+ * New Exchange: LMEX Spot (L2_BOOK, TRADES, ORDER_INFO)
+ * New Exchange: LMEX Futures / Perpetuals (L2_BOOK, TRADES, FUNDING, ORDER_INFO)
+
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
  * Bugfix: Handle empty nextFundingRate in OKX
