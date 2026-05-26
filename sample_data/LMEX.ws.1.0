@@ -1,0 +1,10 @@
+wss://ws.lmex.io/ws/spot <-> 1700000000.0
+wss://ws.lmex.io/ws/spot <- 1700000000.1: {"op":"subscribe","args":["tradeHistoryApi:BTC-USD","tradeHistoryApi:ETH-USD"]}
+1700000000.2: {"event":"subscribe","channel":["tradeHistoryApi:BTC-USD","tradeHistoryApi:ETH-USD"]}
+1700000002.0: {"topic":"tradeHistoryApi:BTC-USD","data":[{"symbol":"BTC-USD","side":"BUY","size":0.01,"price":50001.0,"tradeId":10000001,"timestamp":1700000002000}]}
+1700000002.1: {"topic":"tradeHistoryApi:ETH-USD","data":[{"symbol":"ETH-USD","side":"SELL","size":0.5,"price":2999.5,"tradeId":10000002,"timestamp":1700000002100}]}
+1700000002.2: {"topic":"tradeHistoryApi:BTC-USD","data":[{"symbol":"BTC-USD","side":"SELL","size":0.05,"price":49999.0,"tradeId":10000003,"timestamp":1700000002200}]}
+1700000003.1: {"topic":"tradeHistoryApi:BTC-USD","data":[{"symbol":"BTC-USD","side":"BUY","size":0.02,"price":50001.0,"tradeId":10000004,"timestamp":1700000003100},{"symbol":"BTC-USD","side":"BUY","size":0.03,"price":50001.5,"tradeId":10000005,"timestamp":1700000003150}]}
+1700000004.0: {"topic":"tradeHistoryApi:ETH-USD","data":[{"symbol":"ETH-USD","side":"BUY","size":1.0,"price":3000.5,"tradeId":10000006,"timestamp":1700000004000}]}
+1700000004.1: {"event":"pong"}
+1700000004.2: {"topic":"tradeHistoryApi:BTC-USD","data":[{"symbol":"BTC-USD","side":"SELL","size":0.1,"price":49999.5,"tradeId":10000007,"timestamp":1700000004200}]}

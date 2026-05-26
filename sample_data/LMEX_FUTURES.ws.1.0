@@ -1,0 +1,10 @@
+wss://ws.lmex.io/ws/futures <-> 1700000000.0
+wss://ws.lmex.io/ws/futures <- 1700000000.1: {"op":"subscribe","args":["tradeHistoryApi:BTC-PERP","tradeHistoryApi:ETH-PERP"]}
+1700000000.2: {"event":"subscribe","channel":["tradeHistoryApi:BTC-PERP","tradeHistoryApi:ETH-PERP"]}
+1700000002.0: {"topic":"tradeHistoryApi","data":[{"symbol":"BTCPFC","side":"BUY","size":5,"price":50051.0,"tradeId":20000001,"timestamp":1700000002000}]}
+1700000002.1: {"topic":"tradeHistoryApi","data":[{"symbol":"ETHPFC","side":"SELL","size":20,"price":3004.5,"tradeId":20000002,"timestamp":1700000002100}]}
+1700000002.2: {"topic":"tradeHistoryApi","data":[{"symbol":"BTCPFC","side":"SELL","size":2,"price":50049.0,"tradeId":20000003,"timestamp":1700000002200}]}
+1700000003.1: {"topic":"tradeHistoryApi","data":[{"symbol":"BTCPFC","side":"BUY","size":3,"price":50051.5,"tradeId":20000004,"timestamp":1700000003100},{"symbol":"BTCPFC","side":"BUY","size":4,"price":50052.0,"tradeId":20000005,"timestamp":1700000003150}]}
+1700000004.0: {"topic":"tradeHistoryApi","data":[{"symbol":"ETHPFC","side":"BUY","size":10,"price":3005.5,"tradeId":20000006,"timestamp":1700000004000}]}
+1700000004.1: {"event":"pong"}
+1700000004.2: {"topic":"tradeHistoryApi","data":[{"symbol":"BTCPFC","side":"SELL","size":1,"price":50049.5,"tradeId":20000007,"timestamp":1700000004200}]}
