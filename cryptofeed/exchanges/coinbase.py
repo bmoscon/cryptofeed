@@ -165,6 +165,8 @@ class Coinbase(Feed, CoinbaseRestMixin):
                         await self._pair_level2_snapshot(event, timestamp)
                 elif msg['channel'] == 'subscriptions':
                     pass
+                elif msg['channel'] == 'heartbeats':
+                    pass
                 else:
                     LOG.warning("%s: Invalid message type %s", self.id, msg)
                 # PERF perf_end(self.id, 'msg')

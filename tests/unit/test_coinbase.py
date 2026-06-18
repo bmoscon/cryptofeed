@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+import logging
 
 import pytest
 from yapic import json
@@ -87,3 +88,17 @@ def test_subscribe_keeps_auth_fields_when_credentials_are_configured():
         assert message['api_key'] == 'test-key'
         assert 'timestamp' in message
         assert 'signature' in message
+
+
+def test_heartbeats_are_ignored_without_warning(caplog):
+    _set_coinbase_symbols()
+    feed = Coinbase(symbols=['BTC-USD'], channels=[TRADES], config={})
+    msg = {
+        'channel': 'heartbeats',
+        'events': [{'current_time': '2026-06-18T00:00:00Z', 'heartbeat_counter': '1'}]
+    }
+
+    caplog.set_level(logging.WARNING, logger='feedhandler')
+    asyncio.run(feed.message_handler(json.dumps(msg), None, 0.0))
+
+    assert caplog.records == []
