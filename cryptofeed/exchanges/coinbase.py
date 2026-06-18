@@ -74,12 +74,12 @@ class Coinbase(Feed, CoinbaseRestMixin):
         return ret, info
 
     @classmethod
+    def _symbol_endpoint_prepare(cls, ep: RestEndpoint):
+        return f"{ep.address}/market/products"
+
+    @classmethod
     def symbols(cls, config: dict = None, refresh=False) -> list:
-        config = Config(config)
-        if 'coinbase' not in config or 'key_id' not in config['coinbase'] or 'key_secret' not in config['coinbase']:
-            raise ValueError('You must provide key_id and key_secret in config to retrieve symbols from Coinbase.')
-        headers = get_private_parameters(config, rest_api=True, endpoint='products')
-        return list(cls.symbol_mapping(refresh=refresh, headers=headers).keys())
+        return list(cls.symbol_mapping(refresh=refresh).keys())
 
     def __init__(self, callbacks=None, **kwargs):
         super().__init__(callbacks=callbacks, **kwargs)
@@ -179,7 +179,7 @@ class Coinbase(Feed, CoinbaseRestMixin):
                       "product_ids": product_ids,
                       "channel": chan
                       }
-            private_params = get_private_parameters(self.config, chan, product_ids)
+            private_params = get_private_parameters(self.config, chan, product_ids) if self.key_id and self.key_secret else {}
             if private_params:
                 params = {**params, **private_params}
             await conn.write(json.dumps(params))
@@ -188,5 +188,5 @@ class Coinbase(Feed, CoinbaseRestMixin):
             all_pairs += self.subscription[channel]
             await _subscribe(channel, self.subscription[channel])
         all_pairs = list(dict.fromkeys(all_pairs))
-        await _subscribe('heartbeat', all_pairs)
+        await _subscribe('heartbeats', all_pairs)
         # Implementing heartbeat as per Best Practices doc: https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-best-practices
