@@ -1,3 +1,7 @@
+# Note - Cryptofeed is in a state of flux. Modernization is underway - expect a 3.0 release sometime in the near future. Be aware breaking changes will take place. Before the 3.0 release the library is only semi-functional
+
+
+
 # Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
