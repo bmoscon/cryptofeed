@@ -13,8 +13,6 @@ def test_exchanges_fh():
     """
     Ensure all exchanges are in feedhandler's string to class mapping
     """
-    # huobi_dm is an internal base class for HuobiSwap, not a listed venue
-    # (merged away by the HTX rename, modernization plan P3)
     internal_only = {'huobi_dm'}
 
     path = os.path.dirname(os.path.abspath(__file__))

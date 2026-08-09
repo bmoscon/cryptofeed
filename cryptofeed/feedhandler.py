@@ -99,10 +99,6 @@ class FeedHandler:
     def _check_config_keys(self):
         known = self._KNOWN_CONFIG_KEYS | {exchange.lower() for exchange in EXCHANGE_MAP}
         for key in self.config.keys():
-            if key == 'backend_multiprocessing':
-                if self.config.backend_multiprocessing:
-                    LOG.warning("Config: multiprocess queue mode ('backend_multiprocessing') is removed in cryptofeed 3.0; for process isolation, write to ZMQ/Redis and consume in a second process")
-                continue
             if key not in known:
                 close = get_close_matches(key, known, n=1)
                 hint = f" - did you mean '{close[0]}'?" if close else ''
