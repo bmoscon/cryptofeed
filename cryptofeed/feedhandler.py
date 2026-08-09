@@ -6,8 +6,6 @@ associated with this software.
 '''
 import asyncio
 import logging
-import signal
-import sys
 from contextlib import suppress
 from difflib import get_close_matches
 from signal import SIGABRT, SIGINT, SIGTERM
