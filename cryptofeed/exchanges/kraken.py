@@ -9,21 +9,20 @@ from collections import defaultdict
 import logging
 from typing import Dict, Tuple
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, KRAKEN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.kraken_rest import KrakenRestMixin
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
-class Kraken(Feed, KrakenRestMixin):
+class Kraken(Feed):
     id = KRAKEN
     websocket_endpoints = [WebsocketEndpoint('wss://ws.kraken.com', limit=20)]
     rest_endpoints = [RestEndpoint('https://api.kraken.com', routes=Routes('/0/public/AssetPairs'))]

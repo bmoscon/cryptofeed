@@ -9,7 +9,7 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, FUTURES, TICKER, L2_BOOK, SELL, TRADES, FX
@@ -18,7 +18,7 @@ from cryptofeed.symbols import Symbol
 from cryptofeed.types import Ticker, Trade, OrderBook
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Bitflyer(Feed):

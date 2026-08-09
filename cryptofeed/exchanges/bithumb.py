@@ -6,11 +6,11 @@ associated with this software.
 '''
 import logging
 from decimal import Decimal
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Union
 from datetime import datetime as dt
 from datetime import timedelta
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
@@ -19,7 +19,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.types import Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Bithumb(Feed):
@@ -42,7 +42,9 @@ class Bithumb(Feed):
     }
 
     @classmethod
-    def timestamp_normalize(cls, ts: dt) -> float:
+    def timestamp_normalize(cls, ts: Union[str, dt]) -> float:
+        if isinstance(ts, str):
+            ts = dt.fromisoformat(ts)
         return (ts - timedelta(hours=9)).timestamp()
 
     # Override symbol_mapping class method, because this bithumb is a very special case.

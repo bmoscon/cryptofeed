@@ -74,5 +74,8 @@ class Config:
     def __contains__(self, item):
         return item in self.config
 
+    def keys(self):
+        return self.config.keys()
+
     def __repr__(self) -> str:
         return self.config.__repr__()

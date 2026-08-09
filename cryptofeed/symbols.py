@@ -46,6 +46,8 @@ class Symbol:
     def date_format(date):
         if isinstance(date, (int, float)):
             date = dt.fromtimestamp(date, tz=timezone.utc)
+        if isinstance(date, str) and '-' in date:
+            date = dt.fromisoformat(date)
         if isinstance(date, dt):
             year = str(date.year)[2:]
             month = Symbol.month_code(date.month)

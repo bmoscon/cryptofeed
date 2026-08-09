@@ -14,14 +14,14 @@ from typing import Dict, Tuple, Union
 from datetime import datetime as dt
 import re
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL, SPOT, TICKER
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation, Ticker
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Bybit(Feed):
@@ -55,11 +55,12 @@ class Bybit(Feed):
     tickers = {}
 
     @classmethod
-    def timestamp_normalize(cls, ts: Union[int, dt]) -> float:
+    def timestamp_normalize(cls, ts: Union[int, str, dt]) -> float:
         if isinstance(ts, int):
             return ts / 1000.0
-        else:
-            return ts.timestamp()
+        if isinstance(ts, str):
+            ts = dt.fromisoformat(ts)
+        return ts.timestamp()
 
     @staticmethod
     def convert_to_spot_name(cls, pair):

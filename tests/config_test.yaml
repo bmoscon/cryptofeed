@@ -7,9 +7,6 @@ log:
 uvloop: True
 
 # Secrets for exchanges
-bit.com:
-    key_id: null
-    key_secret: null
 bitmex:
     key_id: null
     key_secret: null
@@ -39,10 +36,6 @@ binance_futures:
 binance_delivery:
     key_id: null
     key_secret: null
-okcoin:
-    key_id: null
-    key_secret: null
-    key_passphrase: null
 okx:
     key_id: null
     key_secret: null

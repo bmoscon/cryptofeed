@@ -19,9 +19,6 @@ binance_futures:
 binance_delivery:
     key_id: null
     key_secret: null
-bit.com:
-    key_id: null
-    key_secret: null
 bitget:
     key_id: null
     key_secret: null
@@ -47,10 +44,6 @@ kraken:
     key_id: null
     key_secret: null
 kucoin:
-    key_id: null
-    key_secret: null
-    key_passphrase: null
-okcoin:
     key_id: null
     key_secret: null
     key_passphrase: null

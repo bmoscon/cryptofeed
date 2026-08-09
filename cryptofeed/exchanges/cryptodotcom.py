@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Dict, Tuple
 from collections import defaultdict
 
-from yapic import json
+from cryptofeed import _json as json
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import BUY, CANDLES, CRYPTODOTCOM, L2_BOOK, SELL, TICKER, TRADES
@@ -20,7 +20,7 @@ from cryptofeed.util.time import timedelta_str_to_sec
 from cryptofeed.types import Trade, Ticker, Candle, OrderBook
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class CryptoDotCom(Feed):

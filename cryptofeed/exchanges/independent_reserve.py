@@ -11,7 +11,7 @@ from typing import Dict, Tuple
 from collections import defaultdict
 from time import time
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, BUY, ASK, INDEPENDENT_RESERVE, L3_BOOK, SELL, TRADES
@@ -21,7 +21,7 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.types import Trade, OrderBook
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class IndependentReserve(Feed):
@@ -61,7 +61,7 @@ class IndependentReserve(Feed):
             'Data': {
                 'TradeGuid': '6d1c2e90-592a-409c-a8d8-58b2d25e0b0b',
                 'Pair': 'eth-aud',
-                'TradeDate': datetime.datetime(2022, 1, 31, 8, 28, 26, 552573, tzinfo=datetime.timezone(datetime.timedelta(seconds=39600))),
+                'TradeDate': '2022-01-31T08:28:26.552573+11:00',
                 'Price': Decimal('3650.81'),
                 'Volume': Decimal('0.543'),
                 'BidGuid': '0430e003-c35e-410e-85f5-f0bb5c40193b',

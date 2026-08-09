@@ -13,17 +13,16 @@ from decimal import Decimal
 from typing import Dict, Tuple
 from collections import defaultdict
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.coinbase_rest import CoinbaseRestMixin
 from cryptofeed.types import OrderBook, Trade
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 def get_private_parameters(config: Config, chan: str = None, product_ids_str: list = None,
@@ -48,7 +47,7 @@ def get_private_parameters(config: Config, chan: str = None, product_ids_str: li
         return {'api_key': config["coinbase"]["key_id"], 'timestamp': timestamp, 'signature': signature}
 
 
-class Coinbase(Feed, CoinbaseRestMixin):
+class Coinbase(Feed):
     id = COINBASE
     websocket_endpoints = [WebsocketEndpoint('wss://advanced-trade-ws.coinbase.com', options={'compression': None})]
     rest_endpoints = [

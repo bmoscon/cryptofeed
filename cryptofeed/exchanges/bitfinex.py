@@ -10,18 +10,17 @@ from functools import partial
 import logging
 from typing import Dict, Tuple
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES, PERPETUAL
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.bitfinex_rest import BitfinexRestMixin
 from cryptofeed.types import Ticker, Trade, OrderBook
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 """
 Bitfinex configuration flags
@@ -40,7 +39,7 @@ SEQ_ALL = 65536
 CHECKSUM = 131072
 
 
-class Bitfinex(Feed, BitfinexRestMixin):
+class Bitfinex(Feed):
     id = BITFINEX
 
     websocket_endpoints = [WebsocketEndpoint('wss://api-pub.bitfinex.com/ws/2', limit=20)]

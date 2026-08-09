@@ -12,7 +12,7 @@ import time
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL
@@ -20,7 +20,7 @@ from cryptofeed.exchanges.huobi_dm import HuobiDM
 from cryptofeed.types import Funding
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class HuobiSwap(HuobiDM):

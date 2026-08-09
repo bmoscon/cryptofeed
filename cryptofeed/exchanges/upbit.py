@@ -9,21 +9,20 @@ from decimal import Decimal
 from typing import Dict, Tuple
 import uuid
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.upbit_rest import UpbitRestMixin
 from cryptofeed.connection import WebsocketEndpoint, RestEndpoint, Routes
 from cryptofeed.types import OrderBook, Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
-class Upbit(Feed, UpbitRestMixin):
+class Upbit(Feed):
     id = UPBIT
     websocket_endpoints = [WebsocketEndpoint('wss://api.upbit.com/websocket/v1')]
     rest_endpoints = [RestEndpoint('https://api.upbit.com', routes=Routes('/v1/market/all'))]

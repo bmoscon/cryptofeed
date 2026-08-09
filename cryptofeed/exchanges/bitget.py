@@ -12,7 +12,7 @@ from time import time
 from typing import Dict, List, Tuple, Union
 from collections import defaultdict
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import ASK, BALANCES, BID, BITGET, BUY, CANCELLED, CANDLES, FILLED, L2_BOOK, LONG, OPEN, ORDER_INFO, PARTIAL, PERPETUAL, POSITIONS, SELL, SHORT, SPOT, TICKER, TRADES
@@ -23,7 +23,7 @@ from cryptofeed.types import Ticker, Trade, Candle, OrderBook, Balance, Position
 from cryptofeed.util.time import timedelta_str_to_sec
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Bitget(Feed):

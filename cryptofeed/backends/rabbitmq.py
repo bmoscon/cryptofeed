@@ -7,7 +7,7 @@ associated with this software.
 from collections import defaultdict
 
 import aio_pika
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 

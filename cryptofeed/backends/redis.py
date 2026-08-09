@@ -7,7 +7,7 @@ associated with this software.
 from collections import defaultdict
 
 from redis import asyncio as aioredis
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
 

@@ -8,7 +8,7 @@ associated with this software.
 import logging
 from collections import defaultdict
 from decimal import Decimal
-from yapic import json
+from cryptofeed import _json as json
 import time
 
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
@@ -20,7 +20,7 @@ from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle, Index, OpenInterest, Funding
 from cryptofeed.util.time import timedelta_str_to_sec
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class GateioFutures(Gateio):

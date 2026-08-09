@@ -11,7 +11,7 @@ from typing import Dict, Tuple
 import zlib
 from decimal import Decimal
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES, TICKER
@@ -19,7 +19,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Candle, Ticker
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Huobi(Feed):

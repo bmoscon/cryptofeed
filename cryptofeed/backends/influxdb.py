@@ -7,13 +7,13 @@ associated with this software.
 from collections import defaultdict
 import logging
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 from cryptofeed.backends.http import HTTPCallback
 from cryptofeed.defines import BID, ASK
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class InfluxCallback(HTTPCallback):

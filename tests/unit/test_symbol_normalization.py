@@ -6,18 +6,13 @@ associated with this software.
 '''
 import pytest
 
-from cryptofeed.defines import BEQUANT, EXX
 from cryptofeed.exchanges import EXCHANGE_MAP
 
 pytestmark = pytest.mark.live
 
 
-@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
+@pytest.mark.parametrize("exchange", list(EXCHANGE_MAP.keys()))
 def test_symbol_conversion(exchange):
-    if exchange == BEQUANT:
-        # exchange blocks traffic based on geolocation, so this
-        # will fail on build machines in github
-        return
     feed = EXCHANGE_MAP[exchange]()
     symbols = feed.symbol_mapping()
     for normalized, original in symbols.items():

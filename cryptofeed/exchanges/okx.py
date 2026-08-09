@@ -7,7 +7,7 @@ associated with this software.
 from collections import defaultdict
 from decimal import Decimal
 from typing import Dict, Tuple
-from yapic import json
+from cryptofeed import _json as json
 import asyncio
 import base64
 import hmac
@@ -17,17 +17,16 @@ import time
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import CALL, CANCELLED, FILL_OR_KILL, FUTURES, IMMEDIATE_OR_CANCEL, MAKER_OR_CANCEL, MARKET, OKX as OKX_str, LIQUIDATIONS, BUY, OPEN, OPTION, PARTIAL, PERPETUAL, PUT, SELL, FILLED, ASK, BID, FUNDING, L2_BOOK, OPEN_INTEREST, TICKER, TRADES, ORDER_INFO, CANDLES, SPOT, UNFILLED, LIMIT
-from cryptofeed.exchanges.mixins.okx_rest import OKXRestMixin
 from cryptofeed.feed import Feed
 from cryptofeed.exceptions import BadChecksum
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation, OrderInfo, Candle
 
 
-LOG = logging.getLogger("feedhandler")
+LOG = logging.getLogger(__name__)
 
 
-class OKX(Feed, OKXRestMixin):
+class OKX(Feed):
     id = OKX_str
     valid_candle_intervals = {'1M', '1W', '1D', '12H', '6H', '4H', '2H', '1H', '30m', '15m', '5m', '3m', '1m'}
     candle_interval_map = {'1M': 2630000, '1W': 604800, '1D': 86400, '12H': 43200, '6H': 21600, '4H': 14400, '2H': 7200, '1H': 3600, '30m': 1800, '15m': 900, '5m': 300, '3m': 180, '1m': 60}
@@ -486,7 +485,7 @@ class OKX(Feed, OKXRestMixin):
 
     def _get_server_time(self):
         endpoint = "public/time"
-        response = requests.get(self.api + endpoint)
+        response = requests.get('https://www.okx.com/api/v5/' + endpoint)
         if response.status_code == 200:
             return response.json()['data'][0]['ts']
         else:

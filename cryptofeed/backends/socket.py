@@ -9,12 +9,12 @@ import asyncio
 import logging
 from textwrap import wrap
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, BackendCallback
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class UDPProtocol:

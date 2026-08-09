@@ -12,7 +12,7 @@ import hmac
 import base64
 import hashlib
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.defines import ASK, BID, BUY, CANDLES, KUCOIN, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
@@ -22,7 +22,7 @@ from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, Websock
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class KuCoin(Feed):

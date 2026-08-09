@@ -10,22 +10,21 @@ import hmac
 import logging
 import time
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime as dt, timedelta
 from decimal import Decimal
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.defines import BID, ASK, BITMEX, BUY, CANCELLED, FILLED, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, SPOT, TICKER, TRADES, UNFILLED
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.exchanges.mixins.bitmex_rest import BitmexRestMixin
 from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OrderInfo, OpenInterest, Liquidation
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
-class Bitmex(Feed, BitmexRestMixin):
+class Bitmex(Feed):
     id = BITMEX
     websocket_endpoints = [WebsocketEndpoint('wss://www.bitmex.com/realtime', sandbox='wss://testnet.bitmex.com/realtime', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://www.bitmex.com', routes=Routes('/api/v1/instrument/active'), sandbox='https://testnet.bitmex.com')]
@@ -480,14 +479,15 @@ class Bitmex(Feed, BitmexRestMixin):
         }
         """
         for data in msg['data']:
-            ts = self.timestamp_normalize(data['timestamp'])
-            interval = data['fundingInterval']
+            ts_dt = dt.fromisoformat(data['timestamp'])
+            ts = self.timestamp_normalize(ts_dt)
+            interval = dt.fromisoformat(data['fundingInterval'])
             f = Funding(
                 self.id,
                 self.exchange_symbol_to_std_symbol(data['symbol']),
                 None,
                 data['fundingRate'],
-                self.timestamp_normalize(data['timestamp'] + timedelta(hours=interval.hour)),
+                self.timestamp_normalize(ts_dt + timedelta(hours=interval.hour)),
                 ts,
                 raw=data
             )

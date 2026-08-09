@@ -8,7 +8,7 @@ import socket
 from time import sleep
 from multiprocessing import Process
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.socket import BookSocket, TradeSocket

@@ -15,10 +15,10 @@ from websockets import ConnectionClosed
 
 from cryptofeed.connection import AsyncConnection
 from cryptofeed.exceptions import ExhaustedRetries
-from cryptofeed.defines import HUOBI, HUOBI_DM, HUOBI_SWAP, OKCOIN, OKX
+from cryptofeed.defines import HUOBI, HUOBI_DM, HUOBI_SWAP, OKX
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class ConnectionHandler:
@@ -103,7 +103,7 @@ class ConnectionHandler:
             if self.log_on_error:
                 if connection.uuid in {HUOBI, HUOBI_DM, HUOBI_SWAP}:
                     message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
-                elif connection.uuid in {OKCOIN, OKX}:
+                elif connection.uuid in {OKX}:
                     message = zlib.decompress(message, -15)
                 LOG.error("%s: error handling message %s", connection.uuid, message)
             # exception will be logged with traceback when connection handler

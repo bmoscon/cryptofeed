@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 from cryptofeed.connection import Connection
+from difflib import get_close_matches
 import logging
 import signal
 from signal import SIGABRT, SIGINT, SIGTERM
@@ -20,17 +21,17 @@ try:
 except ImportError:
     SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.config import Config
 from cryptofeed.defines import L2_BOOK
 from cryptofeed.feed import Feed
-from cryptofeed.log import get_logger
+from cryptofeed.log import configure_logging
 from cryptofeed.nbbo import NBBO
 from cryptofeed.exchanges import EXCHANGE_MAP
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 def _get_event_loop():
@@ -76,10 +77,12 @@ class FeedHandler:
             self.raw_data_collection = raw_data_collection
 
         if not self.config.log.disabled:
-            get_logger('feedhandler', self.config.log.filename, self.config.log.level)
+            configure_logging(filename=self.config.log.filename or None, level=self.config.log.level or 'WARNING', stream=True)
 
         if self.config.log_msg:
             LOG.info(self.config.log_msg)
+
+        self._check_config_keys()
 
         if self.config.uvloop:
             try:
@@ -90,6 +93,20 @@ class FeedHandler:
                 LOG.info('FH: uvloop initalized')
             except ImportError:
                 LOG.info("FH: uvloop not initialized")
+
+    _KNOWN_CONFIG_KEYS = frozenset(('log', 'uvloop', 'ignore_invalid_instruments', 'backend_multiprocessing'))
+
+    def _check_config_keys(self):
+        known = self._KNOWN_CONFIG_KEYS | {exchange.lower() for exchange in EXCHANGE_MAP}
+        for key in self.config.keys():
+            if key == 'backend_multiprocessing':
+                if self.config.backend_multiprocessing:
+                    LOG.warning("Config: multiprocess queue mode ('backend_multiprocessing') is removed in cryptofeed 3.0; for process isolation, write to ZMQ/Redis and consume in a second process")
+                continue
+            if key not in known:
+                close = get_close_matches(key, known, n=1)
+                hint = f" - did you mean '{close[0]}'?" if close else ''
+                LOG.warning("Config: unknown top-level key '%s'%s", key, hint)
 
     def add_feed(self, feed, loop=None, **kwargs):
         """

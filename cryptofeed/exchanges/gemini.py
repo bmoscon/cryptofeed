@@ -14,20 +14,19 @@ import hmac
 import time
 import itertools
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, CANCELLED, FAILED, FILLED, GEMINI, L2_BOOK, LIMIT, OPEN, SELL, STOP_LIMIT, SUBMITTING, TRADES, ORDER_INFO
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.mixins.gemini_rest import GeminiRestMixin
 from cryptofeed.types import OrderBook, Trade, OrderInfo
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
-class Gemini(Feed, GeminiRestMixin):
+class Gemini(Feed):
     id = GEMINI
     websocket_channels = {
         L2_BOOK: L2_BOOK,

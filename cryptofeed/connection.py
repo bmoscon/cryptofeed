@@ -20,13 +20,13 @@ from websockets.asyncio.client import connect, ClientConnection
 from websockets.protocol import State
 import aiohttp
 from aiohttp.typedefs import StrOrURL
-from yapic import json as json_parser
+from cryptofeed import _json as json_parser
 
 from cryptofeed.exceptions import ConnectionClosed
 from cryptofeed.symbols import str_to_symbol
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Connection:

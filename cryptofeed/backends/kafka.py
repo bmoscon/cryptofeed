@@ -11,11 +11,11 @@ from typing import Optional, ByteString
 
 from aiokafka import AIOKafkaProducer
 from aiokafka.errors import RequestTimedOutError, KafkaConnectionError, NodeNotReadyError
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class KafkaCallback(BackendQueue):

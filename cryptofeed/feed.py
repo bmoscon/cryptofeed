@@ -20,7 +20,7 @@ from cryptofeed.exchange import Exchange
 from cryptofeed.types import OrderBook
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Feed(Exchange):

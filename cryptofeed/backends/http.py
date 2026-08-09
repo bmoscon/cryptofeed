@@ -11,7 +11,7 @@ import aiohttp
 from cryptofeed.backends.backend import BackendQueue
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class HTTPCallback(BackendQueue):

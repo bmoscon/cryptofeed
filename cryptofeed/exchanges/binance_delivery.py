@@ -7,19 +7,18 @@ associated with this software.
 from decimal import Decimal
 import logging
 
-from yapic import json
+from cryptofeed import _json as json
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
 
 from cryptofeed.defines import BALANCES, BINANCE_DELIVERY, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
 from cryptofeed.exchanges.binance import Binance
-from cryptofeed.exchanges.mixins.binance_rest import BinanceDeliveryRestMixin
 from cryptofeed.types import Balance, OrderInfo, Position
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
-class BinanceDelivery(Binance, BinanceDeliveryRestMixin):
+class BinanceDelivery(Binance):
     id = BINANCE_DELIVERY
 
     # https://binance-docs.github.io/apidocs/delivery/en/#testnet

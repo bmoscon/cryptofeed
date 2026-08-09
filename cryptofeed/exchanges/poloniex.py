@@ -8,7 +8,7 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, L2_BOOK, POLONIEX, SELL, TRADES
@@ -18,7 +18,7 @@ from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Poloniex(Feed):

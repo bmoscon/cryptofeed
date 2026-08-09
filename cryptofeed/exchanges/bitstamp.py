@@ -11,19 +11,18 @@ from decimal import Decimal
 from typing import Dict, Tuple
 import time
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BITSTAMP, BUY, L2_BOOK, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.exchanges.mixins.bitstamp_rest import BitstampRestMixin
 from cryptofeed.types import OrderBook, Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
-class Bitstamp(Feed, BitstampRestMixin):
+class Bitstamp(Feed):
     id = BITSTAMP
     # API documentation: https://www.bitstamp.net/websocket/v2/
     websocket_endpoints = [WebsocketEndpoint('wss://ws.bitstamp.net/', options={'compression': None})]

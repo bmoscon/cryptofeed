@@ -9,7 +9,7 @@ import asyncio
 
 import aiohttp
 from gcloud.aio.pubsub import subscribe, PublisherClient, SubscriberClient, SubscriberMessage
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed import FeedHandler
 from cryptofeed.backends.gcppubsub import TradeGCPPubSub

@@ -92,7 +92,6 @@ def main():
     exch_sym_map['Coinbase'] = ['BTC-USD']
     exch_sym_map['Deribit'] = ['BTC-USD-PERP']
     exch_sym_map['Gemini'] = ['BTC-USD']
-    exch_sym_map['HitBTC'] = ['BTC-USDT']
     exch_sym_map['Huobi'] = ['BTC-USDT']
     exch_sym_map['Kraken'] = ['BTC-USD']
     exch_sym_map['OKCoin'] = ['BTC-USD']

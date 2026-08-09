@@ -8,44 +8,32 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 
 ## Supported exchanges
 
-* [AscendEX](https://ascendex.com/)
-* [Bequant](https://bequant.io/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
 * [Bithumb](https://en.bithumb.com/)
 * [Bitstamp](https://www.bitstamp.net/)
-* [Blockchain.com](https://www.blockchain.com/)
 * [Bybit](https://www.bybit.com/)
 * [Binance](https://www.binance.com/en)
 * [Binance Delivery](https://binance-docs.github.io/apidocs/delivery/en/)
 * [Binance Futures](https://www.binance.com/en/futures)
 * [Binance US](https://www.binance.us/en)
-* [Bit.com](https://www.bit.com)
 * [Bitget](https://www.bitget.com/)
 * [BitMEX](https://www.bitmex.com/)
 * [Coinbase](https://www.coinbase.com/)
 * [Crypto.com](https://www.crypto.com)
-* [Delta](https://www.delta.exchange/)
 * [Deribit](https://www.deribit.com/)
-* [dYdX](https://dydx.exchange/)
-* [FMFW.io](https://www.fmfw.io/)
-* [EXX](https://www.exx.com/)
 * [Gate.io](https://www.gate.io/)
 * [Gate.io Futures](https://www.gate.io/futures_center)
 * [Gemini](https://gemini.com/)
-* [HitBTC](https://hitbtc.com/)
 * [Huobi](https://www.hbg.com/)
-* [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
 * Huobi Swap (Coin-M and USDT-M)
 * [Independent Reserve](https://www.independentreserve.com/) 
 * [Kraken](https://www.kraken.com/)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)
-* [OKCoin](http://okcoin.com/)
 * [OKX](https://www.okx.com/)
 * [Phemex](https://phemex.com/)
 * [Poloniex](https://www.poloniex.com/)
-* [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
 
 
@@ -167,11 +155,6 @@ Alternatively, you can install from source in editable mode with pip:
 
 See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
-
-
-## Rest API
-
-Cryptofeed supports some REST interfaces for retrieving real-time and historical data, as well as order placement and account management. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange. The methods for interacting with the exchange RET endpoints exist in two flavors, the synchronous methods (suffixed with `_sync`) as well as the asynchronous which can be utilized with asyncio. For more information see the [documentation](docs/rest.md).
 
 
 ## Future Work
