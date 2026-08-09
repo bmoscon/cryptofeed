@@ -10,17 +10,13 @@ import asyncio
 from asyncio import Queue, CancelledError
 from contextlib import asynccontextmanager, suppress
 from typing import List, Union, AsyncIterable
-from decimal import Decimal
-import atexit
 from dataclasses import dataclass
 
 from aiohttp.client_reqrep import ClientResponse
-import requests
 from websockets.asyncio.client import connect, ClientConnection
 from websockets.protocol import State
 import aiohttp
 from aiohttp.typedefs import StrOrURL
-from cryptofeed import _json as json_parser
 
 from cryptofeed.exceptions import ConnectionClosed
 from cryptofeed.symbols import str_to_symbol
@@ -37,33 +33,6 @@ class Connection:
 
     async def write(self, msg: str):
         raise NotImplementedError
-
-
-class HTTPSync(Connection):
-    def process_response(self, r, address, json=False, text=False, uuid=None):
-        if self.raw_data_callback:
-            self.raw_data_callback.sync_callback(r.text, time.time(), str(uuid), endpoint=address)
-
-        r.raise_for_status()
-        if json:
-            return json_parser.loads(r.text, parse_float=Decimal)
-        if text:
-            return r.text
-        return r
-
-    def read(self, address: str, params=None, headers=None, json=False, text=True, uuid=None):
-        LOG.debug("HTTPSync: requesting data from %s", address)
-        r = requests.get(address, headers=headers, params=params)
-        return self.process_response(r, address, json=json, text=text, uuid=uuid)
-
-    def write(self, address: str, data=None, json=False, text=True, uuid=None, is_data_json=False):
-        LOG.debug("HTTPSync: post to %s", address)
-        if (is_data_json):
-            r = requests.post(address, json=data)
-        else:
-            r = requests.post(address, data=data)
-
-        return self.process_response(r, address, json=json, text=text, uuid=uuid)
 
 
 class AsyncConnection(Connection):
@@ -87,18 +56,6 @@ class AsyncConnection(Connection):
         self.authentication = authentication
         self.subscription = subscription
         self.conn: Union[ClientConnection, aiohttp.ClientSession] = None
-        atexit.register(self.__del__)
-
-    def __del__(self):
-        # best effort clean up. Shutdown should be called on Feed/Exchange classes
-        # and any user of the Async connection should use a context manager (via connect)
-        # or call close manually. If not, we *might* be able to clean up the connection on exit
-        try:
-            if self.is_open:
-                asyncio.ensure_future(self.close())
-        except (RuntimeError, RuntimeWarning):
-            # no event loop, ignore error
-            pass
 
     @property
     def uuid(self):
@@ -362,7 +319,7 @@ class WebsocketEndpoint:
     authentication: bool = None
 
     def __post_init__(self):
-        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': None, 'max_queue': None}
+        defaults = {'ping_interval': 20, 'ping_timeout': 60, 'max_size': None, 'max_queue': 1024}
         if self.options:
             defaults.update(self.options)
         self.options = defaults

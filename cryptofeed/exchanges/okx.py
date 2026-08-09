@@ -438,7 +438,7 @@ class OKX(Feed):
         channels = []
         for chan in self.subscription:
             if chan == LIQUIDATIONS:
-                asyncio.create_task(self._liquidations(self.subscription[chan]))
+                self._spawn('liquidations', self._liquidations(self.subscription[chan]))
                 continue
             for pair in self.subscription[chan]:
                 channels.append(self.build_subscription(chan, pair))

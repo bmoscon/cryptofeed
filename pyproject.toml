@@ -107,6 +107,9 @@ ignore = ["E501", "F403", "F405"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+# test orchestration polls with short sleeps on purpose
+"tests/unit/test_lifecycle.py" = ["ASYNC110"]
+"tests/unit/test_connection_handler.py" = ["ASYNC110"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -5,7 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from asyncio import create_task, sleep
+from asyncio import sleep
 from collections import defaultdict
 from decimal import Decimal
 import aiohttp
@@ -541,4 +541,4 @@ class Binance(Feed):
         else:
             self._reset()
         if self.requires_authentication:
-            create_task(self._refresh_token())
+            self._spawn('refresh-token', self._refresh_token())

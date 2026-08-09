@@ -48,12 +48,14 @@ async def _playback(feed: str, filenames: list, callbacks: dict, config: str):
             pass
 
         async def read(self, url, **kwargs):
-            data = self.cache[url].pop(0)
-            if "header:" in data:
-                ret = data.split(" header: ")
-                header = ret[1].strip()
-                return ret[0], json.loads(header)
-            return data
+            if url in self.cache and self.cache[url]:
+                data = self.cache[url].pop(0)
+                if "header:" in data:
+                    ret = data.split(" header: ")
+                    header = ret[1].strip()
+                    return ret[0], json.loads(header)
+                return data
+            return symbol_data.pop(0)
 
     ws = FakeWS(filenames)
     symbol_data = []
@@ -70,17 +72,11 @@ async def _playback(feed: str, filenames: list, callbacks: dict, config: str):
                     if line == "\n":
                         continue
                     line = line.split(": ", 1)[1]
-                    symbol_data.append(json.loads(line.strip()))
+                    symbol_data.append(line.strip())
 
-    def symbol_helper(*args, **kwargs):
-        ret = symbol_data.pop(0)
-        return ret
-
-    from cryptofeed.connection import HTTPAsyncConn, HTTPSync
+    from cryptofeed.connection import HTTPAsyncConn
     http_async_conn_read = HTTPAsyncConn.read
-    http_sync_read = HTTPSync.read
     HTTPAsyncConn.read = ws.read
-    HTTPSync.read = symbol_helper
 
     async def internal_cb(*args, **kwargs):
         callback_stats[kwargs['cb_type']] += 1
@@ -91,6 +87,11 @@ async def _playback(feed: str, filenames: list, callbacks: dict, config: str):
         for ctype in callbacks.keys():
             callbacks[ctype] = [callbacks[ctype], functools.partial(internal_cb, cb_type=ctype)]
     feed = EXCHANGE_MAP[feed](candle_closed_only=False, config=config, subscription=sub, callbacks=callbacks)
+    await feed._setup()
+    if not feed.websocket_endpoints:
+        # venues with dynamic endpoints never connect during playback
+        from cryptofeed.connection import WebsocketEndpoint
+        feed.websocket_endpoints = [WebsocketEndpoint('wss://playback.invalid')]
 
     exchange_sub = {}
     for chan in ws.subscription:
@@ -99,48 +100,45 @@ async def _playback(feed: str, filenames: list, callbacks: dict, config: str):
         exchange_sub[c] = s
     ws.subscription = exchange_sub
 
-    for _, sub, handler, auth in feed.connect():
-        await sub(ws)
+    try:
+        for _, sub, handler, auth in feed.connect():
+            await sub(ws)
 
-    counter = 0
-    filenames = [filename for filename in filenames if '.ws.' in filename]
-    for filename in filenames:
-        with open(filename, 'r') as fp:  # noqa: ASYNC230
-            for line in fp:
-                if line == "\n":
-                    continue
-                start = line[:3]
-                if start == 'wss':
-                    continue
-                if start == 'htt':
-                    counter += 1
-                    continue
+        counter = 0
+        filenames = [filename for filename in filenames if '.ws.' in filename]
+        for filename in filenames:
+            with open(filename, 'r') as fp:  # noqa: ASYNC230
+                for line in fp:
+                    if line == "\n":
+                        continue
+                    start = line[:3]
+                    if start == 'wss':
+                        continue
+                    if start == 'htt':
+                        counter += 1
+                        continue
 
-                try:
-                    timestamp, message = line.split(": ", 1)
-                    counter += 1
+                    try:
+                        timestamp, message = line.split(": ", 1)
+                        counter += 1
 
-                    if OKX in filename:
-                        if message.startswith('b\'') or message.startswith('b"'):
+                        if OKX in filename:
+                            if message.startswith('b\'') or message.startswith('b"'):
+                                message = bytes_string_to_bytes(message)
+                        elif HUOBI in filename:
                             message = bytes_string_to_bytes(message)
-                    elif HUOBI in filename:
-                        message = bytes_string_to_bytes(message)
-                    elif UPBIT in filename:
-                        if message.startswith('b\'') or message.startswith('b"'):
-                            message = message.strip()[2:-1]
+                        elif UPBIT in filename:
+                            if message.startswith('b\'') or message.startswith('b"'):
+                                message = message.strip()[2:-1]
 
-                    await handler(message, ws, timestamp)
-                except Exception:
-                    print("Playback failed on message:", message)
-                    feed.stop()
-                    await feed.shutdown()
-                    raise
-    feed.stop()
-    await feed.shutdown()
-
-    HTTPAsyncConn.read = http_async_conn_read
-    HTTPSync.read = http_sync_read
-    return {'messages_processed': counter, 'callbacks': dict(callback_stats)}
+                        await handler(message, ws, timestamp)
+                    except Exception:
+                        print("Playback failed on message:", message)
+                        raise
+        return {'messages_processed': counter, 'callbacks': dict(callback_stats)}
+    finally:
+        await feed.shutdown()
+        HTTPAsyncConn.read = http_async_conn_read
 
 
 class AsyncFileCallback:
@@ -195,7 +193,7 @@ class AsyncFileCallback:
             self.data[uuid].append(f"{timestamp}: {data}")
 
         if len(self.data[uuid]) >= self.length:
-            await asyncio.create_task(self.write(uuid))
+            await self.write(uuid)
 
     def sync_callback(self, data: str, timestamp: float, uuid: str, endpoint: str = None, send: str = None, connect: str = None, header: str = None):
         if endpoint:

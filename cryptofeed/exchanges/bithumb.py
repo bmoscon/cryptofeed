@@ -12,7 +12,7 @@ from datetime import timedelta
 
 from cryptofeed import _json as json
 
-from cryptofeed.symbols import Symbol, Symbols
+from cryptofeed.symbols import Symbol
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BUY, BITHUMB, SELL, TRADES
 from cryptofeed.feed import Feed
@@ -53,24 +53,15 @@ class Bithumb(Feed):
     # To qeury the ticker endpoint, you need to know which quote currency you want. So far, seems like the exhcnage
     # only offers KRW and BTC as quote currencies.
     @classmethod
-    def symbol_mapping(cls, refresh=False) -> Dict:
-        if Symbols.populated(cls.id) and not refresh:
-            return Symbols.get(cls.id)[0]
-        try:
-            data = {}
-            for ep in cls.rest_endpoints[0].route('instruments'):
-                ret = cls.http_sync.read(ep, json=True, uuid=cls.id)
-                if 'BTC' in ep:
-                    data['BTC'] = ret
-                else:
-                    data['KRW'] = ret
-
-            syms, info = cls._parse_symbol_data(data)
-            Symbols.set(cls.id, syms, info)
-            return syms
-        except Exception as e:
-            LOG.error("%s: Failed to parse symbol information: %s", cls.id, str(e), exc_info=True)
-            raise
+    async def _fetch_symbol_data(cls, conn, headers=None):
+        data = {}
+        for ep in cls.rest_endpoints[0].route('instruments'):
+            ret = json.loads(await conn.read(ep, header=headers), parse_float=Decimal)
+            if 'BTC' in ep:
+                data['BTC'] = ret
+            else:
+                data['KRW'] = ret
+        return [data]
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:

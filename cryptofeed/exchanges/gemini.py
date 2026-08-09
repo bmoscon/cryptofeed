@@ -45,8 +45,8 @@ class Gemini(Feed):
         return ts / 1000.0
 
     @classmethod
-    def _symbol_endpoint_prepare(cls, ep: RestEndpoint) -> Union[List[str], str]:
-        ret = cls.http_sync.read(ep.route('currencies'), json=True, uuid=cls.id)
+    async def _symbol_endpoint_prepare(cls, ep: RestEndpoint, conn) -> Union[List[str], str]:
+        ret = json.loads(await conn.read(ep.route('currencies')), parse_float=Decimal)
         return [ep.route('instruments').format(currency) for currency in ret]
 
     @classmethod

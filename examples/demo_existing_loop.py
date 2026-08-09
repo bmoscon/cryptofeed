@@ -39,19 +39,19 @@ async def aio_task():
         await asyncio.sleep(1)
 
 
-def main():
+async def main():
     f = FeedHandler()
-    f.run(start_loop=False)
-
     f.add_feed(Binance(symbols=['BTC-USDT'], channels=[TRADES, TICKER, L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker}))
     f.add_feed(COINBASE, symbols=['BTC-USD'], channels=[TICKER], callbacks={TICKER: ticker})
     f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade}))
     f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book}))
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(aio_task())
-    loop.run_forever()
+    other = asyncio.create_task(aio_task())
+    try:
+        await f.run_async()
+    finally:
+        other.cancel()
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

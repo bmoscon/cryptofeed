@@ -4,8 +4,6 @@ Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
-
 from cryptofeed.callback import Callback
 
 
@@ -40,8 +38,4 @@ class NBBO(Callback):
         bid, ask, bid_feed, ask_feed = update
         if bid is None:
             return
-        if self.is_async:
-            await self.callback(book.symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, book.symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)
+        await self.callback(book.symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)

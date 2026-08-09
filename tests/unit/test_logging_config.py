@@ -118,14 +118,3 @@ def test_known_and_exchange_keys_do_not_warn(clean_logger, caplog):
     with caplog.at_level(logging.WARNING, logger='cryptofeed.feedhandler'):
         FeedHandler(config=config)
     assert not any('unknown top-level key' in str(r.msg) for r in caplog.records)
-
-
-def test_backend_multiprocessing_warns_when_enabled(clean_logger, caplog):
-    with caplog.at_level(logging.WARNING, logger='cryptofeed.feedhandler'):
-        FeedHandler(config={'log': {'disabled': True}, 'backend_multiprocessing': True})
-    assert any('multiprocess queue mode' in str(r.msg) for r in caplog.records)
-
-    caplog.clear()
-    with caplog.at_level(logging.WARNING, logger='cryptofeed.feedhandler'):
-        FeedHandler(config={'log': {'disabled': True}, 'backend_multiprocessing': False})
-    assert not any('multiprocess queue mode' in str(r.msg) for r in caplog.records)

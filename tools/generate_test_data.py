@@ -8,7 +8,6 @@ import asyncio
 import glob
 import random
 
-import uvloop
 
 from cryptofeed.feedhandler import FeedHandler
 from cryptofeed.exchanges import EXCHANGE_MAP
@@ -16,12 +15,6 @@ from cryptofeed.raw_data_collection import AsyncFileCallback
 from cryptofeed.defines import BINANCE, BINANCE_FUTURES, BINANCE_US, BITFINEX, L2_BOOK, TRADES, TICKER, CANDLES
 from check_raw_dump import main as check_dump
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-
-def stop():
-    loop = asyncio.get_event_loop()
-    loop.stop()
 
 
 def main(only_exchange=None):
@@ -33,13 +26,12 @@ def main(only_exchange=None):
                 skip.append(e.split(".")[0])
 
     print(f'Generating test data. This will take approximately {(len(EXCHANGE_MAP) - len(set(skip))) * 0.5} minutes.')
-    loop = asyncio.get_event_loop()
     for exch_str, exchange in EXCHANGE_MAP.items() if only_exchange is None else [(only_exchange, EXCHANGE_MAP[only_exchange])]:
         if exch_str in skip:
             continue
 
         print(f"Collecting data for {exch_str}")
-        fh = FeedHandler(raw_data_collection=AsyncFileCallback("./"), config={'uvloop': False, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}, 'rest': {'log': {'filename': 'rest.log', 'level': 'WARNING'}}})
+        fh = FeedHandler(raw_data_collection=AsyncFileCallback("./"), config={'uvloop': False, 'log': {'filename': 'feedhandler.log', 'level': 'WARNING'}})
         info = exchange.info()
         channels = list(set.intersection(set(info['channels']['websocket']), set([L2_BOOK, TRADES, TICKER, CANDLES])))
         sample_size = 10
@@ -61,14 +53,13 @@ def main(only_exchange=None):
                 break
 
         fh.add_feed(exchange(symbols=symbols, channels=channels))
-        fh.run(start_loop=False)
 
-        loop.call_later(31, stop)
-        print("Starting feedhandler. Will run for 30 seconds...")
-        loop.run_forever()
+        async def run_briefly():
+            asyncio.get_running_loop().call_later(31, fh.request_stop)
+            print("Starting feedhandler. Will run for 30 seconds...")
+            await fh.run_async(install_signal_handlers=False)
 
-        fh.stop(loop=loop)
-        del fh
+        asyncio.run(run_briefly())
 
     print("Checking raw message dumps for errors...")
     for exch_str, _ in EXCHANGE_MAP.items():

@@ -55,7 +55,7 @@ class Symbol:
             return f"{year}{month}{day}"
 
         if len(date) == 4:
-            year = str(dt.utcnow().year)[2:]
+            year = str(dt.now(timezone.utc).year)[2:]
             date = year + date
         if len(date) == 6:
             year = date[:2]

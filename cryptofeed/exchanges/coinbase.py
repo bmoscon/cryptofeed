@@ -25,8 +25,10 @@ from cryptofeed.types import OrderBook, Trade
 LOG = logging.getLogger(__name__)
 
 
-def get_private_parameters(config: Config, chan: str = None, product_ids_str: list = None,
-                           rest_api: bool = False, endpoint: str = None) -> dict:
+def get_private_parameters(config: Config, chan: str = None, product_ids_str: list = None, rest_api: bool = False, endpoint: str = None) -> dict:
+    if not config["coinbase"]["key_id"] or not config["coinbase"]["key_secret"]:
+        # market data channels work unauthenticated
+        return {}
     timestamp = str(int(time.time()))
     if rest_api:
         base_endpoint = '/api/v3/brokerage/'
@@ -50,8 +52,7 @@ def get_private_parameters(config: Config, chan: str = None, product_ids_str: li
 class Coinbase(Feed):
     id = COINBASE
     websocket_endpoints = [WebsocketEndpoint('wss://advanced-trade-ws.coinbase.com', options={'compression': None})]
-    rest_endpoints = [
-        RestEndpoint('https://api.coinbase.com/api/v3/brokerage', routes=Routes('/products', l3book='/product_book?product_id={}'))]
+    rest_endpoints = [RestEndpoint('https://api.coinbase.com/api/v3/brokerage', routes=Routes('/market/products', l3book='/market/product_book?product_id={}'))]
 
     # TODO: implement candles and user channels
     websocket_channels = {

@@ -6,6 +6,7 @@ associated with this software.
 '''
 import asyncio
 import logging
+from contextlib import suppress
 from socket import error as socket_error
 import time
 from typing import Awaitable
@@ -35,8 +36,11 @@ class ConnectionHandler:
         self.running = True
         self.start_delay = start_delay
 
-    def start(self, loop: asyncio.AbstractEventLoop):
-        loop.create_task(self._create_connection())
+    async def request_stop(self):
+        # prevent reconnection and close the connection
+        self.running = False
+        with suppress(Exception):
+            await self.conn.close()
 
     async def _watcher(self):
         while self.conn.is_open and self.running:
@@ -47,48 +51,62 @@ class ConnectionHandler:
                     break
             await asyncio.sleep(self.timeout_interval)
 
-    async def _create_connection(self):
-        await asyncio.sleep(self.start_delay)
-        retries = 0
-        delay = 1
-        while (retries <= self.retries or self.retries == -1) and self.running:
-            try:
-                async with self.conn.connect() as connection:
-                    await self.authenticate(connection)
-                    await self.subscribe(connection)
-                    # connection was successful, reset retry count and delay
-                    retries = 0
-                    delay = 1
-                    if self.timeout != -1:
-                        loop = asyncio.get_running_loop()
-                        loop.create_task(self._watcher())
-                    await self._handler(connection, self.handler)
-            except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                if self.exceptions:
-                    for ex in self.exceptions:
-                        if isinstance(e, ex):
-                            LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", self.conn.uuid, str(e))
-                            raise
-                LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", self.conn.uuid, str(e), delay, exc_info=True)
-                await asyncio.sleep(delay)
-                retries += 1
-                delay *= 2
-            except Exception as e:
-                if self.exceptions:
-                    for ex in self.exceptions:
-                        if isinstance(e, ex):
-                            LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", self.conn.uuid, str(e))
-                            raise
-                LOG.error("%s: encountered an exception, reconnecting in %.1f seconds", self.conn.uuid, delay, exc_info=True)
-                await asyncio.sleep(delay)
-                retries += 1
-                delay *= 2
+    async def run(self):
+        try:
+            await asyncio.sleep(self.start_delay)
+            retries = 0
+            delay = 1
+            while (retries <= self.retries or self.retries == -1) and self.running:
+                watchdog = None
+                try:
+                    async with self.conn.connect() as connection:
+                        await self.authenticate(connection)
+                        await self.subscribe(connection)
+                        # connection was successful, reset retry count and delay
+                        retries = 0
+                        delay = 1
+                        try:
+                            if self.timeout != -1:
+                                watchdog = asyncio.get_running_loop().create_task(self._watcher(), name=f'{self.conn.id}.watchdog')
+                            await self._handler(connection, self.handler)
+                        finally:
+                            # the watchdog is owned by the connect scope
+                            if watchdog is not None:
+                                watchdog.cancel()
+                                with suppress(asyncio.CancelledError):
+                                    await watchdog
+                except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
+                    if self.exceptions:
+                        for ex in self.exceptions:
+                            if isinstance(e, ex):
+                                LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", self.conn.uuid, str(e))
+                                raise
+                    if not self.running:
+                        break
+                    LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds...", self.conn.uuid, str(e), delay, exc_info=True)
+                    await asyncio.sleep(delay)
+                    retries += 1
+                    delay *= 2
+                except Exception as e:
+                    if self.exceptions:
+                        for ex in self.exceptions:
+                            if isinstance(e, ex):
+                                LOG.warning("%s: encountered exception %s, which is on the ignore list. Raising", self.conn.uuid, str(e))
+                                raise
+                    if not self.running:
+                        break
+                    LOG.error("%s: encountered an exception, reconnecting in %.1f seconds", self.conn.uuid, delay, exc_info=True)
+                    await asyncio.sleep(delay)
+                    retries += 1
+                    delay *= 2
 
-        if not self.running:
+            if self.running:
+                LOG.error('%s: failed to reconnect after %d retries - exiting', self.conn.uuid, retries)
+                raise ExhaustedRetries()
             LOG.info('%s: terminate the connection handler because not running', self.conn.uuid)
-        else:
-            LOG.error('%s: failed to reconnect after %d retries - exiting', self.conn.uuid, retries)
-            raise ExhaustedRetries()
+        finally:
+            with suppress(Exception):
+                await self.conn.close()
 
     async def _handler(self, connection, handler):
         try:

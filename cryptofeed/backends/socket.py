@@ -92,7 +92,7 @@ class SocketCallback(BackendQueue):
     async def connect(self):
         if not self.conn:
             if self.conn_type == 'udp://':
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 self.conn, self.protocol = await loop.create_datagram_endpoint(
                     lambda: UDPProtocol(loop), remote_addr=(self.addr, self.port))
             elif self.conn_type == 'tcp://':

@@ -107,7 +107,6 @@ class HuobiSwap(HuobiDM):
 
     async def subscribe(self, conn: AsyncConnection):
         if FUNDING in self.subscription:
-            loop = asyncio.get_event_loop()
-            loop.create_task(self._funding(self.subscription[FUNDING]))
+            self._spawn('funding', self._funding(self.subscription[FUNDING]))
 
         await super().subscribe(conn)

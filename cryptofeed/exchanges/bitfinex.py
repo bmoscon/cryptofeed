@@ -106,16 +106,20 @@ class Bitfinex(Feed):
         super().__init__(symbols=symbols, channels=channels, subscription=subscription, **kwargs)
         self.number_of_price_points = number_of_price_points
         self.book_frequency = book_frequency
+        self.handlers = {}  # maps a channel id to a function
+        self.order_map = defaultdict(dict)
+        self.seq_no = defaultdict(int)
+
+    def _subscription_resolved(self):
+        channels = self._init_channels
+        subscription = self._init_subscription
+        symbols = self._init_symbols
         if channels or subscription:
             for chan in set(channels or subscription):
                 for pair in set(subscription[chan] if subscription else symbols or []):
                     exch_sym = self.std_symbol_to_exchange_symbol(pair)
                     if (exch_sym[0] == 'f') == (chan != FUNDING):
                         LOG.warning('%s: No %s for symbol %s => Cryptofeed will subscribe to the wrong channel', self.id, chan, pair)
-
-        self.handlers = {}  # maps a channel id (int) to a function
-        self.order_map = defaultdict(dict)
-        self.seq_no = defaultdict(int)
 
     def __reset(self, conn: AsyncConnection):
         if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:

@@ -6,7 +6,6 @@ associated with this software.
 '''
 import asyncio
 from asyncio.queues import Queue
-from multiprocessing import Pipe, Process
 from contextlib import asynccontextmanager
 
 
@@ -14,78 +13,55 @@ SHUTDOWN_SENTINEL = 'STOP'
 
 
 class BackendQueue:
-    def start(self, loop: asyncio.AbstractEventLoop, multiprocess=False):
-        if hasattr(self, 'started') and self.started:
-            # prevent a backend callback from starting more than 1 writer and creating more than 1 queue
-            return
-        self.multiprocess = multiprocess
-        if self.multiprocess:
-            self.queue = Pipe(duplex=False)
-            self.worker = Process(target=BackendQueue.worker, args=(self.writer,), daemon=True)
-            self.worker.start()
-        else:
-            self.queue = Queue()
-            self.worker = loop.create_task(self.writer())
+    def start_writer(self, tg: asyncio.TaskGroup, name: str):
+        """Spawn a writer as a named task in the feed's TaskGroup.
+
+        A backend callback instance shared across feeds gets exactly one writer,
+        owned by the first feed that starts it.
+        """
+        if getattr(self, 'started', False):
+            return None
+        self.queue = Queue()
+        self.worker = tg.create_task(self.writer(), name=name)
         self.started = True
+        return self.worker
 
     async def stop(self):
-        if self.multiprocess:
-            self.queue[1].send(SHUTDOWN_SENTINEL)
-            self.worker.join()
-        else:
+        if getattr(self, 'started', False):
             await self.queue.put(SHUTDOWN_SENTINEL)
-        self.running = False
-
-    @staticmethod
-    def worker(writer):
-        try:
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(writer())
-        except KeyboardInterrupt:
-            pass
 
     async def writer(self):
         raise NotImplementedError
 
     async def write(self, data):
-        if self.multiprocess:
-            self.queue[1].send(data)
-        else:
-            await self.queue.put(data)
+        await self.queue.put(data)
 
     @asynccontextmanager
     async def read_queue(self) -> list:
-        if self.multiprocess:
-            msg = self.queue[0].recv()
-            if msg == SHUTDOWN_SENTINEL:
+        current_depth = self.queue.qsize()
+        if current_depth == 0:
+            update = await self.queue.get()
+            if update == SHUTDOWN_SENTINEL:
                 self.running = False
                 yield []
             else:
-                yield [msg]
+                yield [update]
+            self.queue.task_done()
         else:
-            current_depth = self.queue.qsize()
-            if current_depth == 0:
+            ret = []
+            count = 0
+            while current_depth > count:
                 update = await self.queue.get()
+                count += 1
                 if update == SHUTDOWN_SENTINEL:
-                    yield []
-                else:
-                    yield [update]
+                    self.running = False
+                    break
+                ret.append(update)
+
+            yield ret
+
+            for _ in range(count):
                 self.queue.task_done()
-            else:
-                ret = []
-                count = 0
-                while current_depth > count:
-                    update = await self.queue.get()
-                    count += 1
-                    if update == SHUTDOWN_SENTINEL:
-                        self.running = False
-                        break
-                    ret.append(update)
-
-                yield ret
-
-                for _ in range(count):
-                    self.queue.task_done()
 
 
 class BackendCallback:

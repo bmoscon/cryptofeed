@@ -63,8 +63,7 @@ class Phemex(Feed):
             cls.price_scale[s.normalized] = 10 ** entry.get('priceScale', 8)
         return ret, info
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def _subscription_resolved(self):
         # Phemex only allows 5 connections, with 20 subscriptions per connection, check we arent over the limit
         if sum(map(len, self.subscription.values())) > 100:
             raise ValueError(f"{self.id} only allows a maximum of 100 symbol/channel subscriptions")

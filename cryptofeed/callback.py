@@ -10,17 +10,25 @@ import inspect
 
 class Callback:
     def __init__(self, callback):
+        if callback is not None and not inspect.iscoroutinefunction(callback):
+            raise TypeError('callbacks must be coroutine functions. Wrap synchronous callables in ExecutorCallback')
         self.callback = callback
-        self.is_async = inspect.iscoroutinefunction(callback)
 
-    async def __call__(self, obj, receipt_timestamp):
+    async def __call__(self, obj, receipt_timestamp: float):
         if self.callback is None:
             return
-        elif self.is_async:
-            await self.callback(obj, receipt_timestamp)
-        else:
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, self.callback, obj, receipt_timestamp)
+        await self.callback(obj, receipt_timestamp)
+
+
+class ExecutorCallback:
+    def __init__(self, callback):
+        if not callable(callback) or inspect.iscoroutinefunction(callback):
+            raise TypeError('ExecutorCallback wraps synchronous callables only')
+        self.callback = callback
+
+    async def __call__(self, *args):
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.callback, *args)
 
 
 class TradeCallback(Callback):

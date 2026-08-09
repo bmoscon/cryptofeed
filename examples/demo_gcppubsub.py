@@ -71,21 +71,20 @@ async def start_subscriber(topic):
     await subscribe(subscription_path, message_callback, client, ack_deadline_cache_timeout=300)
 
 
-def main():
+async def main():
     f = FeedHandler()
 
     trades = TradeGCPPubSub()
     cbs = {TRADES: trades}
 
     f.add_feed(Coinbase(channels=[TRADES], symbols=['BTC-USD'], callbacks=cbs))
-    f.run(start_loop=False)
 
-    # Have the client run forever, pulling messages from subscription_path,
-    # passing them to the specified callback function
-    loop = asyncio.get_event_loop()
-    loop.create_task(start_subscriber(trades.topic))
-    loop.run_forever()
+    subscriber = asyncio.create_task(start_subscriber(trades.topic))
+    try:
+        await f.run_async()
+    finally:
+        subscriber.cancel()
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

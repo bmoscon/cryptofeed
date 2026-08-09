@@ -5,7 +5,9 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+import inspect
 from collections import defaultdict
+from contextlib import suppress
 import logging
 from typing import Tuple, Callable, List, Union
 
@@ -24,7 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 class Feed(Exchange):
-    def __init__(self, candle_interval='1m', candle_closed_only=True, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, **kwargs):
+    def __init__(self, candle_interval='1m', candle_closed_only=True, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, shutdown_timeout=10.0, **kwargs):
         """
         candle_interval: str
             the candle interval. See the specific exchange to see what intervals they support
@@ -49,9 +51,7 @@ class Feed(Exchange):
             Toggle a check for a crossed book. Should not be needed on exchanges that support
             checksums or provide message sequence numbers.
         exceptions: list of exceptions
-            These exceptions will not be handled internally and will be passed to the asyncio exception handler. To
-            handle them feedhandler will need to be supplied with a custom exception handler. See the `run` method
-            on FeedHandler, specifically the `exception_handler` keyword argument.
+            These exceptions will not be handled internally and will propagate out of the feed.
         log_message_on_error: bool
             If an exception is encountered in the connection handler, log the raw message
         delay_start: int, float
@@ -59,6 +59,8 @@ class Feed(Exchange):
             on a single exchange, you may encounter 429s. You can use this to stagger the starts.
         http_proxy: str
             URL of proxy server. Passed to HTTPPoll and HTTPAsyncConn. Only used for HTTP GET requests.
+        shutdown_timeout: float
+            Deadline, in seconds, for flushing backends during graceful shutdown
         """
         super().__init__(**kwargs)
         self.log_on_error = log_message_on_error
@@ -80,7 +82,11 @@ class Feed(Exchange):
         self.start_delay = delay_start
         self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
+        self.shutdown_timeout = shutdown_timeout
         self._sequence_no = {}
+        self._conn_tg = None
+        self._spawned = set()
+        self._poller_tasks = []
 
         if self.valid_candle_intervals != NotImplemented:
             if candle_interval not in self.valid_candle_intervals:
@@ -92,15 +98,18 @@ class Feed(Exchange):
         if subscription is not None and (symbols is not None or channels is not None):
             raise ValueError("Use subscription, or channels and symbols, not both")
 
+        self._init_subscription = subscription
+        self._init_symbols = symbols
+        self._init_channels = channels
+
         if subscription is not None:
             for channel in subscription:
-                chan = self.std_channel_to_exchange(channel)
+                self.std_channel_to_exchange(channel)
                 if self.is_authenticated_channel(channel):
                     if not self.key_id or not self.key_secret:
                         raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
                     self.requires_authentication = True
                 self.normalized_symbols.extend(subscription[channel])
-                self.subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol) for symbol in subscription[channel]])
                 self._feed_config[channel].extend(self.normalized_symbols)
 
         if symbols and channels:
@@ -109,14 +118,9 @@ class Feed(Exchange):
                     raise ValueError("Authenticated channel subscribed to, but no auth keys provided")
                 self.requires_authentication = True
 
-            # if we dont have a subscription dict, we'll use symbols+channels and build one
             [self._feed_config[channel].extend(symbols) for channel in channels]
             self.normalized_symbols = symbols
             self.normalized_channels = channels
-
-            symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in symbols]
-            channels = list(set([self.std_channel_to_exchange(chan) for chan in channels]))
-            self.subscription = {chan: symbols for chan in channels}
 
         self._feed_config = dict(self._feed_config)
         self._auth_token = None
@@ -144,7 +148,117 @@ class Feed(Exchange):
 
         for key, callback in self.callbacks.items():
             if not isinstance(callback, list):
-                self.callbacks[key] = [callback]
+                callback = [callback]
+            for cb in callback:
+                if not (inspect.iscoroutinefunction(cb) or inspect.iscoroutinefunction(getattr(cb, '__call__', None))):
+                    raise TypeError(f'{key} callback on {self.id} must be async - wrap synchronous callables in ExecutorCallback')
+            self.callbacks[key] = callback
+
+        if self.normalized_symbol_mapping is not None:
+            self._build_subscription()
+
+    def _build_subscription(self):
+        self._ensure_symbol_mapping()
+
+        if self._init_subscription is not None:
+            self.subscription = defaultdict(set)
+            for channel in self._init_subscription:
+                chan = self.std_channel_to_exchange(channel)
+                self.subscription[chan].update([self.std_symbol_to_exchange_symbol(symbol) for symbol in self._init_subscription[channel]])
+
+        if self._init_symbols and self._init_channels:
+            symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in self._init_symbols]
+            channels = list(set([self.std_channel_to_exchange(chan) for chan in self._init_channels]))
+            self.subscription = {chan: symbols for chan in channels}
+
+        self._subscription_resolved()
+
+    def _subscription_resolved(self):
+        pass
+
+    async def _setup(self):
+        await self.load_symbols(conn=self.http_conn, cache_ttl=self.config.symbol_cache_ttl or None)
+        self._ensure_symbol_mapping()
+        self._build_subscription()
+
+    async def _pre_connect(self):
+        pass
+
+    async def validate(self):
+        await self._setup()
+
+    async def run(self, stop_event: asyncio.Event):
+        try:
+            await self._run(stop_event)
+        finally:
+            # every exit path - clean, failed, or cancelled - releases the http session
+            with suppress(Exception):
+                await self.http_conn.close()
+
+    async def _run(self, stop_event: asyncio.Event):
+        await self._setup()
+        await self._pre_connect()
+
+        self.connection_handlers = []
+        for conn, sub, handler, auth in self.connect():
+            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error, start_delay=self.start_delay))
+        self._spawned = set()
+        self._poller_tasks = []
+
+        async with asyncio.TaskGroup() as tg:
+            writer_tasks = []
+            for callbacks in self.callbacks.values():
+                for cb in callbacks:
+                    if hasattr(cb, 'start_writer'):
+                        task = cb.start_writer(tg, name=f'feed.{self.id}.backend.{self.backend_name(cb)}')
+                        if task is not None:
+                            writer_tasks.append(task)
+
+            error = None
+            try:
+                async with asyncio.TaskGroup() as conn_tg:
+                    self._conn_tg = conn_tg
+                    for handler in self.connection_handlers:
+                        conn_tg.create_task(handler.run(), name=f'feed.{self.id}.conn.{handler.conn.id}')
+                    conn_tg.create_task(self._stop_on_event(stop_event), name=f'feed.{self.id}.stop-watch')
+            except Exception as e:
+                error = e
+            finally:
+                self._conn_tg = None
+
+            try:
+                async with asyncio.timeout(self.shutdown_timeout):
+                    await self.shutdown()
+                    if writer_tasks:
+                        await asyncio.wait(writer_tasks)
+            except TimeoutError:
+                LOG.warning('%s: backend flush exceeded the %.1fs shutdown deadline - cancelling writers', self.id, self.shutdown_timeout)
+                for task in writer_tasks:
+                    task.cancel()
+
+            if error is not None:
+                raise error
+
+    async def _stop_on_event(self, stop_event: asyncio.Event):
+        await stop_event.wait()
+        LOG.info('%s: stop requested - closing connections', self.id)
+        for task in self._poller_tasks:
+            task.cancel()
+        for handler in self.connection_handlers:
+            await handler.request_stop()
+
+    def _spawn(self, name: str, coro):
+        # Spawn a named task owned by the feed's connection TaskGroup
+        task_name = f'feed.{self.id}.poll.{name}'
+        if self._conn_tg is None:
+            LOG.warning('%s: not running under a supervision tree - poller %s not started', self.id, task_name)
+            coro.close()
+            return
+        if task_name in self._spawned:
+            coro.close()
+            return
+        self._spawned.add(task_name)
+        self._poller_tasks.append(self._conn_tg.create_task(coro, name=task_name))
 
     def _connect_rest(self):
         """
@@ -278,25 +392,6 @@ class Feed(Exchange):
         for c in self.connection_handlers:
             await c.conn.close()
         LOG.info('%s: feed shutdown completed', self.id)
-
-    def stop(self):
-        for c in self.connection_handlers:
-            c.running = False
-
-    def start(self, loop: asyncio.AbstractEventLoop):
-        """
-        Create tasks for exchange interfaces and backends
-        """
-        for conn, sub, handler, auth in self.connect():
-            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, auth, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error, start_delay=self.start_delay))
-            self.connection_handlers[-1].start(loop)
-
-        for callbacks in self.callbacks.values():
-            for callback in callbacks:
-                if hasattr(callback, 'start'):
-                    LOG.info('%s: starting backend task %s with multiprocessing=%s', self.id, self.backend_name(callback), 'True' if self.config.backend_multiprocessing else 'False')
-                    # Backends start tasks to write messages
-                    callback.start(loop, multiprocess=self.config.backend_multiprocessing)
 
     def backend_name(self, callback):
         if hasattr(callback, '__class__'):
