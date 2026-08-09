@@ -3,26 +3,19 @@ name: cryptofeed tests
 on: [push, pull_request]
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.12', '3.13', '3.14']
 
     steps:
+      - uses: actions/checkout@v4
       - name: Install uv
         uses: astral-sh/setup-uv@v7
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: |
-          uv sync
-          uv pip install pytest
-          uv pip install -e .
-      - name: Test with pytest
-        run: |
-          uv run pytest tests/
+        run: uv sync
+      - name: Run tests (offline suite)
+        run: uv run pytest tests/

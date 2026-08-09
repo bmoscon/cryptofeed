@@ -7,8 +7,12 @@ associated with this software.
 import asyncio
 from decimal import Decimal
 
+import pytest
+
 from cryptofeed.defines import ASK, BID
 from cryptofeed.exchanges import Bitmex
+
+pytestmark = pytest.mark.live
 
 
 b = Bitmex()

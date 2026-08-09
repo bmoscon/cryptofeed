@@ -1,10 +1,6 @@
-# Note - Cryptofeed is in a state of flux. Modernization is underway - expect a 3.0 release sometime in the near future. Be aware breaking changes will take place. Before the 3.0 release the library is only semi-functional
-
-
-
 # Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.8+-green.svg)
+![Python](https://img.shields.io/badge/Python-3.12+-green.svg)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
 
@@ -151,7 +147,7 @@ Supported Backends:
 
 ## Installation
 
-**Note:** cryptofeed requires Python 3.8+
+**Note:** cryptofeed requires Python 3.12+
 
 Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
 
@@ -161,13 +157,13 @@ Cryptofeed has optional dependencies, depending on the backends used. You can in
 
     pip install cryptofeed[all]
 
-If you wish to clone the repository and install from source, run this command from the root of the cloned repository.
+If you wish to clone the repository and work on it (development uses [uv](https://docs.astral.sh/uv/)), run this from the root of the cloned repository:
 
-    python setup.py install
+    uv sync
 
-Alternatively, you can install in 'edit' mode (also called development mode):
+Alternatively, you can install from source in editable mode with pip:
 
-    python setup.py develop
+    pip install -e .
 
 See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 

@@ -5,11 +5,15 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+import pytest
+
 from cryptofeed.defines import ASK, BID
 from datetime import datetime as dt, timedelta
 from decimal import Decimal
 
 from cryptofeed.exchanges import Deribit
+
+pytestmark = pytest.mark.live
 
 
 d = Deribit()
@@ -20,7 +24,7 @@ def teardown_module(module):
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
-    
+
     loop.run_until_complete(d.shutdown())
 
 

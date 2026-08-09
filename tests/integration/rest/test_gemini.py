@@ -10,6 +10,8 @@ import pytest
 from cryptofeed.defines import BID, ASK, LIMIT, BUY, CANCELLED
 from cryptofeed.exchanges import Gemini
 
+pytestmark = pytest.mark.live
+
 
 public = Gemini(config='config.yaml')
 sandbox = Gemini(sandbox=True, config='config.yaml')
@@ -20,7 +22,7 @@ def teardown_module(module):
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
-    
+
     loop.run_until_complete(public.shutdown())
     loop.run_until_complete(sandbox.shutdown())
 

@@ -12,6 +12,6 @@ def temp_f(r, address, json=False, text=False, uuid=None):
             return json_parser.loads(r.text, parse_float=Decimal)
         if text:
             return r.text
-        return r 
+        return r
 
 Binance.http_sync.process_response = temp_f

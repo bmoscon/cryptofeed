@@ -4,7 +4,6 @@ Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 from collections import defaultdict
 
 import aio_pika
@@ -44,11 +43,11 @@ class RabbitCallback:
     async def connect(self):
         if not self.conn:
             if self.exchange_mode:
-                connection = await aio_pika.connect_robust(f"amqp://{self.host}", loop=asyncio.get_running_loop())
+                connection = await aio_pika.connect_robust(f"amqp://{self.host}")
                 self.conn = await connection.channel()
                 self.conn = await self.conn.declare_exchange(self.exchange_name, self.exchange_type, durable=True, auto_delete=False)
             else:
-                connection = await aio_pika.connect_robust(f"amqp://{self.host}", loop=asyncio.get_running_loop())
+                connection = await aio_pika.connect_robust(f"amqp://{self.host}")
                 self.conn = await connection.channel()
                 await self.conn.declare_queue(self.queue_name, auto_delete=False, durable=True)
 

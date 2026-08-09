@@ -19,8 +19,8 @@ class Callback:
         elif self.is_async:
             await self.callback(obj, receipt_timestamp)
         else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.callback, (obj, receipt_timestamp))
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self.callback, obj, receipt_timestamp)
 
 
 class TradeCallback(Callback):

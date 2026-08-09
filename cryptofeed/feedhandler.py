@@ -10,6 +10,7 @@ import logging
 import signal
 from signal import SIGABRT, SIGINT, SIGTERM
 import sys
+import warnings
 from typing import List
 
 try:
@@ -30,6 +31,16 @@ from cryptofeed.exchanges import EXCHANGE_MAP
 
 
 LOG = logging.getLogger('feedhandler')
+
+
+def _get_event_loop():
+    # handle python versions where asyncio.get_event_loop() was removed
+    try:
+        return asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
 
 
 def setup_signal_handlers(loop):
@@ -73,7 +84,9 @@ class FeedHandler:
         if self.config.uvloop:
             try:
                 import uvloop
-                asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', DeprecationWarning)
+                    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
                 LOG.info('FH: uvloop initalized')
             except ImportError:
                 LOG.info("FH: uvloop not initialized")
@@ -100,7 +113,7 @@ class FeedHandler:
 
         if self.running:
             if loop is None:
-                loop = asyncio.get_event_loop()
+                loop = _get_event_loop()
 
             self.feeds[-1].start(loop)
 
@@ -132,7 +145,7 @@ class FeedHandler:
             a custom exception handler for asyncio
         """
         self.running = True
-        loop = asyncio.get_event_loop()
+        loop = _get_event_loop()
         # Good to enable when debugging or without code change: export PYTHONASYNCIODEBUG=1)
         # loop.set_debug(True)
 
@@ -162,7 +175,7 @@ class FeedHandler:
     def _stop(self, loop=None):
         self.running = False
         if not loop:
-            loop = asyncio.get_event_loop()
+            loop = _get_event_loop()
 
         LOG.info('FH: shutdown connections handlers in feeds')
         for feed in self.feeds:
@@ -191,13 +204,15 @@ class FeedHandler:
         await asyncio.gather(*shutdown_tasks)
 
     def stop(self, loop=None):
+        if not loop:
+            loop = _get_event_loop()
         shutdown_tasks = self._stop(loop=loop)
         loop.run_until_complete(asyncio.gather(*shutdown_tasks))
 
     def close(self, loop=None):
         """Stop the asynchronous generators and close the event loop."""
         if not loop:
-            loop = asyncio.get_event_loop()
+            loop = _get_event_loop()
 
         LOG.info('FH: stop the AsyncIO loop')
         loop.stop()

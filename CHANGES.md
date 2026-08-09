@@ -1,5 +1,15 @@
 ## Changelog
 
+### 2.5.0 (2026-08-08)
+ * Update: Python 3.12+ required, completed move to uv, `setup.py` removed
+ * Update: CI/CD overhaul
+ * Bugfix: various bugs in FeedHandler that prevented it from running on 3.14+
+ * Bugfix: various backend issues that prevented them from working with later versions of Python
+ * Bugfix: Gemini authenticated issue with newer version of websocket library
+ * Bugfix: Binance listenKey refresh now uses aiohttp
+ * Update: Binance per connection stream limit (issue #1087)
+ * Bugfix: Bybit L2_BOOK callback timestamp normalization (issue #1083)
+
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
  * Bugfix: Handle empty nextFundingRate in OKX

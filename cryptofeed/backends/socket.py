@@ -79,8 +79,8 @@ class SocketCallback(BackendQueue):
                     data = {'type': self.key, 'data': update}
                     data = json.dumps(data)
                     if self.conn_type == 'udp://':
-                        if len(update) > self.mtu:
-                            chunks = wrap(update, self.mtu)
+                        if len(data) > self.mtu:
+                            chunks = wrap(data, self.mtu)
                             for chunk in chunks:
                                 msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
                                 self.conn.sendto(msg)

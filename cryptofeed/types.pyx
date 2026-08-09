@@ -1,3 +1,4 @@
+# cython: language_level=3
 '''
 Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 

@@ -8,6 +8,7 @@ import logging
 from asyncio import create_task, sleep
 from collections import defaultdict
 from decimal import Decimal
+import aiohttp
 import requests
 import time
 from typing import Dict, Union, Tuple
@@ -155,8 +156,10 @@ class Binance(Feed, BinanceRestMixin):
             if self._auth_token is None:
                 raise ValueError('There is no token to refresh')
             payload = {'listenKey': self._auth_token}
-            r = requests.put(f'{self.rest_endpoints[0].route("authentication", sandbox=self.sandbox)}?{urlencode(payload)}', headers={'X-MBX-APIKEY': self.key_id})
-            r.raise_for_status()
+            url = f'{self.rest_endpoints[0].route("authentication", sandbox=self.sandbox)}?{urlencode(payload)}'
+            async with aiohttp.ClientSession() as session:
+                async with session.put(url, headers={'X-MBX-APIKEY': self.key_id}) as r:
+                    r.raise_for_status()
 
     def _generate_token(self) -> str:
         url = self.rest_endpoints[0].route('authentication', sandbox=self.sandbox)

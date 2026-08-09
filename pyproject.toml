@@ -4,12 +4,12 @@
 # associated with this software.
 
 [build-system]
-requires = ["setuptools", "wheel", "Cython"]
+requires = ["setuptools>=77.0.3", "Cython>=3.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryptofeed"
-version = "2.4.1"
+version = "2.5.0"
 description = "Cryptocurrency Exchange Websocket Data Feed Handler"
 readme = "README.md"
 license = "XFree86-1.1"
@@ -28,10 +28,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Framework :: AsyncIO",
 ]
 requires-python = ">=3.12"
@@ -74,14 +73,49 @@ all = [
 [project.urls]
 Homepage = "https://github.com/bmoscon/cryptofeed"
 
-[tool.setuptools]
-packages = ["cryptofeed"]
+[dependency-groups]
+dev = [
+    "pytest",
+    "redis",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+include = ["cryptofeed*"]
 
 [tool.setuptools.package-data]
 cryptofeed = ["*.pyx"]
 
+# For a debug build that keeps the runtime assertions, remove the CYTHON_WITHOUT_ASSERTIONS macro and rebuild
+[[tool.setuptools.ext-modules]]
+name = "cryptofeed.types"
+sources = ["cryptofeed/types.pyx"]
+define-macros = [["CYTHON_WITHOUT_ASSERTIONS", ""]]
 
-[tool.cython]
-language_level = 3
-annotate = false
-compiler_directives = {optimize.use_switch = true, optimize.unpack_method_calls = true}
+[tool.cibuildwheel]
+build = "cp312-* cp313-* cp314-*"
+skip = "*-musllinux*"
+test-command = "python -c \"from cryptofeed import FeedHandler; from cryptofeed.types import COMPILED_WITH_ASSERTIONS; assert COMPILED_WITH_ASSERTIONS is False\""
+
+[tool.cibuildwheel.macos]
+archs = ["arm64", "x86_64"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "ASYNC"]
+ignore = ["E501", "F403", "F405"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/integration/rest/test_coinbase.py" = ["E402"]
+"tests/integration/rest/test_dydx.py" = ["E402"]
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: unit tests",
+    "playback: replay exchange data through message handlers",
+    "backend: requires backend services",
+    "live: hits exchange endpoints",
+    "bench: performance tests and benchmarks",
+]
+addopts = "-m 'not live' --ignore=tests/integration"
+asyncio_mode = "auto"

@@ -8,8 +8,12 @@ associated with this software.
 import asyncio
 from decimal import Decimal
 
+import pytest
+
 from cryptofeed.exchanges import OKX
 from cryptofeed.types import Candle
+
+pytestmark = pytest.mark.live
 
 o = OKX()
 

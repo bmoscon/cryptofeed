@@ -79,6 +79,8 @@ def get_message_count(filenames: str):
     return counter
 
 
+
+@pytest.mark.playback
 @pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
 def test_exchange_playback(exchange):
     Symbols.clear()

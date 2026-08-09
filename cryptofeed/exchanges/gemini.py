@@ -196,7 +196,7 @@ class Gemini(Feed, GeminiRestMixin):
             if self.is_authenticated_channel(channel):
                 symbols.extend(self.subscription.get(channel))
         symbols = '&'.join([f"symbolFilter={s.lower()}" for s in symbols])  # needs to match REST format (lower case)
-        options['extra_headers'] = header
+        options['additional_headers'] = header
         return f'{address}?{symbols}', options
 
     async def subscribe(self, conn: AsyncConnection):

@@ -7,8 +7,12 @@ associated with this software.
 import asyncio
 from decimal import Decimal
 
+import pytest
+
 from cryptofeed.defines import ASK, BID, BUY, SELL, BITFINEX
 from cryptofeed.exchanges import Bitfinex
+
+pytestmark = pytest.mark.live
 
 
 b = Bitfinex()
@@ -18,8 +22,8 @@ def teardown_module(module):
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
-        loop = asyncio.new_event_loop()        
-    
+        loop = asyncio.new_event_loop()
+
     loop.run_until_complete(b.shutdown())
 
 

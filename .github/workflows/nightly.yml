@@ -1,10 +1,15 @@
-name: ruff lint
+name: nightly live tests
 
-on: [push, pull_request]
+
+on:
+  schedule:
+    - cron: '17 1 * * *'
+  workflow_dispatch:
 
 jobs:
-  ruff:
+  live:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -13,5 +18,5 @@ jobs:
           python-version: '3.13'
       - name: Install dependencies
         run: uv sync
-      - name: ruff check
-        run: uv run ruff check .
+      - name: Run live tests against real exchanges
+        run: uv run pytest -m live -o addopts="" tests/

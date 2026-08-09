@@ -22,7 +22,7 @@ LOG = logging.getLogger('feedhandler')
 
 class UpbitRestMixin(RestExchange):
     api = "https://api.upbit.com/v1/"
-    rest_channels = (CANDLES)
+    rest_channels = (CANDLES,)
     valid_candle_intervals = {'1m', '3m', '5m', '10m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'}
 
     async def candles(self, symbol: str, start=None, end=None, interval='1m', retry_count=1, retry_delay=60):

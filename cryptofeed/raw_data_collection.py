@@ -19,7 +19,7 @@ from cryptofeed.exchanges import EXCHANGE_MAP
 
 def bytes_string_to_bytes(string):
     tree = ast.parse(string)
-    return tree.body[0].value.s
+    return tree.body[0].value.value
 
 
 def playback(feed: str, filenames: list, callbacks: dict = None, config: str = 'config.yaml'):

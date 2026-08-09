@@ -9,6 +9,8 @@ import pytest
 from cryptofeed.defines import BEQUANT, EXX
 from cryptofeed.exchanges import EXCHANGE_MAP
 
+pytestmark = pytest.mark.live
+
 
 @pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
 def test_symbol_conversion(exchange):

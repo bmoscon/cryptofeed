@@ -56,11 +56,10 @@ class KafkaCallback(BackendQueue):
 
     async def _connect(self):
         if not self.producer:
-            loop = asyncio.get_event_loop()
             try:
                 config_keys = ', '.join([k for k in self.producer_config.keys()])
                 LOG.info(f'{self.__class__.__name__}: Configuring AIOKafka with the following parameters: {config_keys}')
-                self.producer = AIOKafkaProducer(**self.producer_config, loop=loop)
+                self.producer = AIOKafkaProducer(**self.producer_config)
             # Quit if invalid config option passed to AIOKafka
             except (TypeError, ValueError) as e:
                 LOG.error(f'{self.__class__.__name__}: Invalid AIOKafka configuration: {e.args}{chr(10)}See https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer for list of configuration options')
