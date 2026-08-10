@@ -26,6 +26,9 @@ try:
     def dumps(obj) -> str:
         return _encoder.encode(obj).decode()
 
+    def dumpb(obj) -> bytes:
+        return _encoder.encode(obj)
+
 except ImportError:
     # fallback
     import json as _stdlib_json
@@ -37,3 +40,6 @@ except ImportError:
 
     def dumps(obj) -> str:
         return _stdlib_json.dumps(obj, separators=(',', ':'), default=str)
+
+    def dumpb(obj) -> bytes:
+        return dumps(obj).encode()

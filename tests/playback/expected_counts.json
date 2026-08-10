@@ -1,0 +1,134 @@
+{
+  "BINANCE": {
+    "candles": 2,
+    "l2_book": 176,
+    "ticker": 84,
+    "trades": 2
+  },
+  "BINANCE_DELIVERY": {
+    "candles": 33,
+    "l2_book": 1798,
+    "ticker": 2240,
+    "trades": 51
+  },
+  "BINANCE_FUTURES": {
+    "candles": 67,
+    "l2_book": 756,
+    "ticker": 613,
+    "trades": 91
+  },
+  "BINANCE_US": {
+    "candles": 5,
+    "l2_book": 336,
+    "ticker": 128,
+    "trades": 11
+  },
+  "BITFINEX": {
+    "l2_book": 1600,
+    "ticker": 21,
+    "trades": 210
+  },
+  "BITFLYER": {
+    "l2_book": 749,
+    "ticker": 249,
+    "trades": 162
+  },
+  "BITGET": {
+    "candles": 10060,
+    "l2_book": 637,
+    "ticker": 345,
+    "trades": 555
+  },
+  "BITHUMB": {
+    "trades": 7
+  },
+  "BITSTAMP": {
+    "l2_book": 627,
+    "trades": 10
+  },
+  "BYBIT": {
+    "candles": 100,
+    "funding": 758,
+    "index": 758,
+    "l2_book": 2148,
+    "open_interest": 758,
+    "ticker": 839,
+    "trades": 347
+  },
+  "COINBASE": {
+    "candles": 204,
+    "l2_book": 775,
+    "ticker": 160,
+    "trades": 79
+  },
+  "CRYPTO.COM": {
+    "candles": 10,
+    "l2_book": 1525,
+    "ticker": 1484,
+    "trades": 1143
+  },
+  "DERIBIT": {
+    "l2_book": 46,
+    "ticker": 89
+  },
+  "GATEIO": {
+    "candles": 14,
+    "l2_book": 169,
+    "ticker": 22,
+    "trades": 9
+  },
+  "GATEIO_FUTURES": {
+    "candles": 1,
+    "l2_book": 326,
+    "ticker": 75
+  },
+  "GEMINI": {
+    "l2_book": 559,
+    "trades": 2
+  },
+  "HUOBI": {
+    "l2_book": 292,
+    "trades": 73
+  },
+  "HUOBI_SWAP": {
+    "l2_book": 2862,
+    "trades": 25
+  },
+  "INDEPENDENT_RESERVE": {
+    "l3_book": 1631
+  },
+  "KRAKEN": {
+    "l2_book": 4279,
+    "ticker": 18,
+    "trades": 10
+  },
+  "KRAKEN_FUTURES": {
+    "l2_book": 7024,
+    "ticker": 107,
+    "trades": 3
+  },
+  "KUCOIN": {
+    "candles": 6,
+    "l2_book": 3823,
+    "ticker": 830,
+    "trades": 18
+  },
+  "OKX": {
+    "l2_book": 290,
+    "ticker": 28,
+    "trades": 74
+  },
+  "PHEMEX": {
+    "candles": 10041,
+    "l2_book": 1337,
+    "trades": 10025
+  },
+  "POLONIEX": {
+    "l2_book": 294,
+    "trades": 6
+  },
+  "UPBIT": {
+    "l2_book": 145,
+    "trades": 304
+  }
+}

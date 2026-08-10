@@ -12,17 +12,18 @@ name = "cryptofeed"
 version = "2.5.0"
 description = "Cryptocurrency Exchange Websocket Data Feed Handler"
 readme = "README.md"
-license = "XFree86-1.1"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 authors = [
     {name = "Bryant Moscon", email = "bmoscon@gmail.com"}
 ]
 keywords = [
     "cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data", "crypto assets",
     "Trades", "Tickers", "BBO", "Funding", "Open Interest", "Liquidation", "Order book", "Bid", "Ask",
-    "fmfw.io", "Bitfinex", "bitFlyer", "AscendEX", "Bitstamp", "Blockchain.com", "Bybit",
-    "Binance", "Binance Delivery", "Binance Futures", "Binance US", "BitMEX", "Coinbase", "Deribit", "EXX",
-    "Gate.io", "Gemini", "HitBTC", "Huobi", "Huobi DM", "Huobi Swap", "Kraken",
-    "Kraken Futures", "OKCoin", "OKX", "Poloniex", "ProBit", "Upbit"
+    "Binance", "Binance Delivery", "Binance Futures", "Binance US", "Bitfinex", "bitFlyer", "Bitget",
+    "Bithumb", "Bitstamp", "Bybit", "Coinbase", "Crypto.com", "Deribit", "Gate.io", "Gate.io Futures",
+    "Gemini", "Huobi", "Huobi Swap", "Independent Reserve", "Kraken", "Kraken Futures", "KuCoin",
+    "OKX", "Phemex", "Poloniex", "Upbit"
 ]
 classifiers = [
     "Intended Audience :: Developers",
@@ -47,21 +48,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-arctic = ["arctic", "pandas"]
-gcp_pubsub = ["google_cloud_pubsub>=2.4.1", "gcloud_aio_pubsub"]
+capture = ["zstandard ; python_version < '3.14'"]
 kafka = ["aiokafka>=0.7.0"]
-mongo = ["motor"]
+mongo = ["pymongo>=4.9"]
 postgres = ["asyncpg"]
-quasardb = ["quasardb", "numpy"]
 rabbit = ["aio_pika", "pika"]
 redis = ["hiredis", "redis>=4.5.1"]
 zmq = ["pyzmq"]
 all = [
-    "arctic",
-    "google_cloud_pubsub>=2.4.1",
-    "gcloud_aio_pubsub",
     "aiokafka>=0.7.0",
-    "motor",
+    "pymongo>=4.9",
     "asyncpg",
     "aio_pika",
     "pika",
@@ -75,10 +71,18 @@ Homepage = "https://github.com/bmoscon/cryptofeed"
 
 [dependency-groups]
 dev = [
+    "aio-pika>=9.5.8",
+    "aiokafka>=0.13.0",
+    "asyncpg>=0.31.0",
+    "pymongo>=4.9",
     "pytest",
     "pytest-asyncio",
+    "pytest-benchmark>=5.2.3",
+    "pytest-timeout>=2.4.0",
+    "pyzmq>=27.1.0",
     "redis",
     "ruff",
+    "zstandard ; python_version < '3.14'",
 ]
 
 [tool.setuptools.packages.find]
@@ -113,12 +117,15 @@ ignore = ["E501", "F403", "F405"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# markers are applied by directory (tests/<layer>/) in tests/conftest.py
 markers = [
-    "unit: unit tests",
-    "playback: replay exchange data through message handlers",
-    "backend: requires backend services",
-    "live: hits exchange endpoints",
-    "bench: performance tests and benchmarks",
+    "unit: pure logic. offline, no services. tests/unit/",
+    "playback: recorded captures replayed through real message handlers. offline. tests/playback/",
+    "backend: round trips through real backend services. needs containers. tests/backend/",
+    "live: connects to real exchange endpoints. nightly only, never gates a PR. tests/live/",
+    "bench: performance benchmarks. run on demand and on release branches. tests/bench/",
 ]
-addopts = "-m 'not live'"
+addopts = "-m 'unit or playback'"
 asyncio_mode = "auto"
+# a hung socket or service connection should fail the test
+timeout = 120

@@ -17,7 +17,6 @@ Some exchanges support methods for ensuring orderbooks are correct. The two most
 | BinanceUS     |               | x                |                |       |
 | Bitflyer      |               |                  |                |       |
 | Bithumb       |               |                  |                |       |
-| BitMEX        |               |                  |                |       |
 | Coinbase      |               |  x <sup>1</sup>  |                |       |
 | Crypto.com    |               |                  | x              |       |
 | Delta         |               |                  | x              |       |

@@ -26,10 +26,12 @@ LOG = logging.getLogger(__name__)
 
 
 class Feed(Exchange):
-    def __init__(self, candle_interval='1m', candle_closed_only=True, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, shutdown_timeout=10.0, **kwargs):
+    def __init__(self, candle_interval=None, candle_closed_only=True, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=False, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, shutdown_timeout=10.0, **kwargs):
         """
         candle_interval: str
-            the candle interval. See the specific exchange to see what intervals they support
+            the candle interval. See the specific exchange to see what intervals they support.
+            Defaults to 1m where the venue supports it, otherwise to the venue's shortest
+            supported interval - some venues offer exactly one (Coinbase publishes 5m only)
         candle_closed_only: bool
             returns only closed/completed candles (if supported by exchange).
         timeout: int
@@ -80,7 +82,6 @@ class Feed(Exchange):
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
         self.http_proxy = http_proxy
         self.start_delay = delay_start
-        self.candle_interval = candle_interval
         self.candle_closed_only = candle_closed_only
         self.shutdown_timeout = shutdown_timeout
         self._sequence_no = {}
@@ -89,8 +90,13 @@ class Feed(Exchange):
         self._poller_tasks = []
 
         if self.valid_candle_intervals != NotImplemented:
-            if candle_interval not in self.valid_candle_intervals:
+            if candle_interval is None:
+                candle_interval = '1m' if '1m' in self.valid_candle_intervals else sorted(self.valid_candle_intervals)[0]
+            elif candle_interval not in self.valid_candle_intervals:
                 raise ValueError(f"Candle interval must be one of {self.valid_candle_intervals}")
+        elif candle_interval is None:
+            candle_interval = '1m'
+        self.candle_interval = candle_interval
 
         if self.candle_interval_map != NotImplemented:
             self.normalize_candle_interval = {value: key for key, value in self.candle_interval_map.items()}

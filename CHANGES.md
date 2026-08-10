@@ -4,6 +4,9 @@
  * Feature: New asyncio core
  * Update: REST endpoints removed (moves to the cryptotrade project)
  * Update: dropped old / outdated / dead exchanges
+ * Update: Some backend support dropped
+ * Update: tests and tooling updated
+ * Update: raw data samples re-captured
 
 ### 2.5.0 (2026-08-08)
  * Update: Python 3.12+ required, completed move to uv, `setup.py` removed

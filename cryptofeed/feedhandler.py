@@ -18,7 +18,6 @@ try:
 except ImportError:
     SIGNALS = (SIGABRT, SIGINT, SIGTERM)
 
-from cryptofeed import _json as json
 from cryptofeed.config import Config
 from cryptofeed.connection import Connection
 from cryptofeed.defines import L2_BOOK
@@ -32,13 +31,14 @@ LOG = logging.getLogger(__name__)
 
 
 class FeedHandler:
-    def __init__(self, config=None, raw_data_collection=None, on_feed_error='raise'):
+    def __init__(self, config=None, capture=None, on_feed_error='raise'):
         """
         config: str, dict or None
             if str, absolute path (including file name) of the config file. If not provided, config can also be a dictionary of values, or
             can be None, which will default options. See docs/config.md for more information.
-        raw_data_collection: callback (see AsyncFileCallback) or None
-            if set, enables collection of raw data from exchanges. ALL https/wss traffic from the exchanges will be collected.
+        capture: CaptureWriter or None
+            if set, records raw exchange traffic to disk in the corpus format. ALL https/wss
+            traffic from the exchanges is recorded. See cryptofeed.capture.
         on_feed_error: 'raise' or 'remove_feed'
             'raise', default - a feed that fails permanently stops the handler, cancelling other feeds
             'remove_feed' - the failed feed is flushed and removed, other feeds keep running.
@@ -48,14 +48,14 @@ class FeedHandler:
         self.feeds = []
         self.config = Config(config=config)
         self.on_feed_error = on_feed_error
-        self.raw_data_collection = None
+        self.capture = None
         self._stop_event = None
         self._tg = None
         self._main_task = None
         self._signals_installed = False
-        if raw_data_collection:
-            Connection.raw_data_callback = raw_data_collection
-            self.raw_data_collection = raw_data_collection
+        if capture:
+            Connection.raw_data_callback = capture
+            self.capture = capture
 
         if not self.config.log.disabled:
             configure_logging(filename=self.config.log.filename or None, level=self.config.log.level or 'WARNING', stream=True)
@@ -94,8 +94,9 @@ class FeedHandler:
                 raise ValueError("Invalid feed specified")
         else:
             self.feeds.append(feed)
-        if self.raw_data_collection:
-            self.raw_data_collection.write_header(self.feeds[-1].id, json.dumps(self.feeds[-1]._feed_config))
+        if self.capture:
+            feed = self.feeds[-1]
+            self.capture.header(feed.id, feed._feed_config, candle_interval=feed.candle_interval)
 
         if self._tg is not None:
             # while running (loop thread only) the new feed joins the live supervision tree
@@ -158,9 +159,9 @@ class FeedHandler:
             self._main_task = None
             if install_signal_handlers:
                 self._remove_signal_handlers(loop)
-            if self.raw_data_collection:
-                LOG.info('FH: shutting down raw data collection')
-                self.raw_data_collection.stop()
+            if self.capture:
+                LOG.info('FH: closing the capture writer')
+                await self.capture.close()
             LOG.info('FH: leaving run_async()')
 
     def request_stop(self):

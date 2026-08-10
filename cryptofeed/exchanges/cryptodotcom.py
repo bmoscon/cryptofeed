@@ -79,8 +79,8 @@ class CryptoDotCom(Feed):
                 self.id,
                 self.exchange_symbol_to_std_symbol(msg['instrument_name']),
                 BUY if entry['s'] == 'BUY' else SELL,
-                entry['q'],
-                entry['p'],
+                Decimal(entry['q']),
+                Decimal(entry['p']),
                 self.timestamp_normalize(entry['t']),
                 id=str(entry['d']),
                 raw=entry

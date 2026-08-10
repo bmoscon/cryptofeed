@@ -89,7 +89,8 @@ class InfluxCallback(HTTPCallback):
                         update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]} {d}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
 
                     await self.http_write(update, headers=self.headers)
-        await self.session.close()
+        if self.session:
+            await self.session.close()
 
 
 class TradeInflux(InfluxCallback, BackendCallback):

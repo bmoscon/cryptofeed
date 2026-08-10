@@ -9,10 +9,7 @@ import re
 
 
 BANNED = re.compile(r'get_event_loop|ensure_future|run_until_complete|run_forever|set_event_loop_policy|set_event_loop\(|\batexit\b')
-
-ALLOWLIST = {
-    'atexit': {'raw_data_collection.py'},   # AsyncFileCallback's sync flush-on-exit safety net
-}
+ALLOWLIST = {}
 
 
 def test_no_legacy_loop_management():

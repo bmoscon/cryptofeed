@@ -7,9 +7,6 @@ log:
 uvloop: True
 
 # Secrets for exchanges
-bitmex:
-    key_id: null
-    key_secret: null
 bitfinex:
     key_id: null
     key_secret: null

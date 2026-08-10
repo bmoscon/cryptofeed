@@ -15,7 +15,6 @@ $ python demo_checki_trade_timestamps.py
 Starting: 1562808668.105481
 [0]: Subscribing to Binance
 [1]: Subscribing to Bitfinex
-[2]: Subscribing to BitMEX
 [3]: Subscribing to Bitstamp
 [4]: Subscribing to Bybit
 [5]: Subscribing to Coinbase
@@ -36,7 +35,6 @@ Added BINANCE.
 Added BYBIT.
 Added KRAKEN.
 Added COINBASE.
-Added BITMEX.
 Added BITFINEX.
 Added HITBTC.
 Added DERIBIT.
@@ -45,7 +43,6 @@ Added GEMINI.
 Added POLONIEX.
 BINANCE     : timestamp:1562808676.172       <class 'float'> 2019-07-11 09:31:16.172000
 BITFINEX    : timestamp:1562808659.325       <class 'float'> 2019-07-11 09:30:59.325000
-BITMEX      : timestamp:1562808675.125       <class 'float'> 2019-07-11 09:31:15.125000
 BITSTAMP    : timestamp:1562808680.724683    <class 'float'> 2019-07-11 09:31:20.724683
 BYBIT       : timestamp:1562808676.485       <class 'float'> 2019-07-11 09:31:16.485000
 COINBASE    : timestamp:1562808676.184       <class 'float'> 2019-07-11 09:31:16.184000
@@ -86,7 +83,6 @@ def main():
     exch_sym_map = {}
     exch_sym_map['Binance'] = ['BTC-USDT', 'BTC-USDC', 'BTC-TUSD']
     exch_sym_map['Bitfinex'] = ['BTC-USD']
-    exch_sym_map['BitMEX'] = ['BTC-USD-PERP']
     exch_sym_map['Bitstamp'] = ['BTC-USD']
     exch_sym_map['Bybit'] = ['BTC-USD-PERP']
     exch_sym_map['Coinbase'] = ['BTC-USD']

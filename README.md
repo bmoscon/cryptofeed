@@ -1,8 +1,8 @@
 # Cryptocurrency Exchange Feed Handler
-[![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12+-green.svg)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
+
 
 Handles multiple cryptocurrency exchange data feeds and returns normalized and standardized results to client registered callbacks for events like trades, book updates, ticker updates, etc. Utilizes websockets when possible, but can also poll data via REST endpoints if a websocket is not provided.
 
@@ -18,7 +18,6 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Binance Futures](https://www.binance.com/en/futures)
 * [Binance US](https://www.binance.us/en)
 * [Bitget](https://www.bitget.com/)
-* [BitMEX](https://www.bitmex.com/)
 * [Coinbase](https://www.coinbase.com/)
 * [Crypto.com](https://www.crypto.com)
 * [Deribit](https://www.deribit.com/)
@@ -118,7 +117,6 @@ Cryptofeed supports `backend` callbacks that will write directly to storage or o
 
 Supported Backends:
 * Redis (Streams and Sorted Sets)
-* [Arctic](https://github.com/manahl/arctic)
 * ZeroMQ
 * UDP Sockets
 * TCP Sockets
@@ -128,8 +126,6 @@ Supported Backends:
 * Kafka
 * RabbitMQ
 * PostgreSQL
-* [QuasarDB](https://quasar.ai/)
-* GCP Pub/Sub
 * [QuestDB](https://questdb.io/)
 
 
@@ -155,6 +151,23 @@ Alternatively, you can install from source in editable mode with pip:
 
 See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
+## Performance
+
+#### 3.0.0 performance baseline
+
+Measured on Python 3.14.6 based on throughput over real recorded exchange traffic.
+
+| Operation | Result |
+|---|---|
+| `Trade` construct / `to_dict` / `from_dict` | 102 ns / 214 ns / 277 ns |
+| `Ticker` / `Candle` / `Funding` construct | 70 ns / 118 ns / 141 ns |
+| Book single level update / delete / top-of-book read | 89 ns / 124 ns / 140 ns |
+| Book `to_dict`, 10 / 100 levels per side | 2.4 us / 22.2 us |
+| Checksum, Kraken / OKX format (200 levels) | 2.0 us / 6.1 us |
+| JSON decode with `Decimal` (msgspec / stdlib fallback) | 1.39M / 0.60M msg/s |
+| JSON encode to str / bytes | 4.65M / 5.25M msg/s |
+| Message handler, Kraken / Bybit / KuCoin / Kraken Futures | 161k / 134k / 122k / ~100k frames/s |
+| Full corpus replay (Kraken + Bybit + Coinbase) | 72k msg/s, 137 MB peak RSS |
 
 
 ## Future Work

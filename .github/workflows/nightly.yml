@@ -1,9 +1,8 @@
 name: nightly live tests
 
-
 on:
   schedule:
-    - cron: '17 1 * * *'
+    - cron: '17 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -18,5 +17,5 @@ jobs:
           python-version: '3.13'
       - name: Install dependencies
         run: uv sync
-      - name: Run live tests against real exchanges
-        run: uv run pytest -m live -o addopts="" tests/
+      - name: Run live suite against real exchanges
+        run: uv run pytest -m live

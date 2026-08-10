@@ -87,7 +87,8 @@ class SocketCallback(BackendQueue):
                         else:
                             self.conn.sendto(data.encode())
                     else:
-                        self.conn.write(data.encode())
+                        # newline delimited
+                        self.conn.write((data + '\n').encode())
 
     async def connect(self):
         if not self.conn:

@@ -4,7 +4,6 @@ Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import datetime
 import hashlib
 import hmac
 import logging
@@ -17,36 +16,27 @@ from cryptofeed import _json as json
 
 from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, COINBASE, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, CANDLES, COINBASE, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import OrderBook, Trade
+from cryptofeed.types import Candle, OrderBook, Ticker, Trade
 
 LOG = logging.getLogger(__name__)
 
 
-def get_private_parameters(config: Config, chan: str = None, product_ids_str: list = None, rest_api: bool = False, endpoint: str = None) -> dict:
+def get_private_parameters(config: Config, chan: str, product_ids: list) -> dict:
+    """Sign a websocket subscription. Public market data channels need no credentials, so
+    when none are configured this returns nothing and the subscription goes out unsigned."""
     if not config["coinbase"]["key_id"] or not config["coinbase"]["key_secret"]:
-        # market data channels work unauthenticated
         return {}
     timestamp = str(int(time.time()))
-    if rest_api:
-        base_endpoint = '/api/v3/brokerage/'
-        endpoint = base_endpoint + endpoint
-        message = f'{timestamp}GET{endpoint}'
-    else:
-        product_ids_str = ",".join(product_ids_str)
-        message = f"{timestamp}{chan}{product_ids_str}"
+    message = f"{timestamp}{chan}{','.join(product_ids)}"
     signature = hmac.new(
         config["coinbase"]["key_secret"].encode("utf-8"),
         message.encode("utf-8"),
         digestmod=hashlib.sha256,
     ).hexdigest()
-    if rest_api:
-        return {'CB-ACCESS-KEY': config["coinbase"]["key_id"], 'CB-ACCESS-TIMESTAMP': timestamp,
-                'CB-ACCESS-SIGN': signature}
-    else:
-        return {'api_key': config["coinbase"]["key_id"], 'timestamp': timestamp, 'signature': signature}
+    return {'api_key': config["coinbase"]["key_id"], 'timestamp': timestamp, 'signature': signature}
 
 
 class Coinbase(Feed):
@@ -54,12 +44,16 @@ class Coinbase(Feed):
     websocket_endpoints = [WebsocketEndpoint('wss://advanced-trade-ws.coinbase.com', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://api.coinbase.com/api/v3/brokerage', routes=Routes('/market/products', l3book='/market/product_book?product_id={}'))]
 
-    # TODO: implement candles and user channels
     websocket_channels = {
         L2_BOOK: 'level2',
         TRADES: 'market_trades',
+        TICKER: 'ticker',
+        CANDLES: 'candles',
     }
     request_limit = 10
+    # the candles channel is fixed at five minute granularity
+    valid_candle_intervals = {'5m'}
+    candle_interval_map = {'5m': 300}
 
     @classmethod
     def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
@@ -72,14 +66,6 @@ class Coinbase(Feed):
             info['instrument_type'][sym.normalized] = sym.type
             ret[sym.normalized] = entry['product_id']
         return ret, info
-
-    @classmethod
-    def symbols(cls, config: dict = None, refresh=False) -> list:
-        config = Config(config)
-        if 'coinbase' not in config or 'key_id' not in config['coinbase'] or 'key_secret' not in config['coinbase']:
-            raise ValueError('You must provide key_id and key_secret in config to retrieve symbols from Coinbase.')
-        headers = get_private_parameters(config, rest_api=True, endpoint='products')
-        return list(cls.symbol_mapping(refresh=refresh, headers=headers).keys())
 
     def __init__(self, callbacks=None, **kwargs):
         super().__init__(callbacks=callbacks, **kwargs)
@@ -115,7 +101,64 @@ class Coinbase(Feed):
         )
         await self.callback(TRADES, t, timestamp)
 
-    async def _pair_level2_snapshot(self, msg: dict, timestamp: float):
+    async def _ticker_update(self, msg: dict, timestamp: float, ts: str):
+        '''
+        {
+            'type': 'ticker',
+            'product_id': 'BTC-USD',
+            'price': '65093.36',
+            'volume_24_h': '2860.31872502',
+            'low_24_h': '64675.22', 'high_24_h': '65252.99',
+            'low_52_w': '57717.55', 'high_52_w': '126296',
+            'price_percent_chg_24_h': '0.09772441285005',
+            'best_bid': '65093.36', 'best_ask': '65093.37',
+            'best_bid_quantity': '0.15298222', 'best_ask_quantity': '0.19057584'
+        }
+        '''
+        t = Ticker(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['product_id']),
+            Decimal(msg['best_bid']),
+            Decimal(msg['best_ask']),
+            self.timestamp_normalize(ts),
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
+
+    async def _candle_update(self, msg: dict, timestamp: float, ts: str):
+        '''
+        {
+            'start': '1786269300',
+            'high': '64836.04', 'low': '64799.98',
+            'open': '64804.5', 'close': '64832.31',
+            'volume': '3.70089188',
+            'product_id': 'BTC-USD'
+        }
+
+        The channel only publishes five minute candles, and does not flag the final update
+        of an interval - closed is therefore reported as False for every update.
+        '''
+        start = float(msg['start'])
+        interval = self.candle_interval_map[self.candle_interval]
+        c = Candle(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['product_id']),
+            start,
+            start + interval - 1,
+            self.candle_interval,
+            None,
+            Decimal(msg['open']),
+            Decimal(msg['close']),
+            Decimal(msg['high']),
+            Decimal(msg['low']),
+            Decimal(msg['volume']),
+            False,
+            self.timestamp_normalize(ts),
+            raw=msg
+        )
+        await self.callback(CANDLES, c, timestamp)
+
+    async def _pair_level2_snapshot(self, msg: dict, timestamp: float, ts: str):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         bids = {Decimal(update['price_level']): Decimal(update['new_quantity']) for update in msg['updates'] if
                 update['side'] == 'bid'}
@@ -127,9 +170,9 @@ class Coinbase(Feed):
             self._l2_book[pair].book.bids = bids
             self._l2_book[pair].book.asks = asks
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg)
 
-    async def _pair_level2_update(self, msg: dict, timestamp: float, ts: datetime):
+    async def _pair_level2_update(self, msg: dict, timestamp: float, ts: str):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         delta = {BID: [], ASK: []}
         for update in msg['updates']:
@@ -145,10 +188,9 @@ class Coinbase(Feed):
                 self._l2_book[pair].book[side][price] = amount
                 delta[side].append((price, amount))
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts, raw=msg, delta=delta)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg, delta=delta)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
-        # PERF perf_start(self.id, 'msg')
         msg = json.loads(msg, parse_float=Decimal)
         if 'channel' in msg and 'events' in msg:
             for event in msg['events']:
@@ -162,13 +204,17 @@ class Coinbase(Feed):
                     if event.get('type') == 'update':
                         await self._pair_level2_update(event, timestamp, msg['timestamp'])
                     elif event.get('type') == 'snapshot':
-                        await self._pair_level2_snapshot(event, timestamp)
-                elif msg['channel'] == 'subscriptions':
+                        await self._pair_level2_snapshot(event, timestamp, msg['timestamp'])
+                elif msg['channel'] == 'ticker':
+                    for ticker in event['tickers']:
+                        await self._ticker_update(ticker, timestamp, msg['timestamp'])
+                elif msg['channel'] == 'candles':
+                    for candle in event['candles']:
+                        await self._candle_update(candle, timestamp, msg['timestamp'])
+                elif msg['channel'] in ('subscriptions', 'heartbeats'):
                     pass
                 else:
                     LOG.warning("%s: Invalid message type %s", self.id, msg)
-                # PERF perf_end(self.id, 'msg')
-                # PERF perf_log(self.id, 'msg')
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
@@ -188,5 +234,5 @@ class Coinbase(Feed):
             all_pairs += self.subscription[channel]
             await _subscribe(channel, self.subscription[channel])
         all_pairs = list(dict.fromkeys(all_pairs))
-        await _subscribe('heartbeat', all_pairs)
-        # Implementing heartbeat as per Best Practices doc: https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-best-practices
+
+        await _subscribe('heartbeats', all_pairs)

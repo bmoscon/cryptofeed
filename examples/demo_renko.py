@@ -9,7 +9,7 @@ from datetime import datetime
 from cryptofeed import FeedHandler
 from cryptofeed.backends.aggregate import RenkoFixed
 from cryptofeed.defines import TRADES
-from cryptofeed.exchanges import Bitmex
+from cryptofeed.exchanges import Bybit
 
 
 async def renko(data=None):
@@ -18,8 +18,7 @@ async def renko(data=None):
 
 def main():
     f = FeedHandler()
-    f.add_feed(Bitmex(symbols=['BTC-USD-PERP'], channels=[TRADES], callbacks={
-               TRADES: RenkoFixed(renko, brick_size=3)}))
+    f.add_feed(Bybit(symbols=['BTC-USDT-PERP'], channels=[TRADES], callbacks={TRADES: RenkoFixed(renko, brick_size=3)}))
 
     f.run()
 

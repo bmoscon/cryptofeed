@@ -20,9 +20,6 @@ bitget:
     key_id: null
     key_secret: null
     key_passphrase: null
-bitmex:
-    key_id: null
-    key_secret: null
 bitfinex:
     key_id: null
     key_secret: null

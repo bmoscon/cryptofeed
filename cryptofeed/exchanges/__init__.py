@@ -15,7 +15,6 @@ from .bitfinex import Bitfinex
 from .bitflyer import Bitflyer
 from .bitget import Bitget
 from .bithumb import Bithumb
-from .bitmex import Bitmex
 from .bitstamp import Bitstamp
 from .bybit import Bybit
 from .coinbase import Coinbase
@@ -44,7 +43,6 @@ EXCHANGE_MAP = {
     BITFLYER: Bitflyer,
     BITGET: Bitget,
     BITHUMB: Bithumb,
-    BITMEX: Bitmex,
     BITSTAMP: Bitstamp,
     BYBIT: Bybit,
     COINBASE: Coinbase,
