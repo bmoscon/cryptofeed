@@ -68,18 +68,18 @@ class Poloniex(Feed):
             }]
         }
         """
-        price = Decimal(msg['data'][0]['price'])
-        amount = Decimal(msg['data'][0]['amount'])
-        t = Trade(
-            msg['data'][0]['id'],
-            self.exchange_symbol_to_std_symbol(msg['data'][0]['symbol']),
-            SELL if msg['data'][0]['takerSide'] == 'sell' else BUY,
-            amount,
-            price,
-            self.timestamp_normalize(msg['data'][0]['ts']),
-            raw=msg
-        )
-        await self.callback(TRADES, t, timestamp)
+        for entry in msg['data']:
+            t = Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(entry['symbol']),
+                SELL if entry['takerSide'] == 'sell' else BUY,
+                Decimal(entry['quantity']),
+                Decimal(entry['price']),
+                self.timestamp_normalize(entry['ts']),
+                id=str(entry['id']),
+                raw=msg
+            )
+            await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         data = msg['data'][0]
