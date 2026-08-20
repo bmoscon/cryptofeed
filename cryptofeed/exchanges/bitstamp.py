@@ -63,7 +63,7 @@ class Bitstamp(Feed, BitstampRestMixin):
         delta = {BID: [], ASK: []}
 
         if pair in self.last_update_id:
-            if data['timestamp'] < self.last_update_id[pair]:
+            if ts <= self.last_update_id[pair]:
                 return
             else:
                 del self.last_update_id[pair]
@@ -165,7 +165,7 @@ class Bitstamp(Feed, BitstampRestMixin):
 
         for r, pair in zip(results, pairs):
             std_pair = self.exchange_symbol_to_std_symbol(pair) if pair else 'BTC-USD'
-            self.last_update_id[std_pair] = r['timestamp']
+            self.last_update_id[std_pair] = int(r['microtimestamp'])
             self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, asks={Decimal(u[0]): Decimal(u[1]) for u in r['asks']}, bids={Decimal(u[0]): Decimal(u[1]) for u in r['bids']})
             await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), timestamp=float(r['timestamp']), raw=r)
 

@@ -9,6 +9,7 @@
  * Bugfix: Binance listenKey refresh now uses aiohttp
  * Update: Binance per connection stream limit (issue #1087)
  * Bugfix: Bybit L2_BOOK callback timestamp normalization (issue #1083)
+ * Bugfix: Synchronize Bitstamp L2 snapshots and deltas at microsecond precision (issue #1082)
 
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
