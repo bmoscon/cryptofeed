@@ -43,7 +43,6 @@ dependencies = [
     "websockets>=14.1",
     "pyyaml",
     "aiohttp>=3.14.3",  # 3.13.x cannot decode a Content-Encoding: zstd response (Poloniex sends one)
-    "aiofile>=2.0.0",
     "msgspec>=0.19.0",
     "uvloop ; platform_system!='Windows'",
     "order_book>=1.0.2",  # 1.0.2 computes the Bitfinex book checksums, the raw (L3) book's included
@@ -60,23 +59,17 @@ all = [
     "aiokafka>=0.7.0",
     "pymongo>=4.9",
     "asyncpg",
-    "aio_pika",
     "hiredis",
     "redis>=4.5.1",
     "pyzmq",
     "zstandard ; python_version < '3.14'",
 ]
 
-[project.scripts]
-cryptofeed-validate = "cryptofeed.validate.cli:main"
-cryptofeed-arbiter = "cryptofeed.arbiter.cli:main"
-
 [project.urls]
 Homepage = "https://github.com/bmoscon/cryptofeed"
 
 [dependency-groups]
 dev = [
-    "aio-pika>=9.5.8",
     "aiokafka>=0.13.0",
     "asyncpg>=0.31.0",
     "pymongo>=4.9",
@@ -129,21 +122,3 @@ ignore = ["E501", "F403", "F405"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-# test orchestration polls with short sleeps on purpose
-"tests/unit/test_lifecycle.py" = ["ASYNC110"]
-"tests/unit/test_connection_handler.py" = ["ASYNC110"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-# markers are applied by directory (tests/<layer>/) in tests/conftest.py
-markers = [
-    "unit: pure logic. offline, no services. tests/unit/",
-    "playback: recorded captures replayed through real message handlers. offline. tests/playback/",
-    "backend: round trips through real backend services. needs containers. tests/backend/",
-    "live: connects to real exchange endpoints. nightly only, never gates a PR. tests/live/",
-    "bench: performance benchmarks. run on demand and on release branches. tests/bench/",
-]
-addopts = "-m 'unit or playback'"
-asyncio_mode = "auto"
-# a hung socket or service connection should fail the test
-timeout = 120
