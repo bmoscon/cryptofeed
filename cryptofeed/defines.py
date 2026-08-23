@@ -67,18 +67,10 @@ CURRENCY = 'currency'
 FUTURES = 'futures'
 PERPETUAL = 'perpetual'
 OPTION = 'option'
-OPTION_COMBO = 'option_combo'
-FUTURE_COMBO = 'future_combo'
 SPOT = 'spot'
 CALL = 'call'
 PUT = 'put'
 FX = 'fx'
-
-
-# HTTP methods
-GET = 'GET'
-DELETE = 'DELETE'
-POST = 'POST'
 
 
 """

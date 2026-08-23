@@ -6,7 +6,7 @@ associated with this software.
 '''
 import asyncio
 import inspect
-from collections import Counter, defaultdict
+from collections import defaultdict
 from contextlib import suppress
 import logging
 import time
@@ -119,20 +119,13 @@ class Feed(Exchange):
         self.subscription = defaultdict(list)
         self.checksum_validation = (self.provides_checksum if checksum_validation is None else checksum_validation)
         self.cross_check = cross_check
-        self.crossed_books = Counter()
         self._crossed_run = {}
-        self.dead_pollers = []
-        self.normalized_symbols = []
         self.max_depth = max_depth
-        self.previous_book = defaultdict(dict)
-        self._feed_config = defaultdict(list)
         self.http_conn = HTTPAsyncConn(self.id, http_proxy)
         self.http_proxy = http_proxy
-        self._probe_conn = None
         self.start_delay = delay_start
         self.candle_closed_only = candle_closed_only
         self.shutdown_timeout = shutdown_timeout
-        self._sequence_no = {}
         self._conn_tg = None
         self._spawned = set()
         self._poller_tasks = []
@@ -164,18 +157,10 @@ class Feed(Exchange):
         if subscription is not None:
             for channel in subscription:
                 self.std_channel_to_exchange(channel)
-                self.normalized_symbols.extend(subscription[channel])
-                self._feed_config[channel].extend(subscription[channel])
 
         if symbols and channels:
             for channel in channels:
                 self.std_channel_to_exchange(channel)
-
-            [self._feed_config[channel].extend(symbols) for channel in channels]
-            self.normalized_symbols = symbols
-            self.normalized_channels = channels
-
-        self._feed_config = dict(self._feed_config)
 
         self._l3_book = {}
         self._l2_book = {}
@@ -228,9 +213,6 @@ class Feed(Exchange):
 
     async def _pre_connect(self):
         pass
-
-    async def validate(self):
-        await self._setup()
 
     async def run(self, stop_event: asyncio.Event):
         try:
@@ -346,7 +328,6 @@ class Feed(Exchange):
                 if attempt >= policy.max_attempts:
                     LOG.error('%s: REST poller %s failed %d times without recovering - giving up on it. '
                               'The rest of the feed is unaffected', self.id, name, attempt, exc_info=True)
-                    self._record_poller_death(name, f'{type(e).__name__}: {e}', attempt)
                     return
 
                 delay = policy.delay(attempt)
@@ -354,17 +335,12 @@ class Feed(Exchange):
                             '%s: %s', self.id, name, delay, attempt, policy.max_attempts, type(e).__name__, e)
                 await asyncio.sleep(delay)
 
-            except Exception as e:
-                LOG.error('%s: REST poller %s raised something a retry cannot fix - stopping it. The '
-                          'rest of the feed keeps running', self.id, name, exc_info=True)
-                self._record_poller_death(name, f'{type(e).__name__}: {e}', attempt + 1)
+            except Exception:
+                LOG.error('%s: REST poller %s died', self.id, name, exc_info=True)
                 return
 
 
     RESTART_RESET_SECONDS = 300.0
-
-    def _record_poller_death(self, name: str, error: str, attempts: int):
-        self.dead_pollers.append({'poller': name, 'error': error[:300], 'attempts': attempts})
 
     def _spawn(self, name: str, factory, *args):
         task_name = f'feed.{self.id}.poll.{name}'
@@ -394,9 +370,8 @@ class Feed(Exchange):
         1. an AsyncConnection object
         2. the subscribe function pointer associated with this connection
         3. the message handler for this connection
-        4. The authentication method for this connection
         """
-        def limit_sub(subscription: dict, limit: int, auth, options: dict):
+        def limit_sub(subscription: dict, limit: int, options: dict):
             ret = []
             sub = {}
             for channel in subscription:
@@ -405,21 +380,15 @@ class Feed(Exchange):
                         sub[channel] = []
                     sub[channel].append(pair)
                     if sum(map(len, sub.values())) == limit:
-                        ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **options), self.subscribe, self.message_handler))
+                        ret.append((WSAsyncConn(addr, self.id, subscription=sub, **options), self.subscribe, self.message_handler))
                         sub = {}
 
             if sum(map(len, sub.values())) > 0:
-                ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=sub, **options), self.subscribe, self.message_handler))
+                ret.append((WSAsyncConn(addr, self.id, subscription=sub, **options), self.subscribe, self.message_handler))
             return ret
 
         ret = self._connect_rest()
         for endpoint in self.websocket_endpoints:
-            auth = None
-            if endpoint.authentication:
-                # if a class has an endpoint with the authentication flag set to true, this
-                # method must be define. The method will be called immediately before connecting
-                # to authenticate the connection. _ws_authentication returns a tuple of address and ws options
-                auth = self._ws_authentication
             limit = endpoint.limit
             addr = self._address()
             addr = endpoint.get_address(self.sandbox) if addr is None else addr
@@ -436,22 +405,15 @@ class Feed(Exchange):
             if not self.allow_empty_subscriptions and (not filtered_sub or count == 0):
                 continue
             if limit and count > limit:
-                ret.extend(limit_sub(filtered_sub, limit, auth, endpoint.options))
+                ret.extend(limit_sub(filtered_sub, limit, endpoint.options))
             else:
                 if isinstance(addr, list):
                     for add in addr:
-                        ret.append((WSAsyncConn(add, self.id, authentication=auth, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler))
+                        ret.append((WSAsyncConn(add, self.id, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler))
                 else:
-                    ret.append((WSAsyncConn(addr, self.id, authentication=auth, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler))
+                    ret.append((WSAsyncConn(addr, self.id, subscription=filtered_sub, **endpoint.options), self.subscribe, self.message_handler))
 
         return ret
-
-    def _ws_authentication(self, address: str, ws_options: dict) -> Tuple[str, dict]:
-        '''
-        Used to do authentication immediately before connecting. Takes the address and the websocket options as
-        arguments and returns a new address and new websocket options that will be used to connect.
-        '''
-        raise NotImplementedError
 
     def _address(self):
         '''
@@ -489,7 +451,6 @@ class Feed(Exchange):
         crossed = self.check_bid_ask_overlapping(book)
         streak_key = (book_type, book.symbol)
         if crossed:
-            self.crossed_books[book.symbol] += 1
             run = self._crossed_run.get(streak_key, 0) + 1
             self._crossed_run[streak_key] = run
         else:

@@ -51,8 +51,6 @@ def connection_stats(exchange: str = None, since: float = None) -> dict:
 
 
 class Connection:
-    raw_data_callback = None
-
     async def read(self) -> bytes:
         raise NotImplementedError
 
@@ -63,13 +61,10 @@ class Connection:
 class AsyncConnection(Connection):
     conn_count: int = 0
 
-    def __init__(self, conn_id: str, authentication=None, subscription=None):
+    def __init__(self, conn_id: str, subscription=None):
         """
         conn_id: str
             the unique identifier for the connection
-        authentication: Callable
-            function pointer that will be invoked directly before the connection
-            is attempted. Some connections may need to do authentication at this point.
         subscription: dict
             optional connection information
         """
@@ -78,7 +73,6 @@ class AsyncConnection(Connection):
         self.received: int = 0
         self.sent: int = 0
         self.last_message = None
-        self.authentication = authentication
         self.subscription = subscription
         self.conn: Union[ClientConnection, aiohttp.ClientSession] = None
         self.created: float = time.time()
@@ -179,8 +173,6 @@ class HTTPAsyncConn(AsyncConnection):
                 data = await response.text()
                 self.last_message = time.time()
                 self.received += 1
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None)
                 if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
@@ -199,8 +191,6 @@ class HTTPAsyncConn(AsyncConnection):
             async with self.conn.post(address, data=msg, headers=header) as response:
                 self.sent += 1
                 data = await response.read()
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, time.time(), self.id, send=address)
                 if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
@@ -219,8 +209,6 @@ class HTTPAsyncConn(AsyncConnection):
             async with self.conn.delete(address, headers=header) as response:
                 self.sent += 1
                 data = await response.read()
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, time.time(), self.id, send=address)
                 if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
@@ -253,8 +241,6 @@ class HTTPPoll(HTTPAsyncConn):
                 data = await response.text()
                 self.received += 1
                 self.last_message = time.time()
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address)
                 if response.status != 429:
                     response.raise_for_status()
                     return data
@@ -270,7 +256,7 @@ class HTTPPoll(HTTPAsyncConn):
 
 class WSAsyncConn(AsyncConnection):
 
-    def __init__(self, address: str, conn_id: str, authentication=None, subscription=None, **kwargs):
+    def __init__(self, address: str, conn_id: str, subscription=None, **kwargs):
         """
         address: str
             the websocket address to connect to
@@ -282,7 +268,7 @@ class WSAsyncConn(AsyncConnection):
         if not address.startswith("wss://"):
             raise ValueError(f'Invalid address, must be a wss address. Provided address is: {address!r}')
         self.address = address
-        super().__init__(f'{conn_id}.ws.{self.conn_count}', authentication=authentication, subscription=subscription)
+        super().__init__(f'{conn_id}.ws.{self.conn_count}', subscription=subscription)
         self.ws_kwargs = kwargs
 
     @property
@@ -294,11 +280,6 @@ class WSAsyncConn(AsyncConnection):
             LOG.warning('%s: websocket already open', self.id)
         else:
             LOG.debug('%s: connecting to %s', self.id, self.address)
-            if self.raw_data_callback:
-                await self.raw_data_callback(None, time.time(), self.id, connect=self.address)
-            if self.authentication:
-                self.address, self.ws_kwargs = await self.authentication(self.address, self.ws_kwargs)
-
             self.conn = await connect(self.address, **self.ws_kwargs)
         self._reset_counters()
 
@@ -306,24 +287,15 @@ class WSAsyncConn(AsyncConnection):
         if not self.is_open:
             LOG.error('%s: connection closed in read()', id(self))
             raise ConnectionClosed
-        if self.raw_data_callback:
-            async for data in self.conn:
-                self.received += 1
-                self.last_message = time.time()
-                await self.raw_data_callback(data, self.last_message, self.id)
-                yield data
-        else:
-            async for data in self.conn:
-                self.received += 1
-                self.last_message = time.time()
-                yield data
+        async for data in self.conn:
+            self.received += 1
+            self.last_message = time.time()
+            yield data
 
     async def write(self, data: str):
         if not self.is_open:
             raise ConnectionClosed
 
-        if self.raw_data_callback:
-            await self.raw_data_callback(data, time.time(), self.id, send=self.address)
         await self.conn.send(data)
         self.sent += 1
 
@@ -336,7 +308,6 @@ class WebsocketEndpoint:
     channel_filter: str = None
     limit: int = None
     options: dict = None
-    authentication: bool = None
 
     def __post_init__(self):
         defaults = {'ping_interval': 20, 'ping_timeout': 60, 'max_size': None, 'max_queue': 1024}
@@ -379,7 +350,6 @@ class Routes:
     funding: str = None
     open_interest: str = None
     liquidations: str = None
-    stats: str = None
     l2book: str = None
     l3book: str = None
 

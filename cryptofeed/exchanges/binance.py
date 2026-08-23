@@ -19,7 +19,6 @@ from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OpenInterest, OrderBook
 
-REFRESH_SNAPSHOT_MIN_INTERVAL_SECONDS = 60
 
 LOG = logging.getLogger(__name__)
 
@@ -31,6 +30,7 @@ def _chunk(items: list, n: int):
 
 class BinanceBase(Feed):
     provides_sequence_number = True
+    DEFAULT_SNAPSHOT_DEPTH = 1000
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
     websocket_channels = {
@@ -498,6 +498,7 @@ class BinanceBase(Feed):
 
 class Binance(BinanceBase):
     id = BINANCE
+    DEFAULT_SNAPSHOT_DEPTH = 5000
     websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443', sandbox='wss://testnet.binance.vision')]
     rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}'), sandbox='https://testnet.binance.vision')]
 

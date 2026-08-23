@@ -25,7 +25,6 @@ LOG = logging.getLogger(__name__)
 class GateioFutures(Gateio):
     id = GATEIO_FUTURES
     SNAPSHOT_DEPTH = 100
-    L2_BOOK_LEVELS = 100
     provides_sequence_number = True
     websocket_endpoints = [WebsocketEndpoint('wss://fx-ws.gateio.ws/v4/ws/usdt', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/futures/usdt/contracts', l2book='/api/v4/futures/usdt/order_book?contract={}&limit={}&with_id=true'))]
@@ -138,9 +137,6 @@ class GateioFutures(Gateio):
                 raw=entry
             )
             await self.callback(CANDLES, c, timestamp)
-
-    def _book_payload(self, symbol: str) -> list:
-        return [symbol, '100ms', str(self.L2_BOOK_LEVELS)]
 
     def _parse_snapshot(self, symbol: str, data) -> OrderBook:
         """
