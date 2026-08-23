@@ -113,9 +113,6 @@ class Feed(Exchange):
         self.cross_check = cross_check
         self.crossed_books = Counter()
         self._crossed_run = {}
-        self._book_coverage = {}
-        self._coverage_warned = {}
-        self._last_coverage_reseed = {}
         self.dead_pollers = []
         self.normalized_symbols = []
         self.max_depth = max_depth

@@ -1,10 +1,11 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from datetime import datetime
 from decimal import Decimal
 import logging
 from typing import Dict, Tuple
@@ -26,6 +27,10 @@ LOG = logging.getLogger(__name__)
 
 class IndependentReserve(Feed):
     id = INDEPENDENT_RESERVE
+    provides_sequence_number = True
+    validates_sequence_number = True
+    SNAPSHOT_STALENESS_WAIT = 1.5
+    SNAPSHOT_STALENESS_ATTEMPTS = 8
     websocket_endpoints = [WebsocketEndpoint('wss://websockets.independentreserve.com')]
     rest_endpoints = [RestEndpoint('https://api.independentreserve.com', routes=Routes(['/Public/GetValidPrimaryCurrencyCodes', '/Public/GetValidSecondaryCurrencyCodes'], l3book='/Public/GetAllOrders?primaryCurrencyCode={}&secondaryCurrencyCode={}'))]
 
@@ -117,10 +122,10 @@ class IndependentReserve(Feed):
         '''
         seq_no = msg['Nonce']
         base = msg['Channel'].split('-')[-1]
-        delta = {BID: [], ASK: []}
 
         for symbol in self.subscription[self.std_channel_to_exchange(L3_BOOK)]:
             if symbol.startswith(base):
+                delta = {BID: [], ASK: []}
                 quote = symbol.split('-')[-1]
                 instrument = self.exchange_symbol_to_std_symbol(f"{base}-{quote}")
                 if instrument in self._sequence_no and self._sequence_no[instrument] + 1 != seq_no:
@@ -128,7 +133,7 @@ class IndependentReserve(Feed):
                 self._sequence_no[instrument] = seq_no
 
                 if instrument not in self._l3_book:
-                    await self._snapshot(base, quote)
+                    await self._snapshot(base, quote, not_before=msg['Time'] / 1000)
 
                 if msg['Event'] == 'OrderCanceled':
                     uuid = msg['Data']['OrderGuid']
@@ -139,7 +144,7 @@ class IndependentReserve(Feed):
                             del self._l3_book[instrument].book[side][price][uuid]
                             if len(self._l3_book[instrument].book[side][price]) == 0:
                                 del self._l3_book[instrument].book[side][price]
-                            delta[side].append((uuid, price, 0))
+                            delta[side].append((uuid, price, Decimal(0)))
 
                         del self._order_ids[instrument][uuid]
                     else:
@@ -148,8 +153,8 @@ class IndependentReserve(Feed):
                         continue
                 elif msg['Event'] == 'NewOrder':
                     uuid = msg['Data']['OrderGuid']
-                    price = msg['Data']['Price'][quote]
-                    size = msg['Data']['Volume']
+                    price = Decimal(msg['Data']['Price'][quote])
+                    size = Decimal(msg['Data']['Volume'])
                     side = BID if msg['Data']['OrderType'].endswith('Bid') else ASK
                     self._order_ids[instrument][uuid] = (price, side)
 
@@ -161,8 +166,7 @@ class IndependentReserve(Feed):
 
                 elif msg['Event'] == 'OrderChanged':
                     uuid = msg['Data']['OrderGuid']
-                    size = msg['Data']['Volume']
-                    side = BID if msg['Data']['OrderType'].endswith('Bid') else ASK
+                    size = Decimal(msg['Data']['Volume'])
                     if uuid in self._order_ids[instrument]:
                         price, side = self._order_ids[instrument][uuid]
 
@@ -170,10 +174,10 @@ class IndependentReserve(Feed):
                             del self._l3_book[instrument].book[side][price][uuid]
                             if len(self._l3_book[instrument].book[side][price]) == 0:
                                 del self._l3_book[instrument].book[side][price]
+                            del self._order_ids[instrument][uuid]
                         else:
                             self._l3_book[instrument].book[side][price][uuid] = size
 
-                        del self._order_ids[instrument][uuid]
                         delta[side].append((uuid, price, size))
                     else:
                         continue
@@ -183,28 +187,58 @@ class IndependentReserve(Feed):
 
                 await self.book_callback(L3_BOOK, self._l3_book[instrument], timestamp, raw=msg, sequence_number=seq_no, delta=delta, timestamp=msg['Time'] / 1000)
 
-    async def _snapshot(self, base: str, quote: str):
-        url = self.rest_endpoints[0].route('l3book', self.sandbox).format(base, quote)
-        timestamp = time()
-        ret = await self.http_conn.read(url)
-        await asyncio.sleep(1 / self.request_limit)
-        ret = json.loads(ret, parse_float=Decimal)
+    def _snapshot_url(self, symbol: str) -> str:
+        base, quote = symbol.split('-')
+        return self.rest_endpoints[0].route('l3book', self.sandbox).format(base, quote)
 
-        normalized = self.exchange_symbol_to_std_symbol(f"{base}-{quote}")
-        self._l3_book[normalized] = OrderBook(self.id, normalized, max_depth=self.max_depth)
+    def _parse_snapshot(self, symbol: str, data) -> OrderBook:
+        ret = json.loads(data, parse_float=Decimal)
+        book = OrderBook(self.id, symbol, max_depth=self.max_depth)
 
         for side, key in [(BID, 'BuyOrders'), (ASK, 'SellOrders')]:
             for order in ret[key]:
                 price = Decimal(order['Price'])
                 size = Decimal(order['Volume'])
                 uuid = order['Guid']
-                self._order_ids[normalized][uuid] = (price, side)
 
-                if price in self._l3_book[normalized].book[side]:
-                    self._l3_book[normalized].book[side][price][uuid] = size
+                if price in book.book[side]:
+                    book.book[side][price][uuid] = size
                 else:
-                    self._l3_book[normalized].book[side][price] = {uuid: size}
-        await self.book_callback(L3_BOOK, self._l3_book[normalized], timestamp, raw=ret)
+                    book.book[side][price] = {uuid: size}
+        book.raw = ret
+        return book
+
+    @staticmethod
+    def _snapshot_generated_at(raw: dict) -> float:
+        return datetime.fromisoformat(raw['CreatedTimestampUtc'].replace('Z', '+00:00')).timestamp()
+
+    async def _snapshot(self, base: str, quote: str, not_before: float = 0.0):
+        normalized = self.exchange_symbol_to_std_symbol(f"{base}-{quote}")
+
+        for attempt in range(1, self.SNAPSHOT_STALENESS_ATTEMPTS + 1):
+            timestamp = time()
+            response = await self.http_conn.read(self._snapshot_url(f"{base}-{quote}"))
+            await asyncio.sleep(1 / self.request_limit)
+
+            book = self._parse_snapshot(normalized, response)
+            generated = self._snapshot_generated_at(book.raw)
+            if generated > not_before:
+                break
+
+            LOG.info('%s: %s snapshot was generated %.2fs before the stream opened - discarding and '
+                     'retrying (attempt %d/%d)', self.id, normalized, not_before - generated,
+                     attempt, self.SNAPSHOT_STALENESS_ATTEMPTS)
+            await asyncio.sleep(self.SNAPSHOT_STALENESS_WAIT)
+        else:
+            LOG.warning('%s: %s could not obtain a snapshot in %d attempts', self.id, normalized, self.SNAPSHOT_STALENESS_ATTEMPTS)
+
+        self._l3_book[normalized] = book
+        for side in (BID, ASK):
+            for price, orders in book.book[side].items():
+                for uuid in orders:
+                    self._order_ids[normalized][uuid] = (price, side)
+
+        await self.book_callback(L3_BOOK, book, timestamp, raw=book.raw)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

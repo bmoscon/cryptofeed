@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -14,7 +14,7 @@ from decimal import Decimal
 from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BUY, CANDLES, HUOBI, L2_BOOK, SELL, TRADES, TICKER
+from cryptofeed.defines import BUY, CANDLES, HTX as HTX_str, L2_BOOK, SELL, TRADES, TICKER
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Candle, Ticker
 
@@ -22,10 +22,11 @@ from cryptofeed.types import OrderBook, Trade, Candle, Ticker
 LOG = logging.getLogger(__name__)
 
 
-class Huobi(Feed):
-    id = HUOBI
-    websocket_endpoints = [WebsocketEndpoint('wss://api.huobi.pro/ws')]
-    rest_endpoints = [RestEndpoint('https://api.huobi.pro', routes=Routes('/v1/common/symbols'))]
+class HTX(Feed):
+    id = HTX_str
+    book_delivery = 'snapshot'
+    websocket_endpoints = [WebsocketEndpoint('wss://api.htx.com/ws')]
+    rest_endpoints = [RestEndpoint('https://api.htx.com', routes=Routes('/v1/common/symbols'))]
 
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Y'}
     candle_interval_map = {'1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '60min', '4h': '4hour', '1d': '1day', '1M': '1mon', '1w': '1week', '1Y': '1year'}
@@ -178,7 +179,6 @@ class Huobi(Feed):
         msg = zlib.decompress(msg, 16 + zlib.MAX_WBITS)
         msg = json.loads(msg, parse_float=Decimal)
 
-        # Huobi sends a ping evert 5 seconds and will disconnect us if we do not respond to it
         if 'ping' in msg:
             await conn.write(json.dumps({'pong': msg['ping']}))
         elif 'status' in msg and msg['status'] == 'ok':

@@ -1,48 +1,43 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
-from asyncio import sleep
 from collections import defaultdict
 from decimal import Decimal
-import aiohttp
-import requests
 import time
 from typing import Dict, Union, Tuple
-from urllib.parse import urlencode
 
 from cryptofeed import _json as json
 
-from cryptofeed.connection import AsyncConnection, HTTPPoll, HTTPConcurrentPoll, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import ASK, BALANCES, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.connection import AsyncConnection, HTTPPoll, RestEndpoint, Routes, WebsocketEndpoint
+from cryptofeed.defines import ASK, BID, BINANCE, BUY, CANDLES, FUNDING, FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES, FILLED, UNFILLED
+from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OrderBook, OrderInfo, Balance
+from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OpenInterest, OrderBook
 
 REFRESH_SNAPSHOT_MIN_INTERVAL_SECONDS = 60
 
 LOG = logging.getLogger(__name__)
 
 
-class Binance(Feed):
-    id = BINANCE
-    websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443', sandbox='wss://testnet.binance.vision')]
-    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}', authentication='/api/v3/userDataStream'), sandbox='https://testnet.binance.vision')]
+def _chunk(items: list, n: int):
+    for i in range(0, len(items), n):
+        yield items[i:i + n]
 
-    valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
+
+class BinanceBase(Feed):
+    provides_sequence_number = True
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
-    valid_depth_intervals = {'100ms', '1000ms'}
     websocket_channels = {
         L2_BOOK: 'depth',
         TRADES: 'aggTrade',
         TICKER: 'bookTicker',
         CANDLES: 'kline_',
-        BALANCES: BALANCES,
-        ORDER_INFO: ORDER_INFO
     }
     request_limit = 20
     per_connection_limit = 1024
@@ -62,12 +57,17 @@ class Binance(Feed):
                 continue
 
             expiration = None
-            stype = SPOT
-            if symbol.get('contractType') == 'PERPETUAL':
+            contract_type = symbol.get('contractType')
+            if not contract_type:
+                stype = SPOT
+            elif contract_type in ('PERPETUAL', 'TRADIFI_PERPETUAL'):
                 stype = PERPETUAL
-            elif symbol.get('contractType') in ('CURRENT_QUARTER', 'NEXT_QUARTER'):
+            elif contract_type in ('CURRENT_QUARTER', 'NEXT_QUARTER'):
                 stype = FUTURES
                 expiration = symbol['symbol'].split("_")[1]
+            else:
+                cls.unsupported_category('contractType', contract_type)
+                continue
 
             s = Symbol(symbol['baseAsset'], symbol['quoteAsset'], type=stype, expiry_date=expiration)
             ret[s.normalized] = symbol['symbol']
@@ -75,18 +75,52 @@ class Binance(Feed):
             info['instrument_type'][s.normalized] = stype
         return ret, info
 
-    def __init__(self, depth_interval='100ms', **kwargs):
+    def __init__(self, depth_interval='100ms', open_interest_interval=1.0, **kwargs):
         """
         depth_interval: str
             time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
+        open_interest_interval: float
+            time in seconds between open_interest polls
         """
         if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
 
         super().__init__(**kwargs)
         self.depth_interval = depth_interval
+        self.open_interest_interval = open_interest_interval
         self._open_interest_cache = {}
         self._reset()
+
+    def _connect_rest(self):
+        if 'open_interest' not in self.subscription:
+            return []
+        route = self.rest_endpoints[0].routes.open_interest
+        if route is None:
+            raise UnsupportedDataFeed(f'{self.id} no open interest endpoint to poll')
+
+        addrs = [self.rest_endpoints[0].route('open_interest', sandbox=self.sandbox).format(pair) for pair in self.subscription['open_interest']]
+        return [(HTTPPoll(addrs, self.id, delay=60.0, sleep=self.open_interest_interval, proxy=self.http_proxy), self.subscribe, self.message_handler)]
+
+    async def _open_interest(self, msg: dict, timestamp: float):
+        """
+        {
+            "openInterest": "10659.509",
+            "symbol": "BTCUSDT",
+            "time": 1589437530011   // Transaction time
+        }
+        """
+        pair = msg['symbol']
+        oi = msg['openInterest']
+        if oi != self._open_interest_cache.get(pair, None):
+            o = OpenInterest(
+                self.id,
+                self.exchange_symbol_to_std_symbol(pair),
+                Decimal(oi),
+                self.timestamp_normalize(msg['time']),
+                raw=msg
+            )
+            await self.callback(OPEN_INTEREST, o, timestamp)
+            self._open_interest_cache[pair] = oi
 
     def _address(self) -> Union[str, Dict]:
         """
@@ -98,27 +132,19 @@ class Binance(Feed):
         The generic connect method supplied by Feed will take care of creating the
         correct connection objects from the addresses.
         """
-        if self.requires_authentication:
-            listen_key = self._generate_token()
-            address = self.address
-            address += '/ws/' + listen_key
+        address = self.address + '/stream?streams='
+        subs = self._stream_names()
+
+        if 0 < len(subs) < self.per_connection_limit:
+            return address + '/'.join(subs)
         else:
-            address = self.address
-            address += '/stream?streams='
+            return [address + '/'.join(chunk) for chunk in _chunk(subs, self.per_connection_limit)]
+
+    def _stream_names(self) -> list:
         subs = []
-
-        is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)
-        is_any_public = any(not self.is_authenticated_channel(chan) for chan in self.subscription)
-        if is_any_private and is_any_public:
-            raise ValueError("Private channels should be subscribed in separate feeds vs public channels")
-        if all(self.is_authenticated_channel(chan) for chan in self.subscription):
-            return address
-
         for chan in self.subscription:
             normalized_chan = self.exchange_channel_to_std(chan)
             if normalized_chan == OPEN_INTEREST:
-                continue
-            if self.is_authenticated_channel(normalized_chan):
                 continue
 
             stream = chan
@@ -135,41 +161,39 @@ class Binance(Feed):
                 else:
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
+        return subs
 
-        if 0 < len(subs) < self.per_connection_limit:
-            return address + '/'.join(subs)
-        else:
-            def split_list(_list: list, n: int):
-                for i in range(0, len(_list), n):
-                    yield _list[i:i + n]
+    def _reset(self, conn: AsyncConnection = None):
+        if conn is None:
+            self._l2_book = {}
+            self.last_update_id = {}
+            return
 
-            return [address + '/'.join(chunk) for chunk in split_list(subs, self.per_connection_limit)]
+        for pair in self._connection_book_pairs(conn):
+            self._drop_book(pair)
 
-    def _reset(self):
-        self._l2_book = {}
-        self.last_update_id = {}
+    def _connection_book_pairs(self, conn: AsyncConnection) -> list:
+        address = getattr(conn, 'address', None) or ''
+        if 'streams=' not in address:
+            book_channel = self.websocket_channels[L2_BOOK]
+            symbols = (getattr(conn, 'subscription', None) or {}).get(book_channel, [])
+            return [self.exchange_symbol_to_std_symbol(symbol) for symbol in symbols]
 
-    async def _refresh_token(self):
-        while True:
-            await sleep(30 * 60)
-            if self._auth_token is None:
-                raise ValueError('There is no token to refresh')
-            payload = {'listenKey': self._auth_token}
-            url = f'{self.rest_endpoints[0].route("authentication", sandbox=self.sandbox)}?{urlencode(payload)}'
-            async with aiohttp.ClientSession() as session:
-                async with session.put(url, headers={'X-MBX-APIKEY': self.key_id}) as r:
-                    r.raise_for_status()
+        pairs = []
+        for name in address.split('streams=', 1)[1].split('/'):
+            symbol, _, stream = name.partition('@')
+            if not stream.startswith(self.websocket_channels[L2_BOOK]):
+                continue
+            try:
+                pairs.append(self.exchange_symbol_to_std_symbol(symbol.upper()))
+            except UnsupportedSymbol:
+                continue
 
-    def _generate_token(self) -> str:
-        url = self.rest_endpoints[0].route('authentication', sandbox=self.sandbox)
-        r = requests.post(url, headers={'X-MBX-APIKEY': self.key_id})
-        r.raise_for_status()
-        response = r.json()
-        if 'listenKey' in response:
-            self._auth_token = response['listenKey']
-            return self._auth_token
-        else:
-            raise ValueError(f'Unable to retrieve listenKey token from {url}')
+        return pairs
+
+    def _drop_book(self, std_pair: str):
+        self._l2_book.pop(std_pair, None)
+        self.last_update_id.pop(std_pair, None)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -270,26 +294,40 @@ class Binance(Feed):
             self.last_update_id[std_pair] = msg['u']
             return False
         else:
-            self._reset()
-            LOG.warning("%s: Missing book update detected, resetting book", self.id)
+            self._drop_book(std_pair)
+            LOG.warning("%s: %s missing book update detected, resetting book", self.id, std_pair)
             return True
 
+    def _snapshot_depth(self) -> int:
+        deepest = max(self.valid_depths)
+        if not self.max_depth:
+            return min(self.DEFAULT_SNAPSHOT_DEPTH, deepest)
+        if self.max_depth >= deepest:
+            return deepest
+        for depth in self.valid_depths:
+            if depth >= self.max_depth:
+                return depth
+        return deepest
+
+    def _snapshot_url(self, symbol: str) -> str:
+        return self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol, self._snapshot_depth())
+
+    def _parse_snapshot(self, symbol: str, data) -> OrderBook:
+        resp = json.loads(data, parse_float=Decimal)
+        book = OrderBook(self.id, symbol, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
+        book.timestamp = self.timestamp_normalize(resp['E']) if 'E' in resp else None
+        book.sequence_number = resp['lastUpdateId']
+        book.raw = resp
+        return book
+
     async def _snapshot(self, pair: str) -> None:
-        max_depth = self.max_depth if self.max_depth else 1000
-        if max_depth not in self.valid_depths:
-            for d in self.valid_depths:
-                if d > max_depth:
-                    max_depth = d
-                    break
-
-        resp = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(pair, max_depth))
-        resp = json.loads(resp, parse_float=Decimal)
-        timestamp = self.timestamp_normalize(resp['E']) if 'E' in resp else None
-
+        response = await self.http_conn.read(self._snapshot_url(pair))
         std_pair = self.exchange_symbol_to_std_symbol(pair)
-        self.last_update_id[std_pair] = resp['lastUpdateId']
-        self._l2_book[std_pair] = OrderBook(self.id, std_pair, max_depth=self.max_depth, bids={Decimal(u[0]): Decimal(u[1]) for u in resp['bids']}, asks={Decimal(u[0]): Decimal(u[1]) for u in resp['asks']})
-        await self.book_callback(L2_BOOK, self._l2_book[std_pair], time.time(), timestamp=timestamp, raw=resp, sequence_number=self.last_update_id[std_pair])
+        book = self._parse_snapshot(std_pair, response)
+
+        self.last_update_id[std_pair] = book.sequence_number
+        self._l2_book[std_pair] = book
+        await self.book_callback(L2_BOOK, book, time.time(), timestamp=book.timestamp, raw=book.raw, sequence_number=book.sequence_number)
 
     async def _book(self, msg: dict, pair: str, timestamp: float):
         """
@@ -422,112 +460,30 @@ class Binance(Feed):
                    raw=msg)
         await self.callback(CANDLES, c, timestamp)
 
-    async def _account_update(self, msg: dict, timestamp: float):
-        """
-        {
-            "e": "outboundAccountPosition", //Event type
-            "E": 1564034571105,             //Event Time
-            "u": 1564034571073,             //Time of last account update
-            "B": [                          //Balances Array
-                {
-                "a": "ETH",                 //Asset
-                "f": "10000.000000",        //Free
-                "l": "0.000000"             //Locked
-                }
-            ]
-        }
-        """
-        for balance in msg['B']:
-            b = Balance(
-                self.id,
-                balance['a'],
-                Decimal(balance['f']),
-                Decimal(balance['l']),
-                raw=msg)
-            await self.callback(BALANCES, b, timestamp)
-
-    async def _order_update(self, msg: dict, timestamp: float):
-        """
-        {
-            "e": "executionReport",        // Event type
-            "E": 1499405658658,            // Event time
-            "s": "ETHBTC",                 // Symbol
-            "c": "mUvoqJxFIILMdfAW5iGSOW", // Client order ID
-            "S": "BUY",                    // Side
-            "o": "LIMIT",                  // Order type
-            "f": "GTC",                    // Time in force
-            "q": "1.00000000",             // Order quantity
-            "p": "0.10264410",             // Order price
-            "P": "0.00000000",             // Stop price
-            "F": "0.00000000",             // Iceberg quantity
-            "g": -1,                       // OrderListId
-            "C": "",                       // Original client order ID; This is the ID of the order being canceled
-            "x": "NEW",                    // Current execution type
-            "X": "NEW",                    // Current order status
-            "r": "NONE",                   // Order reject reason; will be an error code.
-            "i": 4293153,                  // Order ID
-            "l": "0.00000000",             // Last executed quantity
-            "z": "0.00000000",             // Cumulative filled quantity
-            "L": "0.00000000",             // Last executed price
-            "n": "0",                      // Commission amount
-            "N": null,                     // Commission asset
-            "T": 1499405658657,            // Transaction time
-            "t": -1,                       // Trade ID
-            "I": 8641984,                  // Ignore
-            "w": true,                     // Is the order on the book?
-            "m": false,                    // Is this trade the maker side?
-            "M": false,                    // Ignore
-            "O": 1499405658657,            // Order creation time
-            "Z": "0.00000000",             // Cumulative quote asset transacted quantity
-            "Y": "0.00000000",             // Last quote asset transacted quantity (i.e. lastPrice * lastQty)
-            "Q": "0.00000000"              // Quote Order Qty
-        }
-        """
-        oi = OrderInfo(
-            self.id,
-            self.exchange_symbol_to_std_symbol(msg['s']),
-            str(msg['i']),
-            BUY if msg['S'].lower() == 'buy' else SELL,
-            msg['x'],
-            LIMIT if msg['o'].lower() == 'limit' else MARKET if msg['o'].lower() == 'market' else None,
-            Decimal(msg['Z']) / Decimal(msg['z']) if not Decimal.is_zero(Decimal(msg['z'])) else None,
-            Decimal(msg['q']),
-            Decimal(msg['q']) - Decimal(msg['z']),
-            self.timestamp_normalize(msg['E']),
-            raw=msg
-        )
-        await self.callback(ORDER_INFO, oi, timestamp)
-
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
-        # Handle account updates from User Data Stream
-        if self.requires_authentication:
-            msg_type = msg['e']
-            if msg_type == 'outboundAccountPosition':
-                await self._account_update(msg, timestamp)
-            elif msg_type == 'executionReport':
-                await self._order_update(msg, timestamp)
-            return
+        if 'openInterest' in msg:
+            return await self._open_interest(msg, timestamp)
+
         # Combined stream events are wrapped as follows: {"stream":"<streamName>","data":<rawPayload>}
         # streamName is of format <symbol>@<channel>
         pair, _ = msg['stream'].split('@', 1)
         msg = msg['data']
         pair = pair.upper()
-        if 'e' in msg:
-            if msg['e'] == 'depthUpdate':
-                await self._book(msg, pair, timestamp)
-            elif msg['e'] == 'aggTrade':
-                await self._trade(msg, timestamp)
-            elif msg['e'] == 'forceOrder':
-                await self._liquidations(msg, timestamp)
-            elif msg['e'] == 'markPriceUpdate':
-                await self._funding(msg, timestamp)
-            elif msg['e'] == 'kline':
-                await self._candle(msg, timestamp)
-            else:
-                LOG.warning("%s: Unexpected message received: %s", self.id, msg)
-        elif 'A' in msg:
+
+        event = msg.get('e')
+        if event == 'depthUpdate':
+            await self._book(msg, pair, timestamp)
+        elif event == 'aggTrade':
+            await self._trade(msg, timestamp)
+        elif event == 'forceOrder':
+            await self._liquidations(msg, timestamp)
+        elif event == 'markPriceUpdate':
+            await self._funding(msg, timestamp)
+        elif event == 'kline':
+            await self._candle(msg, timestamp)
+        elif event == 'bookTicker' or (event is None and 'A' in msg):
             await self._ticker(msg, timestamp)
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
@@ -536,9 +492,14 @@ class Binance(Feed):
         # Binance does not have a separate subscribe message, the
         # subscription information is included in the
         # connection endpoint
-        if isinstance(conn, (HTTPPoll, HTTPConcurrentPoll)):
-            self._open_interest_cache = {}
-        else:
-            self._reset()
-        if self.requires_authentication:
-            self._spawn('refresh-token', self._refresh_token())
+        if not isinstance(conn, HTTPPoll):
+            self._reset(conn)
+
+
+class Binance(BinanceBase):
+    id = BINANCE
+    websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443', sandbox='wss://testnet.binance.vision')]
+    rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}'), sandbox='https://testnet.binance.vision')]
+
+    valid_depths = [5, 10, 20, 50, 100, 500, 1000, 5000]
+    valid_depth_intervals = {'100ms', '1000ms'}

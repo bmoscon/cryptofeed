@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -12,11 +12,11 @@ import uuid
 from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.defines import BUY, L2_BOOK, SELL, TRADES, UPBIT
+from cryptofeed.defines import BUY, L1_BOOK, L2_BOOK, SELL, TICKER, TRADES, UPBIT
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.connection import WebsocketEndpoint, RestEndpoint, Routes
-from cryptofeed.types import OrderBook, Trade
+from cryptofeed.types import L1Book, OrderBook, Ticker, Trade
 
 
 LOG = logging.getLogger(__name__)
@@ -24,11 +24,14 @@ LOG = logging.getLogger(__name__)
 
 class Upbit(Feed):
     id = UPBIT
+    book_delivery = 'snapshot'
     websocket_endpoints = [WebsocketEndpoint('wss://api.upbit.com/websocket/v1')]
     rest_endpoints = [RestEndpoint('https://api.upbit.com', routes=Routes('/v1/market/all'))]
     websocket_channels = {
         L2_BOOK: L2_BOOK,
         TRADES: TRADES,
+        TICKER: TICKER,
+        L1_BOOK: L1_BOOK,
     }
     request_limit = 10
 
@@ -68,7 +71,6 @@ class Upbit(Feed):
             'c': 'FALL',              // Change - 'FALL' / 'RISE' / 'EVEN'
         }
         """
-
         price = Decimal(msg['tp'])
         amount = Decimal(msg['tv'])
         t = Trade(
@@ -123,6 +125,46 @@ class Upbit(Feed):
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=orderbook_timestamp, raw=msg)
 
+    @staticmethod
+    def _top_of_book(msg: dict) -> Tuple[Dict, Dict]:
+        """The best bid and ask units, or (None, None) when one side is empty.
+
+        The units are ordered best first, but a level that has emptied is sent with a zero price and
+        size rather than dropped, so the best level is the best *non-zero* one rather than obu[0].
+        """
+        bids = [unit for unit in msg['obu'] if unit['bp'] > 0 and unit['bs'] > 0]
+        asks = [unit for unit in msg['obu'] if unit['ap'] > 0 and unit['as'] > 0]
+        if not bids or not asks:
+            return None, None
+        return max(bids, key=lambda unit: unit['bp']), min(asks, key=lambda unit: unit['ap'])
+
+    async def _ticker(self, msg: dict, timestamp: float):
+        """The venue's own ticker stream is 24h statistics and carries no bid or ask, so - as on
+        Bithumb, whose API this one is the template for - the bid/ask pair comes from the top of the
+        orderbook stream."""
+        bid, ask = self._top_of_book(msg)
+        if bid is None:
+            return
+
+        t = Ticker(self.id, self.exchange_symbol_to_std_symbol(msg['cd']), Decimal(bid['bp']), Decimal(ask['ap']), self.timestamp_normalize(msg['tms']), raw=msg)
+        await self.callback(TICKER, t, timestamp)
+
+    async def _l1_book(self, msg: dict, timestamp: float):
+        """Top of book with sizes, which the Ticker has no room for."""
+        bid, ask = self._top_of_book(msg)
+        if bid is None:
+            return
+
+        book = L1Book(self.id,
+                      self.exchange_symbol_to_std_symbol(msg['cd']),
+                      Decimal(bid['bp']),
+                      Decimal(bid['bs']),
+                      Decimal(ask['ap']),
+                      Decimal(ask['as']),
+                      self.timestamp_normalize(msg['tms']),
+                      raw=msg)
+        await self.callback(L1_BOOK, book, timestamp)
+
     async def message_handler(self, msg: str, conn, timestamp: float):
 
         msg = json.loads(msg, parse_float=Decimal)
@@ -130,7 +172,13 @@ class Upbit(Feed):
         if msg['ty'] == "trade":
             await self._trade(msg, timestamp)
         elif msg['ty'] == "orderbook":
-            await self._book(msg, timestamp)
+            # three channels ride this stream
+            if L2_BOOK in conn.subscription:
+                await self._book(msg, timestamp)
+            if TICKER in conn.subscription:
+                await self._ticker(msg, timestamp)
+            if L1_BOOK in conn.subscription:
+                await self._l1_book(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)
 
@@ -161,11 +209,16 @@ class Upbit(Feed):
         """
 
         chans = [{"ticket": uuid.uuid4()}, {"format": "SIMPLE"}]
-        for chan in self.subscription:
-            codes = list(self.subscription[chan])
-            if chan == L2_BOOK:
-                chans.append({"type": "orderbook", "codes": codes, 'isOnlyRealtime': True})
-            if chan == TRADES:
-                chans.append({"type": "trade", "codes": codes, 'isOnlyRealtime': True})
+        # ticker and top of book are served off the orderbook stream, so all three collapse onto one
+        # subscription rather than asking the venue for a stream it does not have
+        book = []
+        for chan in (L2_BOOK, TICKER, L1_BOOK):
+            for code in self.subscription.get(chan, []):
+                if code not in book:
+                    book.append(code)
+        if book:
+            chans.append({"type": "orderbook", "codes": book, 'isOnlyRealtime': True})
+        if self.subscription.get(TRADES):
+            chans.append({"type": "trade", "codes": list(self.subscription[TRADES]), 'isOnlyRealtime': True})
 
         await conn.write(json.dumps(chans))

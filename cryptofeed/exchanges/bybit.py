@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2018-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -22,8 +22,22 @@ from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, Can
 LOG = logging.getLogger(__name__)
 
 
+DERIVATIVE_TYPES = (FUTURES, PERPETUAL)
+
+
+def _is_linear(symbol) -> bool:
+    """A linear contract settles in the quote currency - USDT or USDC on Bybit."""
+    return symbol.type in DERIVATIVE_TYPES and symbol.quote != 'USD'
+
+
+def _is_inverse(symbol) -> bool:
+    """An inverse contract is coin-margined and quoted in USD: BTCUSD, not BTCUSDT."""
+    return symbol.type in DERIVATIVE_TYPES and symbol.quote == 'USD'
+
+
 class Bybit(Feed):
     id = BYBIT
+    provides_sequence_number = True
     websocket_channels = {
         L2_BOOK: '',  # Assigned in self.subscribe
         TRADES: 'publicTrade',
@@ -34,12 +48,18 @@ class Bybit(Feed):
         LIQUIDATIONS: 'allLiquidation',
         TICKER: 'tickers'
     }
+
+    _derivative_channels = (websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX],
+                            websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING],
+                            websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS], websocket_channels[TICKER])
     websocket_endpoints = [
-        WebsocketEndpoint('wss://stream.bybit.com/v5/public/linear', instrument_filter=('TYPE', (FUTURES, PERPETUAL)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/linear', options={'compression': None}),
-        WebsocketEndpoint('wss://stream.bybit.com/v5/public/spot', instrument_filter=('TYPE', (SPOT)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[CANDLES], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/spot', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/linear', instrument_filter=_is_linear, channel_filter=_derivative_channels, sandbox='wss://stream-testnet.bybit.com/v5/public/linear', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/inverse', instrument_filter=_is_inverse, channel_filter=_derivative_channels, sandbox='wss://stream-testnet.bybit.com/v5/public/inverse', options={'compression': None}),
+        # note the trailing comma - ('TYPE', (SPOT)) is a substring test against the string 'spot'
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/spot', instrument_filter=('TYPE', (SPOT,)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[CANDLES], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/spot', options={'compression': None}),
     ]
     rest_endpoints = [
-        RestEndpoint('https://api.bybit.com', routes=Routes(['/v5/market/instruments-info?&category=linear&status=Trading&limit=1000', '/v5/market/instruments-info?&category=spot&status=Trading&limit=1000']))
+        RestEndpoint('https://api.bybit.com', routes=Routes(['/v5/market/instruments-info?&category=linear&status=Trading&limit=1000', '/v5/market/instruments-info?&category=inverse&status=Trading&limit=1000', '/v5/market/instruments-info?&category=spot&status=Trading&limit=1000']))
     ]
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '1w', '1M'}
     candle_interval_map = {'1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '2h': '120', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W', '1M': 'M'}
@@ -75,14 +95,16 @@ class Bybit(Feed):
         for msg in data:
             if isinstance(msg['result'], dict):
                 for symbol in msg['result']['list']:
-
-                    if 'contractType' not in symbol:
+                    contract_type = symbol.get('contractType')
+                    if not contract_type:
                         stype = SPOT
-                    elif 'contractType' in symbol:
-                        if symbol['contractType'] == 'LinearPerpetual':
-                            stype = PERPETUAL
-                        elif symbol['contractType'] == 'LinearFutures':
-                            stype = FUTURES
+                    elif contract_type in ('LinearPerpetual', 'InversePerpetual'):
+                        stype = PERPETUAL
+                    elif contract_type in ('LinearFutures', 'InverseFutures'):
+                        stype = FUTURES
+                    else:
+                        cls.unsupported_category('contractType', contract_type)
+                        continue
 
                     base = symbol['baseCoin']
                     quote = symbol['quoteCoin']
@@ -90,10 +112,13 @@ class Bybit(Feed):
                     expiry = None
 
                     if stype is FUTURES:
-                        if not symbol['symbol'].endswith(quote):
-                            # linear futures
-                            if '-' in symbol['symbol']:
-                                expiry = symbol['symbol'].split('-')[-1]
+                        if '-' in symbol['symbol']:
+                            # linear futures carry the date in the symbol: BTCUSDT-14AUG26
+                            expiry = symbol['symbol'].split('-')[-1]
+                        elif symbol.get('deliveryTime', '0') != '0':
+                            # inverse futures do not (BTCUSDU26), so take the delivery timestamp.
+                            # Without this they reached Symbol() with no expiry and it raised.
+                            expiry = int(symbol['deliveryTime']) / 1000
 
                     s = Symbol(base, quote, type=stype, expiry_date=expiry)
 
@@ -123,11 +148,7 @@ class Bybit(Feed):
                 if std_pair in self._l2_book:
                     del self._l2_book[std_pair]
 
-        # this feed runs one connection per instrument type, and they share self.tickers
-        # clearing it wholesale here let the spot connection's subscribe wipe the linear
-        # connection's snapshots, after which the next linear delta raised KeyError and took
-        # the connection down. Only forget the pairs this connection is responsible for.
-        for chan, pairs in conn.subscription.items():
+        for _, pairs in conn.subscription.items():
             for pair in pairs:
                 symbol = self.exchange_symbol_to_std_symbol(pair)
                 self.tickers.pop(symbol, None)
@@ -225,10 +246,7 @@ class Bybit(Feed):
         market = conn.address.split('/')[-1]
         if "success" in msg:
             if msg['success']:
-                if 'request' in msg:
-                    if msg['request']['op'] == 'auth':
-                        LOG.debug("%s: Authenticated successful", conn.uuid)
-                elif msg['op'] == 'subscribe':
+                if msg['op'] == 'subscribe':
                     # {"success": true, "ret_msg": "","op": "subscribe","conn_id": "cejreassvfrsfvb9v1a0-2m"}
                     LOG.debug("%s: Subscribed to channel.", conn.uuid)
                 else:
@@ -251,8 +269,6 @@ class Bybit(Feed):
     async def subscribe(self, connection: AsyncConnection):
         self.__reset(connection)
 
-        # Bybit has no separate channels for open interest, funding and index price - all
-        # three arrive on the 'tickers' topic, so they are de-duped into one subscription
         ticker_channels = {self.websocket_channels[c] for c in (TICKER, OPEN_INTEREST, FUNDING, INDEX)}
         tickers_pairs = set()
         for chan, pairs in connection.subscription.items():
@@ -372,14 +388,17 @@ class Bybit(Feed):
         if update_type == 'snapshot':
             delta = None
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+        elif pair not in self._l2_book:
+            return
 
         for key, update in data.items():
             side = BID if key == 'b' else ASK
             if key == 'a' or key == 'b':
                 for price, size in update:
-
                     price = Decimal(price)
                     size = Decimal(size)
+                    if delta is not None:
+                        delta[side].append((price, size))
 
                     if size == 0:
                         if price in self._l2_book[pair].book[side]:
@@ -387,10 +406,7 @@ class Bybit(Feed):
                     else:
                         self._l2_book[pair].book[side][price] = size
 
-        if update_type == 'delta':
-            delta = {BID: data['b'], ASK: data['a']}
-
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(msg['ts'])), raw=msg, delta=delta)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(msg['ts'])), raw=msg, delta=delta, sequence_number=data.get('u'))
 
     async def _ticker_open_interest_funding_index(self, msg: dict, timestamp: float, conn: AsyncConnection, market: str):
         '''
@@ -429,16 +445,12 @@ class Bybit(Feed):
         update = msg['data']
         _pair = msg['data']['symbol']
         if market == 'spot':
-            # spot and USDT perps share a symbol name upstream - without this the spot pair
-            # resolves through the perpetual mapping and its data is published under the perp
             _pair = self.convert_to_spot_name(self, _pair)
             if not _pair:
                 return
         symbol = self.exchange_symbol_to_std_symbol(_pair)
 
         if update_type == 'snapshot' or symbol not in self.tickers:
-            # copy - the stored dict is merged into by later deltas, and mutating the decoded
-            # message would corrupt the raw payload handed to callbacks
             self.tickers[symbol] = dict(update)
         else:
             self.tickers[symbol].update(update)
@@ -455,13 +467,13 @@ class Bybit(Feed):
             )
             await self.callback(TICKER, t, timestamp)
 
-        if self.websocket_channels[FUNDING] in conn.subscription and _pair in conn.subscription[self.websocket_channels[FUNDING]] and 'markPrice' in update:
+        if (self.websocket_channels[FUNDING] in conn.subscription and _pair in conn.subscription[self.websocket_channels[FUNDING]] and 'markPrice' in update and update.get('fundingRate')):
             f = Funding(
                 self.id,
                 symbol,
                 Decimal(update['markPrice']),
                 Decimal(update['fundingRate']),
-                self.timestamp_normalize(int(update['nextFundingTime'])),
+                self.timestamp_normalize(int(update['nextFundingTime'])) if update.get('nextFundingTime') else None,
                 self.timestamp_normalize(int(msg['ts'])),
                 None,
                 raw=update

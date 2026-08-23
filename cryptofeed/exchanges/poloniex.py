@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -23,6 +23,12 @@ LOG = logging.getLogger(__name__)
 
 class Poloniex(Feed):
     id = POLONIEX
+    keepalive_interval = 15.0
+
+    async def keepalive(self, conn: AsyncConnection):
+        await conn.write(json.dumps({'event': 'ping'}))
+    provides_sequence_number = True
+    validates_sequence_number = True
     websocket_endpoints = [WebsocketEndpoint('wss://ws.poloniex.com/ws/public')]
     rest_endpoints = [RestEndpoint('https://api.poloniex.com', routes=Routes('/markets'))]
     websocket_channels = {
@@ -47,6 +53,10 @@ class Poloniex(Feed):
             ret[s.normalized] = symbol
             info['instrument_type'][s.normalized] = s.type
         return ret, info
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.__reset()
 
     def __reset(self):
         self._l2_book = {}
@@ -91,8 +101,12 @@ class Poloniex(Feed):
             asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
             self.seq_no[pair] = data['id']
-            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, timestamp=self.timestamp_normalize(data['ts']))
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, timestamp=self.timestamp_normalize(data['ts']),
+                                     sequence_number=data['id'])
         else:
+            if pair not in self.seq_no:
+                # an update can arrive before the snapshot
+                return
             if data['lastId'] != self.seq_no[pair]:
                 raise MissingSequenceNumber
 
@@ -103,13 +117,14 @@ class Poloniex(Feed):
                     amount = Decimal(amount)
 
                     if amount == 0:
-                        del self._l2_book[pair].book[side][price]
+                        if price in self._l2_book[pair].book[side]:
+                            del self._l2_book[pair].book[side][price]
                         delta[side[:-1]].append((price, 0))
                     else:
                         self._l2_book[pair].book[side][price] = amount
                         delta[side[:-1]].append((price, amount))
             self.seq_no[pair] = data['id']
-            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(data['ts']), raw=msg, delta=delta)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(data['ts']), raw=msg, delta=delta, sequence_number=data['id'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -118,7 +133,7 @@ class Poloniex(Feed):
         if event == 'error':
             LOG.error("%s: Error from exchange: %s", self.id, msg)
             return
-        elif event == 'subscribe':
+        elif event in ('subscribe', 'pong'):
             return
 
         channel = msg.get('channel')

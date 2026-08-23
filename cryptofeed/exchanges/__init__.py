@@ -1,10 +1,11 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from cryptofeed.defines import *
+from cryptofeed.defines import HTX as HTX_str
 from cryptofeed.defines import OKX as OKX_str
 from .phemex import Phemex
 from .binance import Binance
@@ -23,12 +24,16 @@ from .deribit import Deribit
 from .gateio import Gateio
 from .gateio_futures import GateioFutures
 from .gemini import Gemini
-from .huobi import Huobi
-from .huobi_swap import HuobiSwap
+from .htx import HTX
+from .htx_swap import HTXSwap
+from .dydx import dYdX
+from .hyperliquid import Hyperliquid
+from .mexc import MEXCSpot
 from .independent_reserve import IndependentReserve
 from .kraken import Kraken
 from .kraken_futures import KrakenFutures
 from .kucoin import KuCoin
+from .kucoin_futures import KuCoinFutures
 from .okx import OKX
 from .poloniex import Poloniex
 from .upbit import Upbit
@@ -51,12 +56,16 @@ EXCHANGE_MAP = {
     GATEIO: Gateio,
     GATEIO_FUTURES: GateioFutures,
     GEMINI: Gemini,
-    HUOBI_SWAP: HuobiSwap,
-    HUOBI: Huobi,
+    HTX_SWAP: HTXSwap,
+    HTX_str: HTX,
+    DYDX: dYdX,
+    HYPERLIQUID: Hyperliquid,
+    MEXC: MEXCSpot,
     INDEPENDENT_RESERVE: IndependentReserve,
     KRAKEN_FUTURES: KrakenFutures,
     KRAKEN: Kraken,
     KUCOIN: KuCoin,
+    KUCOIN_FUTURES: KuCoinFutures,
     OKX_str: OKX,
     PHEMEX: Phemex,
     POLONIEX: Poloniex,

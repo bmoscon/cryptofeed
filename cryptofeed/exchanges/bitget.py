@@ -1,25 +1,22 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import base64
-import hmac
 import logging
 from decimal import Decimal
-from time import time
 from typing import Dict, List, Tuple, Union
 from collections import defaultdict
 
 from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import ASK, BALANCES, BID, BITGET, BUY, CANCELLED, CANDLES, FILLED, L2_BOOK, LONG, OPEN, ORDER_INFO, PARTIAL, PERPETUAL, POSITIONS, SELL, SHORT, SPOT, TICKER, TRADES
-from cryptofeed.exceptions import BadChecksum
+from cryptofeed.defines import ASK, BID, BITGET, BUY, CANDLES, FUNDING, FUTURES, INDEX, L1_BOOK, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.symbols import Symbol, str_to_symbol
-from cryptofeed.types import Ticker, Trade, Candle, OrderBook, Balance, Position, OrderInfo
+from cryptofeed.symbols import Symbol
+from cryptofeed.types import L1Book, Ticker, Trade, Candle, Funding, Index, OpenInterest, OrderBook
 from cryptofeed.util.time import timedelta_str_to_sec
 
 
@@ -28,75 +25,103 @@ LOG = logging.getLogger(__name__)
 
 class Bitget(Feed):
     id = BITGET
-    websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.bitget.com/spot/v1/stream', instrument_filter=('TYPE', (SPOT,))),
-        WebsocketEndpoint('wss://ws.bitget.com/mix/v1/stream', instrument_filter=('TYPE', (PERPETUAL,))),
-    ]
+    keepalive_interval = 30.0
+
+    async def keepalive(self, conn: AsyncConnection):
+        await conn.write('ping')
+    provides_sequence_number = True
+    validates_sequence_number = True
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.bitget.com/v2/ws/public')]
     rest_endpoints = [
-        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (SPOT,)), routes=Routes('/api/spot/v1/public/products')),
-        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (PERPETUAL,)), routes=Routes(['/api/mix/v1/market/contracts?productType=umcbl', '/api/mix/v1/market/contracts?productType=dmcbl'])),
+        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (SPOT,)), routes=Routes('/api/v2/spot/public/symbols')),
+        RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (PERPETUAL, FUTURES)), routes=Routes(['/api/v2/mix/market/contracts?productType=USDT-FUTURES', '/api/v2/mix/market/contracts?productType=COIN-FUTURES', '/api/v2/mix/market/contracts?productType=USDC-FUTURES'])),
     ]
 
-    valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '12h', '1d', '1w'}
+    valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '6h', '12h', '1d', '3d', '1w', '1M'}
+    candle_interval_map = {'1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '6h': '6H', '12h': '12H', '1d': '1D', '3d': '3D', '1w': '1W', '1M': '1M'}
     websocket_channels = {
         L2_BOOK: 'books',
+        L1_BOOK: 'books1',
         TRADES: 'trade',
         TICKER: 'ticker',
         CANDLES: 'candle',
-        ORDER_INFO: 'orders',
-        BALANCES: 'account',
-        POSITIONS: 'positions'
+        FUNDING: 'ticker',
+        INDEX: 'ticker',
+        OPEN_INTEREST: 'ticker',
     }
     request_limit = 20
 
     @classmethod
-    def timestamp_normalize(cls, ts: int) -> float:
-        return ts / 1000
+    def timestamp_normalize(cls, ts: Union[int, str]) -> float:
+        return int(ts) / 1000
+
+    @classmethod
+    def _product_types(cls, count: int) -> List:
+        contracts = [route.split('productType=')[-1] for route in cls.rest_endpoints[1].routes.instruments]
+        types = [None] + contracts
+        if len(types) != count:
+            raise ValueError(f'{cls.id}: {count} symbol responses for {len(types)} endpoints - the route list and _product_types disagree')
+        return types
 
     @classmethod
     def _parse_symbol_data(cls, data: Union[List, Dict]) -> Tuple[Dict, Dict]:
-        """
-        contract types
-
-        umcbl	USDT Unified Contract
-        dmcbl	Quanto Swap Contract
-        sumcbl	USDT Unified Contract Analog disk (naming makes no sense, but these are basically testnet coins)
-        sdmcbl	Quanto Swap Contract Analog disk (naming makes no sense, but these are basically testnet coins)
-        """
         ret = {}
         info = defaultdict(dict)
 
         if isinstance(data, dict):
             data = [data]
-        for d in data:
-            for entry in d['data']:
-                """
-                Spot
+        product_types = cls._product_types(len(data))
+        for response, product_type in zip(data, product_types):
+            for entry in response['data']:
+                if 'symbolType' not in entry:
+                    '''
+                    spot
 
-                {
-                    "baseCoin":"ALPHA",
-                    "makerFeeRate":"0.001",
-                    "maxTradeAmount":"0",
-                    "minTradeAmount":"2",
-                    "priceScale":"4",
-                    "quantityScale":"4",
-                    "quoteCoin":"USDT",
-                    "status":"online",
-                    "symbol":"ALPHAUSDT_SPBL",
-                    "symbolName":"ALPHAUSDT",
-                    "takerFeeRate":"0.001"
-                }
-                """
-                if "symbolName" in entry:
+                    {
+                        "symbol": "BTCUSDT",
+                        "baseCoin": "BTC",
+                        "quoteCoin": "USDT",
+                        "pricePrecision": "2",
+                        "quantityPrecision": "6",
+                        "status": "online",
+                        ...
+                    }
+                    '''
+                    if entry['status'] != 'online':
+                        continue
+                    inst_type = 'SPOT'
                     sym = Symbol(entry['baseCoin'], entry['quoteCoin'])
-                    ret[sym.normalized] = entry['symbolName']
                 else:
-                    sym = Symbol(entry['baseCoin'], entry['quoteCoin'], type=PERPETUAL)
-                    ret[sym.normalized] = entry['symbol']
+                    '''
+                    futures
+
+                    {
+                        "symbol": "BTCUSDT",
+                        "baseCoin": "BTC",
+                        "quoteCoin": "USDT",
+                        "symbolType": "perpetual",
+                        "symbolStatus": "normal",
+                        "deliveryTime": "",
+                        ...
+                    }
+                    '''
+                    if entry['symbolStatus'] != 'normal':
+                        continue
+                    inst_type = product_type
+                    if entry['symbolType'] == 'delivery':
+                        sym = Symbol(entry['baseCoin'], entry['quoteCoin'], type=FUTURES, expiry_date=int(entry['deliveryTime']) / 1000)
+                    else:
+                        sym = Symbol(entry['baseCoin'], entry['quoteCoin'], type=PERPETUAL)
+
+                ret[sym.normalized] = f"{entry['symbol']}_{inst_type}"
                 info['instrument_type'][sym.normalized] = sym.type
-                info['is_quanto'][sym.normalized] = 'dmcbl' in entry['symbol'].lower()
+                info['is_quanto'][sym.normalized] = inst_type == 'COIN-FUTURES'
 
         return ret, info
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.seq_no = {}
 
     def __reset(self, conn: AsyncConnection):
         if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:
@@ -105,73 +130,114 @@ class Bitget(Feed):
 
                 if std_pair in self._l2_book:
                     del self._l2_book[std_pair]
+                self.seq_no.pop(std_pair, None)
 
     async def _ticker(self, msg: dict, timestamp: float, symbol: str):
-        """
+        '''
+        spot
+
         {
             'action': 'snapshot',
-            'arg': {
-                'instType': 'sp',
-                'channel': 'ticker',
-                'instId': 'BTCUSDT'
-            },
+            'arg': {'instType': 'SPOT', 'channel': 'ticker', 'instId': 'BTCUSDT'},
             'data': [
                 {
                     'instId': 'BTCUSDT',
-                    'last': '46572.07',
-                    'open24h': '46414.54',
-                    'high24h': '46767.30',
-                    'low24h': '46221.11',
-                    'bestBid': '46556.590000',
-                    'bestAsk': '46565.670000',
-                    'baseVolume': '1927.0855',
-                    'quoteVolume': '89120317.8812',
-                    'ts': 1649013100029,
-                    'labeId': 0
+                    'lastPr': '64732.73',
+                    'open24h': '65232.78',
+                    'high24h': '65487.59',
+                    'low24h': '64522',
+                    'change24h': '-0.00680',
+                    'bidPr': '64732.73',
+                    'askPr': '64732.74',
+                    'bidSz': '0.240886',
+                    'askSz': '1.141205',
+                    'baseVolume': '1029.893449',
+                    'quoteVolume': '67018089.479221',
+                    'openUtc': '64898.06',
+                    'changeUtc24h': '-0.00255',
+                    'ts': '1786371836986'
                 }
-            ]
+            ],
+            'ts': 1786371836990
         }
-        """
-        key = 'ts'
-        if msg['arg']['instType'] == 'mc':
-            key = 'systemTime'
 
+        derivatives send the same fields plus fundingRate, nextFundingTime, markPrice, indexPrice and
+        holdingAmount (open interest), which is why funding, index and open interest ride this channel
+        '''
         for entry in msg['data']:
-            # sometimes snapshots do not have bids/asks in them
-            if 'bestBid' not in entry or 'bestAsk' not in entry:
-                continue
-            t = Ticker(
-                self.id,
-                symbol,
-                Decimal(entry['bestBid']),
-                Decimal(entry['bestAsk']),
-                self.timestamp_normalize(entry[key]),
-                raw=entry
-            )
-            await self.callback(TICKER, t, timestamp)
+            ts = self.timestamp_normalize(entry['ts'])
+
+            if entry['bidPr'] and entry['askPr']:
+                t = Ticker(
+                    self.id,
+                    symbol,
+                    Decimal(entry['bidPr']),
+                    Decimal(entry['askPr']),
+                    ts,
+                    raw=entry
+                )
+                await self.callback(TICKER, t, timestamp)
+
+            if entry.get('indexPrice'):
+                i = Index(
+                    self.id,
+                    symbol,
+                    Decimal(entry['indexPrice']),
+                    ts,
+                    raw=entry
+                )
+                await self.callback(INDEX, i, timestamp)
+
+            if entry.get('holdingAmount'):
+                o = OpenInterest(
+                    self.id,
+                    symbol,
+                    Decimal(entry['holdingAmount']),
+                    ts,
+                    raw=entry
+                )
+                await self.callback(OPEN_INTEREST, o, timestamp)
+
+            # delivery contracts report a zeroed funding rate and no next funding time
+            next_funding = entry.get('nextFundingTime')
+            if next_funding and next_funding != '0':
+                f = Funding(
+                    self.id,
+                    symbol,
+                    Decimal(entry['markPrice']),
+                    Decimal(entry['fundingRate']),
+                    self.timestamp_normalize(next_funding),
+                    ts,
+                    raw=entry
+                )
+                await self.callback(FUNDING, f, timestamp)
 
     async def _trade(self, msg: dict, timestamp: float, symbol: str):
-        """
+        '''
         {
             'action': 'update',
-            'arg': {
-                'instType': 'sp',
-                'channel': 'trade',
-                'instId': 'BTCUSDT'
-            },
+            'arg': {'instType': 'SPOT', 'channel': 'trade', 'instId': 'BTCUSDT'},
             'data': [
-                ['1649014224602', '46464.51', '0.0023', 'sell']
-            ]
+                {
+                    'ts': '1786371841905',
+                    'price': '64732.74',
+                    'size': '0.000016',
+                    'side': 'buy',
+                    'tradeId': '1470715589993152512'
+                }
+            ],
+            'ts': 1786371841906
         }
-        """
+        '''
         for entry in msg['data']:
             t = Trade(
                 self.id,
                 symbol,
-                SELL if entry[3] == 'sell' else BUY,
-                Decimal(entry[2]),
-                Decimal(entry[1]),
-                self.timestamp_normalize(int(entry[0])),
+                BUY if entry['side'] == 'buy' else SELL,
+                Decimal(entry['size']),
+                Decimal(entry['price']),
+                self.timestamp_normalize(entry['ts']),
+                id=entry['tradeId'],
                 raw=entry
             )
             await self.callback(TRADES, t, timestamp)
@@ -180,20 +246,27 @@ class Bitget(Feed):
         '''
         {
             'action': 'update',
-            'arg': {
-                'instType': 'sp',
-                'channel': 'candle1m',
-                'instId': 'BTCUSDT'
-            },
-            'data': [['1649014920000', '46434.2', '46437.98', '46434.2', '46437.98', '0.9469']]
+            'arg': {'instType': 'SPOT', 'channel': 'candle1m', 'instId': 'BTCUSDT'},
+            'data': [['1786371840000', '64732.74', '64732.74', '64732.74', '64732.74', '0', '0', '0']],
+            'ts': 1786371840606
         }
+
+        start, open, high, low, close, base volume, quote volume, USDT volume
         '''
+        interval = timedelta_str_to_sec(self.candle_interval)
+        ts = self.timestamp_normalize(msg['ts'])
+
         for entry in msg['data']:
-            t = Candle(
+            start = self.timestamp_normalize(entry[0])
+            # the exchange sends no 'confirm' flag, so closed is derived from the interval
+            closed = start + interval <= ts
+            if self.candle_closed_only and not closed:
+                continue
+            c = Candle(
                 self.id,
                 symbol,
-                self.timestamp_normalize(int(entry[0])),
-                self.timestamp_normalize(int(entry[0])) + timedelta_str_to_sec(self.candle_interval),
+                start,
+                start + interval,
                 self.candle_interval,
                 None,
                 Decimal(entry[1]),
@@ -201,61 +274,42 @@ class Bitget(Feed):
                 Decimal(entry[2]),
                 Decimal(entry[3]),
                 Decimal(entry[5]),
-                None,
-                self.timestamp_normalize(int(entry[0])),
+                closed,
+                ts,
                 raw=entry
             )
-            await self.callback(CANDLES, t, timestamp)
+            await self.callback(CANDLES, c, timestamp)
 
     async def _book(self, msg: dict, timestamp: float, symbol: str):
+        '''
+        {
+            'action': 'update',
+            'arg': {'instType': 'SPOT', 'channel': 'books', 'instId': 'BTCUSDT'},
+            'data': [
+                {
+                    'asks': [['64745.76', '0.863769'], ['64746.69', '0.030926']],
+                    'bids': [],
+                    'ts': '1786371837600',
+                    'seq': 702294710791,
+                    'pseq': 702294703025
+                }
+            ],
+            'ts': 1786371837602
+        }
+        '''
         data = msg['data'][0]
+        delta = None
 
         if msg['action'] == 'snapshot':
-            '''
-            {
-                'action': 'snapshot',
-                'arg': {
-                    'instType': 'sp',
-                    'channel': 'books',
-                    'instId': 'BTCUSDT'
-                },
-                'data': [
-                    {
-                        'asks': [['46700.38', '0.0554'], ['46701.25', '0.0147'], ...
-                        'bids': [['46686.68', '0.0032'], ['46684.75', '0.0161'], ...
-                        'checksum': -393656186,
-                        'ts': '1649021358917'
-                    }
-                ]
-            }
-            '''
-            bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
-            asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks, checksum_format=self.id)
-
-            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data['checksum'] & 0xFFFFFFFF):
-                raise BadChecksum
-            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
-
+            bids = {Decimal(price): Decimal(size) for price, size in data['bids']}
+            asks = {Decimal(price): Decimal(size) for price, size in data['asks']}
+            self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
         else:
-            '''
-            {
-                'action': 'update',
-                'arg': {
-                    'instType': 'sp',
-                    'channel': 'books',
-                    'instId': 'BTCUSDT'
-                },
-                'data': [
-                    {
-                        'asks': [['46701.25', '0'], ['46701.46', '0.0054'], ...
-                        'bids': [['46687.67', '0.0531'], ['46686.22', '0'], ...
-                        'checksum': -750266015,
-                        'ts': '1649021359467'
-                    }
-                ]
-            }
-            '''
+            if symbol not in self._l2_book:
+                return
+            if data.get('pseq') is not None and self.seq_no.get(symbol) not in (None, data['pseq']):
+                raise MissingSequenceNumber(f"{self.id}: {symbol} book expected sequence number {self.seq_no.get(symbol)}, got {data['pseq']}")
+            book = self._l2_book[symbol].book
             delta = {BID: [], ASK: []}
             for side, key in ((BID, 'bids'), (ASK, 'asks')):
                 for price, size in data[key]:
@@ -264,319 +318,69 @@ class Bitget(Feed):
                     delta[side].append((price, size))
 
                     if size == 0:
-                        del self._l2_book[symbol].book[side][price]
+                        if price in book[side]:
+                            del book[side][price]
                     else:
-                        self._l2_book[symbol].book[side][price] = size
+                        book[side][price] = size
 
-            if self.checksum_validation and self._l2_book[symbol].book.checksum() != (data['checksum'] & 0xFFFFFFFF):
-                raise BadChecksum
-            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, checksum=data['checksum'], timestamp=self.timestamp_normalize(int(data['ts'])), raw=msg)
+        self.seq_no[symbol] = data['seq']
+        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, sequence_number=data['seq'], timestamp=self.timestamp_normalize(msg['ts']), raw=msg)
 
-    async def _account(self, msg: dict, symbol: str, timestamp: float):
-        '''
-        spot
-
-        {
-            'action': 'snapshot',
-            'arg': {
-                'instType': 'spbl',
-                'channel': 'account',
-                'instId': 'BTCUSDT_SPBL'
-            },
-            'data': []
-        }
-
-        futures
-
-        {
-            'action': 'snapshot',
-            'arg': {
-                'instType': 'dmcbl',
-                'channel': 'account',
-                'instId': 'BTCUSD_DMCBL'
-            },
-            'data': [{
-                'marginCoin': 'BTC',
-                'locked': '0.00000000',
-                'available': '0.00000000',
-                'maxOpenPosAvailable': '0.00000000',
-                'maxTransferOut': '0.00000000',
-                'equity': '0.00000000',
-                'usdtEquity': '0.000000000000'
-            },
-            {
-                'marginCoin': 'ETH',
-                'locked': '0.00000000',
-                'available': '0.00000000',
-                'maxOpenPosAvailable': '0.00000000',
-                'maxTransferOut': '0.00000000',
-                'equity': '0.00000000',
-                'usdtEquity': '0.000000000000'
-            }]
-        }
-        '''
-        for entry in msg['data']:
-            b = Balance(
-                self.id,
-                symbol,
-                Decimal(entry['available']),
-                Decimal(entry['locked']),
-                raw=entry
-            )
-            await self.callback(BALANCES, b, timestamp)
-
-    async def _positions(self, msg: dict, symbol: str, timestamp: float):
+    async def _l1_book(self, msg: dict, timestamp: float, symbol: str):
         '''
         {
             'action': 'snapshot',
-            'arg': {
-                'instType': 'sumcbl',
-                'channel': 'positions',
-                'instId': 'SBTCSUSDT_SUMCBL'
-            },
-            'data': [
-                {
-                    'posId': '900434465966956544',
-                    'instId': 'SBTCSUSDT_SUMCBL',
-                    'instName': 'SBTCSUSDT',
-                    'marginCoin': 'SUSDT',
-                    'margin': '103.2987',
-                    'marginMode': 'crossed',
-                    'holdSide': 'long',
-                    'holdMode': 'double_hold',
-                    'total': '0.05',
-                    'available': '0.05',
-                    'locked': '0',
-                    'averageOpenPrice': '41319.5',
-                    'leverage': 20,
-                    'achievedProfits': '0',
-                    'upl': '0.518',
-                    'uplRate': '0.005',
-                    'liqPx': '0',
-                    'keepMarginRate': '0.004',
-                    'marginRate': '0.022209875738',
-                    'cTime': '1650406226626',
-                    'uTime': '1650406613064'
-                }
-            ]
+            'arg': {'instType': 'SPOT', 'channel': 'books1', 'instId': 'BTCUSDT'},
+            'data': [{'asks': [['64745.76', '0.863769']], 'bids': [['64745.75', '0.1']],
+                      'ts': '1786371837600', 'seq': 702294710791}],
+            'ts': 1786371837602
         }
         '''
-        # exchange, symbol, position, entry_price, side, unrealised_pnl, timestamp, raw=None):
-        for entry in msg['data']:
-            p = Position(
-                self.id,
-                symbol,
-                Decimal(entry['total']),
-                Decimal(entry['averageOpenPrice']),
-                LONG if entry['holdSide'] == 'long' else SHORT,
-                Decimal(entry['upl']),
-                self.timestamp_normalize(int(entry['uTime'])),
-                raw=entry
-            )
-            await self.callback(POSITIONS, p, timestamp)
+        data = msg['data'][0]
+        if not data['bids'] or not data['asks']:
+            return
 
-    def _status(self, status: str) -> str:
-        if status == 'new':
-            return OPEN
-        if status == 'partial-fill':
-            return PARTIAL
-        if status == 'full-fill':
-            return FILLED
-        if status == 'cancelled':
-            return CANCELLED
-        return status
-
-    async def _order(self, msg: dict, symbol: str, timestamp: float):
-        '''
-        {
-            'action': 'snapshot',
-            'arg': {
-                'instType': 'sumcbl',
-                'channel': 'orders',
-                'instId': 'default'
-            }, 'data': [
-                {
-                    'accFillSz': '0',
-                    'cTime': 1650407316266,
-                    'clOrdId': '900439036248367104',
-                    'force': 'normal',
-                    'instId': 'SBTCSUSDT_SUMCBL',
-                    'lever': '20',
-                    'notionalUsd': '2065.175',
-                    'ordId': '900439036185452544',
-                    'ordType': 'market',
-                    'orderFee': [
-                        {'feeCcy': 'SUSDT', 'fee': '0'
-                    }],
-                    'posSide': 'long',
-                    'px': '0',
-                    'side': 'buy',
-                    'status': 'new',
-                    'sz': '0.05',
-                    'tdMode': 'cross',
-                    'tgtCcy': 'SUSDT',
-                    'uTime': 1650407316266
-                }
-            ]
-        }
-
-
-        filled:
-
-        {
-            'action': 'snapshot',
-            'arg': {
-                'instType': 'sumcbl',
-                'channel': 'orders',
-                'instId': 'default'
-            },
-            'data': [{
-                'accFillSz': '0.1',
-                'avgPx': '41400',
-                'cTime': 1650408010067,
-                'clOrdId': '900441946260676608',
-                'execType': 'T',
-                'fillFee': '-2.484',
-                'fillFeeCcy': 'SUSDT',
-                'fillNotionalUsd': '4140',
-                'fillPx': '41400',
-                'fillSz': '0.1',
-                'fillTime': '1650408010163',
-                'force': 'normal',
-                'instId': 'SBTCSUSDT_SUMCBL',
-                'lever': '20',
-                'notionalUsd': '4139.95',
-                'ordId': '900441946180984832',
-                'ordType': 'market',
-                'orderFee': [{'feeCcy': 'SUSDT', 'fee': '-2.484'}],
-                'pnl': '0',
-                'posSide': 'long',
-                'px': '0',
-                'side': 'buy',
-                'status': 'full-fill',
-                'sz': '0.1',
-                'tdMode': 'cross',
-                'tgtCcy': 'SUSDT',
-                'tradeId': '900441946663366657',
-                'uTime': 1650408010163
-            }]
-        }
-        '''
-        for entry in msg['data']:
-
-            o = OrderInfo(
-                self.id,
-                self.exchange_symbol_to_std_symbol(entry['instId']),
-                entry['ordId'],
-                entry['side'],
-                self._status(entry['status']),
-                entry['ordType'],
-                Decimal(entry['px'] if 'fillPx' not in entry else entry['fillPx']),
-                Decimal(entry['sz']),
-                Decimal(entry['sz']) - Decimal(entry['accFillSz']),
-                self.timestamp_normalize(int(entry['uTime'])),
-                client_order_id=entry['clOrdId'],
-                raw=entry
-            )
-            await self.callback(ORDER_INFO, o, timestamp)
+        bid, bid_size = data['bids'][0]
+        ask, ask_size = data['asks'][0]
+        book = L1Book(self.id, symbol, Decimal(bid), Decimal(bid_size), Decimal(ask), Decimal(ask_size), self.timestamp_normalize(msg['ts']), raw=msg)
+        await self.callback(L1_BOOK, book, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
+        if msg == 'pong':
+            return
         msg = json.loads(msg, parse_float=Decimal)
 
         if 'event' in msg:
-            # {'event': 'subscribe', 'arg': {'instType': 'sp', 'channel': 'ticker', 'instId': 'BTCUSDT'}}
-            if msg['event'] == 'login' and msg['code'] == 0:
-                LOG.info("%s: Authenticated successfully", conn.uuid)
-                return
-            if msg['event'] == 'subscribe':
-                return
+            # {'event': 'subscribe', 'arg': {'instType': 'SPOT', 'channel': 'ticker', 'instId': 'BTCUSDT'}}
             if msg['event'] == 'error':
                 LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
-                return
+            return
 
-        symbol = msg['arg']['instId']
-        if symbol != 'default':
-            if msg['arg']['instType'] == 'mc':
-                if symbol.endswith('T'):
-                    symbol = self.exchange_symbol_to_std_symbol(symbol + "_UMCBL")
-                else:
-                    symbol = self.exchange_symbol_to_std_symbol(symbol + "_DMCBL")
-            elif msg['arg']['instType'] in {'dmcbl', 'umcbl'}:
-                symbol = self.exchange_symbol_to_std_symbol(symbol)
-            elif msg['arg']['instType'] == 'sp':
-                symbol = self.exchange_symbol_to_std_symbol(symbol)
-            else:
-                # SPBL
-                symbol = self.exchange_symbol_to_std_symbol(symbol.split("_")[0])
+        channel = msg['arg']['channel']
+        symbol = self.exchange_symbol_to_std_symbol(f"{msg['arg']['instId']}_{msg['arg']['instType']}")
 
-        if msg['arg']['channel'] == 'books':
+        if channel == 'books':
             await self._book(msg, timestamp, symbol)
-        elif msg['arg']['channel'] == 'ticker':
+        elif channel == 'books1':
+            await self._l1_book(msg, timestamp, symbol)
+        elif channel == 'ticker':
             await self._ticker(msg, timestamp, symbol)
-        elif msg['arg']['channel'] == 'trade':
+        elif channel == 'trade':
             await self._trade(msg, timestamp, symbol)
-        elif msg['arg']['channel'].startswith('candle'):
+        elif channel.startswith('candle'):
             await self._candle(msg, timestamp, symbol)
-        elif msg['arg']['channel'].startswith('account'):
-            await self._account(msg, symbol, timestamp)
-        elif msg['arg']['channel'].startswith('orders'):
-            await self._order(msg, symbol, timestamp)
-        elif msg['arg']['channel'].startswith('positions'):
-            await self._positions(msg, symbol, timestamp)
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
 
-    async def _login(self, conn: AsyncConnection):
-        LOG.debug("%s: Attempting authentication", conn.uuid)
-        timestamp = int(time())
-        msg = f"{timestamp}GET/user/verify"
-        msg = hmac.new(bytes(self.key_secret, encoding='utf8'), bytes(msg, encoding='utf-8'), digestmod='sha256')
-        sign = str(base64.b64encode(msg.digest()), 'utf8')
-        await conn.write(json.dumps({
-            "op": "login",
-            "args": [{
-                "apiKey": self.key_id,
-                "passphrase": self.key_passphrase,
-                "timestamp": timestamp,
-                "sign": sign
-            }]
-        }))
-
     async def subscribe(self, conn: AsyncConnection):
-        if self.key_id and self.key_passphrase and self.key_secret:
-            await self._login(conn)
         self.__reset(conn)
         args = []
 
-        interval = self.candle_interval
-        if interval[-1] != 'm':
-            interval = f"{interval[:-1]}{interval[-1].upper()}"
-
         for chan, symbols in conn.subscription.items():
+            if chan == self.std_channel_to_exchange(CANDLES):
+                chan += self.candle_interval_map[self.candle_interval]
             for s in symbols:
-                sym = str_to_symbol(self.exchange_symbol_to_std_symbol(s))
-                if sym.type == SPOT:
-                    if chan == 'positions':  # positions not applicable on spot
-                        continue
-                    if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                        itype = 'spbl'
-                        s += '_SPBL'
-                    else:
-                        itype = 'SP'
-                else:
-                    if self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                        itype = s.split('_')[-1]
-                        if chan == 'orders':
-                            s = 'default'  # currently only supports 'default' for order channel on futures
-                    else:
-                        itype = 'MC'
-                        s = s.split("_")[0]
-
-                d = {
-                    'instType': itype,
-                    'channel': chan if chan != 'candle' else 'candle' + interval,
-                    'instId': s
-                }
-                args.append(d)
+                inst_id, inst_type = s.split('_', 1)
+                args.append({'instType': inst_type, 'channel': chan, 'instId': inst_id})
 
         await conn.write(json.dumps({"op": "subscribe", "args": args}))

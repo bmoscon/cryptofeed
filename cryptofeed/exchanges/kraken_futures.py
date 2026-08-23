@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -24,6 +24,8 @@ LOG = logging.getLogger(__name__)
 
 class KrakenFutures(Feed):
     id = KRAKEN_FUTURES
+    provides_sequence_number = True
+    validates_sequence_number = True
     websocket_endpoints = [WebsocketEndpoint('wss://futures.kraken.com/ws/v1', sandbox='wss://demo-futures.kraken.com/ws/v1')]
     rest_endpoints = [RestEndpoint('https://futures.kraken.com', routes=Routes('/derivatives/api/v3/instruments'), sandbox='https://demo-futures.kraken.com')]
     websocket_channels = {
@@ -74,7 +76,7 @@ class KrakenFutures(Feed):
             info['underlying'][s.normalized] = entry.get('underlying')
             info['product_type'][s.normalized] = _kraken_futures_product_type[ftype]
             info['instrument_type'][s.normalized] = stype
-            ret[s.normalized] = entry['symbol']
+            ret[s.normalized] = entry['symbol'].upper()
         return ret, info
 
     def __reset(self):
@@ -187,6 +189,9 @@ class KrakenFutures(Feed):
             "timestamp": 1565342713929
         }
         """
+        if pair not in self._l2_book:
+            return
+
         if pair in self.seq_no and self.seq_no[pair] + 1 != msg['seq']:
             raise MissingSequenceNumber
         self.seq_no[pair] = msg['seq']
@@ -246,8 +251,7 @@ class KrakenFutures(Feed):
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:
-            # As per Kraken support: websocket product_id is uppercase version of the REST API symbols
-            pair = self.exchange_symbol_to_std_symbol(msg['product_id'].lower())
+            pair = self.exchange_symbol_to_std_symbol(msg['product_id'].upper())
             if msg['feed'] == 'trade':
                 await self._trade(msg, pair, timestamp)
             elif msg['feed'] == 'trade_snapshot':

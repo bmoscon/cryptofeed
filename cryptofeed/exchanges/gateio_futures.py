@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,6 @@ import logging
 from collections import defaultdict
 from decimal import Decimal
 from cryptofeed import _json as json
-import time
 
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import GATEIO_FUTURES, PERPETUAL, CANDLES, L2_BOOK, TICKER, TRADES, BID, ASK, BUY, SELL, OPEN_INTEREST, INDEX, FUNDING
@@ -25,8 +24,11 @@ LOG = logging.getLogger(__name__)
 
 class GateioFutures(Gateio):
     id = GATEIO_FUTURES
+    SNAPSHOT_DEPTH = 100
+    L2_BOOK_LEVELS = 100
+    provides_sequence_number = True
     websocket_endpoints = [WebsocketEndpoint('wss://fx-ws.gateio.ws/v4/ws/usdt', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/futures/usdt/contracts', l2book='/api/v4/futures/usdt/order_book?contract={}&limit=100&with_id=true'))]
+    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/futures/usdt/contracts', l2book='/api/v4/futures/usdt/order_book?contract={}&limit={}&with_id=true'))]
 
     websocket_channels = {
         L2_BOOK: 'futures.order_book_update',
@@ -37,6 +39,10 @@ class GateioFutures(Gateio):
         OPEN_INTEREST: 'futures.tickers',
         INDEX: 'futures.tickers'
     }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._sub_contract_trades = set()
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -133,7 +139,10 @@ class GateioFutures(Gateio):
             )
             await self.callback(CANDLES, c, timestamp)
 
-    async def _snapshot(self, symbol: str):
+    def _book_payload(self, symbol: str) -> list:
+        return [symbol, '100ms', str(self.L2_BOOK_LEVELS)]
+
+    def _parse_snapshot(self, symbol: str, data) -> OrderBook:
         """
         {
             "id": 123456,
@@ -161,17 +170,13 @@ class GateioFutures(Gateio):
             ]
         }
         """
-        ret = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol))
-        data = json.loads(ret, parse_float=Decimal)
-
-        symbol = self.exchange_symbol_to_std_symbol(symbol)
-        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
-        self.last_update_id[symbol] = data['id']
-
-        self._l2_book[symbol].book.bids = {Decimal(bid["p"]): Decimal(bid["s"]) for bid in data['bids']}
-        self._l2_book[symbol].book.asks = {Decimal(ask["p"]): Decimal(ask["s"]) for ask in data['asks']}
-        # self._l2_book[symbol].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], time.time(), raw=data, sequence_number=data['id'])
+        data = json.loads(data, parse_float=Decimal)
+        book = OrderBook(self.id, symbol, max_depth=self.max_depth)
+        book.book.bids = {Decimal(bid["p"]): Decimal(bid["s"]) for bid in data['bids']}
+        book.book.asks = {Decimal(ask["p"]): Decimal(ask["s"]) for ask in data['asks']}
+        book.sequence_number = data['id']
+        book.raw = data
+        return book
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
         """
@@ -255,6 +260,13 @@ class GateioFutures(Gateio):
         }
         """
         for entry in msg['result']:
+            if not entry['size']:
+                symbol = self.exchange_symbol_to_std_symbol(entry['contract'])
+                if symbol not in self._sub_contract_trades:
+                    self._sub_contract_trades.add(symbol)
+                    LOG.warning('%s: %s trades smaller than one contract are reported by the venue with '
+                                'size 0 and cannot be published - trade counts will be short of the venue', self.id, symbol)
+                continue
             t = Trade(
                 self.id,
                 self.exchange_symbol_to_std_symbol(entry['contract']),

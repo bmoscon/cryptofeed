@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -14,7 +14,7 @@ from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BITFINEX, BUY, CURRENCY, FUNDING, L2_BOOK, L3_BOOK, SELL, TICKER, TRADES, PERPETUAL
-from cryptofeed.exceptions import MissingSequenceNumber
+from cryptofeed.exceptions import BadChecksum, MissingSequenceNumber, UnsupportedDataFeed
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import Ticker, Trade, OrderBook
@@ -41,6 +41,9 @@ CHECKSUM = 131072
 
 class Bitfinex(Feed):
     id = BITFINEX
+    provides_checksum = True
+    provides_sequence_number = True
+    validates_sequence_number = True
 
     websocket_endpoints = [WebsocketEndpoint('wss://api-pub.bitfinex.com/ws/2', limit=20)]
     rest_endpoints = [RestEndpoint('https://api-pub.bitfinex.com', routes=Routes(['/v2/conf/pub:list:pair:exchange', '/v2/conf/pub:list:currency', '/v2/conf/pub:list:pair:futures']))]
@@ -51,11 +54,16 @@ class Bitfinex(Feed):
         TICKER: 'ticker',
     }
     request_limit = 1
-    valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '3h', '6h', '12h', '1d', '1w', '2w', '1M'}
 
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
         return ts / 1000.0
+
+    asset_aliases = {'BCHN': 'BCH', 'UST': 'USDT'}
+
+    @classmethod
+    def _asset(cls, code: str) -> str:
+        return cls.asset_aliases.get(code, code)
 
     @classmethod
     def _parse_symbol_data(cls, data: list) -> Tuple[Dict, Dict]:
@@ -66,32 +74,26 @@ class Bitfinex(Feed):
         pairs = data[0][0]
         currencies = data[1][0]
         perpetuals = data[2][0]
-        for c in currencies:
-            c = c.replace('BCHN', 'BCH')  # Bitfinex uses BCHN, other exchanges use BCH
-            c = c.replace('UST', 'USDT')
-            s = Symbol(c, c, type=CURRENCY)
+
+        for c in sorted(currencies, key=lambda code: code in cls.asset_aliases):
+            asset = cls._asset(c)
+            s = Symbol(asset, asset, type=CURRENCY)
             ret[s.normalized] = "f" + c
             info['instrument_type'][s.normalized] = CURRENCY
 
         for p in pairs:
-            norm = p.replace('BCHN', 'BCH')
-            norm = norm.replace('UST', 'USDT')
-
-            if ':' in norm:
-                base, quote = norm.split(":")
+            if ':' in p:
+                base, quote = p.split(":")
             else:
-                base, quote = norm[:3], norm[3:]
+                base, quote = p[:3], p[3:]
 
-            s = Symbol(base, quote)
+            s = Symbol(cls._asset(base), cls._asset(quote))
             ret[s.normalized] = "t" + p
             info['instrument_type'][s.normalized] = s.type
 
         for f in perpetuals:
-            norm = f.replace('BCHN', 'BCH')
-            norm = norm.replace('UST', 'USDT')
-            base, quote = norm.split(':')  # 'ALGF0:USTF0'
-            base, quote = base[:-2], quote[:-2]
-            s = Symbol(base, quote, type=PERPETUAL)
+            base, quote = f.split(':')  # 'ALGF0:USTF0'
+            s = Symbol(cls._asset(base[:-2]), cls._asset(quote[:-2]), type=PERPETUAL)
             ret[s.normalized] = "t" + f
             info['instrument_type'][s.normalized] = s.type
 
@@ -111,6 +113,11 @@ class Bitfinex(Feed):
         self.seq_no = defaultdict(int)
 
     def _subscription_resolved(self):
+        for channel in (L2_BOOK, L3_BOOK):
+            funding = [symbol for symbol in self.subscription.get(self.std_channel_to_exchange(channel), []) if symbol[0] == 'f']
+            if funding:
+                raise UnsupportedDataFeed(f'{self.id} does not serve {channel} for funding currencies: {sorted(self.exchange_symbol_to_std_symbol(s) for s in funding)}')
+
         channels = self._init_channels
         subscription = self._init_subscription
         symbols = self._init_symbols
@@ -146,8 +153,16 @@ class Bitfinex(Feed):
         if msg[1] == 'hb':
             return  # ignore heartbeats
         # bid, bid_size, ask, ask_size, daily_change, daily_change_percent,
-        # last_price, volume, high, low
-        bid, _, ask, _, _, _, _, _, _, _ = msg[1]
+        # last_price, volume, high, low - and Bitfinex has since appended an 11th field, so index
+        # rather than unpack: a positional unpack raises ValueError the moment the venue adds one
+        bid, ask = msg[1][0], msg[1][2]
+        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
+        await self.callback(TICKER, t, timestamp)
+
+    async def _funding_ticker(self, pair: str, msg: list, timestamp: float):
+        if msg[1] == 'hb':
+            return
+        bid, ask = msg[1][1], msg[1][4]
         t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
         await self.callback(TICKER, t, timestamp)
 
@@ -161,7 +176,7 @@ class Bitfinex(Feed):
                 Decimal(abs(Decimal(amount))),
                 Decimal(price),
                 self.timestamp_normalize(ts),
-                id=order_id,
+                id=str(order_id),
                 raw=funding
             )
             await self.callback(TRADES, t, timestamp)
@@ -205,6 +220,10 @@ class Bitfinex(Feed):
     async def _book(self, pair: str, msg: list, timestamp: float):
         """For L2 book updates."""
         if not isinstance(msg[1], list):
+            if msg[1] == 'cs':
+                if self.checksum_validation and pair in self._l2_book and self._l2_book[pair].book.checksum() != msg[2] & 0xFFFFFFFF:
+                    raise BadChecksum(f'{self.id} {pair}: book checksum mismatch')
+                return
             if msg[1] != 'hb':
                 LOG.warning('%s: Unexpected book L2 msg %s', self.id, msg)
             return
@@ -212,7 +231,7 @@ class Bitfinex(Feed):
         delta = None
         if isinstance(msg[1][0], list):
             # snapshot so clear book
-            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, checksum_format=self.id)
             for update in msg[1]:
                 price, _, amount = update
                 price = Decimal(price)
@@ -252,6 +271,10 @@ class Bitfinex(Feed):
     async def _raw_book(self, pair: str, msg: list, timestamp: float):
         """For L3 book updates."""
         if not isinstance(msg[1], list):
+            if msg[1] == 'cs':
+                if self.checksum_validation and pair in self._l3_book and self._l3_book[pair].book.checksum() != msg[2] & 0xFFFFFFFF:
+                    raise BadChecksum(f'{self.id} {pair}: book checksum mismatch')
+                return
             if msg[1] != 'hb':
                 LOG.warning('%s: Unexpected book L3 msg %s', self.id, msg)
             return
@@ -268,13 +291,13 @@ class Bitfinex(Feed):
             if len(self._l3_book[pair].book[side][price]) == 0:
                 del self._l3_book[pair].book[side][price]
 
-        delta = {BID: [], ASK: []}
+        delta = None
 
         if isinstance(msg[1][0], list):
             # snapshot so clear orders
             self.order_map[pair][BID] = {}
             self.order_map[pair][ASK] = {}
-            self._l3_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+            self._l3_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, checksum_format=self.id)
 
             for update in msg[1]:
                 order_id, price, amount = update
@@ -291,6 +314,7 @@ class Bitfinex(Feed):
                 add_to_book(side, price, order_id, amount)
         else:
             # book update
+            delta = {BID: [], ASK: []}
             order_id, price, amount = msg[1]
             price = Decimal(price)
             amount = Decimal(amount)
@@ -339,7 +363,7 @@ class Bitfinex(Feed):
             seq_no = msg[-1]
             expected = self.seq_no[conn.uuid] + 1
             if seq_no != expected:
-                LOG.warning('%s: missed message (sequence number) received %d, expected %d', conn.uuid, seq_no, expected)
+                LOG.warning('%s: missed message (sequence number) received %s, expected %s', conn.uuid, seq_no, expected)
                 raise MissingSequenceNumber
             self.seq_no[conn.uuid] = seq_no
             if hb_skip:
@@ -363,22 +387,18 @@ class Bitfinex(Feed):
         pair = self.exchange_symbol_to_std_symbol(symbol)
 
         if msg['channel'] == 'ticker':
-            if is_funding:
-                LOG.warning('%s %s: Ticker funding not implemented - ignoring for %s', conn.uuid, pair, msg)
-                handler = self._do_nothing
-            else:
-                handler = partial(self._ticker, pair)
+            handler = partial(self._funding_ticker if is_funding else self._ticker, pair)
         elif msg['channel'] == 'trades':
             if is_funding:
                 handler = partial(self._funding, pair)
             else:
                 handler = partial(self._trades, pair)
         elif msg['channel'] == 'book':
-            if msg['prec'] == 'R0':
-                handler = partial(self._raw_book, pair)
-            elif is_funding:
-                LOG.warning('%s %s: Book funding not implemented - ignoring for %s', conn.uuid, pair, msg)
+            if is_funding:
+                LOG.warning('%s %s: funding books - ignoring %s', conn.uuid, pair, msg)
                 handler = self._do_nothing
+            elif msg['prec'] == 'R0':
+                handler = partial(self._raw_book, pair)
             else:
                 handler = partial(self._book, pair)
         else:
@@ -393,7 +413,7 @@ class Bitfinex(Feed):
         self.__reset(connection)
         await connection.write(json.dumps({
             'event': "conf",
-            'flags': SEQ_ALL
+            'flags': SEQ_ALL | CHECKSUM
         }))
 
         for chan, pairs in connection.subscription.items():

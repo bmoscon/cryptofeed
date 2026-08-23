@@ -1,21 +1,18 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import hashlib
-import hmac
 import logging
-import time
 from decimal import Decimal
 from typing import Dict, Tuple
 from collections import defaultdict
 
 from cryptofeed import _json as json
 
-from cryptofeed.config import Config
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.defines import BID, ASK, BUY, CANDLES, COINBASE, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -24,25 +21,10 @@ from cryptofeed.types import Candle, OrderBook, Ticker, Trade
 LOG = logging.getLogger(__name__)
 
 
-def get_private_parameters(config: Config, chan: str, product_ids: list) -> dict:
-    """Sign a websocket subscription. Public market data channels need no credentials, so
-    when none are configured this returns nothing and the subscription goes out unsigned."""
-    if not config["coinbase"]["key_id"] or not config["coinbase"]["key_secret"]:
-        return {}
-    timestamp = str(int(time.time()))
-    message = f"{timestamp}{chan}{','.join(product_ids)}"
-    signature = hmac.new(
-        config["coinbase"]["key_secret"].encode("utf-8"),
-        message.encode("utf-8"),
-        digestmod=hashlib.sha256,
-    ).hexdigest()
-    return {'api_key': config["coinbase"]["key_id"], 'timestamp': timestamp, 'signature': signature}
-
-
 class Coinbase(Feed):
     id = COINBASE
     websocket_endpoints = [WebsocketEndpoint('wss://advanced-trade-ws.coinbase.com', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://api.coinbase.com/api/v3/brokerage', routes=Routes('/market/products', l3book='/market/product_book?product_id={}'))]
+    rest_endpoints = [RestEndpoint('https://api.coinbase.com/api/v3/brokerage', routes=Routes('/market/products', l2book='/market/product_book?product_id={}&limit={}'))]
 
     websocket_channels = {
         L2_BOOK: 'level2',
@@ -51,7 +33,6 @@ class Coinbase(Feed):
         CANDLES: 'candles',
     }
     request_limit = 10
-    # the candles channel is fixed at five minute granularity
     valid_candle_intervals = {'5m'}
     candle_interval_map = {'5m': 300}
 
@@ -73,6 +54,31 @@ class Coinbase(Feed):
 
     def __reset(self):
         self._l2_book = {}
+        self._sequence_num = {}
+
+    def _check_sequence_num(self, msg: dict, conn: AsyncConnection) -> None:
+        sequence = msg.get('sequence_num')
+        uuid = getattr(conn, 'uuid', None)
+        if sequence is None or uuid is None:
+            return
+        last = self._sequence_num.get(uuid)
+        self._sequence_num[uuid] = sequence
+        if last is not None and sequence != last + 1:
+            if sequence <= last:
+                LOG.warning('%s: %s sequence went backwards, %d after %d - ignoring per exchange docs', self.id, conn.uuid, sequence, last)
+                self._sequence_num[uuid] = last
+                return
+            raise MissingSequenceNumber(f"{self.id}: expected sequence number {last}, got {sequence}")
+
+
+    def _parse_snapshot(self, symbol: str, data) -> OrderBook:
+        pricebook = json.loads(data, parse_float=Decimal)['pricebook']
+        bids = {Decimal(level['price']): Decimal(level['size']) for level in pricebook['bids']}
+        asks = {Decimal(level['price']): Decimal(level['size']) for level in pricebook['asks']}
+        book = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
+        book.timestamp = self.timestamp_normalize(pricebook['time']) if pricebook.get('time') else None
+        book.raw = pricebook
+        return book
 
     async def _trade_update(self, msg: dict, timestamp: float):
         '''
@@ -134,9 +140,6 @@ class Coinbase(Feed):
             'volume': '3.70089188',
             'product_id': 'BTC-USD'
         }
-
-        The channel only publishes five minute candles, and does not flag the final update
-        of an interval - closed is therefore reported as False for every update.
         '''
         start = float(msg['start'])
         interval = self.candle_interval_map[self.candle_interval]
@@ -160,10 +163,11 @@ class Coinbase(Feed):
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float, ts: str):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
-        bids = {Decimal(update['price_level']): Decimal(update['new_quantity']) for update in msg['updates'] if
-                update['side'] == 'bid'}
-        asks = {Decimal(update['price_level']): Decimal(update['new_quantity']) for update in msg['updates'] if
-                update['side'] == 'ask'}
+        bids, asks = {}, {}
+
+        for update in msg['updates']:
+            side = bids if update['side'] == 'bid' else asks
+            side[Decimal(update['price_level'])] = Decimal(update['new_quantity'])
         if pair not in self._l2_book:
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
         else:
@@ -174,6 +178,9 @@ class Coinbase(Feed):
 
     async def _pair_level2_update(self, msg: dict, timestamp: float, ts: str):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
+        if pair not in self._l2_book:
+            return
+
         delta = {BID: [], ASK: []}
         for update in msg['updates']:
             side = BID if update['side'] == 'bid' else ASK
@@ -192,14 +199,15 @@ class Coinbase(Feed):
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
+        self._check_sequence_num(msg, conn)
         if 'channel' in msg and 'events' in msg:
             for event in msg['events']:
                 if msg['channel'] == 'market_trades':
-                    if event.get('type') == 'update':
+                    if event.get('type') in ('update', 'snapshot'):
                         for trade in event['trades']:
                             await self._trade_update(trade, timestamp)
                     else:
-                        pass  # TODO: do we want to implement trades snapshots?
+                        LOG.warning('%s: unexpected market_trades event type %r', self.id, event.get('type'))
                 elif msg['channel'] == 'l2_data':
                     if event.get('type') == 'update':
                         await self._pair_level2_update(event, timestamp, msg['timestamp'])
@@ -225,9 +233,6 @@ class Coinbase(Feed):
                       "product_ids": product_ids,
                       "channel": chan
                       }
-            private_params = get_private_parameters(self.config, chan, product_ids)
-            if private_params:
-                params = {**params, **private_params}
             await conn.write(json.dumps(params))
 
         for channel in self.subscription:
