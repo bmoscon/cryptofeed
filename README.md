@@ -90,8 +90,7 @@ def main():
 
 ## Supported Channels
 
-Cryptofeed supports the following channels from exchanges. Every one of them is public market data -
-cryptofeed handles no credentials and signs nothing.
+Cryptofeed supports the following public data channels from exchanges
 
 * L1_BOOK - Top of book
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
@@ -103,11 +102,6 @@ cryptofeed handles no credentials and signs nothing.
 * LIQUIDATIONS
 * INDEX
 * CANDLES - Candlestick / K-Line data.
-
-The authenticated channels - ORDER_INFO, FILLS, BALANCES, POSITIONS and TRANSACTIONS - are gone as of
-3.0. They worked; they were removed because execution, user data streams and credentials belong to the
-cryptotrade project, not to a market data library. The 2.5 branch is the last one that serves them.
-
 
 ## Backends
 
