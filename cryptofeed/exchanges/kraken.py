@@ -24,7 +24,6 @@ LOG = logging.getLogger(__name__)
 
 class Kraken(Feed):
     id = KRAKEN
-    CHECKSUM_VALIDATION_DEFAULT = True
     provides_checksum = True
     websocket_endpoints = [WebsocketEndpoint('wss://ws.kraken.com/v2', limit=20)]
     rest_endpoints = [RestEndpoint('https://api.kraken.com', routes=Routes('/0/public/AssetPairs', l2book='/0/public/Depth?pair={}&count={}'))]

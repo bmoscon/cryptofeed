@@ -15,7 +15,6 @@ from typing import Tuple, Callable, List, Union
 from aiohttp import ClientError
 from aiohttp.typedefs import StrOrURL
 
-from cryptofeed.backends.aggregate import wrapper_chain
 from cryptofeed.backends.backend import BackendQueue, RetryPolicy
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
@@ -27,6 +26,15 @@ from cryptofeed.types import OrderBook
 
 
 LOG = logging.getLogger(__name__)
+
+
+def wrapper_chain(callback) -> list:
+    chain = []
+    node = callback
+    while node is not None and not any(node is seen for seen in chain):
+        chain.append(node)
+        node = getattr(node, 'handler', None)
+    return chain
 
 
 def _numbered(entries):
@@ -83,9 +91,9 @@ class Feed(Exchange):
         candle_interval: str
             Length of time between a candle's Open and Close. Valid on exchanges with support for candles
         checksum_validation: bool
-            Toggle checksum validation, when supported by an exchange. None (the default) takes the
-            venue's own default from CHECKSUM_VALIDATION_DEFAULT - on where a checksum is the only
-            gap detection the venue has, off elsewhere. Pass True or False to decide explicitly.
+            Toggle checksum validation, when supported by an exchange. None (the default) turns it
+            on for every venue that publishes a book checksum (provides_checksum) and off elsewhere.
+            Pass True or False to decide explicitly.
         cross_check: bool
             Toggle a check for a crossed book. Should not be needed on exchanges that support
             checksums or provide message sequence numbers.
@@ -109,7 +117,7 @@ class Feed(Exchange):
         self.timeout = timeout
         self.timeout_interval = timeout_interval
         self.subscription = defaultdict(list)
-        self.checksum_validation = (self.CHECKSUM_VALIDATION_DEFAULT if checksum_validation is None else checksum_validation)
+        self.checksum_validation = (self.provides_checksum if checksum_validation is None else checksum_validation)
         self.cross_check = cross_check
         self.crossed_books = Counter()
         self._crossed_run = {}
@@ -231,8 +239,6 @@ class Feed(Exchange):
             # every exit path - clean, failed, or cancelled - releases the http session
             with suppress(Exception):
                 await self.http_conn.close()
-            with suppress(Exception):
-                await self._close_probe_connection()
 
     async def _run(self, stop_event: asyncio.Event):
         await self._setup()
@@ -515,7 +521,6 @@ class Feed(Exchange):
     async def shutdown(self):
         LOG.info('%s: feed shutdown starting...', self.id)
         await self.http_conn.close()
-        await self._close_probe_connection()
 
         released = []
         for callbacks in self.callbacks.values():
