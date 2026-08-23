@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -60,22 +60,6 @@ class FundingCallback(Callback):
 
 
 class IndexCallback(Callback):
-    pass
-
-
-class OrderInfoCallback(Callback):
-    pass
-
-
-class BalancesCallback(Callback):
-    pass
-
-
-class TransactionsCallback(Callback):
-    pass
-
-
-class UserFillsCallback(Callback):
     pass
 
 

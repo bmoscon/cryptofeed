@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -7,9 +7,9 @@ associated with this software.
 import logging
 import time
 import asyncio
-from asyncio import Queue, CancelledError
-from contextlib import asynccontextmanager, suppress
-from typing import List, Union, AsyncIterable
+import weakref
+from contextlib import asynccontextmanager
+from typing import List, Optional, Union, AsyncIterable
 from dataclasses import dataclass
 
 from aiohttp.client_reqrep import ClientResponse
@@ -23,6 +23,31 @@ from cryptofeed.symbols import str_to_symbol
 
 
 LOG = logging.getLogger(__name__)
+_LIVE = weakref.WeakSet()
+
+
+@dataclass(frozen=True)
+class ConnectionStats:
+    id: str
+    created: float
+    connects: int
+    reconnects: int
+    watchdog_trips: int
+    received: int
+    sent: int
+    last_message: Optional[float]
+    open: bool
+
+
+def connection_stats(exchange: str = None, since: float = None) -> dict:
+    out = {}
+    for conn in list(_LIVE):
+        if since is not None and conn.created < since:
+            continue
+        if exchange is not None and conn.id.split('.', 1)[0] != exchange:
+            continue
+        out[conn.id] = conn.stats
+    return dict(sorted(out.items()))
 
 
 class Connection:
@@ -56,6 +81,12 @@ class AsyncConnection(Connection):
         self.authentication = authentication
         self.subscription = subscription
         self.conn: Union[ClientConnection, aiohttp.ClientSession] = None
+        self.created: float = time.time()
+        self.connects: int = 0
+        self.watchdog_trips: int = 0
+        self._received_before: int = 0
+        self._sent_before: int = 0
+        _LIVE.add(self)
 
     @property
     def uuid(self):
@@ -64,10 +95,34 @@ class AsyncConnection(Connection):
     @asynccontextmanager
     async def connect(self):
         await self._open()
+        self.connects += 1
         try:
             yield self
         finally:
             await self.close()
+
+    def _reset_counters(self):
+        self._received_before += self.received
+        self._sent_before += self.sent
+        self.received = 0
+        self.sent = 0
+        self.last_message = None
+
+    def record_watchdog_trip(self):
+        self.watchdog_trips += 1
+
+    @property
+    def stats(self) -> ConnectionStats:
+        """Read-only snapshot. Never raises: a report that cannot be taken is worse than a stale one."""
+        try:
+            is_open = bool(self.is_open)
+        except NotImplementedError:
+            is_open = False
+        return ConnectionStats(id=self.id, created=self.created, connects=self.connects,
+                               reconnects=max(self.connects - 1, 0), watchdog_trips=self.watchdog_trips,
+                               received=self._received_before + self.received,
+                               sent=self._sent_before + self.sent,
+                               last_message=self.last_message, open=is_open)
 
     async def _open(self):
         raise NotImplementedError
@@ -112,11 +167,9 @@ class HTTPAsyncConn(AsyncConnection):
         else:
             LOG.debug('%s: create HTTP session', self.id)
             self.conn = aiohttp.ClientSession()
-            self.sent = 0
-            self.received = 0
-            self.last_message = None
+            self._reset_counters()
 
-    async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
+    async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:
             await self._open()
 
@@ -127,7 +180,7 @@ class HTTPAsyncConn(AsyncConnection):
                 self.last_message = time.time()
                 self.received += 1
                 if self.raw_data_callback:
-                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None if return_headers is False else dict(response.headers))
+                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None)
                 if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
@@ -136,8 +189,6 @@ class HTTPAsyncConn(AsyncConnection):
                     await asyncio.sleep(retry_delay)
                     continue
                 self._handle_error(response, data)
-                if return_headers:
-                    return data, response.headers
                 return data
 
     async def write(self, address: str, msg: str, header=None, retry_count=0, retry_delay=60) -> str:
@@ -217,35 +268,6 @@ class HTTPPoll(HTTPAsyncConn):
             await asyncio.sleep(self.sleep)
 
 
-class HTTPConcurrentPoll(HTTPPoll):
-    """Polls each address concurrently in it's own Task"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._queue = Queue()
-
-    async def _poll_address(self, address: str, header=None):
-        while True:
-            data = await self._read_address(address, header)
-            await self._queue.put(data)
-            await asyncio.sleep(self.sleep)
-
-    async def read(self, header=None) -> AsyncIterable[str]:
-        tasks = asyncio.gather(*(self._poll_address(address, header) for address in self.address))
-
-        try:
-            while not tasks.done():
-                with suppress(asyncio.exceptions.TimeoutError):
-                    yield await asyncio.wait_for(self._queue.get(), timeout=1)
-        finally:
-            if not tasks.done():
-                tasks.cancel()
-                with suppress(CancelledError):
-                    await tasks
-            elif tasks.exception() is not None:
-                raise tasks.exception()
-
-
 class WSAsyncConn(AsyncConnection):
 
     def __init__(self, address: str, conn_id: str, authentication=None, subscription=None, **kwargs):
@@ -278,9 +300,7 @@ class WSAsyncConn(AsyncConnection):
                 self.address, self.ws_kwargs = await self.authentication(self.address, self.ws_kwargs)
 
             self.conn = await connect(self.address, **self.ws_kwargs)
-        self.sent = 0
-        self.received = 0
-        self.last_message = None
+        self._reset_counters()
 
     async def read(self) -> AsyncIterable:
         if not self.is_open:
@@ -334,6 +354,9 @@ class WebsocketEndpoint:
             ret[chan] = []
             if not self.instrument_filter:
                 ret[chan].extend(sub[chan])
+            elif callable(self.instrument_filter):
+                # some venues split endpoints on more than one attribute
+                ret[chan].extend([s for s in syms if self.instrument_filter(str_to_symbol(s))])
             else:
                 if self.instrument_filter[0] == 'TYPE':
                     ret[chan].extend([s for s in syms if str_to_symbol(s).type in self.instrument_filter[1]])
@@ -357,7 +380,6 @@ class Routes:
     open_interest: str = None
     liquidations: str = None
     stats: str = None
-    authentication: str = None
     l2book: str = None
     l3book: str = None
 

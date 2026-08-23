@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -14,26 +14,35 @@ from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, Backe
 
 
 class ZMQCallback(BackendQueue):
+    hand_off = True
+    retryable_exceptions = (zmq.ZMQError,)
+
     def __init__(self, host='127.0.0.1', port=5555, none_to=None, numeric_type=float, key=None, dynamic_key=True, **kwargs):
+        super().__init__(**kwargs)
         self.url = "tcp://{}:{}".format(host, port)
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.dynamic_key = dynamic_key
-        self.running = True
+        self.con = None
 
-    async def writer(self):
-        ctx = zmq.asyncio.Context.instance()
-        con = ctx.socket(zmq.PUB)
-        con.connect(self.url)
-        while self.running:
-            async with self.read_queue() as updates:
-                for update in updates:
-                    if self.dynamic_key:
-                        update = f'{update["exchange"]}-{self.key}-{update["symbol"]} {json.dumps(update)}'
-                    else:
-                        update = f'{self.key} {json.dumps(update)}'
-                    await con.send_string(update)
+    async def connect(self):
+        if self.con is None or self.con.closed:
+            self.con = zmq.asyncio.Context.instance().socket(zmq.PUB)
+            self.con.connect(self.url)
+
+    async def write_batch(self, batch: list):
+        for update in batch:
+            if self.dynamic_key:
+                msg = f'{update["exchange"]}-{self.key}-{update["symbol"]} {json.dumps(update)}'
+            else:
+                msg = f'{self.key} {json.dumps(update)}'
+            await self.con.send_string(msg)
+
+    async def close(self):
+        if self.con is not None:
+            self.con.close()
+            self.con = None
 
 
 class TradeZMQ(ZMQCallback, BackendCallback):
@@ -68,23 +77,3 @@ class LiquidationsZMQ(ZMQCallback, BackendCallback):
 
 class CandlesZMQ(ZMQCallback, BackendCallback):
     default_key = 'candles'
-
-
-class BalancesZMQ(ZMQCallback, BackendCallback):
-    default_key = 'balances'
-
-
-class PositionsZMQ(ZMQCallback, BackendCallback):
-    default_key = 'positions'
-
-
-class OrderInfoZMQ(ZMQCallback, BackendCallback):
-    default_key = 'order_info'
-
-
-class FillsZMQ(ZMQCallback, BackendCallback):
-    default_key = 'fills'
-
-
-class TransactionsZMQ(ZMQCallback, BackendCallback):
-    default_key = 'transactions'

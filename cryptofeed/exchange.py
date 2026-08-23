@@ -1,11 +1,12 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
 import logging
+from collections import defaultdict
 import os
 import time
 from datetime import datetime as dt, timezone
@@ -13,7 +14,6 @@ from decimal import Decimal
 from typing import Dict, List, Union
 
 from cryptofeed import _json as json
-from cryptofeed.defines import POSITIONS, TRANSACTIONS, BALANCES, ORDER_INFO, FILLS
 from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPAsyncConn, RestEndpoint
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol
@@ -24,6 +24,20 @@ LOG = logging.getLogger(__name__)
 
 
 class Exchange:
+    provides_checksum = False
+    provides_sequence_number = False
+    validates_sequence_number = False
+    book_delivery = 'delta'
+    _unknown_categories = defaultdict(set)
+
+    @classmethod
+    def unsupported_category(cls, field: str, value) -> None:
+        seen = Exchange._unknown_categories[cls.id]
+        if value in seen:
+            return
+        seen.add(value)
+        LOG.warning('%s: unrecognised %s %r - skipping. symbol parser needs updating', cls.id, field, value)
+
     id = NotImplemented
     websocket_endpoints = NotImplemented
     rest_endpoints = NotImplemented
@@ -34,17 +48,9 @@ class Exchange:
     candle_interval_map = NotImplemented
     allow_empty_subscriptions = False
 
-    def __init__(self, config=None, sandbox=False, subaccount=None, **kwargs):
+    def __init__(self, config=None, sandbox=False, **kwargs):
         self.config = Config(config=config)
         self.sandbox = sandbox
-        self.subaccount = subaccount
-
-        keys = self.config[self.id.lower()] if self.subaccount is None else self.config[self.id.lower()][self.subaccount]
-        self.key_id = keys.key_id
-        self.key_secret = keys.key_secret
-        self.key_passphrase = keys.key_passphrase
-        self.account_name = keys.account_name
-
         self.ignore_invalid_instruments = self.config.ignore_invalid_instruments
 
         self.normalized_symbol_mapping = None
@@ -66,10 +72,7 @@ class Exchange:
         symbols = cls.symbol_mapping()
         data = Symbols.get(cls.id)[1]
         data['symbols'] = list(symbols.keys())
-        data['channels'] = {
-            'rest': [],
-            'websocket': list(cls.websocket_channels.keys())
-        }
+        data['channels'] = {'websocket': list(cls.websocket_channels.keys())}
         return data
 
     @classmethod
@@ -84,22 +87,44 @@ class Exchange:
         """
         return ep.route('instruments')
 
+    SLOW_SYMBOL_FETCH_SECONDS = 5.0
+
     @classmethod
-    async def _fetch_symbol_data(cls, conn: HTTPAsyncConn, headers: dict = None) -> list:
+    async def _await_symbol_fetch(cls, awaitable, addr):
+        async def fetch():
+            return await awaitable
+
+        task = asyncio.create_task(fetch(), name=f'{cls.id}.symbols')
+        started = time.time()
+        try:
+            while True:
+                done, _ = await asyncio.wait({task}, timeout=cls.SLOW_SYMBOL_FETCH_SECONDS)
+                if done:
+                    elapsed = time.time() - started
+                    if elapsed >= cls.SLOW_SYMBOL_FETCH_SECONDS:
+                        LOG.warning("%s: symbol list from %s arrived after %.1fs", cls.id, addr, elapsed)
+                    return task.result()
+                LOG.warning("%s: still waiting for the symbol list from %s after %.0fs - no data delivered until symbols arrive", cls.id, addr, time.time() - started)
+        except asyncio.CancelledError:
+            task.cancel()
+            raise
+
+    @classmethod
+    async def _fetch_symbol_data(cls, conn: HTTPAsyncConn) -> list:
         data = []
         for endpoint in cls.rest_endpoints:
             addr = await cls._symbol_endpoint_prepare(endpoint, conn)
             if isinstance(addr, list):
                 LOG.debug("%s: reading symbol information from %s", cls.id, addr)
-                fetched = await asyncio.gather(*[conn.read(a, header=headers) for a in addr])
+                fetched = await cls._await_symbol_fetch(asyncio.gather(*[conn.read(a) for a in addr]), addr)
                 data.extend(json.loads(f, parse_float=Decimal) for f in fetched)
             else:
                 LOG.debug("%s: reading symbol information from %s", cls.id, addr)
-                data.append(json.loads(await conn.read(addr, header=headers), parse_float=Decimal))
+                data.append(json.loads(await cls._await_symbol_fetch(conn.read(addr), addr), parse_float=Decimal))
         return data
 
     @classmethod
-    async def load_symbols(cls, conn: HTTPAsyncConn = None, refresh=False, headers: dict = None, cache_ttl: float = None) -> Dict:
+    async def load_symbols(cls, conn: HTTPAsyncConn = None, refresh=False, cache_ttl: float = None) -> Dict:
         if Symbols.populated(cls.id) and not refresh:
             return Symbols.get(cls.id)[0]
         if not refresh and cache_ttl and cls._load_symbol_cache(cache_ttl):
@@ -109,7 +134,7 @@ class Exchange:
         if owns_conn:
             conn = HTTPAsyncConn(cls.id)
         try:
-            data = await cls._fetch_symbol_data(conn, headers=headers)
+            data = await cls._fetch_symbol_data(conn)
             syms, info = cls._parse_symbol_data(data if len(data) > 1 else data[0])
         except Exception as e:
             LOG.error("%s: Failed to parse symbol information: %s", cls.id, str(e), exc_info=True)
@@ -117,6 +142,7 @@ class Exchange:
         finally:
             if owns_conn:
                 await conn.close()
+
         Symbols.set(cls.id, syms, info)
         cls._write_symbol_cache(syms, info)
         return syms
@@ -129,7 +155,7 @@ class Exchange:
             asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(cls.load_symbols(refresh=refresh))
-        raise RuntimeError(f'{cls.id}: symbols cannot be loaded synchronously from a running event loop - use await {cls.__name__}.load_symbols()')
+        raise RuntimeError(f'{cls.id}: symbols cannot be loaded synchronously - use await {cls.__name__}.load_symbols()')
 
     @staticmethod
     def _symbol_cache_path(exchange_id: str) -> str:
@@ -165,7 +191,7 @@ class Exchange:
     def _ensure_symbol_mapping(self):
         if self.normalized_symbol_mapping is None:
             if not Symbols.populated(self.id):
-                raise RuntimeError(f'{self.id}: symbols are not loaded - they load in run(), or eagerly via await validate()')
+                raise RuntimeError(f'{self.id}: symbols not loaded')
             self._apply_symbol_mapping()
 
     @classmethod
@@ -181,10 +207,6 @@ class Exchange:
             if exch == channel:
                 return chan
         raise ValueError(f'Unable to normalize channel {cls.id}')
-
-    @classmethod
-    def is_authenticated_channel(cls, channel: str) -> bool:
-        return channel in (ORDER_INFO, FILLS, TRANSACTIONS, BALANCES, POSITIONS)
 
     def exchange_symbol_to_std_symbol(self, symbol: str) -> str:
         self._ensure_symbol_mapping()

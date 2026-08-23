@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -17,6 +17,9 @@ class NBBO(Callback):
         super(NBBO, self).__init__(callback)
 
     def _update(self, book):
+        if not len(book.book.bids) or not len(book.book.asks):
+            return None
+
         bid, size = book.book.bids.index(0)
         self.bids[book.symbol][book.exchange] = {'price': bid, 'size': size}
         ask, size = book.book.asks.index(0)
@@ -29,13 +32,13 @@ class NBBO(Callback):
 
     async def __call__(self, book, receipt_timestamp: float):
         update = self._update(book)
+        if update is None:
+            return
 
-        # only write updates when a best bid / best aks changes
+        # only write updates when a best bid / best ask changes
         if self.last_update == update:
             return
         self.last_update = update
 
         bid, ask, bid_feed, ask_feed = update
-        if bid is None:
-            return
         await self.callback(book.symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)

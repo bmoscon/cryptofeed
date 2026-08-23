@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -10,23 +10,11 @@ class MissingSequenceNumber(Exception):
     pass
 
 
-class MissingMessage(Exception):
-    pass
-
-
 class UnsupportedSymbol(Exception):
     pass
 
 
 class UnsupportedDataFeed(Exception):
-    pass
-
-
-class UnsupportedTradingOption(Exception):
-    pass
-
-
-class UnsupportedType(Exception):
     pass
 
 
@@ -42,13 +30,5 @@ class BadChecksum(Exception):
     pass
 
 
-class RestResponseError(Exception):
-    pass
-
-
 class ConnectionClosed(Exception):
-    pass
-
-
-class UnexpectedMessage(Exception):
     pass

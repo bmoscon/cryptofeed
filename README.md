@@ -23,11 +23,14 @@ Handles multiple cryptocurrency exchange data feeds and returns normalized and s
 * [Deribit](https://www.deribit.com/)
 * [Gate.io](https://www.gate.io/)
 * [Gate.io Futures](https://www.gate.io/futures_center)
+* [dYdX v4](https://dydx.trade/)
 * [Gemini](https://gemini.com/)
-* [Huobi](https://www.hbg.com/)
-* Huobi Swap (Coin-M and USDT-M)
+* [Hyperliquid](https://hyperliquid.xyz/)
+* [HTX](https://www.htx.com/) (formerly Huobi)
+* HTX Swap (Coin-M and USDT-M)
 * [Independent Reserve](https://www.independentreserve.com/) 
 * [Kraken](https://www.kraken.com/)
+* [MEXC](https://www.mexc.com/) (spot)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)
 * [OKX](https://www.okx.com/)
@@ -46,8 +49,13 @@ from cryptofeed import FeedHandler
 
 fh = FeedHandler()
 
-# ticker, trade, and book are user defined functions that
-# will be called when ticker, trade and book updates are received
+# ticker, trade and book are user defined coroutine functions, each taking the
+# normalized object and the timestamp cryptofeed received the message at:
+#
+#     async def trade(t, receipt_timestamp):
+#         print(f'{t.exchange} {t.symbol} {t.side} {t.amount} @ {t.price}')
+#
+# a callback must be async - wrap a synchronous one in cryptofeed.callback.ExecutorCallback
 ticker_cb = {TICKER: ticker}
 trade_cb = {TRADES: trade}
 gemini_cb = {TRADES: trade, L2_BOOK: book}
@@ -61,22 +69,16 @@ fh.add_feed(Gemini(symbols=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], c
 fh.run()
 ```
 
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage.
-
-
-For an example of a containerized application using cryptofeed to store data to a backend, please see [Cryptostore](https://github.com/bmoscon/cryptostore).
-
-
 ## National Best Bid/Offer (NBBO)
 
-Cryptofeed also provides a synthetic [NBBO](examples/demo_nbbo.py) (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
+Cryptofeed also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
 ```python
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase, Gemini, Kraken
 
 
-def nbbo_update(symbol, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
+async def nbbo_update(symbol, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
     print(f'Pair: {symbol} Bid Price: {bid:.2f} Bid Size: {bid_size:.6f} Bid Feed: {bid_feed} Ask Price: {ask:.2f} Ask Size: {ask_size:.6f} Ask Feed: {ask_feed}')
 
 
@@ -88,9 +90,8 @@ def main():
 
 ## Supported Channels
 
-Cryptofeed supports the following channels from exchanges:
-
-### Market Data Channels (Public)
+Cryptofeed supports the following channels from exchanges. Every one of them is public market data -
+cryptofeed handles no credentials and signs nothing.
 
 * L1_BOOK - Top of book
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
@@ -103,12 +104,9 @@ Cryptofeed supports the following channels from exchanges:
 * INDEX
 * CANDLES - Candlestick / K-Line data.
 
-### Authenticated Data Channels
-
-* ORDER_INFO - Order status updates
-* TRANSACTIONS - Real-time updates on account deposits and withdrawals
-* BALANCES - Updates on wallet funds
-* FILLS - User's executed trades
+The authenticated channels - ORDER_INFO, FILLS, BALANCES, POSITIONS and TRANSACTIONS - are gone as of
+3.0. They worked; they were removed because execution, user data streams and credentials belong to the
+cryptotrade project, not to a market data library. The 2.5 branch is the last one that serves them.
 
 
 ## Backends
@@ -116,7 +114,7 @@ Cryptofeed supports the following channels from exchanges:
 Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces.
 
 Supported Backends:
-* Redis (Streams and Sorted Sets)
+* Redis (Sorted Sets, Streams and Keys)
 * ZeroMQ
 * UDP Sockets
 * TCP Sockets
@@ -124,7 +122,6 @@ Supported Backends:
 * [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
-* RabbitMQ
 * PostgreSQL
 * [QuestDB](https://questdb.io/)
 
@@ -149,11 +146,8 @@ Alternatively, you can install from source in editable mode with pip:
 
     pip install -e .
 
-See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
 ## Performance
-
-#### 3.0.0 performance baseline
 
 Measured on Python 3.14.6 based on throughput over real recorded exchange traffic.
 
@@ -162,12 +156,11 @@ Measured on Python 3.14.6 based on throughput over real recorded exchange traffi
 | `Trade` construct / `to_dict` / `from_dict` | 102 ns / 214 ns / 277 ns |
 | `Ticker` / `Candle` / `Funding` construct | 70 ns / 118 ns / 141 ns |
 | Book single level update / delete / top-of-book read | 89 ns / 124 ns / 140 ns |
-| Book `to_dict`, 10 / 100 levels per side | 2.4 us / 22.2 us |
-| Checksum, Kraken / OKX format (200 levels) | 2.0 us / 6.1 us |
+| Book `to_dict`, 10 / 100 levels per side | 2.4 µs / 22.2 µs |
+| Checksum, Kraken / OKX format (200 levels) | 2.0 µs / 6.1 µs |
 | JSON decode with `Decimal` (msgspec / stdlib fallback) | 1.39M / 0.60M msg/s |
 | JSON encode to str / bytes | 4.65M / 5.25M msg/s |
 | Message handler, Kraken / Bybit / KuCoin / Kraken Futures | 161k / 134k / 122k / ~100k frames/s |
-| Full corpus replay (Kraken + Bybit + Coinbase) | 72k msg/s, 137 MB peak RSS |
 
 
 ## Future Work

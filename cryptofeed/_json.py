@@ -13,7 +13,6 @@ try:
     BACKEND = 'msgspec'
     _decoder = _msgspec_json.Decoder()
     _decimal_decoder = _msgspec_json.Decoder(float_hook=Decimal)
-    # decimal_format='number' - msgspec defaults to encoding Decimal as a JSON string
     _encoder = _msgspec_json.Encoder(decimal_format='number')
 
     def loads(data, parse_float=None):
@@ -30,7 +29,6 @@ try:
         return _encoder.encode(obj)
 
 except ImportError:
-    # fallback
     import json as _stdlib_json
 
     BACKEND = 'json'

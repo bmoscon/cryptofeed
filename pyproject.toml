@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryptofeed"
-version = "2.5.0"
+version = "3.0.0"
 description = "Cryptocurrency Exchange Websocket Data Feed Handler"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
@@ -22,7 +22,7 @@ keywords = [
     "Trades", "Tickers", "BBO", "Funding", "Open Interest", "Liquidation", "Order book", "Bid", "Ask",
     "Binance", "Binance Delivery", "Binance Futures", "Binance US", "Bitfinex", "bitFlyer", "Bitget",
     "Bithumb", "Bitstamp", "Bybit", "Coinbase", "Crypto.com", "Deribit", "Gate.io", "Gate.io Futures",
-    "Gemini", "Huobi", "Huobi Swap", "Independent Reserve", "Kraken", "Kraken Futures", "KuCoin",
+    "dYdX", "Gemini", "Hyperliquid", "HTX", "HTX Swap", "Independent Reserve", "Kraken", "Kraken Futures", "KuCoin", "MEXC",
     "OKX", "Phemex", "Poloniex", "Upbit"
 ]
 classifiers = [
@@ -33,26 +33,27 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Framework :: AsyncIO",
+    # The supported platforms, stated in the metadata rather than only in prose. Without these PyPI
+    # says nothing at all about where this package runs, which is the same as claiming everywhere.
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "requests>=2.18.4",
     "websockets>=14.1",
     "pyyaml",
-    "aiohttp>=3.11.6",
+    "aiohttp>=3.14.3",  # 3.13.x cannot decode a Content-Encoding: zstd response (Poloniex sends one)
     "aiofile>=2.0.0",
     "msgspec>=0.19.0",
     "uvloop ; platform_system!='Windows'",
-    "order_book>=0.6.0",
+    "order_book>=1.0.2",  # 1.0.2 computes the Bitfinex book checksums, the raw (L3) book's included
     "aiodns>=1.1"
 ]
 
 [project.optional-dependencies]
-capture = ["zstandard ; python_version < '3.14'"]
 kafka = ["aiokafka>=0.7.0"]
 mongo = ["pymongo>=4.9"]
 postgres = ["asyncpg"]
-rabbit = ["aio_pika", "pika"]
 redis = ["hiredis", "redis>=4.5.1"]
 zmq = ["pyzmq"]
 all = [
@@ -60,11 +61,15 @@ all = [
     "pymongo>=4.9",
     "asyncpg",
     "aio_pika",
-    "pika",
     "hiredis",
     "redis>=4.5.1",
     "pyzmq",
+    "zstandard ; python_version < '3.14'",
 ]
+
+[project.scripts]
+cryptofeed-validate = "cryptofeed.validate.cli:main"
+cryptofeed-arbiter = "cryptofeed.arbiter.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/bmoscon/cryptofeed"
@@ -89,7 +94,10 @@ dev = [
 include = ["cryptofeed*"]
 
 [tool.setuptools.package-data]
-cryptofeed = ["*.pyx"]
+# py.typed is PEP 561: without it every downstream mypy treats the package as untyped, whatever
+# annotations it carries. types.pyi is the stub for the Cython extension, whose .pyx setuptools
+# ships but whose types are otherwise opaque to a type checker.
+cryptofeed = ["*.pyx", "py.typed", "types.pyi"]
 
 # For a debug build that keeps the runtime assertions, remove the CYTHON_WITHOUT_ASSERTIONS macro and rebuild
 [[tool.setuptools.ext-modules]]
@@ -99,11 +107,21 @@ define-macros = [["CYTHON_WITHOUT_ASSERTIONS", ""]]
 
 [tool.cibuildwheel]
 build = "cp312-* cp313-* cp314-*"
-skip = "*-musllinux*"
+# free-threaded builds are deliberately not produced: cryptofeed.types does not declare
+# Py_MOD_GIL_NOT_USED, and asserting thread safety would mean auditing it together with the
+# external order_book extension. Standard CPython only for 3.0 (decision D10). cp314t-* is
+# excluded by the build selector above; this makes the intent explicit rather than incidental.
+# musllinux is not built: the supported platforms are glibc Linux (x86_64 and aarch64) and macOS on
+# Apple silicon. An Alpine wheel would be the worst of both - it installs, and then its hard
+# `order_book` dependency has no musl wheel either and has to compile on an image that characteristically
+# has no compiler. Anyone who wants musl can build from the sdist, which works.
+skip = "*t-* *musllinux*"
 test-command = "python -c \"from cryptofeed import FeedHandler; from cryptofeed.types import COMPILED_WITH_ASSERTIONS; assert COMPILED_WITH_ASSERTIONS is False\""
 
 [tool.cibuildwheel.macos]
-archs = ["arm64", "x86_64"]
+# arm64 only. Intel Macs are not a supported platform, and `order_book` publishes no macosx_x86_64
+# wheel either, so an Intel wheel would install and then need a toolchain to finish.
+archs = ["arm64"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "ASYNC"]

@@ -1,13 +1,13 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+from contextlib import suppress
 import asyncio
 import logging
-from textwrap import wrap
 
 from cryptofeed import _json as json
 
@@ -17,29 +17,37 @@ from cryptofeed.backends.backend import BackendQueue, BackendBookCallback, Backe
 LOG = logging.getLogger(__name__)
 
 
-class UDPProtocol:
-    def __init__(self, loop):
-        self.loop = loop
+class UDPProtocol(asyncio.DatagramProtocol):
+    def __init__(self, backend):
+        self.backend = backend
         self.transport = None
 
     def connection_made(self, transport):
         self.transport = transport
 
-    def datagram_received(self, data, addr):
-        pass
-
     def error_received(self, exc):
         LOG.error('UDP backend received exception: %s', exc)
-        self.transport.close()
-        self.transport = None
+        self._drop()
 
     def connection_lost(self, exc):
-        LOG.error('UDP backend connection lost: %s', exc)
-        self.transport.close()
-        self.transport = None
+        if exc:
+            LOG.error('UDP backend connection lost: %s', exc)
+        self._drop()
+
+    def _drop(self):
+        transport, self.transport = self.transport, None
+        if transport is not None:
+            transport.close()
+        if self.backend.conn is transport:
+            self.backend.conn = None
+            self.backend.protocol = None
 
 
 class SocketCallback(BackendQueue):
+    hand_off = True
+    retryable_exceptions = (OSError,)
+    MIN_MTU = 64
+
     def __init__(self, addr: str, port=None, none_to=None, numeric_type=float, key=None, mtu=1400, **kwargs):
         """
         Common parent class for all socket callbacks
@@ -58,9 +66,12 @@ class SocketCallback(BackendQueue):
         mtu: int
           MTU for UDP message size. Should be slightly less than actual MTU for overhead
         """
+        super().__init__(**kwargs)
         self.conn_type = addr[:6]
         if self.conn_type not in {'tcp://', 'uds://', 'udp://'}:
             raise ValueError("Invalid protocol specified for SocketCallback")
+        if mtu < self.MIN_MTU:
+            raise ValueError(f'mtu must be at least {self.MIN_MTU} bytes, not {mtu}')
         self.conn = None
         self.protocol = None
         self.addr = addr[6:]
@@ -69,37 +80,70 @@ class SocketCallback(BackendQueue):
         self.numeric_type = numeric_type
         self.none_to = none_to
         self.key = key if key else self.default_key
-        self.running = True
-
-    async def writer(self):
-        while self.running:
-            await self.connect()
-            async with self.read_queue() as updates:
-                for update in updates:
-                    data = {'type': self.key, 'data': update}
-                    data = json.dumps(data)
-                    if self.conn_type == 'udp://':
-                        if len(data) > self.mtu:
-                            chunks = wrap(data, self.mtu)
-                            for chunk in chunks:
-                                msg = json.dumps({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}).encode()
-                                self.conn.sendto(msg)
-                        else:
-                            self.conn.sendto(data.encode())
-                    else:
-                        # newline delimited
-                        self.conn.write((data + '\n').encode())
 
     async def connect(self):
-        if not self.conn:
+        if self.conn is not None and self.conn.is_closing():
+            await self.close()
+        if self.conn is None:
             if self.conn_type == 'udp://':
                 loop = asyncio.get_running_loop()
                 self.conn, self.protocol = await loop.create_datagram_endpoint(
-                    lambda: UDPProtocol(loop), remote_addr=(self.addr, self.port))
+                    lambda: UDPProtocol(self), remote_addr=(self.addr, self.port))
             elif self.conn_type == 'tcp://':
                 _, self.conn = await asyncio.open_connection(host=self.addr, port=self.port)
             elif self.conn_type == 'uds://':
                 _, self.conn = await asyncio.open_unix_connection(path=self.addr)
+
+    def _datagrams(self, data: str) -> list:
+        raw = data.encode()
+        if len(raw) <= self.mtu:
+            return [raw]
+
+        budget = self.mtu - len(json.dumpb({'type': 'chunked', 'chunks': len(data), 'data': ''}))
+        chunks = []
+        pos = 0
+        while pos < len(data):
+            width = budget
+            while width > 1:
+                encoded = len(json.dumpb(data[pos:pos + width])) - 2   # minus the quotes
+                if encoded <= budget:
+                    break
+                width = max(1, int(width * budget / encoded))
+            chunks.append(data[pos:pos + width])
+            pos += width
+
+        return [json.dumpb({'type': 'chunked', 'chunks': len(chunks), 'data': chunk}) for chunk in chunks]
+
+    async def write_batch(self, batch: list):
+        if self.conn_type == 'udp://':
+            conn = self.conn
+            if conn is None:
+                raise ConnectionError(f'{self.addr}: no UDP transport')
+            for update in batch:
+                for datagram in self._datagrams(json.dumps({'type': self.key, 'data': update})):
+                    conn.sendto(datagram)
+            if self.conn is None:
+                raise ConnectionError(f'{self.addr}: UDP transport closed mid-batch')
+            return
+
+        payload = ''.join(json.dumps({'type': self.key, 'data': update}) + '\n' for update in batch)
+        try:
+            self.conn.write(payload.encode())
+            await self.conn.drain()
+        except OSError:
+            await self.close()
+            raise
+
+    async def close(self):
+        conn, self.conn = self.conn, None
+        self.protocol = None
+        if conn is None:
+            return
+
+        with suppress(Exception):
+            conn.close()
+            if self.conn_type != 'udp://':
+                await conn.wait_closed()
 
 
 class TradeSocket(SocketCallback, BackendCallback):
@@ -134,19 +178,3 @@ class LiquidationsSocket(SocketCallback, BackendCallback):
 
 class CandlesSocket(SocketCallback, BackendCallback):
     default_key = 'candles'
-
-
-class OrderInfoSocket(SocketCallback, BackendCallback):
-    default_key = 'order_info'
-
-
-class TransactionsSocket(SocketCallback, BackendCallback):
-    default_key = 'transactions'
-
-
-class BalancesSocket(SocketCallback, BackendCallback):
-    default_key = 'balances'
-
-
-class FillsSocket(SocketCallback, BackendCallback):
-    default_key = 'fills'

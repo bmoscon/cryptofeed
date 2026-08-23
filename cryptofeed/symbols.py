@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -98,11 +98,6 @@ class _Symbols:
     def clear(self):
         self.data = {}
 
-    def load_all(self):
-        from cryptofeed.exchanges import EXCHANGE_MAP
-
-        for _, exchange in EXCHANGE_MAP.items():
-            exchange.symbols(refresh=True)
 
     def set(self, exchange: str, normalized: dict, exchange_info: dict):
         self.data[exchange] = {}
