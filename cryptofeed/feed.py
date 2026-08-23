@@ -20,7 +20,7 @@ from cryptofeed.backends.backend import BackendQueue, RetryPolicy
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
-from cryptofeed.defines import ASK, BID, CANDLES, FUNDING, INDEX, L1_BOOK, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES
+from cryptofeed.defines import CANDLES, FUNDING, INDEX, L1_BOOK, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES
 from cryptofeed.exceptions import BidAskOverlapping
 from cryptofeed.exchange import Exchange
 from cryptofeed.types import OrderBook
@@ -468,7 +468,7 @@ class Feed(Exchange):
         raise NotImplementedError(f'{self.id} does not fetch a book snapshot over REST')
 
 
-    # some exchanges **expect** occasional crossed books and their docs say to ignore this for 
+    # some exchanges **expect** occasional crossed books and their docs say to ignore this for
     # a few updates until it self corrects (scary)
     CROSSED_BOOK_TOLERANCE = 3
     CROSSED_BOOKS_ARE_DOCUMENTED = False

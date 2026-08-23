@@ -145,7 +145,7 @@ class MEXCSpot(Feed):
                                             symbol,
                                             Decimal(book[1].decode()),
                                             Decimal(book[2].decode()),
-                                            Decimal(book[3].decode()), 
+                                            Decimal(book[3].decode()),
                                             Decimal(book[4].decode()),
                                             self.timestamp_normalize(book[6]) if 6 in book else timestamp,
                                             raw=None),

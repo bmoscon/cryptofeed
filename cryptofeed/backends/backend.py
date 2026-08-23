@@ -74,12 +74,12 @@ class BackendQueue:
     BLOCK_POLL = 0.25
     FAILURE_LEVEL = logging.ERROR
 
-    def __init__(self, *, 
-                 max_depth: Optional[int] = None, 
+    def __init__(self, *,
+                 max_depth: Optional[int] = None,
                  overflow: Optional[Literal['block', 'drop_oldest', 'drop_new']] = None,
-                 batch_max: Optional[int] = None, 
-                 batch_interval: Optional[float] = None, 
-                 retry: Optional[RetryPolicy] = None, 
+                 batch_max: Optional[int] = None,
+                 batch_interval: Optional[float] = None,
+                 retry: Optional[RetryPolicy] = None,
                  flush_deadline: Optional[float] = None):
         if overflow is not None and overflow not in ('block', 'drop_oldest', 'drop_new'):
             raise ValueError(f"overflow must be 'block', 'drop_oldest' or 'drop_new', not {overflow!r}")
