@@ -192,18 +192,35 @@ class MEXCSpot(Feed):
                 delta[side].append((price, size))
         return delta, {'fromVersion': from_version, 'toVersion': to_version, 'sendTime': event_time}
 
+    def _resync(self, symbol: str):
+        self._l2_book.pop(symbol, None)
+        self.last_update_id.pop(symbol, None)
+        self._snapshot_time.pop(symbol, None)
+        self._buffered[symbol] = []
+
     async def _book(self, symbol: str, payload: bytes, timestamp: float):
         if symbol not in self._l2_book:
             self._buffered[symbol].append((payload, timestamp))
             if len(self._buffered[symbol]) == 1:
-                await self._snapshot(symbol)
+                try:
+                    await self._snapshot(symbol)
+                except MissingSequenceNumber as e:
+                    LOG.warning('%s: %s missing sequence number for %s', self.id, e, symbol)
+                    self._resync(symbol)
+                    return
                 stamped = self._snapshot_time.get(symbol)
                 await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp,
                                          sequence_number=self.last_update_id.get(symbol),
                                          timestamp=self.timestamp_normalize(stamped) if stamped else None)
             return
 
-        applied = self._apply(symbol, payload, timestamp)
+        try:
+            applied = self._apply(symbol, payload, timestamp)
+        except MissingSequenceNumber as e:
+            LOG.warning('%s: %s missing sequence number for %s', self.id, e, symbol)
+            self._resync(symbol)
+            await self._book(symbol, payload, timestamp)
+            return
         if applied is not None:
             delta, raw = applied
             await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, raw=raw,

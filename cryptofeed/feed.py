@@ -198,7 +198,7 @@ class Feed(Exchange):
 
         if self._init_symbols and self._init_channels:
             symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in self._init_symbols]
-            channels = list(set([self.std_channel_to_exchange(chan) for chan in self._init_channels]))
+            channels = sorted(set([self.std_channel_to_exchange(chan) for chan in self._init_channels]))
             self.subscription = {chan: symbols for chan in channels}
 
         self._subscription_resolved()
@@ -228,6 +228,7 @@ class Feed(Exchange):
 
         self.connection_handlers = []
         for conn, sub, handler in self.connect():
+            conn = self._wrap_connection(conn)
             self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error, start_delay=self.start_delay, keepalive=self.keepalive if self.keepalive_interval else None, keepalive_interval=self.keepalive_interval))
         if not self.connection_handlers and not self.allow_empty_subscriptions:
             LOG.warning('%s: empty subscription (subscription: %r)', self.id, dict(self.subscription))
@@ -359,6 +360,9 @@ class Feed(Exchange):
         support their polled REST endpoints.
         """
         return []
+
+    def _wrap_connection(self, conn: AsyncConnection) -> AsyncConnection:
+        return conn
 
     def connect(self) -> List[Tuple[AsyncConnection, Callable[[None], None], Callable[[str, float], None]]]:
         """

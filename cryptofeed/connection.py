@@ -44,13 +44,16 @@ def connection_stats(exchange: str = None, since: float = None) -> dict:
     for conn in list(_LIVE):
         if since is not None and conn.created < since:
             continue
-        if exchange is not None and conn.id.split('.', 1)[0] != exchange:
+        # prefix match, exchange ids can contain periods
+        if exchange is not None and not conn.id.startswith(f'{exchange}.'):
             continue
         out[conn.id] = conn.stats
     return dict(sorted(out.items()))
 
 
 class Connection:
+    raw_data_callback = None
+
     async def read(self) -> bytes:
         raise NotImplementedError
 
@@ -132,6 +135,9 @@ class AsyncConnection(Connection):
             await conn.close()
             LOG.info('%s: closed connection %r', self.id, conn.__class__.__name__)
 
+        if self.raw_data_callback is not None:
+            await self.raw_data_callback.on_close(self)
+
 
 class HTTPAsyncConn(AsyncConnection):
     def __init__(self, conn_id: str, proxy: StrOrURL = None):
@@ -181,6 +187,8 @@ class HTTPAsyncConn(AsyncConnection):
                     await asyncio.sleep(retry_delay)
                     continue
                 self._handle_error(response, data)
+                if self.raw_data_callback is not None:
+                    await self.raw_data_callback.on_http(self, address, params, header, data, self.last_message)
                 return data
 
     async def write(self, address: str, msg: str, header=None, retry_count=0, retry_delay=60) -> str:
@@ -199,6 +207,8 @@ class HTTPAsyncConn(AsyncConnection):
                     await asyncio.sleep(retry_delay)
                     continue
                 self._handle_error(response, data)
+                if self.raw_data_callback is not None:
+                    await self.raw_data_callback.on_http_post(self, address, msg, data, time.time())
                 return data
 
     async def delete(self, address: str, header=None, retry_count=0, retry_delay=60) -> str:
@@ -222,7 +232,7 @@ class HTTPAsyncConn(AsyncConnection):
 
 class HTTPPoll(HTTPAsyncConn):
     def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1, proxy: StrOrURL = None):
-        super().__init__(f'{conn_id}.http.{self.conn_count}', proxy)
+        super().__init__(conn_id, proxy)
         if isinstance(address, str):
             address = [address]
         self.address = address
@@ -243,6 +253,8 @@ class HTTPPoll(HTTPAsyncConn):
                 self.last_message = time.time()
                 if response.status != 429:
                     response.raise_for_status()
+                    if self.raw_data_callback is not None:
+                        await self.raw_data_callback.on_http_poll(self, address, header, data, self.last_message)
                     return data
             LOG.warning("%s: encountered a rate limit for address %s, retrying in %f seconds", self.id, address, self.delay)
             await asyncio.sleep(self.delay)
@@ -281,6 +293,8 @@ class WSAsyncConn(AsyncConnection):
         else:
             LOG.debug('%s: connecting to %s', self.id, self.address)
             self.conn = await connect(self.address, **self.ws_kwargs)
+            if self.raw_data_callback is not None:
+                await self.raw_data_callback.on_ws_open(self, time.time())
         self._reset_counters()
 
     async def read(self) -> AsyncIterable:
@@ -290,6 +304,8 @@ class WSAsyncConn(AsyncConnection):
         async for data in self.conn:
             self.received += 1
             self.last_message = time.time()
+            if self.raw_data_callback is not None:
+                await self.raw_data_callback.on_ws_message(self, data, self.last_message)
             yield data
 
     async def write(self, data: str):
@@ -298,6 +314,8 @@ class WSAsyncConn(AsyncConnection):
 
         await self.conn.send(data)
         self.sent += 1
+        if self.raw_data_callback is not None:
+            await self.raw_data_callback.on_ws_send(self, data, time.time())
 
 
 @dataclass

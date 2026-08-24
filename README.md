@@ -120,6 +120,22 @@ Supported Backends:
 * [QuestDB](https://questdb.io/)
 
 
+## Data Capture and Replay
+
+Cryptofeed can record data from data feeds to standard pcap files for later replay
+
+```python
+from cryptofeed import FeedHandler
+
+# `record` is a pcap file path or a directory
+fh = FeedHandler(record='sample_data/')
+fh.add_feed('COINBASE', symbols=['BTC-USD'], channels=[TRADES, L2_BOOK], callbacks=...)
+fh.run()
+```
+
+[examples/record.py](examples/record.py) wraps this into a small recording tool. The pcaps are zstandaard compressed by default. Wireshark and tshark open these files natively and playback decompresses transparently. Metadata is stored in `.meta.json`.
+
+
 ## Installation
 
 **Note:** cryptofeed requires Python 3.12+

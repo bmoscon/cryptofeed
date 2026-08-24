@@ -25,7 +25,7 @@ LOG = logging.getLogger(__name__)
 
 
 class FeedHandler:
-    def __init__(self, config=None, on_feed_error='raise'):
+    def __init__(self, config=None, on_feed_error='raise', record=None):
         """
         config: str, dict or None
             if str, absolute path (including file name) of the config file. If not provided, config can also be a dictionary of values, or
@@ -33,9 +33,19 @@ class FeedHandler:
         on_feed_error: 'raise' or 'remove_feed'
             'raise', default - a feed that fails permanently stops the handler, cancelling other feeds
             'remove_feed' - the failed feed is flushed and removed, other feeds keep running.
+        record: str, PcapRecorder or None
+            record all exchange traffic (websocket and HTTP) to a pcap
         """
         if on_feed_error not in ('raise', 'remove_feed'):
             raise ValueError("on_feed_error must be 'raise' or 'remove_feed'")
+        self.recorder = None
+        if record is not None:
+            from cryptofeed.capture import PcapRecorder
+            from cryptofeed.connection import Connection
+            if Connection.raw_data_callback is not None:
+                raise ValueError('only one recorder can be active per process')
+            self.recorder = record if isinstance(record, PcapRecorder) else PcapRecorder(record)
+            Connection.raw_data_callback = self.recorder
         self.feeds = []
         self.removed_feeds = []
         self._feed_keys = []
@@ -86,6 +96,8 @@ class FeedHandler:
             self.feeds.append(feed)
 
         self._feed_key(self.feeds[-1])
+        if self.recorder is not None:
+            self.recorder.register_feed(self.feeds[-1])
         if self._tg is not None:
             self._tg.create_task(self._run_feed(self.feeds[-1]), name=f'feed.{self.feeds[-1].id}')
 
@@ -146,6 +158,10 @@ class FeedHandler:
             self._main_task = None
             if install_signal_handlers:
                 self._remove_signal_handlers(loop)
+            if self.recorder is not None:
+                from cryptofeed.connection import Connection
+                Connection.raw_data_callback = None
+                await self.recorder.aclose()
             LOG.info('FH: leaving run_async()')
 
     def request_stop(self):

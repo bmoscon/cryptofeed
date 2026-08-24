@@ -31,6 +31,8 @@ def _chunk(items: list, n: int):
 class BinanceBase(Feed):
     provides_sequence_number = True
     DEFAULT_SNAPSHOT_DEPTH = 1000
+    SNAPSHOT_RETRIES = 5
+    SNAPSHOT_RETRY_DELAY = 15
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
     websocket_channels = {
@@ -321,7 +323,7 @@ class BinanceBase(Feed):
         return book
 
     async def _snapshot(self, pair: str) -> None:
-        response = await self.http_conn.read(self._snapshot_url(pair))
+        response = await self.http_conn.read(self._snapshot_url(pair), retry_count=self.SNAPSHOT_RETRIES, retry_delay=self.SNAPSHOT_RETRY_DELAY)
         std_pair = self.exchange_symbol_to_std_symbol(pair)
         book = self._parse_snapshot(std_pair, response)
 

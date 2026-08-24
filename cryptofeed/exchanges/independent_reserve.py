@@ -18,7 +18,6 @@ from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, Websock
 from cryptofeed.defines import BID, BUY, ASK, INDEPENDENT_RESERVE, L3_BOOK, SELL, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
-from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.types import Trade, OrderBook
 
 
@@ -129,7 +128,10 @@ class IndependentReserve(Feed):
                 quote = symbol.split('-')[-1]
                 instrument = self.exchange_symbol_to_std_symbol(f"{base}-{quote}")
                 if instrument in self._sequence_no and self._sequence_no[instrument] + 1 != seq_no:
-                    raise MissingSequenceNumber
+                    # clear just the bad book vs raising missingSeq exception
+                    LOG.warning("%s: %s missing sequence number (%d - %d) - resyncing from snapshot", self.id, instrument, self._sequence_no[instrument], seq_no)
+                    self._l3_book.pop(instrument, None)
+                    self._order_ids[instrument].clear()
                 self._sequence_no[instrument] = seq_no
 
                 if instrument not in self._l3_book:

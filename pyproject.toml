@@ -46,7 +46,8 @@ dependencies = [
     "msgspec>=0.19.0",
     "uvloop ; platform_system!='Windows'",
     "order_book>=1.0.2",  # 1.0.2 computes the Bitfinex book checksums, the raw (L3) book's included
-    "aiodns>=1.1"
+    "aiodns>=1.1",
+    "zstandard>=0.23 ; python_version<'3.14'"  # capture compression; 3.14+ uses stdlib compression.zstd
 ]
 
 [project.optional-dependencies]

@@ -335,6 +335,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "uvloop", marker = "sys_platform != 'win32'" },
     { name = "websockets" },
+    { name = "zstandard", marker = "python_full_version < '3.14'" },
 ]
 
 [package.optional-dependencies]
@@ -400,6 +401,7 @@ requires-dist = [
     { name = "redis", marker = "extra == 'redis'", specifier = ">=4.5.1" },
     { name = "uvloop", marker = "sys_platform != 'win32'" },
     { name = "websockets", specifier = ">=14.1" },
+    { name = "zstandard", marker = "python_full_version < '3.14'", specifier = ">=0.23" },
     { name = "zstandard", marker = "python_full_version < '3.14' and extra == 'all'" },
 ]
 provides-extras = ["kafka", "mongo", "postgres", "redis", "zmq", "all"]

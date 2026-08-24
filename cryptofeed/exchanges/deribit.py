@@ -264,30 +264,36 @@ class Deribit(Feed):
         if pair not in self._l2_book:
             return
 
-        if msg['params']['data']['prev_change_id'] != self.seq_no[pair]:
+        prev_change_id = msg['params']['data']['prev_change_id']
+        change_id = msg['params']['data']['change_id']
+        if prev_change_id != self.seq_no[pair]:
+            if change_id == self.seq_no[pair]:
+                # duplicate update, skip vs raising
+                return
             LOG.warning("%s: Missing sequence number detected for %s", self.id, pair)
-            LOG.warning("%s: Requesting book snapshot", self.id)
             raise MissingSequenceNumber
 
-        self.seq_no[pair] = msg['params']['data']['change_id']
+        self.seq_no[pair] = change_id
 
         delta = {BID: [], ASK: []}
 
+        # skip dels on missing levels
         for action, price, amount in msg["params"]["data"]["bids"]:
             if action != "delete":
                 self._l2_book[pair].book.bids[price] = Decimal(amount)
                 delta[BID].append((Decimal(price), Decimal(amount)))
-            else:
+            elif price in self._l2_book[pair].book.bids:
                 del self._l2_book[pair].book.bids[price]
                 delta[BID].append((Decimal(price), Decimal(amount)))
 
         for action, price, amount in msg["params"]["data"]["asks"]:
             if action != "delete":
-                self._l2_book[pair].book.asks[price] = amount
+                self._l2_book[pair].book.asks[price] = Decimal(amount)
                 delta[ASK].append((Decimal(price), Decimal(amount)))
-            else:
+            elif price in self._l2_book[pair].book.asks:
                 del self._l2_book[pair].book.asks[price]
                 delta[ASK].append((Decimal(price), Decimal(amount)))
+
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg, delta=delta, sequence_number=msg['params']['data']['change_id'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):

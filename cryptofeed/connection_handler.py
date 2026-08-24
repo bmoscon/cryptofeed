@@ -144,10 +144,13 @@ class ConnectionHandler:
             if not self.running:
                 return
             if self.log_on_error:
-                if connection.uuid in {HTX, HTX_SWAP}:
-                    message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
-                elif connection.uuid in {OKX}:
-                    message = zlib.decompress(message, -15)
+                # uuid is the full conn id, i.e. COINBASE.ws.1
+                if isinstance(message, bytes):
+                    with suppress(Exception):
+                        if connection.uuid.startswith((f'{HTX}.', f'{HTX_SWAP}.')):
+                            message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
+                        elif connection.uuid.startswith(f'{OKX}.'):
+                            message = zlib.decompress(message, -15)
                 LOG.error("%s: error handling message %s", connection.uuid, message)
             # exception will be logged with traceback when connection handler
             # retries the connection
