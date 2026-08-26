@@ -29,6 +29,7 @@ jobs:
           uv venv /tmp/verify
           VIRTUAL_ENV=/tmp/verify uv pip install dist/*.whl
       - name: Verify the compiled extension
+        working-directory: /tmp
         run: |
           /tmp/verify/bin/python -c "
           from cryptofeed import FeedHandler
