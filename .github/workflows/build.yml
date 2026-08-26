@@ -1,0 +1,59 @@
+name: build
+
+on: [push, pull_request]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            /*
+            !/sample_data
+          sparse-checkout-cone-mode: false
+          filter: blob:none
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: '3.13'
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Install the wheel into a clean environment
+        run: |
+          uv venv /tmp/verify
+          VIRTUAL_ENV=/tmp/verify uv pip install dist/*.whl
+      - name: Verify the compiled extension
+        run: |
+          /tmp/verify/bin/python -c "
+          from cryptofeed import FeedHandler
+          from cryptofeed.types import COMPILED_WITH_ASSERTIONS
+          assert COMPILED_WITH_ASSERTIONS is False, 'release build must not carry the runtime assertions'
+          "
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  playback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13', '3.14']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: uv sync
+      - name: Replay the recorded captures
+        run: uv run pytest -m playback

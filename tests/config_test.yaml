@@ -1,0 +1,7 @@
+# test suite cfg file
+log:
+    filename: feedhandler.log
+    level: WARNING
+
+uvloop: True
+ignore_invalid_instruments: False

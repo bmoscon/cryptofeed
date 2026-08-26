@@ -123,3 +123,16 @@ ignore = ["E501", "F403", "F405"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: unit tests",
+    "playback: replay recorded exchange data through the message handlers",
+    "backend: requires backend services",
+    "live: hits exchange endpoints",
+    "bench: performance tests and benchmarks",
+]
+addopts = "-m 'not live'"
+asyncio_mode = "auto"
+# a replay that stalls should fail, not hang the run
+timeout = 600
