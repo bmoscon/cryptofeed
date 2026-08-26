@@ -9,7 +9,7 @@ import os
 from cryptofeed.defines import *
 from cryptofeed.capture import Replayer, playback
 from cryptofeed.exchanges import EXCHANGE_MAP
-from tests.util import CONFIG, ROOT, capture_path, read_metadata
+from tests.util import CONFIG, capture_path, read_metadata
 
 import pytest
 
