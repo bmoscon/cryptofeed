@@ -214,7 +214,7 @@ class BackendQueue:
 
     def _count_overflow_drop(self):
         if self._dropped_overflow == 0:
-            LOG.warning('%s: queue full (max_depth=%d) - dropping data', type(self).__name__, self.max_depth, self.overflow)
+            LOG.warning('%s: queue full (max_depth=%d, overflow=%s) - dropping data', type(self).__name__, self.max_depth, self.overflow)
         self._dropped_overflow += 1
 
     async def writer(self):
@@ -238,8 +238,11 @@ class BackendQueue:
                 self._dropped_failed += abandoned
                 LOG.warning('%s: writer stopped with %d message(s) undelivered - counted as dropped',
                             type(self).__name__, abandoned)
-            with suppress(Exception):
+            try:
                 await self.close()
+            except Exception as e:
+                self._last_error = f'{type(e).__name__}: {e}'
+                LOG.exception('%s: close() failed - data not yet flushed may be lost', type(self).__name__)
 
     async def _next_batch(self) -> list:
         first = await self.queue.get()
