@@ -1,0 +1,142 @@
+from typing import Any
+
+
+class Trade:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    price: Any  # readonly
+    amount: Any  # readonly
+    side: str  # readonly
+    id: str  # readonly
+    type: str  # readonly
+    timestamp: float  # readonly
+    raw: Any  # readonly
+    def __init__(self, exchange: Any, symbol: Any, side: Any, amount: Any, price: Any, timestamp: Any, id: Any = ..., type: Any = ..., raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    @staticmethod
+    def from_dict(data: dict) -> Trade: ...
+    def __repr__(self) -> str: ...
+
+
+class Ticker:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    bid: Any  # readonly
+    ask: Any  # readonly
+    timestamp: Any  # readonly
+    raw: Any  # readonly
+    def __init__(self, exchange: Any, symbol: Any, bid: Any, ask: Any, timestamp: Any, raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    @staticmethod
+    def from_dict(data: dict) -> Ticker: ...
+    def __repr__(self) -> str: ...
+
+
+class Liquidation:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    side: str  # readonly
+    quantity: Any  # readonly
+    price: Any  # readonly
+    id: str  # readonly
+    status: str  # readonly
+    timestamp: Any  # readonly
+    raw: dict  # readonly
+    def __init__(self, exchange: Any, symbol: Any, side: Any, quantity: Any, price: Any, id: Any, status: Any, timestamp: Any, raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    @staticmethod
+    def from_dict(data: dict) -> Liquidation: ...
+    def __repr__(self) -> str: ...
+
+
+class Funding:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    mark_price: Any  # readonly
+    rate: Any  # readonly
+    next_funding_time: Any  # readonly
+    predicted_rate: Any  # readonly
+    timestamp: float  # readonly
+    raw: Any  # readonly
+    def __init__(self, exchange: Any, symbol: Any, mark_price: Any, rate: Any, next_funding_time: Any, timestamp: Any, predicted_rate: Any = ..., raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    @staticmethod
+    def from_dict(data: dict) -> Funding: ...
+    def __repr__(self) -> str: ...
+
+
+class Candle:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    start: float  # readonly
+    stop: float  # readonly
+    interval: str  # readonly
+    trades: Any  # readonly
+    open: Any  # readonly
+    close: Any  # readonly
+    high: Any  # readonly
+    low: Any  # readonly
+    volume: Any  # readonly
+    closed: bool  # readonly
+    timestamp: Any  # readonly
+    raw: Any  # readonly
+    def __init__(self, exchange: Any, symbol: Any, start: Any, stop: Any, interval: Any, trades: Any, open: Any, close: Any, high: Any, low: Any, volume: Any, closed: Any, timestamp: Any, raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    @staticmethod
+    def from_dict(data: dict) -> Candle: ...
+    def __repr__(self) -> str: ...
+
+
+class Index:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    price: Any  # readonly
+    timestamp: float  # readonly
+    raw: dict  # readonly
+    def __init__(self, exchange: Any, symbol: Any, price: Any, timestamp: Any, raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    def __repr__(self) -> str: ...
+
+
+class OpenInterest:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    open_interest: Any  # readonly
+    timestamp: Any  # readonly
+    raw: dict  # readonly
+    def __init__(self, exchange: Any, symbol: Any, open_interest: Any, timestamp: Any, raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    def __repr__(self) -> str: ...
+
+
+class OrderBook:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    book: Any  # readonly
+    delta: dict
+    sequence_number: Any
+    checksum: Any
+    timestamp: Any
+    raw: Any
+    def __init__(self, exchange: Any, symbol: Any, bids: Any = ..., asks: Any = ..., max_depth: Any = ..., truncate: Any = ..., checksum_format: Any = ...) -> None: ...
+    def to_dict(self, delta: Any = ..., numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    @staticmethod
+    def from_dict(data: dict) -> OrderBook: ...
+    def __repr__(self) -> str: ...
+
+
+class L1Book:
+    exchange: str  # readonly
+    symbol: str  # readonly
+    bid_price: Any  # readonly
+    bid_size: Any  # readonly
+    ask_price: Any  # readonly
+    ask_size: Any  # readonly
+    timestamp: float  # readonly
+    raw: dict  # readonly
+    def __init__(self, exchange: Any, symbol: Any, bid_price: Any, bid_size: Any, ask_price: Any, ask_size: Any, timestamp: Any, raw: Any = ...) -> None: ...
+    def to_dict(self, numeric_type: Any = ..., none_to: Any = ...) -> dict: ...
+    def __repr__(self) -> str: ...
+
+
+COMPILED_WITH_ASSERTIONS: bool

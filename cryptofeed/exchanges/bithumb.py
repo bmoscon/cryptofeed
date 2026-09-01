@@ -1,142 +1,200 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
 from decimal import Decimal
-from typing import Tuple, Dict
-from datetime import datetime as dt
-from datetime import timedelta
+from typing import Dict, Tuple
+import uuid
 
-from yapic import json
+from cryptofeed import _json as json
 
-from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BUY, BITHUMB, SELL, TRADES
+from cryptofeed.defines import BITHUMB, BUY, L1_BOOK, L2_BOOK, SELL, TICKER, TRADES
 from cryptofeed.feed import Feed
-from cryptofeed.types import Trade
+from cryptofeed.symbols import Symbol
+from cryptofeed.types import L1Book, OrderBook, Ticker, Trade
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Bithumb(Feed):
-    '''
-    Before you use this bithumb implementation, you should know that this is exchange's API is pretty terrible.
-
-    For some unknown reason, bithumb's api_info page lists all their KRW symbols as USDT. Probably because they bought
-    the exchange and copied everything but didn't bother to update the reference data.
-
-    We'll just assume that anything USDT is actually KRW. A search on their exchange page
-    shows that there is no USDT symbols available. Please be careful when referencing their api_info page
-    '''
     id = BITHUMB
-    websocket_endpoints = [WebsocketEndpoint('wss://pubwss.bithumb.com/pub/ws')]
-    rest_endpoints = [RestEndpoint('https://api.bithumb.com', routes=Routes(['/public/ticker/ALL_BTC', '/public/ticker/ALL_KRW']))]
+    book_delivery = 'snapshot'
+    websocket_endpoints = [WebsocketEndpoint('wss://ws-api.bithumb.com/websocket/v1')]
+    rest_endpoints = [RestEndpoint('https://api.bithumb.com', routes=Routes('/v1/market/all'))]
     websocket_channels = {
-        # L2_BOOK: 'orderbookdepth', <-- technically the exchange supports orderbooks but it only provides orderbook deltas, there is
-        # no way to synchronize against a rest snapshot, nor request/obtain an orderbook via the websocket, so this isn't really useful
-        TRADES: 'transaction',
+        L2_BOOK: 'orderbook',
+        TRADES: 'trade',
+        TICKER: 'ticker',
+        L1_BOOK: 'l1_book',
     }
 
     @classmethod
-    def timestamp_normalize(cls, ts: dt) -> float:
-        return (ts - timedelta(hours=9)).timestamp()
+    def timestamp_normalize(cls, ts: int) -> float:
+        # for trades
+        return ts / 1000
 
-    # Override symbol_mapping class method, because this bithumb is a very special case.
-    # There is no actual page in the API for reference info.
-    # Need to query the ticker endpoint by quote currency for that info
-    # To qeury the ticker endpoint, you need to know which quote currency you want. So far, seems like the exhcnage
-    # only offers KRW and BTC as quote currencies.
     @classmethod
-    def symbol_mapping(cls, refresh=False) -> Dict:
-        if Symbols.populated(cls.id) and not refresh:
-            return Symbols.get(cls.id)[0]
-        try:
-            data = {}
-            for ep in cls.rest_endpoints[0].route('instruments'):
-                ret = cls.http_sync.read(ep, json=True, uuid=cls.id)
-                if 'BTC' in ep:
-                    data['BTC'] = ret
-                else:
-                    data['KRW'] = ret
-
-            syms, info = cls._parse_symbol_data(data)
-            Symbols.set(cls.id, syms, info)
-            return syms
-        except Exception as e:
-            LOG.error("%s: Failed to parse symbol information: %s", cls.id, str(e), exc_info=True)
-            raise
+    def _book_timestamp(cls, ts: int) -> float:
+        # for orderbooks
+        return ts / 1_000_000
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = {'instrument_type': {}}
 
-        for quote_curr, response in data.items():
-            bases = response['data']
-            for base_curr in bases.keys():
-                if base_curr == 'date':
-                    continue
-                s = Symbol(base_curr, quote_curr)
-                ret[s.normalized] = f"{base_curr}_{quote_curr}"
-                info['instrument_type'][s.normalized] = s.type
+        for entry in data:
+            quote, base = entry['market'].split('-')
+            s = Symbol(base, quote)
+            ret[s.normalized] = entry['market']
+            info['instrument_type'][s.normalized] = s.type
 
         return ret, info
 
-    def __init__(self, max_depth=30, **kwargs):
-        super().__init__(max_depth=max_depth, **kwargs)
-
-    async def _trades(self, msg: dict, rtimestamp: float):
+    async def _trade(self, msg: dict, timestamp: float):
         '''
         {
-            "type": "transaction",
-            "content": {
-                "list": [
-                    {
-                        "symbol": "BTC_KRW", // currency code
-                        "buySellGb": "1", // type of contract (1: sale contract, 2: buy contract)
-                        "contPrice": "10579000", // execution price
-                        "contQty": "0.01", // number of contracts
-                        "contAmt": "105790.00", // execution amount
-                        "contDtm": "2020-01-29 12:24:18.830039", // Signing time
-                        "updn": "dn" // comparison with the previous price: up-up, dn-down
-                    }
-                ]
-            }
+            "type": "trade",
+            "code": "KRW-BTC",
+            "trade_price": 91195000,
+            "trade_volume": 0.0005469,
+            "ask_bid": "BID",
+            "prev_closing_price": 91611000,
+            "change": "FALL",
+            "change_price": 416000,
+            "trade_date": "2026-08-10",
+            "trade_time": "23:25:54",
+            "trade_timestamp": 1786371954790,
+            "sequential_id": 953736236403549546,
+            "timestamp": 1786371955039,
+            "stream_type": "SNAPSHOT"
         }
         '''
-        trades = msg.get('content', {}).get('list', [])
+        t = Trade(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['code']),
+            BUY if msg['ask_bid'] == 'BID' else SELL,
+            Decimal(msg['trade_volume']),
+            Decimal(msg['trade_price']),
+            self.timestamp_normalize(msg['trade_timestamp']),
+            id=str(msg['sequential_id']),
+            raw=msg
+        )
+        await self.callback(TRADES, t, timestamp)
 
-        for trade in trades:
-            # API ref list uses '-', but market data returns '_'
-            symbol = self.exchange_symbol_to_std_symbol(trade['symbol'])
-            timestamp = self.timestamp_normalize(trade['contDtm'])
-            price = Decimal(trade['contPrice'])
-            quantity = Decimal(trade['contQty'])
-            side = BUY if trade['buySellGb'] == '2' else SELL
+    @staticmethod
+    def _book_sides(msg: dict) -> Tuple[Dict, Dict]:
+        '''
+        {
+            "type": "orderbook",
+            "code": "KRW-BTC",
+            "total_ask_size": 4.5131,
+            "total_bid_size": 0.1863,
+            "orderbook_units": [{"ask_price": 91220000, "bid_price": 91200000, "ask_size": 0.1176, "bid_size": 0.0069},
+                                ... 15 of them, best first ...],
+            "level": 1,
+            "timestamp": 1786371955004253,
+            "stream_type": "REALTIME"
+        }
+        '''
+        units = msg['orderbook_units']
+        return ({Decimal(u['bid_price']): Decimal(u['bid_size']) for u in units if u['bid_price'] > 0 and u['bid_size'] > 0},
+                {Decimal(u['ask_price']): Decimal(u['ask_size']) for u in units if u['ask_price'] > 0 and u['ask_size'] > 0})
 
-            t = Trade(self.id, symbol, side, quantity, price, timestamp, raw=trade)
-            await self.callback(TRADES, t, rtimestamp)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.__reset()
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
+    def __reset(self):
+        self._l2_book = {}
+
+    async def _book(self, msg: dict, bids: Dict, asks: Dict, timestamp: float):
+        pair = self.exchange_symbol_to_std_symbol(msg['code'])
+        if pair not in self._l2_book:
+            self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+
+        self._l2_book[pair].book.bids = bids
+        self._l2_book[pair].book.asks = asks
+
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self._book_timestamp(msg['timestamp']), raw=msg)
+
+    async def _ticker(self, msg: dict, bids: Dict, asks: Dict, timestamp: float):
+        if not bids or not asks:
+            return
+
+        t = Ticker(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['code']),
+            max(bids),
+            min(asks),
+            self._book_timestamp(msg['timestamp']),
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
+
+    async def _l1_book(self, msg: dict, bids: Dict, asks: Dict, timestamp: float):
+        if not bids or not asks:
+            return
+
+        bid = max(bids)
+        ask = min(asks)
+        book = L1Book(
+            self.id,
+            self.exchange_symbol_to_std_symbol(msg['code']),
+            bid,
+            bids[bid],
+            ask,
+            asks[ask],
+            self._book_timestamp(msg['timestamp']),
+            raw=msg
+        )
+        await self.callback(L1_BOOK, book, timestamp)
+
+    async def message_handler(self, msg: bytes, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        msg_type = msg.get('type', None)
 
-        if msg_type == 'transaction':
-            await self._trades(msg, timestamp)
-        elif msg_type is None and msg.get('status', None) == '0000':
+        if 'error' in msg:
+            LOG.error("%s: error from exchange: %s", conn.uuid, msg['error'])
+            return
+
+        msg_type = msg.get('type')
+        if msg_type == 'trade':
+            await self._trade(msg, timestamp)
+        elif msg_type == 'orderbook':
+            bids, asks = self._book_sides(msg)
+            if self.websocket_channels[L2_BOOK] in conn.subscription:
+                await self._book(msg, bids, asks, timestamp)
+            if self.websocket_channels[TICKER] in conn.subscription:
+                await self._ticker(msg, bids, asks, timestamp)
+            if self.websocket_channels[L1_BOOK] in conn.subscription:
+                await self._l1_book(msg, bids, asks, timestamp)
+        elif 'status' in msg:
             return
         else:
-            LOG.warning("%s: Unexpected message received: %s", self.id, msg)
+            LOG.warning("%s: Unhandled message %s", conn.uuid, msg)
 
     async def subscribe(self, conn: AsyncConnection):
-        if self.subscription:
-            for chan in self.subscription:
-                await conn.write(json.dumps({
-                    "type": chan,
-                    "symbols": [symbol for symbol in self.subscription[chan]]
-                    # API ref list uses '-', but subscription requires '_'
-                }))
+        '''
+        [{"ticket": "..."},
+         {"type": "trade", "codes": ["KRW-BTC"]},
+         {"type": "orderbook", "codes": ["KRW-BTC", "KRW-ETH"]}]
+        '''
+        self.__reset()
+        chans = [{'ticket': str(uuid.uuid4())}]
+
+        trades = conn.subscription.get(self.websocket_channels[TRADES], [])
+        if trades:
+            chans.append({'type': 'trade', 'codes': sorted(trades)})
+
+        book = set(conn.subscription.get(self.websocket_channels[L2_BOOK], []))
+        book |= set(conn.subscription.get(self.websocket_channels[TICKER], []))
+        book |= set(conn.subscription.get(self.websocket_channels[L1_BOOK], []))
+        if book:
+            chans.append({'type': 'orderbook', 'codes': sorted(book)})
+
+        await conn.write(json.dumps(chans))

@@ -1,51 +1,41 @@
 # Cryptocurrency Exchange Feed Handler
-[![License](https://img.shields.io/badge/license-XFree86-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.12+-green.svg)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/efa4e0d6e10b41d0b51454d08f7b33b1)](https://www.codacy.com/app/bmoscon/cryptofeed?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bmoscon/cryptofeed&amp;utm_campaign=Badge_Grade)
+
 
 Handles multiple cryptocurrency exchange data feeds and returns normalized and standardized results to client registered callbacks for events like trades, book updates, ticker updates, etc. Utilizes websockets when possible, but can also poll data via REST endpoints if a websocket is not provided.
 
 ## Supported exchanges
 
-* [AscendEX](https://ascendex.com/)
-* [Bequant](https://bequant.io/)
 * [Bitfinex](https://bitfinex.com)
 * [bitFlyer](https://bitflyer.com/)
 * [Bithumb](https://en.bithumb.com/)
 * [Bitstamp](https://www.bitstamp.net/)
-* [Blockchain.com](https://www.blockchain.com/)
 * [Bybit](https://www.bybit.com/)
 * [Binance](https://www.binance.com/en)
 * [Binance Delivery](https://binance-docs.github.io/apidocs/delivery/en/)
 * [Binance Futures](https://www.binance.com/en/futures)
 * [Binance US](https://www.binance.us/en)
-* [Bit.com](https://www.bit.com)
 * [Bitget](https://www.bitget.com/)
-* [BitMEX](https://www.bitmex.com/)
 * [Coinbase](https://www.coinbase.com/)
 * [Crypto.com](https://www.crypto.com)
-* [Delta](https://www.delta.exchange/)
 * [Deribit](https://www.deribit.com/)
-* [dYdX](https://dydx.exchange/)
-* [FMFW.io](https://www.fmfw.io/)
-* [EXX](https://www.exx.com/)
 * [Gate.io](https://www.gate.io/)
 * [Gate.io Futures](https://www.gate.io/futures_center)
+* [dYdX v4](https://dydx.trade/)
 * [Gemini](https://gemini.com/)
-* [HitBTC](https://hitbtc.com/)
-* [Huobi](https://www.hbg.com/)
-* [Huobi DM](https://www.huobi.com/en-us/markets/hb_dm/)
-* Huobi Swap (Coin-M and USDT-M)
+* [Hyperliquid](https://hyperliquid.xyz/)
+* [HTX](https://www.htx.com/) (formerly Huobi)
+* HTX Swap (Coin-M and USDT-M)
 * [Independent Reserve](https://www.independentreserve.com/) 
 * [Kraken](https://www.kraken.com/)
+* [MEXC](https://www.mexc.com/) (spot)
 * [Kraken Futures](https://futures.kraken.com/)
 * [KuCoin](https://www.kucoin.com/)
-* [OKCoin](http://okcoin.com/)
 * [OKX](https://www.okx.com/)
 * [Phemex](https://phemex.com/)
 * [Poloniex](https://www.poloniex.com/)
-* [ProBit](https://www.probit.com/)
 * [Upbit](https://sg.upbit.com/home)
 
 
@@ -59,8 +49,13 @@ from cryptofeed import FeedHandler
 
 fh = FeedHandler()
 
-# ticker, trade, and book are user defined functions that
-# will be called when ticker, trade and book updates are received
+# ticker, trade and book are user defined coroutine functions, each taking the
+# normalized object and the timestamp cryptofeed received the message at:
+#
+#     async def trade(t, receipt_timestamp):
+#         print(f'{t.exchange} {t.symbol} {t.side} {t.amount} @ {t.price}')
+#
+# a callback must be async - wrap a synchronous one in cryptofeed.callback.ExecutorCallback
 ticker_cb = {TICKER: ticker}
 trade_cb = {TRADES: trade}
 gemini_cb = {TRADES: trade, L2_BOOK: book}
@@ -74,22 +69,16 @@ fh.add_feed(Gemini(symbols=['BTC-USD', 'ETH-USD'], channels=[TRADES, L2_BOOK], c
 fh.run()
 ```
 
-Please see the [examples](https://github.com/bmoscon/cryptofeed/tree/master/examples) for more code samples and the [documentation](https://github.com/bmoscon/cryptofeed/blob/master/docs/README.md) for more information about the library usage.
-
-
-For an example of a containerized application using cryptofeed to store data to a backend, please see [Cryptostore](https://github.com/bmoscon/cryptostore).
-
-
 ## National Best Bid/Offer (NBBO)
 
-Cryptofeed also provides a synthetic [NBBO](examples/demo_nbbo.py) (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
+Cryptofeed also provides a synthetic NBBO (National Best Bid/Offer) feed that aggregates the best bids and asks from the user specified feeds.
 
 ```python
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import Coinbase, Gemini, Kraken
 
 
-def nbbo_update(symbol, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
+async def nbbo_update(symbol, bid, bid_size, ask, ask_size, bid_feed, ask_feed):
     print(f'Pair: {symbol} Bid Price: {bid:.2f} Bid Size: {bid_size:.6f} Bid Feed: {bid_feed} Ask Price: {ask:.2f} Ask Size: {ask_size:.6f} Ask Feed: {ask_feed}')
 
 
@@ -101,9 +90,7 @@ def main():
 
 ## Supported Channels
 
-Cryptofeed supports the following channels from exchanges:
-
-### Market Data Channels (Public)
+Cryptofeed supports the following public data channels from exchanges
 
 * L1_BOOK - Top of book
 * L2_BOOK - Price aggregated sizes. Some exchanges provide the entire depth, some provide a subset.
@@ -116,21 +103,12 @@ Cryptofeed supports the following channels from exchanges:
 * INDEX
 * CANDLES - Candlestick / K-Line data.
 
-### Authenticated Data Channels
-
-* ORDER_INFO - Order status updates
-* TRANSACTIONS - Real-time updates on account deposits and withdrawals
-* BALANCES - Updates on wallet funds
-* FILLS - User's executed trades
-
-
 ## Backends
 
 Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces.
 
 Supported Backends:
-* Redis (Streams and Sorted Sets)
-* [Arctic](https://github.com/manahl/arctic)
+* Redis (Sorted Sets, Streams and Keys)
 * ZeroMQ
 * UDP Sockets
 * TCP Sockets
@@ -138,11 +116,24 @@ Supported Backends:
 * [InfluxDB v2](https://github.com/influxdata/influxdb)
 * MongoDB
 * Kafka
-* RabbitMQ
 * PostgreSQL
-* [QuasarDB](https://quasar.ai/)
-* GCP Pub/Sub
 * [QuestDB](https://questdb.io/)
+
+
+## Data Capture and Replay
+
+Cryptofeed can record data from data feeds to standard pcap files for later replay
+
+```python
+from cryptofeed import FeedHandler
+
+# `record` is a pcap file path or a directory
+fh = FeedHandler(record='sample_data/')
+fh.add_feed('COINBASE', symbols=['BTC-USD'], channels=[TRADES, L2_BOOK], callbacks=...)
+fh.run()
+```
+
+[examples/record.py](examples/record.py) wraps this into a small recording tool. The pcaps are zstandaard compressed by default. Wireshark and tshark open these files natively and playback decompresses transparently. Metadata is stored in `.meta.json`.
 
 
 ## Installation
@@ -165,13 +156,21 @@ Alternatively, you can install from source in editable mode with pip:
 
     pip install -e .
 
-See more discussion of package installation in [INSTALL.md](https://github.com/bmoscon/cryptofeed/blob/master/INSTALL.md).
 
+## Performance
 
+Measured on Python 3.14.6 based on throughput over real recorded exchange traffic.
 
-## Rest API
-
-Cryptofeed supports some REST interfaces for retrieving real-time and historical data, as well as order placement and account management. These are integrated into the exchange classes directly. You can view the supported methods by calling the `info()` method on any exchange. The methods for interacting with the exchange RET endpoints exist in two flavors, the synchronous methods (suffixed with `_sync`) as well as the asynchronous which can be utilized with asyncio. For more information see the [documentation](docs/rest.md).
+| Operation | Result |
+|---|---|
+| `Trade` construct / `to_dict` / `from_dict` | 102 ns / 214 ns / 277 ns |
+| `Ticker` / `Candle` / `Funding` construct | 70 ns / 118 ns / 141 ns |
+| Book single level update / delete / top-of-book read | 89 ns / 124 ns / 140 ns |
+| Book `to_dict`, 10 / 100 levels per side | 2.4 µs / 22.2 µs |
+| Checksum, Kraken / OKX format (200 levels) | 2.0 µs / 6.1 µs |
+| JSON decode with `Decimal` (msgspec / stdlib fallback) | 1.39M / 0.60M msg/s |
+| JSON encode to str / bytes | 4.65M / 5.25M msg/s |
+| Message handler, Kraken / Bybit / KuCoin / Kraken Futures | 161k / 134k / 122k / ~100k frames/s |
 
 
 ## Future Work

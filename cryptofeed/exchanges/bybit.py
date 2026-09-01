@@ -1,11 +1,9 @@
 '''
-Copyright (C) 2018-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import hmac
-import time
 from collections import defaultdict
 from cryptofeed.symbols import Symbol, str_to_symbol
 import logging
@@ -14,37 +12,54 @@ from typing import Dict, Tuple, Union
 from datetime import datetime as dt
 import re
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL, SPOT, TICKER
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANDLES, FUNDING, L2_BOOK, LIQUIDATIONS, SELL, TRADES, OPEN_INTEREST, INDEX, FUTURES, PERPETUAL, SPOT, TICKER
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation, Ticker
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, Candle, Liquidation, Ticker
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
+
+
+DERIVATIVE_TYPES = (FUTURES, PERPETUAL)
+
+
+def _is_linear(symbol) -> bool:
+    """A linear contract settles in the quote currency - USDT or USDC on Bybit."""
+    return symbol.type in DERIVATIVE_TYPES and symbol.quote != 'USD'
+
+
+def _is_inverse(symbol) -> bool:
+    """An inverse contract is coin-margined and quoted in USD: BTCUSD, not BTCUSDT."""
+    return symbol.type in DERIVATIVE_TYPES and symbol.quote == 'USD'
 
 
 class Bybit(Feed):
     id = BYBIT
+    provides_sequence_number = True
     websocket_channels = {
         L2_BOOK: '',  # Assigned in self.subscribe
         TRADES: 'publicTrade',
-        FILLS: 'execution',
-        ORDER_INFO: 'order',
         INDEX: 'index',
         OPEN_INTEREST: 'open_interest',
         FUNDING: 'funding',
         CANDLES: 'kline',
-        LIQUIDATIONS: 'liquidation',
+        LIQUIDATIONS: 'allLiquidation',
         TICKER: 'tickers'
     }
+
+    _derivative_channels = (websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX],
+                            websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING],
+                            websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS], websocket_channels[TICKER])
     websocket_endpoints = [
-        WebsocketEndpoint('wss://stream.bybit.com/v5/public/linear', instrument_filter=('TYPE', (FUTURES, PERPETUAL)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[INDEX], websocket_channels[OPEN_INTEREST], websocket_channels[FUNDING], websocket_channels[CANDLES], websocket_channels[LIQUIDATIONS], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/linear', options={'compression': None}),
-        WebsocketEndpoint('wss://stream.bybit.com/v5/public/spot', instrument_filter=('TYPE', (SPOT)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[CANDLES],), sandbox='wss://stream-testnet.bybit.com/v5/public/spot', options={'compression': None}),
-        WebsocketEndpoint('wss://stream.bybit.com/realtime_private', channel_filter=(websocket_channels[ORDER_INFO], websocket_channels[FILLS]), instrument_filter=('QUOTE', ('USDT',)), sandbox='wss://stream-testnet.bybit.com/realtime_private', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/linear', instrument_filter=_is_linear, channel_filter=_derivative_channels, sandbox='wss://stream-testnet.bybit.com/v5/public/linear', options={'compression': None}),
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/inverse', instrument_filter=_is_inverse, channel_filter=_derivative_channels, sandbox='wss://stream-testnet.bybit.com/v5/public/inverse', options={'compression': None}),
+        # note the trailing comma - ('TYPE', (SPOT)) is a substring test against the string 'spot'
+        WebsocketEndpoint('wss://stream.bybit.com/v5/public/spot', instrument_filter=('TYPE', (SPOT,)), channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[CANDLES], websocket_channels[TICKER]), sandbox='wss://stream-testnet.bybit.com/v5/public/spot', options={'compression': None}),
     ]
     rest_endpoints = [
-        RestEndpoint('https://api.bybit.com', routes=Routes(['/v5/market/instruments-info?&category=linear&status=Trading&limit=1000', '/v5/market/instruments-info?&category=spot&status=Trading&limit=1000']))
+        RestEndpoint('https://api.bybit.com', routes=Routes(['/v5/market/instruments-info?&category=linear&status=Trading&limit=1000', '/v5/market/instruments-info?&category=inverse&status=Trading&limit=1000', '/v5/market/instruments-info?&category=spot&status=Trading&limit=1000']))
     ]
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '1d', '1w', '1M'}
     candle_interval_map = {'1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '1h': '60', '2h': '120', '4h': '240', '6h': '360', '1d': 'D', '1w': 'W', '1M': 'M'}
@@ -55,11 +70,12 @@ class Bybit(Feed):
     tickers = {}
 
     @classmethod
-    def timestamp_normalize(cls, ts: Union[int, dt]) -> float:
+    def timestamp_normalize(cls, ts: Union[int, str, dt]) -> float:
         if isinstance(ts, int):
             return ts / 1000.0
-        else:
-            return ts.timestamp()
+        if isinstance(ts, str):
+            ts = dt.fromisoformat(ts)
+        return ts.timestamp()
 
     @staticmethod
     def convert_to_spot_name(cls, pair):
@@ -79,14 +95,16 @@ class Bybit(Feed):
         for msg in data:
             if isinstance(msg['result'], dict):
                 for symbol in msg['result']['list']:
-
-                    if 'contractType' not in symbol:
+                    contract_type = symbol.get('contractType')
+                    if not contract_type:
                         stype = SPOT
-                    elif 'contractType' in symbol:
-                        if symbol['contractType'] == 'LinearPerpetual':
-                            stype = PERPETUAL
-                        elif symbol['contractType'] == 'LinearFutures':
-                            stype = FUTURES
+                    elif contract_type in ('LinearPerpetual', 'InversePerpetual'):
+                        stype = PERPETUAL
+                    elif contract_type in ('LinearFutures', 'InverseFutures'):
+                        stype = FUTURES
+                    else:
+                        cls.unsupported_category('contractType', contract_type)
+                        continue
 
                     base = symbol['baseCoin']
                     quote = symbol['quoteCoin']
@@ -94,10 +112,13 @@ class Bybit(Feed):
                     expiry = None
 
                     if stype is FUTURES:
-                        if not symbol['symbol'].endswith(quote):
-                            # linear futures
-                            if '-' in symbol['symbol']:
-                                expiry = symbol['symbol'].split('-')[-1]
+                        if '-' in symbol['symbol']:
+                            # linear futures carry the date in the symbol: BTCUSDT-14AUG26
+                            expiry = symbol['symbol'].split('-')[-1]
+                        elif symbol.get('deliveryTime', '0') != '0':
+                            # inverse futures do not (BTCUSDU26), so take the delivery timestamp.
+                            # Without this they reached Symbol() with no expiry and it raised.
+                            expiry = int(symbol['deliveryTime']) / 1000
 
                     s = Symbol(base, quote, type=stype, expiry_date=expiry)
 
@@ -127,7 +148,10 @@ class Bybit(Feed):
                 if std_pair in self._l2_book:
                     del self._l2_book[std_pair]
 
-        self.tickers = {}
+        for _, pairs in conn.subscription.items():
+            for pair in pairs:
+                symbol = self.exchange_symbol_to_std_symbol(pair)
+                self.tickers.pop(symbol, None)
 
     async def _candle(self, msg: dict, timestamp: float, market: str):
         """
@@ -167,47 +191,50 @@ class Bybit(Feed):
                 continue
             c = Candle(self.id,
                        symbol,
-                       entry['start'],
-                       entry['end'],
+                       self.timestamp_normalize(entry['start']),
+                       self.timestamp_normalize(entry['end']),
                        self.candle_interval,
-                       entry['confirm'],
+                       None,
                        Decimal(entry['open']),
                        Decimal(entry['close']),
                        Decimal(entry['high']),
                        Decimal(entry['low']),
                        Decimal(entry['volume']),
-                       None,
-                       ts,
+                       entry['confirm'],
+                       self.timestamp_normalize(ts),
                        raw=entry)
             await self.callback(CANDLES, c, timestamp)
 
     async def _liquidation(self, msg: dict, timestamp: float):
         '''
         {
-            "topic": "liquidation.BTCUSDT",
+            "topic": "allLiquidation.ROSEUSDT",
             "type": "snapshot",
-            "ts": 1703485237953,
-            "data": {
-                "updatedTime": 1703485237953,
-                "symbol": "BTCUSDT",
-                "side": "Sell",
-                "size": "0.003",
-                "price": "43511.70"
-            }
+            "ts": 1739502303204,
+            "data": [
+                {
+                    "T": 1739502302929,
+                    "s": "ROSEUSDT",
+                    "S": "Sell",          # side of the liquidated position
+                    "v": "20000",         # executed size
+                    "p": "0.04499"        # bankruptcy price
+                }
+            ]
         }
         '''
-        liq = Liquidation(
-            self.id,
-            self.exchange_symbol_to_std_symbol(msg['data']['symbol']),
-            BUY if msg['data']['side'] == 'Buy' else SELL,
-            Decimal(msg['data']['size']),
-            Decimal(msg['data']['price']),
-            None,
-            None,
-            msg['ts'],
-            raw=msg
-        )
-        await self.callback(LIQUIDATIONS, liq, timestamp)
+        for entry in msg['data']:
+            liq = Liquidation(
+                self.id,
+                self.exchange_symbol_to_std_symbol(entry['s']),
+                BUY if entry['S'] == 'Buy' else SELL,
+                Decimal(entry['v']),
+                Decimal(entry['p']),
+                None,
+                None,
+                self.timestamp_normalize(entry['T']),
+                raw=entry
+            )
+            await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -219,10 +246,7 @@ class Bybit(Feed):
         market = conn.address.split('/')[-1]
         if "success" in msg:
             if msg['success']:
-                if 'request' in msg:
-                    if msg['request']['op'] == 'auth':
-                        LOG.debug("%s: Authenticated successful", conn.uuid)
-                elif msg['op'] == 'subscribe':
+                if msg['op'] == 'subscribe':
                     # {"success": true, "ret_msg": "","op": "subscribe","conn_id": "cejreassvfrsfvb9v1a0-2m"}
                     LOG.debug("%s: Subscribed to channel.", conn.uuid)
                 else:
@@ -235,62 +259,42 @@ class Bybit(Feed):
             await self._book(msg, timestamp, market)
         elif msg['topic'].startswith('kline'):
             await self._candle(msg, timestamp, market)
-        elif msg['topic'].startswith('liquidation'):
+        elif msg['topic'].startswith('allLiquidation'):
             await self._liquidation(msg, timestamp)
         elif msg['topic'].startswith('tickers'):
-            await self._ticker_open_interest_funding_index(msg, timestamp, conn)
-        elif "order" in msg["topic"]:
-            await self._order(msg, timestamp)
-        elif "execution" in msg["topic"]:
-            await self._execution(msg, timestamp)
-        # elif "position" in msg["topic"]:
-        #     await self._balances(msg, timestamp)
+            await self._ticker_open_interest_funding_index(msg, timestamp, conn, market)
         else:
             LOG.warning("%s: Unhandled message type %s", conn.uuid, msg)
 
     async def subscribe(self, connection: AsyncConnection):
         self.__reset(connection)
 
-        # Bybit does not offer separate channels for open interest, funding, and index price.
-        # Instead, it integrates this data into the 'tickers' channel. This approach de-duplicates pairs and
-        # subscribes them all at once to the 'tickers' channel.
-        tickers_pairs = []
+        ticker_channels = {self.websocket_channels[c] for c in (TICKER, OPEN_INTEREST, FUNDING, INDEX)}
+        tickers_pairs = set()
         for chan, pairs in connection.subscription.items():
-            if chan in [self.websocket_channels[TICKER], OPEN_INTEREST, FUNDING, INDEX]:
-                tickers_pairs += pairs
-        tickers_pairs = list(set(tickers_pairs))
-        sub = [f"tickers.{pair}" for pair in tickers_pairs]
-        if sub:
-            await connection.write(json.dumps({"op": "subscribe", "args": sub}))
+            if chan in ticker_channels:
+                tickers_pairs.update(pairs)
+        if tickers_pairs:
+            args = [f"tickers.{pair.replace('/', '')}" for pair in sorted(tickers_pairs)]
+            await connection.write(json.dumps({"op": "subscribe", "args": args}))
 
-        for chan in connection.subscription:
-            if not self.is_authenticated_channel(self.exchange_channel_to_std(chan)):
-                for pair in connection.subscription[chan]:
-                    sym = str_to_symbol(self.exchange_symbol_to_std_symbol(pair))
-                    if sym.type == SPOT:
-                        pair = pair.replace('/', '')
+        for chan, pairs in connection.subscription.items():
+            if chan in ticker_channels:
+                continue
+            std_chan = self.exchange_channel_to_std(chan)
+            for pair in pairs:
+                sym = str_to_symbol(self.exchange_symbol_to_std_symbol(pair))
+                if sym.type == SPOT:
+                    pair = pair.replace('/', '')
 
-                    if self.exchange_channel_to_std(chan) == CANDLES:
-                        sub = [f"{self.websocket_channels[CANDLES]}.{self.candle_interval_map[self.candle_interval]}.{pair}"]
-                    elif self.exchange_channel_to_std(chan) == L2_BOOK:
-                        l2_book_channel = {
-                            SPOT: "orderbook.200",
-                            FUTURES: "orderbook.200",
-                            PERPETUAL: "orderbook.200",
-                        }
-                        sub = [f"{l2_book_channel[sym.type]}.{pair}"]
-                    else:
-                        sub = [f"{chan}.{pair}"]
+                if std_chan == CANDLES:
+                    topic = f"{self.websocket_channels[CANDLES]}.{self.candle_interval_map[self.candle_interval]}.{pair}"
+                elif std_chan == L2_BOOK:
+                    topic = f"orderbook.200.{pair}"
+                else:
+                    topic = f"{chan}.{pair}"
 
-                    if self.exchange_channel_to_std(chan) not in [self.websocket_channels[TICKER], OPEN_INTEREST, FUNDING, INDEX]:
-                        await connection.write(json.dumps({"op": "subscribe", "args": sub}))
-            else:
-                await connection.write(json.dumps(
-                    {
-                        "op": "subscribe",
-                        "args": [f"{chan}"]
-                    }
-                ))
+                await connection.write(json.dumps({"op": "subscribe", "args": [topic]}))
 
     async def _trade(self, msg: dict, timestamp: float, market: str):
         """
@@ -384,14 +388,17 @@ class Bybit(Feed):
         if update_type == 'snapshot':
             delta = None
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
+        elif pair not in self._l2_book:
+            return
 
         for key, update in data.items():
             side = BID if key == 'b' else ASK
             if key == 'a' or key == 'b':
                 for price, size in update:
-
                     price = Decimal(price)
                     size = Decimal(size)
+                    if delta is not None:
+                        delta[side].append((price, size))
 
                     if size == 0:
                         if price in self._l2_book[pair].book[side]:
@@ -399,12 +406,9 @@ class Bybit(Feed):
                     else:
                         self._l2_book[pair].book[side][price] = size
 
-        if update_type == 'delta':
-            delta = {BID: data['b'], ASK: data['a']}
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(msg['ts'])), raw=msg, delta=delta, sequence_number=data.get('u'))
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(msg['ts'])), raw=msg, delta=delta)
-
-    async def _ticker_open_interest_funding_index(self, msg: dict, timestamp: float, conn: AsyncConnection):
+    async def _ticker_open_interest_funding_index(self, msg: dict, timestamp: float, conn: AsyncConnection, market: str):
         '''
         {
             "topic": "tickers.BTCUSDT",
@@ -440,179 +444,60 @@ class Bybit(Feed):
         update_type = msg['type']
         update = msg['data']
         _pair = msg['data']['symbol']
+        if market == 'spot':
+            _pair = self.convert_to_spot_name(self, _pair)
+            if not _pair:
+                return
         symbol = self.exchange_symbol_to_std_symbol(_pair)
 
-        if update_type == 'snapshot':
-            self.tickers[symbol] = update
-
-        if update_type == 'delta':
+        if update_type == 'snapshot' or symbol not in self.tickers:
+            self.tickers[symbol] = dict(update)
+        else:
             self.tickers[symbol].update(update)
-            update = self.tickers[symbol]
+        update = self.tickers[symbol]
 
-        if 'tickers' in conn.subscription and _pair in conn.subscription['tickers']:
+        if self.websocket_channels[TICKER] in conn.subscription and _pair in conn.subscription[self.websocket_channels[TICKER]]:
             t = Ticker(
                 self.id,
                 symbol,
                 Decimal(update['bid1Price']) if 'bid1Price' in update else Decimal(0),
                 Decimal(update['ask1Price']) if 'ask1Price' in update else Decimal(0),
-                int(msg['ts']),
+                self.timestamp_normalize(int(msg['ts'])),
                 raw=update
             )
             await self.callback(TICKER, t, timestamp)
 
-        if 'funding' in conn.subscription and _pair in conn.subscription['funding']:
+        if (self.websocket_channels[FUNDING] in conn.subscription and _pair in conn.subscription[self.websocket_channels[FUNDING]] and 'markPrice' in update and update.get('fundingRate')):
             f = Funding(
                 self.id,
                 symbol,
                 Decimal(update['markPrice']),
                 Decimal(update['fundingRate']),
-                int(update['nextFundingTime']),
-                int(msg['ts']),
+                self.timestamp_normalize(int(update['nextFundingTime'])) if update.get('nextFundingTime') else None,
+                self.timestamp_normalize(int(msg['ts'])),
                 None,
                 raw=update
             )
             await self.callback(FUNDING, f, timestamp)
 
-        if 'open_interest' in conn.subscription and _pair in conn.subscription['open_interest']:
+        if self.websocket_channels[OPEN_INTEREST] in conn.subscription and _pair in conn.subscription[self.websocket_channels[OPEN_INTEREST]] and 'openInterest' in update:
             o = OpenInterest(
                 self.id,
                 symbol,
                 Decimal(update['openInterest']),
-                int(msg['ts']),
+                self.timestamp_normalize(int(msg['ts'])),
                 raw=update
             )
 
             await self.callback(OPEN_INTEREST, o, timestamp)
 
-        if 'index' in conn.subscription and _pair in conn.subscription['index']:
+        if self.websocket_channels[INDEX] in conn.subscription and _pair in conn.subscription[self.websocket_channels[INDEX]] and 'indexPrice' in update:
             i = Index(
                 self.id,
                 symbol,
                 Decimal(update['indexPrice']),
-                int(msg['ts']),
+                self.timestamp_normalize(int(msg['ts'])),
                 raw=update
             )
 
             await self.callback(INDEX, i, timestamp)
-
-    async def _order(self, msg: dict, timestamp: float):
-        """
-        {
-            "topic": "order",
-            "action": "",
-            "data": [
-                {
-                    "order_id": "xxxxxxxx-xxxx-xxxx-9a8f-4a973eb5c418",
-                    "order_link_id": "",
-                    "symbol": "BTCUSDT",
-                    "side": "Buy",
-                    "order_type": "Limit",
-                    "price": 11000,
-                    "qty": 0.001,
-                    "leaves_qty": 0.001,
-                    "last_exec_price": 0,
-                    "cum_exec_qty": 0,
-                    "cum_exec_value": 0,
-                    "cum_exec_fee": 0,
-                    "time_in_force": "GoodTillCancel",
-                    "create_type": "CreateByUser",
-                    "cancel_type": "UNKNOWN",
-                    "order_status": "New",
-                    "take_profit": 0,
-                    "stop_loss": 0,
-                    "trailing_stop": 0,
-                    "reduce_only": false,
-                    "close_on_trigger": false,
-                    "create_time": "2020-08-12T21:18:40.780039678Z",
-                    "update_time": "2020-08-12T21:18:40.787986415Z"
-                }
-            ]
-        }
-        """
-        order_status = {
-            'Created': SUBMITTING,
-            'Rejected': FAILED,
-            'New': OPEN,
-            'PartiallyFilled': PARTIAL,
-            'Filled': FILLED,
-            'Cancelled': CANCELLED,
-            'PendingCancel': CANCELLING
-        }
-
-        for i in range(len(msg['data'])):
-            data = msg['data'][i]
-
-            oi = OrderInfo(
-                self.id,
-                self.exchange_symbol_to_std_symbol(data['symbol']),
-                data["order_id"],
-                BUY if data["side"] == 'Buy' else SELL,
-                order_status[data["order_status"]],
-                LIMIT if data['order_type'] == 'Limit' else MARKET,
-                Decimal(data['price']),
-                Decimal(data['qty']),
-                Decimal(data['qty']) - Decimal(data['cum_exec_qty']),
-                self.timestamp_normalize(data.get('update_time') or data.get('O') or data.get('timestamp')),
-                raw=data,
-            )
-            await self.callback(ORDER_INFO, oi, timestamp)
-
-    async def _execution(self, msg: dict, timestamp: float):
-        '''
-        {
-            "topic": "execution",
-            "data": [
-                {
-                    "symbol": "BTCUSD",
-                    "side": "Buy",
-                    "order_id": "xxxxxxxx-xxxx-xxxx-9a8f-4a973eb5c418",
-                    "exec_id": "xxxxxxxx-xxxx-xxxx-8b66-c3d2fcd352f6",
-                    "order_link_id": "",
-                    "price": "8300",
-                    "order_qty": 1,
-                    "exec_type": "Trade",
-                    "exec_qty": 1,
-                    "exec_fee": "0.00000009",
-                    "leaves_qty": 0,
-                    "is_maker": false,
-                    "trade_time": "2020-01-14T14:07:23.629Z" // trade time
-                }
-            ]
-        }
-        '''
-        for entry in msg['data']:
-            symbol = self.exchange_symbol_to_std_symbol(entry['symbol'])
-            f = Fill(
-                self.id,
-                symbol,
-                BUY if entry['side'] == 'Buy' else SELL,
-                Decimal(entry['exec_qty']),
-                Decimal(entry['price']),
-                Decimal(entry['exec_fee']),
-                entry['exec_id'],
-                entry['order_id'],
-                None,
-                MAKER if entry['is_maker'] else TAKER,
-                entry['trade_time'].timestamp(),
-                raw=entry
-            )
-            await self.callback(FILLS, f, timestamp)
-
-    # async def _balances(self, msg: dict, timestamp: float):
-    #    for i in range(len(msg['data'])):
-    #        data = msg['data'][i]
-    #        symbol = self.exchange_symbol_to_std_symbol(data['symbol'])
-    #        await self.callback(BALANCES, feed=self.id, symbol=symbol, data=data, receipt_timestamp=timestamp)
-
-    async def authenticate(self, conn: AsyncConnection):
-        if any(self.is_authenticated_channel(self.exchange_channel_to_std(chan)) for chan in conn.subscription):
-            auth = self._auth(self.key_id, self.key_secret)
-            LOG.debug(f"{conn.uuid}: Sending authentication request with message {auth}")
-            await conn.write(auth)
-
-    def _auth(self, key_id: str, key_secret: str) -> str:
-        # https://bybit-exchange.github.io/docs/inverse/#t-websocketauthentication
-
-        expires = int((time.time() + 60)) * 1000
-        signature = str(hmac.new(bytes(key_secret, 'utf-8'), bytes(f'GET/realtime{expires}', 'utf-8'), digestmod='sha256').hexdigest())
-        return json.dumps({'op': 'auth', 'args': [key_id, expires, signature]})

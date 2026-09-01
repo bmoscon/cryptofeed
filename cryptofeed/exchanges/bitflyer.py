@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2018-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -9,7 +9,7 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, BUY, BITFLYER, FUTURES, TICKER, L2_BOOK, SELL, TRADES, FX
@@ -18,7 +18,7 @@ from cryptofeed.symbols import Symbol
 from cryptofeed.types import Ticker, Trade, OrderBook
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Bitflyer(Feed):
@@ -170,7 +170,7 @@ class Bitflyer(Feed):
         for side in ('bids', 'asks'):
             s = BID if side == 'bids' else ASK
             if snapshot:
-                self._l2_book[pair].book[side] = {d['price']: d['size'] for d in data[side]}
+                self._l2_book[pair].book[side] = {d['price']: d['size'] for d in data[side] if d['size'] > 0}
             else:
                 for entry in data[side]:
                     if entry['size'] == 0:

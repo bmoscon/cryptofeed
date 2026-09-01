@@ -1,24 +1,30 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
+import logging
 
 from redis import asyncio as aioredis
-from yapic import json
+from cryptofeed import _json as json
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue, PermanentWriteError
+
+
+LOG = logging.getLogger(__name__)
 
 
 class RedisCallback(BackendQueue):
+    retryable_exceptions = (aioredis.ConnectionError, aioredis.TimeoutError, aioredis.OutOfMemoryError, aioredis.ReadOnlyError, OSError)
+
     def __init__(self, host='127.0.0.1', port=6379, socket=None, key=None, none_to='None', numeric_type=float, **kwargs):
         """
-        setting key lets you override the prefix on the
-        key used in redis. The defaults are related to the data
+        setting key lets you override the prefix on the key used in redis. The defaults are related to the data
         being stored, i.e. trade, funding, etc
         """
+        super().__init__(**kwargs)
         prefix = 'redis://'
         if socket:
             prefix = 'unix://'
@@ -28,7 +34,38 @@ class RedisCallback(BackendQueue):
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to
-        self.running = True
+        self.conn = None
+
+    async def connect(self):
+        if self.conn is None:
+            self.conn = aioredis.from_url(self.redis)
+
+    async def close(self):
+        if self.conn is not None:
+            await self.conn.aclose()
+            self.conn = None
+
+    async def _execute(self, pipe) -> list:
+        try:
+            return await pipe.execute(raise_on_error=False)
+        except self.retryable_exceptions:
+            raise
+        except (aioredis.ResponseError, aioredis.DataError) as e:
+            raise PermanentWriteError(str(e)) from e
+
+    def _rejected(self, results: list) -> list:
+        errors = [result for result in results if isinstance(result, Exception)]
+
+        for error in errors:
+            if isinstance(error, self.retryable_exceptions):
+                raise error
+
+        if errors and len(errors) == len(results):
+            raise PermanentWriteError(str(errors[0])) from errors[0]
+
+        if errors:
+            LOG.error('%s: redis rejected %d of %d commands in batch. First error: %s', self.__class__.__name__, len(errors), len(results), errors[0])
+        return errors
 
 
 class RedisZSetCallback(RedisCallback):
@@ -42,55 +79,58 @@ class RedisZSetCallback(RedisCallback):
         self.score_key = score_key
         super().__init__(host=host, port=port, socket=socket, key=key, numeric_type=numeric_type, **kwargs)
 
-    async def writer(self):
-        conn = aioredis.from_url(self.redis)
+    async def write_batch(self, batch: list):
+        async with self.conn.pipeline(transaction=False) as pipe:
+            for update in batch:
+                pipe.zadd(f"{self.key}-{update['exchange']}-{update['symbol']}", {json.dumps(update): update[self.score_key]}, nx=True)
+            added = await self._execute(pipe)
+        discarded = len(self._rejected(added))
 
-        while self.running:
-            async with self.read_queue() as updates:
-                async with conn.pipeline(transaction=False) as pipe:
-                    for update in updates:
-                        pipe = pipe.zadd(f"{self.key}-{update['exchange']}-{update['symbol']}", {json.dumps(update): update[self.score_key]}, nx=True)
-                    await pipe.execute()
-
-        await conn.close()
-        await conn.connection_pool.disconnect()
+        return sum(count for count in added if not isinstance(count, Exception)), discarded
 
 
 class RedisStreamCallback(RedisCallback):
-    async def writer(self):
-        conn = aioredis.from_url(self.redis)
+    async def write_batch(self, batch: list):
+        async with self.conn.pipeline(transaction=False) as pipe:
+            for update in batch:
+                if 'delta' in update:
+                    if not isinstance(update['delta'], str):
+                        update['delta'] = json.dumps(update['delta'])
+                elif 'book' in update:
+                    if not isinstance(update['book'], str):
+                        update['book'] = json.dumps(update['book'])
+                elif 'closed' in update:
+                    if not isinstance(update['closed'], str):
+                        update['closed'] = str(update['closed'])
 
-        while self.running:
-            async with self.read_queue() as updates:
-                async with conn.pipeline(transaction=False) as pipe:
-                    for update in updates:
-                        if 'delta' in update:
-                            update['delta'] = json.dumps(update['delta'])
-                        elif 'book' in update:
-                            update['book'] = json.dumps(update['book'])
-                        elif 'closed' in update:
-                            update['closed'] = str(update['closed'])
+                pipe.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
+            results = await self._execute(pipe)
 
-                        pipe = pipe.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
-                    await pipe.execute()
-
-        await conn.close()
-        await conn.connection_pool.disconnect()
+        discarded = len(self._rejected(results))
+        return len(results) - discarded, discarded
 
 
 class RedisKeyCallback(RedisCallback):
 
-    async def writer(self):
-        conn = aioredis.from_url(self.redis)
+    async def write_batch(self, batch: list):
+        latest = {}
+        collapsed = defaultdict(int)
 
-        while self.running:
-            async with self.read_queue() as updates:
-                update = list(updates)[-1]
-                if update:
-                    await conn.set(f"{self.key}-{update['exchange']}-{update['symbol']}", json.dumps(update))
+        for update in batch:
+            key = f"{self.key}-{update['exchange']}-{update['symbol']}"
+            latest[key] = update
+            collapsed[key] += 1
 
-        await conn.close()
-        await conn.connection_pool.disconnect()
+        async with self.conn.pipeline(transaction=False) as pipe:
+            for key, update in latest.items():
+                pipe.set(key, json.dumps(update))
+            results = await self._execute(pipe)
+
+        if not self._rejected(results):
+            return None
+
+        stored = sum(collapsed[key] for key, result in zip(latest, results) if not isinstance(result, Exception))
+        return stored, len(batch) - stored
 
 
 class TradeRedis(RedisZSetCallback, BackendCallback):
@@ -132,11 +172,11 @@ class BookStream(RedisStreamCallback, BackendBookCallback):
 class BookSnapshotRedisKey(RedisKeyCallback, BackendBookCallback):
     default_key = 'book'
 
-    def __init__(self, *args, snapshot_interval=1000, score_key='receipt_timestamp', **kwargs):
-        kwargs['snapshots_only'] = True
+    def __init__(self, *args, snapshot_interval=1000, **kwargs):
+        self.snapshots_only = True
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
-        super().__init__(*args, score_key=score_key, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class TickerRedis(RedisZSetCallback, BackendCallback):
@@ -169,35 +209,3 @@ class CandlesRedis(RedisZSetCallback, BackendCallback):
 
 class CandlesStream(RedisStreamCallback, BackendCallback):
     default_key = 'candles'
-
-
-class OrderInfoRedis(RedisZSetCallback, BackendCallback):
-    default_key = 'order_info'
-
-
-class OrderInfoStream(RedisStreamCallback, BackendCallback):
-    default_key = 'order_info'
-
-
-class TransactionsRedis(RedisZSetCallback, BackendCallback):
-    default_key = 'transactions'
-
-
-class TransactionsStream(RedisStreamCallback, BackendCallback):
-    default_key = 'transactions'
-
-
-class BalancesRedis(RedisZSetCallback, BackendCallback):
-    default_key = 'balances'
-
-
-class BalancesStream(RedisStreamCallback, BackendCallback):
-    default_key = 'balances'
-
-
-class FillsRedis(RedisZSetCallback, BackendCallback):
-    default_key = 'fills'
-
-
-class FillsStream(RedisStreamCallback, BackendCallback):
-    default_key = 'fills'

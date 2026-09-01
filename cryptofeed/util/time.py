@@ -1,45 +1,38 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 
 
-def timedelta_str_to_sec(td: str):
-    if td == '1m':
-        return 60
-    if td == '3m':
-        return 180
-    if td == '5m':
-        return 300
-    if td == '10m':
-        return 600
-    if td == '15m':
-        return 900
-    if td == '30m':
-        return 1800
-    if td == '1h':
-        return 3600
-    if td == '2h':
-        return 7200
-    if td == '4h':
-        return 14400
-    if td == '6h':
-        return 21600
-    if td == '8h':
-        return 28800
-    if td == '12h':
-        return 43200
-    if td == '1d':
-        return 86400
-    if td == '3d':
-        return 259200
-    if td == '1w':
-        return 604800
-    if td == '2w':
-        return 1209600
-    if td == '1M':
-        return 2592000
-    if td == '1Y':
-        return 31536000
+_SECONDS = {
+    '10s': 10,
+    '1m': 60,
+    '3m': 180,
+    '5m': 300,
+    '10m': 600,
+    '15m': 900,
+    '30m': 1800,
+    '1h': 3600,
+    '2h': 7200,
+    '3h': 10800,
+    '4h': 14400,
+    '6h': 21600,
+    '8h': 28800,
+    '12h': 43200,
+    '1d': 86400,
+    '3d': 259200,
+    '1w': 604800,
+    '2w': 1209600,
+    '15d': 1296000,
+    '1M': 2592000,
+    '1Y': 31536000,
+}
+
+
+def timedelta_str_to_sec(td: str) -> int:
+    try:
+        return _SECONDS[td]
+    except KeyError:
+        raise ValueError(f'unknown candle interval {td!r}. Must be one of {", ".join(sorted(_SECONDS))}') from None

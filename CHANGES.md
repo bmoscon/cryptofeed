@@ -1,5 +1,11 @@
 ## Changelog
 
+### 3.0.0
+ * Feature: New asyncio core
+ * Update: REST endpoints removed (trading functionality moves to the cryptotrade project)
+ * Update: dropped old / outdated / dead exchanges
+ * Update: Some backend support dropped
+
 ### 2.5.0 (2026-08-08)
  * Update: Python 3.12+ required, completed move to uv, `setup.py` removed
  * Update: CI/CD overhaul

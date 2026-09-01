@@ -1,131 +1,66 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-from decimal import Decimal
+import asyncio
 
 from cryptofeed import FeedHandler
-from cryptofeed.defines import CANDLES, BID, ASK, BLOCKCHAIN, FUNDING, GEMINI, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, TICKER, TRADES, INDEX
-from cryptofeed.exchanges import (Binance, BinanceUS, BinanceFutures, Bitfinex, Bitflyer, AscendEX, Bitmex, Bitstamp, Coinbase, Gateio,
-                                  HitBTC, Huobi, HuobiDM, HuobiSwap, Kraken, OKCoin, OKX, Poloniex, Bybit, KuCoin, Bequant, Upbit, Probit)
-from cryptofeed.exchanges.bitdotcom import BitDotCom
-from cryptofeed.exchanges.bitget import Bitget
-from cryptofeed.exchanges.cryptodotcom import CryptoDotCom
-from cryptofeed.exchanges.delta import Delta
-from cryptofeed.exchanges.fmfw import FMFW
-from cryptofeed.exchanges.independent_reserve import IndependentReserve
-from cryptofeed.exchanges.kraken_futures import KrakenFutures
-from cryptofeed.exchanges.blockchain import Blockchain
-from cryptofeed.exchanges.bithumb import Bithumb
-from cryptofeed.symbols import Symbol
-from cryptofeed.exchanges.phemex import Phemex
-from cryptofeed.exchanges.dydx import dYdX
-from cryptofeed.exchanges.deribit import Deribit
+from cryptofeed.defines import L2_BOOK, TRADES
+from cryptofeed.exchanges import EXCHANGE_MAP, INDEPENDENT_RESERVE
 
 
-# Examples of some handlers for different updates. These currently don't do much.
-# Handlers should conform to the patterns/signatures in callback.py
-# Handlers can be normal methods/functions or async. The feedhandler is paused
-# while the callbacks are being handled (unless they in turn await other functions or I/O)
-# so they should be as lightweight as possible
-async def ticker(t, receipt_timestamp):
-    if t.timestamp is not None:
-        assert isinstance(t.timestamp, float)
-    assert isinstance(t.exchange, str)
-    assert isinstance(t.bid, Decimal)
-    assert isinstance(t.ask, Decimal)
-    print(f'Ticker received at {receipt_timestamp}: {t}')
+BASE = 'BTC'
+QUOTE_PREFERENCE = ('USD', 'USDT', 'USDC', 'EUR', 'GBP', 'JPY', 'KRW')
+SYMBOL_CACHE_TTL = 3600
 
 
 async def trade(t, receipt_timestamp):
-    assert isinstance(t.timestamp, float)
-    assert isinstance(t.side, str)
-    assert isinstance(t.amount, Decimal)
-    assert isinstance(t.price, Decimal)
-    assert isinstance(t.exchange, str)
-    print(f"Trade received at {receipt_timestamp}: {t}")
+    print(f'TRADE {t.exchange:<16} {t.symbol:<20} {t.side:<4} {t.amount} @ {t.price} (exchange ts {t.timestamp}, received {receipt_timestamp})')
 
 
-async def book(book, receipt_timestamp):
-    print(f'Book received at {receipt_timestamp} for {book.exchange} - {book.symbol}, with {len(book.book)} entries. Top of book prices: {book.book.asks.index(0)[0]} - {book.book.bids.index(0)[0]}')
-    if book.delta:
-        print(f"Delta from last book contains {len(book.delta[BID]) + len(book.delta[ASK])} entries.")
-    if book.sequence_number:
-        assert isinstance(book.sequence_number, int)
+async def book(b, receipt_timestamp):
+    if not len(b.book.bids) or not len(b.book.asks):
+        return
+
+    bid, bid_size = b.book.bids.index(0)
+    ask, ask_size = b.book.asks.index(0)
+    print(f'BOOK  {b.exchange:<16} {b.symbol:<20} bid {bid_size} @ {bid} | ask {ask_size} @ {ask} ({len(b.book.bids)}x{len(b.book.asks)} levels, received {receipt_timestamp})')
 
 
-async def funding(f, receipt_timestamp):
-    print(f"Funding update received at {receipt_timestamp}: {f}")
+def _rank(symbol: str) -> tuple:
+    parts = symbol.split('-')
+    quote_rank = QUOTE_PREFERENCE.index(parts[1]) if parts[1] in QUOTE_PREFERENCE else len(QUOTE_PREFERENCE)
+    return (len(parts), quote_rank, 0 if parts[-1] == 'PERP' else 1, symbol)
 
 
-async def oi(update, receipt_timestamp):
-    print(f"Open Interest update received at {receipt_timestamp}: {update}")
+def pick_symbol(symbols: list) -> str:
+    pairs = [symbol for symbol in symbols if '-' in symbol]
+    candidates = [symbol for symbol in pairs if symbol.split('-')[0] == BASE]
+    return min(candidates or pairs, key=_rank)
 
 
-async def index(i, receipt_timestamp):
-    print(f"Index received at {receipt_timestamp}: {i}")
+async def main():
+    fh = FeedHandler(on_feed_error='remove_feed')
 
+    for name, exchange in EXCHANGE_MAP.items():
+        # IR doesnt support L2 books
+        if name == INDEPENDENT_RESERVE:
+            continue
 
-async def candle_callback(c, receipt_timestamp):
-    print(f"Candle received at {receipt_timestamp}: {c}")
+        try:
+            await exchange.load_symbols(cache_ttl=SYMBOL_CACHE_TTL)
+            symbol = pick_symbol(exchange.symbols())
+        except Exception as e:
+            print(f'{name}: skipping, unable to load symbols ({e})')
+            continue
 
+        print(f'{name}: subscribing to {symbol} - {TRADES} and {L2_BOOK}')
+        fh.add_feed(name, symbols=[symbol], channels=[TRADES, L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book})
 
-async def liquidations(liquidation, receipt_timestamp):
-    print(f"Liquidation received at {receipt_timestamp}: {liquidation}")
-
-
-def main():
-    config = {'log': {'filename': 'demo.log', 'level': 'DEBUG', 'disabled': False}}
-    # the config will be automatically passed into any exchanges set up by string. Instantiated exchange objects would need to pass the config in manually.
-    f = FeedHandler(config=config)
-
-    f.add_feed(FMFW(symbols=['BTC-USDT'], channels=[CANDLES, L2_BOOK, TRADES, TICKER], callbacks={CANDLES: candle_callback, TICKER: ticker, L2_BOOK: book, TRADES: trade}))
-    f.add_feed(AscendEX(symbols=['XRP-USDT'], channels=[L2_BOOK, TRADES], callbacks={L2_BOOK: book, TRADES: trade}))
-    f.add_feed(Bequant(symbols=['BTC-USDT'], channels=[L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade, TICKER: ticker, CANDLES: candle_callback}))
-    pairs = Binance.symbols()[:1]
-    f.add_feed(Binance(symbols=pairs, channels=[L2_BOOK], callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
-    pairs = BinanceFutures.symbols()[:30]
-    f.add_feed(BinanceFutures(symbols=pairs, channels=[TRADES, OPEN_INTEREST, FUNDING, LIQUIDATIONS], callbacks={TRADES: trade, OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
-    f.add_feed(BinanceUS(symbols=BinanceUS.symbols()[:2], channels=[TRADES, L2_BOOK], callbacks={L2_BOOK: book, TRADES: trade}))
-    f.add_feed(Bitfinex(symbols=['BTC-USDT'], channels=[L3_BOOK], callbacks={L3_BOOK: book, TICKER: ticker, TRADES: trade}))
-    f.add_feed(Bitflyer(symbols=['BTC-JPY'], channels=[TICKER, TRADES, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade}))
-    f.add_feed(Bithumb(symbols=['BTC-KRW'], channels=[TRADES], callbacks={TRADES: trade}))
-    f.add_feed(Bitmex(timeout=5000, symbols=Bitmex.symbols(), channels=[LIQUIDATIONS], callbacks={LIQUIDATIONS: liquidations, OPEN_INTEREST: oi, FUNDING: funding}))
-    f.add_feed(Bitstamp(channels=[L2_BOOK, TRADES], symbols=['BTC-USD'], callbacks={L2_BOOK: book, TRADES: trade}))
-    f.add_feed(BLOCKCHAIN, subscription={L2_BOOK: ['BTC-USD'], TRADES: Blockchain.symbols()}, callbacks={L2_BOOK: book, TRADES: trade})
-    f.add_feed(Bybit(symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[INDEX, FUNDING, OPEN_INTEREST], callbacks={OPEN_INTEREST: oi, INDEX: index, FUNDING: funding}))
-    f.add_feed(Bybit(candle_closed_only=True, symbols=['BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[CANDLES, TRADES, L2_BOOK], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book}))
-    f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], TICKER: ['BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker}))
-    f.add_feed(Coinbase(subscription={L3_BOOK: ['LTC-USD']}, callbacks={L3_BOOK: book}))
-    f.add_feed(Deribit(symbols=['BTC-USD-PERP'], channels=[L2_BOOK, TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS], callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker, OPEN_INTEREST: oi, FUNDING: funding, LIQUIDATIONS: liquidations}))
-    f.add_feed(dYdX(symbols=dYdX.symbols(), channels=[L2_BOOK, TRADES], callbacks={TRADES: trade, L2_BOOK: book}))
-    f.add_feed(Gateio(symbols=['BTC-USDT', 'ETH-USDT'], channels=[L2_BOOK, CANDLES, TRADES, TICKER], callbacks={CANDLES: candle_callback, L2_BOOK: book, TRADES: trade, TICKER: ticker}))
-    f.add_feed(GEMINI, subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book})
-    f.add_feed(HitBTC(channels=[TRADES], symbols=['BTC-USDT'], callbacks={TRADES: trade}))
-    f.add_feed(Huobi(symbols=['BTC-USDT'], channels=[CANDLES, TRADES, L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, CANDLES: candle_callback}))
-    f.add_feed(HuobiDM(subscription={L2_BOOK: HuobiDM.symbols()[:2], TRADES: HuobiDM.symbols()[:10]}, callbacks={TRADES: trade, L2_BOOK: book}))
-    pairs = ['BTC-USD-PERP', 'ETH-USD-PERP', 'LTC-USD-PERP']
-    f.add_feed(HuobiSwap(symbols=pairs, channels=[TRADES, L2_BOOK, FUNDING], callbacks={FUNDING: funding, TRADES: trade, L2_BOOK: book}))
-    f.add_feed(KrakenFutures(symbols=KrakenFutures.symbols(), channels=[L2_BOOK, TICKER, TRADES, OPEN_INTEREST, FUNDING], callbacks={L2_BOOK: book, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade, TICKER: ticker}))
-    f.add_feed(Kraken(config='config.yaml', checksum_validation=True, subscription={L2_BOOK: ['BTC-USD'], TRADES: ['BTC-USD'], CANDLES: ['BTC-USD'], TICKER: ['ETH-USD']}, callbacks={L2_BOOK: book, CANDLES: candle_callback, TRADES: trade, TICKER: ticker}))
-    f.add_feed(KuCoin(symbols=['BTC-USDT', 'ETH-USDT'], channels=[TICKER, TRADES, CANDLES], callbacks={CANDLES: candle_callback, TICKER: ticker, TRADES: trade}))
-    f.add_feed(OKX(checksum_validation=True, symbols=['BTC-USDT-PERP'], channels=[TRADES, TICKER, FUNDING, OPEN_INTEREST, LIQUIDATIONS, L2_BOOK], callbacks={L2_BOOK: book, TICKER: ticker, LIQUIDATIONS: liquidations, FUNDING: funding, OPEN_INTEREST: oi, TRADES: trade}))
-    f.add_feed(OKCoin(checksum_validation=True, symbols=['BTC-USD'], channels=[TRADES, TICKER, L2_BOOK, CANDLES], callbacks={L2_BOOK: book, TICKER: ticker, TRADES: trade, CANDLES: candle_callback}))
-    f.add_feed(Phemex(symbols=[Symbol('BTC', 'USD', type=PERPETUAL)], channels=[L2_BOOK, CANDLES, TRADES], callbacks={TRADES: trade, L2_BOOK: book, CANDLES: candle_callback}))
-    f.add_feed(Poloniex(symbols=['BTC-USDT'], channels=[TRADES], callbacks={TRADES: trade}))
-    f.add_feed(Poloniex(subscription={TRADES: ['DOGE-BTC'], L2_BOOK: ['LTC-BTC']}, callbacks={TRADES: trade, L2_BOOK: book}))
-    f.add_feed(Probit(subscription={TRADES: ['BTC-USDT'], L2_BOOK: ['BTC-USDT']}, callbacks={TRADES: trade, L2_BOOK: book}))
-    f.add_feed(Upbit(subscription={TRADES: ['BTC-USDT'], L2_BOOK: ['BTC-USDT']}, callbacks={TRADES: trade, L2_BOOK: book}))
-    f.add_feed(CryptoDotCom(symbols=['BTC-USDT'], channels=[L2_BOOK, TICKER, CANDLES, TRADES], callbacks={TRADES: trade, CANDLES: candle_callback, TICKER: ticker, L2_BOOK: book}))
-    f.add_feed(Delta(symbols=['BTC-USDT', 'BTC-USDT-PERP'], channels=[L2_BOOK, TRADES, CANDLES], callbacks={TRADES: trade, CANDLES: candle_callback, L2_BOOK: book}))
-    f.add_feed(BitDotCom(config="config.yaml", sandbox=True, symbols=['BTC-USDT', 'BTC-USD-PERP'], channels=[TICKER, TRADES, L2_BOOK], callbacks={TRADES: trade, L2_BOOK: book, TICKER: ticker}))
-    f.add_feed(Bitget(checksum_validation=True, config='config.yaml', symbols=['BTC-USDT', 'BTC-USDT-PERP', 'BTC-USD-PERP'], channels=[L2_BOOK, TRADES, TICKER, CANDLES], callbacks={CANDLES: candle_callback, TRADES: trade, L2_BOOK: book, TICKER: ticker}))
-    f.add_feed(IndependentReserve(symbols=['BTC-USD'], channels=[L3_BOOK, TRADES], callbacks={TRADES: trade, L3_BOOK: book}))
-
-    f.run()
+    await fh.run_async()
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -36,6 +36,16 @@ class AttrDict(dict):
     __setattr__ = __setitem__
 
 
+def _merge(defaults: dict, supplied: dict) -> AttrDict:
+    merged = AttrDict(defaults)
+    for key, value in (supplied or {}).items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
 class Config:
     def __init__(self, config=None):
         self.config = AttrDict(_default_config)
@@ -44,20 +54,20 @@ class Config:
         if isinstance(config, str):
             if config and os.path.exists(config):
                 with open(config) as fp:
-                    self.config = AttrDict(yaml.safe_load(fp))
+                    self.config = _merge(_default_config, yaml.safe_load(fp))
                     self.log_msg = f'Config: use file={config!r} containing the following main keys: {", ".join(self.config.keys())}'
             else:
                 self.log_msg = f'Config: no file={config!r} => default config.'
         elif isinstance(config, dict):
-            self.config = AttrDict(config)
+            self.config = _merge(_default_config, config)
             self.log_msg = f'Config: use dict containing the following main keys: {", ".join(self.config.keys())}'
         elif isinstance(config, Config):
-            self.config = AttrDict(config.config)
+            self.config = _merge(_default_config, config.config)
             self.log_msg = f'Config: using Config containing the following main keys: {", ".join(self.config.keys())}'
         elif os.environ.get('CRYPTOFEED_CONFIG') and os.path.exists(os.environ.get('CRYPTOFEED_CONFIG')):
             config = os.environ.get('CRYPTOFEED_CONFIG')
             with open(config) as fp:
-                self.config = AttrDict(yaml.safe_load(fp))
+                self.config = _merge(_default_config, yaml.safe_load(fp))
                 self.log_msg = f'Config: use file={config!r} from CRYPTOFEED_CONFIG containing the following main keys: {", ".join(self.config.keys())}'
         else:
             self.log_msg = f'Config: Only accept str and dict but got {type(config)!r} => default config.'
@@ -73,6 +83,9 @@ class Config:
 
     def __contains__(self, item):
         return item in self.config
+
+    def keys(self):
+        return self.config.keys()
 
     def __repr__(self) -> str:
         return self.config.__repr__()

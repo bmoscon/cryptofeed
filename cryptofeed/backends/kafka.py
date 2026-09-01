@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -7,18 +7,40 @@ associated with this software.
 from collections import defaultdict
 import asyncio
 import logging
-from typing import Optional, ByteString
+import re
+from contextlib import suppress
+from typing import Optional
 
 from aiokafka import AIOKafkaProducer
-from aiokafka.errors import RequestTimedOutError, KafkaConnectionError, NodeNotReadyError
-from yapic import json
+from aiokafka.errors import (InvalidTopicError, KafkaConnectionError, KafkaTimeoutError, MessageSizeTooLargeError, NodeNotReadyError, RecordListTooLargeError, RequestTimedOutError, UnknownTopicOrPartitionError)
+from cryptofeed import _json as json
 
-from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue
+from cryptofeed.backends.backend import BackendBookCallback, BackendCallback, BackendQueue, PermanentWriteError
 
-LOG = logging.getLogger('feedhandler')
+
+LOG = logging.getLogger(__name__)
+
+
+QUEUE_KWARGS = ('max_depth', 'overflow', 'batch_max', 'batch_interval', 'retry', 'flush_deadline')
+PERMANENT_ERRORS = (MessageSizeTooLargeError, RecordListTooLargeError, InvalidTopicError)
+TOPIC_MAX_LENGTH = 249
+LEGAL_TOPIC = re.compile(r'^[A-Za-z0-9._-]+$')
+
+
+def illegal_topic(name: str) -> Optional[str]:
+    """Why `name` can never be a Kafka topic, or None if it can be one."""
+    if not name or len(name) > TOPIC_MAX_LENGTH:
+        return f'a topic name is 1-{TOPIC_MAX_LENGTH} characters, this one is {len(name)}'
+    if name in ('.', '..'):
+        return "'.' and '..' are not legal topic names"
+    if not LEGAL_TOPIC.match(name):
+        return 'a topic name may only contain [A-Za-z0-9._-]'
+    return None
 
 
 class KafkaCallback(BackendQueue):
+    retryable_exceptions = (KafkaConnectionError, KafkaTimeoutError, NodeNotReadyError, RequestTimedOutError, UnknownTopicOrPartitionError)
+
     def __init__(self, key=None, numeric_type=float, none_to=None, **kwargs):
         """
         You can pass configuration options to AIOKafkaProducer as keyword arguments.
@@ -37,16 +59,24 @@ class KafkaCallback(BackendQueue):
             'value_serializer': your_serialization_function}
 
         (Passing the event loop is already handled)
+
+        The queue options of BackendQueue (max_depth, overflow, batch_max, batch_interval,
+        retry, flush_deadline) are accepted here too and go to the queue, not to the producer.
         """
+        super().__init__(**{name: kwargs.pop(name) for name in QUEUE_KWARGS if name in kwargs})
         self.producer_config = kwargs
         self.producer = None
         self.key: str = key or self.default_key
+        reason = illegal_topic(self.key)
+
+        if reason is not None:
+            raise ValueError(f'key {self.key!r} cannot be part of a Kafka topic name: {reason}')
+
         self.numeric_type = numeric_type
         self.none_to = none_to
-        # Do not allow writer to send messages until connection confirmed
-        self.running = False
+        self._checked_topics = set()
 
-    def _default_serializer(self, to_bytes: dict | str) -> ByteString:
+    def _default_serializer(self, to_bytes: dict | str) -> bytes:
         if isinstance(to_bytes, dict):
             return json.dumpb(to_bytes)
         elif isinstance(to_bytes, str):
@@ -54,29 +84,32 @@ class KafkaCallback(BackendQueue):
         else:
             raise TypeError(f'{type(to_bytes)} is not a valid Serialization type')
 
-    async def _connect(self):
-        if not self.producer:
-            try:
-                config_keys = ', '.join([k for k in self.producer_config.keys()])
-                LOG.info(f'{self.__class__.__name__}: Configuring AIOKafka with the following parameters: {config_keys}')
-                self.producer = AIOKafkaProducer(**self.producer_config)
-            # Quit if invalid config option passed to AIOKafka
-            except (TypeError, ValueError) as e:
-                LOG.error(f'{self.__class__.__name__}: Invalid AIOKafka configuration: {e.args}{chr(10)}See https://aiokafka.readthedocs.io/en/stable/api.html#aiokafka.AIOKafkaProducer for list of configuration options')
-                raise SystemExit
-            else:
-                while not self.running:
-                    try:
-                        await self.producer.start()
-                    except KafkaConnectionError:
-                        LOG.error(f'{self.__class__.__name__}: Unable to bootstrap from host(s)')
-                        await asyncio.sleep(10)
-                    else:
-                        LOG.info(f'{self.__class__.__name__}: "{self.producer.client._client_id}" connected to cluster containing {len(self.producer.client.cluster.brokers())} broker(s)')
-                        self.running = True
+    async def connect(self):
+        if self.producer is not None:
+            return
+        LOG.info('%s: Configuring AIOKafka with the following parameters: %s', self.__class__.__name__, ', '.join(self.producer_config.keys()))
+        producer = AIOKafkaProducer(**self.producer_config)
+        try:
+            await producer.start()
+        except BaseException:
+            with suppress(Exception):
+                await producer.stop()
+            raise
+
+        self.producer = producer
+        LOG.info('%s: connected to a cluster containing %d broker(s)', self.__class__.__name__, len(producer.client.cluster.brokers()))
 
     def topic(self, data: dict) -> str:
         return f"{self.key}-{data['exchange']}-{data['symbol']}"
+
+    def _topic(self, data: dict) -> str:
+        name = self.topic(data)
+        if name not in self._checked_topics:
+            reason = illegal_topic(name)
+            if reason is not None:
+                raise PermanentWriteError(f'{name!r} is not a legal Kafka topic name: {reason}')
+            self._checked_topics.add(name)
+        return name
 
     def partition_key(self, data: dict) -> Optional[bytes]:
         return None
@@ -84,27 +117,54 @@ class KafkaCallback(BackendQueue):
     def partition(self, data: dict) -> Optional[int]:
         return None
 
-    async def writer(self):
-        await self._connect()
-        while self.running:
-            async with self.read_queue() as updates:
-                for index in range(len(updates)):
-                    topic = self.topic(updates[index])
-                    # Check for user-provided serializers, otherwise use default
-                    value = updates[index] if self.producer_config.get('value_serializer') else self._default_serializer(updates[index])
-                    key = self.key if self.producer_config.get('key_serializer') else self._default_serializer(self.key)
-                    partition = self.partition(updates[index])
-                    try:
-                        send_future = await self.producer.send(topic, value, key, partition)
-                        await send_future
-                    except RequestTimedOutError:
-                        LOG.error(f'{self.__class__.__name__}: No response received from server within {self.producer._request_timeout_ms} ms. Messages may not have been delivered')
-                    except NodeNotReadyError:
-                        LOG.error(f'{self.__class__.__name__}: Node not ready')
-                    except Exception as e:
-                        LOG.info(f'{self.__class__.__name__}: Encountered an error:{chr(10)}{e}')
-        LOG.info(f"{self.__class__.__name__}: sending last messages and closing connection '{self.producer.client._client_id}'")
-        await self.producer.stop()
+    async def write_batch(self, batch: list):
+        results, interrupted = await self._send(batch)
+        delivered = sum(not isinstance(result, BaseException) for result in results)
+        permanent = None
+
+        for result in results if interrupted is None else [*results, interrupted]:
+            if not isinstance(result, BaseException):
+                continue
+            if not isinstance(result, PERMANENT_ERRORS + (PermanentWriteError,)):
+                raise result
+            if permanent is None:
+                permanent = result
+
+        if permanent is None:
+            return None
+
+        if not delivered:
+            if isinstance(permanent, PermanentWriteError):
+                raise permanent
+            raise PermanentWriteError(str(permanent)) from permanent
+
+        LOG.error('%s: kafka permanently rejected batch after %d of %d records already delivered (%s) - ', self.__class__.__name__, delivered, len(batch), permanent)
+        return delivered, len(batch) - delivered
+
+    async def _send(self, batch: list) -> tuple:
+        value_serializer = self.producer_config.get('value_serializer')
+        key = self.key if self.producer_config.get('key_serializer') else self._default_serializer(self.key)
+        futures = []
+
+        try:
+            for update in batch:
+                value = update if value_serializer else self._default_serializer(update)
+                message_key = self.partition_key(update)
+                futures.append(await self.producer.send(self._topic(update), value,
+                                                        key if message_key is None else message_key,
+                                                        self.partition(update)))
+        except BaseException as e:
+            results = await asyncio.gather(*futures, return_exceptions=True)
+            if not isinstance(e, Exception):
+                raise
+            return results, e
+        return await asyncio.gather(*futures, return_exceptions=True), None
+
+    async def close(self):
+        if self.producer is not None:
+            producer, self.producer = self.producer, None
+            LOG.info('%s: sending last messages and closing connection', self.__class__.__name__)
+            await producer.stop()
 
 
 class TradeKafka(KafkaCallback, BackendCallback):
@@ -139,19 +199,3 @@ class LiquidationsKafka(KafkaCallback, BackendCallback):
 
 class CandlesKafka(KafkaCallback, BackendCallback):
     default_key = 'candles'
-
-
-class OrderInfoKafka(KafkaCallback, BackendCallback):
-    default_key = 'order_info'
-
-
-class TransactionsKafka(KafkaCallback, BackendCallback):
-    default_key = 'transactions'
-
-
-class BalancesKafka(KafkaCallback, BackendCallback):
-    default_key = 'balances'
-
-
-class FillsKafka(KafkaCallback, BackendCallback):
-    default_key = 'fills'

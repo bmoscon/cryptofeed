@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -10,23 +10,28 @@ from decimal import Decimal
 import time
 from typing import Dict, Tuple
 
-from yapic import json
+from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle
 from cryptofeed.util.time import timedelta_str_to_sec
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
 
 
 class Gateio(Feed):
     id = GATEIO
+    provides_sequence_number = True
+    validates_sequence_number = True
+    MAX_STALE_SNAPSHOTS = 3
+    SNAPSHOT_DEPTH = 100
     websocket_endpoints = [WebsocketEndpoint('wss://api.gateio.ws/ws/v4/', options={'compression': None})]
-    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/spot/currency_pairs', l2book='/api/v4/spot/order_book?currency_pair={}&limit=100&with_id=true'))]
+    rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/spot/currency_pairs', l2book='/api/v4/spot/order_book?currency_pair={}&limit={}&with_id=true'))]
 
     valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d'}
     websocket_channels = {
@@ -49,10 +54,12 @@ class Gateio(Feed):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
+
     def _reset(self):
         self._l2_book = {}
         self.last_update_id = {}
         self.forced = defaultdict(bool)
+        self.stale_snapshots = defaultdict(int)
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -112,7 +119,10 @@ class Gateio(Feed):
         )
         await self.callback(TRADES, t, timestamp)
 
-    async def _snapshot(self, symbol: str):
+    def _snapshot_url(self, symbol: str) -> str:
+        return self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol, self.SNAPSHOT_DEPTH)
+
+    def _parse_snapshot(self, symbol: str, data) -> OrderBook:
         """
         {
             "id": 2679059670,
@@ -120,15 +130,21 @@ class Gateio(Feed):
             "bids": [[price, amount], [...], ...]
         }
         """
-        ret = await self.http_conn.read(self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol))
-        data = json.loads(ret, parse_float=Decimal)
+        data = json.loads(data, parse_float=Decimal)
+        book = OrderBook(self.id, symbol, max_depth=self.max_depth)
+        book.book.bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
+        book.book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
+        book.sequence_number = data['id']
+        book.raw = data
+        return book
 
-        symbol = self.exchange_symbol_to_std_symbol(symbol)
-        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
-        self.last_update_id[symbol] = data['id']
-        self._l2_book[symbol].book.bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
-        self._l2_book[symbol].book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], time.time(), raw=data, sequence_number=data['id'])
+    async def _snapshot(self, symbol: str):
+        response = await self.http_conn.read(self._snapshot_url(symbol))
+        book = self._parse_snapshot(self.exchange_symbol_to_std_symbol(symbol), response)
+
+        self._l2_book[book.symbol] = book
+        self.last_update_id[book.symbol] = book.sequence_number
+        await self.book_callback(L2_BOOK, book, time.time(), raw=book.raw, sequence_number=book.sequence_number)
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
@@ -139,12 +155,21 @@ class Gateio(Feed):
         elif forced and msg['U'] <= self.last_update_id[pair] + 1 <= msg['u']:
             self.last_update_id[pair] = msg['u']
             self.forced[pair] = True
+            self.stale_snapshots.pop(pair, None)
         elif not forced and self.last_update_id[pair] + 1 == msg['U']:
             self.last_update_id[pair] = msg['u']
-        else:
-            self._reset()
-            LOG.warning("%s: Missing book update detected, resetting book", self.id)
+        elif forced:
+            self.stale_snapshots[pair] += 1
+            if self.stale_snapshots[pair] > self.MAX_STALE_SNAPSHOTS:
+                raise MissingSequenceNumber(f'{self.id}: {pair} snapshot is still behind the update stream after {self.MAX_STALE_SNAPSHOTS} attempts')
+            LOG.warning('%s: %s snapshot (%d) is behind the update stream (%d-%d), snapshotting again', self.id, pair, self.last_update_id[pair], msg['U'], msg['u'])
+
+            self._l2_book.pop(pair, None)
+            self.last_update_id.pop(pair, None)
+            self.forced[pair] = False
             skip_update = True
+        else:
+            raise MissingSequenceNumber(f"{self.id}: sequence number failure, resetting")
 
         return skip_update
 
@@ -241,7 +266,7 @@ class Gateio(Feed):
         if msg['event'] == 'subscribe':
             return
         elif 'channel' in msg:
-            market, channel = msg['channel'].split('.')
+            _, channel = msg['channel'].split('.')
             if channel == 'tickers':
                 await self._ticker(msg, timestamp)
             elif channel == 'trades':

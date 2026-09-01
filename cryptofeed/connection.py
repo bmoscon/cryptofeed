@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -7,26 +7,48 @@ associated with this software.
 import logging
 import time
 import asyncio
-from asyncio import Queue, CancelledError
-from contextlib import asynccontextmanager, suppress
-from typing import List, Union, AsyncIterable
-from decimal import Decimal
-import atexit
+import weakref
+from contextlib import asynccontextmanager
+from typing import List, Optional, Union, AsyncIterable
 from dataclasses import dataclass
 
 from aiohttp.client_reqrep import ClientResponse
-import requests
 from websockets.asyncio.client import connect, ClientConnection
 from websockets.protocol import State
 import aiohttp
 from aiohttp.typedefs import StrOrURL
-from yapic import json as json_parser
 
 from cryptofeed.exceptions import ConnectionClosed
 from cryptofeed.symbols import str_to_symbol
 
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
+_LIVE = weakref.WeakSet()
+
+
+@dataclass(frozen=True)
+class ConnectionStats:
+    id: str
+    created: float
+    connects: int
+    reconnects: int
+    watchdog_trips: int
+    received: int
+    sent: int
+    last_message: Optional[float]
+    open: bool
+
+
+def connection_stats(exchange: str = None, since: float = None) -> dict:
+    out = {}
+    for conn in list(_LIVE):
+        if since is not None and conn.created < since:
+            continue
+        # prefix match, exchange ids can contain periods
+        if exchange is not None and not conn.id.startswith(f'{exchange}.'):
+            continue
+        out[conn.id] = conn.stats
+    return dict(sorted(out.items()))
 
 
 class Connection:
@@ -39,43 +61,13 @@ class Connection:
         raise NotImplementedError
 
 
-class HTTPSync(Connection):
-    def process_response(self, r, address, json=False, text=False, uuid=None):
-        if self.raw_data_callback:
-            self.raw_data_callback.sync_callback(r.text, time.time(), str(uuid), endpoint=address)
-
-        r.raise_for_status()
-        if json:
-            return json_parser.loads(r.text, parse_float=Decimal)
-        if text:
-            return r.text
-        return r
-
-    def read(self, address: str, params=None, headers=None, json=False, text=True, uuid=None):
-        LOG.debug("HTTPSync: requesting data from %s", address)
-        r = requests.get(address, headers=headers, params=params)
-        return self.process_response(r, address, json=json, text=text, uuid=uuid)
-
-    def write(self, address: str, data=None, json=False, text=True, uuid=None, is_data_json=False):
-        LOG.debug("HTTPSync: post to %s", address)
-        if (is_data_json):
-            r = requests.post(address, json=data)
-        else:
-            r = requests.post(address, data=data)
-
-        return self.process_response(r, address, json=json, text=text, uuid=uuid)
-
-
 class AsyncConnection(Connection):
     conn_count: int = 0
 
-    def __init__(self, conn_id: str, authentication=None, subscription=None):
+    def __init__(self, conn_id: str, subscription=None):
         """
         conn_id: str
             the unique identifier for the connection
-        authentication: Callable
-            function pointer that will be invoked directly before the connection
-            is attempted. Some connections may need to do authentication at this point.
         subscription: dict
             optional connection information
         """
@@ -84,21 +76,14 @@ class AsyncConnection(Connection):
         self.received: int = 0
         self.sent: int = 0
         self.last_message = None
-        self.authentication = authentication
         self.subscription = subscription
         self.conn: Union[ClientConnection, aiohttp.ClientSession] = None
-        atexit.register(self.__del__)
-
-    def __del__(self):
-        # best effort clean up. Shutdown should be called on Feed/Exchange classes
-        # and any user of the Async connection should use a context manager (via connect)
-        # or call close manually. If not, we *might* be able to clean up the connection on exit
-        try:
-            if self.is_open:
-                asyncio.ensure_future(self.close())
-        except (RuntimeError, RuntimeWarning):
-            # no event loop, ignore error
-            pass
+        self.created: float = time.time()
+        self.connects: int = 0
+        self.watchdog_trips: int = 0
+        self._received_before: int = 0
+        self._sent_before: int = 0
+        _LIVE.add(self)
 
     @property
     def uuid(self):
@@ -107,10 +92,34 @@ class AsyncConnection(Connection):
     @asynccontextmanager
     async def connect(self):
         await self._open()
+        self.connects += 1
         try:
             yield self
         finally:
             await self.close()
+
+    def _reset_counters(self):
+        self._received_before += self.received
+        self._sent_before += self.sent
+        self.received = 0
+        self.sent = 0
+        self.last_message = None
+
+    def record_watchdog_trip(self):
+        self.watchdog_trips += 1
+
+    @property
+    def stats(self) -> ConnectionStats:
+        """Read-only snapshot. Never raises: a report that cannot be taken is worse than a stale one."""
+        try:
+            is_open = bool(self.is_open)
+        except NotImplementedError:
+            is_open = False
+        return ConnectionStats(id=self.id, created=self.created, connects=self.connects,
+                               reconnects=max(self.connects - 1, 0), watchdog_trips=self.watchdog_trips,
+                               received=self._received_before + self.received,
+                               sent=self._sent_before + self.sent,
+                               last_message=self.last_message, open=is_open)
 
     async def _open(self):
         raise NotImplementedError
@@ -125,6 +134,9 @@ class AsyncConnection(Connection):
             self.conn = None
             await conn.close()
             LOG.info('%s: closed connection %r', self.id, conn.__class__.__name__)
+
+        if self.raw_data_callback is not None:
+            await self.raw_data_callback.on_close(self)
 
 
 class HTTPAsyncConn(AsyncConnection):
@@ -155,11 +167,9 @@ class HTTPAsyncConn(AsyncConnection):
         else:
             LOG.debug('%s: create HTTP session', self.id)
             self.conn = aiohttp.ClientSession()
-            self.sent = 0
-            self.received = 0
-            self.last_message = None
+            self._reset_counters()
 
-    async def read(self, address: str, header=None, params=None, return_headers=False, retry_count=0, retry_delay=60) -> str:
+    async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60) -> str:
         if not self.is_open:
             await self._open()
 
@@ -169,8 +179,6 @@ class HTTPAsyncConn(AsyncConnection):
                 data = await response.text()
                 self.last_message = time.time()
                 self.received += 1
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address, header=None if return_headers is False else dict(response.headers))
                 if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
@@ -179,8 +187,8 @@ class HTTPAsyncConn(AsyncConnection):
                     await asyncio.sleep(retry_delay)
                     continue
                 self._handle_error(response, data)
-                if return_headers:
-                    return data, response.headers
+                if self.raw_data_callback is not None:
+                    await self.raw_data_callback.on_http(self, address, params, header, data, self.last_message)
                 return data
 
     async def write(self, address: str, msg: str, header=None, retry_count=0, retry_delay=60) -> str:
@@ -191,8 +199,6 @@ class HTTPAsyncConn(AsyncConnection):
             async with self.conn.post(address, data=msg, headers=header) as response:
                 self.sent += 1
                 data = await response.read()
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, time.time(), self.id, send=address)
                 if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
@@ -201,6 +207,8 @@ class HTTPAsyncConn(AsyncConnection):
                     await asyncio.sleep(retry_delay)
                     continue
                 self._handle_error(response, data)
+                if self.raw_data_callback is not None:
+                    await self.raw_data_callback.on_http_post(self, address, msg, data, time.time())
                 return data
 
     async def delete(self, address: str, header=None, retry_count=0, retry_delay=60) -> str:
@@ -211,8 +219,6 @@ class HTTPAsyncConn(AsyncConnection):
             async with self.conn.delete(address, headers=header) as response:
                 self.sent += 1
                 data = await response.read()
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, time.time(), self.id, send=address)
                 if response.status == 429 and retry_count:
                     LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
                     retry_count -= 1
@@ -226,7 +232,7 @@ class HTTPAsyncConn(AsyncConnection):
 
 class HTTPPoll(HTTPAsyncConn):
     def __init__(self, address: Union[List, str], conn_id: str, delay: float = 60, sleep: float = 1, proxy: StrOrURL = None):
-        super().__init__(f'{conn_id}.http.{self.conn_count}', proxy)
+        super().__init__(conn_id, proxy)
         if isinstance(address, str):
             address = [address]
         self.address = address
@@ -245,10 +251,10 @@ class HTTPPoll(HTTPAsyncConn):
                 data = await response.text()
                 self.received += 1
                 self.last_message = time.time()
-                if self.raw_data_callback:
-                    await self.raw_data_callback(data, self.last_message, self.id, endpoint=address)
                 if response.status != 429:
                     response.raise_for_status()
+                    if self.raw_data_callback is not None:
+                        await self.raw_data_callback.on_http_poll(self, address, header, data, self.last_message)
                     return data
             LOG.warning("%s: encountered a rate limit for address %s, retrying in %f seconds", self.id, address, self.delay)
             await asyncio.sleep(self.delay)
@@ -260,38 +266,9 @@ class HTTPPoll(HTTPAsyncConn):
             await asyncio.sleep(self.sleep)
 
 
-class HTTPConcurrentPoll(HTTPPoll):
-    """Polls each address concurrently in it's own Task"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._queue = Queue()
-
-    async def _poll_address(self, address: str, header=None):
-        while True:
-            data = await self._read_address(address, header)
-            await self._queue.put(data)
-            await asyncio.sleep(self.sleep)
-
-    async def read(self, header=None) -> AsyncIterable[str]:
-        tasks = asyncio.gather(*(self._poll_address(address, header) for address in self.address))
-
-        try:
-            while not tasks.done():
-                with suppress(asyncio.exceptions.TimeoutError):
-                    yield await asyncio.wait_for(self._queue.get(), timeout=1)
-        finally:
-            if not tasks.done():
-                tasks.cancel()
-                with suppress(CancelledError):
-                    await tasks
-            elif tasks.exception() is not None:
-                raise tasks.exception()
-
-
 class WSAsyncConn(AsyncConnection):
 
-    def __init__(self, address: str, conn_id: str, authentication=None, subscription=None, **kwargs):
+    def __init__(self, address: str, conn_id: str, subscription=None, **kwargs):
         """
         address: str
             the websocket address to connect to
@@ -303,7 +280,7 @@ class WSAsyncConn(AsyncConnection):
         if not address.startswith("wss://"):
             raise ValueError(f'Invalid address, must be a wss address. Provided address is: {address!r}')
         self.address = address
-        super().__init__(f'{conn_id}.ws.{self.conn_count}', authentication=authentication, subscription=subscription)
+        super().__init__(f'{conn_id}.ws.{self.conn_count}', subscription=subscription)
         self.ws_kwargs = kwargs
 
     @property
@@ -315,40 +292,30 @@ class WSAsyncConn(AsyncConnection):
             LOG.warning('%s: websocket already open', self.id)
         else:
             LOG.debug('%s: connecting to %s', self.id, self.address)
-            if self.raw_data_callback:
-                await self.raw_data_callback(None, time.time(), self.id, connect=self.address)
-            if self.authentication:
-                self.address, self.ws_kwargs = await self.authentication(self.address, self.ws_kwargs)
-
             self.conn = await connect(self.address, **self.ws_kwargs)
-        self.sent = 0
-        self.received = 0
-        self.last_message = None
+            if self.raw_data_callback is not None:
+                await self.raw_data_callback.on_ws_open(self, time.time())
+        self._reset_counters()
 
     async def read(self) -> AsyncIterable:
         if not self.is_open:
             LOG.error('%s: connection closed in read()', id(self))
             raise ConnectionClosed
-        if self.raw_data_callback:
-            async for data in self.conn:
-                self.received += 1
-                self.last_message = time.time()
-                await self.raw_data_callback(data, self.last_message, self.id)
-                yield data
-        else:
-            async for data in self.conn:
-                self.received += 1
-                self.last_message = time.time()
-                yield data
+        async for data in self.conn:
+            self.received += 1
+            self.last_message = time.time()
+            if self.raw_data_callback is not None:
+                await self.raw_data_callback.on_ws_message(self, data, self.last_message)
+            yield data
 
     async def write(self, data: str):
         if not self.is_open:
             raise ConnectionClosed
 
-        if self.raw_data_callback:
-            await self.raw_data_callback(data, time.time(), self.id, send=self.address)
         await self.conn.send(data)
         self.sent += 1
+        if self.raw_data_callback is not None:
+            await self.raw_data_callback.on_ws_send(self, data, time.time())
 
 
 @dataclass
@@ -359,10 +326,9 @@ class WebsocketEndpoint:
     channel_filter: str = None
     limit: int = None
     options: dict = None
-    authentication: bool = None
 
     def __post_init__(self):
-        defaults = {'ping_interval': 10, 'ping_timeout': None, 'max_size': None, 'max_queue': None}
+        defaults = {'ping_interval': 20, 'ping_timeout': 60, 'max_size': None, 'max_queue': 1024}
         if self.options:
             defaults.update(self.options)
         self.options = defaults
@@ -377,6 +343,9 @@ class WebsocketEndpoint:
             ret[chan] = []
             if not self.instrument_filter:
                 ret[chan].extend(sub[chan])
+            elif callable(self.instrument_filter):
+                # some venues split endpoints on more than one attribute
+                ret[chan].extend([s for s in syms if self.instrument_filter(str_to_symbol(s))])
             else:
                 if self.instrument_filter[0] == 'TYPE':
                     ret[chan].extend([s for s in syms if str_to_symbol(s).type in self.instrument_filter[1]])
@@ -399,8 +368,6 @@ class Routes:
     funding: str = None
     open_interest: str = None
     liquidations: str = None
-    stats: str = None
-    authentication: str = None
     l2book: str = None
     l3book: str = None
 

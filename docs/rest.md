@@ -1,1 +1,0 @@
-## Supported REST Endpoints

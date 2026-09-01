@@ -1,19 +1,24 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from collections import defaultdict
 import logging
+import re
 
-from yapic import json
+from cryptofeed import _json as json
 
+from cryptofeed.backends._line_protocol import INFLUXDB, encode
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
-from cryptofeed.backends.http import HTTPCallback
+from cryptofeed.backends.http import HTTPCallback, error_message
 from cryptofeed.defines import BID, ASK
 
-LOG = logging.getLogger('feedhandler')
+LOG = logging.getLogger(__name__)
+
+UNPARSEABLE = re.compile(r"unable to parse '(.*)': ")
+DROPPED = re.compile(r'dropped=(\d+)')
 
 
 class InfluxCallback(HTTPCallback):
@@ -26,18 +31,8 @@ class InfluxCallback(HTTPCallback):
         MEASUREMENT | TAGS | FIELDS
 
         Measurement: Data Feed-Exchange (configurable)
-        TAGS: symbol
-        FIELDS: timestamp, amount, price, other funding specific fields
-
-        Example data in InfluxDB
-        ------------------------
-        > select * from "book-COINBASE";
-        name: COINBASE
-        time                amount    symbol    price   side timestamp
-        ----                ------    ----    -----   ---- ---------
-        1542577584985404000 0.0018    BTC-USD 5536.17 bid  2018-11-18T21:46:24.963762Z
-        1542577584985404000 0.0015    BTC-USD 5542    ask  2018-11-18T21:46:24.963762Z
-        1542577585259616000 0.0018    BTC-USD 5536.17 bid  2018-11-18T21:46:25.256391Z
+        TAGS: symbol (plus interval for candles)
+        FIELDS: timestamp, amount, price, other data type specific fields
 
         Parameters
         ----------
@@ -53,50 +48,53 @@ class InfluxCallback(HTTPCallback):
         key:
           key to use when writing data, will be a combination of key-datatype
         """
-        super().__init__(addr, **kwargs)
-        self.addr = f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision=us"
+        super().__init__(f"{addr}/api/v2/write?org={org}&bucket={bucket}&precision=ns", **kwargs)
         self.headers = {"Authorization": f"Token {token}"}
-
-        self.session = None
         self.key = key if key else self.default_key
         self.numeric_type = float
         self.none_to = None
-        self.running = True
+        self._last_point_ns = 0
 
-    def format(self, data):
-        ret = []
-        for key, value in data.items():
-            if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp'}:
-                continue
-            if isinstance(value, str) or value is None:
-                ret.append(f'{key}="{value}"')
-            else:
-                ret.append(f'{key}={value}')
-        return ','.join(ret)
+    def _tags(self, data: dict) -> dict:
+        tags = {'symbol': data['symbol']}
+        if 'interval' in data:
+            tags['interval'] = data['interval']
+        return tags
 
-    async def writer(self):
-        while self.running:
-            async with self.read_queue() as updates:
-                for update in updates:
-                    d = self.format(update)
-                    timestamp = update["timestamp"]
-                    timestamp_str = f',timestamp={timestamp}' if timestamp is not None else ''
+    def _fields(self, data: dict) -> dict:
+        return {key: value for key, value in data.items()
+                if key not in ('exchange', 'symbol', 'interval') and not key.startswith('_')}
 
-                    if 'interval' in update:
-                        trades = f',trades={update["trades"]},' if update['trades'] else ','
-                        update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]},interval={update["interval"]} start={update["start"]},stop={update["stop"]}{trades}open={update["open"]},close={update["close"]},high={update["high"]},low={update["low"]},volume={update["volume"]}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
-                    else:
-                        update = f'{self.key}-{update["exchange"]},symbol={update["symbol"]} {d}{timestamp_str},receipt_timestamp={update["receipt_timestamp"]} {int(update["receipt_timestamp"] * 1000000)}'
+    def _point_time(self, data: dict) -> int:
+        stamp = data.get('_influx_ns')
+        if stamp is None:
+            stamp = max(int(data['receipt_timestamp'] * 1_000_000_000), self._last_point_ns + 1)
+            self._last_point_ns = stamp
+            data['_influx_ns'] = stamp
+        return stamp
 
-                    await self.http_write(update, headers=self.headers)
-        await self.session.close()
+    def _encode(self, data: dict) -> str:
+        return encode(f'{self.key}-{data["exchange"]}', self._tags(data), self._fields(data), self._point_time(data), dialect=INFLUXDB)
+
+    def _rejected_line(self, body: str, lines: list):
+        match = UNPARSEABLE.search(error_message(body))
+        if match is None:
+            return None
+        try:
+            return lines.index(match.group(1))
+        except ValueError:
+            return None
+
+    def _partial_write(self, body: str, lines: list):
+        message = error_message(body)
+        if 'partial write' not in message:
+            return None
+        match = DROPPED.search(message)
+        return min(int(match.group(1)), len(lines)) if match else None
 
 
 class TradeInflux(InfluxCallback, BackendCallback):
     default_key = 'trades'
-
-    def format(self, data):
-        return f'side="{data["side"]}",price={data["price"]},amount={data["amount"]},id="{str(data["id"])}",type="{str(data["type"])}"'
 
 
 class FundingInflux(InfluxCallback, BackendCallback):
@@ -112,13 +110,11 @@ class BookInflux(InfluxCallback, BackendBookCallback):
         self.snapshot_count = defaultdict(int)
         super().__init__(*args, **kwargs)
 
-    def format(self, data):
+    def _fields(self, data: dict) -> dict:
         delta = 'delta' in data
-        book = data['book'] if not delta else data['delta']
-        bids = json.dumps(book[BID])
-        asks = json.dumps(book[ASK])
-
-        return f'delta={str(delta)},{BID}="{bids}",{ASK}="{asks}"'
+        book = data['delta'] if delta else data['book']
+        return {'delta': delta, BID: json.dumps(book[BID]), ASK: json.dumps(book[ASK]),
+                'timestamp': data['timestamp'], 'receipt_timestamp': data['receipt_timestamp']}
 
 
 class TickerInflux(InfluxCallback, BackendCallback):
@@ -135,19 +131,3 @@ class LiquidationsInflux(InfluxCallback, BackendCallback):
 
 class CandlesInflux(InfluxCallback, BackendCallback):
     default_key = 'candles'
-
-
-class OrderInfoInflux(InfluxCallback, BackendCallback):
-    default_key = 'order_info'
-
-
-class TransactionsInflux(InfluxCallback, BackendCallback):
-    default_key = 'transactions'
-
-
-class BalancesInflux(InfluxCallback, BackendCallback):
-    default_key = 'balances'
-
-
-class FillsInflux(InfluxCallback, BackendCallback):
-    default_key = 'fills'

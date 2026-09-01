@@ -1,5 +1,5 @@
 '''
-Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
+Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
 Please see the LICENSE file for the terms and conditions
 associated with this software.
@@ -28,8 +28,8 @@ class Symbol:
         self.option_type = option_type
         self.strike_price = strike_price
 
-        if expiry_date and expiry_normalize:
-            self.expiry_date = self.date_format(expiry_date)
+        if expiry_date:
+            self.expiry_date = self.date_format(expiry_date) if expiry_normalize else expiry_date
 
     def __repr__(self) -> str:
         return self.normalized
@@ -46,6 +46,8 @@ class Symbol:
     def date_format(date):
         if isinstance(date, (int, float)):
             date = dt.fromtimestamp(date, tz=timezone.utc)
+        if isinstance(date, str) and '-' in date:
+            date = dt.fromisoformat(date)
         if isinstance(date, dt):
             year = str(date.year)[2:]
             month = Symbol.month_code(date.month)
@@ -53,7 +55,7 @@ class Symbol:
             return f"{year}{month}{day}"
 
         if len(date) == 4:
-            year = str(dt.utcnow().year)[2:]
+            year = str(dt.now(timezone.utc).year)[2:]
             date = year + date
         if len(date) == 6:
             year = date[:2]
@@ -96,11 +98,6 @@ class _Symbols:
     def clear(self):
         self.data = {}
 
-    def load_all(self):
-        from cryptofeed.exchanges import EXCHANGE_MAP
-
-        for _, exchange in EXCHANGE_MAP.items():
-            exchange.symbols(refresh=True)
 
     def set(self, exchange: str, normalized: dict, exchange_info: dict):
         self.data[exchange] = {}
@@ -142,6 +139,9 @@ def str_to_symbol(symbol: str) -> Symbol:
     if len(values) == 5:
         s = Symbol(values[0], values[1], type=OPTION, strike_price=values[2], option_type=values[4], expiry_date=values[3], expiry_normalize=False)
         return s
+    if len(values) == 4 and values[3] in (CALL, PUT):
+        # an option on a single currency normalizes without a separate quote (Deribit's BTC-15000-22M24-call), so base and quote are the same
+        return Symbol(values[0], values[0], type=OPTION, strike_price=values[1], option_type=values[3], expiry_date=values[2], expiry_normalize=False)
     if len(values) == 3:
         s = Symbol(values[0], values[1], type=FUTURES, expiry_date=values[2], expiry_normalize=False)
         return s
