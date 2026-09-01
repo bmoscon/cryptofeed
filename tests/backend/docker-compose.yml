@@ -1,0 +1,57 @@
+# Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
+#
+# Please see the LICENSE file for the terms and conditions
+# associated with this software.
+#
+#   docker compose -f tests/backend/docker-compose.yml up -d
+#   uv run pytest -m backend
+#   docker compose -f tests/backend/docker-compose.yml down -v
+
+services:
+  redis:
+    image: redis:8
+    ports: ['6379:6379']
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: cryptofeed
+      POSTGRES_PASSWORD: cryptofeed
+      POSTGRES_DB: cryptofeed
+    ports: ['5432:5432']
+
+  mongo:
+    image: mongo:7
+    ports: ['27017:27017']
+
+  questdb:
+    image: questdb/questdb:8.2.1
+    ports: ['9000:9000']
+
+  influxdb:
+    image: influxdb:2.7
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: cryptofeed
+      DOCKER_INFLUXDB_INIT_PASSWORD: cryptofeed
+      DOCKER_INFLUXDB_INIT_ORG: cryptofeed
+      DOCKER_INFLUXDB_INIT_BUCKET: cryptofeed
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: cryptofeed-test-token
+    ports: ['8086:8086']
+
+  kafka:
+    image: apache/kafka:3.9.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://localhost:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports: ['9092:9092']

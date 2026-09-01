@@ -1,0 +1,136 @@
+name: backends
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: backends-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backends:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13', '3.14']
+
+    env:
+      BACKEND_SERVICES_REQUIRED: '1'
+
+    services:
+      redis:
+        image: redis:8
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: cryptofeed
+          POSTGRES_PASSWORD: cryptofeed
+          POSTGRES_DB: cryptofeed
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U cryptofeed"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping: 1})'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+      kafka:
+        image: apache/kafka:3.9.0
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://localhost:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+        ports: ['9092:9092']
+        options: >-
+          --health-cmd "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 20
+
+      influxdb:
+        image: influxdb:2.7
+        env:
+          DOCKER_INFLUXDB_INIT_MODE: setup
+          DOCKER_INFLUXDB_INIT_USERNAME: cryptofeed
+          DOCKER_INFLUXDB_INIT_PASSWORD: cryptofeed
+          DOCKER_INFLUXDB_INIT_ORG: cryptofeed
+          DOCKER_INFLUXDB_INIT_BUCKET: cryptofeed
+          DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: cryptofeed-test-token
+        ports: ['8086:8086']
+
+      questdb:
+        image: questdb/questdb:8.2.1
+        ports: ['9000:9000']
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            /*
+            !/sample_data
+          sparse-checkout-cone-mode: false
+          filter: blob:none
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Wait for InfluxDB and QuestDB
+        run: |
+          wait_for() {
+            for _ in $(seq 1 60); do
+              if curl -sf "$2" > /dev/null; then
+                echo "$1 is up"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "$1 never came up" >&2
+            return 1
+          }
+          wait_for influxdb 'http://localhost:8086/health'
+          wait_for questdb 'http://localhost:9000/exec?query=select%201'
+
+      - name: Run the backend suite
+        run: uv run pytest tests/backend
+
+      - name: Service logs
+        if: failure()
+        run: |
+          for container in $(docker ps -aq); do
+            echo "::group::$(docker inspect --format '{{.Config.Image}}' "$container")"
+            docker logs --tail 100 "$container" 2>&1 || true
+            echo '::endgroup::'
+          done
