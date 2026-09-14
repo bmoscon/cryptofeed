@@ -1,0 +1,186 @@
+{
+  "BINANCE": {
+    "candles": 50,
+    "l2_book": 1438,
+    "ticker": 14165,
+    "trades": 1068
+  },
+  "BINANCE_DELIVERY": {
+    "candles": 30,
+    "funding": 600,
+    "l2_book": 6436,
+    "open_interest": 217,
+    "ticker": 26251,
+    "trades": 559
+  },
+  "BINANCE_FUTURES": {
+    "candles": 50,
+    "funding": 1000,
+    "l2_book": 485,
+    "liquidations": 1,
+    "open_interest": 476,
+    "ticker": 81906,
+    "trades": 7302
+  },
+  "BINANCE_US": {
+    "candles": 50,
+    "l2_book": 8025,
+    "ticker": 8813,
+    "trades": 39
+  },
+  "BITFINEX": {
+    "l2_book": 96980,
+    "l3_book": 75986,
+    "ticker": 943,
+    "trades": 2278
+  },
+  "BITFLYER": {
+    "l2_book": 956,
+    "ticker": 257,
+    "trades": 140
+  },
+  "BITGET": {
+    "candles": 30941,
+    "l1_book": 11540,
+    "l2_book": 11633,
+    "ticker": 5093,
+    "trades": 7669
+  },
+  "BITHUMB": {
+    "l1_book": 5333,
+    "l2_book": 5333,
+    "ticker": 5333,
+    "trades": 451
+  },
+  "BITSTAMP": {
+    "l2_book": 5446,
+    "l3_book": 5436,
+    "trades": 127
+  },
+  "BYBIT": {
+    "candles": 20,
+    "funding": 4926,
+    "index": 4926,
+    "l2_book": 8707,
+    "open_interest": 4926,
+    "ticker": 4926,
+    "trades": 3023
+  },
+  "COINBASE": {
+    "candles": 2981,
+    "l2_book": 12076,
+    "ticker": 3212,
+    "trades": 5559
+  },
+  "CRYPTO.COM": {
+    "candles": 15000,
+    "funding": 26,
+    "index": 390,
+    "l2_book": 3040,
+    "open_interest": 535,
+    "ticker": 2340,
+    "trades": 3613
+  },
+  "DERIBIT": {
+    "funding": 7835,
+    "l1_book": 17894,
+    "l2_book": 10071,
+    "open_interest": 5132,
+    "ticker": 10388,
+    "trades": 530
+  },
+  "DYDX": {
+    "l2_book": 141533,
+    "trades": 6
+  },
+  "GATEIO": {
+    "candles": 195,
+    "l2_book": 5348,
+    "ticker": 777,
+    "trades": 537
+  },
+  "GATEIO_FUTURES": {
+    "candles": 351,
+    "funding": 625,
+    "index": 625,
+    "l2_book": 7004,
+    "open_interest": 625,
+    "ticker": 14558,
+    "trades": 4099
+  },
+  "GEMINI": {
+    "l2_book": 118636,
+    "trades": 28
+  },
+  "HTX": {
+    "candles": 480,
+    "l2_book": 1328,
+    "ticker": 4386,
+    "trades": 486
+  },
+  "HTX_SWAP": {
+    "funding": 50,
+    "l2_book": 7562,
+    "trades": 430
+  },
+  "HYPERLIQUID": {
+    "l1_book": 6364,
+    "l2_book": 300,
+    "trades": 2713
+  },
+  "INDEPENDENT_RESERVE": {
+    "l3_book": 13385,
+    "trades": 4
+  },
+  "KRAKEN": {
+    "candles": 543,
+    "l2_book": 49021,
+    "ticker": 169,
+    "trades": 154
+  },
+  "KRAKEN_FUTURES": {
+    "funding": 3258,
+    "l2_book": 131919,
+    "open_interest": 159,
+    "ticker": 1084,
+    "trades": 755
+  },
+  "KUCOIN": {
+    "candles": 310,
+    "l2_book": 31977,
+    "ticker": 29302,
+    "trades": 751
+  },
+  "KUCOIN_FUTURES": {
+    "candles": 390,
+    "l2_book": 44289,
+    "ticker": 580,
+    "trades": 813
+  },
+  "MEXC": {
+    "l1_book": 14956,
+    "l2_book": 5848,
+    "trades": 2455
+  },
+  "OKX": {
+    "candles": 942,
+    "l2_book": 5464,
+    "ticker": 5521,
+    "trades": 174
+  },
+  "PHEMEX": {
+    "candles": 51011,
+    "l2_book": 5938,
+    "trades": 25993
+  },
+  "POLONIEX": {
+    "l2_book": 42716,
+    "trades": 1630
+  },
+  "UPBIT": {
+    "l1_book": 3747,
+    "l2_book": 3747,
+    "ticker": 3747,
+    "trades": 410
+  }
+}

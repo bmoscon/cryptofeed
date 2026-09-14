@@ -36,7 +36,7 @@ jobs:
           from cryptofeed.types import COMPILED_WITH_ASSERTIONS
           assert COMPILED_WITH_ASSERTIONS is False, 'release build must not carry the runtime assertions'
           "
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: dist
           path: dist/
@@ -50,6 +50,13 @@ jobs:
         python-version: ['3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            /*
+            !/sample_data
+            /sample_data/small
+          sparse-checkout-cone-mode: false
+          filter: blob:none
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
