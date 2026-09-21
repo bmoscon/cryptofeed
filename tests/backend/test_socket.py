@@ -59,31 +59,46 @@ class Datagrams(asyncio.DatagramProtocol):
 
 async def _serve(start_server) -> tuple:
     listener = Listener()
+    writers = set()
 
-    async def handle(reader, _writer):
-        async for line in reader:
-            if line.strip():
-                listener.add(json.loads(line))
+    async def handle(reader, writer):
+        writers.add(writer)
+        try:
+            async for line in reader:
+                if line.strip():
+                    listener.add(json.loads(line))
+        finally:
+            writers.discard(writer)
+            writer.close()
 
-    return await start_server(handle), listener
+    return await start_server(handle), listener, writers
+
+
+async def _shutdown(server, writers):
+    server.close()
+    for writer in list(writers):
+        writer.close()
+    await server.wait_closed()
 
 
 @pytest.fixture
 async def tcp():
-    server, listener = await _serve(lambda handle: asyncio.start_server(handle, '127.0.0.1', 0))
-    async with server:
+    server, listener, writers = await _serve(lambda handle: asyncio.start_server(handle, '127.0.0.1', 0))
+    try:
         yield 'tcp://127.0.0.1', server.sockets[0].getsockname()[1], listener
+    finally:
+        await _shutdown(server, writers)
 
 
 @pytest.fixture
 async def uds():
     directory = tempfile.mkdtemp()
     path = os.path.join(directory, 'cf.uds')
-    server, listener = await _serve(lambda handle: asyncio.start_unix_server(handle, path))
+    server, listener, writers = await _serve(lambda handle: asyncio.start_unix_server(handle, path))
     try:
-        async with server:
-            yield f'uds://{path}', None, listener
+        yield f'uds://{path}', None, listener
     finally:
+        await _shutdown(server, writers)
         shutil.rmtree(directory, ignore_errors=True)
 
 
