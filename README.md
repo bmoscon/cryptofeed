@@ -1,6 +1,6 @@
 # Cryptocurrency Exchange Feed Handler
 [![License](https://img.shields.io/badge/license-AGPL-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.12+-green.svg)
+![Python](https://img.shields.io/badge/Python-3.13+-green.svg)
 [![PyPi](https://img.shields.io/badge/PyPi-cryptofeed-brightgreen.svg)](https://pypi.python.org/pypi/cryptofeed)
 
 
@@ -138,7 +138,7 @@ fh.run()
 
 ## Installation
 
-**Note:** cryptofeed requires Python 3.12+
+**Note:** cryptofeed requires Python 3.13+
 
 Cryptofeed can be installed from PyPi. (It's recommended that you install in a virtual environment of your choosing).
 

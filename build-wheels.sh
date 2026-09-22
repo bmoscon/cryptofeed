@@ -1,7 +1,7 @@
 #!/bin/bash
 #set -e -x
 
-py_vers=("/opt/python/cp312-cp312/bin" "/opt/python/cp313-cp313/bin")
+py_vers=("/opt/python/cp313-cp313/bin" "/opt/python/cp314-cp314/bin")
 
 #for PY in "${py_vers[@]}"; do
 #    "${PY}/pip" wheel /io/ -w wheelhouse/

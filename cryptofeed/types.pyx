@@ -1,4 +1,4 @@
-# cython: language_level=3
+# cython: language_level=3, freethreading_compatible=True
 '''
 Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 
@@ -420,16 +420,22 @@ cdef class OrderBook:
             ob.delta = data['delta']
         return ob
 
-    def _delta(self, numeric_type) -> dict:
+    def _delta(self, book_delta: dict, numeric_type) -> dict:
         return {
-            BID: [tuple([numeric_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[BID]],
-            ASK: [tuple([numeric_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[ASK]]
+            BID: [tuple([numeric_type(v) if isinstance(v, Decimal) else v for v in value]) for value in book_delta[BID]],
+            ASK: [tuple([numeric_type(v) if isinstance(v, Decimal) else v for v in value]) for value in book_delta[ASK]]
         }
 
     def to_dict(self, delta=False, numeric_type=None, none_to=False) -> dict:
-        assert self.sequence_number is None or isinstance(self.sequence_number, int)
-        assert self.checksum is None or isinstance(self.checksum, (str, int))
-        assert self.timestamp is None or isinstance(self.timestamp, float)
+        with cython.critical_section(self):
+            book_delta = self.delta
+            timestamp = self.timestamp
+            sequence_number = self.sequence_number
+            checksum = self.checksum
+
+        assert sequence_number is None or isinstance(sequence_number, int)
+        assert checksum is None or isinstance(checksum, (str, int))
+        assert timestamp is None or isinstance(timestamp, float)
 
         def helper(x):
             if isinstance(x, dict):
@@ -439,25 +445,32 @@ cdef class OrderBook:
 
         if delta:
             if numeric_type is None:
-                data = {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self.delta, 'timestamp': self.timestamp}
+                data = {'exchange': self.exchange, 'symbol': self.symbol, 'delta': book_delta, 'timestamp': timestamp}
             else:
-                data = {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self._delta(numeric_type) if self.delta else None, 'timestamp': self.timestamp}
+                data = {'exchange': self.exchange, 'symbol': self.symbol, 'delta': self._delta(book_delta, numeric_type) if book_delta else None, 'timestamp': timestamp}
             return data if not none_to else convert_none_values(data, none_to)
 
         if numeric_type is None:
             book_dict = self.book.to_dict()
-            data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self.delta, 'timestamp': self.timestamp}
+            data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': book_delta, 'timestamp': timestamp}
             return data if not none_to else convert_none_values(data, none_to)
 
         book_dict = self.book.to_dict(to_type=helper)
-        data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self._delta(numeric_type) if self.delta else None, 'timestamp': self.timestamp}
+        data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self._delta(book_delta, numeric_type) if book_delta else None, 'timestamp': timestamp}
         return data if not none_to else convert_none_values(data, none_to)
 
     def __repr__(self):
-        return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {self.timestamp}"
+        with cython.critical_section(self):
+            timestamp = self.timestamp
+        return f"exchange: {self.exchange} symbol: {self.symbol} book: {self.book} timestamp: {timestamp}"
 
     def __eq__(self, cmp):
-        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and self.delta == cmp.delta and self.timestamp == cmp.timestamp and self.sequence_number == cmp.sequence_number and self.checksum == cmp.checksum and self.book.to_dict() == cmp.book.to_dict()
+        with cython.critical_section(self):
+            book_delta = self.delta
+            timestamp = self.timestamp
+            sequence_number = self.sequence_number
+            checksum = self.checksum
+        return self.exchange == cmp.exchange and self.symbol == cmp.symbol and book_delta == cmp.delta and timestamp == cmp.timestamp and sequence_number == cmp.sequence_number and checksum == cmp.checksum and self.book.to_dict() == cmp.book.to_dict()
 
     def __hash__(self):
         return hash(self.__repr__())
