@@ -1,6 +1,6 @@
 ## Changelog
 
-### 3.0.0
+### 3.0.0 (2026-09-21)
  * Feature: New asyncio core
  * Update: REST endpoints removed (trading functionality moves to the cryptotrade project)
  * Update: dropped old / outdated / dead exchanges
