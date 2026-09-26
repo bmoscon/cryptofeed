@@ -24,6 +24,7 @@ class BinanceDelivery(BinanceBase):
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
+    default_depth_interval = '250ms'
     websocket_channels = {
         **BinanceBase.websocket_channels,
         FUNDING: 'markPrice',

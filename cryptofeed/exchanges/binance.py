@@ -33,6 +33,9 @@ class BinanceBase(Feed):
     DEFAULT_SNAPSHOT_DEPTH = 1000
     SNAPSHOT_RETRIES = 5
     SNAPSHOT_RETRY_DELAY = 15
+    # Depth interval Binance serves on the bare `<symbol>@depth` stream. The
+    # futures endpoints send nothing on an explicit `@250ms` suffix.
+    default_depth_interval = None
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
     websocket_channels = {
@@ -152,7 +155,7 @@ class BinanceBase(Feed):
             stream = chan
             if normalized_chan == CANDLES:
                 stream = f"{chan}{self.candle_interval}"
-            elif normalized_chan == L2_BOOK:
+            elif normalized_chan == L2_BOOK and self.depth_interval != self.default_depth_interval:
                 stream = f"{chan}@{self.depth_interval}"
 
             for pair in self.subscription[chan]:
