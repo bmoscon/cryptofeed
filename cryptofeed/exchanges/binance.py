@@ -82,11 +82,14 @@ class BinanceBase(Feed):
 
     def __init__(self, depth_interval='100ms', open_interest_interval=1.0, **kwargs):
         """
-        depth_interval: str
-            time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY)
+        depth_interval: str or None
+            time between l2_book/delta updates {'100ms', '1000ms'} (different from BINANCE_FUTURES & BINANCE_DELIVERY).
+            None selects the venue's default speed, i.e. the bare <symbol>@depth stream
         open_interest_interval: float
             time in seconds between open_interest polls
         """
+        if depth_interval is None:
+            depth_interval = self.default_depth_interval
         if depth_interval is not None and depth_interval not in self.valid_depth_intervals:
             raise ValueError(f"Depth interval must be one of {self.valid_depth_intervals}")
 

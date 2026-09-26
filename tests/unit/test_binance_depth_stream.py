@@ -17,6 +17,9 @@ from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
     (BinanceDelivery, 'BTCUSD_PERP', '100ms', 'btcusd_perp@depth@100ms'),
     (Binance, 'BTCUSDT', '1000ms', 'btcusdt@depth@1000ms'),
     (Binance, 'BTCUSDT', '100ms', 'btcusdt@depth@100ms'),
+    (BinanceFutures, 'BTCUSDT', None, 'btcusdt@depth'),
+    (BinanceDelivery, 'BTCUSD_PERP', None, 'btcusd_perp@depth'),
+    (Binance, 'BTCUSDT', None, 'btcusdt@depth'),
 ])
 def test_depth_stream_name(feed_cls, symbol, interval, stream):
     feed = feed_cls(depth_interval=interval)
