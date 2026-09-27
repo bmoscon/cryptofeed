@@ -2,6 +2,9 @@ name: ruff lint
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   ruff:
     runs-on: ubuntu-latest

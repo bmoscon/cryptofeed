@@ -9,6 +9,9 @@ concurrency:
   group: backends-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   backends:
     runs-on: ubuntu-latest
