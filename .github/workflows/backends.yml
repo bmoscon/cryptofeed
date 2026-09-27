@@ -16,10 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.13', '3.14']
+        python-version: ['3.13', '3.14', '3.14t']
 
     env:
       BACKEND_SERVICES_REQUIRED: '1'
+      # aiokafka has no free-threaded wheel and re-enables the GIL on import so fallback to pure python
+      AIOKAFKA_NO_EXTENSIONS: ${{ endsWith(matrix.python-version, 't') && '1' || '' }}
 
     services:
       redis:

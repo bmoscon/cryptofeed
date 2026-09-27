@@ -10,6 +10,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13', '3.14t']
     steps:
       - uses: actions/checkout@v7
         with:
@@ -21,7 +25,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: '3.13'
+          python-version: ${{ matrix.python-version }}
       - name: Build sdist and wheel
         run: uv build
       - name: Install the wheel into a clean environment
@@ -32,13 +36,15 @@ jobs:
         working-directory: /tmp
         run: |
           /tmp/verify/bin/python -c "
+          import sys, sysconfig
           from cryptofeed import FeedHandler
           from cryptofeed.types import COMPILED_WITH_ASSERTIONS
           assert COMPILED_WITH_ASSERTIONS is False, 'release build must not carry the runtime assertions'
+          assert not (sysconfig.get_config_var('Py_GIL_DISABLED') and sys._is_gil_enabled()), 'importing cryptofeed re-enabled the GIL'
           "
       - uses: actions/upload-artifact@v5
         with:
-          name: dist
+          name: dist-${{ matrix.python-version }}
           path: dist/
 
   tests:
@@ -47,7 +53,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.13', '3.14']
+        python-version: ['3.13', '3.14', '3.14t']
+    env:
+      # aiokafka has no free-threaded wheel and re-enables the GIL on import so fallback to pure python
+      AIOKAFKA_NO_EXTENSIONS: ${{ endsWith(matrix.python-version, 't') && '1' || '' }}
     steps:
       - uses: actions/checkout@v7
         with:
