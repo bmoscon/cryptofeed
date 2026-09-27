@@ -9,6 +9,9 @@ import pytest
 from cryptofeed.exchanges import Binance, BinanceDelivery, BinanceFutures
 
 
+pytestmark = pytest.mark.unit
+
+
 @pytest.mark.parametrize('feed_cls, symbol, interval, stream', [
     (BinanceFutures, 'BTCUSDT', '250ms', 'btcusdt@depth'),
     (BinanceFutures, 'BTCUSDT', '100ms', 'btcusdt@depth@100ms'),

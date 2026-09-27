@@ -54,14 +54,16 @@ class dYdX(Feed):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._reset()
-
-    def _reset(self):
-        self._l2_book = {}
         self._message_id = {}
 
+    def _reset(self, conn: AsyncConnection):
+        for symbol in conn.subscription.get(self.std_channel_to_exchange(L2_BOOK), []):
+            self._l2_book.pop(self.exchange_symbol_to_std_symbol(symbol), None)
+        # message ids reset to 0
+        self._message_id.pop(conn.uuid, None)
+
     async def subscribe(self, conn: AsyncConnection):
-        self._reset()
+        self._reset(conn)
         for channel, symbols in conn.subscription.items():
             for symbol in symbols:
                 await conn.write(json.dumps({'type': 'subscribe', 'channel': channel, 'id': symbol}))

@@ -1,8 +1,11 @@
 ## Changelog
 
 ### 3.0.1
+ * Update: Gate.io -> Gate rebranding
  * Bugfix: Binance Futures and Binance Delivery L2_BOOK with `depth_interval='250ms'` subscribed to `<symbol>@depth@250ms`, which Binance accepts but never sends data on. The default interval now uses the bare `<symbol>@depth` stream.
  * Bugfix: `depth_interval=None` on Binance Futures and Binance Delivery produced an invalid subscription. `None` now resolves to the venue default
+ * Bugfix: Coinbase, OKX, Gate, Kraken data quality issues
+ * Bugfix: dYdX subscribe/reconnect connection issues
 
 ### 3.0.0 (2026-09-21)
  * Feature: New asyncio core

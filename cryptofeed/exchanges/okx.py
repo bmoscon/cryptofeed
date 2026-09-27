@@ -178,26 +178,33 @@ class OKX(Feed):
             },
             "data": [
                 [
-                    "1597026383085",     // ts
+                    "1597026383085",     // ts, opening time of this row's candle
                     "8533.02",           // open
                     "8553.74",           // high
                     "8527.17",           // low
                     "8548.26",           // close
-                    "45247",             // contracts, spot/margin -> amount of base ccy, derivatives -> contracts,
-                    "529.5858061"        // currency, spot/margin -> amount of quote ccy, derivatives -> amount of base ccy
+                    "45247",             // vol, spot/margin -> amount of base ccy, derivatives -> contracts
+                    "529.5858061",       // volCcy, spot/margin -> amount of quote ccy, derivatives -> amount of base ccy
+                    "5529.5858061",      // volCcyQuote, amount of quote ccy
+                    "0"                  // confirm, 0 -> candle is still forming, 1 -> candle is complete
                 ]
             ]
         }
         '''
         symbol = self.exchange_symbol_to_std_symbol(msg['arg']['instId'])
-        ts = int(msg['data'][0][0]) / 1_000
+        interval = self.candle_interval_map[self.candle_interval]
 
         for entry in msg['data']:
+            closed = len(entry) > 8 and entry[8] == '1'
+            if self.candle_closed_only and not closed:
+                continue
+
+            start = int(entry[0]) / 1_000
             candle = Candle(
                 self.id,
                 symbol,
-                ts,
-                ts + self.candle_interval_map[self.candle_interval],
+                start,
+                start + interval,
                 self.candle_interval,
                 None,
                 Decimal(entry[1]),
@@ -205,7 +212,7 @@ class OKX(Feed):
                 Decimal(entry[2]),
                 Decimal(entry[3]),
                 Decimal(entry[5]),
-                Decimal(entry[6]),
+                closed,
                 timestamp,
                 raw=msg
             )

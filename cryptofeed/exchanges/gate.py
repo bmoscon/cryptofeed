@@ -13,7 +13,7 @@ from typing import Dict, Tuple
 from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, CANDLES, GATEIO, L2_BOOK, TICKER, TRADES, BUY, SELL
+from cryptofeed.defines import BID, ASK, CANDLES, GATE, L2_BOOK, TICKER, TRADES, BUY, SELL
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
@@ -24,8 +24,8 @@ from cryptofeed.util.time import timedelta_str_to_sec
 LOG = logging.getLogger(__name__)
 
 
-class Gateio(Feed):
-    id = GATEIO
+class Gate(Feed):
+    id = GATE
     provides_sequence_number = True
     validates_sequence_number = True
     MAX_STALE_SNAPSHOTS = 3
@@ -121,6 +121,9 @@ class Gateio(Feed):
 
     def _snapshot_url(self, symbol: str) -> str:
         return self.rest_endpoints[0].route('l2book', self.sandbox).format(symbol, self.SNAPSHOT_DEPTH)
+
+    def _book_subscription(self, symbol: str) -> list:
+        return [symbol, '100ms']
 
     def _parse_snapshot(self, symbol: str, data) -> OrderBook:
         """
@@ -292,7 +295,7 @@ class Gateio(Feed):
                             "time": int(time.time()),
                             "channel": chan,
                             "event": 'subscribe',
-                            "payload": [symbol, '100ms'] if nchan == L2_BOOK else [self.candle_interval, symbol],
+                            "payload": self._book_subscription(symbol) if nchan == L2_BOOK else [self.candle_interval, symbol],
                         }
                     ))
             else:

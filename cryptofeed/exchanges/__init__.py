@@ -21,8 +21,8 @@ from .bybit import Bybit
 from .coinbase import Coinbase
 from .cryptodotcom import CryptoDotCom
 from .deribit import Deribit
-from .gateio import Gateio
-from .gateio_futures import GateioFutures
+from .gate import Gate
+from .gate_futures import GateFutures
 from .gemini import Gemini
 from .htx import HTX
 from .htx_swap import HTXSwap
@@ -53,8 +53,8 @@ EXCHANGE_MAP = {
     COINBASE: Coinbase,
     CRYPTODOTCOM: CryptoDotCom,
     DERIBIT: Deribit,
-    GATEIO: Gateio,
-    GATEIO_FUTURES: GateioFutures,
+    GATE: Gate,
+    GATE_FUTURES: GateFutures,
     GEMINI: Gemini,
     HTX_SWAP: HTXSwap,
     HTX_str: HTX,

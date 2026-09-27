@@ -93,13 +93,13 @@
     "l2_book": 141533,
     "trades": 6
   },
-  "GATEIO": {
+  "GATE": {
     "candles": 195,
     "l2_book": 5348,
     "ticker": 777,
     "trades": 537
   },
-  "GATEIO_FUTURES": {
+  "GATE_FUTURES": {
     "candles": 351,
     "funding": 625,
     "index": 625,
@@ -163,7 +163,7 @@
     "trades": 2455
   },
   "OKX": {
-    "candles": 942,
+    "candles": 103,
     "l2_book": 5464,
     "ticker": 5521,
     "trades": 174

@@ -21,7 +21,7 @@ keywords = [
     "cryptocurrency", "bitcoin", "btc", "feed handler", "market feed", "market data", "crypto assets",
     "Trades", "Tickers", "BBO", "Funding", "Open Interest", "Liquidation", "Order book", "Bid", "Ask",
     "Binance", "Binance Delivery", "Binance Futures", "Binance US", "Bitfinex", "bitFlyer", "Bitget",
-    "Bithumb", "Bitstamp", "Bybit", "Coinbase", "Crypto.com", "Deribit", "Gate.io", "Gate.io Futures",
+    "Bithumb", "Bitstamp", "Bybit", "Coinbase", "Crypto.com", "Deribit", "Gate", "Gate Futures",
     "dYdX", "Gemini", "Hyperliquid", "HTX", "HTX Swap", "Independent Reserve", "Kraken", "Kraken Futures", "KuCoin", "MEXC",
     "OKX", "Phemex", "Poloniex", "Upbit"
 ]

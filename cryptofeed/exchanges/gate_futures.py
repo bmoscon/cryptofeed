@@ -11,9 +11,9 @@ from decimal import Decimal
 from cryptofeed import _json as json
 
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import GATEIO_FUTURES, PERPETUAL, CANDLES, L2_BOOK, TICKER, TRADES, BID, ASK, BUY, SELL, OPEN_INTEREST, INDEX, FUNDING
+from cryptofeed.defines import GATE_FUTURES, PERPETUAL, CANDLES, L2_BOOK, TICKER, TRADES, BID, ASK, BUY, SELL, OPEN_INTEREST, INDEX, FUNDING
 
-from cryptofeed.exchanges.gateio import Gateio
+from cryptofeed.exchanges.gate import Gate
 from typing import Dict, Tuple
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle, Index, OpenInterest, Funding
@@ -22,8 +22,8 @@ from cryptofeed.util.time import timedelta_str_to_sec
 LOG = logging.getLogger(__name__)
 
 
-class GateioFutures(Gateio):
-    id = GATEIO_FUTURES
+class GateFutures(Gate):
+    id = GATE_FUTURES
     SNAPSHOT_DEPTH = 100
     provides_sequence_number = True
     websocket_endpoints = [WebsocketEndpoint('wss://fx-ws.gateio.ws/v4/ws/usdt', options={'compression': None})]
@@ -39,9 +39,17 @@ class GateioFutures(Gateio):
         INDEX: 'futures.tickers'
     }
 
+    BOOK_LEVELS = (20, 50, 100)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._sub_contract_trades = set()
+        self.SNAPSHOT_DEPTH = next((level for level in self.BOOK_LEVELS if level >= self.max_depth), self.BOOK_LEVELS[-1]) if self.max_depth else self.BOOK_LEVELS[-1]
+        self._book_window = {}
+        self._book_window_warned = False
+
+    def _book_subscription(self, symbol: str) -> list:
+        return [symbol, '100ms', str(self.SNAPSHOT_DEPTH)]
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -167,11 +175,13 @@ class GateioFutures(Gateio):
         }
         """
         data = json.loads(data, parse_float=Decimal)
-        book = OrderBook(self.id, symbol, max_depth=self.max_depth)
-        book.book.bids = {Decimal(bid["p"]): Decimal(bid["s"]) for bid in data['bids']}
-        book.book.asks = {Decimal(ask["p"]): Decimal(ask["s"]) for ask in data['asks']}
+        depth = self._book_window.get(symbol, self.SNAPSHOT_DEPTH)
+        book = OrderBook(self.id, symbol, max_depth=depth, truncate=True, bids={Decimal(bid["p"]): Decimal(bid["s"]) for bid in data['bids']}, asks={Decimal(ask["p"]): Decimal(ask["s"]) for ask in data['asks']})
+        book.book.bids.truncate()
+        book.book.asks.truncate()
         book.sequence_number = data['id']
         book.raw = data
+
         return book
 
     async def _process_l2_book(self, msg: dict, timestamp: float):
@@ -187,6 +197,7 @@ class GateioFutures(Gateio):
                 "s": "BTC_USD",         symbol
                 "U": 2517661101,        start of update seq no
                 "u": 2517661113,        end of update seq no
+                "l": "100",             levels per side the updates cover
                 "b": [
                 {
                     "p": "54672.1",
@@ -210,28 +221,41 @@ class GateioFutures(Gateio):
             }
         }
         """
-        symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
-        if symbol not in self._l2_book:
-            await self._snapshot(msg['result']['s'])
+        result = msg['result']
+        symbol = self.exchange_symbol_to_std_symbol(result['s'])
+        window = int(result['l']) if result.get('l') else self.SNAPSHOT_DEPTH
 
-        skip_update = self._check_update_id(symbol, msg['result'])
+        if window < self.SNAPSHOT_DEPTH and not self._book_window_warned:
+            self._book_window_warned = True
+            LOG.warning('%s: %s order book updates cover the top %d levels, not the %d requested - keeping the book to %d levels', self.id, symbol, window, self.SNAPSHOT_DEPTH, window)
+
+        self._book_window[symbol] = window
+        if symbol in self._l2_book and self._l2_book[symbol].book.max_depth != window:
+            self._l2_book.pop(symbol, None)
+            self.last_update_id.pop(symbol, None)
+            self.forced[symbol] = False
+        if symbol not in self._l2_book:
+            await self._snapshot(result['s'])
+
+        skip_update = self._check_update_id(symbol, result)
         if skip_update:
             return
 
-        ts = msg['result']['t'] / 1000
+        ts = result['t'] / 1000
         delta = {BID: [], ASK: []}
+        book = self._l2_book[symbol].book
 
         for s, side in (('b', BID), ('a', ASK)):
-            for update in msg['result'][s]:
+            for update in result[s]:
                 price = Decimal(update["p"])
                 amount = Decimal(update["s"])
 
                 if amount == 0:
-                    if price in self._l2_book[symbol].book[side]:
-                        del self._l2_book[symbol].book[side][price]
+                    if price in book[side]:
+                        del book[side][price]
                         delta[side].append((price, amount))
                 else:
-                    self._l2_book[symbol].book[side][price] = amount
+                    book[side][price] = amount
                     delta[side].append((price, amount))
 
         await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, timestamp=ts, raw=msg)

@@ -213,15 +213,38 @@ class KrakenFutures(Feed):
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, sequence_number=msg['seq'], raw=msg)
 
     async def _funding(self, msg: dict, pair: str, timestamp: float):
-        if 'funding_rate' in msg:
+        """
+        {
+            "feed": "ticker",
+            "product_id": "PF_XBTUSD",
+            "time": 1787582328387,
+            "funding_rate": 1.1333053522361405,
+            "funding_rate_prediction": 1.4125904284706516,
+            "relative_funding_rate": 0.000014425483333333,
+            "relative_funding_rate_prediction": 0.000017720654166667,
+            "next_funding_rate_time": 1787583600000,
+            "openInterest": 2096.2634,
+            "markPrice": 79734.71790589426,
+            ...
+        }
+
+        funding_rate and funding_rate_prediction are absolute amounts, paid per contract per hour (quote currency
+        on linear contracts, base currency on inverse ones). The relative_* fields are fractional hourly rate
+        Kraken displays as the funding rate, so they populate rate and predicted_rate
+        """
+        if 'funding_rate' in msg or 'relative_funding_rate' in msg:
+            rate = msg.get('relative_funding_rate')
+            predicted = msg.get('relative_funding_rate_prediction', None if 'funding_rate_prediction' in msg else 0)
+            mark = msg.get('markPrice')
+
             f = Funding(
                 self.id,
                 pair,
-                None,
-                msg['funding_rate'],
+                Decimal(mark) if mark is not None else None,
+                Decimal(rate) if rate is not None else None,
                 self.timestamp_normalize(msg['next_funding_rate_time']),
                 self.timestamp_normalize(msg['time']),
-                predicted_rate=msg['funding_rate_prediction'],
+                predicted_rate=Decimal(predicted) if predicted is not None else None,
                 raw=msg
             )
             await self.callback(FUNDING, f, timestamp)

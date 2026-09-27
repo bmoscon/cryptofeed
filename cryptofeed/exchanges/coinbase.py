@@ -83,21 +83,28 @@ class Coinbase(Feed):
     async def _trade_update(self, msg: dict, timestamp: float):
         '''
         {
-            'trade_id': 43736593
+            'trade_id': '43736593',
             'side': 'BUY' or 'SELL',
             'size': '0.01235647',
             'price': '8506.26000000',
             'product_id': 'BTC-USD',
             'time': '2018-05-21T00:26:05.585000Z'
         }
+
+        'side' is the maker side of the trade but we report the taker side
         '''
+        side = SELL if msg.get('side') == 'BUY' else BUY if msg.get('side') == 'SELL' else None
+        if side is None:
+            LOG.warning('%s: unexpected market_trades side %r for %s trade %s - skipping', self.id, msg.get('side'), msg.get('product_id'), msg.get('trade_id'))
+            return
+
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
         ts = self.timestamp_normalize(msg['time'])
         order_type = 'market'
         t = Trade(
             self.id,
             pair,
-            SELL if msg['side'] == 'SELL' else BUY,
+            side,
             Decimal(msg['size']),
             Decimal(msg['price']),
             ts,
