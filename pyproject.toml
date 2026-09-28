@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryptofeed"
-version = "3.0.1"
+version = "3.0.2"
 description = "Cryptocurrency Exchange Websocket Data Feed Handler"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
