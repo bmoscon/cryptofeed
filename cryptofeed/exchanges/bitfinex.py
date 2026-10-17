@@ -26,9 +26,7 @@ LOG = logging.getLogger(__name__)
 Bitfinex configuration flags
 DEC_S: Enable all decimal as strings.
 TIME_S: Enable all times as date strings.
-TIMESTAMP: Timestamp in milliseconds, appended to every list frame (hb and cs included) after the sequence number.
-           It is Bitfinex's per-message server time (the venue does not say whether it is matching engine or
-           gateway time), and the adapter uses it as the timestamp of book and ticker updates.
+TIMESTAMP: Timestamp in milliseconds.
 SEQ_ALL: Enable sequencing BETA FEATURE
 CHECKSUM: Enable checksum for every book iteration.
           Checks the top 25 entries for each side of book.
