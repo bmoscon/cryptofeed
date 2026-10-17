@@ -85,7 +85,14 @@ class Bithumb(Feed):
             id=str(msg['sequential_id']),
             raw=msg
         )
-        await self.callback(TRADES, t, timestamp)
+
+        if msg.get('stream_type') == 'SNAPSHOT':
+            trades = self.trade_watermark.batch([t], symbol=t.symbol)
+        else:
+            trades = self.trade_watermark.live([t])
+
+        for t in trades:
+            await self.callback(TRADES, t, timestamp)
 
     @staticmethod
     def _book_sides(msg: dict) -> Tuple[Dict, Dict]:
@@ -181,7 +188,7 @@ class Bithumb(Feed):
     async def subscribe(self, conn: AsyncConnection):
         '''
         [{"ticket": "..."},
-         {"type": "trade", "codes": ["KRW-BTC"]},
+         {"type": "trade", "codes": ["KRW-BTC"], "is_only_realtime": true},
          {"type": "orderbook", "codes": ["KRW-BTC", "KRW-ETH"]}]
         '''
         self.__reset()
@@ -189,7 +196,12 @@ class Bithumb(Feed):
 
         trades = conn.subscription.get(self.websocket_channels[TRADES], [])
         if trades:
-            chans.append({'type': 'trade', 'codes': sorted(trades)})
+            trade = {'type': 'trade', 'codes': sorted(trades)}
+            if not self.trade_history:
+                # no snapshot of the latest trade on subscribe. The trade entry only: the orderbook snapshot is the
+                # first update of a quiet book
+                trade['is_only_realtime'] = True
+            chans.append(trade)
 
         book = set(conn.subscription.get(self.websocket_channels[L2_BOOK], []))
         book |= set(conn.subscription.get(self.websocket_channels[TICKER], []))

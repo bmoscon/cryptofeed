@@ -123,17 +123,22 @@ class HTX(Feed):
             }
         }
         """
-        for trade in msg['tick']['data']:
-            t = Trade(
+        pair = msg['ch'].split('.')[1]
+        symbol = self.exchange_symbol_to_std_symbol(pair)
+        trades = [
+            Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
+                symbol,
                 BUY if trade['direction'] == 'buy' else SELL,
                 Decimal(trade['amount']),
                 Decimal(trade['price']),
                 self.timestamp_normalize(trade['ts']),
                 id=str(trade['tradeId']),
                 raw=trade
-            )
+            ) for trade in msg['tick']['data']
+        ]
+
+        for t in self.trade_watermark.frame(trades, symbol):
             await self.callback(TRADES, t, timestamp)
 
     async def _candles(self, msg: dict, symbol: str, interval: str, timestamp: float):
@@ -156,6 +161,7 @@ class HTX(Feed):
         interval = self.normalize_candle_interval[interval]
         start = int(msg['tick']['id'])
         end = start + timedelta_str_to_sec(interval) - 1
+
         c = Candle(
             self.id,
             self.exchange_symbol_to_std_symbol(symbol),
@@ -200,7 +206,9 @@ class HTX(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
+        self.trade_watermark.expect(self.exchange_symbol_to_std_symbol(pair) for pair in self.subscription.get(self.std_channel_to_exchange(TRADES), ()))
         client_id = 0
+
         for chan in self.subscription:
             for pair in self.subscription[chan]:
                 client_id += 1

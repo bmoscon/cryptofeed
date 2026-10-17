@@ -1,5 +1,9 @@
 ## Changelog
 
+### 3.0.2
+* Bugfix: Various data improvements across exchanges
+* Bugfix: connection hardening, improved retries, improved snapshot syncing
+
 ### 3.0.1 (2026-09-27)
  * Update: Gate.io -> Gate rebranding
  * Bugfix: Binance Futures and Binance Delivery L2_BOOK with `depth_interval='250ms'` subscribed to `<symbol>@depth@250ms`, which Binance accepts but never sends data on. The default interval now uses the bare `<symbol>@depth` stream.

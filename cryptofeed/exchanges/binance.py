@@ -4,11 +4,12 @@ Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import logging
 from collections import defaultdict
 from decimal import Decimal
 import time
-from typing import Dict, Union, Tuple
+from typing import Dict, Optional, Union, Tuple
 
 from cryptofeed import _json as json
 
@@ -18,6 +19,7 @@ from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import Trade, Ticker, Candle, Liquidation, Funding, OpenInterest, OrderBook
+from cryptofeed.util.snapshots import SnapshotSync
 
 
 LOG = logging.getLogger(__name__)
@@ -28,13 +30,53 @@ def _chunk(items: list, n: int):
         yield items[i:i + n]
 
 
-class BinanceBase(Feed):
+class RestWeight:
+    HEADROOM = 0.8
+
+    def __init__(self, limit: int):
+        self.limit = limit
+        self.window = None
+        self.used = 0
+        self.blocked_until = 0.0
+
+    def _roll(self, now: float) -> int:
+        window = int(now // 60)
+        if window != self.window:
+            self.window, self.used = window, 0
+        return window
+
+    async def acquire(self, weight: int):
+        while True:
+            now = time.time()
+            if now < self.blocked_until:
+                await asyncio.sleep(self.blocked_until - now)
+                continue
+            window = self._roll(now)
+            if self.used + weight <= self.limit * self.HEADROOM:
+                self.used += weight
+                return
+            await asyncio.sleep((window + 1) * 60 - now)
+
+    def observe(self, headers: dict):
+        try:
+            used = int(headers.get('x-mbx-used-weight-1m'))
+        except (TypeError, ValueError):
+            return
+        self._roll(time.time())
+        self.used = max(self.used, used)
+
+    def block(self, seconds: float):
+        self.blocked_until = max(self.blocked_until, time.time() + seconds)
+
+
+REST_WEIGHTS: Dict[str, RestWeight] = {}
+
+
+class BinanceBase(SnapshotSync, Feed):
     provides_sequence_number = True
     DEFAULT_SNAPSHOT_DEPTH = 1000
-    SNAPSHOT_RETRIES = 5
-    SNAPSHOT_RETRY_DELAY = 15
-    # Depth interval Binance serves on the bare `<symbol>@depth` stream. The
-    # futures endpoints send nothing on an explicit `@250ms` suffix.
+    SNAPSHOT_WEIGHTS = ((50, 2), (100, 5), (500, 10), (1000, 20))
+    REQUEST_WEIGHT_LIMIT = 2400
     default_depth_interval = None
     # m -> minutes; h -> hours; d -> days; w -> weeks; M -> months
     valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M'}
@@ -97,6 +139,7 @@ class BinanceBase(Feed):
         self.depth_interval = depth_interval
         self.open_interest_interval = open_interest_interval
         self._open_interest_cache = {}
+        self._sync_init()
         self._reset()
 
     def _connect_rest(self):
@@ -175,10 +218,12 @@ class BinanceBase(Feed):
         if conn is None:
             self._l2_book = {}
             self.last_update_id = {}
+            self._cancel_syncs()
             return
 
         for pair in self._connection_book_pairs(conn):
             self._drop_book(pair)
+        self._cancel_syncs(conn.uuid)
 
     def _connection_book_pairs(self, conn: AsyncConnection) -> list:
         address = getattr(conn, 'address', None) or ''
@@ -302,6 +347,7 @@ class BinanceBase(Feed):
             self.last_update_id[std_pair] = msg['u']
             return False
         else:
+            self.book_sync_stats['gap_resets'] += 1
             self._drop_book(std_pair)
             LOG.warning("%s: %s missing book update detected, resetting book", self.id, std_pair)
             return True
@@ -328,16 +374,32 @@ class BinanceBase(Feed):
         book.raw = resp
         return book
 
-    async def _snapshot(self, pair: str) -> None:
-        response = await self.http_conn.read(self._snapshot_url(pair), retry_count=self.SNAPSHOT_RETRIES, retry_delay=self.SNAPSHOT_RETRY_DELAY)
-        std_pair = self.exchange_symbol_to_std_symbol(pair)
-        book = self._parse_snapshot(std_pair, response)
+    def _snapshot_weight(self) -> int:
+        depth = self._snapshot_depth()
+        return next((weight for deepest, weight in self.SNAPSHOT_WEIGHTS if depth <= deepest), self.SNAPSHOT_WEIGHTS[-1][1])
 
+    def _rest_weight(self) -> Optional[RestWeight]:
+        if self.http_conn.offline:
+            return None
+        host = self.rest_endpoints[0].route('l2book', self.sandbox).split('/')[2]
+        if host not in REST_WEIGHTS:
+            REST_WEIGHTS[host] = RestWeight(self.REQUEST_WEIGHT_LIMIT)
+        return REST_WEIGHTS[host]
+
+    def _covered(self, last_update_id: int, msg: dict) -> bool:
+        return msg['u'] <= last_update_id
+
+    def _bridges(self, last_update_id: int, msg: dict) -> bool:
+        return msg['U'] <= last_update_id + 1 <= msg['u']
+
+    def _start_book(self, std_pair: str, book: OrderBook):
         self.last_update_id[std_pair] = book.sequence_number
         self._l2_book[std_pair] = book
-        await self.book_callback(L2_BOOK, book, time.time(), timestamp=book.timestamp, raw=book.raw, sequence_number=book.sequence_number)
 
-    async def _book(self, msg: dict, pair: str, timestamp: float):
+    async def _apply_buffered(self, pair: str, msg: dict, timestamp: float, conn: AsyncConnection):
+        await self._book(msg, pair, timestamp, conn)
+
+    async def _book(self, msg: dict, pair: str, timestamp: float, conn: AsyncConnection):
         """
         {
             "e": "depthUpdate", // Event type
@@ -363,7 +425,8 @@ class BinanceBase(Feed):
         pair = self.exchange_symbol_to_std_symbol(pair)
 
         if pair not in self._l2_book:
-            await self._snapshot(exchange_pair)
+            self._buffer_update(exchange_pair, pair, msg, conn)
+            return
 
         skip_update = self._check_update_id(pair, msg)
         if skip_update:
@@ -470,6 +533,8 @@ class BinanceBase(Feed):
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
+        if self._ready:
+            await self._install_snapshots(conn, timestamp)
 
         if 'openInterest' in msg:
             return await self._open_interest(msg, timestamp)
@@ -482,7 +547,7 @@ class BinanceBase(Feed):
 
         event = msg.get('e')
         if event == 'depthUpdate':
-            await self._book(msg, pair, timestamp)
+            await self._book(msg, pair, timestamp, conn)
         elif event == 'aggTrade':
             await self._trade(msg, timestamp)
         elif event == 'forceOrder':
@@ -496,17 +561,20 @@ class BinanceBase(Feed):
         else:
             LOG.warning("%s: Unexpected message received: %s", self.id, msg)
 
+        if self._syncing:
+            await asyncio.sleep(0)
+
     async def subscribe(self, conn: AsyncConnection):
         # Binance does not have a separate subscribe message, the
-        # subscription information is included in the
-        # connection endpoint
+        # subscription information is included in the connection endpoint
         if not isinstance(conn, HTTPPoll):
             self._reset(conn)
 
 
 class Binance(BinanceBase):
     id = BINANCE
-    DEFAULT_SNAPSHOT_DEPTH = 5000
+    SNAPSHOT_WEIGHTS = ((100, 5), (500, 25), (1000, 50), (5000, 250))
+    REQUEST_WEIGHT_LIMIT = 6000
     websocket_endpoints = [WebsocketEndpoint('wss://stream.binance.com:9443', sandbox='wss://testnet.binance.vision')]
     rest_endpoints = [RestEndpoint('https://api.binance.com', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}'), sandbox='https://testnet.binance.vision')]
 

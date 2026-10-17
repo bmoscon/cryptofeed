@@ -5,9 +5,11 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+import heapq
 import logging
 import time
-from bisect import bisect_left
+import weakref
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
@@ -24,16 +26,20 @@ LOG = logging.getLogger('cryptofeed.capture')
 
 
 class _Token:
-    __slots__ = ('index', 'name', 'pending', 'exhausted')
+    __slots__ = ('index', 'name', 'pending', 'exhausted', 'granted_ns', 'wake')
 
     def __init__(self, index: int, name: str):
         self.index = index
         self.name = name
         self.pending = None
         self.exhausted = False
+        self.granted_ns = None
+        self.wake = asyncio.Event()
 
 
 class PlaybackCoordinator:
+    ARRIVAL_IDLE = 0.25
+
     def __init__(self, pacing: str = 'fast', speed: float = 1.0, strict_order: bool = True, stall_timeout: float = 30.0):
         if pacing not in ('fast', 'realtime'):
             raise ValueError("pacing must be 'fast' or 'realtime'")
@@ -44,10 +50,16 @@ class PlaybackCoordinator:
         self.stop_event = asyncio.Event()
         self.delivered = 0
         self.last_granted_ns = 0
+        self.order_regressions = 0
         self.streams = 0
         self._tokens = []
         self._active = 0
-        self._changed = asyncio.Event()
+        self._readers = weakref.WeakKeyDictionary()
+        self._background = weakref.WeakKeyDictionary()
+        self._arrivals = []
+        self._arrival_seq = 0
+        self._handing = 0
+        self._handed = asyncio.Event()
         self._t0_ns = None
         self._wall0 = None
 
@@ -67,9 +79,19 @@ class PlaybackCoordinator:
 
         return best
 
+    def _wake(self, *tokens: _Token):
+        if not self.strict:
+            return
+
+        for token in tokens:
+            token.wake.set()
+        best = self._min_token()
+        if best is not None:
+            best.wake.set()
+
     def reset_pending(self, token: _Token, ts_ns: Optional[int]):
         token.pending = (ts_ns, token.index) if ts_ns is not None else None
-        self._changed.set()
+        self._wake(token)
 
     def stream_exhausted(self, token: _Token):
         if token.exhausted:
@@ -81,40 +103,112 @@ class PlaybackCoordinator:
 
         if self._active <= 0:
             self.stop_event.set()
+            self._wake(*self._tokens)
+            self._release(None)
+        else:
+            self._wake()
 
-        self._changed.set()
+    def set_reader(self, token: _Token):
+        self._readers[asyncio.current_task()] = token
+
+    def request_clock(self) -> tuple:
+        task = asyncio.current_task()
+        token = self._readers.get(task) if task is not None else None
+        if token is not None:
+            return (token.granted_ns if token.granted_ns is not None else self.last_granted_ns), False
+
+        return max(self.last_granted_ns, self._background.get(task, 0) if task is not None else 0), True
+
+    async def arrival(self, ts_ns: int):
+        task = asyncio.current_task()
+        if task is not None:
+            self._background[task] = max(self._background.get(task, 0), ts_ns)
+        if ts_ns <= self.last_granted_ns or self.stop_event.is_set() or self._min_token() is None:
+            return
+
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        self._arrival_seq += 1
+        heapq.heappush(self._arrivals, (ts_ns, self._arrival_seq, future))
+        try:
+            while not future.done():
+                delivered = self.delivered
+                due = self._due((ts_ns, 0))
+                await asyncio.wait({future}, timeout=self.ARRIVAL_IDLE if due is None else max(self.ARRIVAL_IDLE, due - loop.time() + self.ARRIVAL_IDLE))
+                if not future.done() and self.delivered == delivered and (due is None or loop.time() >= due):
+                    LOG.debug('playback: no frame delivered for %.2fs while a background request waits for its recorded response - serving it now', self.ARRIVAL_IDLE)
+                    break
+        finally:
+            if not future.done():
+                future.cancel()
+            elif not future.cancelled():
+                self._handing -= 1
+                if not self._handing:
+                    self._handed.set()
+
+        due = self._due((ts_ns, 0))
+        if due is not None and due > loop.time():
+            await asyncio.sleep(due - loop.time())
+
+    def _release(self, ts_ns: Optional[int]) -> int:
+        released = 0
+        while self._arrivals and (ts_ns is None or self._arrivals[0][0] <= ts_ns):
+            future = heapq.heappop(self._arrivals)[2]
+            if not future.done():
+                future.set_result(None)
+                released += 1
+        self._handing += released
+
+        return released
+
+    def _due(self, entry: tuple) -> Optional[float]:
+        if self.pacing != 'realtime' or self._t0_ns is None:
+            return None
+
+        return self._wall0 + (entry[0] - self._t0_ns) / 1e9 / self.speed
 
     async def turn(self, token: _Token, ts_ns: int, next_ts_ns: Optional[int]) -> bool:
         entry = (ts_ns, token.index)
-        token.pending = entry
-        self._changed.set()
+        if token.pending != entry:
+            token.pending = entry
+            self._wake()
+        loop = asyncio.get_running_loop()
+
+        while True:
+            token.wake.clear()
+            if self.stop_event.is_set() or token.pending != entry:
+                return False
+
+            watched = self._min_token() if self.strict else token
+            if watched is token:
+                if not self._release(ts_ns):
+                    break
+                while self._handing:
+                    self._handed.clear()
+                    await self._handed.wait()
+                continue
+
+            watched_entry = watched.pending
+            delivered = self.delivered
+            due = self._due(watched_entry)
+            timeout = self.stall_timeout if due is None else max(self.stall_timeout, due - loop.time() + self.stall_timeout)
+
+            try:
+                await asyncio.wait_for(token.wake.wait(), timeout)
+            except TimeoutError:
+                due = self._due(watched_entry)
+                if (self._min_token() is watched and watched.pending == watched_entry and self.delivered == delivered
+                        and (due is None or loop.time() >= due + self.stall_timeout)):
+                    LOG.warning('playback: stream %s stalled the timeline for %.0fs - skipping past it', watched.name, self.stall_timeout)
+                    watched.pending = None
+                    self._wake(watched)
 
         if self._t0_ns is None:
-            self._t0_ns = ts_ns
-            self._wall0 = asyncio.get_running_loop().time()
-
-        if self.strict:
-            while True:
-                if self.stop_event.is_set():
-                    return False
-                if token.pending != entry:
-                    return False
-                if self._min_token() is token:
-                    break
-                self._changed.clear()
-                if self.stop_event.is_set() or token.pending != entry or self._min_token() is token:
-                    continue
-                try:
-                    await asyncio.wait_for(self._changed.wait(), self.stall_timeout)
-                except TimeoutError:
-                    stuck = self._min_token()
-                    if stuck is not None and stuck is not token:
-                        LOG.warning('playback: stream %s stalled the timeline for %.0fs - skipping past it', stuck.name, self.stall_timeout)
-                        stuck.pending = None
-                        self._changed.set()
+            first = self._min_token()
+            self._t0_ns = first.pending[0] if first is not None else ts_ns
+            self._wall0 = loop.time()
 
         if self.pacing == 'realtime':
-            loop = asyncio.get_running_loop()
             delay = self._wall0 + (ts_ns - self._t0_ns) / 1e9 / self.speed - loop.time()
 
             if delay > 0:
@@ -124,12 +218,15 @@ class PlaybackCoordinator:
                 return False
 
         self.delivered += 1
+        token.granted_ns = ts_ns
 
         if ts_ns > self.last_granted_ns:
             self.last_granted_ns = ts_ns
+        elif ts_ns < self.last_granted_ns:
+            self.order_regressions += 1
 
         token.pending = (next_ts_ns, token.index) if next_ts_ns is not None else None
-        self._changed.set()
+        self._wake()
 
         return True
 
@@ -153,6 +250,9 @@ class _PlaybackMixin:
         self._open_flag = True
         self._closed_event = asyncio.Event()
         self._reset_counters()
+        self._coordinator.set_reader(self._token)
+        if self._session_idx >= len(self._sessions_inbound):
+            self._coordinator.stream_exhausted(self._token)
 
     async def write(self, data, *args, **kwargs):
         self.writes.append(data)
@@ -177,6 +277,7 @@ class _PlaybackMixin:
         if not self._open_flag:
             raise ConnectionClosed
 
+        self._coordinator.set_reader(self._token)
         session_idx = self._session_idx
         if session_idx < len(self._sessions_inbound):
             inbound = self._sessions_inbound[session_idx]
@@ -227,6 +328,8 @@ class PlaybackPollConnection(_PlaybackMixin, HTTPPoll):
 
 
 class PlaybackHTTPConn(HTTPAsyncConn):
+    offline = True
+
     def __init__(self, conn_id: str, responses: Dict[str, List[tuple]], coordinator: PlaybackCoordinator):
         AsyncConnection.__init__(self, f'{conn_id}.playback.http')
         self.proxy = None
@@ -252,14 +355,23 @@ class PlaybackHTTPConn(HTTPAsyncConn):
             raise ConnectionClosed(f'playback: no recorded response for {url!r} body={request_body!r} - the capture holds: [{known}]')
 
         timestamps, bodies = entry
-        index = min(bisect_left(timestamps, self._coordinator.last_granted_ns), len(timestamps) - 1)
+        now, background = self._coordinator.request_clock()
+        if background:
+            index = bisect_right(timestamps, now)
+            if index < len(timestamps):
+                await self._coordinator.arrival(timestamps[index])
+            else:
+                index = len(timestamps) - 1
+        else:
+            index = min(bisect_left(timestamps, now), len(timestamps) - 1)
+
         self.received += 1
         self.last_message = time.time()
         self.served += 1
 
         return bodies[index]
 
-    async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60) -> str:
+    async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60, headers_out: dict = None) -> str:
         return await self._serve(request_url(address, params))
 
     async def write(self, address: str, msg=None, header=None, retry_count=0, retry_delay=60):
@@ -274,6 +386,7 @@ class PlaybackResult:
     http_requests_served: int
     streams: int
     duration: float
+    order_regressions: int = 0
 
 
 class _ChannelCounter:
@@ -375,6 +488,14 @@ class Replayer:
 
         return conn_id.count('.http.') >= 2
 
+    def _register(self, conn_id: str, sessions_inbound: List[List[tuple]]) -> _Token:
+        token = self.coordinator.register(conn_id)
+        first = next((inbound[0][0] for inbound in sessions_inbound if inbound), None)
+        if first is not None:
+            self.coordinator.reset_pending(token, first)
+
+        return token
+
     def wrap_connection(self, conn: AsyncConnection) -> AsyncConnection:
         if isinstance(conn, HTTPPoll):
             for i, group in enumerate(self._poll_groups):
@@ -383,7 +504,7 @@ class Replayer:
 
                 self._poll_assigned[i] = True
                 sessions_inbound = [[(ts_ns, body) for ts_ns, method, url, body, _ in session.requests] for session in group]
-                token = self.coordinator.register(conn.id)
+                token = self._register(conn.id, sessions_inbound)
 
                 return PlaybackPollConnection(conn.address, conn.id, sessions_inbound, self.coordinator, token)
 
@@ -399,7 +520,7 @@ class Replayer:
                 if (group[0].address, _canonical_sub(group[0].subscription)) == want:
                     self._ws_assigned[i] = True
                     sessions_inbound = [[(ts_ns, payload) for ts_ns, direction, payload in session.messages if direction == 'in'] for session in group]
-                    token = self.coordinator.register(conn.id)
+                    token = self._register(conn.id, sessions_inbound)
 
                     return PlaybackWSConnection(conn.address, conn.id, conn.subscription, sessions_inbound, self.coordinator, token)
 
@@ -495,6 +616,7 @@ async def playback_async(capture: Union[str, List[str], Capture], exchange: str 
         http_requests_served=replayer.http_conn.served if replayer.http_conn else 0,
         streams=replayer.coordinator.streams,
         duration=loop.time() - start,
+        order_regressions=replayer.coordinator.order_regressions,
     )
 
 

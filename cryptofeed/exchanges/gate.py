@@ -4,6 +4,7 @@ Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from collections import defaultdict
 import logging
 from decimal import Decimal
@@ -18,13 +19,14 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade, Ticker, Candle
+from cryptofeed.util.snapshots import SnapshotSync
 from cryptofeed.util.time import timedelta_str_to_sec
 
 
 LOG = logging.getLogger(__name__)
 
 
-class Gate(Feed):
+class Gate(SnapshotSync, Feed):
     id = GATE
     provides_sequence_number = True
     validates_sequence_number = True
@@ -55,11 +57,17 @@ class Gate(Feed):
         return ret, info
 
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._sync_init()
+
     def _reset(self):
+        self._cancel_syncs()
         self._l2_book = {}
         self.last_update_id = {}
         self.forced = defaultdict(bool)
         self.stale_snapshots = defaultdict(int)
+        self._open_candles = {}
 
     async def _ticker(self, msg: dict, timestamp: float):
         """
@@ -129,6 +137,8 @@ class Gate(Feed):
         """
         {
             "id": 2679059670,
+            "current": 1623898993123,   ms timestamp the snapshot was generated
+            "update": 1623898993121,    ms timestamp of the book's last change
             "asks": [[price, amount], [...], ...],
             "bids": [[price, amount], [...], ...]
         }
@@ -138,16 +148,23 @@ class Gate(Feed):
         book.book.bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
         book.book.asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
         book.sequence_number = data['id']
+        book.timestamp = float(data['current']) / 1000
         book.raw = data
         return book
 
-    async def _snapshot(self, symbol: str):
-        response = await self.http_conn.read(self._snapshot_url(symbol))
-        book = self._parse_snapshot(self.exchange_symbol_to_std_symbol(symbol), response)
+    def _covered(self, sequence: int, msg: dict) -> bool:
+        return msg['result']['u'] <= sequence
 
-        self._l2_book[book.symbol] = book
-        self.last_update_id[book.symbol] = book.sequence_number
-        await self.book_callback(L2_BOOK, book, time.time(), raw=book.raw, sequence_number=book.sequence_number)
+    def _bridges(self, sequence: int, msg: dict) -> bool:
+        return msg['result']['U'] <= sequence + 1 <= msg['result']['u']
+
+    def _start_book(self, std_pair: str, book: OrderBook):
+        self._l2_book[std_pair] = book
+        self.last_update_id[std_pair] = book.sequence_number
+        self.forced[std_pair] = False
+
+    async def _apply_buffered(self, pair: str, msg: dict, timestamp: float, conn):
+        await self._process_l2_book(msg, timestamp, conn)
 
     def _check_update_id(self, pair: str, msg: dict) -> Tuple[bool, bool]:
         skip_update = False
@@ -176,7 +193,7 @@ class Gate(Feed):
 
         return skip_update
 
-    async def _process_l2_book(self, msg: dict, timestamp: float):
+    async def _process_l2_book(self, msg: dict, timestamp: float, conn=None):
         """
         {
             'time': 1618961347,
@@ -196,7 +213,8 @@ class Gate(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
         if symbol not in self._l2_book:
-            await self._snapshot(msg['result']['s'])
+            self._buffer_update(msg['result']['s'], symbol, msg, conn)
+            return
 
         skip_update = self._check_update_id(symbol, msg['result'])
         if skip_update:
@@ -220,6 +238,27 @@ class Gate(Feed):
 
         await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, timestamp=ts, raw=msg)
 
+    async def _candle(self, candle: Candle, timestamp: float):
+        key = (candle.symbol, candle.interval)
+        candles = [candle]
+        held = self._open_candles.get(key)
+
+        if held is not None and held.start < candle.start:
+            del self._open_candles[key]
+            candles.append(Candle(held.exchange, held.symbol, held.start, held.stop, held.interval, held.trades, held.open, held.close, held.high, held.low, held.volume, True, held.timestamp, raw=held.raw))
+
+        for c in self.candle_watermark.live(candles):
+            held = self._open_candles.get(key)
+
+            if c.closed:
+                if held is not None and held.start == c.start:
+                    del self._open_candles[key]
+            elif held is None or held.start <= c.start:
+                self._open_candles[key] = c
+
+            if c.closed or not self.candle_closed_only:
+                await self.callback(CANDLES, c, timestamp)
+
     async def _candles(self, msg: dict, timestamp: float):
         """
         {
@@ -233,7 +272,9 @@ class Gate(Feed):
                 'h': '54992.64',
                 'l': '54976.29',
                 'o': '54976.29',
-                'n': '1m_BTC_USDT'
+                'n': '1m_BTC_USDT',
+                'a': '0.02099',
+                'w': False - window closed
             }
         }
         """
@@ -252,15 +293,21 @@ class Gate(Feed):
             Decimal(msg['result']['h']),
             Decimal(msg['result']['l']),
             Decimal(msg['result']['v']),
-            None,
+            bool(msg['result'].get('w')),
             float(msg['time']),
             raw=msg
         )
-        await self.callback(CANDLES, c, timestamp)
+        await self._candle(c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
+        if self._ready:
+            await self._install_snapshots(conn, timestamp)
+        await self._handle(msg, conn, timestamp)
+        if self._syncing:
+            await asyncio.sleep(0)
 
+    async def _handle(self, msg: dict, conn, timestamp: float):
         if "error" in msg:
             if msg['error'] is None:
                 pass
@@ -275,7 +322,7 @@ class Gate(Feed):
             elif channel == 'trades':
                 await self._trades(msg, timestamp)
             elif channel == 'order_book_update':
-                await self._process_l2_book(msg, timestamp)
+                await self._process_l2_book(msg, timestamp, conn)
             elif channel == 'candlesticks':
                 await self._candles(msg, timestamp)
             else:

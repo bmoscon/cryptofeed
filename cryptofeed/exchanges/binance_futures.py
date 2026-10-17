@@ -63,6 +63,12 @@ class BinanceFutures(BinanceBase):
             addresses.extend(base + '/'.join(chunk) for chunk in _chunk(names, self.per_connection_limit))
         return addresses[0] if len(addresses) == 1 else addresses
 
+    def _covered(self, last_update_id: int, msg: dict) -> bool:
+        return msg['u'] < last_update_id
+
+    def _bridges(self, last_update_id: int, msg: dict) -> bool:
+        return msg['U'] <= last_update_id <= msg['u'] or msg.get('pu') == last_update_id
+
     def _check_update_id(self, pair: str, msg: dict) -> bool:
         if self._l2_book[pair].delta is None and msg['u'] < self.last_update_id[pair]:
             return True
@@ -73,6 +79,7 @@ class BinanceFutures(BinanceBase):
             self.last_update_id[pair] = msg['u']
             return False
         else:
+            self.book_sync_stats['gap_resets'] += 1
             self._drop_book(pair)
             LOG.warning("%s: %s missing book update detected, resetting that book", self.id, pair)
             return True

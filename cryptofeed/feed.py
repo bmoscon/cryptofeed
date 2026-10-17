@@ -23,6 +23,7 @@ from cryptofeed.defines import CANDLES, FUNDING, INDEX, L1_BOOK, L2_BOOK, L3_BOO
 from cryptofeed.exceptions import BidAskOverlapping
 from cryptofeed.exchange import Exchange
 from cryptofeed.types import OrderBook
+from cryptofeed.util.history import CandleWatermark, TradeWatermark
 
 
 LOG = logging.getLogger(__name__)
@@ -65,11 +66,12 @@ class _BackendWriters:
 
 class Feed(Exchange):
     keepalive_interval = None
+    quiet_channels = ()
 
     async def keepalive(self, conn: AsyncConnection):
         raise NotImplementedError(f'{self.id}: keepalive_interval is set but keepalive() is not implemented')
 
-    def __init__(self, candle_interval=None, candle_closed_only=True, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=None, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, shutdown_timeout=10.0, **kwargs):
+    def __init__(self, candle_interval=None, candle_closed_only=True, trade_history=False, candle_history=False, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=None, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, shutdown_timeout=10.0, **kwargs):
         """
         candle_interval: str
             the candle interval. See the specific exchange to see what intervals they support.
@@ -77,9 +79,13 @@ class Feed(Exchange):
             supported interval - some venues offer exactly one (Coinbase publishes 5m only)
         candle_closed_only: bool
             returns only closed/completed candles (if supported by exchange).
+        trade_history: bool
+            deliver historical trades sent on initial subscribe (not all exchange support this)
+        candle_history: bool
+            deliver historical candles sent on initial subscribe (not all exchange support this)
         timeout: int
-            Time, in seconds, between message to wait before a feed is considered dead and will be restarted.
-            Set to -1 for infinite.
+            wait time in seconds before feed is considered dead
+            Set to -1 for infinite. quiet_channels are ignored
         timeout_interval: int
             Time, in seconds, between timeout checks.
         retries: int
@@ -125,6 +131,8 @@ class Feed(Exchange):
         self.http_proxy = http_proxy
         self.start_delay = delay_start
         self.candle_closed_only = candle_closed_only
+        self.trade_watermark = TradeWatermark(trade_history)
+        self.candle_watermark = CandleWatermark(candle_history)
         self.shutdown_timeout = shutdown_timeout
         self._conn_tg = None
         self._spawned = set()
@@ -181,6 +189,22 @@ class Feed(Exchange):
         if self.normalized_symbol_mapping is not None:
             self._build_subscription()
 
+    @property
+    def trade_history(self) -> bool:
+        return self.trade_watermark.history
+
+    @trade_history.setter
+    def trade_history(self, value: bool):
+        self.trade_watermark.history = value
+
+    @property
+    def candle_history(self) -> bool:
+        return self.candle_watermark.history
+
+    @candle_history.setter
+    def candle_history(self, value: bool):
+        self.candle_watermark.history = value
+
     def _build_subscription(self):
         self._ensure_symbol_mapping()
 
@@ -229,7 +253,7 @@ class Feed(Exchange):
         self.connection_handlers = []
         for conn, sub, handler in self.connect():
             conn = self._wrap_connection(conn)
-            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, timeout=self.timeout, timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error, start_delay=self.start_delay, keepalive=self.keepalive if self.keepalive_interval else None, keepalive_interval=self.keepalive_interval))
+            self.connection_handlers.append(ConnectionHandler(conn, sub, handler, self.retries, timeout=self._watchdog_timeout(conn), timeout_interval=self.timeout_interval, exceptions=self.exceptions, log_on_error=self.log_on_error, start_delay=self.start_delay, keepalive=self.keepalive if self.keepalive_interval else None, keepalive_interval=self.keepalive_interval))
         if not self.connection_handlers and not self.allow_empty_subscriptions:
             LOG.warning('%s: empty subscription (subscription: %r)', self.id, dict(self.subscription))
         self._spawned = set()
@@ -342,6 +366,16 @@ class Feed(Exchange):
 
 
     RESTART_RESET_SECONDS = 300.0
+
+    def _watchdog_timeout(self, conn: AsyncConnection):
+        channels = list(getattr(conn, 'subscription', None) or ()) if self.quiet_channels else []
+        try:
+            if channels and all(self.exchange_channel_to_std(channel) in self.quiet_channels for channel in channels):
+                return -1
+        except ValueError:
+            pass
+
+        return self.timeout
 
     def _spawn(self, name: str, factory, *args):
         task_name = f'feed.{self.id}.poll.{name}'

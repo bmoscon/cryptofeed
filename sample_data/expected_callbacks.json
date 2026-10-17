@@ -1,38 +1,38 @@
 {
   "BINANCE": {
-    "candles": 50,
-    "l2_book": 1438,
-    "ticker": 14165,
-    "trades": 1068
+    "candles": 250,
+    "l2_book": 62687,
+    "ticker": 296210,
+    "trades": 18066
   },
   "BINANCE_DELIVERY": {
     "candles": 150,
-    "funding": 3000,
-    "l2_book": 35905,
-    "open_interest": 217,
-    "ticker": 129938,
-    "trades": 2843
+    "funding": 2970,
+    "l2_book": 40976,
+    "open_interest": 413,
+    "ticker": 124274,
+    "trades": 3534
   },
   "BINANCE_FUTURES": {
     "candles": 250,
-    "funding": 5000,
-    "l2_book": 1254,
-    "liquidations": 1,
-    "open_interest": 476,
-    "ticker": 405520,
-    "trades": 36511
+    "funding": 4950,
+    "l2_book": 122109,
+    "liquidations": 46,
+    "open_interest": 1061,
+    "ticker": 1200062,
+    "trades": 54453
   },
   "BINANCE_US": {
     "candles": 250,
-    "l2_book": 40948,
-    "ticker": 43882,
-    "trades": 235
+    "l2_book": 40373,
+    "ticker": 43978,
+    "trades": 141
   },
   "BITFINEX": {
-    "l2_book": 970453,
-    "l3_book": 759457,
-    "ticker": 943,
-    "trades": 3708
+    "l2_book": 686924,
+    "l3_book": 570397,
+    "ticker": 888,
+    "trades": 1062
   },
   "BITFLYER": {
     "l2_book": 9988,
@@ -40,17 +40,17 @@
     "trades": 1421
   },
   "BITGET": {
-    "candles": 30956,
+    "candles": 250,
     "l1_book": 126559,
     "l2_book": 109663,
     "ticker": 48514,
-    "trades": 17792
+    "trades": 11294
   },
   "BITHUMB": {
     "l1_book": 54149,
     "l2_book": 54149,
     "ticker": 54149,
-    "trades": 3682
+    "trades": 3632
   },
   "BITSTAMP": {
     "l2_book": 54803,
@@ -67,46 +67,46 @@
     "trades": 40632
   },
   "COINBASE": {
-    "candles": 3619,
+    "candles": 29,
     "l2_book": 119991,
     "ticker": 32852,
-    "trades": 34176
+    "trades": 31276
   },
   "CRYPTO.COM": {
-    "candles": 15200,
+    "candles": 250,
     "funding": 78,
     "index": 3861,
     "l2_book": 29394,
     "open_interest": 5889,
     "ticker": 24461,
-    "trades": 15887
+    "trades": 13387
   },
   "DERIBIT": {
-    "funding": 7835,
-    "l1_book": 17894,
-    "l2_book": 10071,
-    "open_interest": 5132,
-    "ticker": 10388,
-    "trades": 530
+    "funding": 23482,
+    "l1_book": 89239,
+    "l2_book": 33071,
+    "open_interest": 1549,
+    "ticker": 29169,
+    "trades": 6058
   },
   "DYDX": {
-    "l2_book": 1415424,
-    "trades": 32
+    "l2_book": 1707626,
+    "trades": 104
   },
   "GATE": {
-    "candles": 1626,
-    "l2_book": 63537,
-    "ticker": 7956,
-    "trades": 6504
+    "candles": 244,
+    "l2_book": 60118,
+    "ticker": 7215,
+    "trades": 4823
   },
   "GATE_FUTURES": {
-    "candles": 3458,
-    "funding": 5790,
-    "index": 5790,
-    "l2_book": 81679,
-    "open_interest": 5790,
-    "ticker": 148269,
-    "trades": 38658
+    "candles": 250,
+    "funding": 6166,
+    "index": 6166,
+    "l2_book": 84065,
+    "open_interest": 6166,
+    "ticker": 112920,
+    "trades": 17385
   },
   "GEMINI": {
     "l2_book": 1186311,
@@ -116,24 +116,24 @@
     "candles": 3842,
     "l2_book": 13986,
     "ticker": 46598,
-    "trades": 4229
+    "trades": 4173
   },
   "HTX_SWAP": {
     "funding": 50,
     "l2_book": 72874,
-    "trades": 3592
+    "trades": 3538
   },
   "HYPERLIQUID": {
     "l1_book": 66487,
     "l2_book": 2850,
-    "trades": 13932
+    "trades": 12432
   },
   "INDEPENDENT_RESERVE": {
-    "l3_book": 71878,
-    "trades": 8
+    "l3_book": 478722,
+    "trades": 49
   },
   "KRAKEN": {
-    "candles": 572,
+    "candles": 56,
     "l2_book": 491089,
     "ticker": 169,
     "trades": 154
@@ -146,21 +146,21 @@
     "trades": 6244
   },
   "KUCOIN": {
-    "candles": 3265,
+    "candles": 123,
     "l2_book": 344140,
     "ticker": 267701,
     "trades": 10089
   },
   "KUCOIN_FUTURES": {
-    "candles": 3631,
+    "candles": 190,
     "l2_book": 446500,
     "ticker": 5182,
     "trades": 7210
   },
   "MEXC": {
-    "l1_book": 149589,
-    "l2_book": 66387,
-    "trades": 3052
+    "l1_book": 148423,
+    "l2_book": 55371,
+    "trades": 3316
   },
   "OKX": {
     "candles": 250,
@@ -169,9 +169,9 @@
     "trades": 1289
   },
   "PHEMEX": {
-    "candles": 51340,
+    "candles": 121,
     "l2_book": 59775,
-    "trades": 26638
+    "trades": 1638
   },
   "POLONIEX": {
     "l2_book": 425719,

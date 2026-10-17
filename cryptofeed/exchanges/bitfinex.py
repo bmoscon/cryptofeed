@@ -26,7 +26,9 @@ LOG = logging.getLogger(__name__)
 Bitfinex configuration flags
 DEC_S: Enable all decimal as strings.
 TIME_S: Enable all times as date strings.
-TIMESTAMP: Timestamp in milliseconds.
+TIMESTAMP: Timestamp in milliseconds, appended to every list frame (hb and cs included) after the sequence number.
+           It is Bitfinex's per-message server time (the venue does not say whether it is matching engine or
+           gateway time), and the adapter uses it as the timestamp of book and ticker updates.
 SEQ_ALL: Enable sequencing BETA FEATURE
 CHECKSUM: Enable checksum for every book iteration.
           Checks the top 25 entries for each side of book.
@@ -111,6 +113,8 @@ class Bitfinex(Feed):
         self.handlers = {}  # maps a channel id to a function
         self.order_map = defaultdict(dict)
         self.seq_no = defaultdict(int)
+        self._conf_flags = {}
+        self.trade_watermark.key = lambda t: int(t.id)
 
     def _subscription_resolved(self):
         for channel in (L2_BOOK, L3_BOOK):
@@ -138,6 +142,7 @@ class Bitfinex(Feed):
 
         if conn.uuid in self.seq_no:
             del self.seq_no[conn.uuid]
+        self._conf_flags.pop(conn.uuid, None)
 
         if self.std_channel_to_exchange(L3_BOOK) in conn.subscription:
             for pair in conn.subscription[self.std_channel_to_exchange(L3_BOOK)]:
@@ -149,75 +154,78 @@ class Bitfinex(Feed):
                 if std_pair in self.order_map:
                     del self.order_map[std_pair]
 
-    async def _ticker(self, pair: str, msg: list, timestamp: float):
+    async def _ticker(self, pair: str, msg: list, ts: float, timestamp: float):
         if msg[1] == 'hb':
             return  # ignore heartbeats
         # bid, bid_size, ask, ask_size, daily_change, daily_change_percent,
         # last_price, volume, high, low - and Bitfinex has since appended an 11th field, so index
         # rather than unpack: a positional unpack raises ValueError the moment the venue adds one
         bid, ask = msg[1][0], msg[1][2]
-        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
+        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), ts, raw=msg)
         await self.callback(TICKER, t, timestamp)
 
-    async def _funding_ticker(self, pair: str, msg: list, timestamp: float):
+    async def _funding_ticker(self, pair: str, msg: list, ts: float, timestamp: float):
         if msg[1] == 'hb':
             return
         bid, ask = msg[1][1], msg[1][4]
-        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), None, raw=msg)
+        t = Ticker(self.id, pair, Decimal(bid), Decimal(ask), ts, raw=msg)
         await self.callback(TICKER, t, timestamp)
 
-    async def _funding(self, pair: str, msg: list, timestamp: float):
-        async def _funding_update(funding: list, timestamp: float):
-            order_id, ts, amount, price, period = funding
-            t = Trade(
+    async def _funding(self, pair: str, msg: list, ts: float, timestamp: float):
+        def _funding_update(funding: list):
+            order_id, mts, amount, price, period = funding
+            return Trade(
                 self.id,
                 pair,
                 SELL if amount < 0 else BUY,
                 Decimal(abs(Decimal(amount))),
                 Decimal(price),
-                self.timestamp_normalize(ts),
+                self.timestamp_normalize(mts),
                 id=str(order_id),
                 raw=funding
             )
-            await self.callback(TRADES, t, timestamp)
 
         if isinstance(msg[1], list):
-            # snapshot
-            for funding in msg[1]:
-                await _funding_update(funding, timestamp)
+            trades = self.trade_watermark.batch([_funding_update(funding) for funding in msg[1]], symbol=pair)
         elif msg[1] in ('te', 'fte'):
             # update
-            await _funding_update(msg[2], timestamp)
-        elif msg[1] not in ('tu', 'ftu', 'hb'):
-            # ignore trade updates and heartbeats
-            LOG.warning('%s %s: Unexpected funding message %s', self.id, pair, msg)
+            trades = self.trade_watermark.live([_funding_update(msg[2])])
+        else:
+            if msg[1] not in ('tu', 'ftu', 'hb'):
+                # ignore trade updates and heartbeats
+                LOG.warning('%s %s: Unexpected funding message %s', self.id, pair, msg)
+            return
 
-    async def _trades(self, pair: str, msg: list, timestamp: float):
-        async def _trade_update(trade: list, timestamp: float):
-            order_id, ts, amount, price = trade
-            t = Trade(
+        for t in trades:
+            await self.callback(TRADES, t, timestamp)
+
+    async def _trades(self, pair: str, msg: list, ts: float, timestamp: float):
+        def _trade_update(trade: list):
+            order_id, mts, amount, price = trade
+            return Trade(
                 self.id,
                 pair,
                 SELL if amount < 0 else BUY,
                 Decimal(abs(Decimal(amount))),
                 Decimal(price),
-                self.timestamp_normalize(ts),
+                self.timestamp_normalize(mts),
                 id=str(order_id),
             )
-            await self.callback(TRADES, t, timestamp)
 
         if isinstance(msg[1], list):
-            # snapshot
-            for trade in msg[1]:
-                await _trade_update(trade, timestamp)
+            trades = self.trade_watermark.batch([_trade_update(trade) for trade in msg[1]], symbol=pair)
         elif msg[1] in ('te', 'fte'):
             # update
-            await _trade_update(msg[2], timestamp)
-        elif msg[1] not in ('tu', 'ftu', 'hb'):
-            # ignore trade updates and heartbeats
-            LOG.warning('%s %s: Unexpected trade message %s', self.id, pair, msg)
+            trades = self.trade_watermark.live([_trade_update(msg[2])])
+        else:
+            if msg[1] not in ('tu', 'ftu', 'hb'):
+                LOG.warning('%s %s: Unexpected trade message %s', self.id, pair, msg)
+            return
 
-    async def _book(self, pair: str, msg: list, timestamp: float):
+        for t in trades:
+            await self.callback(TRADES, t, timestamp)
+
+    async def _book(self, pair: str, msg: list, ts: float, timestamp: float):
         """For L2 book updates."""
         if not isinstance(msg[1], list):
             if msg[1] == 'cs':
@@ -266,9 +274,9 @@ class Bitfinex(Feed):
                     del self._l2_book[pair].book[side][price]
                     delta[side].append((price, 0))
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, delta=delta, sequence_number=msg[-1])
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts, raw=msg, delta=delta, sequence_number=msg[-1])
 
-    async def _raw_book(self, pair: str, msg: list, timestamp: float):
+    async def _raw_book(self, pair: str, msg: list, ts: float, timestamp: float):
         """For L3 book updates."""
         if not isinstance(msg[1], list):
             if msg[1] == 'cs':
@@ -342,33 +350,32 @@ class Bitfinex(Feed):
                 add_to_book(side, price, order_id, amount)
                 self.order_map[pair][side][order_id] = {'price': price, 'amount': amount}
 
-        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, raw=msg, delta=delta, sequence_number=msg[-1])
+        await self.book_callback(L3_BOOK, self._l3_book[pair], timestamp, timestamp=ts, raw=msg, delta=delta, sequence_number=msg[-1])
 
     @staticmethod
-    async def _do_nothing(msg: list, timestamp: float):
+    async def _do_nothing(msg: list, ts: float, timestamp: float):
         pass
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if isinstance(msg, list):
-            hb_skip = False
-            chan_handler = self.handlers.get(msg[0])
-            if chan_handler is None:
-                if msg[1] == 'hb':
-                    hb_skip = True
-                else:
-                    LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
-                    return
+            ts = self.timestamp_normalize(msg.pop()) if self._conf_flags.get(conn.uuid, 0) & TIMESTAMP else None
             seq_no = msg[-1]
             expected = self.seq_no[conn.uuid] + 1
+
             if seq_no != expected:
                 LOG.warning('%s: missed message (sequence number) received %s, expected %s', conn.uuid, seq_no, expected)
                 raise MissingSequenceNumber
+
             self.seq_no[conn.uuid] = seq_no
-            if hb_skip:
+            chan_handler = self.handlers.get(msg[0])
+
+            if chan_handler is None:
+                if msg[1] != 'hb':
+                    LOG.warning('%s: Unregistered channel ID in message %s', conn.uuid, msg)
                 return
-            await chan_handler(msg, timestamp)
+            await chan_handler(msg, ts, timestamp)
 
         elif 'event' not in msg:
             LOG.warning('%s: Unexpected msg (missing event) from exchange: %s', conn.uuid, msg)
@@ -376,6 +383,8 @@ class Bitfinex(Feed):
             LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
         elif msg['event'] in ('info', 'conf'):
             LOG.debug('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
+            if msg['event'] == 'conf' and msg.get('status') == 'OK':
+                self._conf_flags[conn.uuid] = msg['flags']
         elif 'chanId' in msg and 'symbol' in msg:
             self.register_channel_handler(msg, conn)
         else:
@@ -413,7 +422,7 @@ class Bitfinex(Feed):
         self.__reset(connection)
         await connection.write(json.dumps({
             'event': "conf",
-            'flags': SEQ_ALL | CHECKSUM
+            'flags': SEQ_ALL | CHECKSUM | TIMESTAMP
         }))
 
         for chan, pairs in connection.subscription.items():

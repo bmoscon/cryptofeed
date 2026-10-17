@@ -139,7 +139,17 @@ class AsyncConnection(Connection):
             await self.raw_data_callback.on_close(self)
 
 
+def retry_after(headers, default: float) -> float:
+    # seconds from a Retry-After header (sent with 429 and 418), else default
+    try:
+        return float(headers.get('Retry-After'))
+    except (TypeError, ValueError):
+        return default
+
+
 class HTTPAsyncConn(AsyncConnection):
+    offline = False
+
     def __init__(self, conn_id: str, proxy: StrOrURL = None):
         """
         conn_id: str
@@ -169,7 +179,11 @@ class HTTPAsyncConn(AsyncConnection):
             self.conn = aiohttp.ClientSession()
             self._reset_counters()
 
-    async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60) -> str:
+    async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60, headers_out: dict = None) -> str:
+        '''
+        GET address. A 429 is retried up to retry_count times after the venue's Retry-After (retry_delay without one);
+        a 418 (a ban) and any other error raise. headers_out, when given, receives the response headers
+        '''
         if not self.is_open:
             await self._open()
 
@@ -179,16 +193,22 @@ class HTTPAsyncConn(AsyncConnection):
                 data = await response.text()
                 self.last_message = time.time()
                 self.received += 1
+
+                if headers_out is not None:
+                    headers_out.clear()
+                    headers_out.update((key.lower(), value) for key, value in response.headers.items())
+
                 if response.status == 429 and retry_count:
-                    LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
+                    delay = retry_after(response.headers, retry_delay)
+                    LOG.warning("%s: encountered a rate limit for address %s, retrying in %.0f seconds", self.id, address, delay)
                     retry_count -= 1
-                    if retry_count < 0:
-                        self._handle_error(response, data)
-                    await asyncio.sleep(retry_delay)
+                    await asyncio.sleep(delay)
                     continue
+
                 self._handle_error(response, data)
                 if self.raw_data_callback is not None:
                     await self.raw_data_callback.on_http(self, address, params, header, data, self.last_message)
+
                 return data
 
     async def write(self, address: str, msg: str, header=None, retry_count=0, retry_delay=60) -> str:
@@ -199,16 +219,18 @@ class HTTPAsyncConn(AsyncConnection):
             async with self.conn.post(address, data=msg, headers=header) as response:
                 self.sent += 1
                 data = await response.read()
+
                 if response.status == 429 and retry_count:
-                    LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
+                    delay = retry_after(response.headers, retry_delay)
+                    LOG.warning("%s: encountered a rate limit for address %s, retrying in %.0f seconds", self.id, address, delay)
                     retry_count -= 1
-                    if retry_count < 0:
-                        self._handle_error(response, data)
-                    await asyncio.sleep(retry_delay)
+                    await asyncio.sleep(delay)
                     continue
+
                 self._handle_error(response, data)
                 if self.raw_data_callback is not None:
                     await self.raw_data_callback.on_http_post(self, address, msg, data, time.time())
+
                 return data
 
     async def delete(self, address: str, header=None, retry_count=0, retry_delay=60) -> str:
@@ -219,12 +241,12 @@ class HTTPAsyncConn(AsyncConnection):
             async with self.conn.delete(address, headers=header) as response:
                 self.sent += 1
                 data = await response.read()
+
                 if response.status == 429 and retry_count:
-                    LOG.warning("%s: encountered a rate limit for address %s, retrying in 60 seconds", self.id, address)
+                    delay = retry_after(response.headers, retry_delay)
+                    LOG.warning("%s: encountered a rate limit for address %s, retrying in %.0f seconds", self.id, address, delay)
                     retry_count -= 1
-                    if retry_count < 0:
-                        response.raise_for_status()
-                    await asyncio.sleep(retry_delay)
+                    await asyncio.sleep(delay)
                     continue
                 response.raise_for_status()
                 return data

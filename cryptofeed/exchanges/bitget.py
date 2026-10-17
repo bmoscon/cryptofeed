@@ -122,6 +122,8 @@ class Bitget(Feed):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.seq_no = {}
+        self._candle_rows = {}
+        self.trade_watermark.key = lambda t: int(t.id)
 
     def __reset(self, conn: AsyncConnection):
         if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:
@@ -229,8 +231,8 @@ class Bitget(Feed):
             'ts': 1786371841906
         }
         '''
-        for entry in msg['data']:
-            t = Trade(
+        trades = [
+            Trade(
                 self.id,
                 symbol,
                 BUY if entry['side'] == 'buy' else SELL,
@@ -240,6 +242,15 @@ class Bitget(Feed):
                 id=entry['tradeId'],
                 raw=entry
             )
+            for entry in msg['data']
+        ]
+
+        if msg['action'] == 'snapshot':
+            trades = self.trade_watermark.batch(trades, symbol=symbol)
+        else:
+            trades = self.trade_watermark.live(trades, sort=True)
+
+        for t in trades:
             await self.callback(TRADES, t, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float, symbol: str):
@@ -255,14 +266,24 @@ class Bitget(Feed):
         '''
         interval = timedelta_str_to_sec(self.candle_interval)
         ts = self.timestamp_normalize(msg['ts'])
-
+        if msg['action'] == 'snapshot':
+            self._candle_rows[symbol] = {}
+        rows = self._candle_rows.setdefault(symbol, {})
+        pushed = set()
         for entry in msg['data']:
             start = self.timestamp_normalize(entry[0])
-            # the exchange sends no 'confirm' flag, so closed is derived from the interval
-            closed = start + interval <= ts
-            if self.candle_closed_only and not closed:
+            rows[start] = entry
+            pushed.add(start)
+
+        newest = max(rows, default=None)
+        candles = []
+
+        for start in sorted(rows):
+            closed = start < newest or (self.candle_interval != '1M' and start + interval <= ts)
+            if not closed and start not in pushed:
                 continue
-            c = Candle(
+            entry = rows.pop(start) if closed else rows[start]
+            candles.append(Candle(
                 self.id,
                 symbol,
                 start,
@@ -277,8 +298,16 @@ class Bitget(Feed):
                 closed,
                 ts,
                 raw=entry
-            )
-            await self.callback(CANDLES, c, timestamp)
+            ))
+
+        if msg['action'] == 'snapshot':
+            candles = self.candle_watermark.batch(candles, symbol=symbol, interval=self.candle_interval)
+        else:
+            candles = self.candle_watermark.live(candles)
+
+        for c in candles:
+            if c.closed or not self.candle_closed_only:
+                await self.callback(CANDLES, c, timestamp)
 
     async def _book(self, msg: dict, timestamp: float, symbol: str):
         '''
