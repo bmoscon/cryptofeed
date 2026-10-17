@@ -162,10 +162,16 @@ class Phemex(Feed):
 
         await self._l2_update(symbol, levels, msg['type'] == 'snapshot', self.timestamp_normalize(msg['timestamp']), timestamp)
 
+    async def _trades(self, msg: dict, symbol: str, trades: list, timestamp: float):
+        if msg.get('type') == 'snapshot':
+            trades = self.trade_watermark.batch(trades, symbol=symbol)
+        else:
+            trades = self.trade_watermark.live(trades)
+        for t in trades:
+            await self.callback(TRADES, t, timestamp)
+
     async def _trade(self, msg: dict, timestamp: float):
         """
-        v1
-
         {
             'sequence': 9047166781,
             'symbol': 'BTCUSD',
@@ -177,8 +183,8 @@ class Phemex(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         scale = Decimal(self.price_scale[symbol])
-        for ts, side, price, amount in msg['trades']:
-            t = Trade(
+        trades = [
+            Trade(
                 self.id,
                 symbol,
                 BUY if side == 'Buy' else SELL,
@@ -187,12 +193,12 @@ class Phemex(Feed):
                 self.timestamp_normalize(ts),
                 raw=msg
             )
-            await self.callback(TRADES, t, timestamp)
+            for ts, side, price, amount in reversed(msg['trades'])
+        ]
+        await self._trades(msg, symbol, trades, timestamp)
 
     async def _trade_p(self, msg: dict, timestamp: float):
         """
-        v2 - same layout as v1, but the price is a decimal string and the size is the base quantity
-
         {
             'dts': 1786993352252547133,
             'mts': 1786993352250748663,
@@ -205,8 +211,8 @@ class Phemex(Feed):
         }
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        for ts, side, price, amount in msg['trades_p']:
-            t = Trade(
+        trades = [
+            Trade(
                 self.id,
                 symbol,
                 BUY if side == 'Buy' else SELL,
@@ -215,12 +221,21 @@ class Phemex(Feed):
                 self.timestamp_normalize(ts),
                 raw=msg
             )
-            await self.callback(TRADES, t, timestamp)
+            for ts, side, price, amount in reversed(msg['trades_p'])
+        ]
+        await self._trades(msg, symbol, trades, timestamp)
+
+    async def _candles(self, msg: dict, symbol: str, candles: list, timestamp: float):
+        if msg.get('type') == 'snapshot':
+            candles = self.candle_watermark.batch(candles, symbol=symbol, interval=self.candle_interval)
+        else:
+            candles = self.candle_watermark.live(candles)
+        for c in candles:
+            if c.closed or not self.candle_closed_only:
+                await self.callback(CANDLES, c, timestamp)
 
     async def _candle(self, msg: dict, timestamp: float):
         """
-        v1
-
         {
             'kline': [
                 [1625332980, 60, 346285000, 346300000, 346390000, 346300000, 346390000, 49917, 144121225]
@@ -232,10 +247,12 @@ class Phemex(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         scale = Decimal(self.price_scale[symbol])
+        newest = max((entry[0] for entry in msg['kline']), default=None)
 
+        candles = []
         for entry in msg['kline']:
             ts, _, _, open, high, low, close, volume, _ = entry
-            c = Candle(
+            candles.append(Candle(
                 self.id,
                 symbol,
                 ts,
@@ -247,16 +264,13 @@ class Phemex(Feed):
                 Decimal(high) / scale,
                 Decimal(low) / scale,
                 Decimal(volume),
-                None,
+                ts < newest,
                 None
-            )
-            await self.callback(CANDLES, c, timestamp)
+            ))
+        await self._candles(msg, symbol, candles, timestamp)
 
     async def _candle_p(self, msg: dict, timestamp: float):
         """
-        v2 - same layout as v1 (start, interval, last close, open, high, low, close, volume, turnover)
-        but every price and size is a decimal string, and the volume is the base quantity
-
         {
             'dts': 1786993345047502771,
             'kline_p': [
@@ -269,10 +283,12 @@ class Phemex(Feed):
         }
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
+        newest = max((entry[0] for entry in msg['kline_p']), default=None)
 
+        candles = []
         for entry in msg['kline_p']:
             ts, _, _, open, high, low, close, volume, _ = entry
-            c = Candle(
+            candles.append(Candle(
                 self.id,
                 symbol,
                 ts,
@@ -284,16 +300,16 @@ class Phemex(Feed):
                 Decimal(high),
                 Decimal(low),
                 Decimal(volume),
-                None,
+                ts < newest,
                 None
-            )
-            await self.callback(CANDLES, c, timestamp)
+            ))
+        await self._candles(msg, symbol, candles, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
 
         if msg.get('id') == self.PING_ID and not msg.get('error'):
-            # answers keepalive(); {'error': None, 'id': PING_ID, 'result': {'status': 'success'}}
+            # {'error': None, 'id': PING_ID, 'result': {'status': 'success'}}
             return
         elif 'id' in msg and msg['id'] == 1 and not msg['error']:
             pass

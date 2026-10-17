@@ -77,13 +77,13 @@ class CryptoDotCom(Feed):
             if self.max_depth > self.valid_depths[-1]:
                 raise ValueError(f'{self.id} serves a book at most {self.valid_depths[-1]} levels deep, {self.max_depth} requested')
             self.book_depth = next(d for d in self.valid_depths if d >= self.max_depth)
+        self.trade_watermark.key = lambda t: int(t.id)
         self.__reset()
 
     def __reset(self):
         self._l2_book = {}
         self._candles = {}
         self._candle_newest = {}
-        self._candle_published = {}
         self._mark_price = {}
         self._predicted_rate = {}
         self._index_subscribers = defaultdict(list)
@@ -137,7 +137,7 @@ class CryptoDotCom(Feed):
                                          }}))
             await asyncio.sleep(1)
 
-    async def _trades(self, msg: dict, timestamp: float):
+    async def _trades(self, msg: dict, history: bool, timestamp: float):
         '''
         {
             'instrument_name': 'BTC_USDT',
@@ -157,17 +157,19 @@ class CryptoDotCom(Feed):
         }
         '''
         symbol = self.exchange_symbol_to_std_symbol(msg['instrument_name'])
-        for entry in msg['data']:
-            t = Trade(
-                self.id,
-                symbol,
-                BUY if entry['s'] == 'BUY' else SELL,
-                Decimal(entry['q']),
-                Decimal(entry['p']),
-                self.timestamp_normalize(entry['t']),
-                id=entry['d'],
-                raw=entry
-            )
+        trades = [Trade(
+            self.id,
+            symbol,
+            BUY if entry['s'] == 'BUY' else SELL,
+            Decimal(entry['q']),
+            Decimal(entry['p']),
+            self.timestamp_normalize(entry['t']),
+            id=entry['d'],
+            raw=entry
+        ) for entry in msg['data']]
+
+        trades = self.trade_watermark.batch(trades, symbol=symbol) if history else self.trade_watermark.live(trades)
+        for t in trades:
             await self.callback(TRADES, t, timestamp)
 
     async def _ticker(self, msg: dict, conn: AsyncConnection, timestamp: float):
@@ -261,7 +263,7 @@ class CryptoDotCom(Feed):
             for symbol in subscribers:
                 await self.callback(INDEX, Index(self.id, symbol, Decimal(entry['v']), ts, raw=entry), timestamp)
 
-    async def _candle(self, msg: dict, timestamp: float):
+    async def _candle(self, msg: dict, history: bool, timestamp: float):
         '''
         {
             'instrument_name': 'BTC_USDT',
@@ -283,43 +285,47 @@ class CryptoDotCom(Feed):
         '''
         interval = self.normalize_candle_interval[msg['interval']]
         symbol = self.exchange_symbol_to_std_symbol(msg['instrument_name'])
-        newest = max(self._candle_newest.get(symbol, 0), max(entry['t'] for entry in msg['data']) / 1000)
-        self._candle_newest[symbol] = newest
+        data = sorted(msg['data'], key=lambda e: e['t'])
+        newest = self._candle_newest.get(symbol, 0)
 
-        held = self._candles.pop(symbol, None)
-        if held is not None and held['t'] / 1000 < newest:
-            await self._publish_candle(symbol, interval, held, True, timestamp)
+        if data:
+            newest = self._candle_newest[symbol] = max(newest, data[-1]['t'] / 1000)
 
-        for entry in sorted(msg['data'], key=lambda e: e['t']):
-            start = entry['t'] / 1000
-            closed = start < newest
+        candles = [self._build_candle(symbol, interval, entry, entry['t'] / 1000 < newest) for entry in data]
 
-            if not self.candle_closed_only:
-                await self._publish_candle(symbol, interval, entry, closed, timestamp)
-            elif closed:
-                if start > self._candle_published.get(symbol, 0):
-                    self._candle_published[symbol] = start
-                    await self._publish_candle(symbol, interval, entry, True, timestamp)
+        if history:
+            candles = self.candle_watermark.batch(candles, symbol=symbol, interval=interval)
+        else:
+            held = self._candles.get(symbol)
+
+            if held is not None and held['t'] / 1000 < newest:
+                del self._candles[symbol]
+                if all(entry['t'] != held['t'] for entry in data):
+                    candles.append(self._build_candle(symbol, interval, held, True))
+            candles = self.candle_watermark.live(candles)
+
+        for c in candles:
+            if c.closed or not self.candle_closed_only:
+                await self.callback(CANDLES, c, timestamp)
             else:
-                self._candles[symbol] = entry
+                self._candles[symbol] = c.raw
 
-    async def _publish_candle(self, symbol: str, interval: str, entry: dict, closed: bool, timestamp: float):
+    def _build_candle(self, symbol: str, interval: str, entry: dict, closed: bool) -> Candle:
         start = entry['t'] / 1000
-        c = Candle(self.id,
-                   symbol,
-                   start,
-                   start + timedelta_str_to_sec(interval) - 1,
-                   interval,
-                   None,
-                   Decimal(entry['o']),
-                   Decimal(entry['c']),
-                   Decimal(entry['h']),
-                   Decimal(entry['l']),
-                   Decimal(entry['v']),
-                   closed,
-                   self.timestamp_normalize(entry['ut']),
-                   raw=entry)
-        await self.callback(CANDLES, c, timestamp)
+        return Candle(self.id,
+                      symbol,
+                      start,
+                      start + timedelta_str_to_sec(interval) - 1,
+                      interval,
+                      None,
+                      Decimal(entry['o']),
+                      Decimal(entry['c']),
+                      Decimal(entry['h']),
+                      Decimal(entry['l']),
+                      Decimal(entry['v']),
+                      closed,
+                      self.timestamp_normalize(entry['ut']),
+                      raw=entry)
 
     async def _book(self, msg: dict, timestamp: float):
         '''
@@ -366,12 +372,14 @@ class CryptoDotCom(Feed):
             return
 
         channel = result['channel']
+        history = msg.get('id') != -1
+
         if channel == 'trade':
-            await self._trades(result, timestamp)
+            await self._trades(result, history, timestamp)
         elif channel == 'ticker':
             await self._ticker(result, conn, timestamp)
         elif channel == 'candlestick':
-            await self._candle(result, timestamp)
+            await self._candle(result, history, timestamp)
         elif channel == 'book':
             await self._book(result, timestamp)
         elif channel == 'funding':

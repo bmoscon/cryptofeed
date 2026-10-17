@@ -1,6 +1,8 @@
 ## Changelog
 
 ### 3.0.2
+* Bugfix: Various data improvements across exchanges
+* Bugfix: connection hardening, improved retries, improved snapshot syncing
  * Bugfix: Poloniex trades corrected
 
 ### 3.0.1 (2026-09-27)

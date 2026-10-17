@@ -48,13 +48,22 @@ class Coinbase(Feed):
             ret[sym.normalized] = entry['product_id']
         return ret, info
 
-    def __init__(self, callbacks=None, **kwargs):
+    def __init__(self, callbacks=None, candle_grace: float = 60.0, **kwargs):
+        """
+        candle_grace: float
+            seconds after candle interval before its considered closed. Coinbase sends no close flag
+        """
         super().__init__(callbacks=callbacks, **kwargs)
+        self.candle_grace = candle_grace
+        # channels whose snapshot named no product (a product that has not traded): its products are seeded at the
+        # next subscribe, once every product's own first snapshot has arrived
+        self._empty_snapshots = set()
         self.__reset()
 
     def __reset(self):
         self._l2_book = {}
         self._sequence_num = {}
+        self._candles = {}
 
     def _check_sequence_num(self, msg: dict, conn: AsyncConnection) -> None:
         sequence = msg.get('sequence_num')
@@ -80,7 +89,7 @@ class Coinbase(Feed):
         book.raw = pricebook
         return book
 
-    async def _trade_update(self, msg: dict, timestamp: float):
+    async def _trade_update(self, event: dict, timestamp: float):
         '''
         {
             'trade_id': '43736593',
@@ -93,26 +102,34 @@ class Coinbase(Feed):
 
         'side' is the maker side of the trade but we report the taker side
         '''
-        side = SELL if msg.get('side') == 'BUY' else BUY if msg.get('side') == 'SELL' else None
-        if side is None:
-            LOG.warning('%s: unexpected market_trades side %r for %s trade %s - skipping', self.id, msg.get('side'), msg.get('product_id'), msg.get('trade_id'))
-            return
+        trades = []
+        for msg in event['trades']:
+            side = SELL if msg.get('side') == 'BUY' else BUY if msg.get('side') == 'SELL' else None
+            if side is None:
+                LOG.warning('%s: unexpected market_trades side %r for %s trade %s - skipping', self.id, msg.get('side'), msg.get('product_id'), msg.get('trade_id'))
+                continue
 
-        pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
-        ts = self.timestamp_normalize(msg['time'])
-        order_type = 'market'
-        t = Trade(
-            self.id,
-            pair,
-            side,
-            Decimal(msg['size']),
-            Decimal(msg['price']),
-            ts,
-            id=str(msg['trade_id']),
-            type=order_type,
-            raw=msg
-        )
-        await self.callback(TRADES, t, timestamp)
+            trades.append(Trade(
+                self.id,
+                self.exchange_symbol_to_std_symbol(msg['product_id']),
+                side,
+                Decimal(msg['size']),
+                Decimal(msg['price']),
+                self.timestamp_normalize(msg['time']),
+                id=str(msg['trade_id']),
+                type='market',
+                raw=msg
+            ))
+
+        if event['type'] == 'snapshot':
+            if not event['trades']:
+                self._empty_snapshots.add(TRADES)
+            trades = self.trade_watermark.batch(trades)
+        else:
+            trades = self.trade_watermark.live(trades, sort=True)
+
+        for t in trades:
+            await self.callback(TRADES, t, timestamp)
 
     async def _ticker_update(self, msg: dict, timestamp: float, ts: str):
         '''
@@ -138,7 +155,7 @@ class Coinbase(Feed):
         )
         await self.callback(TICKER, t, timestamp)
 
-    async def _candle_update(self, msg: dict, timestamp: float, ts: str):
+    def _candle(self, symbol: str, start: float, msg: dict, ts: float, closed: bool) -> Candle:
         '''
         {
             'start': '1786269300',
@@ -148,13 +165,11 @@ class Coinbase(Feed):
             'product_id': 'BTC-USD'
         }
         '''
-        start = float(msg['start'])
-        interval = self.candle_interval_map[self.candle_interval]
-        c = Candle(
+        return Candle(
             self.id,
-            self.exchange_symbol_to_std_symbol(msg['product_id']),
+            symbol,
             start,
-            start + interval - 1,
+            start + self.candle_interval_map[self.candle_interval] - 1,
             self.candle_interval,
             None,
             Decimal(msg['open']),
@@ -162,11 +177,45 @@ class Coinbase(Feed):
             Decimal(msg['high']),
             Decimal(msg['low']),
             Decimal(msg['volume']),
-            False,
-            self.timestamp_normalize(ts),
+            closed,
+            ts,
             raw=msg
         )
-        await self.callback(CANDLES, c, timestamp)
+
+    async def _candle_update(self, event: dict, timestamp: float, ts: str):
+        ts = self.timestamp_normalize(ts)
+        closes = self.candle_interval_map[self.candle_interval] + self.candle_grace
+        rows = [(self.exchange_symbol_to_std_symbol(msg['product_id']), float(msg['start']), msg) for msg in event['candles']]
+
+        if event.get('type') == 'snapshot' and not rows:
+            self._empty_snapshots.add(CANDLES)
+        elif event.get('type') == 'snapshot':
+            closed = [self._candle(symbol, start, msg, ts, True) for symbol, start, msg in rows if start + closes <= ts]
+            for c in self.candle_watermark.batch(closed, symbol=rows[0][0], interval=self.candle_interval):
+                await self.callback(CANDLES, c, timestamp)
+            rows = [row for row in rows if row[1] + closes > ts]
+
+        for symbol, start, msg in rows:
+            mark = self.candle_watermark.get(symbol, self.candle_interval)
+            if mark is None or start > mark:
+                self._candles[symbol, start] = (msg, ts)
+        await self._close_candles(ts, timestamp)
+
+        if not self.candle_closed_only:
+            candles = [self._candle(symbol, start, msg, ts, False) for symbol, start, msg in rows if (symbol, start) in self._candles]
+            for c in self.candle_watermark.live(candles):
+                await self.callback(CANDLES, c, timestamp)
+
+    async def _close_candles(self, ts: float, timestamp: float):
+        closes = self.candle_interval_map[self.candle_interval] + self.candle_grace
+        ended = [key for key in self._candles if key[1] + closes <= ts]
+
+        if not ended:
+            return
+
+        candles = [self._candle(symbol, start, *self._candles.pop((symbol, start)), True) for symbol, start in ended]
+        for c in self.candle_watermark.live(candles):
+            await self.callback(CANDLES, c, timestamp)
 
     async def _pair_level2_snapshot(self, msg: dict, timestamp: float, ts: str):
         pair = self.exchange_symbol_to_std_symbol(msg['product_id'])
@@ -188,6 +237,7 @@ class Coinbase(Feed):
         if pair not in self._l2_book:
             return
 
+        book = self._l2_book[pair].book
         delta = {BID: [], ASK: []}
         for update in msg['updates']:
             side = BID if update['side'] == 'bid' else ASK
@@ -195,11 +245,11 @@ class Coinbase(Feed):
             amount = Decimal(update['new_quantity'])
 
             if amount == 0:
-                if price in self._l2_book[pair].book[side]:
-                    del self._l2_book[pair].book[side][price]
+                if price in book[side]:
+                    del book[side][price]
                     delta[side].append((price, 0))
             else:
-                self._l2_book[pair].book[side][price] = amount
+                book[side][price] = amount
                 delta[side].append((price, amount))
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg, delta=delta)
@@ -211,8 +261,7 @@ class Coinbase(Feed):
             for event in msg['events']:
                 if msg['channel'] == 'market_trades':
                     if event.get('type') in ('update', 'snapshot'):
-                        for trade in event['trades']:
-                            await self._trade_update(trade, timestamp)
+                        await self._trade_update(event, timestamp)
                     else:
                         LOG.warning('%s: unexpected market_trades event type %r', self.id, event.get('type'))
                 elif msg['channel'] == 'l2_data':
@@ -224,15 +273,26 @@ class Coinbase(Feed):
                     for ticker in event['tickers']:
                         await self._ticker_update(ticker, timestamp, msg['timestamp'])
                 elif msg['channel'] == 'candles':
-                    for candle in event['candles']:
-                        await self._candle_update(candle, timestamp, msg['timestamp'])
-                elif msg['channel'] in ('subscriptions', 'heartbeats'):
+                    await self._candle_update(event, timestamp, msg['timestamp'])
+                elif msg['channel'] == 'heartbeats':
+                    # a heartbeat every second closes the held candles whose grace ran out
+                    if self._candles:
+                        await self._close_candles(self.timestamp_normalize(msg['timestamp']), timestamp)
+                elif msg['channel'] == 'subscriptions':
                     pass
                 else:
                     LOG.warning("%s: Invalid message type %s", self.id, msg)
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
+        for channel in self._empty_snapshots:
+            for product in self.subscription.get(self.websocket_channels[channel], ()):
+                symbol = self.exchange_symbol_to_std_symbol(product)
+                if channel == TRADES:
+                    self.trade_watermark.batch([], symbol=symbol)
+                else:
+                    self.candle_watermark.batch([], symbol=symbol, interval=self.candle_interval)
+        self._empty_snapshots.clear()
         all_pairs = list()
 
         async def _subscribe(chan: str, product_ids: list):

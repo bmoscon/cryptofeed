@@ -4,10 +4,11 @@ Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 import logging
 from collections import defaultdict
 from decimal import Decimal
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from cryptofeed import _json as json
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
@@ -16,6 +17,7 @@ from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import L1Book, OrderBook, Trade
+from cryptofeed.util.snapshots import SnapshotSync
 
 
 LOG = logging.getLogger(__name__)
@@ -67,7 +69,7 @@ def _levels(buf: bytes, number: int) -> list:
     return out
 
 
-class MEXCSpot(Feed):
+class MEXCSpot(SnapshotSync, Feed):
     id = MEXC
     websocket_endpoints = [WebsocketEndpoint('wss://wbs-api.mexc.com/ws', limit=20)]
     rest_endpoints = [RestEndpoint('https://api.mexc.com', routes=Routes('/api/v3/exchangeInfo', l2book='/api/v3/depth?symbol={}&limit={}'))]
@@ -105,16 +107,18 @@ class MEXCSpot(Feed):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._sync_init()
         self._reset()
 
     def _reset(self):
+        self._cancel_syncs()
         self._l2_book = {}
         self.last_update_id = {}
-        self._buffered = defaultdict(list)
-        self._snapshot_time = {}
 
     async def subscribe(self, conn: AsyncConnection):
-        self._reset()
+        for symbol in conn.subscription.get(self.websocket_channels[L2_BOOK], []):
+            self._resync(self.exchange_symbol_to_std_symbol(symbol))
+        self._cancel_syncs(getattr(conn, 'uuid', None))
         topics = [f'{channel}@{symbol}'
                   for channel, symbols in conn.subscription.items() for symbol in symbols]
         for start in range(0, len(topics), 30):
@@ -137,7 +141,7 @@ class MEXCSpot(Feed):
             )
             await self.callback(TRADES, trade, timestamp)
 
-    async def _l1_book(self, symbol: str, payload: bytes, timestamp: float):
+    async def _l1_book(self, symbol: str, payload: bytes, timestamp: float, send_time: Optional[int]):
         book = _one(payload)
         if not all(key in book for key in (1, 2, 3, 4)):
             return
@@ -147,30 +151,47 @@ class MEXCSpot(Feed):
                                             Decimal(book[2].decode()),
                                             Decimal(book[3].decode()),
                                             Decimal(book[4].decode()),
-                                            self.timestamp_normalize(book[6]) if 6 in book else timestamp,
-                                            raw=None),
+                                            self.timestamp_normalize(send_time) if send_time is not None else timestamp,
+                                            raw={'version': int(book[5].decode()) if 5 in book else None,
+                                                 'lastOrderCreateTime': book.get(6), 'sendTime': send_time}),
                                             timestamp)
 
-    async def _snapshot(self, symbol: str):
-        exchange_symbol = self.std_symbol_to_exchange_symbol(symbol)
-        address = self.rest_endpoints[0].route('l2book').format(exchange_symbol, self.SNAPSHOT_DEPTH)
-        data = json.loads(await self.http_conn.read(address), parse_float=Decimal)
+    def _snapshot_url(self, symbol: str) -> str:
+        return self.rest_endpoints[0].route('l2book').format(symbol, self.SNAPSHOT_DEPTH)
 
-        self.last_update_id[symbol] = data['lastUpdateId']
-        self._snapshot_time[symbol] = data.get('timestamp')
-        book = self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
+    def _parse_snapshot(self, symbol: str, data) -> OrderBook:
+        data = json.loads(data, parse_float=Decimal)
+        book = OrderBook(self.id, symbol, max_depth=self.max_depth)
         book.book.bids = {Decimal(price): Decimal(size) for price, size in data['bids']}
         book.book.asks = {Decimal(price): Decimal(size) for price, size in data['asks']}
+        book.sequence_number = data['lastUpdateId']
+        book.timestamp = self.timestamp_normalize(data['timestamp']) if data.get('timestamp') else None
+        return book
 
-        buffered, self._buffered[symbol] = self._buffered[symbol], []
-        for payload, ts in buffered:
-            self._apply(symbol, payload, ts)          # the snapshot callback reports the result
+    @staticmethod
+    def _versions(update: tuple) -> Tuple[Optional[int], Optional[int]]:
+        message = _one(update[0])
+        return (int(message[4].decode()) if 4 in message else None, int(message[5].decode()) if 5 in message else None)
 
-    def _apply(self, symbol: str, payload: bytes, timestamp: float):
+    def _covered(self, sequence: int, update: tuple) -> bool:
+        return (self._versions(update)[1] or sequence + 1) <= sequence
+
+    def _bridges(self, sequence: int, update: tuple) -> bool:
+        from_version = self._versions(update)[0]
+        return from_version is None or from_version <= sequence + 1
+
+    def _start_book(self, symbol: str, book: OrderBook):
+        self._l2_book[symbol] = book
+        self.last_update_id[symbol] = book.sequence_number
+
+    async def _apply_buffered(self, pair: str, update: tuple, timestamp: float, conn):
+        payload, send_time = update
+        await self._book(self.exchange_symbol_to_std_symbol(pair), payload, timestamp, send_time, conn)
+
+    def _apply(self, symbol: str, payload: bytes, timestamp: float, send_time: Optional[int]):
         message = _one(payload)
         to_version = int(message[5].decode()) if 5 in message else None
         from_version = int(message[4].decode()) if 4 in message else None
-        event_time = message.get(6)
         last = self.last_update_id.get(symbol)
 
         if to_version is not None and last is not None:
@@ -190,45 +211,40 @@ class MEXCSpot(Feed):
                 else:
                     book.book[side][price] = size
                 delta[side].append((price, size))
-        return delta, {'fromVersion': from_version, 'toVersion': to_version, 'sendTime': event_time}
+        return delta, {'fromVersion': from_version, 'toVersion': to_version, 'sendTime': send_time,
+                       'lastOrderCreateTime': message.get(6)}
 
     def _resync(self, symbol: str):
         self._l2_book.pop(symbol, None)
         self.last_update_id.pop(symbol, None)
-        self._snapshot_time.pop(symbol, None)
-        self._buffered[symbol] = []
 
-    async def _book(self, symbol: str, payload: bytes, timestamp: float):
+    async def _book(self, symbol: str, payload: bytes, timestamp: float, send_time: Optional[int], conn=None):
         if symbol not in self._l2_book:
-            self._buffered[symbol].append((payload, timestamp))
-            if len(self._buffered[symbol]) == 1:
-                try:
-                    await self._snapshot(symbol)
-                except MissingSequenceNumber as e:
-                    LOG.warning('%s: %s missing sequence number for %s', self.id, e, symbol)
-                    self._resync(symbol)
-                    return
-                stamped = self._snapshot_time.get(symbol)
-                await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp,
-                                         sequence_number=self.last_update_id.get(symbol),
-                                         timestamp=self.timestamp_normalize(stamped) if stamped else None)
+            self._buffer_update(self.std_symbol_to_exchange_symbol(symbol), symbol, (payload, send_time), conn)
             return
 
         try:
-            applied = self._apply(symbol, payload, timestamp)
+            applied = self._apply(symbol, payload, timestamp, send_time)
         except MissingSequenceNumber as e:
             LOG.warning('%s: %s missing sequence number for %s', self.id, e, symbol)
+            self.book_sync_stats['gap_resets'] += 1
             self._resync(symbol)
-            await self._book(symbol, payload, timestamp)
+            await self._book(symbol, payload, timestamp, send_time, conn)
             return
         if applied is not None:
             delta, raw = applied
             await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, raw=raw,
                                      sequence_number=raw['toVersion'],
-                                     timestamp=self.timestamp_normalize(raw['sendTime'])
-                                     if raw['sendTime'] else None)
+                                     timestamp=self.timestamp_normalize(send_time) if send_time is not None else None)
 
     async def message_handler(self, msg, conn: AsyncConnection, timestamp: float):
+        if self._ready:
+            await self._install_snapshots(conn, timestamp)
+        await self._handle(msg, conn, timestamp)
+        if self._syncing:
+            await asyncio.sleep(0)
+
+    async def _handle(self, msg, conn: AsyncConnection, timestamp: float):
         if not isinstance(msg, bytes):
             ack = json.loads(msg)
             if ack.get('code') not in (0, None):
@@ -241,12 +257,13 @@ class MEXCSpot(Feed):
             LOG.warning('%s: message with no symbol on %s', self.id, channel)
             return
         symbol = self.exchange_symbol_to_std_symbol(wrapper[3].decode())
+        send_time = wrapper.get(6)
 
         if self.DEALS in wrapper:
             await self._trades(symbol, wrapper[self.DEALS], timestamp)
         elif self.DEPTH in wrapper:
-            await self._book(symbol, wrapper[self.DEPTH], timestamp)
+            await self._book(symbol, wrapper[self.DEPTH], timestamp, send_time, conn)
         elif self.BOOK_TICKER in wrapper:
-            await self._l1_book(symbol, wrapper[self.BOOK_TICKER], timestamp)
+            await self._l1_book(symbol, wrapper[self.BOOK_TICKER], timestamp, send_time)
         else:
             LOG.warning('%s: no known payload on %s (fields %s)', self.id, channel, sorted(wrapper))

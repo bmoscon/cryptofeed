@@ -49,3 +49,14 @@ class KuCoinFutures(KuCoin):
             ret[s.normalized] = entry['symbol']
 
         return ret, info
+
+    async def _candles(self, msg: dict, symbol: str, timestamp: float):
+        """
+        {"T": "kline.FUTURES", "P": 1787582340151258122,
+         "d": {"a": "1216096.283", "s": "ETHUSDTM", "C": 1787582340, "c": "2526.85", "S": false, "v": "48104",
+               "h": "2530.21", "i": "1min", "l": "2525.42", "O": 1787582280, "o": "2527.78"}}
+
+        S==true inside the window, false on the update at final state
+        """
+        closed = not msg['d']['S'] or self._after_window(msg)
+        await self._deliver_candles([self._candle(msg, symbol, closed)], timestamp)

@@ -34,6 +34,10 @@ class Gemini(Feed):
     rest_endpoints = [RestEndpoint('https://api.gemini.com', routes=Routes('/v1/symbols/details/{}', currencies='/v1/symbols', l2book='/v1/book/{}?limit_bids={}&limit_asks={}'))]
     request_limit = 1
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.trade_watermark.key = lambda t: int(t.id)
+
     @classmethod
     def timestamp_normalize(cls, ts: float) -> float:
         return ts / 1000.0
@@ -95,13 +99,32 @@ class Gemini(Feed):
         book.raw = response
         return book
 
+    def _trade_row(self, row: dict) -> Trade:
+        return Trade(
+            self.id,
+            self.exchange_symbol_to_std_symbol(row['symbol']),
+            SELL if row['side'] == 'sell' else BUY,
+            Decimal(row['quantity']),
+            Decimal(row['price']),
+            self.timestamp_normalize(row['timestamp']),
+            id=str(row['tid']),
+            raw=row
+        )
+
     async def _trade(self, msg: dict, timestamp: float):
-        pair = self.exchange_symbol_to_std_symbol(msg['symbol'])
-        price = Decimal(msg['price'])
-        side = SELL if msg['side'] == 'sell' else BUY
-        amount = Decimal(msg['quantity'])
-        t = Trade(self.id, pair, side, amount, price, self.timestamp_normalize(msg['timestamp']), id=str(msg['event_id']), raw=msg)
-        await self.callback(TRADES, t, timestamp)
+        '''
+        {"event_id": 1764553222813043, "price": "79722.23", "quantity": "0.0000621", "side": "buy", "symbol": "BTCUSD",
+         "tid": 2840141021512809, "timestamp": 1787582029430, "type": "trade"}
+
+        tid identifies the fill
+        '''
+        for t in self.trade_watermark.live([self._trade_row(msg)]):
+            await self.callback(TRADES, t, timestamp)
+
+    async def _trade_batch(self, msg: dict, timestamp: float):
+        symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
+        for t in self.trade_watermark.batch([self._trade_row(row) for row in msg['trades']], symbol=symbol):
+            await self.callback(TRADES, t, timestamp)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -109,6 +132,8 @@ class Gemini(Feed):
         if 'type' not in msg:
             LOG.warning('%s: Error from exchange %s', self.id, msg)
         elif msg['type'] == 'l2_updates':
+            if 'trades' in msg:
+                await self._trade_batch(msg, timestamp)
             await self._book(msg, timestamp)
         elif msg['type'] == 'trade':
             await self._trade(msg, timestamp)

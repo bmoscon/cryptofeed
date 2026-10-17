@@ -112,17 +112,22 @@ class HTXSwap(Feed):
                 'data': [{'id': '10006534098224147003732', 'amount': Decimal('0.0777'), 'price': Decimal('3669.69'), 'direction': 'buy', 'ts': 1549757127140}]}
         }
         """
-        for trade in msg['tick']['data']:
-            t = Trade(
+        pair = msg['ch'].split('.')[1]
+        symbol = self.exchange_symbol_to_std_symbol(pair)
+        trades = [
+            Trade(
                 self.id,
-                self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
+                symbol,
                 BUY if trade['direction'] == 'buy' else SELL,
                 Decimal(trade['amount']),
                 Decimal(trade['price']),
                 self.timestamp_normalize(trade['ts']),
                 id=str(trade['id']),
                 raw=trade
-            )
+            ) for trade in msg['tick']['data']
+        ]
+
+        for t in self.trade_watermark.frame(trades, symbol):
             await self.callback(TRADES, t, timestamp)
 
     async def _funding(self, pairs):
@@ -200,6 +205,7 @@ class HTXSwap(Feed):
             self._spawn('funding', self._funding, self.subscription[FUNDING])
 
         self.__reset()
+        self.trade_watermark.expect(self.exchange_symbol_to_std_symbol(pair) for pair in conn.subscription.get(self.std_channel_to_exchange(TRADES), ()))
 
         client_id = 0
         for chan, symbols in conn.subscription.items():

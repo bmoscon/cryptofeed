@@ -106,27 +106,32 @@ class GateFutures(Gate):
             "error": null,
             "result": [
                 {
-                "t": 1545129300,
+                "t": 1545129240,
                 "v": 27525555,
                 "c": "95.4",
                 "h": "96.9",
                 "l": "89.5",
                 "o": "94.3",
-                "n": "1m_BTC_USD"
+                "n": "1m_BTC_USD",
+                "a": "314732.87412",
+                "w": true - window closed
                 },
                 {
                 "t": 1545129300,
-                "v": 27525555,
+                "v": 0,
                 "c": "95.4",
-                "h": "96.9",
-                "l": "89.5",
-                "o": "94.3",
-                "n": "1m_BTC_USD"
+                "h": "95.4",
+                "l": "95.4",
+                "o": "95.4",
+                "n": "1m_BTC_USD",
+                "a": "0",
+                "w": false
                 }
             ]
         }
         """
-        for entry in msg['result']:
+        # a rollover frame closes the previous bar and opens the next: close first
+        for entry in sorted(msg['result'], key=lambda entry: int(entry['t'])):
             interval, symbol = entry['n'].split('_', 1)
             c = Candle(
                 self.id,
@@ -140,11 +145,11 @@ class GateFutures(Gate):
                 Decimal(entry['h']),
                 Decimal(entry['l']),
                 Decimal(entry['v']),
-                None,
+                bool(entry.get('w')),
                 float(msg['time_ms'] / 1000),
                 raw=entry
             )
-            await self.callback(CANDLES, c, timestamp)
+            await self._candle(c, timestamp)
 
     def _parse_snapshot(self, symbol: str, data) -> OrderBook:
         """
@@ -180,11 +185,12 @@ class GateFutures(Gate):
         book.book.bids.truncate()
         book.book.asks.truncate()
         book.sequence_number = data['id']
+        book.timestamp = float(data['current'])
         book.raw = data
 
         return book
 
-    async def _process_l2_book(self, msg: dict, timestamp: float):
+    async def _process_l2_book(self, msg: dict, timestamp: float, conn=None):
         """
         {
             "time": 1615366381,
@@ -235,7 +241,8 @@ class GateFutures(Gate):
             self.last_update_id.pop(symbol, None)
             self.forced[symbol] = False
         if symbol not in self._l2_book:
-            await self._snapshot(result['s'])
+            self._buffer_update(result['s'], symbol, msg, conn)
+            return
 
         skip_update = self._check_update_id(symbol, result)
         if skip_update:
@@ -365,9 +372,7 @@ class GateFutures(Gate):
                 )
                 await self.callback(FUNDING, f, timestamp)
 
-    async def message_handler(self, msg: str, conn, timestamp: float):
-        msg = json.loads(msg, parse_float=Decimal)
-
+    async def _handle(self, msg: dict, conn, timestamp: float):
         if "error" in msg:
             if msg['error'] is None:
                 pass
@@ -384,7 +389,7 @@ class GateFutures(Gate):
             elif channel == 'trades':
                 await self._trades(msg, timestamp)
             elif channel == 'order_book_update':
-                await self._process_l2_book(msg, timestamp)
+                await self._process_l2_book(msg, timestamp, conn)
             elif channel == 'candlesticks':
                 await self._candles(msg, timestamp)
             else:

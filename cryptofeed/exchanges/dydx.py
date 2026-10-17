@@ -23,8 +23,8 @@ LOG = logging.getLogger(__name__)
 
 class dYdX(Feed):
     id = DYDX
-    CROSSED_BOOKS_ARE_DOCUMENTED = True
     SEQUENCED_FRAMES = ('channel_data', 'channel_batch_data')
+    quiet_channels = (TRADES,)
 
     websocket_endpoints = [WebsocketEndpoint('wss://indexer.dydx.trade/v4/ws', limit=4)]
     rest_endpoints = [RestEndpoint('https://indexer.dydx.trade', routes=Routes('/v4/perpetualMarkets'))]
@@ -55,11 +55,13 @@ class dYdX(Feed):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._message_id = {}
+        self._offsets = {}
 
     def _reset(self, conn: AsyncConnection):
         for symbol in conn.subscription.get(self.std_channel_to_exchange(L2_BOOK), []):
-            self._l2_book.pop(self.exchange_symbol_to_std_symbol(symbol), None)
-        # message ids reset to 0
+            symbol = self.exchange_symbol_to_std_symbol(symbol)
+            self._l2_book.pop(symbol, None)
+            self._offsets.pop(symbol, None)
         self._message_id.pop(conn.uuid, None)
 
     async def subscribe(self, conn: AsyncConnection):
@@ -68,10 +70,10 @@ class dYdX(Feed):
             for symbol in symbols:
                 await conn.write(json.dumps({'type': 'subscribe', 'channel': channel, 'id': symbol}))
 
-    async def _trades(self, msg: dict, timestamp: float):
+    async def _trades(self, msg: dict, timestamp: float, batch: bool = False):
         symbol = self.exchange_symbol_to_std_symbol(msg['id'])
-        for entry in msg['contents']['trades']:
-            trade = Trade(
+        trades = [
+            Trade(
                 self.id,
                 symbol,
                 BUY if entry['side'] == 'BUY' else SELL,
@@ -82,17 +84,28 @@ class dYdX(Feed):
                 type=entry.get('type'),
                 raw=entry
             )
+            for entry in msg['contents']['trades']
+        ]
 
+        if batch:
+            trades = self.trade_watermark.batch(trades, symbol=symbol)
+        else:
+            trades = self.trade_watermark.live(trades, sort=True)
+
+        for trade in trades:
             await self.callback(TRADES, trade, timestamp)
 
     async def _snapshot(self, msg: dict, timestamp: float):
         symbol = self.exchange_symbol_to_std_symbol(msg['id'])
         contents = msg['contents']
-        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
-        self._l2_book[symbol].book.bids = {Decimal(level['price']): Decimal(level['size']) for level in contents.get('bids', []) if Decimal(level['size']) > 0}
-        self._l2_book[symbol].book.asks = {Decimal(level['price']): Decimal(level['size']) for level in contents.get('asks', []) if Decimal(level['size']) > 0}
+        book = self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
+        book.book.bids = {Decimal(level['price']): Decimal(level['size']) for level in contents.get('bids', []) if Decimal(level['size']) > 0}
+        book.book.asks = {Decimal(level['price']): Decimal(level['size']) for level in contents.get('asks', []) if Decimal(level['size']) > 0}
+        offset = msg.get('message_id', 0)
+        self._offsets[symbol] = {side: dict.fromkeys(book.book[side].keys(), offset) for side in (BID, ASK)}
+        self._uncross(symbol, book, None)
 
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, raw=msg)
+        await self.book_callback(L2_BOOK, book, timestamp, raw=msg)
 
     async def _update(self, msg: dict, timestamp: float):
         symbol = self.exchange_symbol_to_std_symbol(msg['id'])
@@ -100,6 +113,8 @@ class dYdX(Feed):
             return
 
         book = self._l2_book[symbol]
+        offsets = self._offsets[symbol]
+        offset = msg.get('message_id', 0)
         delta = {BID: [], ASK: []}
         for side, key in ((BID, 'bids'), (ASK, 'asks')):
             for price, size in msg['contents'].get(key, []):
@@ -107,11 +122,41 @@ class dYdX(Feed):
                 if size == 0:
                     if price in book.book[side]:
                         del book.book[side][price]
+                    offsets[side].pop(price, None)
                 else:
                     book.book[side][price] = size
+                    offsets[side][price] = offset
                 delta[side].append((price, size))
+        self._uncross(symbol, book, delta)
 
         await self.book_callback(L2_BOOK, book, timestamp, delta=delta, raw=msg)
+
+    def _uncross(self, symbol: str, book: OrderBook, delta: dict):
+        '''
+        dYdX's book can cross - https://docs.dydx.exchange/api_integration-guides/how_to_uncross_orderbook
+        '''
+        bids, asks = book.book.bids, book.book.asks
+        offsets = self._offsets[symbol]
+        while len(bids) and len(asks):
+            bid, bid_size = bids.index(0)
+            ask, ask_size = asks.index(0)
+            if bid < ask:
+                return
+            bid_offset, ask_offset = offsets[BID].get(bid, -1), offsets[ASK].get(ask, -1)
+            changes = []
+            if bid_offset != ask_offset:
+                changes.append((BID, bid, 0) if bid_offset < ask_offset else (ASK, ask, 0))
+            else:
+                matched = min(bid_size, ask_size)
+                changes.extend(((BID, bid, bid_size - matched), (ASK, ask, ask_size - matched)))
+            for side, price, size in changes:
+                if size:
+                    book.book[side][price] = size
+                else:
+                    del book.book[side][price]
+                    offsets[side].pop(price, None)
+                if delta is not None:
+                    delta[side].append((price, size))
 
     def _check_sequence_number(self, msg: dict, conn: AsyncConnection) -> None:
         if msg.get('type') not in self.SEQUENCED_FRAMES:
@@ -145,7 +190,7 @@ class dYdX(Feed):
             if channel == 'v4_orderbook':
                 await self._snapshot(msg, timestamp)
             elif channel == 'v4_trades':
-                LOG.info('%s: discarding the %d-trade history batch for %s - it is a history query, not reconnect backfill', self.id, len(msg.get('contents', {}).get('trades', [])), msg.get('id'))
+                await self._trades(msg, timestamp, batch=True)
         elif kind == 'connected':
             LOG.debug('%s: connected, connection_id %s', self.id, msg.get('connection_id'))
         elif kind == 'error':

@@ -72,6 +72,36 @@ class KuCoin(Feed):
     def __reset(self):
         self._l2_book = {}
         self.seq_no = {}
+        # the last kline frame per symbol of a spot candle still open on this connection
+        self._open_candles = {}
+
+    def _candle(self, msg: dict, symbol: str, closed: bool) -> Candle:
+        data = msg['d']
+        return Candle(
+            self.id,
+            symbol,
+            int(data['O']),
+            int(data['C']) - 1,
+            self.normalize_candle_interval[data['i']],
+            None,
+            Decimal(data['o']),
+            Decimal(data['c']),
+            Decimal(data['h']),
+            Decimal(data['l']),
+            Decimal(data['v']),
+            closed,
+            msg['P'] / 1_000_000_000,
+            raw=msg
+        )
+
+    @staticmethod
+    def _after_window(msg: dict) -> bool:
+        return msg['P'] >= int(msg['d']['C']) * 1_000_000_000
+
+    async def _deliver_candles(self, candles: list, timestamp: float):
+        for c in self.candle_watermark.live(candles):
+            if c.closed or not self.candle_closed_only:
+                await self.callback(CANDLES, c, timestamp)
 
     async def _candles(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -80,25 +110,20 @@ class KuCoin(Feed):
                "v": "0.48447824", "h": "78247.9", "i": "1min", "l": "78202.2", "O": 1787348580,
                "o": "78202.2"}}
         """
-        data = msg['d']
-        interval = self.normalize_candle_interval[data['i']]
-        c = Candle(
-            self.id,
-            symbol,
-            int(data['O']),
-            int(data['C']) - 1,
-            interval,
-            None,
-            Decimal(data['o']),
-            Decimal(data['c']),
-            Decimal(data['h']),
-            Decimal(data['l']),
-            Decimal(data['v']),
-            bool(data['S']),
-            msg['P'] / 1_000_000_000,
-            raw=msg
-        )
-        await self.callback(CANDLES, c, timestamp)
+        start = int(msg['d']['O'])
+        candles = []
+        last = self._open_candles.get(symbol)
+        if last is not None and start != int(last['d']['O']):
+            if start < int(last['d']['O']):
+                return
+            candles.append(self._candle(last, symbol, True))
+        closed = self._after_window(msg)
+        candles.append(self._candle(msg, symbol, closed))
+        if closed:
+            self._open_candles.pop(symbol, None)
+        else:
+            self._open_candles[symbol] = msg
+        await self._deliver_candles(candles, timestamp)
 
     async def _ticker(self, msg: dict, symbol: str, timestamp: float):
         """

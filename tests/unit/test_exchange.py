@@ -40,4 +40,5 @@ def test_exchange_playback(exchange):
     results = replay(exchange)
 
     assert results.messages_processed == expected_message_count(exchange)
+    assert results.order_regressions == 0
     assert results.callbacks == expected_callbacks()[exchange]

@@ -105,6 +105,8 @@ class PcapRecorder:
             'kwargs': {
                 'candle_interval': getattr(feed, 'candle_interval', None),
                 'candle_closed_only': feed.candle_closed_only,
+                'trade_history': feed.trade_history,
+                'candle_history': feed.candle_history,
                 'max_depth': feed.max_depth,
                 'sandbox': feed.sandbox,
             },

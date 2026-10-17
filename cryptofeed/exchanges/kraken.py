@@ -59,10 +59,18 @@ class Kraken(Feed):
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 
-    def __init__(self, max_depth=1000, **kwargs):
+    def __init__(self, max_depth=1000, candle_grace: float = 5.0, **kwargs):
+        """
+        candle_grace: float
+            seconds after candle interval before its considered closed. Kraken sends no close flag
+        """
         super().__init__(max_depth=max_depth, **kwargs)
         depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         self.book_depth = next((d for d in self.valid_depths if d >= depth), self.valid_depths[-1])
+        self.candle_grace = candle_grace
+        self._candle_held = {}
+        self._candle_due = {}
+        self._candle_dropped = {}
 
     def __reset(self, conn: AsyncConnection):
         if self.std_channel_to_exchange(L2_BOOK) in conn.subscription:
@@ -71,6 +79,10 @@ class Kraken(Feed):
 
                 if std_pair in self._l2_book:
                     del self._l2_book[std_pair]
+
+        for candle in self._candle_held.pop(conn.uuid, {}).values():
+            self._candle_dropped[candle.symbol] = candle.start
+        self._candle_due.pop(conn.uuid, None)
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset(conn)
@@ -211,7 +223,27 @@ class Kraken(Feed):
         book.raw = entry
         return book
 
-    async def _candle(self, msg: dict, timestamp: float):
+    def _ohlc(self, update: dict, ts: float, closed: bool = None) -> Candle:
+        start = self.timestamp_normalize(update['interval_begin'])
+        stop = start + update['interval'] * 60
+        return Candle(
+            self.id,
+            self.exchange_symbol_to_std_symbol(update['symbol']),
+            start,
+            stop,
+            self.normalize_candle_interval[update['interval']],
+            update['trades'],
+            Decimal(update['open']),
+            Decimal(update['close']),
+            Decimal(update['high']),
+            Decimal(update['low']),
+            Decimal(update['volume']),
+            stop <= ts if closed is None else closed,
+            ts,
+            raw=update
+        )
+
+    async def _candle(self, msg: dict, conn: AsyncConnection, timestamp: float):
         """
         {
             'channel': 'ohlc',
@@ -224,26 +256,56 @@ class Kraken(Feed):
         }
         """
         ts = self.timestamp_normalize(msg['timestamp'])
-        for update in msg['data']:
-            start = self.timestamp_normalize(update['interval_begin'])
-            stop = start + update['interval'] * 60
-            c = Candle(
-                self.id,
-                self.exchange_symbol_to_std_symbol(update['symbol']),
-                start,
-                stop,
-                self.normalize_candle_interval[update['interval']],
-                update['trades'],
-                Decimal(update['open']),
-                Decimal(update['close']),
-                Decimal(update['high']),
-                Decimal(update['low']),
-                Decimal(update['volume']),
-                stop <= ts,
-                ts,
-                raw=update
-            )
+        candles = [self._ohlc(update, ts) for update in msg['data']]
+
+        if msg['type'] == 'snapshot':
+            for symbol in {c.symbol for c in candles}:
+                start = self._candle_dropped.pop(symbol, None)
+                if start is not None and all(c.start != start for c in candles if c.symbol == symbol):
+                    LOG.warning("%s: %s candle %s was open when its connection reset and the snapshot no longer lists it, dropping it", self.id, symbol, start)
+            for c in self.candle_watermark.batch(candles):
+                if c.closed or not self.candle_closed_only:
+                    await self.callback(CANDLES, c, timestamp)
+                else:
+                    self._hold(conn, c)
+        elif not self.candle_closed_only:
+            for c in self.candle_watermark.live(candles):
+                await self.callback(CANDLES, c, timestamp)
+        else:
+            for c in candles:
+                held = self._candle_held.get(conn.uuid, {}).get(c.symbol)
+                if held is not None and held.start < c.start:
+                    # the next interval began, so candle is final
+                    del self._candle_held[conn.uuid][c.symbol]
+                    await self._release(held, timestamp)
+                elif held is not None and c.start < held.start:
+                    LOG.warning("%s: dropping an update to %s candle %s, older than the one held", self.id, c.symbol, c.start)
+                    continue
+                mark = self.candle_watermark.get(c.symbol, c.interval)
+                if mark is not None and c.start <= mark:
+                    LOG.warning("%s: dropping an update to %s candle %s, which was already published closed", self.id, c.symbol, c.start)
+                    continue
+                self._hold(conn, c)
+
+    def _hold(self, conn: AsyncConnection, candle: Candle):
+        self._candle_held.setdefault(conn.uuid, {})[candle.symbol] = candle
+        due = candle.stop + self.candle_grace
+        self._candle_due[conn.uuid] = min(due, self._candle_due.get(conn.uuid, due))
+
+    async def _release(self, candle: Candle, timestamp: float):
+        for c in self.candle_watermark.live([self._ohlc(candle.raw, candle.timestamp, closed=True)]):
             await self.callback(CANDLES, c, timestamp)
+
+    async def _release_due(self, conn: AsyncConnection, timestamp: float):
+        held = self._candle_held.get(conn.uuid, {})
+        for symbol, candle in list(held.items()):
+            if candle.stop + self.candle_grace <= timestamp:
+                del held[symbol]
+                await self._release(candle, timestamp)
+        if held:
+            self._candle_due[conn.uuid] = min(candle.stop for candle in held.values()) + self.candle_grace
+        else:
+            self._candle_due.pop(conn.uuid, None)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
 
@@ -257,9 +319,9 @@ class Kraken(Feed):
         elif channel == 'ticker':
             await self._ticker(msg, timestamp)
         elif channel == 'ohlc':
-            await self._candle(msg, timestamp)
+            await self._candle(msg, conn, timestamp)
         elif channel == 'heartbeat':
-            return
+            pass
         elif channel == 'status':
             LOG.debug("%s: connection status %s", conn.uuid, msg['data'])
         elif 'method' in msg:
@@ -269,3 +331,7 @@ class Kraken(Feed):
                 LOG.error("%s: %s failed: %s", conn.uuid, msg['method'], msg.get('error'))
         else:
             LOG.warning("%s: Invalid message type %s", self.id, msg)
+
+        due = self._candle_due.get(conn.uuid) if self._candle_due else None
+        if due is not None and timestamp >= due:
+            await self._release_due(conn, timestamp)

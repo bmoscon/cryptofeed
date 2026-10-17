@@ -87,9 +87,11 @@ class Hyperliquid(Feed):
 
     def _reset(self):
         self._l2_book = {}
+        self._acked = []
 
     async def subscribe(self, conn: AsyncConnection):
         self._reset()
+        self.trade_watermark.expect(self.exchange_symbol_to_std_symbol(coin) for coin in conn.subscription.get(self.std_channel_to_exchange(TRADES), ()))
         for channel, symbols in conn.subscription.items():
             for symbol in symbols:
                 await conn.write(json.dumps({
@@ -98,8 +100,13 @@ class Hyperliquid(Feed):
                 }))
 
     async def _trades(self, msg: dict, timestamp: float):
-        for entry in msg['data']:
-            trade = Trade(
+        if msg['data']:
+            symbol = self.exchange_symbol_to_std_symbol(msg['data'][0]['coin'])
+        else:
+            symbol = next((coin for coin in self._acked if coin in self.trade_watermark.pending), None)
+
+        trades = [
+            Trade(
                 self.id,
                 self.exchange_symbol_to_std_symbol(entry['coin']),
                 BUY if entry['side'] == 'B' else SELL,
@@ -108,7 +115,10 @@ class Hyperliquid(Feed):
                 self.timestamp_normalize(entry['time']),
                 id=str(entry['tid']),
                 raw=entry
-            )
+            ) for entry in msg['data']
+        ]
+
+        for trade in self.trade_watermark.frame(trades, symbol):
             await self.callback(TRADES, trade, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
@@ -156,6 +166,9 @@ class Hyperliquid(Feed):
             await self._l1_book(msg, timestamp)
         elif channel == 'subscriptionResponse':
             LOG.debug('%s: subscription confirmed: %s', self.id, msg.get('data'))
+            subscription = msg['data'].get('subscription', {})
+            if subscription.get('type') == self.std_channel_to_exchange(TRADES):
+                self._acked.append(self.exchange_symbol_to_std_symbol(subscription['coin']))
         elif channel == 'error':
             LOG.error('%s: venue reported an error: %s', self.id, msg.get('data'))
         elif channel == 'pong':

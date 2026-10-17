@@ -251,8 +251,8 @@ class Deribit(Feed):
         ts = msg["params"]["data"]["timestamp"]
         pair = self.exchange_symbol_to_std_symbol(msg["params"]["data"]["instrument_name"])
         self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth)
-        self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["bids"]}
-        self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["asks"]}
+        self._l2_book[pair].book.bids = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["bids"] if amount}
+        self._l2_book[pair].book.asks = {Decimal(price): Decimal(amount) for _, price, amount in msg["params"]["data"]["asks"] if amount}
         self.seq_no[pair] = msg["params"]["data"]["change_id"]
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), sequence_number=msg["params"]["data"]["change_id"], raw=msg)
@@ -277,22 +277,15 @@ class Deribit(Feed):
 
         delta = {BID: [], ASK: []}
 
-        # skip dels on missing levels
-        for action, price, amount in msg["params"]["data"]["bids"]:
-            if action != "delete":
-                self._l2_book[pair].book.bids[price] = Decimal(amount)
-                delta[BID].append((Decimal(price), Decimal(amount)))
-            elif price in self._l2_book[pair].book.bids:
-                del self._l2_book[pair].book.bids[price]
-                delta[BID].append((Decimal(price), Decimal(amount)))
-
-        for action, price, amount in msg["params"]["data"]["asks"]:
-            if action != "delete":
-                self._l2_book[pair].book.asks[price] = Decimal(amount)
-                delta[ASK].append((Decimal(price), Decimal(amount)))
-            elif price in self._l2_book[pair].book.asks:
-                del self._l2_book[pair].book.asks[price]
-                delta[ASK].append((Decimal(price), Decimal(amount)))
+        for side, key in ((BID, 'bids'), (ASK, 'asks')):
+            book = self._l2_book[pair].book[side]
+            for action, price, amount in msg["params"]["data"][key]:
+                if action != "delete" and amount:
+                    book[price] = Decimal(amount)
+                    delta[side].append((Decimal(price), Decimal(amount)))
+                elif price in book:
+                    del book[price]
+                    delta[side].append((Decimal(price), Decimal(0)))
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(ts), raw=msg, delta=delta, sequence_number=msg['params']['data']['change_id'])
 
