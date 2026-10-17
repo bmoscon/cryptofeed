@@ -66,7 +66,6 @@ class SnapshotSync:
         elif len(sync.buffer) < self.BOOK_BUFFER_LIMIT:
             sync.buffer.append(msg)
         else:
-            # the snapshot in flight predates this update: start over from it, with a fresh request
             self.book_sync_stats['buffer_overflows'] += 1
             LOG.warning('%s: %s buffered %d updates waiting for its snapshot - restarting its sync', self.id, std_pair, len(sync.buffer))
             sync.task.cancel()
@@ -134,7 +133,6 @@ class SnapshotSync:
 
             pair = self.std_symbol_to_exchange_symbol(std_pair)
             if covered < len(sync.buffer) and not self._bridges(sequence, sync.buffer[covered]):
-                # the buffer has aged by a round trip, so the next snapshot has that much more room to cover it
                 self.book_sync_stats['stale_snapshots'] += 1
                 self._start_fetch(pair, std_pair, sync)
                 continue
@@ -145,7 +143,6 @@ class SnapshotSync:
 
             LOG.debug('%s: %s book live %.2fs after its first update (%d buffered, %d covered by the snapshot)', self.id, std_pair, received - sync.started, len(sync.buffer), covered)
 
-            # the snapshot and the buffered updates it does not cover are delivered now, with this message's receipt time
             receipt = received if timestamp is None else timestamp
             self._start_book(std_pair, book)
             await self.book_callback(L2_BOOK, book, receipt, timestamp=book.timestamp, raw=book.raw, sequence_number=sequence)
