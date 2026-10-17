@@ -180,10 +180,6 @@ class HTTPAsyncConn(AsyncConnection):
             self._reset_counters()
 
     async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60, headers_out: dict = None) -> str:
-        '''
-        GET address. A 429 is retried up to retry_count times after the venue's Retry-After (retry_delay without one);
-        a 418 (a ban) and any other error raise. headers_out, when given, receives the response headers
-        '''
         if not self.is_open:
             await self._open()
 
