@@ -41,7 +41,6 @@ class TradeWatermark:
         self.history = history
         self.key = key
         self._marks = {}
-        # symbols whose next frame is the batch of recent trades the venue sends on subscribe (see expect)
         self.pending = set()
 
     def get(self, symbol):
@@ -76,12 +75,9 @@ class TradeWatermark:
         return trades
 
     def expect(self, symbols):
-        # venues that answer a trades subscription with the symbol's recent trades in an unmarked frame: the first
-        # frame of each of these symbols is that batch
         self.pending.update(symbols)
 
     def frame(self, trades, symbol) -> list:
-        # one symbol's frame: the batch while expected, live after
         if symbol in self.pending:
             self.pending.discard(symbol)
             return self.batch(trades, symbol=symbol)
