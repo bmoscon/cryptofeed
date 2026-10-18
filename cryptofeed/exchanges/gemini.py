@@ -99,6 +99,11 @@ class Gemini(Feed):
         book.raw = response
         return book
 
+    def _trades_subscribed(self, symbol: str) -> bool:
+        # The l2 subscription delivers trades for every subscribed symbol, including
+        # symbols that were only requested for L2_BOOK
+        return not self.subscription or symbol in self.subscription.get(TRADES, [])
+
     def _trade_row(self, row: dict) -> Trade:
         return Trade(
             self.id,
@@ -118,10 +123,14 @@ class Gemini(Feed):
 
         tid identifies the fill
         '''
+        if not self._trades_subscribed(msg['symbol']):
+            return
         for t in self.trade_watermark.live([self._trade_row(msg)]):
             await self.callback(TRADES, t, timestamp)
 
     async def _trade_batch(self, msg: dict, timestamp: float):
+        if not self._trades_subscribed(msg['symbol']):
+            return
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         for t in self.trade_watermark.batch([self._trade_row(row) for row in msg['trades']], symbol=symbol):
             await self.callback(TRADES, t, timestamp)
