@@ -32,6 +32,7 @@ class _BookSync:
 class SnapshotSync:
     SNAPSHOT_CONCURRENCY = 5
     SNAPSHOT_TIMEOUT = 30.0
+    SNAPSHOT_HEADERS = None
     BOOK_BUFFER_LIMIT = 2000
     SNAPSHOT_RETRY_DELAY = 1.0
     SNAPSHOT_RETRY_MAX = 60.0
@@ -92,7 +93,7 @@ class SnapshotSync:
                     headers = {}
                     try:
                         async with asyncio.timeout(self.SNAPSHOT_TIMEOUT):
-                            response = await self.http_conn.read(self._snapshot_url(pair), headers_out=headers)
+                            response = await self.http_conn.read(self._snapshot_url(pair), header=self.SNAPSHOT_HEADERS, headers_out=headers)
                     finally:
                         if weights is not None:
                             weights.observe(headers)

@@ -105,6 +105,7 @@ class BackendQueue:
             self._orphaned = False
             self._owners = 0
             self._owners_seen = []
+            self._shared = False
             self._inflight = []
 
     @property
@@ -117,17 +118,18 @@ class BackendQueue:
                             conflicts=self._conflicts, retries=self._retries, last_error=self._last_error,
                             last_write_ts=self._last_write_ts, hand_off=bool(getattr(self, 'hand_off', False)))
 
-    def start_writer(self, tg: asyncio.TaskGroup, name: str, owner=None):
+    def start_writer(self, tg: asyncio.TaskGroup, name: str, owner=None, shared: bool = False):
         self._init_state()
         self._owners += 1
         if getattr(self, 'started', False):
             if owner is not None and any(seen is owner for seen in self._owners_seen):
                 LOG.info('%s: one feed is using this backend instance for more than one channel', type(self).__name__)
-            else:
-                LOG.warning('%s: a second feed is sharing this backend instance', type(self).__name__)
+            elif not self._shared:
+                LOG.warning('%s: a second feed is sharing this backend instance - if the first feed fails, the writer stops with it', type(self).__name__)
             self._owners_seen.append(owner)
             return None
         self._owners_seen.append(owner)
+        self._shared = shared
         self.queue = asyncio.Queue(maxsize=self.max_depth)
         self._stopping = asyncio.Event()
         self.worker = tg.create_task(self.writer(), name=name)

@@ -13,7 +13,7 @@ from typing import Dict, Tuple
 from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, TRADES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, CANDLES, PHEMEX, L2_BOOK, SELL, SPOT, TRADES, PERPETUAL
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade, Candle
 
@@ -54,6 +54,7 @@ class Phemex(Feed):
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
         ret = {}
         info = defaultdict(dict)
+        value_scales = {currency['currency']: 10 ** currency['valueScale'] for currency in data['data']['currencies']}
 
         for entry in data['data']['products']:
             if entry['status'] != 'Listed':
@@ -72,12 +73,15 @@ class Phemex(Feed):
             else:
                 info['api_version'][s.normalized] = 1
                 info['price_scale'][s.normalized] = 10 ** entry.get('priceScale', 8)
+                # for spot - sizes, trade amounts and candle volumes are scaled by valueScale
+                info['size_scale'][s.normalized] = value_scales[entry['baseCurrency']] if stype == SPOT else 1
         return ret, info
 
     def _apply_symbol_mapping(self):
         super()._apply_symbol_mapping()
         info = Symbols.get(self.id)[1]
         self.price_scale = {symbol: int(scale) for symbol, scale in info.get('price_scale', {}).items()}
+        self.size_scale = {symbol: int(scale) for symbol, scale in info.get('size_scale', {}).items()}
         self.api_version = {symbol: int(version) for symbol, version in info.get('api_version', {}).items()}
 
     def _subscription_resolved(self):
@@ -131,9 +135,10 @@ class Phemex(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         scale = Decimal(self.price_scale[symbol])
+        size_scale = Decimal(self.size_scale[symbol])
         levels = {BID: [], ASK: []}
         for key, side in (('asks', ASK), ('bids', BID)):
-            levels[side] = [(Decimal(price) / scale, Decimal(amount)) for price, amount in msg['book'][key]]
+            levels[side] = [(Decimal(price) / scale, Decimal(amount) / size_scale) for price, amount in msg['book'][key]]
 
         await self._l2_update(symbol, levels, msg['type'] == 'snapshot', self.timestamp_normalize(msg['timestamp']), timestamp)
 
@@ -183,12 +188,13 @@ class Phemex(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         scale = Decimal(self.price_scale[symbol])
+        size_scale = Decimal(self.size_scale[symbol])
         trades = [
             Trade(
                 self.id,
                 symbol,
                 BUY if side == 'Buy' else SELL,
-                Decimal(amount),
+                Decimal(amount) / size_scale,
                 Decimal(price) / scale,
                 self.timestamp_normalize(ts),
                 raw=msg
@@ -247,6 +253,7 @@ class Phemex(Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['symbol'])
         scale = Decimal(self.price_scale[symbol])
+        size_scale = Decimal(self.size_scale[symbol])
         newest = max((entry[0] for entry in msg['kline']), default=None)
 
         candles = []
@@ -263,7 +270,7 @@ class Phemex(Feed):
                 Decimal(close) / scale,
                 Decimal(high) / scale,
                 Decimal(low) / scale,
-                Decimal(volume),
+                Decimal(volume) / size_scale,
                 ts < newest,
                 None
             ))

@@ -51,8 +51,7 @@ class Symbol:
         if isinstance(date, dt):
             year = str(date.year)[2:]
             month = Symbol.month_code(date.month)
-            day = date.day
-            return f"{year}{month}{day}"
+            return f"{year}{month}{date.day:02d}"
 
         if len(date) == 4:
             year = str(dt.now(timezone.utc).year)[2:]

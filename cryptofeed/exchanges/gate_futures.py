@@ -26,7 +26,9 @@ class GateFutures(Gate):
     id = GATE_FUTURES
     SNAPSHOT_DEPTH = 100
     provides_sequence_number = True
-    websocket_endpoints = [WebsocketEndpoint('wss://fx-ws.gateio.ws/v4/ws/usdt', options={'compression': None})]
+    SIZE_DECIMAL_HEADER = {'X-Gate-Size-Decimal': '1'}
+    SNAPSHOT_HEADERS = SIZE_DECIMAL_HEADER
+    websocket_endpoints = [WebsocketEndpoint('wss://fx-ws.gateio.ws/v4/ws/usdt', options={'compression': None, 'additional_headers': SIZE_DECIMAL_HEADER})]
     rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/futures/usdt/contracts', l2book='/api/v4/futures/usdt/order_book?contract={}&limit={}&with_id=true'))]
 
     websocket_channels = {
@@ -43,7 +45,6 @@ class GateFutures(Gate):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._sub_contract_trades = set()
         self.SNAPSHOT_DEPTH = next((level for level in self.BOOK_LEVELS if level >= self.max_depth), self.BOOK_LEVELS[-1]) if self.max_depth else self.BOOK_LEVELS[-1]
         self._book_window = {}
         self._book_window_warned = False
@@ -276,7 +277,7 @@ class GateFutures(Gate):
             "time_ms": 1541503698123,
             "result": [
                 {
-                "size": -108,
+                "size": "-108.5",
                 "id": 27753479,
                 "create_time": 1545136464,
                 "create_time_ms": 1545136464123,
@@ -285,20 +286,16 @@ class GateFutures(Gate):
                 }
             ]
         }
+
+        size is a signed decimal string (negative sells).
         """
         for entry in msg['result']:
-            if not entry['size']:
-                symbol = self.exchange_symbol_to_std_symbol(entry['contract'])
-                if symbol not in self._sub_contract_trades:
-                    self._sub_contract_trades.add(symbol)
-                    LOG.warning('%s: %s trades smaller than one contract are reported by the venue with '
-                                'size 0 and cannot be published - trade counts will be short of the venue', self.id, symbol)
-                continue
+            size = Decimal(entry['size'])
             t = Trade(
                 self.id,
                 self.exchange_symbol_to_std_symbol(entry['contract']),
-                SELL if entry['size'] < 0 else BUY,
-                Decimal(abs(entry['size'])),
+                SELL if size < 0 else BUY,
+                abs(size),
                 Decimal(entry['price']),
                 float(entry['create_time_ms'] / 1000),
                 id=str(entry['id']),

@@ -482,7 +482,6 @@ class BinanceBase(SnapshotSync, Feed):
                     rate,
                     next_time,
                     self.timestamp_normalize(msg['E']),
-                    predicted_rate=Decimal(msg['P']) if 'P' in msg and msg['P'] is not None else None,
                     raw=msg)
         await self.callback(FUNDING, f, timestamp)
 

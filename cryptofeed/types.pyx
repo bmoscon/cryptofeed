@@ -388,6 +388,10 @@ cdef class OpenInterest:
         return hash(self.__repr__())
 
 
+def _string_keys(book: dict) -> dict:
+    return {side: {str(price): size for price, size in levels.items()} for side, levels in book.items()}
+
+
 cdef class OrderBook:
     cdef readonly str exchange
     cdef readonly str symbol
@@ -451,11 +455,13 @@ cdef class OrderBook:
             return data if not none_to else convert_none_values(data, none_to)
 
         if numeric_type is None:
-            book_dict = self.book.to_dict()
+            book_dict = _string_keys(self.book.to_dict())
             data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': book_delta, 'timestamp': timestamp}
             return data if not none_to else convert_none_values(data, none_to)
 
         book_dict = self.book.to_dict(to_type=helper)
+        if numeric_type is Decimal:
+            book_dict = _string_keys(book_dict)
         data = {'exchange': self.exchange, 'symbol': self.symbol, 'book': book_dict, 'delta': self._delta(book_delta, numeric_type) if book_delta else None, 'timestamp': timestamp}
         return data if not none_to else convert_none_values(data, none_to)
 

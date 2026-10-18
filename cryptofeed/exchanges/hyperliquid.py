@@ -67,13 +67,14 @@ class Hyperliquid(Feed):
             info['instrument_type'][symbol.normalized] = PERPETUAL
             ret[symbol.normalized] = entry['name']
 
-        tokens = spot.get('tokens', [])
+        tokens = {token['index']: token['name'] for token in spot.get('tokens', [])}
         for entry in spot.get('universe', []):
             try:
-                base, quote = (tokens[index]['name'] for index in entry['tokens'])
-            except (IndexError, KeyError, ValueError):
+                base, quote = (tokens[index] for index in entry['tokens'])
+            except (KeyError, ValueError):
                 LOG.warning('%s: skipping spot pair %s, token indices %s do not resolve', cls.id, entry.get('name'), entry.get('tokens'))
                 continue
+
             symbol = Symbol(base, quote, type=SPOT)
             info['instrument_type'][symbol.normalized] = SPOT
             ret[symbol.normalized] = entry['name']

@@ -10,7 +10,6 @@ import logging
 from decimal import Decimal
 from typing import Dict, Tuple, Union
 from datetime import datetime as dt
-import re
 
 from cryptofeed import _json as json
 
@@ -77,15 +76,13 @@ class Bybit(Feed):
             ts = dt.fromisoformat(ts)
         return ts.timestamp()
 
-    @staticmethod
-    def convert_to_spot_name(cls, pair):
-        # Bybit spot and USDT perps use the same symbol name. To distinguish them, use a slash to separate the base and quote.
-        if not re.findall(r"(USDT|USDC|EUR|BTC|ETH|DAI|BRZ)$", pair):
-            LOG.error("Quote currency not found in the trading pair %s", pair)
+    def _apply_symbol_mapping(self):
+        super()._apply_symbol_mapping()
+        self._spot_symbols = {venue.replace('/', ''): std for venue, std in self.exchange_symbol_mapping.items() if '/' in venue}
 
-            return None
-
-        return re.sub(r"(USDT|USDC|EUR|BTC|ETH|DAI|BRZ)$", r"/\1", pair)
+    def _std_symbol(self, symbol: str, market: str) -> str:
+        self._ensure_symbol_mapping()
+        return self._spot_symbols[symbol] if market == 'spot' else self.exchange_symbol_to_std_symbol(symbol)
 
     @classmethod
     def _parse_symbol_data(cls, data: dict) -> Tuple[Dict, Dict]:
@@ -176,13 +173,7 @@ class Bybit(Feed):
             "type": "snapshot"
         }
         """
-        symbol = msg['topic'].split(".")[-1]
-        if market == 'spot':
-            symbol = self.convert_to_spot_name(self, symbol)
-            if not symbol:
-                return
-
-        symbol = self.exchange_symbol_to_std_symbol(symbol)
+        symbol = self._std_symbol(msg['topic'].split(".")[-1], market)
 
         ts = int(msg['ts'])
 
@@ -276,7 +267,9 @@ class Bybit(Feed):
                 tickers_pairs.update(pairs)
         if tickers_pairs:
             args = [f"tickers.{pair.replace('/', '')}" for pair in sorted(tickers_pairs)]
-            await connection.write(json.dumps({"op": "subscribe", "args": args}))
+            # spot rejects a subscribe request with more than 10 args
+            for start in range(0, len(args), 10):
+                await connection.write(json.dumps({"op": "subscribe", "args": args[start:start + 10]}))
 
         for chan, pairs in connection.subscription.items():
             if chan in ticker_channels:
@@ -316,18 +309,11 @@ class Bybit(Feed):
         data = msg['data']
         if isinstance(data, list):
             for trade in data:
-                symbol = trade['s']
-
-                if market == 'spot':
-                    symbol = self.convert_to_spot_name(self, trade['s'])
-                    if not symbol:
-                        return
-
                 ts = int(trade['T']) if isinstance(trade['T'], str) else trade['T']
 
                 t = Trade(
                     self.id,
-                    self.exchange_symbol_to_std_symbol(symbol),
+                    self._std_symbol(trade['s'], market),
                     BUY if trade['S'] == 'Buy' else SELL,
                     Decimal(trade['v']),
                     Decimal(trade['p']),
@@ -373,17 +359,10 @@ class Bybit(Feed):
             "cts": 1672304484976
         }
         '''
-        pair = msg['topic'].split('.')[-1]
+        pair = self._std_symbol(msg['topic'].split('.')[-1], market)
         update_type = msg['type']
         data = msg['data']
         delta = {BID: [], ASK: []}
-
-        if market == 'spot':
-            pair = self.convert_to_spot_name(self, data['s'])
-            if not pair:
-                return
-
-        pair = self.exchange_symbol_to_std_symbol(pair)
 
         if update_type == 'snapshot':
             delta = None
@@ -443,12 +422,8 @@ class Bybit(Feed):
         # Bybit does not provide bid/ask information for the spot market, only for perps at the moment
         update_type = msg['type']
         update = msg['data']
-        _pair = msg['data']['symbol']
-        if market == 'spot':
-            _pair = self.convert_to_spot_name(self, _pair)
-            if not _pair:
-                return
-        symbol = self.exchange_symbol_to_std_symbol(_pair)
+        symbol = self._std_symbol(update['symbol'], market)
+        pair = self.std_symbol_to_exchange_symbol(symbol)
 
         if update_type == 'snapshot' or symbol not in self.tickers:
             self.tickers[symbol] = dict(update)
@@ -456,7 +431,7 @@ class Bybit(Feed):
             self.tickers[symbol].update(update)
         update = self.tickers[symbol]
 
-        if self.websocket_channels[TICKER] in conn.subscription and _pair in conn.subscription[self.websocket_channels[TICKER]]:
+        if self.websocket_channels[TICKER] in conn.subscription and pair in conn.subscription[self.websocket_channels[TICKER]]:
             t = Ticker(
                 self.id,
                 symbol,
@@ -467,7 +442,7 @@ class Bybit(Feed):
             )
             await self.callback(TICKER, t, timestamp)
 
-        if (self.websocket_channels[FUNDING] in conn.subscription and _pair in conn.subscription[self.websocket_channels[FUNDING]] and 'markPrice' in update and update.get('fundingRate')):
+        if (self.websocket_channels[FUNDING] in conn.subscription and pair in conn.subscription[self.websocket_channels[FUNDING]] and 'markPrice' in update and update.get('fundingRate')):
             f = Funding(
                 self.id,
                 symbol,
@@ -480,7 +455,7 @@ class Bybit(Feed):
             )
             await self.callback(FUNDING, f, timestamp)
 
-        if self.websocket_channels[OPEN_INTEREST] in conn.subscription and _pair in conn.subscription[self.websocket_channels[OPEN_INTEREST]] and 'openInterest' in update:
+        if self.websocket_channels[OPEN_INTEREST] in conn.subscription and pair in conn.subscription[self.websocket_channels[OPEN_INTEREST]] and 'openInterest' in update:
             o = OpenInterest(
                 self.id,
                 symbol,
@@ -491,7 +466,7 @@ class Bybit(Feed):
 
             await self.callback(OPEN_INTEREST, o, timestamp)
 
-        if self.websocket_channels[INDEX] in conn.subscription and _pair in conn.subscription[self.websocket_channels[INDEX]] and 'indexPrice' in update:
+        if self.websocket_channels[INDEX] in conn.subscription and pair in conn.subscription[self.websocket_channels[INDEX]] and 'indexPrice' in update:
             i = Index(
                 self.id,
                 symbol,

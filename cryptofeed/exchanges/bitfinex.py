@@ -106,6 +106,8 @@ class Bitfinex(Feed):
             raise ValueError("book_frequency should be one of F0, F1")
 
         super().__init__(symbols=symbols, channels=channels, subscription=subscription, **kwargs)
+        if self.checksum_validation and 0 < self.max_depth < 25:
+            raise ValueError(f'{self.id} checksums cover the top 25 levels of each side, so max_depth must be 0 or at least 25 when checksum_validation is on (got {self.max_depth}); pass checksum_validation=False for a shallower book')
         self.number_of_price_points = number_of_price_points
         self.book_frequency = book_frequency
         self.handlers = {}  # maps a channel id to a function

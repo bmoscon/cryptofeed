@@ -13,7 +13,7 @@ import itertools
 from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, SELL, TRADES
+from cryptofeed.defines import BID, ASK, BUY, GEMINI, L2_BOOK, PERPETUAL, SELL, SPOT, TRADES
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol
 from cryptofeed.types import OrderBook, Trade
@@ -55,7 +55,7 @@ class Gemini(Feed):
         for symbol in data:
             if symbol['status'] == 'closed':
                 continue
-            s = Symbol(symbol['base_currency'], symbol['quote_currency'])
+            s = Symbol(symbol['base_currency'], symbol['quote_currency'], type=PERPETUAL if symbol['product_type'] == 'swap' else SPOT)
             ret[s.normalized] = symbol['symbol']
             info['tick_size'][s.normalized] = symbol['tick_size']
             info['instrument_type'][s.normalized] = s.type

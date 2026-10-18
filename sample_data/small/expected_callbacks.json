@@ -101,12 +101,12 @@
   },
   "GATE_FUTURES": {
     "candles": 50,
-    "funding": 570,
-    "index": 570,
-    "l2_book": 7515,
-    "open_interest": 570,
-    "ticker": 11902,
-    "trades": 1465
+    "funding": 788,
+    "index": 788,
+    "l2_book": 9996,
+    "open_interest": 788,
+    "ticker": 8958,
+    "trades": 1605
   },
   "GEMINI": {
     "l2_book": 118636,

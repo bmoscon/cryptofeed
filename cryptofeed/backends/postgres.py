@@ -47,7 +47,7 @@ def _ident(data: dict) -> str:
 
 
 class PostgresCallback(BackendQueue):
-    retryable_exceptions = (OSError, asyncpg.PostgresConnectionError)
+    retryable_exceptions = (OSError, asyncpg.PostgresConnectionError, asyncpg.OperatorInterventionError)
     fields = frozenset()
 
     def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, custom_columns: dict = None, none_to=None, numeric_type=float, **kwargs):

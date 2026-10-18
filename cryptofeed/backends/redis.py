@@ -23,14 +23,10 @@ class RedisCallback(BackendQueue):
         """
         setting key lets you override the prefix on the key used in redis. The defaults are related to the data
         being stored, i.e. trade, funding, etc
+        socket: path of a Unix domain socket to connect through instead of host and port
         """
         super().__init__(**kwargs)
-        prefix = 'redis://'
-        if socket:
-            prefix = 'unix://'
-            port = None
-
-        self.redis = f"{prefix}{host}" + (f":{port}" if port else "")
+        self.redis = f'unix://{socket}' if socket else f'redis://{host}:{port}'
         self.key = key if key else self.default_key
         self.numeric_type = numeric_type
         self.none_to = none_to

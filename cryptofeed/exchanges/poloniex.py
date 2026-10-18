@@ -46,11 +46,8 @@ class Poloniex(Feed):
         ret = {}
         info = {'instrument_type': {}}
         for entry in data:
-            symbol = entry['symbol']
-            std = symbol.replace("STR", "XLM")
-            base, quote = std.split("_")
-            s = Symbol(base, quote)
-            ret[s.normalized] = symbol
+            s = Symbol(entry['baseCurrencyName'], entry['quoteCurrencyName'])
+            ret[s.normalized] = entry['symbol']
             info['instrument_type'][s.normalized] = s.type
         return ret, info
 

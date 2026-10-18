@@ -151,8 +151,13 @@ class FeedHandler:
         try:
             async with asyncio.TaskGroup() as tg:
                 self._tg = tg
-                for feed in self.feeds:
-                    tg.create_task(self._run_feed(feed), name=f'feed.{feed.id}')
+                shared = self._start_shared_writers(tg)
+                tasks = [tg.create_task(self._run_feed(feed), name=f'feed.{feed.id}') for feed in self.feeds]
+                if shared:
+                    # a shared writer outlives any one feed; release it once every feed has finished
+                    await asyncio.wait(tasks)
+                    for backend in shared:
+                        await backend.stop()
         finally:
             self._tg = None
             self._main_task = None
@@ -167,6 +172,22 @@ class FeedHandler:
     def request_stop(self):
         if self._stop_event is not None:
             self._stop_event.set()
+
+    def _start_shared_writers(self, tg: asyncio.TaskGroup) -> list:
+        """
+        Starts the writer of every shared backend
+
+        Shared writers are started here so a feed failure doesnt take it down for
+        the surviving feeds. Writer will stop after all feeds have finished or failed.
+        """
+        users = {}
+        for feed in self.feeds:
+            for _, backend in feed._backend_entries():
+                users.setdefault(id(backend), (backend, []))[1].append(feed)
+        shared = [backend for backend, feeds in users.values() if len(feeds) > 1]
+        for backend in shared:
+            backend.start_writer(tg, name=f'fh.backend.{type(backend).__name__}', owner=self, shared=True)
+        return shared
 
     def _feed_key(self, feed) -> str:
         for known, key in self._feed_keys:

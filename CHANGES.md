@@ -3,7 +3,20 @@
 ### 3.0.2
 * Bugfix: Various data improvements across exchanges
 * Bugfix: connection hardening, improved retries, improved snapshot syncing
- * Bugfix: Poloniex trades corrected
+* Bugfix: Poloniex trades corrected
+* Bugfix: Phemex spot values were scaled incorrectly
+* Bugfix: set Gate Futures decimal request header correctly
+* Bugfix: Gemini perpetual instruments resolved correctly
+* Bugfix: Hyperliquid spot instruments resolved correctly
+* Bugfix: Poloniex instruments resolved correctly
+* Bugfix: Bitfinex max_depth limited correctly when checksum validation is enabled
+* Bugfix: Bybit ticker subscription fixed
+* Bugfix: Binance Funding data correction
+* Bugfix: backends handle many feeds, single failure scenario correctly
+* Bugfix: Postgres backend retries through a PostgreSQL restart instead of dying
+* Bugfix: book snapshots serialized with numeric_type=Decimal were not valid JSON. price keys now strings
+* Bugfix: Redis incorrectly ignored `socket` path
+* Update: expiry dates in normalized symbols now zero padded for every exchange (eg. BTC-USD-26H05)
 
 ### 3.0.1 (2026-09-27)
  * Update: Gate.io -> Gate rebranding
@@ -132,7 +145,7 @@
  * Update: Exchange name change OKEx -> OKX
  * Bugfix: OKX candle REST code was setting values incorrectly
  * Update: OKX now uses v5 for all connections (REST and WS). Update endpoints to new exchange name: okex.com -> okx.com
- 
+
 ### 2.2.0 (2021-02-16)
  * Feature: New exchange: Bit.com
  * Feature: Rework how exchanges that have multiple websocket endpoints are managed and configured.
@@ -159,7 +172,7 @@
  * Feature: Add ByBit sandbox endpoints.
  * Bugfix: Fix calculation in OrderInfo on Binance.
  * Feature: Support list of bootstrap servers for Kafka backend.
- * Feature: Add OrderInfo and Fills zmq callbacks 
+ * Feature: Add OrderInfo and Fills zmq callbacks
 
 ### 2.1.1 (2021-11-29)
  * Bugfix: Position data type missing side field.
