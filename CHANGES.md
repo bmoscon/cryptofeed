@@ -2,6 +2,7 @@
 
 ### 3.0.2
 * Bugfix: Gemini no longer emits trades for symbols that were only subscribed to L2_BOOK
+* Bugfix: Bithumb no longer emits book or ticker updates for symbols that were not subscribed to that channel
 * Bugfix: Various data improvements across exchanges
 * Bugfix: connection hardening, improved retries, improved snapshot syncing
 * Bugfix: Poloniex trades corrected
