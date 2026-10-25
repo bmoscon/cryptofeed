@@ -141,6 +141,8 @@ def str_to_symbol(symbol: str) -> Symbol:
     if len(values) == 4 and values[3] in (CALL, PUT):
         # an option on a single currency normalizes without a separate quote (Deribit's BTC-15000-22M24-call), so base and quote are the same
         return Symbol(values[0], values[0], type=OPTION, strike_price=values[1], option_type=values[3], expiry_date=values[2], expiry_normalize=False)
+    if len(values) == 3 and values[-1] == 'FX':
+        return Symbol(values[0], values[1], type=FX)
     if len(values) == 3:
         s = Symbol(values[0], values[1], type=FUTURES, expiry_date=values[2], expiry_normalize=False)
         return s
