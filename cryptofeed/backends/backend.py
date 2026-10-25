@@ -35,11 +35,12 @@ class RetryPolicy:
     max_attempts: int = 5
     base: float = 0.5
     jitter: bool = True
+    max_delay: float = 60.0
 
     def delay(self, attempt: int) -> float:
-        d = self.base * (2 ** (attempt - 1))
+        d = min(self.base * (2 ** (attempt - 1)), self.max_delay)
         if self.jitter:
-            d *= random.uniform(0.5, 1.5)
+            d *= random.uniform(1.0, 1.5)
         return d
 
 

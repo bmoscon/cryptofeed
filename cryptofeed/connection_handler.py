@@ -6,29 +6,34 @@ associated with this software.
 '''
 import asyncio
 import logging
-from contextlib import suppress
-from socket import error as socket_error
 import time
-from typing import Awaitable
 import zlib
+from contextlib import suppress
 
-from websockets import ConnectionClosed
+from websockets import ConnectionClosed as WebsocketClosed
 
+from cryptofeed.backends.backend import RetryPolicy
 from cryptofeed.connection import AsyncConnection
-from cryptofeed.exceptions import ExhaustedRetries
 from cryptofeed.defines import HTX, HTX_SWAP, OKX
+from cryptofeed.exceptions import ConnectionClosed, ExhaustedRetries
 
 
 LOG = logging.getLogger(__name__)
 
+# the far end going away, as the transport reports it: logged at WARNING; anything else is an error worth a traceback
+TRANSIENT = (WebsocketClosed, ConnectionClosed, OSError)
+
 
 class ConnectionHandler:
-    def __init__(self, conn: AsyncConnection, subscribe: Awaitable, handler: Awaitable, retries: int, timeout=120, timeout_interval=30, exceptions=None, log_on_error=False, start_delay=0, keepalive: Awaitable = None, keepalive_interval: float = None):
+    STABILITY_WINDOW = 60.0
+    BACKOFF = RetryPolicy(base=1.0, max_delay=120.0)
+
+    def __init__(self, conn: AsyncConnection, subscribe, handler, retries: int, timeout=120, timeout_interval=30, exceptions=None, log_on_error=False, start_delay=0, keepalive=None, keepalive_interval: float = None):
         self.conn = conn
         self.subscribe = subscribe
         self.handler = handler
         self.retries = retries
-        self.exceptions = exceptions
+        self.exceptions = tuple(exceptions) if exceptions else ()
         self.log_on_error = log_on_error
         self.timeout = timeout
         self.timeout_interval = timeout_interval
@@ -36,17 +41,20 @@ class ConnectionHandler:
         self.keepalive_interval = keepalive_interval
         self.running = True
         self.start_delay = start_delay
+        self._stop = asyncio.Event()
+        self._tripped = False
 
     async def request_stop(self):
-        # prevent reconnection and close the connection
         self.running = False
+        self._stop.set()
         with suppress(Exception):
             await self.conn.close()
 
-    def _record_watchdog_trip(self):
-        record = getattr(self.conn, 'record_watchdog_trip', None)
-        if record is not None:
-            record()
+    async def _wait(self, seconds: float) -> bool:
+        if seconds > 0:
+            with suppress(TimeoutError):
+                await asyncio.wait_for(self._stop.wait(), seconds)
+        return not self.running
 
     async def _keepalive(self):
         while self.conn.is_open and self.running:
@@ -57,101 +65,128 @@ class ConnectionHandler:
 
             try:
                 await self.keepalive(self.conn)
-            except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error):
+            except TRANSIENT:
                 return
             except Exception:
-                LOG.exception('%s: keepalive failed', self.conn.uuid)
+                LOG.error('%s: keepalive failed - restarting the connection', self.conn.uuid, exc_info=True)
+                await self.conn.close()
                 return
 
     async def _watcher(self):
+        seen = self.conn.received
+        quiet_since = time.monotonic()
+
         while self.conn.is_open and self.running:
-            if self.conn.last_message:
-                if time.time() - self.conn.last_message > self.timeout:
-                    LOG.warning("%s: received no messages within timeout, restarting connection", self.conn.uuid)
-                    self._record_watchdog_trip()
-                    await self.conn.close()
-                    break
             await asyncio.sleep(self.timeout_interval)
+
+            if self.conn.received != seen:
+                seen, quiet_since = self.conn.received, time.monotonic()
+            elif time.monotonic() - quiet_since > self.timeout:
+                if seen:
+                    LOG.warning('%s: received no messages within %gs, restarting connection', self.conn.uuid, self.timeout)
+                else:
+                    LOG.warning('%s: no message received within %gs of subscribing, restarting connection', self.conn.uuid, self.timeout)
+
+                self._tripped = True
+                self.conn.record_watchdog_trip()
+                await self.conn.close()
+
+                return
 
     async def run(self):
         try:
-            await asyncio.sleep(self.start_delay)
-            retries = 0
-            delay = 1
+            if await self._wait(self.start_delay):
+                return
 
-            while (retries <= self.retries or self.retries == -1) and self.running:
-                watchdog = pinger = None
+            attempt = 0
+            while self.running:
+                failure, healthy = await self._session()
+                if not self.running:
+                    break
+                if healthy:
+                    attempt = 0
+                    if failure is None:
+                        continue
 
-                try:
-                    async with self.conn.connect() as connection:
-                        await self.subscribe(connection)
-                        # connection was successful, reset retry count and delay
-                        retries = 0
-                        delay = 1
-                        try:
-                            if self.timeout != -1:
-                                watchdog = asyncio.get_running_loop().create_task(self._watcher(), name=f'{self.conn.id}.watchdog')
-                            if self.keepalive is not None and self.keepalive_interval:
-                                pinger = asyncio.get_running_loop().create_task(self._keepalive(), name=f'{self.conn.id}.keepalive')
-                            await self._handler(connection, self.handler)
-                        finally:
-                            for task in (watchdog, pinger):
-                                if task is not None:
-                                    task.cancel()
-                                    with suppress(asyncio.CancelledError):
-                                        await task
-                except (ConnectionClosed, ConnectionAbortedError, ConnectionResetError, socket_error) as e:
-                    if self.exceptions:
-                        for ex in self.exceptions:
-                            if isinstance(e, ex):
-                                LOG.warning("%s: encountered exception %s which is on the ignore list. Raising", self.conn.uuid, str(e))
-                                raise
-                    if not self.running:
-                        break
-                    LOG.warning("%s: encountered connection issue %s - reconnecting in %.1f seconds", self.conn.uuid, str(e), delay, exc_info=True)
-                    await asyncio.sleep(delay)
-                    retries += 1
-                    delay *= 2
-                except Exception as e:
-                    if self.exceptions:
-                        for ex in self.exceptions:
-                            if isinstance(e, ex):
-                                LOG.warning("%s: encountered exception %s which is on the ignore list. Raising", self.conn.uuid, str(e))
-                                raise
-                    if not self.running:
-                        break
-                    LOG.error("%s: encountered an exception, reconnecting in %.1f seconds", self.conn.uuid, delay, exc_info=True)
-                    await asyncio.sleep(delay)
-                    retries += 1
-                    delay *= 2
+                attempt += 1
+                if self.retries != -1 and attempt > self.retries:
+                    LOG.error('%s: failed to reconnect after %d retries - exiting', self.conn.uuid, self.retries)
+                    raise ExhaustedRetries()
 
-            if self.running:
-                LOG.error('%s: failed to reconnect after %d retries - exiting', self.conn.uuid, retries)
-                raise ExhaustedRetries()
+                delay = self.BACKOFF.delay(attempt)
+                budget = '' if self.retries == -1 else f' of {self.retries}'
+
+                if failure is None:
+                    LOG.warning('%s: connection closed by the venue shortly after subscribing - reconnecting in %.1f seconds (attempt %d%s)', self.conn.uuid, delay, attempt, budget)
+                elif isinstance(failure, TRANSIENT):
+                    LOG.warning('%s: encountered connection issue %s - reconnecting in %.1f seconds (attempt %d%s)', self.conn.uuid, failure, delay, attempt, budget)
+                else:
+                    LOG.error('%s: encountered an exception, reconnecting in %.1f seconds (attempt %d%s)', self.conn.uuid, delay, attempt, budget, exc_info=failure)
+
+                if await self._wait(delay):
+                    break
             LOG.info('%s: terminate the connection handler because not running', self.conn.uuid)
+
         finally:
             with suppress(Exception):
                 await self.conn.close()
 
+    async def _session(self):
+        self._tripped = False
+        subscribed_at = None
+        failure = None
+
+        try:
+            async with self.conn.connect() as connection:
+                if not self.running:
+                    return None, True
+
+                await self.subscribe(connection)
+                subscribed_at = time.monotonic()
+                tasks = []
+
+                if self.timeout != -1:
+                    tasks.append(asyncio.create_task(self._watcher(), name=f'{self.conn.id}.watchdog'))
+
+                if self.keepalive is not None and self.keepalive_interval:
+                    tasks.append(asyncio.create_task(self._keepalive(), name=f'{self.conn.id}.keepalive'))
+
+                try:
+                    await self._handler(connection, self.handler)
+                finally:
+                    for task in tasks:
+                        task.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await task
+        except self.exceptions as e:
+            LOG.warning('%s: encountered exception %s which is on the ignore list. Raising', self.conn.uuid, e)
+            raise
+        except Exception as e:
+            failure = e
+
+        long_lived = subscribed_at is not None and time.monotonic() - subscribed_at >= self.STABILITY_WINDOW
+        return failure, long_lived or self._tripped or not self.conn.paced
+
     async def _handler(self, connection, handler):
+        message = None
         try:
             async for message in connection.read():
                 await handler(message, connection, self.conn.last_message)
+                message = None
+
                 if not self.running:
                     await connection.close()
                     return
         except Exception:
             if not self.running:
                 return
-            if self.log_on_error:
-                # uuid is the full conn id, i.e. COINBASE.ws.1
+
+            if self.log_on_error and message is not None:
                 if isinstance(message, bytes):
                     with suppress(Exception):
                         if connection.uuid.startswith((f'{HTX}.', f'{HTX_SWAP}.')):
                             message = zlib.decompress(message, 16 + zlib.MAX_WBITS)
                         elif connection.uuid.startswith(f'{OKX}.'):
                             message = zlib.decompress(message, -15)
-                LOG.error("%s: error handling message %s", connection.uuid, message)
-            # exception will be logged with traceback when connection handler
-            # retries the connection
+                LOG.error('%s: error handling message %s', connection.uuid, message)
             raise

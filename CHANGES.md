@@ -1,6 +1,12 @@
 ## Changelog
 
 ### 3.0.2
+* Bugfix: reconnection of unstable feeds adjusted with backoffs
+* Bugfix: the silence watchdog starts only after subscribe
+* Bugfix: HTTP requests time out after 60s (10 s to connect)
+* Bugfix: log_message_on_error raised UnboundLocalError when the read failed before the first message
+* Bugfix: improvements to `log` section in config
+* Update: the default Feed `retries` is now 15
 * Update: Python 3.15 and free-threaded 3.15t are built, tested and shipped as wheels
 * Bugfix: Gemini no longer emits trades for symbols that were only subscribed to L2_BOOK
 * Bugfix: Bithumb no longer emits book or ticker updates for symbols that were not subscribed to that channel

@@ -25,13 +25,12 @@ class AttrDict(dict):
         super().__setitem__(key, value)
 
     def __getattr__(self, item):
+        if item.startswith('__'):
+            raise AttributeError(item)
         return self.__getitem__(item)
 
     def __missing__(self, key):
         return AttrDict()
-
-    def __repr__(self) -> str:
-        return super().__repr__()
 
     __setattr__ = __setitem__
 
@@ -39,10 +38,13 @@ class AttrDict(dict):
 def _merge(defaults: dict, supplied: dict) -> AttrDict:
     merged = AttrDict(defaults)
     for key, value in (supplied or {}).items():
-        if isinstance(value, dict) and isinstance(merged.get(key), dict):
-            merged[key] = _merge(merged[key], value)
-        else:
-            merged[key] = value
+        if isinstance(merged.get(key), dict):
+            if value is None:
+                continue
+            if isinstance(value, dict):
+                merged[key] = _merge(merged[key], value)
+                continue
+        merged[key] = value
     return merged
 
 
@@ -69,13 +71,14 @@ class Config:
             with open(config) as fp:
                 self.config = _merge(_default_config, yaml.safe_load(fp))
                 self.log_msg = f'Config: use file={config!r} from CRYPTOFEED_CONFIG containing the following main keys: {", ".join(self.config.keys())}'
+        elif config is None:
+            self.log_msg = 'Config: no config given => default config.'
         else:
-            self.log_msg = f'Config: Only accept str and dict but got {type(config)!r} => default config.'
-
-    def __bool__(self):
-        return self.config != {}
+            self.log_msg = f'Config: expected a path, dict or Config but got {type(config)!r} => default config.'
 
     def __getattr__(self, attr):
+        if attr.startswith('__'):
+            raise AttributeError(attr)
         return self.config[attr]
 
     def __getitem__(self, key):
@@ -88,4 +91,4 @@ class Config:
         return self.config.keys()
 
     def __repr__(self) -> str:
-        return self.config.__repr__()
+        return repr(self.config)

@@ -17,7 +17,7 @@ from aiohttp.typedefs import StrOrURL
 
 from cryptofeed.backends.backend import BackendQueue, RetryPolicy
 from cryptofeed.callback import Callback
-from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, WSAsyncConn
+from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPPoll, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
 from cryptofeed.defines import CANDLES, FUNDING, INDEX, L1_BOOK, L2_BOOK, L3_BOOK, LIQUIDATIONS, OPEN_INTEREST, TICKER, TRADES
 from cryptofeed.exceptions import BidAskOverlapping
@@ -71,7 +71,7 @@ class Feed(Exchange):
     async def keepalive(self, conn: AsyncConnection):
         raise NotImplementedError(f'{self.id}: keepalive_interval is set but keepalive() is not implemented')
 
-    def __init__(self, candle_interval=None, candle_closed_only=True, trade_history=False, candle_history=False, timeout=120, timeout_interval=30, retries=10, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=None, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, shutdown_timeout=10.0, **kwargs):
+    def __init__(self, candle_interval=None, candle_closed_only=True, trade_history=False, candle_history=False, timeout=120, timeout_interval=30, retries=15, symbols=None, channels=None, subscription=None, callbacks=None, max_depth=0, checksum_validation=None, cross_check=False, exceptions=None, log_message_on_error=False, delay_start=0, http_proxy: StrOrURL = None, shutdown_timeout=10.0, **kwargs):
         """
         candle_interval: str
             the candle interval. See the specific exchange to see what intervals they support.
@@ -89,7 +89,8 @@ class Feed(Exchange):
         timeout_interval: int
             Time, in seconds, between timeout checks.
         retries: int
-            Number of times to retry a failed connection. Set to -1 for infinite
+            Consecutive failed connection attempts to allow before the feed gives up with ExhaustedRetries.
+            A session that lives past 60s resets the count. set to -1 for infinite
         symbols: list of str, Symbol
             A list of instrument symbols. Symbols must be of type str or Symbol
         max_depth: int
@@ -235,6 +236,26 @@ class Feed(Exchange):
         self._ensure_symbol_mapping()
         self._build_subscription()
 
+    async def _setup_unless_stopped(self, stop_event: asyncio.Event) -> bool:
+        setup = asyncio.ensure_future(self._setup())
+        stop = asyncio.ensure_future(stop_event.wait())
+
+        try:
+            done, _ = await asyncio.wait({setup, stop}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            setup.cancel()
+            stop.cancel()
+
+        for task in (setup, stop):
+            with suppress(asyncio.CancelledError):
+                await task
+
+        if setup not in done:
+            LOG.info('%s: stop requested during start-up', self.id)
+            return False
+
+        return True
+
     async def _pre_connect(self):
         pass
 
@@ -247,7 +268,8 @@ class Feed(Exchange):
                 await self.http_conn.close()
 
     async def _run(self, stop_event: asyncio.Event):
-        await self._setup()
+        if not await self._setup_unless_stopped(stop_event):
+            return
         await self._pre_connect()
 
         self.connection_handlers = []
@@ -368,6 +390,9 @@ class Feed(Exchange):
     RESTART_RESET_SECONDS = 300.0
 
     def _watchdog_timeout(self, conn: AsyncConnection):
+        if isinstance(conn, HTTPPoll):
+            return -1
+
         channels = list(getattr(conn, 'subscription', None) or ()) if self.quiet_channels else []
         try:
             if channels and all(self.exchange_channel_to_std(channel) in self.quiet_channels for channel in channels):

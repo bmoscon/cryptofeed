@@ -15,7 +15,7 @@ def configure_logging(filename: str = None, level='WARNING', stream: bool = Fals
     logger = logging.getLogger('cryptofeed')
     if any(not isinstance(h, logging.NullHandler) for h in logger.handlers):
         return logger
-    logger.setLevel(level)
+    logger.setLevel(level.upper() if isinstance(level, str) else level)
     if filename:
         fh = RotatingFileHandler(filename, maxBytes=max_bytes, backupCount=backup_count)
         fh.setFormatter(FORMAT)

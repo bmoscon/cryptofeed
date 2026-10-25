@@ -302,6 +302,8 @@ class _PlaybackMixin:
 
 
 class PlaybackWSConnection(_PlaybackMixin, WSAsyncConn):
+    paced = False
+
     def __init__(self, address: str, conn_id: str, subscription, sessions_inbound, coordinator, token):
         AsyncConnection.__init__(self, conn_id, subscription=subscription)
         self.address = address
@@ -314,15 +316,18 @@ class PlaybackWSConnection(_PlaybackMixin, WSAsyncConn):
 
 
 class PlaybackPollConnection(_PlaybackMixin, HTTPPoll):
+    paced = False
+
     def __init__(self, address, conn_id: str, sessions_inbound, coordinator, token):
         AsyncConnection.__init__(self, conn_id)
         self.address = address if isinstance(address, list) else [address]
         self.proxy = None
         self.sleep = 0
         self.delay = 0
+        self._closing = asyncio.Event()
         self._playback_init(sessions_inbound, coordinator, token)
 
-    async def read(self, header=None):
+    async def read(self):
         async for payload in self._replay_read():
             yield payload
 
@@ -371,10 +376,10 @@ class PlaybackHTTPConn(HTTPAsyncConn):
 
         return bodies[index]
 
-    async def read(self, address: str, header=None, params=None, retry_count=0, retry_delay=60, headers_out: dict = None) -> str:
+    async def read(self, address: str, header=None, params=None, headers_out: dict = None) -> str:
         return await self._serve(request_url(address, params))
 
-    async def write(self, address: str, msg=None, header=None, retry_count=0, retry_delay=60):
+    async def write(self, address: str, msg=None, header=None):
         body = msg.decode() if isinstance(msg, (bytes, bytearray)) else msg
         return await self._serve(address, body)
 
