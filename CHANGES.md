@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 3.0.2
+* Update: Python 3.15 and free-threaded 3.15t are built, tested and shipped as wheels
 * Bugfix: Gemini no longer emits trades for symbols that were only subscribed to L2_BOOK
 * Bugfix: Bithumb no longer emits book or ticker updates for symbols that were not subscribed to that channel
 * Bugfix: Various data improvements across exchanges

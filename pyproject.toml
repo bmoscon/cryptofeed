@@ -31,6 +31,7 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Free Threading :: 2 - Beta",
     "Framework :: AsyncIO",
     "Operating System :: POSIX :: Linux",
@@ -95,7 +96,7 @@ sources = ["cryptofeed/types.pyx"]
 define-macros = [["CYTHON_WITHOUT_ASSERTIONS", ""]]
 
 [tool.cibuildwheel]
-build = "cp313-* cp314-* cp314t-*"
+build = "cp313-* cp314-* cp314t-* cp315-* cp315t-*"
 skip = "*musllinux*"
 test-command = "python -c \"import sys, sysconfig; from cryptofeed import FeedHandler; from cryptofeed.types import COMPILED_WITH_ASSERTIONS; assert COMPILED_WITH_ASSERTIONS is False; assert not (sysconfig.get_config_var('Py_GIL_DISABLED') and sys._is_gil_enabled()), 'importing cryptofeed re-enabled the GIL'\""
 
