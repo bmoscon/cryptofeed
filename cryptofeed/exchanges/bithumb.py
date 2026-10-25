@@ -174,11 +174,12 @@ class Bithumb(Feed):
             await self._trade(msg, timestamp)
         elif msg_type == 'orderbook':
             bids, asks = self._book_sides(msg)
-            if self.websocket_channels[L2_BOOK] in conn.subscription:
+            # one orderbook stream serves all three channels, so check the symbol per channel
+            if msg['code'] in conn.subscription.get(self.websocket_channels[L2_BOOK], []):
                 await self._book(msg, bids, asks, timestamp)
-            if self.websocket_channels[TICKER] in conn.subscription:
+            if msg['code'] in conn.subscription.get(self.websocket_channels[TICKER], []):
                 await self._ticker(msg, bids, asks, timestamp)
-            if self.websocket_channels[L1_BOOK] in conn.subscription:
+            if msg['code'] in conn.subscription.get(self.websocket_channels[L1_BOOK], []):
                 await self._l1_book(msg, bids, asks, timestamp)
         elif 'status' in msg:
             return
