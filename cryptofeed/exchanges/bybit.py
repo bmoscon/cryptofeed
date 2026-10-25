@@ -459,7 +459,7 @@ class Bybit(Feed):
             o = OpenInterest(
                 self.id,
                 symbol,
-                Decimal(update['openInterest']),
+                Decimal(update.get('singleOpenInterest') or update['openInterest']),
                 self.timestamp_normalize(int(msg['ts'])),
                 raw=update
             )
