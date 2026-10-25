@@ -217,7 +217,7 @@ class Bybit(Feed):
             liq = Liquidation(
                 self.id,
                 self.exchange_symbol_to_std_symbol(entry['s']),
-                BUY if entry['S'] == 'Buy' else SELL,
+                SELL if entry['S'] == 'Buy' else BUY,
                 Decimal(entry['v']),
                 Decimal(entry['p']),
                 None,
