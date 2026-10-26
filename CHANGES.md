@@ -1,6 +1,7 @@
 ## Changelog
 
 ### 3.0.2
+* Bugfix: Bybit liquidation side is now the side of the liquidation order (SELL when a long is liquidated), as for Binance and OKX
 * Bugfix: reconnection of unstable feeds adjusted with backoffs
 * Bugfix: the silence watchdog starts only after subscribe
 * Bugfix: HTTP requests time out after 60s (10 s to connect)
