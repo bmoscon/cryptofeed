@@ -172,12 +172,12 @@ class Upbit(Feed):
         if msg['ty'] == "trade":
             await self._trade(msg, timestamp)
         elif msg['ty'] == "orderbook":
-            # three channels ride this stream
-            if L2_BOOK in conn.subscription:
+            # three channels ride this stream, so check the symbol per channel
+            if msg['cd'] in conn.subscription.get(L2_BOOK, []):
                 await self._book(msg, timestamp)
-            if TICKER in conn.subscription:
+            if msg['cd'] in conn.subscription.get(TICKER, []):
                 await self._ticker(msg, timestamp)
-            if L1_BOOK in conn.subscription:
+            if msg['cd'] in conn.subscription.get(L1_BOOK, []):
                 await self._l1_book(msg, timestamp)
         else:
             LOG.warning("%s: Unhandled message %s", self.id, msg)

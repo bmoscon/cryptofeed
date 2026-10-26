@@ -2,6 +2,7 @@
 
 ### 3.0.4
 * Feature: ClickHouse support
+* Bugfix: Upbit no longer emits book or ticker updates for symbols that were not subscribed to that channel
 
 ### 3.0.3 (2026-11-02)
 * Bugfix: Duplication issues in NBBO
