@@ -44,8 +44,8 @@ class OKX(Feed):
         CANDLES: 'candle'
     }
     websocket_endpoints = [
-        WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]), options={'compression': None}),
-        WebsocketEndpoint('wss://ws.okx.com:8443/ws/v5/business', channel_filter=(websocket_channels[CANDLES],), options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okx.com/ws/v5/public', channel_filter=(websocket_channels[L2_BOOK], websocket_channels[TRADES], websocket_channels[TICKER], websocket_channels[FUNDING], websocket_channels[OPEN_INTEREST], websocket_channels[LIQUIDATIONS]), options={'compression': None}),
+        WebsocketEndpoint('wss://ws.okx.com/ws/v5/business', channel_filter=(websocket_channels[CANDLES],), options={'compression': None}),
     ]
     rest_endpoints = [RestEndpoint('https://www.okx.com', routes=Routes(['/api/v5/public/instruments?instType=SPOT', '/api/v5/public/instruments?instType=SWAP', '/api/v5/public/instruments?instType=FUTURES'], currencies='/api/v5/public/underlying?instType=OPTION', liquidations='/api/v5/public/liquidation-orders?instType={}&limit=100&state={}&uly={}', l2book='/api/v5/market/books?instId={}&sz={}'))]
     option_instruments = '/api/v5/public/instruments?instType=OPTION&uly={}'

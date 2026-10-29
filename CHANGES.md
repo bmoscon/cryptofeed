@@ -10,6 +10,7 @@
 * Update: the default Feed `retries` is now 15
 * Update: Python 3.15 and free-threaded 3.15t are built, tested and shipped as wheels
 * Bugfix: Gemini no longer emits trades for symbols that were only subscribed to L2_BOOK
+* Update: OKX websocket endpoints no longer use port 8443, which OKX retires on 2026-10-31
 * Bugfix: Bithumb no longer emits book or ticker updates for symbols that were not subscribed to that channel
 * Bugfix: Various data improvements across exchanges
 * Bugfix: connection hardening, improved retries, improved snapshot syncing
