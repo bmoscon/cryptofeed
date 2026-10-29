@@ -12,7 +12,7 @@ class NBBO(Callback):
         self.bids = {symbol: {} for symbol in symbols}
         self.asks = {symbol: {} for symbol in symbols}
 
-        self.last_update = None
+        self.last_update = {}
 
         super(NBBO, self).__init__(callback)
 
@@ -36,9 +36,9 @@ class NBBO(Callback):
             return
 
         # only write updates when a best bid / best ask changes
-        if self.last_update == update:
+        if self.last_update.get(book.symbol) == update:
             return
-        self.last_update = update
+        self.last_update[book.symbol] = update
 
         bid, ask, bid_feed, ask_feed = update
         await self.callback(book.symbol, bid['price'], bid['size'], ask['price'], ask['size'], bid_feed, ask_feed)
