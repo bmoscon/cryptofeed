@@ -4,6 +4,7 @@ Copyright (C) 2017-2026 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from collections import defaultdict
 import logging
 
@@ -49,19 +50,39 @@ class RedisCallback(BackendQueue):
         except (aioredis.ResponseError, aioredis.DataError) as e:
             raise PermanentWriteError(str(e)) from e
 
-    def _rejected(self, results: list) -> list:
-        errors = [result for result in results if isinstance(result, Exception)]
+    async def _run(self, items: list, add) -> list:
+        results = [None] * len(items)
+        pending = list(range(len(items)))
 
-        for error in errors:
-            if isinstance(error, self.retryable_exceptions):
-                raise error
+        for attempt in range(1, self.retry.max_attempts + 1):
+            try:
+                async with self.conn.pipeline(transaction=False) as pipe:
+                    for index in pending:
+                        add(pipe, items[index])
+                    replies = await self._execute(pipe)
+            except self.retryable_exceptions as e:
+                if not any(r is not None and not isinstance(r, Exception) for r in results):
+                    raise
+                replies = [e] * len(pending)
 
-        if errors and len(errors) == len(results):
-            raise PermanentWriteError(str(errors[0])) from errors[0]
+            for index, reply in zip(pending, replies):
+                results[index] = reply
 
-        if errors:
-            LOG.error('%s: redis rejected %d of %d commands in batch. First error: %s', self.__class__.__name__, len(errors), len(results), errors[0])
-        return errors
+            pending = [index for index in pending if isinstance(results[index], self.retryable_exceptions)]
+            if not pending:
+                break
+
+            if attempt == self.retry.max_attempts:
+                LOG.error('%s: redis still rejecting %d of %d commands after %d attempts: %s', type(self).__name__, len(pending), len(items), attempt, results[pending[0]])
+                break
+
+            LOG.warning('%s: redis rejected %d of %d commands (%s), retrying them', type(self).__name__, len(pending), len(items), results[pending[0]])
+            await asyncio.sleep(self.retry.delay(attempt))
+
+        rejected = [r for r in results if isinstance(r, Exception) and not isinstance(r, self.retryable_exceptions)]
+        if rejected:
+            LOG.error('%s: redis rejected %d of %d commands in batch. First error: %s', type(self).__name__, len(rejected), len(items), rejected[0])
+        return results
 
 
 class RedisZSetCallback(RedisCallback):
@@ -76,33 +97,30 @@ class RedisZSetCallback(RedisCallback):
         super().__init__(host=host, port=port, socket=socket, key=key, numeric_type=numeric_type, **kwargs)
 
     async def write_batch(self, batch: list):
-        async with self.conn.pipeline(transaction=False) as pipe:
-            for update in batch:
-                pipe.zadd(f"{self.key}-{update['exchange']}-{update['symbol']}", {json.dumps(update): update[self.score_key]}, nx=True)
-            added = await self._execute(pipe)
-        discarded = len(self._rejected(added))
+        def add(pipe, update):
+            pipe.zadd(f"{self.key}-{update['exchange']}-{update['symbol']}", {json.dumps(update): update[self.score_key]}, nx=True)
 
-        return sum(count for count in added if not isinstance(count, Exception)), discarded
+        results = await self._run(batch, add)
+        return sum(count for count in results if not isinstance(count, Exception)), sum(isinstance(r, Exception) for r in results)
 
 
 class RedisStreamCallback(RedisCallback):
     async def write_batch(self, batch: list):
-        async with self.conn.pipeline(transaction=False) as pipe:
-            for update in batch:
-                if 'delta' in update:
-                    if not isinstance(update['delta'], str):
-                        update['delta'] = json.dumps(update['delta'])
-                elif 'book' in update:
-                    if not isinstance(update['book'], str):
-                        update['book'] = json.dumps(update['book'])
-                elif 'closed' in update:
-                    if not isinstance(update['closed'], str):
-                        update['closed'] = str(update['closed'])
+        def add(pipe, update):
+            if 'delta' in update:
+                if not isinstance(update['delta'], str):
+                    update['delta'] = json.dumps(update['delta'])
+            elif 'book' in update:
+                if not isinstance(update['book'], str):
+                    update['book'] = json.dumps(update['book'])
+            elif 'closed' in update:
+                if not isinstance(update['closed'], str):
+                    update['closed'] = str(update['closed'])
 
-                pipe.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
-            results = await self._execute(pipe)
+            pipe.xadd(f"{self.key}-{update['exchange']}-{update['symbol']}", update)
 
-        discarded = len(self._rejected(results))
+        results = await self._run(batch, add)
+        discarded = sum(isinstance(r, Exception) for r in results)
         return len(results) - discarded, discarded
 
 
@@ -117,12 +135,12 @@ class RedisKeyCallback(RedisCallback):
             latest[key] = update
             collapsed[key] += 1
 
-        async with self.conn.pipeline(transaction=False) as pipe:
-            for key, update in latest.items():
-                pipe.set(key, json.dumps(update))
-            results = await self._execute(pipe)
+        def add(pipe, item):
+            key, update = item
+            pipe.set(key, json.dumps(update))
 
-        if not self._rejected(results):
+        results = await self._run(list(latest.items()), add)
+        if not any(isinstance(r, Exception) for r in results):
             return None
 
         stored = sum(collapsed[key] for key, result in zip(latest, results) if not isinstance(result, Exception))

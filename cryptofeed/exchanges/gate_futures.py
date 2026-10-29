@@ -242,7 +242,7 @@ class GateFutures(Gate):
             self.last_update_id.pop(symbol, None)
             self.forced[symbol] = False
         if symbol not in self._l2_book:
-            self._buffer_update(result['s'], symbol, msg, conn)
+            self._buffer_update(result['s'], symbol, msg, conn, timestamp)
             return
 
         skip_update = self._check_update_id(symbol, result)

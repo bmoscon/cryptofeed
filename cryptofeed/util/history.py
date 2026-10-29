@@ -35,8 +35,7 @@ def _group(rows, stream, extra=None) -> dict:
 
 
 class TradeWatermark:
-    # at a high level, this ensures that a feed delivers every trade once
-    # and only once, and in time descending order
+    # at a high level, this ensures that a feed delivers every trade once and only once, and in time ascending order
     def __init__(self, history: bool = False, key=None):
         self.history = history
         self.key = key

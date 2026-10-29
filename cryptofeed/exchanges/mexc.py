@@ -220,7 +220,7 @@ class MEXCSpot(SnapshotSync, Feed):
 
     async def _book(self, symbol: str, payload: bytes, timestamp: float, send_time: Optional[int], conn=None):
         if symbol not in self._l2_book:
-            self._buffer_update(self.std_symbol_to_exchange_symbol(symbol), symbol, (payload, send_time), conn)
+            self._buffer_update(self.std_symbol_to_exchange_symbol(symbol), symbol, (payload, send_time), conn, timestamp)
             return
 
         try:
@@ -239,7 +239,7 @@ class MEXCSpot(SnapshotSync, Feed):
 
     async def message_handler(self, msg, conn: AsyncConnection, timestamp: float):
         if self._ready:
-            await self._install_snapshots(conn, timestamp)
+            await self._install_snapshots(conn)
         await self._handle(msg, conn, timestamp)
         if self._syncing:
             await asyncio.sleep(0)

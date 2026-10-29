@@ -3,6 +3,7 @@
 ### 3.0.2
 * Bugfix: Bybit liquidation side is now the side of the liquidation order (SELL when a long is liquidated), as for Binance and OKX
 * Bugfix: Deribit liquidations flagged `M` (maker liquidated) reported the taker's side
+* Bugfix: Bybit open interest now uses `singleOpenInterest`; `openInterest` counts both sides (2x other exchanges)
 * Bugfix: reconnection of unstable feeds adjusted with backoffs
 * Bugfix: the silence watchdog starts only after subscribe
 * Bugfix: HTTP requests time out after 60s (10 s to connect)
@@ -11,6 +12,7 @@
 * Update: the default Feed `retries` is now 15
 * Update: Python 3.15 and free-threaded 3.15t are built, tested and shipped as wheels
 * Bugfix: Gemini no longer emits trades for symbols that were only subscribed to L2_BOOK
+* Update: OKX websocket endpoints no longer use port 8443, which OKX retires on 2026-10-31
 * Bugfix: Bithumb no longer emits book or ticker updates for symbols that were not subscribed to that channel
 * Bugfix: Various data improvements across exchanges
 * Bugfix: connection hardening, improved retries, improved snapshot syncing
@@ -28,6 +30,14 @@
 * Bugfix: book snapshots serialized with numeric_type=Decimal were not valid JSON. price keys now strings
 * Bugfix: Redis incorrectly ignored `socket` path
 * Update: expiry dates in normalized symbols now zero padded for every exchange (eg. BTC-USD-26H05)
+* Bugfix: the shutdown enforced on backend writers
+* Bugfix: cancelling a backend writer no longer loses messages from the stats counters
+* Bugfix: a backend instance can be reused across runs
+* Bugfix: BookMongo stores deltas as book documents and accept numeric_type=float
+* Bugfix: Redis Stream and ZSet backends retry only rejected commands
+* Bugfix: Postgres backends render dict and list values as JSON
+* Feature: Postgres backends define table layouts and provide create_table_sql()
+* Update: Postgres backends default numeric_type to Decimal, so NUMERIC columns receive exact values
 
 ### 3.0.1 (2026-09-27)
  * Update: Gate.io -> Gate rebranding

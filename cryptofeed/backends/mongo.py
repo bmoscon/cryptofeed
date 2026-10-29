@@ -38,7 +38,7 @@ class MongoCallback(BackendQueue):
         none_to: any
             if not None, convert None values to this value before inserting into MongoDB
         numeric_type: type
-            type to convert numeric values to before inserting into MongoDB. Defaults to str
+            type to convert numeric values to before inserting into MongoDB. Defaults to str, but can be float
         client_options: dict
             passed straight to pymongo's AsyncMongoClient - username/password, tls,
             connectTimeoutMS, serverSelectionTimeoutMS and anything else the driver accepts.
@@ -80,21 +80,26 @@ class MongoCallback(BackendQueue):
             return value
         return dt.fromtimestamp(value, tz=timezone.utc)
 
+    @staticmethod
+    def _side(levels) -> bytes:
+        pairs = levels.items() if isinstance(levels, dict) else levels
+        return bson.encode({str(price): size for price, size in pairs})
+
     def _document(self, update: dict) -> dict:
         update['timestamp'] = self._datetime(update['timestamp'])
         update['receipt_timestamp'] = self._datetime(update['receipt_timestamp'])
 
-        if 'book' in update:
-            delta = 'delta' in update
-            source = update['delta'] if delta else update['book']
+        if 'book' in update or 'delta' in update:
+            snapshot = 'book' in update
+            source = update['book'] if snapshot else update['delta']
             return {
                 'exchange': update['exchange'],
                 'symbol': update['symbol'],
                 'timestamp': update['timestamp'],
                 'receipt_timestamp': update['receipt_timestamp'],
-                'delta': delta,
-                'bid': bson.encode(source['bid']),
-                'ask': bson.encode(source['ask']),
+                'delta': not snapshot,
+                'bid': self._side(source['bid']),
+                'ask': self._side(source['ask']),
             }
         return update
 

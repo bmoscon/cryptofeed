@@ -15,7 +15,7 @@ from typing import Tuple, Callable, List, Union
 from aiohttp import ClientError
 from aiohttp.typedefs import StrOrURL
 
-from cryptofeed.backends.backend import BackendQueue, RetryPolicy
+from cryptofeed.backends.backend import BackendQueue, RetryPolicy, finish_writers
 from cryptofeed.callback import Callback
 from cryptofeed.connection import AsyncConnection, HTTPAsyncConn, HTTPPoll, WSAsyncConn
 from cryptofeed.connection_handler import ConnectionHandler
@@ -95,8 +95,6 @@ class Feed(Exchange):
             A list of instrument symbols. Symbols must be of type str or Symbol
         max_depth: int
             Maximum number of levels per side to return in book updates. 0 is the default, and indicates no trimming of levels should be performed.
-        candle_interval: str
-            Length of time between a candle's Open and Close. Valid on exchanges with support for candles
         checksum_validation: bool
             Toggle checksum validation, when supported by an exchange. None (the default) turns it
             on for every venue that publishes a book checksum (provides_checksum) and off elsewhere.
@@ -285,13 +283,10 @@ class Feed(Exchange):
 
         async with asyncio.TaskGroup() as tg:
             writers = _BackendWriters(self, tg)
-            writer_tasks = []
             for callbacks in self.callbacks.values():
                 for cb in callbacks:
                     if hasattr(cb, 'start_writer'):
-                        task = cb.start_writer(writers, name=f'feed.{self.id}.backend.{self.backend_name(cb)}', owner=self)
-                        if task is not None:
-                            writer_tasks.append((cb, task))
+                        cb.start_writer(writers, name=f'feed.{self.id}.backend.{self.backend_name(cb)}', owner=self)
 
             error = None
             try:
@@ -305,17 +300,8 @@ class Feed(Exchange):
             finally:
                 self._conn_tg = None
 
-            waiting_on = []
-            try:
-                async with asyncio.timeout(self.shutdown_timeout):
-                    released = await self.shutdown()
-                    waiting_on = [task for backend, task in writer_tasks if backend in released]
-                    if waiting_on:
-                        await asyncio.wait(waiting_on)
-            except TimeoutError:
-                LOG.warning('%s: backend flush exceeded the %.1fs shutdown deadline - cancelling writers', self.id, self.shutdown_timeout)
-                for task in waiting_on:
-                    task.cancel()
+            released = await self.shutdown()
+            await finish_writers(released, self.shutdown_timeout)
 
             if error is None:
                 error = self._backend_error
@@ -542,19 +528,21 @@ class Feed(Exchange):
     async def subscribe(self, connection: AsyncConnection):
         raise NotImplementedError
 
-    async def shutdown(self):
+    async def shutdown(self) -> list:
         LOG.info('%s: feed shutdown starting...', self.id)
-        await self.http_conn.close()
+        for conn in [self.http_conn] + [c.conn for c in self.connection_handlers]:
+            try:
+                await conn.close()
+            except Exception as e:
+                LOG.warning('%s: closing %s failed: %r', self.id, type(conn).__name__, e)
 
         released = []
         for callbacks in self.callbacks.values():
             for callback in callbacks:
-                if hasattr(callback, 'stop'):
+                if hasattr(callback, 'release_owner') and callback.release_owner():
                     LOG.info('%s: stopping backend %s', self.id, self.backend_name(callback))
-                    if await callback.stop():
-                        released.append(callback)
-        for c in self.connection_handlers:
-            await c.conn.close()
+                    released.append(callback)
+
         LOG.info('%s: feed shutdown completed', self.id)
         return released
 

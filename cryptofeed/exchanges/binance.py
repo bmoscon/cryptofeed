@@ -425,7 +425,7 @@ class BinanceBase(SnapshotSync, Feed):
         pair = self.exchange_symbol_to_std_symbol(pair)
 
         if pair not in self._l2_book:
-            self._buffer_update(exchange_pair, pair, msg, conn)
+            self._buffer_update(exchange_pair, pair, msg, conn, timestamp)
             return
 
         skip_update = self._check_update_id(pair, msg)
@@ -533,7 +533,7 @@ class BinanceBase(SnapshotSync, Feed):
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if self._ready:
-            await self._install_snapshots(conn, timestamp)
+            await self._install_snapshots(conn)
 
         if 'openInterest' in msg:
             return await self._open_interest(msg, timestamp)

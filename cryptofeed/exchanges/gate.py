@@ -213,7 +213,7 @@ class Gate(SnapshotSync, Feed):
         """
         symbol = self.exchange_symbol_to_std_symbol(msg['result']['s'])
         if symbol not in self._l2_book:
-            self._buffer_update(msg['result']['s'], symbol, msg, conn)
+            self._buffer_update(msg['result']['s'], symbol, msg, conn, timestamp)
             return
 
         skip_update = self._check_update_id(symbol, msg['result'])
@@ -302,7 +302,7 @@ class Gate(SnapshotSync, Feed):
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
         if self._ready:
-            await self._install_snapshots(conn, timestamp)
+            await self._install_snapshots(conn)
         await self._handle(msg, conn, timestamp)
         if self._syncing:
             await asyncio.sleep(0)

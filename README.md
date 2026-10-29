@@ -103,6 +103,27 @@ Cryptofeed supports the following public data channels from exchanges
 * INDEX
 * CANDLES - Candlestick / K-Line data.
 
+## Normalized data
+
+Every callback receives two arguments: a normalized object and `receipt_timestamp`, the time (float epoch seconds)
+cryptofeed received the message that produced the callback. The objects are defined in `cryptofeed/types.pyx` (`Trade`,
+`Ticker`, `OrderBook`, `L1Book`, `Candle`, `Funding`, `OpenInterest`, `Liquidation`, `Index`) and share these rules:
+
+* `exchange` is the venue id and `symbol` the normalized name: `BASE-QUOTE` for spot, `BASE-QUOTE-PERP` for
+  perpetuals, `BASE-QUOTE-<expiry>` for dated futures with the expiry as a two-digit year, a futures month code and
+  a zero-padded day (`BTC-USD-26H05`), and `BASE-QUOTE-<strike>-<expiry>-CALL|PUT` for options.
+* Prices, sizes, rates and volumes are `Decimal`. `numeric_type` on a backend or `to_dict()` converts them.
+* `timestamp` is the venue's event time in float epoch seconds. `timestamp` is `None` when the venue does not provide
+  a timestamp and backends then store the receipt time in its place.
+* `Trade.side` is the taker's side. `Trade.id` is the venue's id or `None`.
+* `OrderBook.book` holds the full local book (`.bids`, `.asks`). `delta` is `None` for a snapshot and otherwise lists
+  the levels that changed as `(price, size)` with size 0 for a removed level. `sequence_number` and `checksum` are
+  set when the venue provides them.
+* `Candle.closed` is `True` once the bar is final, by default only closed candles are delivered.
+  (`candle_closed_only=False` also delivers each update of the open bar).
+* `trade_history` and `candle_history` control whether the batch of recent trades or candles some venues send on
+  subscribe is delivered, by default it is `False`.
+
 ## Backends
 
 Cryptofeed supports `backend` callbacks that will write directly to storage or other interfaces.
