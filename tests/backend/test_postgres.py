@@ -17,18 +17,8 @@ USER = 'cryptofeed'
 PASSWORD = 'cryptofeed'
 DB = 'cryptofeed'
 
-COMMON = '"timestamp" TIMESTAMPTZ, "receipt_timestamp" TIMESTAMPTZ, "exchange" TEXT, "symbol" TEXT'
-
-CASES = [
-    (TradePostgres, 'trades', '"side" TEXT, "amount" NUMERIC, "price" NUMERIC, "trade_id" TEXT, "order_type" TEXT'),
-    (TickerPostgres, 'ticker', '"bid" NUMERIC, "ask" NUMERIC'),
-    (FundingPostgres, 'funding', '"mark_price" NUMERIC, "rate" NUMERIC, "next_funding_time" TIMESTAMPTZ, "predicted_rate" NUMERIC'),
-    (OpenInterestPostgres, 'open_interest', '"open_interest" NUMERIC'),
-    (IndexPostgres, 'index', '"price" NUMERIC'),
-    (LiquidationsPostgres, 'liquidations', '"side" TEXT, "quantity" NUMERIC, "price" NUMERIC, "trade_id" TEXT, "status" TEXT'),
-    (CandlesPostgres, 'candles', '"candle_start" TIMESTAMPTZ, "candle_stop" TIMESTAMPTZ, "interval" TEXT, "trades" INTEGER, "open" NUMERIC, "close" NUMERIC, "high" NUMERIC, "low" NUMERIC, "volume" NUMERIC, "closed" BOOLEAN'),
-    (BookPostgres, 'book', '"data" JSONB'),
-]
+CASES = [(TradePostgres, 'trades'), (TickerPostgres, 'ticker'), (FundingPostgres, 'funding'), (OpenInterestPostgres, 'open_interest'),
+         (IndexPostgres, 'index'), (LiquidationsPostgres, 'liquidations'), (CandlesPostgres, 'candles'), (BookPostgres, 'book')]
 
 
 def table_name(backend_class) -> str:
@@ -41,20 +31,20 @@ async def postgres():
     conn = await asyncpg.connect(host=host, port=port, user=USER, password=PASSWORD, database=DB)
 
     async def drop():
-        for backend_class, _, _ in CASES:
+        for backend_class, _ in CASES:
             await conn.execute(f'DROP TABLE IF EXISTS {table_name(backend_class)}')
 
     await drop()
-    for backend_class, _, columns in CASES:
-        await conn.execute(f'CREATE TABLE {table_name(backend_class)} (id serial PRIMARY KEY, {COMMON}, {columns})')
+    for backend_class, _ in CASES:
+        await conn.execute(backend_class.create_table_sql(table_name(backend_class)))
 
     yield conn, host, port
     await drop()
     await conn.close()
 
 
-@pytest.mark.parametrize('backend_class, kind, _columns', CASES, ids=[c.__name__ for c, _, _ in CASES])
-async def test_write(postgres, backend_class, kind, _columns):
+@pytest.mark.parametrize('backend_class, kind', CASES, ids=[c.__name__ for c, _ in CASES])
+async def test_write(postgres, backend_class, kind):
     conn, host, port = postgres
     data = samples(kind)
     table = table_name(backend_class)

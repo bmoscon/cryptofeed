@@ -21,9 +21,9 @@ LOG = logging.getLogger(__name__)
 class _BookSync:
     __slots__ = ('conn', 'buffer', 'task', 'result', 'started')
 
-    def __init__(self, conn: str, update):
+    def __init__(self, conn: str, update, receipt: float):
         self.conn = conn
-        self.buffer = [update]
+        self.buffer = [(update, receipt)]
         self.task = None
         self.result = None
         self.started = time.time()
@@ -59,18 +59,18 @@ class SnapshotSync:
         self._cancel_syncs()
         return await super().shutdown()
 
-    def _buffer_update(self, pair: str, std_pair: str, msg, conn):
+    def _buffer_update(self, pair: str, std_pair: str, msg, conn, receipt: float):
         sync = self._syncing.get(std_pair)
         if sync is None:
-            sync = self._syncing[std_pair] = _BookSync(getattr(conn, 'uuid', None), msg)
+            sync = self._syncing[std_pair] = _BookSync(getattr(conn, 'uuid', None), msg, receipt)
             self._start_fetch(pair, std_pair, sync)
         elif len(sync.buffer) < self.BOOK_BUFFER_LIMIT:
-            sync.buffer.append(msg)
+            sync.buffer.append((msg, receipt))
         else:
             self.book_sync_stats['buffer_overflows'] += 1
             LOG.warning('%s: %s buffered %d updates waiting for its snapshot - restarting its sync', self.id, std_pair, len(sync.buffer))
             sync.task.cancel()
-            sync.buffer, sync.started = [msg], time.time()
+            sync.buffer, sync.started = [(msg, receipt)], time.time()
             self._start_fetch(pair, std_pair, sync)
 
     def _start_fetch(self, pair: str, std_pair: str, sync: _BookSync):
@@ -120,7 +120,7 @@ class SnapshotSync:
                 self._ready.add(std_pair)
             return
 
-    async def _install_snapshots(self, conn, timestamp: float = None):
+    async def _install_snapshots(self, conn):
         uuid = getattr(conn, 'uuid', None)
         for std_pair in [pair for pair, sync in self._syncing.items() if pair in self._ready and sync.conn == uuid]:
             self._ready.discard(std_pair)
@@ -129,11 +129,11 @@ class SnapshotSync:
             sequence = book.sequence_number
             covered = 0
 
-            while covered < len(sync.buffer) and self._covered(sequence, sync.buffer[covered]):
+            while covered < len(sync.buffer) and self._covered(sequence, sync.buffer[covered][0]):
                 covered += 1
 
             pair = self.std_symbol_to_exchange_symbol(std_pair)
-            if covered < len(sync.buffer) and not self._bridges(sequence, sync.buffer[covered]):
+            if covered < len(sync.buffer) and not self._bridges(sequence, sync.buffer[covered][0]):
                 self.book_sync_stats['stale_snapshots'] += 1
                 self._start_fetch(pair, std_pair, sync)
                 continue
@@ -144,9 +144,8 @@ class SnapshotSync:
 
             LOG.debug('%s: %s book live %.2fs after its first update (%d buffered, %d covered by the snapshot)', self.id, std_pair, received - sync.started, len(sync.buffer), covered)
 
-            receipt = received if timestamp is None else timestamp
             self._start_book(std_pair, book)
-            await self.book_callback(L2_BOOK, book, receipt, timestamp=book.timestamp, raw=book.raw, sequence_number=sequence)
+            await self.book_callback(L2_BOOK, book, received, timestamp=book.timestamp, raw=book.raw, sequence_number=sequence)
 
-            for msg in sync.buffer[covered:]:
+            for msg, receipt in sync.buffer[covered:]:
                 await self._apply_buffered(pair, msg, receipt, conn)

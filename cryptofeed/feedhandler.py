@@ -17,6 +17,7 @@ from cryptofeed.defines import L2_BOOK
 from cryptofeed.feed import Feed, _numbered
 from cryptofeed.log import configure_logging
 from cryptofeed.nbbo import NBBO
+from cryptofeed.backends.backend import finish_writers
 from cryptofeed.exchanges import EXCHANGE_MAP
 
 
@@ -156,8 +157,8 @@ class FeedHandler:
                 if shared:
                     # a shared writer outlives any one feed; release it once every feed has finished
                     await asyncio.wait(tasks)
-                    for backend in shared:
-                        await backend.stop()
+                    deadline = max((feed.shutdown_timeout for feed in self._known_feeds()), default=10.0)
+                    await finish_writers([backend for backend in shared if backend.release_owner()], deadline)
         finally:
             self._tg = None
             self._main_task = None

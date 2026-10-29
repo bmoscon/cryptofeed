@@ -62,6 +62,24 @@ class BackendStats:
         return self.written + self.conflicts
 
 
+async def finish_writers(backends: list, deadline: float):
+    if not backends:
+        return
+    try:
+        async with asyncio.timeout(deadline):
+            for backend in backends:
+                await backend.signal()
+
+            pending = [backend.worker for backend in backends if not backend.worker.done()]
+            if pending:
+                await asyncio.wait(pending)
+    except TimeoutError:
+        pending = [backend for backend in backends if not backend.worker.done()]
+        LOG.warning('backend flush exceeded the %.1fs shutdown deadline - cancelling %d writer(s)', deadline, len(pending))
+        for backend in pending:
+            backend.worker.cancel()
+
+
 class BackendQueue:
     hand_off = False
     max_depth = 10_000
@@ -72,6 +90,7 @@ class BackendQueue:
     retry = RetryPolicy()
     retryable_exceptions: tuple = ()
     SENTINEL_TIMEOUT = 1.0
+    CLOSE_TIMEOUT = 0.25
     BLOCK_POLL = 0.25
     FAILURE_LEVEL = logging.ERROR
 
@@ -122,15 +141,19 @@ class BackendQueue:
     def start_writer(self, tg: asyncio.TaskGroup, name: str, owner=None, shared: bool = False):
         self._init_state()
         self._owners += 1
-        if getattr(self, 'started', False):
+        worker = getattr(self, 'worker', None)
+
+        if worker is not None and not worker.done():
             if owner is not None and any(seen is owner for seen in self._owners_seen):
                 LOG.info('%s: one feed is using this backend instance for more than one channel', type(self).__name__)
             elif not self._shared:
                 LOG.warning('%s: a second feed is sharing this backend instance - if the first feed fails, the writer stops with it', type(self).__name__)
             self._owners_seen.append(owner)
             return None
-        self._owners_seen.append(owner)
+
+        self._owners_seen = [owner]
         self._shared = shared
+        self._orphaned = False
         self.queue = asyncio.Queue(maxsize=self.max_depth)
         self._stopping = asyncio.Event()
         self.worker = tg.create_task(self.writer(), name=name)
@@ -142,32 +165,39 @@ class BackendQueue:
         if stopping is not None:
             stopping.set()
 
-    async def stop(self):
+    def release_owner(self) -> bool:
         if not getattr(self, 'started', False):
             return False
-
         self._owners -= 1
         if self._owners_seen:
             self._owners_seen.pop()
-        if self._owners > 0:
-            return False
+        return self._owners <= 0
 
+    async def signal(self):
         self._stopping.set()
+        if self.worker.done():
+            return
         try:
             self.queue.put_nowait(SHUTDOWN_SENTINEL)
-            return True
         except asyncio.QueueFull:
-            pass
+            if self.overflow == 'block':
+                await self.queue.put(SHUTDOWN_SENTINEL)
+            else:
+                self.queue.get_nowait()
+                self._count_overflow_drop()
+                self.queue.put_nowait(SHUTDOWN_SENTINEL)
 
-        if self.overflow == 'block':
-            with suppress(TimeoutError):
-                await asyncio.wait_for(self.queue.put(SHUTDOWN_SENTINEL), self.SENTINEL_TIMEOUT)
-                return True
+    async def stop(self) -> bool:
+        if not self.release_owner():
+            return False
+        try:
+            async with asyncio.timeout(self.SENTINEL_TIMEOUT):
+                await self.signal()
+        except TimeoutError:
             LOG.warning('%s: did not drain within %.1fs of shutdown', type(self).__name__, self.SENTINEL_TIMEOUT)
-
-        self.queue.get_nowait()
-        self._count_overflow_drop()
-        self.queue.put_nowait(SHUTDOWN_SENTINEL)
+            self.queue.get_nowait()
+            self._count_overflow_drop()
+            self.queue.put_nowait(SHUTDOWN_SENTINEL)
         return True
 
     async def write(self, data):
@@ -222,12 +252,17 @@ class BackendQueue:
 
     async def writer(self):
         self.running = True
+        cancelled = False
+
         try:
             while self.running:
                 batch = await self._next_batch()
                 if batch:
                     await self._write_with_retry(batch)
             await self.flush(self.flush_deadline)
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
         finally:
             self.running = False
             abandoned = len(self._inflight)
@@ -242,7 +277,14 @@ class BackendQueue:
                 LOG.warning('%s: writer stopped with %d message(s) undelivered - counted as dropped',
                             type(self).__name__, abandoned)
             try:
-                await self.close()
+                if cancelled:
+                    async with asyncio.timeout(self.CLOSE_TIMEOUT):
+                        await self.close()
+                else:
+                    await self.close()
+            except TimeoutError:
+                self._last_error = 'close() timed out'
+                LOG.warning('%s: close() did not return within %.2fs of cancellation', type(self).__name__, self.CLOSE_TIMEOUT)
             except Exception as e:
                 self._last_error = f'{type(e).__name__}: {e}'
                 LOG.exception('%s: close() failed - data not yet flushed may be lost', type(self).__name__)
@@ -254,6 +296,7 @@ class BackendQueue:
             return []
 
         batch = [first]
+        self._inflight = batch
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.batch_interval
 
@@ -354,10 +397,11 @@ class BackendQueue:
                     await self._write_with_retry(batch)
                     del pending[:len(batch)]
         except TimeoutError:
-            self._inflight = []
-            self._dropped_failed += len(pending)
             LOG.warning('%s: flush deadline (%.1fs) hit - %d messages dropped',
                         type(self).__name__, deadline, len(pending))
+        finally:
+            self._inflight = []
+            self._dropped_failed += len(pending)
 
     async def connect(self):
         pass

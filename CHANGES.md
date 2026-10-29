@@ -27,6 +27,14 @@
 * Bugfix: book snapshots serialized with numeric_type=Decimal were not valid JSON. price keys now strings
 * Bugfix: Redis incorrectly ignored `socket` path
 * Update: expiry dates in normalized symbols now zero padded for every exchange (eg. BTC-USD-26H05)
+* Bugfix: the shutdown enforced on backend writers
+* Bugfix: cancelling a backend writer no longer loses messages from the stats counters
+* Bugfix: a backend instance can be reused across runs
+* Bugfix: BookMongo stores deltas as book documents and accept numeric_type=float
+* Bugfix: Redis Stream and ZSet backends retry only rejected commands
+* Bugfix: Postgres backends render dict and list values as JSON
+* Feature: Postgres backends define table layouts and provide create_table_sql()
+* Update: Postgres backends default numeric_type to Decimal, so NUMERIC columns receive exact values
 
 ### 3.0.1 (2026-09-27)
  * Update: Gate.io -> Gate rebranding

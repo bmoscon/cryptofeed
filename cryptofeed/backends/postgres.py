@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import re
+from decimal import Decimal
 from collections import defaultdict
 from datetime import datetime as dt, timezone
 
@@ -16,6 +17,7 @@ from cryptofeed.defines import CANDLES, FUNDING, OPEN_INTEREST, TICKER, TRADES, 
 
 
 _COMMON_FIELDS = frozenset({'exchange', 'symbol', 'timestamp', 'receipt_timestamp', 'receipt'})
+_COMMON_COLUMNS = (('timestamp', 'TIMESTAMPTZ'), ('receipt_timestamp', 'TIMESTAMPTZ'), ('exchange', 'TEXT'), ('symbol', 'TEXT'))
 _REJECTED = (asyncpg.exceptions.DataError, asyncpg.exceptions.IntegrityConstraintViolationError)
 
 
@@ -30,6 +32,8 @@ def _render(value):
         return None
     if isinstance(value, bool):
         return 'true' if value else 'false'
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
     return str(value)
 
 
@@ -49,8 +53,14 @@ def _ident(data: dict) -> str:
 class PostgresCallback(BackendQueue):
     retryable_exceptions = (OSError, asyncpg.PostgresConnectionError, asyncpg.OperatorInterventionError)
     fields = frozenset()
+    COLUMNS = (('data', 'JSONB'),)
 
-    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, custom_columns: dict = None, none_to=None, numeric_type=float, **kwargs):
+    @classmethod
+    def create_table_sql(cls, table: str = None) -> str:
+        columns = ', '.join(f'"{name}" {sql_type}' for name, sql_type in _COMMON_COLUMNS + cls.COLUMNS)
+        return f'CREATE TABLE IF NOT EXISTS {table or cls.default_table} (id serial PRIMARY KEY, {columns})'
+
+    def __init__(self, host='127.0.0.1', user=None, pw=None, db=None, port=None, table=None, custom_columns: dict = None, none_to=None, numeric_type=Decimal, **kwargs):
         """
         host: str
             Database host address
@@ -68,6 +78,8 @@ class PostgresCallback(BackendQueue):
             Note: to store BOOK data in a JSONB column, include a 'data' field, e.g. {'symbol': 'symbol', 'data': 'json_data'}
             Both halves are checked when the backend first connects: an unknown column name
             or a field this callback never produces is an error, not a column of NULLs.
+        numeric_type: type
+            cast numerics to this value. Decimal (default) for NUMERIC columns
         """
         super().__init__(**kwargs)
         self.pool = None
@@ -189,6 +201,7 @@ class PostgresCallback(BackendQueue):
 
 class TradePostgres(PostgresCallback, BackendCallback):
     default_table = TRADES
+    COLUMNS = (('side', 'TEXT'), ('amount', 'NUMERIC'), ('price', 'NUMERIC'), ('trade_id', 'TEXT'), ('order_type', 'TEXT'))
     fields = _COMMON_FIELDS | {'side', 'amount', 'price', 'id', 'type'}
 
     def _default_row(self, data, ts, rts):
@@ -197,6 +210,7 @@ class TradePostgres(PostgresCallback, BackendCallback):
 
 class FundingPostgres(PostgresCallback, BackendCallback):
     default_table = FUNDING
+    COLUMNS = (('mark_price', 'NUMERIC'), ('rate', 'NUMERIC'), ('next_funding_time', 'TIMESTAMPTZ'), ('predicted_rate', 'NUMERIC'))
     fields = _COMMON_FIELDS | {'mark_price', 'rate', 'next_funding_time', 'predicted_rate'}
 
     def _prepare(self, data):
@@ -208,6 +222,7 @@ class FundingPostgres(PostgresCallback, BackendCallback):
 
 class TickerPostgres(PostgresCallback, BackendCallback):
     default_table = TICKER
+    COLUMNS = (('bid', 'NUMERIC'), ('ask', 'NUMERIC'))
     fields = _COMMON_FIELDS | {'bid', 'ask'}
 
     def _default_row(self, data, ts, rts):
@@ -216,6 +231,7 @@ class TickerPostgres(PostgresCallback, BackendCallback):
 
 class OpenInterestPostgres(PostgresCallback, BackendCallback):
     default_table = OPEN_INTEREST
+    COLUMNS = (('open_interest', 'NUMERIC'),)
     fields = _COMMON_FIELDS | {'open_interest'}
 
     def _default_row(self, data, ts, rts):
@@ -224,6 +240,7 @@ class OpenInterestPostgres(PostgresCallback, BackendCallback):
 
 class IndexPostgres(PostgresCallback, BackendCallback):
     default_table = INDEX
+    COLUMNS = (('price', 'NUMERIC'),)
     fields = _COMMON_FIELDS | {'price'}
 
     def _default_row(self, data, ts, rts):
@@ -232,6 +249,7 @@ class IndexPostgres(PostgresCallback, BackendCallback):
 
 class LiquidationsPostgres(PostgresCallback, BackendCallback):
     default_table = LIQUIDATIONS
+    COLUMNS = (('side', 'TEXT'), ('quantity', 'NUMERIC'), ('price', 'NUMERIC'), ('trade_id', 'TEXT'), ('status', 'TEXT'))
     fields = _COMMON_FIELDS | {'side', 'quantity', 'price', 'id', 'status'}
 
     def _default_row(self, data, ts, rts):
@@ -240,6 +258,7 @@ class LiquidationsPostgres(PostgresCallback, BackendCallback):
 
 class BookPostgres(PostgresCallback, BackendBookCallback):
     default_table = 'book'
+    COLUMNS = (('data', 'JSONB'),)
     fields = _COMMON_FIELDS | {'data', 'book', 'delta'}
 
     def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
@@ -261,6 +280,7 @@ class BookPostgres(PostgresCallback, BackendBookCallback):
 
 class CandlesPostgres(PostgresCallback, BackendCallback):
     default_table = CANDLES
+    COLUMNS = (('candle_start', 'TIMESTAMPTZ'), ('candle_stop', 'TIMESTAMPTZ'), ('interval', 'TEXT'), ('trades', 'INTEGER'), ('open', 'NUMERIC'), ('close', 'NUMERIC'), ('high', 'NUMERIC'), ('low', 'NUMERIC'), ('volume', 'NUMERIC'), ('closed', 'BOOLEAN'))
     fields = _COMMON_FIELDS | {'start', 'stop', 'interval', 'trades', 'open', 'close', 'high', 'low', 'volume', 'closed'}
 
     def _prepare(self, data):
