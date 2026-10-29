@@ -117,10 +117,14 @@ class Deribit(Feed):
             await self.callback(TRADES, t, timestamp)
 
             if 'liquidation' in trade:
+                side = BUY if trade['direction'] == 'buy' else SELL
+                if trade['liquidation'] == 'M':
+                    # the maker was liquidated, on the other side of the taker's direction
+                    side = SELL if side == BUY else BUY
                 liq = Liquidation(
                     self.id,
                     self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
-                    BUY if trade['direction'] == 'buy' else SELL,
+                    side,
                     Decimal(trade['amount']),
                     Decimal(trade['price']),
                     trade['trade_id'],
