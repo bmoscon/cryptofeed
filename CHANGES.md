@@ -1,5 +1,8 @@
 ## Changelog
 
+### 3.0.3
+* Bugfix: OKX liquidations no longer replay the last 100 records (hours old) on start and after a poller restart
+
 ### 3.0.2 (2026-10-29)
 * Bugfix: Bybit liquidation side is now the side of the liquidation order (SELL when a long is liquidated), as for Binance and OKX
 * Bugfix: Deribit liquidations flagged `M` (maker liquidated) reported the taker's side

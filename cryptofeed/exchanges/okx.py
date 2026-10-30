@@ -112,7 +112,7 @@ class OKX(Feed):
         return ret, info
 
     async def _liquidations(self, pairs: list):
-        last_update = defaultdict(dict)
+        last_update = self._last_liquidation
         """
         for PERP liquidations, the following arguments are required: uly, state
         for FUTURES liquidations, the following arguments are required: uly, state, alias
@@ -131,15 +131,16 @@ class OKX(Feed):
                     data = await self.http_conn.read(self.rest_endpoints[0].route('liquidations', sandbox=self.sandbox).format(instrument_type, status, uly))
                     data = json.loads(data, parse_float=Decimal)
                     timestamp = time.time()
+                    details = data['data'][0]['details'] if data['data'] else []
+                    if status not in last_update[pair]:
+                        last_update[pair][status] = details[0] if details else None
+                        continue
                     if not data['data']:
                         LOG.info('%s: no liquidation data received for %s @ %s', self.id, pair, self.rest_endpoints[0].route('liquidations', sandbox=self.sandbox).format(instrument_type, status, uly))
                         continue
-                    if len(data['data'][0]['details']) == 0 or (len(data['data'][0]['details']) > 0 and last_update.get(pair) == data['data'][0]['details'][0]):
-                        continue
-                    for entry in data['data'][0]['details']:
-                        if pair in last_update:
-                            if entry == last_update[pair].get(status):
-                                break
+                    for entry in details:
+                        if entry == last_update[pair][status]:
+                            break
 
                         liq = Liquidation(
                             self.id,
@@ -153,12 +154,14 @@ class OKX(Feed):
                             raw=data
                         )
                         await self.callback(LIQUIDATIONS, liq, timestamp)
-                    last_update[pair][status] = data['data'][0]['details'][0]
+                    if details:
+                        last_update[pair][status] = details[0]
                 await asyncio.sleep(0.1)
             await asyncio.sleep(60)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._last_liquidation = defaultdict(dict)
         self.__reset()
 
     def __reset(self):
