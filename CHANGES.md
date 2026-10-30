@@ -1,6 +1,6 @@
 ## Changelog
 
-### 3.0.2
+### 3.0.2 (2026-10-29)
 * Bugfix: Bybit liquidation side is now the side of the liquidation order (SELL when a long is liquidated), as for Binance and OKX
 * Bugfix: Deribit liquidations flagged `M` (maker liquidated) reported the taker's side
 * Bugfix: Bybit open interest now uses `singleOpenInterest`; `openInterest` counts both sides (2x other exchanges)
