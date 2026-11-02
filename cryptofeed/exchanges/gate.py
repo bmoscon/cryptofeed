@@ -292,7 +292,7 @@ class Gate(SnapshotSync, Feed):
             Decimal(msg['result']['c']),
             Decimal(msg['result']['h']),
             Decimal(msg['result']['l']),
-            Decimal(msg['result']['v']),
+            Decimal(msg['result']['a']),
             bool(msg['result'].get('w')),
             float(msg['time']),
             raw=msg
