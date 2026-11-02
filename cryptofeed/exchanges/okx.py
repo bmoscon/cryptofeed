@@ -116,7 +116,10 @@ class OKX(Feed):
                 info['tick_size'][s.normalized] = e['tickSz']
                 info['instrument_type'][s.normalized] = stype
                 if e.get('ctVal') and e.get('ctMult'):
+                    # the size is in ctValCcy - the base coin on linear swaps, futures and options, USD on inverse
+                    # swaps and futures (ctType says 'inverse' on BTC-settled options whose value is still in BTC)
                     info['contract_size'][s.normalized] = Decimal(e['ctVal']) * Decimal(e['ctMult'])
+                    info['contract_currency'][s.normalized] = e['ctValCcy']
 
         return ret, info
 

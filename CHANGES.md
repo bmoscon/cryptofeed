@@ -3,7 +3,7 @@
 ### 3.0.3
 * Bugfix: Duplication issues in NBBO
 * Update: `liquidation_history` feed option, like `trade_history` and `candle_history` - deliver the historical liquidations sent on initial subscribe
-* Update: OKX `info()` has `contract_size` for swaps, futures and options; their sizes are in contracts
+* Update: OKX `info()` has `contract_size` and `contract_currency` for swaps, futures and options; their sizes are in contracts, of that many units of that currency (the base coin on linear contracts and options, USD on inverse swaps and futures)
 * Bugfix: OKX candles have `timestamp` None (exchange sends no timestamp), and monthly (`1M`) candles stop at the next calendar month (UTC+8) instead of a fixed 2,630,000 s after their start
 * Update: OKX TRADES subscribes the `trades-all` channel (one Trade per fill with its own id).
 * Bugfix: OKX no longer subscribes spot and option symbols to funding-rate, or spot symbols to open-interest, which the venue refused with error 60018
