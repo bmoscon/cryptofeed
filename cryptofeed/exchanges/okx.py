@@ -115,6 +115,8 @@ class OKX(Feed):
                 ret[s.normalized] = e['instId']
                 info['tick_size'][s.normalized] = e['tickSz']
                 info['instrument_type'][s.normalized] = stype
+                if e.get('ctVal') and e.get('ctMult'):
+                    info['contract_size'][s.normalized] = Decimal(e['ctVal']) * Decimal(e['ctMult'])
 
         return ret, info
 
