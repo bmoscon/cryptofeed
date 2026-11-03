@@ -9,6 +9,7 @@
 * Bugfix: OKX no longer subscribes spot and option symbols to funding-rate, or spot symbols to open-interest, which the venue refused with error 60018
 * Bugfix: OKX and Crypto.com skip a ticker update with an empty bid or ask side instead of reporting a price of 0
 * Update: `OKX.instrument_type()` removed (unused)
+* Bugfix: Gate candle volume is now the base currency amount (`a`), not the quote currency volume (`v`)
 
 ### 3.0.2 (2026-10-29)
 * Bugfix: Bybit liquidation side is now the side of the liquidation order (SELL when a long is liquidated), as for Binance and OKX
