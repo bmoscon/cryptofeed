@@ -95,6 +95,14 @@ jobs:
         image: questdb/questdb:8.2.1
         ports: ['9000:9000']
 
+      clickhouse:
+        image: clickhouse/clickhouse-server:26.8
+        env:
+          CLICKHOUSE_USER: cryptofeed
+          CLICKHOUSE_PASSWORD: cryptofeed
+          CLICKHOUSE_DB: cryptofeed
+        ports: ['8123:8123']
+
     steps:
       - uses: actions/checkout@v7
         with:
@@ -112,7 +120,7 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Wait for InfluxDB and QuestDB
+      - name: Wait for InfluxDB, QuestDB and ClickHouse
         run: |
           wait_for() {
             for _ in $(seq 1 60); do
@@ -127,6 +135,7 @@ jobs:
           }
           wait_for influxdb 'http://localhost:8086/health'
           wait_for questdb 'http://localhost:9000/exec?query=select%201'
+          wait_for clickhouse 'http://localhost:8123/ping'
 
       - name: Run the backend suite
         run: uv run pytest tests/backend

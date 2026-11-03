@@ -31,6 +31,7 @@ SERVICES = {
     'kafka': ('KAFKA_HOST', 'KAFKA_PORT', '127.0.0.1', 9092),
     'influxdb': ('INFLUXDB_HOST', 'INFLUXDB_PORT', '127.0.0.1', 8086),
     'questdb': ('QUESTDB_HOST', 'QUESTDB_PORT', '127.0.0.1', 9000),
+    'clickhouse': ('CLICKHOUSE_HOST', 'CLICKHOUSE_PORT', '127.0.0.1', 8123),
 }
 
 

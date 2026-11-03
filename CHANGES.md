@@ -1,5 +1,8 @@
 ## Changelog
 
+### 3.0.4
+* Feature: ClickHouse support
+
 ### 3.0.3 (2026-11-02)
 * Bugfix: Duplication issues in NBBO
 * Update: `liquidation_history` feed option, like `trade_history` and `candle_history` - deliver the historical liquidations sent on initial subscribe

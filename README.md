@@ -139,6 +139,7 @@ Supported Backends:
 * Kafka
 * PostgreSQL
 * [QuestDB](https://questdb.io/)
+* [ClickHouse](https://clickhouse.com/)
 
 
 ## Data Capture and Replay

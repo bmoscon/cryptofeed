@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cryptofeed"
-version = "3.0.3"
+version = "3.0.4"
 description = "Cryptocurrency Exchange Websocket Data Feed Handler"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
@@ -50,6 +50,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+clickhouse = ["clickhouse-connect[async]>=1.4.0"]
 kafka = ["aiokafka>=0.7.0"]
 mongo = ["pymongo>=4.9"]
 postgres = ["asyncpg"]
@@ -57,6 +58,7 @@ redis = ["hiredis", "redis>=4.5.1"]
 zmq = ["pyzmq"]
 all = [
     "aiokafka>=0.7.0",
+    "clickhouse-connect[async]>=1.4.0",
     "pymongo>=4.9",
     "asyncpg",
     "hiredis",
@@ -72,6 +74,7 @@ Homepage = "https://github.com/bmoscon/cryptofeed"
 dev = [
     "aiokafka>=0.13.0",
     "asyncpg>=0.31.0",
+    "clickhouse-connect[async]>=1.4.0",
     "pymongo>=4.9",
     "pytest",
     "pytest-asyncio",
