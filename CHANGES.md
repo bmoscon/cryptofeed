@@ -1,6 +1,6 @@
 ## Changelog
 
-### 3.0.3
+### 3.0.3 (2026-11-02)
 * Bugfix: Duplication issues in NBBO
 * Update: `liquidation_history` feed option, like `trade_history` and `candle_history` - deliver the historical liquidations sent on initial subscribe
 * Update: OKX `info()` has `contract_size` and `contract_currency` for swaps, futures and options; their sizes are in contracts, of that many units of that currency (the base coin on linear contracts and options, USD on inverse swaps and futures)
@@ -10,6 +10,7 @@
 * Bugfix: OKX and Crypto.com skip a ticker update with an empty bid or ask side instead of reporting a price of 0
 * Update: `OKX.instrument_type()` removed (unused)
 * Bugfix: Gate candle volume is now the base currency amount (`a`), not the quote currency volume (`v`)
+* Update: musllinux wheels support
 
 ### 3.0.2 (2026-10-29)
 * Bugfix: Bybit liquidation side is now the side of the liquidation order (SELL when a long is liquidated), as for Binance and OKX

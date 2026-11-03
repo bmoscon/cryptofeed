@@ -97,7 +97,6 @@ define-macros = [["CYTHON_WITHOUT_ASSERTIONS", ""]]
 
 [tool.cibuildwheel]
 build = "cp313-* cp314-* cp314t-* cp315-* cp315t-*"
-skip = "*musllinux*"
 test-command = "python -c \"import sys, sysconfig; from cryptofeed import FeedHandler; from cryptofeed.types import COMPILED_WITH_ASSERTIONS; assert COMPILED_WITH_ASSERTIONS is False; assert not (sysconfig.get_config_var('Py_GIL_DISABLED') and sys._is_gil_enabled()), 'importing cryptofeed re-enabled the GIL'\""
 
 [tool.cibuildwheel.linux]
