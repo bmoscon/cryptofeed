@@ -166,10 +166,13 @@ class Bitget(Feed):
         derivatives send the same fields plus fundingRate, nextFundingTime, markPrice, indexPrice and
         holdingAmount (open interest), which is why funding, index and open interest ride this channel
         '''
+        # four channels ride this stream, so each one checks the instrument against its own subscription
+        instrument = f"{msg['arg']['instId']}_{msg['arg']['instType']}"
+        wanted = {chan: self.subscribed(chan, instrument) for chan in (TICKER, INDEX, OPEN_INTEREST, FUNDING)}
         for entry in msg['data']:
             ts = self.timestamp_normalize(entry['ts'])
 
-            if entry['bidPr'] and entry['askPr']:
+            if wanted[TICKER] and entry['bidPr'] and entry['askPr']:
                 t = Ticker(
                     self.id,
                     symbol,
@@ -180,7 +183,7 @@ class Bitget(Feed):
                 )
                 await self.callback(TICKER, t, timestamp)
 
-            if entry.get('indexPrice'):
+            if wanted[INDEX] and entry.get('indexPrice'):
                 i = Index(
                     self.id,
                     symbol,
@@ -190,7 +193,7 @@ class Bitget(Feed):
                 )
                 await self.callback(INDEX, i, timestamp)
 
-            if entry.get('holdingAmount'):
+            if wanted[OPEN_INTEREST] and entry.get('holdingAmount'):
                 o = OpenInterest(
                     self.id,
                     symbol,
@@ -202,7 +205,7 @@ class Bitget(Feed):
 
             # delivery contracts report a zeroed funding rate and no next funding time
             next_funding = entry.get('nextFundingTime')
-            if next_funding and next_funding != '0':
+            if wanted[FUNDING] and next_funding and next_funding != '0':
                 f = Funding(
                     self.id,
                     symbol,

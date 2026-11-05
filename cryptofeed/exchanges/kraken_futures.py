@@ -245,7 +245,8 @@ class KrakenFutures(Feed):
         on linear contracts, base currency on inverse ones). The relative_* fields are fractional hourly rate
         Kraken displays as the funding rate, so they populate rate and predicted_rate
         """
-        if 'funding_rate' in msg or 'relative_funding_rate' in msg:
+        product = msg['product_id'].upper()
+        if self.subscribed(FUNDING, product) and ('funding_rate' in msg or 'relative_funding_rate' in msg):
             rate = msg.get('relative_funding_rate')
             predicted = msg.get('relative_funding_rate_prediction', None if 'funding_rate_prediction' in msg else 0)
             mark = msg.get('markPrice')
@@ -262,6 +263,8 @@ class KrakenFutures(Feed):
             )
             await self.callback(FUNDING, f, timestamp)
 
+        if not self.subscribed(OPEN_INTEREST, product):
+            return
         oi = msg['openInterest']
         if pair in self._open_interest_cache and oi == self._open_interest_cache[pair]:
             return

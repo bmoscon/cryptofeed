@@ -124,6 +124,7 @@ class Feed(Exchange):
         self.timeout = timeout
         self.timeout_interval = timeout_interval
         self.subscription = defaultdict(list)
+        self._channel_symbols = {}
         self.checksum_validation = (self.provides_checksum if checksum_validation is None else checksum_validation)
         self.cross_check = cross_check
         self._crossed_run = {}
@@ -217,6 +218,7 @@ class Feed(Exchange):
 
     def _build_subscription(self):
         self._ensure_symbol_mapping()
+        self._channel_symbols = {}
 
         if self._init_subscription is not None:
             self.subscription = {}
@@ -224,8 +226,10 @@ class Feed(Exchange):
             for channel in self._init_subscription:
                 chan = self.std_channel_to_exchange(channel)
                 bucket = self.subscription.setdefault(chan, [])
+                wanted = self._channel_symbols.setdefault(channel, set())
                 for symbol in self._init_subscription[channel]:
                     exchange_symbol = self.std_symbol_to_exchange_symbol(symbol)
+                    wanted.add(exchange_symbol)
                     if exchange_symbol not in seen[chan]:
                         seen[chan].add(exchange_symbol)
                         bucket.append(exchange_symbol)
@@ -234,8 +238,12 @@ class Feed(Exchange):
             symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in self._init_symbols]
             channels = sorted(set([self.std_channel_to_exchange(chan) for chan in self._init_channels]))
             self.subscription = {chan: symbols for chan in channels}
+            self._channel_symbols = {channel: set(symbols) for channel in self._init_channels}
 
         self._subscription_resolved()
+
+    def subscribed(self, channel: str, exchange_symbol: str) -> bool:
+        return exchange_symbol in self._channel_symbols.get(channel, ())
 
     def _subscription_resolved(self):
         pass

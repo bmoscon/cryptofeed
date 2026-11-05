@@ -21,6 +21,7 @@ async def test_liquidation_side_is_the_side_of_the_liquidated_order(flag, direct
     feed = object.__new__(Deribit)
     feed.exchange_symbol_to_std_symbol = lambda symbol: 'BTC-USD-PERP'
     feed.callback = AsyncMock()
+    feed.subscribed = lambda channel, instrument: True
     trade = {
         'trade_seq': 306123136,
         'trade_id': '452479061',

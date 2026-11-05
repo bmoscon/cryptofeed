@@ -336,7 +336,7 @@ class GateFutures(Gate):
         """
         ts = msg['time_ms'] / 1000
         for entry in msg['result']:
-            if "total_size" in entry:
+            if "total_size" in entry and self.subscribed(OPEN_INTEREST, entry['contract']):
                 oi = OpenInterest(
                     self.id,
                     self.exchange_symbol_to_std_symbol(entry['contract']),
@@ -346,7 +346,7 @@ class GateFutures(Gate):
                 )
                 await self.callback(OPEN_INTEREST, oi, timestamp)
 
-            if "index_price" in entry:
+            if "index_price" in entry and self.subscribed(INDEX, entry['contract']):
                 i = Index(
                     self.id,
                     self.exchange_symbol_to_std_symbol(entry['contract']),
@@ -356,7 +356,7 @@ class GateFutures(Gate):
                 )
                 await self.callback(INDEX, i, timestamp)
 
-            if "funding_rate" in entry:
+            if "funding_rate" in entry and self.subscribed(FUNDING, entry['contract']):
                 f = Funding(
                     self.id,
                     self.exchange_symbol_to_std_symbol(entry['contract']),

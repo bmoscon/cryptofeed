@@ -197,10 +197,12 @@ class CryptoDotCom(Feed):
             ]
         }
         '''
-        symbol = self.exchange_symbol_to_std_symbol(msg['instrument_name'])
-        wants_ticker = self.websocket_channels[TICKER] in conn.subscription
+        instrument = msg['instrument_name']
+        symbol = self.exchange_symbol_to_std_symbol(instrument)
+        # open interest rides the ticker stream, so each channel checks the instrument against its own symbols
+        wants_ticker = instrument in conn.subscription.get(self.websocket_channels[TICKER], [])
         # spot instruments report oi as 0, so only publish it where it means something
-        wants_oi = self.websocket_channels[OPEN_INTEREST] in conn.subscription and str_to_symbol(symbol).type != SPOT
+        wants_oi = instrument in conn.subscription.get(self.websocket_channels[OPEN_INTEREST], []) and str_to_symbol(symbol).type != SPOT
 
         for entry in msg['data']:
             ts = self.timestamp_normalize(entry['t'])

@@ -104,19 +104,20 @@ class Deribit(Feed):
         }
         """
         for trade in msg["params"]["data"]:
-            t = Trade(
-                self.id,
-                self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
-                BUY if trade['direction'] == 'buy' else SELL,
-                Decimal(trade['amount']),
-                Decimal(trade['price']),
-                self.timestamp_normalize(trade['timestamp']),
-                id=trade['trade_id'],
-                raw=trade
-            )
-            await self.callback(TRADES, t, timestamp)
+            if self.subscribed(TRADES, trade["instrument_name"]):
+                t = Trade(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(trade["instrument_name"]),
+                    BUY if trade['direction'] == 'buy' else SELL,
+                    Decimal(trade['amount']),
+                    Decimal(trade['price']),
+                    self.timestamp_normalize(trade['timestamp']),
+                    id=trade['trade_id'],
+                    raw=trade
+                )
+                await self.callback(TRADES, t, timestamp)
 
-            if 'liquidation' in trade:
+            if 'liquidation' in trade and self.subscribed(LIQUIDATIONS, trade["instrument_name"]):
                 side = BUY if trade['direction'] == 'buy' else SELL
                 if trade['liquidation'] == 'M':
                     # the maker was liquidated, on the other side of the taker's direction
@@ -166,19 +167,21 @@ class Deribit(Feed):
             "method" : "subscription",
             "jsonrpc" : "2.0"}
         '''
-        pair = self.exchange_symbol_to_std_symbol(msg['params']['data']['instrument_name'])
+        instrument = msg['params']['data']['instrument_name']
+        pair = self.exchange_symbol_to_std_symbol(instrument)
         ts = self.timestamp_normalize(msg['params']['data']['timestamp'])
-        t = Ticker(
-            self.id,
-            pair,
-            Decimal(msg["params"]["data"]['best_bid_price']),
-            Decimal(msg["params"]["data"]['best_ask_price']),
-            ts,
-            raw=msg
-        )
-        await self.callback(TICKER, t, timestamp)
+        if self.subscribed(TICKER, instrument):
+            t = Ticker(
+                self.id,
+                pair,
+                Decimal(msg["params"]["data"]['best_bid_price']),
+                Decimal(msg["params"]["data"]['best_ask_price']),
+                ts,
+                raw=msg
+            )
+            await self.callback(TICKER, t, timestamp)
 
-        if "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
+        if self.subscribed(FUNDING, instrument) and "current_funding" in msg["params"]["data"] and "funding_8h" in msg["params"]["data"]:
             f = Funding(
                 self.id,
                 pair,
@@ -192,7 +195,7 @@ class Deribit(Feed):
 
         # spot instruments have no open interest
         oi = msg['params']['data'].get('open_interest')
-        if oi is None or (pair in self._open_interest_cache and oi == self._open_interest_cache[pair]):
+        if not self.subscribed(OPEN_INTEREST, instrument) or oi is None or (pair in self._open_interest_cache and oi == self._open_interest_cache[pair]):
             return
         self._open_interest_cache[pair] = oi
         o = OpenInterest(
