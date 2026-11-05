@@ -2,6 +2,7 @@
 
 ### 3.0.4
 * Feature: ClickHouse support
+* Bugfix: `import cryptofeed` and `FeedHandler.run()` work on Windows again (no SIGHUP, no `add_signal_handler` on Windows event loops)
 * Bugfix: Upbit, Bitget, Crypto.com, Deribit, Gate Futures and Kraken Futures no longer emits book or ticker updates for symbols that were not subscribed to that channel
 
 ### 3.0.3 (2026-11-02)

@@ -6,9 +6,9 @@ associated with this software.
 '''
 import asyncio
 import logging
+import signal
 from contextlib import suppress
 from difflib import get_close_matches
-from signal import SIGABRT, SIGINT, SIGTERM, SIGHUP
 from typing import List
 
 
@@ -21,7 +21,8 @@ from cryptofeed.backends.backend import finish_writers
 from cryptofeed.exchanges import EXCHANGE_MAP
 
 
-SIGNALS = (SIGABRT, SIGINT, SIGTERM, SIGHUP)
+# SIGHUP does not exist on Windows
+SIGNALS = tuple(getattr(signal, name) for name in ('SIGABRT', 'SIGINT', 'SIGTERM', 'SIGHUP') if hasattr(signal, name))
 LOG = logging.getLogger(__name__)
 
 
@@ -56,6 +57,7 @@ class FeedHandler:
         self._tg = None
         self._main_task = None
         self._signals_installed = False
+        self._prev_handlers = {}
 
         if not self.config.log.disabled:
             configure_logging(filename=self.config.log.filename or None, level=self.config.log.level or 'WARNING', stream=True)
@@ -259,8 +261,13 @@ class FeedHandler:
             self._stop_event.set()
 
     def _install_signal_handlers(self, loop):
+        self._prev_handlers = {}
         for sig in SIGNALS:
-            loop.add_signal_handler(sig, self._on_signal)
+            try:
+                loop.add_signal_handler(sig, self._on_signal)
+            except NotImplementedError:
+                # Windows event loops have no add_signal_handler: install a plain handler that hops onto the loop
+                self._prev_handlers[sig] = signal.signal(sig, lambda *_: loop.call_soon_threadsafe(self._on_signal))
         self._signals_installed = True
 
     def _remove_signal_handlers(self, loop):
@@ -268,5 +275,9 @@ class FeedHandler:
             return
         for sig in SIGNALS:
             with suppress(Exception):
-                loop.remove_signal_handler(sig)
+                if sig in self._prev_handlers:
+                    signal.signal(sig, self._prev_handlers[sig])
+                else:
+                    loop.remove_signal_handler(sig)
+        self._prev_handlers = {}
         self._signals_installed = False
