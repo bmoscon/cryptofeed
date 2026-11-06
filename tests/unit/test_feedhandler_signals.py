@@ -13,7 +13,10 @@ def test_missing_sighup_import(monkeypatch):
     monkeypatch.delattr(signal, 'SIGHUP', raising=False)
     try:
         reloaded = importlib.reload(feedhandler)
-        assert set(reloaded.SIGNALS) == {signal.SIGABRT, signal.SIGINT, signal.SIGTERM}
+        expected = {signal.SIGABRT, signal.SIGINT, signal.SIGTERM}
+        if hasattr(signal, 'SIGBREAK'):
+            expected.add(signal.SIGBREAK)
+        assert set(reloaded.SIGNALS) == expected
     finally:
         monkeypatch.undo()
         importlib.reload(feedhandler)

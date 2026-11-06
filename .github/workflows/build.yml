@@ -51,11 +51,13 @@ jobs:
           path: dist/
 
   tests:
-    runs-on: ubuntu-latest
+    name: tests ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ['3.13', '3.14', '3.14t', '3.15', '3.15t']
     env:
       # aiokafka has no free-threaded wheel and re-enables the GIL on import so fallback to pure python
