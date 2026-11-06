@@ -296,7 +296,7 @@ class PcapRecorder:
 
         tmp = path + '.tmp'
         try:
-            with open(tmp, 'w') as fp:
+            with open(tmp, 'w', encoding='utf-8') as fp:
                 fp.write(json.dumps(doc))
             os.replace(tmp, path)
         except (OSError, TypeError, ValueError):

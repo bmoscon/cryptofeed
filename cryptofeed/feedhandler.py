@@ -22,7 +22,7 @@ from cryptofeed.exchanges import EXCHANGE_MAP
 
 
 # SIGHUP does not exist on Windows
-SIGNALS = tuple(getattr(signal, name) for name in ('SIGABRT', 'SIGINT', 'SIGTERM', 'SIGHUP') if hasattr(signal, name))
+SIGNALS = tuple(getattr(signal, name) for name in ('SIGABRT', 'SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK') if hasattr(signal, name))
 LOG = logging.getLogger(__name__)
 
 

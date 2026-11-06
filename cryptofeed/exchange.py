@@ -165,7 +165,7 @@ class Exchange:
     @classmethod
     def _load_symbol_cache(cls, ttl: float) -> bool:
         try:
-            with open(cls._symbol_cache_path(cls.id), 'r') as fp:
+            with open(cls._symbol_cache_path(cls.id), 'r', encoding='utf-8') as fp:
                 cached = json.loads(fp.read(), parse_float=Decimal)
             if time.time() - float(cached['timestamp']) > ttl:
                 return False
@@ -179,7 +179,7 @@ class Exchange:
         path = cls._symbol_cache_path(cls.id)
         try:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, 'w') as fp:
+            with open(path, 'w', encoding='utf-8') as fp:
                 fp.write(json.dumps({'timestamp': time.time(), 'symbols': syms, 'info': info}))
         except (OSError, TypeError, ValueError):
             LOG.warning('%s: unable to write symbol cache', cls.id, exc_info=True)

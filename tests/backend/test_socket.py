@@ -7,6 +7,7 @@ associated with this software.
 import asyncio
 import os
 import shutil
+import sys
 import tempfile
 
 import pytest
@@ -125,6 +126,7 @@ async def test_tcp_write(tcp, backend_class, kind):
     assert {message['type'] for message in messages} == {backend.key}
 
 
+@pytest.mark.skipif(sys.platform == 'win32', reason='no Unix domain sockets on Windows')
 async def test_uds_write(uds):
     addr, port, listener = uds
     data = samples('trades')
@@ -163,3 +165,9 @@ async def test_udp_chunks_oversized_messages(udp):
 async def test_unknown_protocol_is_rejected():
     with pytest.raises(ValueError, match='Invalid protocol'):
         TradeSocket('http://127.0.0.1', port=8080)
+
+
+def test_uds_is_rejected_on_windows(monkeypatch):
+    monkeypatch.setattr(sys, 'platform', 'win32')
+    with pytest.raises(ValueError, match='not supported on Windows'):
+        TradeSocket('uds:///tmp/cf.uds')

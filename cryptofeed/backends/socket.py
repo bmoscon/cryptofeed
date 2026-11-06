@@ -8,6 +8,7 @@ from collections import defaultdict
 from contextlib import suppress
 import asyncio
 import logging
+import sys
 
 from cryptofeed import _json as json
 
@@ -70,6 +71,8 @@ class SocketCallback(BackendQueue):
         self.conn_type = addr[:6]
         if self.conn_type not in {'tcp://', 'uds://', 'udp://'}:
             raise ValueError("Invalid protocol specified for SocketCallback")
+        if self.conn_type == 'uds://' and sys.platform == 'win32':
+            raise ValueError('uds:// is not supported on Windows, use tcp:// or udp://')
         if mtu < self.MIN_MTU:
             raise ValueError(f'mtu must be at least {self.MIN_MTU} bytes, not {mtu}')
         self.conn = None
