@@ -2,6 +2,7 @@
 
 ### 3.0.5
 * Bugfix: Remove withdrawn venue quotes from NBBO when an order-book side becomes empty
+* Bugfix: Phemex `1M`, `1Q` and `1Y` candles subscribed to the next shorter interval because the weekly one was missing from the list; `1w` is now supported
 
 ### 3.0.4 (2026-11-06)
 * Feature: ClickHouse support
