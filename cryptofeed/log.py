@@ -17,7 +17,7 @@ def configure_logging(filename: str = None, level='WARNING', stream: bool = Fals
         return logger
     logger.setLevel(level.upper() if isinstance(level, str) else level)
     if filename:
-        fh = RotatingFileHandler(filename, maxBytes=max_bytes, backupCount=backup_count)
+        fh = RotatingFileHandler(filename, maxBytes=max_bytes, backupCount=backup_count, encoding='utf-8')
         fh.setFormatter(FORMAT)
         logger.addHandler(fh)
     if stream:

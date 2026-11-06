@@ -31,7 +31,7 @@ def capture_path(exchange: str) -> str:
 
 
 def read_metadata(exchange: str) -> dict:
-    with open(metadata_path(capture_path(exchange))) as fp:
+    with open(metadata_path(capture_path(exchange)), encoding='utf-8') as fp:
         return json.load(fp)
 
 
@@ -40,7 +40,7 @@ def feed_entry(exchange: str) -> dict:
 
 
 def expected_callbacks() -> dict:
-    with open(os.path.join(sample_data(), 'expected_callbacks.json')) as fp:
+    with open(os.path.join(sample_data(), 'expected_callbacks.json'), encoding='utf-8') as fp:
         return json.load(fp)
 
 

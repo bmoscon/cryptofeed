@@ -55,7 +55,7 @@ class Config:
 
         if isinstance(config, str):
             if config and os.path.exists(config):
-                with open(config) as fp:
+                with open(config, encoding='utf-8') as fp:
                     self.config = _merge(_default_config, yaml.safe_load(fp))
                     self.log_msg = f'Config: use file={config!r} containing the following main keys: {", ".join(self.config.keys())}'
             else:
@@ -68,7 +68,7 @@ class Config:
             self.log_msg = f'Config: using Config containing the following main keys: {", ".join(self.config.keys())}'
         elif os.environ.get('CRYPTOFEED_CONFIG') and os.path.exists(os.environ.get('CRYPTOFEED_CONFIG')):
             config = os.environ.get('CRYPTOFEED_CONFIG')
-            with open(config) as fp:
+            with open(config, encoding='utf-8') as fp:
                 self.config = _merge(_default_config, yaml.safe_load(fp))
                 self.log_msg = f'Config: use file={config!r} from CRYPTOFEED_CONFIG containing the following main keys: {", ".join(self.config.keys())}'
         elif config is None:

@@ -478,7 +478,7 @@ class Replayer:
     @staticmethod
     def _load_metadata(pcap_path: str):
         try:
-            with open(metadata_path(pcap_path)) as fp:
+            with open(metadata_path(pcap_path), encoding='utf-8') as fp:
                 return json.loads(fp.read())
         except OSError:
             return None
