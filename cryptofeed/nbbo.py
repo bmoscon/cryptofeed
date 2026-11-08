@@ -17,13 +17,17 @@ class NBBO(Callback):
         super(NBBO, self).__init__(callback)
 
     def _update(self, book):
-        if not len(book.book.bids) or not len(book.book.asks):
-            return None
+        for side, quotes in ((book.book.bids, self.bids[book.symbol]),
+                             (book.book.asks, self.asks[book.symbol])):
+            if len(side):
+                price, size = side.index(0)
+                quotes[book.exchange] = {'price': price, 'size': size}
+            else:
+                quotes.pop(book.exchange, None)
 
-        bid, size = book.book.bids.index(0)
-        self.bids[book.symbol][book.exchange] = {'price': bid, 'size': size}
-        ask, size = book.book.asks.index(0)
-        self.asks[book.symbol][book.exchange] = {'price': ask, 'size': size}
+        if not self.bids[book.symbol] or not self.asks[book.symbol]:
+            self.last_update.pop(book.symbol, None)
+            return None
 
         min_ask = min(self.asks[book.symbol], key=lambda x: self.asks[book.symbol][x]['price'])
         max_bid = max(self.bids[book.symbol], key=lambda x: self.bids[book.symbol][x]['price'])
