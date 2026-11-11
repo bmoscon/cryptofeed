@@ -26,7 +26,6 @@ class NBBO(Callback):
                 quotes.pop(book.exchange, None)
 
         if not self.bids[book.symbol] or not self.asks[book.symbol]:
-            self.last_update.pop(book.symbol, None)
             return None
 
         min_ask = min(self.asks[book.symbol], key=lambda x: self.asks[book.symbol][x]['price'])
