@@ -1,5 +1,8 @@
 ## Changelog
 
+### Unreleased
+* Bugfix: Remove withdrawn venue quotes from NBBO when an order-book side becomes empty
+
 ### 3.0.4 (2026-11-06)
 * Feature: ClickHouse support
 * Bugfix: `import cryptofeed` and `FeedHandler.run()` work on Windows again (no SIGHUP, no `add_signal_handler` on Windows event loops)
