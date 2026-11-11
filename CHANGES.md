@@ -1,6 +1,6 @@
 ## Changelog
 
-### Unreleased
+### 3.0.5
 * Bugfix: Remove withdrawn venue quotes from NBBO when an order-book side becomes empty
 
 ### 3.0.4 (2026-11-06)
