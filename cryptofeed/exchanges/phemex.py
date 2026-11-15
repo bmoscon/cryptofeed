@@ -32,7 +32,7 @@ class Phemex(Feed):
     rest_endpoints = [RestEndpoint('https://api.phemex.com', routes=Routes('/exchange/public/cfg/v2/products'))]
     price_scale = {}
     api_version = {}
-    valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1M', '1Q', '1Y')
+    valid_candle_intervals = ('1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M', '1Q', '1Y')
     candle_interval_map = {interval: second for interval, second in zip(valid_candle_intervals, [60, 300, 900, 1800, 3600, 14400, 86400, 604800, 2592000, 7776000, 31104000])}
 
     websocket_channels = {
