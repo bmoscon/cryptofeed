@@ -3,6 +3,9 @@
 ### 3.0.5
 * Bugfix: Remove withdrawn venue quotes from NBBO when an order-book side becomes empty
 * Bugfix: Phemex `1M`, `1Q` and `1Y` candles subscribed to the next shorter interval because the weekly one was missing from the list; `1w` is now supported
+* Bugfix: Deribit skips a ticker or L1 book update whose best bid or ask is empty
+* Bugfix: Gate / Gate Futures support `1w` candles 
+* Bugfix: callbacks that are incorrect now raise erorrs instead of being silently ignored
 
 ### 3.0.4 (2026-11-06)
 * Feature: ClickHouse support

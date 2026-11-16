@@ -83,10 +83,10 @@
   },
   "DERIBIT": {
     "funding": 2475,
-    "l1_book": 8497,
+    "l1_book": 8496,
     "l2_book": 3596,
     "open_interest": 145,
-    "ticker": 3110,
+    "ticker": 3089,
     "trades": 388
   },
   "DYDX": {

@@ -178,6 +178,9 @@ class Feed(Exchange):
         self.callbacks = {channel: Callback(None) for channel in CALLBACK_CHANNELS}
 
         if callbacks:
+            unknown = set(callbacks) - set(CALLBACK_CHANNELS)
+            if unknown:
+                raise ValueError(f"Unknown callback channel(s) {', '.join(sorted(map(repr, unknown)))}, must be one of {', '.join(CALLBACK_CHANNELS)}")
             for cb_type, cb_func in callbacks.items():
                 self.callbacks[cb_type] = cb_func
 
@@ -235,9 +238,9 @@ class Feed(Exchange):
                         bucket.append(exchange_symbol)
 
         if self._init_symbols and self._init_channels:
-            symbols = [self.std_symbol_to_exchange_symbol(symbol) for symbol in self._init_symbols]
+            symbols = list(dict.fromkeys(self.std_symbol_to_exchange_symbol(symbol) for symbol in self._init_symbols))
             channels = sorted(set([self.std_channel_to_exchange(chan) for chan in self._init_channels]))
-            self.subscription = {chan: symbols for chan in channels}
+            self.subscription = {chan: list(symbols) for chan in channels}
             self._channel_symbols = {channel: set(symbols) for channel in self._init_channels}
 
         self._subscription_resolved()

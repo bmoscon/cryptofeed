@@ -14,6 +14,7 @@ async def test_candle_volume_is_the_base_currency_amount(window_closed):
     # Avoid symbol discovery or any live exchange access.
     feed = object.__new__(Gate)
     feed.exchange_symbol_to_std_symbol = lambda symbol: 'BTC-USDT'
+    feed.normalize_candle_interval = {venue: std for std, venue in Gate.candle_interval_map.items()}
     feed._candle = AsyncMock()
     message = {
         'time': 1619092863,

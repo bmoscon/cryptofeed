@@ -30,6 +30,8 @@ class GateFutures(Gate):
     SNAPSHOT_HEADERS = SIZE_DECIMAL_HEADER
     websocket_endpoints = [WebsocketEndpoint('wss://fx-ws.gateio.ws/v4/ws/usdt', options={'compression': None, 'additional_headers': SIZE_DECIMAL_HEADER})]
     rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/futures/usdt/contracts', l2book='/api/v4/futures/usdt/order_book?contract={}&limit={}&with_id=true'))]
+    candle_interval_map = {**Gate.candle_interval_map, '1w': '1w'}
+    valid_candle_intervals = set(candle_interval_map)
 
     websocket_channels = {
         L2_BOOK: 'futures.order_book_update',
@@ -134,6 +136,7 @@ class GateFutures(Gate):
         # a rollover frame closes the previous bar and opens the next: close first
         for entry in sorted(msg['result'], key=lambda entry: int(entry['t'])):
             interval, symbol = entry['n'].split('_', 1)
+            interval = self.normalize_candle_interval[interval]
             c = Candle(
                 self.id,
                 self.exchange_symbol_to_std_symbol(symbol),

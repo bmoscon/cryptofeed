@@ -35,7 +35,8 @@ class Gate(SnapshotSync, Feed):
     websocket_endpoints = [WebsocketEndpoint('wss://api.gateio.ws/ws/v4/', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://api.gateio.ws', routes=Routes('/api/v4/spot/currency_pairs', l2book='/api/v4/spot/order_book?currency_pair={}&limit={}&with_id=true'))]
 
-    valid_candle_intervals = {'10s', '1m', '5m', '15m', '30m', '1h', '4h', '8h', '1d', '3d'}
+    candle_interval_map = {'10s': '10s', '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '8h': '8h', '1d': '1d', '3d': '3d', '1w': '7d'}
+    valid_candle_intervals = set(candle_interval_map)
     websocket_channels = {
         L2_BOOK: 'spot.order_book_update',
         TRADES: 'spot.trades',
@@ -279,8 +280,7 @@ class Gate(SnapshotSync, Feed):
         }
         """
         interval, symbol = msg['result']['n'].split('_', 1)
-        if interval == '7d':
-            interval = '1w'
+        interval = self.normalize_candle_interval[interval]
         c = Candle(
             self.id,
             self.exchange_symbol_to_std_symbol(symbol),
@@ -342,7 +342,7 @@ class Gate(SnapshotSync, Feed):
                             "time": int(time.time()),
                             "channel": chan,
                             "event": 'subscribe',
-                            "payload": self._book_subscription(symbol) if nchan == L2_BOOK else [self.candle_interval, symbol],
+                            "payload": self._book_subscription(symbol) if nchan == L2_BOOK else [self.candle_interval_map[self.candle_interval], symbol],
                         }
                     ))
             else:

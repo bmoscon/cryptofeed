@@ -170,7 +170,7 @@ class Deribit(Feed):
         instrument = msg['params']['data']['instrument_name']
         pair = self.exchange_symbol_to_std_symbol(instrument)
         ts = self.timestamp_normalize(msg['params']['data']['timestamp'])
-        if self.subscribed(TICKER, instrument):
+        if self.subscribed(TICKER, instrument) and msg['params']['data'].get('best_bid_price') and msg['params']['data'].get('best_ask_price'):
             t = Ticker(
                 self.id,
                 pair,
@@ -208,6 +208,8 @@ class Deribit(Feed):
         await self.callback(OPEN_INTEREST, o, timestamp)
 
     async def _quote(self, quote: dict, timestamp: float):
+        if not quote.get('best_bid_price') or not quote.get('best_ask_price'):
+            return
         book = L1Book(
             self.id,
             self.exchange_symbol_to_std_symbol(quote['instrument_name']),
