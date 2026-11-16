@@ -42,6 +42,8 @@ class Coinbase(Feed):
         info = defaultdict(dict)
 
         for entry in data['products']:
+            if entry['status'] != 'online':
+                continue
             sym = Symbol(entry['base_currency_id'], entry['quote_currency_id'])
             info['tick_size'][sym.normalized] = entry['quote_increment']
             info['instrument_type'][sym.normalized] = sym.type

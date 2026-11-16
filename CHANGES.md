@@ -6,6 +6,24 @@
 * Bugfix: Deribit skips a ticker or L1 book update whose best bid or ask is empty
 * Bugfix: Gate / Gate Futures support `1w` candles 
 * Bugfix: callbacks that are incorrect now raise erorrs instead of being silently ignored
+* Feature: Kraken Futures liquidations
+* Bugfix: fix Binance/Binance US ticker timestamps
+* Bugfix: Bitfinex reconnects on info 20051 (server restart) and 20061 (maintenance end)
+* Bugfix: bitFlyer trade ids corrected
+* Bugfix: Bitget handle very large subscriptions correctly
+* Bugfix: Bybit spot ticker fixed
+* Bugfix: Bybit candles no longer publish history unless specifically asked for
+* Bugfix: Coinbase symbol fixes
+* Bugfix: Gate Futures skips a book ticker update whose best bid or ask is empty
+* Bugfix: Gate Futures order books show at most `max_depth` levels
+* Bugfix: Gate Futures funding now sets `next_funding_time`
+* Bugfix: HTX candles fixes
+* Bugfix: Kraken ticker updates fixed
+* Bugfix: Kraken order books show at most `max_depth` levels
+* Bugfix: KuCoin / KuCoin Futures support `5m` and `1M` candles
+* Bugfix: MEXC logs refused subscriptions correctly
+* Bugfix: Poloniex trade and book timestamps corrected
+* Bugfix: Upbit requests the order book snapshot on subscribe
 
 ### 3.0.4 (2026-11-06)
 * Feature: ClickHouse support

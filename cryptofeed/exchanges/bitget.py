@@ -31,7 +31,9 @@ class Bitget(Feed):
         await conn.write('ping')
     provides_sequence_number = True
     validates_sequence_number = True
-    websocket_endpoints = [WebsocketEndpoint('wss://ws.bitget.com/v2/ws/public')]
+    # at most 1000 channels per connection and 4096 bytes per subscribe request
+    websocket_endpoints = [WebsocketEndpoint('wss://ws.bitget.com/v2/ws/public', limit=1000)]
+    max_subscribe_bytes = 4096
     rest_endpoints = [
         RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (SPOT,)), routes=Routes('/api/v2/spot/public/symbols')),
         RestEndpoint('https://api.bitget.com', instrument_filter=('TYPE', (PERPETUAL, FUTURES)), routes=Routes(['/api/v2/mix/market/contracts?productType=USDT-FUTURES', '/api/v2/mix/market/contracts?productType=COIN-FUTURES', '/api/v2/mix/market/contracts?productType=USDC-FUTURES'])),
@@ -407,12 +409,22 @@ class Bitget(Feed):
     async def subscribe(self, conn: AsyncConnection):
         self.__reset(conn)
         args = []
+        empty = len(json.dumpb({"op": "subscribe", "args": []}))
+        size = empty
 
         for chan, symbols in conn.subscription.items():
             if chan == self.std_channel_to_exchange(CANDLES):
                 chan += self.candle_interval_map[self.candle_interval]
             for s in symbols:
                 inst_id, inst_type = s.split('_', 1)
-                args.append({'instType': inst_type, 'channel': chan, 'instId': inst_id})
+                arg = {'instType': inst_type, 'channel': chan, 'instId': inst_id}
+                arg_size = len(json.dumpb(arg)) + 1
+                if args and size + arg_size > self.max_subscribe_bytes:
+                    await conn.write(json.dumps({"op": "subscribe", "args": args}))
+                    args = []
+                    size = empty
+                args.append(arg)
+                size += arg_size
 
-        await conn.write(json.dumps({"op": "subscribe", "args": args}))
+        if args:
+            await conn.write(json.dumps({"op": "subscribe", "args": args}))

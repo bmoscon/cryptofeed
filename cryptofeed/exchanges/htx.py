@@ -58,6 +58,7 @@ class HTX(Feed):
 
     def __reset(self):
         self._l2_book = {}
+        self._open_candles = {}
 
     async def _book(self, msg: dict, timestamp: float):
         pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
@@ -141,6 +142,22 @@ class HTX(Feed):
         for t in self.trade_watermark.frame(trades, symbol):
             await self.callback(TRADES, t, timestamp)
 
+    async def _candle(self, candle: Candle, timestamp: float):
+        key = (candle.symbol, candle.interval)
+        held = self._open_candles.get(key)
+        if held is not None and candle.start < held.start:
+            return
+
+        candles = [candle]
+        if held is not None and held.start < candle.start:
+            candles.append(Candle(held.exchange, held.symbol, held.start, held.stop, held.interval, held.trades, held.open, held.close, held.high, held.low, held.volume, True, held.timestamp, raw=held.raw))
+
+        for c in self.candle_watermark.live(candles):
+            if not c.closed:
+                self._open_candles[key] = c
+            if c.closed or not self.candle_closed_only:
+                await self.callback(CANDLES, c, timestamp)
+
     async def _candles(self, msg: dict, symbol: str, interval: str, timestamp: float):
         """
         {
@@ -174,11 +191,11 @@ class HTX(Feed):
             Decimal(msg['tick']['high']),
             Decimal(msg['tick']['low']),
             Decimal(msg['tick']['amount']),
-            None,
+            False,
             self.timestamp_normalize(msg['ts']),
             raw=msg
         )
-        await self.callback(CANDLES, c, timestamp)
+        await self._candle(c, timestamp)
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         # unzip message

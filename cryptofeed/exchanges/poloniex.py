@@ -82,7 +82,7 @@ class Poloniex(Feed):
                 SELL if entry['takerSide'] == 'sell' else BUY,
                 Decimal(entry['quantity']),
                 Decimal(entry['price']),
-                self.timestamp_normalize(entry['ts']),
+                self.timestamp_normalize(entry['createTime']),
                 id=str(entry['id']),
                 raw=msg
             )
@@ -97,7 +97,7 @@ class Poloniex(Feed):
             asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
             self.seq_no[pair] = data['id']
-            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, timestamp=self.timestamp_normalize(data['ts']),
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=msg, timestamp=self.timestamp_normalize(data['createTime']),
                                      sequence_number=data['id'])
         else:
             if pair not in self.seq_no:
@@ -120,7 +120,7 @@ class Poloniex(Feed):
                         self._l2_book[pair].book[side][price] = amount
                         delta[side[:-1]].append((price, amount))
             self.seq_no[pair] = data['id']
-            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(data['ts']), raw=msg, delta=delta, sequence_number=data['id'])
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(data['createTime']), raw=msg, delta=delta, sequence_number=data['id'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

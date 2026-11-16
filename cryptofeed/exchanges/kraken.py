@@ -67,6 +67,7 @@ class Kraken(Feed):
         super().__init__(max_depth=max_depth, **kwargs)
         depth = self.max_depth if self.max_depth else self.valid_depths[-1]
         self.book_depth = next((d for d in self.valid_depths if d >= depth), self.valid_depths[-1])
+        self._venue_book = {}
         self.candle_grace = candle_grace
         self._candle_held = {}
         self._candle_due = {}
@@ -79,6 +80,7 @@ class Kraken(Feed):
 
                 if std_pair in self._l2_book:
                     del self._l2_book[std_pair]
+                self._venue_book.pop(std_pair, None)
 
         for candle in self._candle_held.pop(conn.uuid, {}).values():
             self._candle_dropped[candle.symbol] = candle.start
@@ -90,6 +92,10 @@ class Kraken(Feed):
             params = {"channel": chan, "symbol": symbols}
             if self.exchange_channel_to_std(chan) == L2_BOOK:
                 params['depth'] = self.book_depth
+
+            if self.exchange_channel_to_std(chan) == TICKER:
+                params['event_trigger'] = 'bbo'
+
             if self.exchange_channel_to_std(chan) == CANDLES:
                 params['interval'] = self.candle_interval_map[self.candle_interval]
 
@@ -167,12 +173,17 @@ class Kraken(Feed):
             if msg['type'] == 'snapshot':
                 bids = {Decimal(level['price']): Decimal(level['qty']) for level in update['bids']}
                 asks = {Decimal(level['price']): Decimal(level['qty']) for level in update['asks']}
-                self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.book_depth, truncate=True, checksum_format='KRAKEN', bids=bids, asks=asks)
+                ob = OrderBook(self.id, pair, max_depth=self.book_depth, truncate=True, checksum_format='KRAKEN', bids=bids, asks=asks)
+                self._venue_book[pair] = ob.book
+                if 0 < self.max_depth < self.book_depth:
+                    # a level pushed out of the subscribed depth gets no delete, so the book is kept at that depth
+                    ob = OrderBook(self.id, pair, max_depth=self.max_depth, checksum_format='KRAKEN', bids=ob.book.bids.to_dict(), asks=ob.book.asks.to_dict())
+                self._l2_book[pair] = ob
             else:
                 if pair not in self._l2_book:
                     continue
                 delta = {BID: [], ASK: []}
-                book = self._l2_book[pair].book
+                book = self._venue_book[pair]
                 for side, key in ((BID, 'bids'), (ASK, 'asks')):
                     inserts = sum(1 for level in update[key] if Decimal(level['qty']) != 0)
                     evictable = self._tail(book[side], inserts) if inserts else []
@@ -200,9 +211,18 @@ class Kraken(Feed):
                                    if price not in book[side] and price not in reported)
                     delta[side] = applied
 
+                shown = self._l2_book[pair].book
+                if shown is not book:
+                    for side in (BID, ASK):
+                        for price, size in delta[side]:
+                            if size:
+                                shown[side][price] = size
+                            elif price in shown[side]:
+                                del shown[side][price]
+
             checksum = update.get('checksum')
             if self.checksum_validation and checksum is not None:
-                if self._l2_book[pair].book.checksum() != checksum:
+                if self._venue_book[pair].checksum() != checksum:
                     raise BadChecksum(f'{self.id}: {pair} checksum validation failed')
             await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(update['timestamp']) if update.get('timestamp') else None, raw=msg, delta=delta, checksum=checksum)
 

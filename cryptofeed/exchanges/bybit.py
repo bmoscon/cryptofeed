@@ -68,6 +68,10 @@ class Bybit(Feed):
     # Initialize the store to keep snapshots and update the data with deltas
     tickers = {}
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._candle_pending = set()
+
     @classmethod
     def timestamp_normalize(cls, ts: Union[int, str, dt]) -> float:
         if isinstance(ts, int):
@@ -177,24 +181,31 @@ class Bybit(Feed):
 
         ts = int(msg['ts'])
 
-        for entry in msg['data']:
-            if self.candle_closed_only and not entry['confirm']:
-                continue
-            c = Candle(self.id,
-                       symbol,
-                       self.timestamp_normalize(entry['start']),
-                       self.timestamp_normalize(entry['end']),
-                       self.candle_interval,
-                       None,
-                       Decimal(entry['open']),
-                       Decimal(entry['close']),
-                       Decimal(entry['high']),
-                       Decimal(entry['low']),
-                       Decimal(entry['volume']),
-                       entry['confirm'],
-                       self.timestamp_normalize(ts),
-                       raw=entry)
-            await self.callback(CANDLES, c, timestamp)
+        candles = [Candle(self.id,
+                          symbol,
+                          self.timestamp_normalize(entry['start']),
+                          self.timestamp_normalize(entry['end']),
+                          self.candle_interval,
+                          None,
+                          Decimal(entry['open']),
+                          Decimal(entry['close']),
+                          Decimal(entry['high']),
+                          Decimal(entry['low']),
+                          Decimal(entry['volume']),
+                          entry['confirm'],
+                          self.timestamp_normalize(ts),
+                          raw=entry)
+                   for entry in msg['data']]
+
+        if symbol in self._candle_pending:
+            self._candle_pending.discard(symbol)
+            candles = self.candle_watermark.batch(candles, symbol=symbol, interval=self.candle_interval)
+        else:
+            candles = self.candle_watermark.live(candles)
+
+        for c in candles:
+            if c.closed or not self.candle_closed_only:
+                await self.callback(CANDLES, c, timestamp)
 
     async def _liquidation(self, msg: dict, timestamp: float):
         '''
@@ -246,6 +257,8 @@ class Bybit(Feed):
                 LOG.error("%s: Error from exchange %s", conn.uuid, msg)
         elif msg["topic"].startswith('publicTrade'):
             await self._trade(msg, timestamp, market)
+        elif market == 'spot' and msg['topic'].startswith('orderbook.1.'):
+            await self._spot_ticker(msg, timestamp)
         elif msg["topic"].startswith('orderbook'):
             await self._book(msg, timestamp, market)
         elif msg['topic'].startswith('kline'):
@@ -266,7 +279,7 @@ class Bybit(Feed):
             if chan in ticker_channels:
                 tickers_pairs.update(pairs)
         if tickers_pairs:
-            args = [f"tickers.{pair.replace('/', '')}" for pair in sorted(tickers_pairs)]
+            args = [f"orderbook.1.{pair.replace('/', '')}" if '/' in pair else f"tickers.{pair}" for pair in sorted(tickers_pairs)]
             # spot rejects a subscribe request with more than 10 args
             for start in range(0, len(args), 10):
                 await connection.write(json.dumps({"op": "subscribe", "args": args[start:start + 10]}))
@@ -275,6 +288,8 @@ class Bybit(Feed):
             if chan in ticker_channels:
                 continue
             std_chan = self.exchange_channel_to_std(chan)
+            if std_chan == CANDLES:
+                self._candle_pending.update(self.exchange_symbol_to_std_symbol(pair) for pair in pairs)
             for pair in pairs:
                 sym = str_to_symbol(self.exchange_symbol_to_std_symbol(pair))
                 if sym.type == SPOT:
@@ -387,6 +402,36 @@ class Bybit(Feed):
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(int(msg['ts'])), raw=msg, delta=delta, sequence_number=data.get('u'))
 
+    async def _spot_ticker(self, msg: dict, timestamp: float):
+        '''
+        {
+            "topic": "orderbook.1.BTCUSDT",
+            "ts": 1672304484978,
+            "type": "snapshot",
+            "data": {
+                "s": "BTCUSDT",
+                "b": [["16493.50", "0.006"]],
+                "a": [["16611.00", "0.029"]],
+                "u": 18521288,
+                "seq": 7961638724
+            },
+            "cts": 1672304484976
+        }
+        '''
+        data = msg['data']
+        if not data.get('b') or not data.get('a'):
+            return
+
+        t = Ticker(
+            self.id,
+            self._std_symbol(data['s'], 'spot'),
+            Decimal(data['b'][0][0]),
+            Decimal(data['a'][0][0]),
+            self.timestamp_normalize(int(msg['ts'])),
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
+
     async def _ticker_open_interest_funding_index(self, msg: dict, timestamp: float, conn: AsyncConnection, market: str):
         '''
         {
@@ -419,7 +464,6 @@ class Bybit(Feed):
         }
         '''
 
-        # Bybit does not provide bid/ask information for the spot market, only for perps at the moment
         update_type = msg['type']
         update = msg['data']
         symbol = self._std_symbol(update['symbol'], market)
@@ -431,12 +475,12 @@ class Bybit(Feed):
             self.tickers[symbol].update(update)
         update = self.tickers[symbol]
 
-        if self.websocket_channels[TICKER] in conn.subscription and pair in conn.subscription[self.websocket_channels[TICKER]]:
+        if self.websocket_channels[TICKER] in conn.subscription and pair in conn.subscription[self.websocket_channels[TICKER]] and update.get('bid1Price') and update.get('ask1Price'):
             t = Ticker(
                 self.id,
                 symbol,
-                Decimal(update['bid1Price']) if 'bid1Price' in update else Decimal(0),
-                Decimal(update['ask1Price']) if 'ask1Price' in update else Decimal(0),
+                Decimal(update['bid1Price']),
+                Decimal(update['ask1Price']),
                 self.timestamp_normalize(int(msg['ts'])),
                 raw=update
             )

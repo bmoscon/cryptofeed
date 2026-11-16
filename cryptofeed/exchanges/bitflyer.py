@@ -112,13 +112,19 @@ class Bitflyer(Feed):
         """
         pair = self.exchange_symbol_to_std_symbol(msg['params']['channel'][21:])
         for update in msg['params']['message']:
+            side = BUY if update['side'] == 'BUY' else SELL if update['side'] == 'SELL' else None
+            if side is None:
+                # side is '' for executions in an auction, which have no taker
+                LOG.info('%s: skipping %s execution %s with no taker side %r', self.id, pair, update['id'], update['side'])
+                continue
             t = Trade(
                 self.id,
                 pair,
-                BUY if update['side'] == 'BUY' else SELL,
+                side,
                 update['size'],
                 update['price'],
                 self.timestamp_normalize(update['exec_date']),
+                id=str(update['id']),
                 raw=update
             )
             await self.callback(TRADES, t, timestamp)
@@ -170,9 +176,12 @@ class Bitflyer(Feed):
         for side in ('bids', 'asks'):
             s = BID if side == 'bids' else ASK
             if snapshot:
-                self._l2_book[pair].book[side] = {d['price']: d['size'] for d in data[side] if d['size'] > 0}
+                self._l2_book[pair].book[side] = {d['price']: d['size'] for d in data[side] if d['size'] > 0 and d['price'] > 0}
             else:
                 for entry in data[side]:
+                    if entry['price'] == 0:
+                        # auction market orders are sent with price 0
+                        continue
                     if entry['size'] == 0:
                         if entry['price'] in self._l2_book[pair].book[side]:
                             del self._l2_book[pair].book[side][entry['price']]

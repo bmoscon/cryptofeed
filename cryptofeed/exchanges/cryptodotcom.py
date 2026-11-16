@@ -13,7 +13,8 @@ from collections import defaultdict
 from cryptofeed import _json as json
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 
-from cryptofeed.defines import BUY, CANDLES, CRYPTODOTCOM, FUNDING, FUTURES, INDEX, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES
+from cryptofeed.defines import ASK, BID, BUY, CANDLES, CRYPTODOTCOM, FUNDING, FUTURES, INDEX, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, SPOT, TICKER, TRADES
+from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
 from cryptofeed.symbols import Symbol, str_to_symbol
 from cryptofeed.util.time import timedelta_str_to_sec
@@ -45,6 +46,8 @@ class CryptoDotCom(Feed):
     valid_candle_intervals = set(candle_interval_map)
     valid_depths = [10, 50, 150]
     book_depth = 150
+    delta_depth = 50
+    book_update_frequency = 10
     instrument_types = {'CCY_PAIR': SPOT, 'PERPETUAL_SWAP': PERPETUAL, 'FUTURE': FUTURES}
 
     @classmethod
@@ -77,11 +80,15 @@ class CryptoDotCom(Feed):
             if self.max_depth > self.valid_depths[-1]:
                 raise ValueError(f'{self.id} serves a book at most {self.valid_depths[-1]} levels deep, {self.max_depth} requested')
             self.book_depth = next(d for d in self.valid_depths if d >= self.max_depth)
+        if self.book_depth <= self.delta_depth:
+            self.book_delivery = 'delta'
+            self.validates_sequence_number = True
         self.trade_watermark.key = lambda t: int(t.id)
         self.__reset()
 
     def __reset(self):
         self._l2_book = {}
+        self._book_sequence = {}
         self._candles = {}
         self._candle_newest = {}
         self._mark_price = {}
@@ -128,13 +135,13 @@ class CryptoDotCom(Feed):
                     requests[extra].extend(f'{extra}.{symbol}' for symbol in symbols
                                            if str_to_symbol(self.exchange_symbol_to_std_symbol(symbol)).type == PERPETUAL)
 
-        for topics in requests.values():
+        for chan, topics in requests.items():
             if not topics:
                 continue
-            await conn.write(json.dumps({"method": "subscribe",
-                                         "params": {
-                                             "channels": list(dict.fromkeys(topics))
-                                         }}))
+            params = {"channels": list(dict.fromkeys(topics))}
+            if chan == self.websocket_channels[L2_BOOK] and self.book_delivery == 'delta':
+                params.update(book_subscription_type='SNAPSHOT_AND_UPDATE', book_update_frequency=self.book_update_frequency)
+            await conn.write(json.dumps({"method": "subscribe", "params": params}))
             await asyncio.sleep(1)
 
     async def _trades(self, msg: dict, history: bool, timestamp: float):
@@ -344,16 +351,54 @@ class CryptoDotCom(Feed):
                 }
             ]
         }
+
+        delta subscriptions follow the snapshot with channel book.update:
+        'data': [
+            {
+                'update': {
+                    'asks': [['64756.1', '0', '0'],
+                             ['64759.5', '0.0301', '2']],
+                    'bids': []
+                },
+                't': 1794793816002,
+                'tt': 1794793815995,
+                'u': 390933011281632,
+                'pu': 390933011087648,
+                'cs': -1983751463
+            }
+        ]
         '''
         symbol = self.exchange_symbol_to_std_symbol(msg['instrument_name'])
         for entry in msg['data']:
-            if symbol not in self._l2_book:
-                self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
+            delta = None
+            if msg['channel'] == 'book':
+                if symbol not in self._l2_book:
+                    self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth)
 
-            self._l2_book[symbol].book.bids = {Decimal(price): Decimal(size) for price, size, _ in entry['bids']}
-            self._l2_book[symbol].book.asks = {Decimal(price): Decimal(size) for price, size, _ in entry['asks']}
+                self._l2_book[symbol].book.bids = {Decimal(price): Decimal(size) for price, size, _ in entry['bids']}
+                self._l2_book[symbol].book.asks = {Decimal(price): Decimal(size) for price, size, _ in entry['asks']}
+            else:
+                last = self._book_sequence.get(symbol)
+                if entry['pu'] != last:
+                    raise MissingSequenceNumber(f'{self.id}: {symbol} book expected pu {last}, got {entry["pu"]}')
 
-            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, timestamp=self.timestamp_normalize(entry['t']), sequence_number=entry['u'], raw=entry)
+                delta = {BID: [], ASK: []}
+                book = self._l2_book[symbol].book
+                for side, levels in ((BID, entry['update'].get('bids', [])), (ASK, entry['update'].get('asks', []))):
+                    for price, size, _ in levels:
+                        price, size = Decimal(price), Decimal(size)
+                        if size == 0:
+                            if price not in book[side]:
+                                continue
+                            del book[side][price]
+                        else:
+                            book[side][price] = size
+                        delta[side].append((price, size))
+
+            self._book_sequence[symbol] = entry['u']
+            if delta is not None and not delta[BID] and not delta[ASK]:
+                continue
+            await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, timestamp=self.timestamp_normalize(entry['t']), sequence_number=entry['u'], raw=entry, delta=delta)
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -379,7 +424,7 @@ class CryptoDotCom(Feed):
             await self._ticker(result, conn, timestamp)
         elif channel == 'candlestick':
             await self._candle(result, history, timestamp)
-        elif channel == 'book':
+        elif channel in ('book', 'book.update'):
             await self._book(result, timestamp)
         elif channel == 'funding':
             await self._funding(result, timestamp)

@@ -288,12 +288,8 @@ class BinanceBase(SnapshotSync, Feed):
         pair = self.exchange_symbol_to_std_symbol(msg['s'])
         bid = Decimal(msg['b'])
         ask = Decimal(msg['a'])
-
-        # Binance does not have a timestamp in this update, but the two futures APIs do
-        if 'E' in msg:
-            ts = self.timestamp_normalize(msg['E'])
-        else:
-            ts = timestamp
+        # spot bookTicker carries no event time, but futures and delivery do
+        ts = self.timestamp_normalize(msg['E']) if 'E' in msg else None
 
         t = Ticker(self.id, pair, bid, ask, ts, raw=msg)
         await self.callback(TICKER, t, timestamp)

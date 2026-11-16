@@ -83,7 +83,14 @@ class Upbit(Feed):
             id=str(msg['sid']),
             raw=msg
         )
-        await self.callback(TRADES, t, timestamp)
+
+        if msg.get('st') == 'SNAPSHOT':
+            trades = self.trade_watermark.batch([t], symbol=t.symbol)
+        else:
+            trades = self.trade_watermark.live([t])
+
+        for t in trades:
+            await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -217,8 +224,12 @@ class Upbit(Feed):
                 if code not in book:
                     book.append(code)
         if book:
-            chans.append({"type": "orderbook", "codes": book, 'isOnlyRealtime': True})
+            chans.append({"type": "orderbook", "codes": book})
+
         if self.subscription.get(TRADES):
-            chans.append({"type": "trade", "codes": list(self.subscription[TRADES]), 'isOnlyRealtime': True})
+            trade = {"type": "trade", "codes": list(self.subscription[TRADES])}
+            if not self.trade_history:
+                trade['is_only_realtime'] = True
+            chans.append(trade)
 
         await conn.write(json.dumps(chans))

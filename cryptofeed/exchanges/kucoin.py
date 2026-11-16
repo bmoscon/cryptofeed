@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import asyncio
+from datetime import datetime, timezone
 from decimal import Decimal
 import logging
 import time
@@ -32,8 +33,8 @@ class KuCoin(Feed):
     rest_endpoints = [RestEndpoint('https://api.kucoin.com', routes=Routes('/api/v1/symbols', l2book='/api/v1/market/orderbook/level2_100?symbol={}'))]
     BOOK_DEPTH = 'increment@10ms'
 
-    valid_candle_intervals = {'1m', '3m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w'}
-    candle_interval_map = {'1m': '1min', '3m': '3min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week'}
+    valid_candle_intervals = {'1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w', '1M'}
+    candle_interval_map = {'1m': '1min', '3m': '3min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week', '1M': '1month'}
 
     websocket_channels = {
         L2_BOOK: 'obu',
@@ -81,7 +82,7 @@ class KuCoin(Feed):
             self.id,
             symbol,
             int(data['O']),
-            int(data['C']) - 1,
+            self._window_end(data) - 1,
             self.normalize_candle_interval[data['i']],
             None,
             Decimal(data['o']),
@@ -95,8 +96,17 @@ class KuCoin(Feed):
         )
 
     @staticmethod
-    def _after_window(msg: dict) -> bool:
-        return msg['P'] >= int(msg['d']['C']) * 1_000_000_000
+    def _window_end(data: dict) -> int:
+        # a 1M bar is the calendar month from 00:00 UTC on the 1st
+        if data['i'] == '1month':
+            opened = datetime.fromtimestamp(int(data['O']), tz=timezone.utc)
+            year, month = (opened.year + 1, 1) if opened.month == 12 else (opened.year, opened.month + 1)
+            return int(opened.replace(year=year, month=month).timestamp())
+        return int(data['C'])
+
+    @classmethod
+    def _after_window(cls, msg: dict) -> bool:
+        return msg['P'] >= cls._window_end(msg['d']) * 1_000_000_000
 
     async def _deliver_candles(self, candles: list, timestamp: float):
         for c in self.candle_watermark.live(candles):

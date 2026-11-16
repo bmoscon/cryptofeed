@@ -87,6 +87,7 @@ class MEXCSpot(SnapshotSync, Feed):
     DEPTH = 313
     BOOK_TICKER = 315
     SNAPSHOT_DEPTH = 2000
+    REFUSED = 'Not Subscribed successfully! ['
 
     @classmethod
     def timestamp_normalize(cls, ts: int) -> float:
@@ -247,8 +248,13 @@ class MEXCSpot(SnapshotSync, Feed):
     async def _handle(self, msg, conn: AsyncConnection, timestamp: float):
         if not isinstance(msg, bytes):
             ack = json.loads(msg)
+            text = ack.get('msg') or ''
             if ack.get('code') not in (0, None):
-                LOG.error('%s: %s', self.id, ack.get('msg'))
+                LOG.error('%s: %s', self.id, text)
+            elif self.REFUSED in text:
+                # refused topics are acked with code 0 and listed in the text
+                refused, _, reason = text.partition(self.REFUSED)[2].partition(']')
+                LOG.error('%s: %s: subscription refused for %s (%s)', self.id, conn.uuid, refused.split(','), reason.strip(' .'))
             return
 
         wrapper = _one(msg)

@@ -37,6 +37,9 @@ TIME_S = 32
 TIMESTAMP = 32768
 SEQ_ALL = 65536
 CHECKSUM = 131072
+INFO_RESTART = 20051
+INFO_MAINTENANCE_START = 20060
+INFO_MAINTENANCE_END = 20061
 
 
 class Bitfinex(Feed):
@@ -381,6 +384,11 @@ class Bitfinex(Feed):
             LOG.warning('%s: Unexpected msg (missing event) from exchange: %s', conn.uuid, msg)
         elif msg['event'] == 'error':
             LOG.error('%s: Error from exchange: %s', conn.uuid, msg)
+        elif msg['event'] == 'info' and msg.get('code') in (INFO_RESTART, INFO_MAINTENANCE_END):
+            LOG.warning('%s: info %s from exchange - reconnecting: %s', conn.uuid, msg['code'], msg)
+            await conn.close()
+        elif msg['event'] == 'info' and msg.get('code') == INFO_MAINTENANCE_START:
+            LOG.warning('%s: exchange entering maintenance: %s', conn.uuid, msg)
         elif msg['event'] in ('info', 'conf'):
             LOG.debug('%s: %s from exchange: %s', conn.uuid, msg['event'], msg)
             if msg['event'] == 'conf' and msg.get('status') == 'OK':

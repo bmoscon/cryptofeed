@@ -23,6 +23,7 @@ async def test_trade_uses_base_quantity_and_emits_each_batch_entry(batch_size):
             'amount': '364.89973',
             'quantity': '0.017',
             'takerSide': 'sell',
+            'createTime': 1661120814818,
             'price': '21464.69',
             'id': '60183607',
             'ts': 1661120814823,
@@ -32,6 +33,7 @@ async def test_trade_uses_base_quantity_and_emits_each_batch_entry(batch_size):
             'amount': '3200',
             'quantity': '2',
             'takerSide': 'buy',
+            'createTime': 1661120814819,
             'price': '1600',
             'id': '60183608',
             'ts': 1661120814824,
@@ -52,6 +54,6 @@ async def test_trade_uses_base_quantity_and_emits_each_batch_entry(batch_size):
         assert trade.amount == Decimal(entry['quantity'])
         assert trade.price == Decimal(entry['price'])
         assert trade.id == entry['id']
-        assert trade.timestamp == entry['ts'] / 1000.0
+        assert trade.timestamp == entry['createTime'] / 1000.0
         assert trade.raw == message
         assert received_at == receipt_timestamp

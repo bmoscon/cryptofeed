@@ -58,7 +58,7 @@
     "trades": 1748
   },
   "BYBIT": {
-    "candles": 268,
+    "candles": 250,
     "funding": 47229,
     "index": 47229,
     "l2_book": 81553,
@@ -113,7 +113,7 @@
     "trades": 335
   },
   "HTX": {
-    "candles": 3842,
+    "candles": 250,
     "l2_book": 13986,
     "ticker": 46598,
     "trades": 4173

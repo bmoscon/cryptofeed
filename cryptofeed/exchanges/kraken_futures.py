@@ -13,13 +13,14 @@ from typing import Dict, Tuple
 from cryptofeed import _json as json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, FUNDING, FUTURES, KRAKEN_FUTURES, L2_BOOK, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES
+from cryptofeed.defines import BID, ASK, BUY, FILLED, FUNDING, FUTURES, KRAKEN_FUTURES, L2_BOOK, LIQUIDATIONS, OPEN_INTEREST, PERPETUAL, SELL, TICKER, TRADES
 from cryptofeed.exceptions import MissingSequenceNumber
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest
+from cryptofeed.types import OrderBook, Trade, Ticker, Funding, OpenInterest, Liquidation
 
 
 LOG = logging.getLogger(__name__)
+LIQUIDATION_TYPES = {'liquidation', 'partialLiquidation', 'partial liquidation', 'assignment', 'termination'}
 
 
 class KrakenFutures(Feed):
@@ -34,6 +35,7 @@ class KrakenFutures(Feed):
         TICKER: 'ticker_lite',
         FUNDING: 'ticker',
         OPEN_INTEREST: 'ticker',
+        LIQUIDATIONS: 'trade',
     }
 
     @classmethod
@@ -82,7 +84,7 @@ class KrakenFutures(Feed):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # uid is random, so fills sharing a time are told apart by the product's trade sequence number
-        self.trade_watermark.key = lambda t: ((t.raw or {}).get('seq', -1), t.id)
+        self.trade_watermark.key = self.liquidation_watermark.key = lambda t: ((t.raw or {}).get('seq', -1), t.id)
 
     def __reset(self):
         self._open_interest_cache = {}
@@ -114,8 +116,13 @@ class KrakenFutures(Feed):
             "price": 11735.0
         }
         """
-        for t in self.trade_watermark.live([self._trade_row(msg, pair)]):
-            await self.callback(TRADES, t, timestamp)
+        product = msg['product_id'].upper()
+        if self.subscribed(TRADES, product):
+            for t in self.trade_watermark.live([self._trade_row(msg, pair)]):
+                await self.callback(TRADES, t, timestamp)
+        if msg.get('type') in LIQUIDATION_TYPES and self.subscribed(LIQUIDATIONS, product):
+            for liq in self.liquidation_watermark.live([self._liquidation_row(msg, pair)]):
+                await self.callback(LIQUIDATIONS, liq, timestamp)
 
     def _trade_row(self, row: dict, pair: str) -> Trade:
         return Trade(
@@ -126,6 +133,21 @@ class KrakenFutures(Feed):
             Decimal(row['price']),
             self.timestamp_normalize(row['time']),
             id=row['uid'],
+            type=row.get('type'),
+            raw=row
+        )
+
+    def _liquidation_row(self, row: dict, pair: str) -> Liquidation:
+        # side is the taker, the liquidated position's closing side (Kraken closes it with IOC orders, then assignment)
+        return Liquidation(
+            self.id,
+            pair,
+            BUY if row['side'] == 'buy' else SELL,
+            Decimal(row['qty']),
+            Decimal(row['price']),
+            row['uid'],
+            FILLED,
+            self.timestamp_normalize(row['time']),
             raw=row
         )
 
@@ -133,8 +155,14 @@ class KrakenFutures(Feed):
         '''
         {"feed": "trade_snapshot", "product_id": "PF_ETHUSD", "trades": [rows shaped like a trade message]}
         '''
-        for t in self.trade_watermark.batch([self._trade_row(row, pair) for row in msg['trades']], symbol=pair):
-            await self.callback(TRADES, t, timestamp)
+        product = msg['product_id'].upper()
+        if self.subscribed(TRADES, product):
+            for t in self.trade_watermark.batch([self._trade_row(row, pair) for row in msg['trades']], symbol=pair):
+                await self.callback(TRADES, t, timestamp)
+        if self.subscribed(LIQUIDATIONS, product):
+            rows = [self._liquidation_row(row, pair) for row in msg['trades'] if row.get('type') in LIQUIDATION_TYPES]
+            for liq in self.liquidation_watermark.batch(rows, symbol=pair, status=FILLED):
+                await self.callback(LIQUIDATIONS, liq, timestamp)
 
     async def _ticker(self, msg: dict, pair: str, timestamp: float):
         """
@@ -186,6 +214,7 @@ class KrakenFutures(Feed):
             self._l2_book[pair].book.asks = asks
         else:
             self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
+        self.seq_no[pair] = msg['seq']
 
         ts = self.timestamp_normalize(msg['timestamp']) if 'timestamp' in msg else None
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts, raw=msg, sequence_number=msg['seq'])

@@ -157,7 +157,7 @@ class Gate(SnapshotSync, Feed):
         return msg['result']['u'] <= sequence
 
     def _bridges(self, sequence: int, msg: dict) -> bool:
-        return msg['result']['U'] <= sequence + 1 <= msg['result']['u']
+        return msg['result'].get('full') or msg['result']['U'] <= sequence + 1 <= msg['result']['u']
 
     def _start_book(self, std_pair: str, book: OrderBook):
         self._l2_book[std_pair] = book
@@ -202,6 +202,8 @@ class Gate(SnapshotSync, Feed):
             'event': 'update',
             'result': {
                 't': 1618961347345,   ms timestamp
+                'full': True,         only on a full depth push, which replaces the book
+                'l': '100',           depth level
                 'e': 'depthUpdate',   ignore
                 'E': 1618961347,      deprecated timestamp
                 's': 'BTC_USDT',      symbol
@@ -217,11 +219,20 @@ class Gate(SnapshotSync, Feed):
             self._buffer_update(msg['result']['s'], symbol, msg, conn, timestamp)
             return
 
+        ts = msg['result']['t'] / 1000
+        if msg['result'].get('full'):
+            book = OrderBook(self.id, symbol, max_depth=self.max_depth)
+            book.book.bids = {Decimal(price): Decimal(amount) for price, amount in msg['result']['b']}
+            book.book.asks = {Decimal(price): Decimal(amount) for price, amount in msg['result']['a']}
+            book.sequence_number = msg['result']['u']
+            self._start_book(symbol, book)
+            await self.book_callback(L2_BOOK, book, timestamp, timestamp=ts, raw=msg, sequence_number=book.sequence_number)
+            return
+
         skip_update = self._check_update_id(symbol, msg['result'])
         if skip_update:
             return
 
-        ts = msg['result']['t'] / 1000
         delta = {BID: [], ASK: []}
 
         for s, side in (('b', BID), ('a', ASK)):

@@ -8,6 +8,7 @@ associated with this software.
 import logging
 from collections import defaultdict
 from decimal import Decimal
+from order_book import OrderBook as _OrderBook
 from cryptofeed import _json as json
 
 from cryptofeed.connection import RestEndpoint, Routes, WebsocketEndpoint
@@ -51,6 +52,10 @@ class GateFutures(Gate):
         self._book_window = {}
         self._book_window_warned = False
 
+    def _reset(self):
+        super()._reset()
+        self._window_levels = {}
+
     def _book_subscription(self, symbol: str) -> list:
         return [symbol, '100ms', str(self.SNAPSHOT_DEPTH)]
 
@@ -81,13 +86,16 @@ class GateFutures(Gate):
             "t": 1615366379123,     // Book ticker generated timestamp in milliseconds
             "u": 2517661076,        // Order book update id
             "s": "BTC_USD",         // Symbol
-            "b": "54696.6",         // Best bid price
+            "b": "54696.6",         // Best bid price, empty string if no bids
             "B": 37000,             // Best bid amount
-            "a": "54696.7",         // Best ask price
+            "a": "54696.7",         // Best ask price, empty string if no asks
             "A": 47061              // Best ask amount
         }
         }
         """
+        if not msg['result']['b'] or not msg['result']['a']:
+            return
+
         t = Ticker(
             self.id,
             self.exchange_symbol_to_std_symbol(msg['result']['s']),
@@ -184,15 +192,38 @@ class GateFutures(Gate):
         }
         """
         data = json.loads(data, parse_float=Decimal)
-        depth = self._book_window.get(symbol, self.SNAPSHOT_DEPTH)
-        book = OrderBook(self.id, symbol, max_depth=depth, truncate=True, bids={Decimal(bid["p"]): Decimal(bid["s"]) for bid in data['bids']}, asks={Decimal(ask["p"]): Decimal(ask["s"]) for ask in data['asks']})
-        book.book.bids.truncate()
-        book.book.asks.truncate()
+        window = self._book_window.get(symbol, self.SNAPSHOT_DEPTH)
+        book = self._new_book(symbol, window, data['bids'], data['asks'])
         book.sequence_number = data['id']
         book.timestamp = float(data['current'])
         book.raw = data
 
         return book
+
+    def _new_book(self, symbol: str, window: int, bids: list, asks: list) -> OrderBook:
+        depth = self.max_depth if self.max_depth < window else 0
+        bids = {Decimal(bid["p"]): Decimal(bid["s"]) for bid in bids}
+        asks = {Decimal(ask["p"]): Decimal(ask["s"]) for ask in asks}
+        book = OrderBook(self.id, symbol, max_depth=depth, bids=bids, asks=asks)
+        levels = book.book
+
+        if depth:
+            levels = _OrderBook()
+            levels.bids = bids
+            levels.asks = asks
+        self._window_levels[symbol] = (window, levels)
+
+        for side in (BID, ASK):
+            self._trim(book.book, levels, side, window)
+        return book
+
+    @staticmethod
+    def _trim(book, levels, side: str, window: int):
+        while len(levels[side]) > window:
+            price = levels[side].index(window)[0]
+            del levels[side][price]
+            if levels is not book:
+                del book[side][price]
 
     async def _process_l2_book(self, msg: dict, timestamp: float, conn=None):
         """
@@ -204,6 +235,7 @@ class GateFutures(Gate):
             "error": null,
             "result": {
                 "t": 1615366381417,     ms timestamp
+                "full": true,           only on a full depth push, which replaces the book
                 "s": "BTC_USD",         symbol
                 "U": 2517661101,        start of update seq no
                 "u": 2517661113,        end of update seq no
@@ -240,7 +272,7 @@ class GateFutures(Gate):
             LOG.warning('%s: %s order book updates cover the top %d levels, not the %d requested - keeping the book to %d levels', self.id, symbol, window, self.SNAPSHOT_DEPTH, window)
 
         self._book_window[symbol] = window
-        if symbol in self._l2_book and self._l2_book[symbol].book.max_depth != window:
+        if symbol in self._l2_book and self._window_levels[symbol][0] != window:
             self._l2_book.pop(symbol, None)
             self.last_update_id.pop(symbol, None)
             self.forced[symbol] = False
@@ -248,13 +280,22 @@ class GateFutures(Gate):
             self._buffer_update(result['s'], symbol, msg, conn, timestamp)
             return
 
+        ts = result['t'] / 1000
+        if result.get('full'):
+            book = self._new_book(symbol, window, result['b'], result['a'])
+            book.sequence_number = result['u']
+            self._start_book(symbol, book)
+
+            await self.book_callback(L2_BOOK, book, timestamp, timestamp=ts, raw=msg, sequence_number=book.sequence_number)
+            return
+
         skip_update = self._check_update_id(symbol, result)
         if skip_update:
             return
 
-        ts = result['t'] / 1000
         delta = {BID: [], ASK: []}
         book = self._l2_book[symbol].book
+        levels = self._window_levels[symbol][1]
 
         for s, side in (('b', BID), ('a', ASK)):
             for update in result[s]:
@@ -268,6 +309,15 @@ class GateFutures(Gate):
                 else:
                     book[side][price] = amount
                     delta[side].append((price, amount))
+
+            if levels is not book:
+                for price, amount in delta[side]:
+                    if amount:
+                        levels[side][price] = amount
+                    else:
+                        del levels[side][price]
+
+            self._trim(book, levels, side, window)
 
         await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, timestamp=ts, raw=msg)
 
@@ -309,30 +359,34 @@ class GateFutures(Gate):
     async def _tickers(self, msg: dict, timestamp: float):
         """
         {
-            "time": 1541"659086,
-            "time_ms": 1541659086123,
+            "time": 1792280364,
+            "time_ms": 1792280364275,
             "channel": "futures.tickers",
             "event": "update",
-            "error": null,
             "result": [
                 {
-                "contract": "BTC_USD",
-                "last": "118.4",
-                "change_percentage": "0.77",
-                "funding_rate": "-0.000114",
-                "funding_rate_indicative": "0.01875",
-                "mark_price": "118.35",
-                "index_price": "118.36",
-                "total_size": "73648",
-                "volume_24h": "745487577",
-                "volume_24h_btc": "117",
-                "volume_24h_usd": "419950",
+                "contract": "TRX_USDT",
+                "last": "0.33351",
+                "change_percentage": "-0.4626",
+                "total_size": "2035146.6",
+                "volume_24h": "78379.6",
+                "volume_24h_base": "7837960",
+                "volume_24h_quote": "2614038",
+                "volume_24h_settle": "2614038",
+                "mark_price": "0.33351",
+                "funding_rate": "0.000035",
+                "funding_rate_indicative": "0.000035",   deprecated, a copy of funding_rate
+                "funding_interval": 28800,
+                "funding_offset": 0,
+                "funding_next_apply": 1792281600,       next funding time in seconds
+                "index_price": "0.33366",
                 "quanto_base_rate": "",
-                "volume_24h_quote": "1665006",
-                "volume_24h_settle": "178",
-                "volume_24h_base": "5526",
-                "low_24h": "99.2",
-                "high_24h": "132.5"
+                "low_24h": "0.33320",
+                "high_24h": "0.33715",
+                "price_type": "last",
+                "change_from": "24h",
+                "change_price": "-0.00155",
+                "t": 1792280363670
                 }
             ]
         }
@@ -365,9 +419,8 @@ class GateFutures(Gate):
                     self.exchange_symbol_to_std_symbol(entry['contract']),
                     Decimal(entry["mark_price"]),
                     Decimal(entry['funding_rate']),
-                    None,
+                    float(entry['funding_next_apply']) if entry.get('funding_next_apply') else None,
                     ts,
-                    Decimal(entry['funding_rate_indicative']),
                     raw=entry
                 )
                 await self.callback(FUNDING, f, timestamp)
