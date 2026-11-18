@@ -1,6 +1,6 @@
 ## Changelog
 
-### 3.0.5
+### 3.0.5 (2026-11-18)
 * Bugfix: Remove withdrawn venue quotes from NBBO when an order-book side becomes empty
 * Bugfix: Phemex `1M`, `1Q` and `1Y` candles subscribed to the next shorter interval because the weekly one was missing from the list; `1w` is now supported
 * Bugfix: Deribit skips a ticker or L1 book update whose best bid or ask is empty
