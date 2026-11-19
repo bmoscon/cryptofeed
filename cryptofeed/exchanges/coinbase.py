@@ -67,19 +67,20 @@ class Coinbase(Feed):
         self._sequence_num = {}
         self._candles = {}
 
-    def _check_sequence_num(self, msg: dict, conn: AsyncConnection) -> None:
+    def _check_sequence_num(self, msg: dict, conn: AsyncConnection) -> bool:
         sequence = msg.get('sequence_num')
         uuid = getattr(conn, 'uuid', None)
         if sequence is None or uuid is None:
-            return
+            return True
         last = self._sequence_num.get(uuid)
         self._sequence_num[uuid] = sequence
         if last is not None and sequence != last + 1:
             if sequence <= last:
                 LOG.warning('%s: %s sequence went backwards, %d after %d - ignoring per exchange docs', self.id, conn.uuid, sequence, last)
                 self._sequence_num[uuid] = last
-                return
+                return False
             raise MissingSequenceNumber(f"{self.id}: expected sequence number {last}, got {sequence}")
+        return True
 
 
     def _parse_snapshot(self, symbol: str, data) -> OrderBook:
@@ -258,7 +259,8 @@ class Coinbase(Feed):
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        self._check_sequence_num(msg, conn)
+        if not self._check_sequence_num(msg, conn):
+            return
         if 'channel' in msg and 'events' in msg:
             for event in msg['events']:
                 if msg['channel'] == 'market_trades':
