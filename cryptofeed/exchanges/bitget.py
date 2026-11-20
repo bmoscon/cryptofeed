@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Dict, List, Tuple, Union
 from collections import defaultdict
@@ -41,6 +42,8 @@ class Bitget(Feed):
 
     valid_candle_intervals = {'1m', '5m', '15m', '30m', '1h', '4h', '6h', '12h', '1d', '3d', '1w', '1M'}
     candle_interval_map = {'1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '6h': '6H', '12h': '12H', '1d': '1D', '3d': '3D', '1w': '1W', '1M': '1M'}
+    # candle1M bars open at 00:00 UTC+8 on the 1st and run for a calendar month
+    CANDLE_TZ = timezone(timedelta(hours=8))
     websocket_channels = {
         L2_BOOK: 'books',
         L1_BOOK: 'books1',
@@ -258,6 +261,13 @@ class Bitget(Feed):
         for t in trades:
             await self.callback(TRADES, t, timestamp)
 
+    def _candle_stop(self, start: float) -> float:
+        if self.candle_interval == '1M':
+            opened = datetime.fromtimestamp(start, tz=self.CANDLE_TZ)
+            year, month = (opened.year + 1, 1) if opened.month == 12 else (opened.year, opened.month + 1)
+            return opened.replace(year=year, month=month).timestamp()
+        return start + timedelta_str_to_sec(self.candle_interval)
+
     async def _candle(self, msg: dict, timestamp: float, symbol: str):
         '''
         {
@@ -292,7 +302,7 @@ class Bitget(Feed):
                 self.id,
                 symbol,
                 start,
-                start + interval,
+                self._candle_stop(start),
                 self.candle_interval,
                 None,
                 Decimal(entry[1]),

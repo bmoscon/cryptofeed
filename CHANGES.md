@@ -1,5 +1,8 @@
 ## Changelog
 
+### 3.0.6
+* Bugfix: Bitget `1M` candles stop at the start of the next calendar month instead of 30 days after they open
+
 ### 3.0.5 (2026-11-18)
 * Bugfix: Remove withdrawn venue quotes from NBBO when an order-book side becomes empty
 * Bugfix: Phemex `1M`, `1Q` and `1Y` candles subscribed to the next shorter interval because the weekly one was missing from the list; `1w` is now supported
