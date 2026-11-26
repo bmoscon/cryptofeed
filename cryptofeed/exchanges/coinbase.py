@@ -73,13 +73,12 @@ class Coinbase(Feed):
         if sequence is None or uuid is None:
             return True
         last = self._sequence_num.get(uuid)
+        if last is not None and sequence <= last:
+            LOG.warning('%s: %s sequence went backwards, %d after %d - ignoring per exchange docs', self.id, uuid, sequence, last)
+            return False
         self._sequence_num[uuid] = sequence
         if last is not None and sequence != last + 1:
-            if sequence <= last:
-                LOG.warning('%s: %s sequence went backwards, %d after %d - ignoring per exchange docs', self.id, conn.uuid, sequence, last)
-                self._sequence_num[uuid] = last
-                return False
-            raise MissingSequenceNumber(f"{self.id}: expected sequence number {last}, got {sequence}")
+            raise MissingSequenceNumber(f"{self.id}: expected sequence number {last + 1}, got {sequence}")
         return True
 
 

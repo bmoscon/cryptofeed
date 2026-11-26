@@ -158,25 +158,27 @@ class dYdX(Feed):
                 if delta is not None:
                     delta[side].append((price, size))
 
-    def _check_sequence_number(self, msg: dict, conn: AsyncConnection) -> None:
+    def _check_sequence_number(self, msg: dict, conn: AsyncConnection) -> bool:
         if msg.get('type') not in self.SEQUENCED_FRAMES:
-            return
+            return True
         message_id = msg.get('message_id')
         uuid = getattr(conn, 'uuid', None)
         if message_id is None or uuid is None:
-            return
+            return True
 
         last = self._message_id.get(uuid)
+        if last is not None and message_id <= last:
+            LOG.warning('%s: %s message_id went backwards, %s after %s - ignoring', self.id, uuid, message_id, last)
+            return False
         self._message_id[uuid] = message_id
         if last is not None and message_id != last + 1:
-            if message_id <= last:
-                LOG.warning('%s: %s message_id went backwards, %s after %s', self.id, uuid, message_id, last)
-                return
-            raise MissingSequenceNumber(f"{self.id}: expected sequence number {last}, got {message_id}")
+            raise MissingSequenceNumber(f"{self.id}: expected sequence number {last + 1}, got {message_id}")
+        return True
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
-        self._check_sequence_number(msg, conn)
+        if not self._check_sequence_number(msg, conn):
+            return
         kind, channel = msg.get('type'), msg.get('channel')
 
         if kind == 'channel_data' or kind == 'channel_batch_data':
