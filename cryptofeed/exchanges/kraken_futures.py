@@ -68,8 +68,7 @@ class KrakenFutures(Feed):
             if "_" in symbol:
                 stype = FUTURES
                 symbol, expiry = symbol.split("_")
-            symbol = symbol.replace('XBT', 'BTC')
-            base, quote = symbol[:-3], symbol[-3:]
+            base, quote = ('BTC' if currency == 'XBT' else currency for currency in (symbol[:-3], symbol[-3:]))
 
             s = Symbol(base, quote, type=stype, expiry_date=expiry)
 
