@@ -35,8 +35,8 @@ class KuCoinFutures(KuCoin):
                 LOG.warning('%s: skipping %s, unknown contract type %s', cls.id, entry['symbol'], entry['type'])
                 continue
 
-            base = entry['baseCurrency'].replace('XBT', 'BTC')
-            quote = entry['quoteCurrency'].replace('XBT', 'BTC')
+            base = 'BTC' if entry['baseCurrency'] == 'XBT' else entry['baseCurrency']
+            quote = 'BTC' if entry['quoteCurrency'] == 'XBT' else entry['quoteCurrency']
             expiry = entry.get('expireDate')
 
             s = Symbol(base, quote, type=stype,

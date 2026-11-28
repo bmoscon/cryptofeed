@@ -2,6 +2,7 @@
 
 ### 3.0.6
 * Bugfix: Bitget `1M` candles stop at the start of the next calendar month instead of 30 days after they open
+* Bugfix: KuCoin Futures / Kraken Futures rename only the `XBT` currency itself to `BTC`, so `AIXBT` contracts are no longer listed as `AIBTC-USDT-PERP` and `AIBTC-USD-PERP`
 
 ### 3.0.5 (2026-11-18)
 * Bugfix: Remove withdrawn venue quotes from NBBO when an order-book side becomes empty
